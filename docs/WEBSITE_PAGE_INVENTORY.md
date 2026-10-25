@@ -354,3 +354,74 @@ Every release should run formatting/lint, TypeScript checks, unit tests, product
 ### Immediate implementation gate
 
 Before adding all planned pages, inspect the starter app and dependencies, choose and document the routing approach, add the shared application shell and error boundaries, and establish lint/typecheck/test/build checks. Then migrate one small vertical slice (for example, sports directory) through route, UI, typed data access, loading/error states, tests, and SEO before repeating the pattern for other modules. This validates the architecture without generating empty folders or fake content.
+
+## Mobile application strategy
+
+KhelGrid is intended to support both a responsive website and a dedicated mobile app. Treat these as two client experiences on the same product platform, sharing domain rules and backend contracts while respecting each platform's navigation and interaction patterns. The mobile app is planned scope; it is not yet implemented or released by this document change.
+
+### Recommended delivery approach
+
+- **Phase 1 — responsive web:** ensure the website works well on small screens and remains usable on slow or intermittent connections. This is useful independently and provides the first responsive baseline.
+- **Phase 2 — mobile app foundation:** after validating core web modules and backend contracts, evaluate a cross-platform app using React Native with Expo (a candidate recommendation, not a final tool choice). This fits a React/TypeScript team and can target Android and iOS from a shared codebase.
+- **Phase 3 — vertical-slice app:** start with a small, useful mobile release: sports/opportunity discovery, opportunity details and source/status, venue discovery, and saved items only if account functionality is securely enabled. Add modules after their APIs and acceptance criteria are proven.
+- **Phase 4 — native capabilities:** add push notifications, deep links, share sheets, camera/photo upload, location-based discovery, and offline support only where the feature needs them and the user has granted relevant permissions.
+- Do not wrap the website in a basic WebView and call it a full mobile app unless a deliberate product decision selects that trade-off.
+
+### Shared platform, separate clients
+
+Suggested high-level workspace when mobile development begins:
+
+    apps/
+      web/                 # Existing React + Vite website
+      mobile/              # Future React Native / Expo client
+    packages/
+      domain/              # Portable domain types and pure business rules
+      api-contracts/       # Validated request/response types
+      design-tokens/       # Shared semantic colours, spacing, typography
+      validation/          # Cross-client schemas where practical
+    supabase/
+      migrations/          # Versioned schema and policy changes
+
+This is a target structure, not a request to relocate the current app immediately. Keep the current repository structure stable until an incremental migration is justified. Share portable TypeScript logic and contracts, not web-only React components, DOM APIs, or browser-specific code with the native app.
+
+### Mobile-specific modules and screens
+
+| App area | Initial screen/route | Notes |
+|---|---|---|
+| Onboarding | Welcome and feature overview | No account required to browse public content |
+| Discover | Home and search | Lightweight, filterable discovery |
+| Sports | Sports list and sport detail | Use the same supported sports catalogue as web |
+| Opportunities | Trials/opportunities list and detail | Show source, last-checked date, eligibility, and current status |
+| Venues | Venue list and venue detail | Display only published venue information and prices |
+| Saved items | Saved list | Requires working authentication and user-owned storage |
+| Notifications | Notification inbox/settings | Only when notification backend and consent controls exist |
+| Profile | Profile/settings | Gated until authentication, privacy, and account deletion are implemented |
+| Booking | Court selection and booking status | Disabled until database-enforced availability, pricing, concurrency, and cancellation checks pass |
+| Live sports | Live match centre | Disabled/unavailable until a genuine authorized data provider is integrated |
+| Sports CV | Create/edit/export CV | Plan for mobile-friendly forms and PDF export; protect personal athlete data |
+| Help and legal | Help, privacy, terms, safety | Must be accessible from app settings and relevant flows |
+
+Mobile screen names are a planning inventory, not existing screens or a guarantee that every feature ships in the first release.
+
+### Mobile engineering rules
+
+1. **Backend authority:** mobile clients are untrusted. Use the same Supabase RLS policies and trusted backend rules as the web app. Never embed service-role keys, provider secrets, or privileged credentials in the app bundle.
+2. **Authentication and sessions:** if auth is enabled, use a supported secure session approach and platform-secure storage. Never store passwords or long-lived privileged tokens in ordinary local storage.
+3. **Offline and retry behaviour:** distinguish cached/stale data from current data. Show when content was last refreshed; retry idempotently and avoid duplicate submissions or bookings after reconnecting.
+4. **Booking correctness:** never rely on a device clock or client-side availability check to reserve a court. The database/trusted service must validate price, operating hours, holds, overlap, and state transitions atomically.
+5. **Permissions and privacy:** request location, camera, photos, and notifications only when needed, explain why, and provide a manual alternative where reasonable. Avoid collecting precise location or sensitive athlete/minor data without a documented need and safeguards.
+6. **Deep links:** use canonical HTTPS links that open the relevant screen in the app when installed and provide a useful web fallback. Validate parameters and authorization after opening a deep link.
+7. **Performance:** paginate lists, compress/resize uploaded media, avoid unnecessary background work, support low bandwidth, and monitor app startup and crash rates.
+8. **Accessibility and localization:** support screen readers, scalable text, adequate touch targets, dynamic font sizes, keyboard/accessibility navigation where applicable, and translation-ready Hindi/English UI strings.
+9. **Release and distribution:** plan separate development/staging/production configuration, Android signing and iOS signing, store privacy disclosures, app permissions review, crash monitoring, and a rollback/release process. Never use production credentials in development builds.
+10. **Parity without forcing identical UI:** keep domain behaviour and data rules consistent across web and mobile, but use platform-appropriate navigation, gestures, forms, and system controls.
+
+### Mobile readiness gates
+
+Before starting the native app, confirm the initial release scope, Android/iOS target, authentication decision, backend API contracts, privacy requirements, and who will maintain app-store releases. Then prove one end-to-end slice from backend data through a mobile screen, loading/empty/error states, accessibility, tests, and a development build.
+
+Before any public release, test on real Android devices and, if iOS is targeted, iOS simulators/devices; test slow/offline networks, interrupted requests, expired sessions, deep links, permissions denied, small screens, accessibility, and upgrade paths. A successful web build does not validate a mobile build.
+
+### Mobile delivery status
+
+Track mobile work separately from web modules with statuses **Planned**, **In progress**, **Blocked**, **Implemented**, and **Verified**. This document update only records the mobile strategy and screen inventory; it does not create, build, publish, or submit an app to any app store.
