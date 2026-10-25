@@ -407,3 +407,48 @@ Requirement: include a comprehensive field set so athletes can create a full CV.
 - Exact launch sport catalogue and content-entry method for the initial 100+ records; ensure no unsupported sport-specific claims.
 - CV field-level mandatory/optional rules by sport and country; default should be minimum necessary with optional relevant sections.
 - PDF design variants, translation schedule and whether any later server-side document storage is justified.
+
+
+## 17. Automatic expiry, archive lifecycle and public archive (owner requirement, 2026-10-25)
+
+### Required behaviour
+- Trials and opportunities that have passed their relevant deadline/event end date must automatically stop appearing in active listings and move to the website's public archive.
+- Archived listings remain accessible from a clearly labelled **Archive** area on the website, with search/filter/detail pages where the retained source data supports them.
+- Archive movement must be a lifecycle/status change on the authoritative record, not a destructive delete or a one-time manual UI filter.
+- The active website, public API, search results, homepage cards, category/city pages, sitemap and structured data must all use the same lifecycle rules. An expired item must not leak back into active results through a fallback/static list or stale cache.
+- Archive pages must clearly show “Expired”, “Closed”, “Cancelled” or the actual known state and the relevant date. Never describe archived listings as open or currently available.
+- Preserve source provenance, review status, original dates, last-checked time and correction history for editorial/audit purposes. Do not silently rewrite an expired record's history.
+
+### Date and status rules
+- Each listing type must define the authoritative lifecycle date: application/registration deadline when present; otherwise the event end date or a documented event-specific rule. Do not expire a multi-day event on its start date if the source provides a later end date.
+- Use the source's stated timezone where available; otherwise use one documented application timezone consistently and store timestamps with timezone semantics. Define how date-only deadlines are interpreted.
+- A listing marked cancelled or withdrawn should leave active listings immediately and appear in the archive with the cancellation/withdrawal status when public disclosure is appropriate.
+- If the source announces an extension, only update the deadline after editorial review and recording the evidence. Do not automatically extend because a page is unreachable.
+- If dates are missing or conflicting, route the record to editorial review; do not invent an expiry date or keep it indefinitely labelled active without recheck.
+- “Verified by KhelGrid” and “source listed — not independently verified” remain distinct review states from lifecycle status. Verification does not override expiry.
+
+### Automation and resilience
+- Implement an idempotent lifecycle job or database-enforced query/status process that regularly detects due records, updates their status to archived/expired and records the reason/time. The exact scheduler must fit the approved hosting/free-tier limits.
+- If scheduled jobs are unavailable or fail, active-list queries must still exclude records whose authoritative deadline has passed; the job should reconcile the stored lifecycle status later. This prevents a missed scheduler run from showing stale items as active.
+- The job must be safe to retry, avoid duplicate archive records, handle timezone/date boundaries, log counts and failures without exposing secrets, and alert/flag repeated failures.
+- No expensive paid scheduler or provider should be introduced without owner approval. A bounded scheduled workflow, supported database scheduler or request-time reconciliation may be evaluated for the actual stack.
+
+### Public archive UX and SEO
+- Provide an Archive entry point and archive filters by sport, city/state when supported, year/date range, event type and lifecycle status.
+- Archived detail pages should retain canonical URLs where appropriate, show source and expiry/cancellation context, and link to related current opportunities only when those are genuine records.
+- Keep active and archive query/API contracts separate or explicitly filtered. Use stable IDs and preserve historical details needed to understand the original listing.
+- Sitemap policy must be deliberate: include archive pages only when useful, public, canonical and allowed by indexing policy; exclude private/rejected records and internal review metadata. Do not generate fake or stale last-modified dates.
+- Expired listings must not be marked as current event offers in structured data or snippets. Validate structured data against the visible archived status.
+- Archive records must remain reachable from the website archive navigation even if they are no longer present in active listings.
+
+### Acceptance tests
+1. A listing with a passed registration deadline disappears from all active pages/API/search and appears in Archive with an accurate status/date.
+2. A multi-day event remains active through its source-defined end/deadline, then archives according to its documented rule.
+3. Cancellation/withdrawal immediately removes the listing from active surfaces and preserves the appropriate archive state.
+4. A source-confirmed deadline extension updates lifecycle only after reviewer approval and evidence recording.
+5. Missing/conflicting dates are flagged for editorial review rather than guessed.
+6. Running the archive job repeatedly is idempotent; retries do not duplicate records or notifications.
+7. A scheduler outage does not allow overdue listings into active queries; reconciliation restores stored status when service returns.
+8. Homepage, category/city pages, APIs, sitemap, structured data and caches agree on active/archive status.
+9. Archive pages show historical status and do not claim availability; rejected/private records never appear publicly.
+10. Date/timezone boundaries are tested, including date-only deadlines and India Standard Time handling where relevant.
