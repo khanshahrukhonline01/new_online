@@ -83,3 +83,22 @@
 
 ## Change control
 Any scope change must record: request, reason, affected requirements/routes, dependencies, security/content/SEO/cost impact, acceptance tests, decision owner and approval date. Changes do not silently alter the approved first-release scope. Production migration, credentials, merge and deployment approval remain separate decisions.
+
+## Frontend foundation progress — 2026-10-25
+
+Production design reference reviewed: https://www.khelgrid.com/. The production site uses a sports-first discovery experience with a compact sport navigation strip, search/quick-explore patterns, grouped cards, and responsive horizontal discovery sections. The rebuild should retain the recognizable KhelGrid navy/green identity and sports-discovery hierarchy, while excluding unsupported numeric/verification claims and keeping unavailable services clearly disabled.
+
+Foundation work recorded on `feat/app-shell-discovery-modules`:
+- App shell: header, responsive primary navigation, Search entry, main landmark, skip link, footer and development/service-status disclosure.
+- Design system: centralized navy/green tokens, type defaults, spacing/surface/border/radius tokens, focus treatments, button interaction states, reduced-motion handling and narrow-screen form layout.
+- Shared states: accessible loading, unconfigured, unavailable and empty states; no sample listings when data is not connected.
+- Search: queries only the connected public catalogue and does not manufacture records.
+- Safety boundary: rebuild branch only; production repo, production database, DNS and production deployment are not changed by this work.
+
+Still required before calling the foundation complete:
+- [ ] Run typecheck, lint, tests and production build against the exact latest commit; retain CI links/logs.
+- [ ] Verify at 320px, 375px, tablet and desktop widths, including menu open/close, keyboard focus, overflow and footer wrapping.
+- [ ] Compare header, sports discovery entry points, cards and section rhythm against current production at a visual review.
+- [ ] Add or adjust shared component tests for menu/navigation, loading/error/empty states and mobile-safe controls where test setup permits.
+- [ ] Confirm the deployment preview (if available) uses only development configuration and cannot call production services.
+
