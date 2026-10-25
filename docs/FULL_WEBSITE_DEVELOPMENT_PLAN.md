@@ -517,3 +517,18 @@ Before release/reapplication, every indexable page must pass the quality gate; w
 - AI-generated drafts cannot bypass human review or populate unsupported facts.
 - Ads and third-party scripts respect the actual consent/privacy design and do not obscure primary content.
 - The content audit report records all exceptions, remediation and final re-review before AdSense reapplication.
+
+
+## 19. Baseline freeze and scope-change control (2026-10-25)
+
+The owner approved freezing this document as the planning baseline. This is an additive governance note: all existing sections above remain part of the record.
+
+- The [Implementation Checklist](IMPLEMENTATION_CHECKLIST.md) tracks execution without implying that unchecked work is complete.
+- The [Requirements and Acceptance Criteria](REQUIREMENTS_AND_ACCEPTANCE_CRITERIA.md) define testable outcomes; the [Production Repository Parity Audit](PRODUCTION_REPOSITORY_PARITY_AUDIT.md) records source findings and evidence gaps.
+- Planning approval does not mean the website is implemented, tests pass, content review is complete, or production is approved.
+- Avoid silently expanding the baseline. Proposed scope changes must record rationale, affected requirements/routes, dependencies, security/privacy/content/SEO/cost impact, acceptance criteria, owner decision and date.
+- Existing documentation, audit findings and decisions must not be deleted. Corrections and new decisions should be appended or recorded in a new document, preserving prior context.
+- Production repository/data/settings, Supabase migrations, credentials, merges and deployment require separate explicit authorization.
+
+### Frozen first-release scope summary
+Public-first responsive website; data-driven catalogue for at least 100 sports; human-reviewed opportunities/trials with clear verification states and automatic archive; informational venue directory without booking; private local-first Sports CV create/edit/preview/PDF export; useful, original, source-backed indexable content; accessibility, SEO, privacy, reproducible testing, backup/restore and release gates.
