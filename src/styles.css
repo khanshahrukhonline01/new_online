@@ -200,3 +200,35 @@ h3 { margin: 31px 0 10px; font-size: 18px; letter-spacing: -.025em; }
 .mobile-drawer.is-open{transform:translateX(0);visibility:visible}.mobile-drawer[aria-hidden=true]{pointer-events:none}.mobile-drawer-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:17px;border-bottom:1px solid var(--sidebar-line)}.mobile-drawer .sidebar-mobile-close{display:inline-grid}.mobile-drawer .sidebar-navigation{padding-top:12px}.mobile-drawer .sidebar-promo{flex:0 0 auto}
 .mobile-bottom-nav{position:fixed;z-index:20;right:12px;bottom:max(10px,env(safe-area-inset-bottom));left:12px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;padding:7px;border:1px solid var(--line-strong);border-radius:15px;background:rgba(16,25,39,.96);box-shadow:0 12px 38px rgba(0,0,0,.28);backdrop-filter:blur(18px)}
 .mobile-bottom-link{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:47px;border-radius:9px;color:var(--muted);text-decoration:none}.mobile-bottom-link>span{font-size:19px;line-height:1}.mobile-bottom-link small{font-size:9px;font-weight:700}.mobile-bottom-link.is-active{background:var(--sidebar-active);color:var(--accent)}.site-footer{padding-bottom:90px}}
+
+
+/* Accessibility foundation: consistent keyboard focus and reduced motion. */
+:where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+:where(a, button, input, select, textarea):focus:not(:focus-visible) {
+  outline: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+@media (max-width: 700px) {
+  .site-header {
+    gap: 12px;
+    min-height: 64px;
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+  .site-header .environment-label { display: none; }
+  .site-header .header-search-link { margin-left: auto; }
+  .site-header .menu-toggle { min-height: 40px; align-items: center; gap: 8px; }
+  .mobile-drawer { padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+  .mobile-bottom-nav { padding-bottom: max(7px, env(safe-area-inset-bottom)); }
+}
