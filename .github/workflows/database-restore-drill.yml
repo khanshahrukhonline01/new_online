@@ -65,7 +65,9 @@ jobs:
           age --decrypt --identity age-identity.txt --output public.dump khelgrid-public.dump.age
           rm -f age-identity.txt
           test -s public.dump
-          # Disposable PostgreSQL service only. Drop public and let pg_restore recreate it from the archive.
+          # Supabase roles are prerequisites for restoring RLS policies; these are test-only roles.
+          psql -v ON_ERROR_STOP=1 -c "CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS;"
+          # Disposable PostgreSQL service only. Let the archive recreate the public schema.
           psql -v ON_ERROR_STOP=1 -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA auth; CREATE TABLE auth.users (id uuid PRIMARY KEY);'
           /usr/lib/postgresql/17/bin/pg_restore --exit-on-error --no-owner --no-acl --dbname="$PGDATABASE" public.dump
           psql -v ON_ERROR_STOP=1 -Atc "select count(*) from information_schema.tables where table_schema='public' and table_name in ('profiles','sports','opportunities','venues','venue_courts')" | grep -qx '5'
