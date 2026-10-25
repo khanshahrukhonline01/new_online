@@ -11,9 +11,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Validate SQL migration safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(supabase/migrations/*.sql)
+          if (("${#files[@]}" == 0)); then
+            echo "No SQL migrations found"; exit 1
+          fi
+          for file in "${files[@]}"; do
+            base="$(basename "$file")"
+            if [[ ! "$base" =~ ^[0-9]{14}_[a-z0-9_]+\.sql$ ]]; then
+              echo "Invalid migration filename: $base"; exit 1
+            fi
+            grep -Eiq '^[[:space:]]*begin([;[:space:]]|$)' "$file" || { echo "$base is missing BEGIN"; exit 1; }
+            grep -Eiq '^[[:space:]]*commit[[:space:]]*;' "$file" || { echo "$base is missing COMMIT"; exit 1; }
+            if grep -Eiq '^[[:space:]]*(drop[[:space:]]+(table|schema|database)|truncate([[:space:]]|;))' "$file"; then
+              echo "Potentially destructive statement in $base; require explicit review and an approved exception"; exit 1
+            fi
+          done
+          # Ensure required checks are present in the workflow; fail closed if removed.
+          for check in "npm run typecheck" "npm run lint" "npm run test" "npm run build"; do
+            grep -Fq "$check" .github/workflows/ci.yml || { echo "Required CI check missing: $check"; exit 1; }
+          done
       - run: npm install
       - run: npm run typecheck
       - run: npm run lint
