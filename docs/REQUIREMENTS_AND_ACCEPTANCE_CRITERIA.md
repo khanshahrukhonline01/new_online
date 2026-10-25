@@ -82,3 +82,31 @@ Accounts/authentication, server-side CV sync, public athlete profiles/sharing, t
 - No venue page suggests that a court is bookable or currently available.
 - CV data is not publicly accessible or transmitted to a backend by default; the chosen local storage/export behaviour is documented and tested.
 - No deferred capability is advertised as operational.
+
+
+## Approved scope extensions: 100+ sports, KhelGrid editorial review, comprehensive CV (2026-10-25)
+
+### Sports catalogue
+- Support at least 100 sports from a data-driven catalogue, scalable beyond 100 without hard-coded page implementations.
+- India-wide is the planning default; city-level availability/content must be evidence-based, not implied for every sport.
+- Reusable sport detail templates, canonical IDs/slugs, aliases, accessible search and genuine empty states are required.
+- A sport with no verified listings may still have a directory page; do not fabricate opportunities or venues to populate it.
+
+### Editorial workflow and public verification labels
+- KhelGrid editorial/review team owns analysis, review and approval using the standard opportunity/trial template.
+- Newly discovered records may enter the internal review queue directly, but must not become active public listings without the required checks.
+- Public “not independently verified” listings are permitted only when the source is traceable and minimum authenticity, relevance, safety and currentness checks pass. Clearly label the status and source; do not imply endorsement.
+- Records that fail minimum checks stay internal, are held or rejected; the word “unverified” is not a way to bypass review.
+- Use distinct statuses: Verified by KhelGrid; Source listed — not independently verified; Under review (not public active); Expired/closed; Cancelled; Rejected/removed.
+- “Verified by KhelGrid” indicates the documented review process was completed, not government endorsement or guaranteed event outcomes.
+- Required metadata: source/publisher, evidence reference, checked date, reviewer, event date/deadline, sport, location, eligibility as stated, fee or “not stated”, contact or “not published”, status, review level, expiry/recheck date, attribution/reuse basis and correction history.
+- Test source mismatch, missing/unknown facts, expiry, cancellation, duplicate, unsupported official claims and review-status authorization.
+
+### Sports CV
+- Support a comprehensive field catalogue with optional sections; not every field is mandatory.
+- Sections include identity/contact; athletic profile; sport/discipline/position; measurements when relevant; performance/statistics and personal bests; competitions/results/rankings; teams/clubs/academies/coaches; career/participation; achievements/awards/selections; education/eligibility; skills/certifications/languages; goals/availability; optional references and media/portfolio links; CV language/template/version and export settings.
+- Mark self-reported versus evidenced/reviewed results. Never fabricate statistics, rankings, achievements or verification badges.
+- Sensitive data such as government IDs, medical records, emergency/guardian contacts and full home address is excluded from default export and should not be collected without a separately approved need and safe handling.
+- PDF is the required first-release export format. DOCX or other formats may follow later.
+- Provide concise and full CV layouts, optional section selection/reordering, preview, local-first edit/save, export and delete/reset.
+- No account, server sync, public profile or sharing in the initial release. Clearly disclose local storage limitations and test that CV contents are not sent to a backend or analytics by default.
