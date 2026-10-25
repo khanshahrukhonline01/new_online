@@ -60,3 +60,25 @@ CI gates pass on exact commit. Secrets are least-privilege and environment-separ
 - Which identity provider and account lifecycle are in scope?
 - Are athlete profiles private by default and what fields may be shared?
 - Who approves production credentials, migrations and releases?
+
+
+## Approved first-release scope (2026-10-25)
+
+The product owner approved a public-first website, manually reviewed opportunity listings, an informational venue directory without booking, and private Sports CV creation/export before accounts or public sharing.
+
+### In scope
+- Public pages and sports discovery that work without login.
+- Manually reviewed trials/opportunities with provenance and expiry/archive rules.
+- Informational venue/court directory using reviewed source data only.
+- Private Sports CV creation, editing, preview and export, with storage behaviour disclosed.
+- Trust/legal/help and correction-intake paths, SEO/accessibility and quality gates.
+
+### Out of scope for the first release
+Accounts/authentication, server-side CV sync, public athlete profiles/sharing, trial applications, notifications, booking/availability/payments, live scores/commentary, advertising/analytics integrations, native app and AI/MCP features beyond an approved public read-only scope. These require later scope approval and their own acceptance/security gates.
+
+### Release-specific acceptance
+- No login is required for public discovery or the initial private CV workflow.
+- No opportunity is published until a human reviewer approves evidence and required metadata.
+- No venue page suggests that a court is bookable or currently available.
+- CV data is not publicly accessible or transmitted to a backend by default; the chosen local storage/export behaviour is documented and tested.
+- No deferred capability is advertised as operational.
