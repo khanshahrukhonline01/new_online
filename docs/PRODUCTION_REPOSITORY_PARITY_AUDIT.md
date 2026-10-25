@@ -374,3 +374,233 @@ Further inspection of `user-profile-service.ts` and `supabase.ts` found addition
 7. Test venue owner intake, admin review, publication, court setup, pricing, operating hours, holds, overlapping requests, cancellation and unauthorized access using a disposable development database.
 8. Do not apply migrations to production during this parity audit. Do not seed fake venues or publish guessed prices.
 
+
+
+## 7. Follow-up source audit: trials, notifications, live sports, ads and technical endpoints
+
+**Scope:** read-only inspection of named files on production repository `main`; no runtime execution, provider verification, deployment inspection or database-policy evaluation was performed. These are source findings, not claims about current production runtime.
+
+### 7.1 Trials and opportunity data — gaps found
+
+Files inspected: `src/lib/trials-service.ts`, `src/services/trials-database-service.ts`, `src/routes/api.trials.ts`, `src/routes/sitemap[.]xml.ts`.
+
+- `fetchAvailableTrialsFromSupabase` queries the `trials` table and filters active/upcoming statuses, then filters by event end date. It returns query errors and does not merge static cards into a successful database response. This is a positive fail-closed behaviour for that service.
+- A separate `trialsDatabaseService` still falls back to the static `TRIALS` array for summary stats and individual trial detail when the database is unavailable or a lookup fails. Callers must visibly distinguish that fallback from current, source-verified database records; otherwise the same site can have inconsistent source-of-truth behaviour.
+- `/api/trials` directly serializes static `TRIALS`, with public wildcard CORS and a cache lifetime up to 24 hours at shared caches. Its payload includes source URLs and a `verified` value derived from `verifiedLabel`; this endpoint is not database-backed in the inspected file. A client could therefore receive dated static records even if the live database service has no rows.
+- Sitemap opportunity URLs are generated from static `TRIALS`; its last-modified date is a hard-coded constant. Venue URLs likewise come from static `VENUES`. This can index stale/non-authoritative listings or URLs that don't correspond to live database entities.
+- **Required follow-up:** consolidate public listing/API/sitemap/detail views onto one authoritative data path; distinguish source-published vs independently verified; validate source evidence, fee/eligibility/date/expiry; use bounded cache invalidation; add tests for empty/error/archive/upcoming cases and sitemap/API consistency. Do not delete data or alter production until owner approval and evidence review.
+
+### 7.2 Notifications — prototype/local state and authorization risks
+
+File inspected: `src/services/notification-worker-service.ts`.
+
+- The module contains hard-coded sample subscriptions and a test-looking FCM token in `DEFAULT_SUBSCRIPTIONS`; local storage falls back to these defaults when there is no saved value or parsing fails. This is demonstration state and must never be treated as a real subscriber/device.
+- `subscribeToTrialAlerts` accepts `userId` and `fcmToken` from the caller, tries a Supabase upsert, then returns `success: true` even if the database write did not succeed. The return shape exposes `isSupabaseLive`, but callers must not interpret `success` alone as durable subscription.
+- `getNotificationSubscriptions` queries using caller-provided user ID or FCM token. Its fallback returns the entire local list if the requested filter finds no matches, which can expose unrelated local subscription records to UI callers. The function also starts with `isSupabaseLive = false` and only returns true on one successful non-empty branch.
+- `unsubscribeFromTrialAlerts` updates by subscription ID without a visible user filter in this client function and returns `success: true` even if persistence failed. Effective RLS/constraints may mitigate database access, but they were not evaluated here.
+- **Required follow-up:** remove sample tokens/subscriptions from production defaults; make persistence result explicit; require authenticated identity and server/database ownership checks; make reads return only exact matches (no unfiltered fallback); bind unsubscribe to owner or an unguessable verified device credential; implement real server-side push delivery and retry/idempotency before claiming notifications work. Test unauthorized cross-user reads/writes and opt-out behaviour.
+
+### 7.3 Live sports — external headlines are not a score API
+
+Files inspected: `src/routes/live-scores.tsx`, `src/lib/live-sports-service.ts`, `src/data/liveSports.ts`.
+
+- The live-score page initializes its state from `LIVE_SPORTS_UPDATES`, a static fixture array. The page itself labels its refresh action as a status check and tells users that live data is not connected; refresh does not fetch scores.
+- A separate service tries to parse Google News RSS search results using regular expressions and infers teams, sport, status and scores from article headlines. It can also ask a server-side Gemini model to return a JSON list of purported current matches. News headlines and generated search summaries are not authoritative structured match-state feeds; inference can misclassify sports, scores or live status.
+- The service response type and source comments should not be interpreted as proof that a licensed/official score provider is connected. The inspected code does not establish a provider contract, match identifiers, score validation, per-sport structured endpoints, source freshness guarantees or rights to redistribute official live data.
+- **Required follow-up:** keep fixture/demo data visibly marked and excluded from claims of live service; select a real provider with documented terms, coverage, attribution and commercial redistribution rights; implement server-side adapters, secret handling, normalization, stale-data detection and rate limits; use official match IDs/status and never derive scores from news text; test stale/error/empty states. No provider should be called “connected” until a real integration is configured and verified.
+
+### 7.4 Advertising and consent — implementation exists, policy compliance unverified
+
+Files inspected: `src/components/ads/AdConsent.tsx`, `src/components/ads/AdConsentBanner.tsx`, `src/components/ads/AdSenseLoader.tsx`, `src/lib/ump-web.ts` (loader integration referenced from consent module).
+
+- Consent is stored in browser local storage with `unknown`, `granted`, and `denied` states. The banner labels “Non-personalized” and “Accept all”; the code comment says ads are not requested until consent is resolved in consent-required mode.
+- The provider's default `requireConsent` is `false`; therefore the actual application-level provider configuration and every loader/slot call site determine whether script loading waits for a choice. The banner alone is not proof that all ad requests are blocked before consent.
+- “Non-personalized” is not the same as “no tracking/no storage” or a legally valid consent refusal in every jurisdiction. Consent Mode/UMP wiring, geography, vendor disclosures, retention, withdrawal, tag order, mobile/native ad consent and actual network requests were not tested.
+- AdSense loader is guarded by an environment-variable wrapper according to its comments, but the actual production environment and AdSense account approval/ads.txt state were not checked.
+- **Required follow-up:** audit provider props and all ad slot/analytics tags; verify real network requests in clean browser sessions for unknown/granted/denied and privacy-settings reset; confirm current Google publisher policies and applicable privacy rules; test native Android consent separately; ensure denied/unknown states do not load unauthorized trackers or personalized ad requests. Do not promise compliance from source comments alone.
+
+### 7.5 Technical endpoints and SEO — actionable source issues
+
+Files inspected: `src/routes/api.indexnow.ts`, `src/lib/indexnow.ts`, `src/routes/api.trials.ts`, `src/routes/robots[.]txt.ts`, `src/routes/sitemap[.]xml.ts`, `src/routes/llms[.]txt.ts`.
+
+- `GET /api/indexnow` submits the first 100 sitemap URLs to an external indexing service. `POST /api/indexnow` accepts a caller-supplied `urls` array and forwards it after only basic normalization/length bounding. There is no visible authentication, rate limiting, same-host allowlist, or URL validation in this route/service. This creates an abuse surface and permits submissions outside the intended canonical host because absolute URLs beginning with `http` are passed through.
+- The IndexNow key is a public protocol key and is returned in the GET JSON; the important controls are correct host/key-file verification and abuse resistance, not treating that public key as a password.
+- Sitemap generation uses a fixed last-modified date, includes static trial and venue catalog entries, and includes a query-string archive URL. It does not prove every URL returns canonical 200 or has index-worthy content.
+- The `llms.txt` fallback contains strong claims such as “verified,” “zero fake trials,” “real-time searchable,” “Khelo India accredited,” “real-time scores,” and “book ... across Indian metro cities.” These claims need evidence and should not be emitted as fallback copy unless current capabilities substantiate them. It also advertises the static-backed trials API as delivering verified trials.
+- `robots.txt` explicitly allows many crawlers, including LLM-related user agents; that is a policy choice, not an automatic compliance requirement. Confirm desired crawl permissions and ensure disallowed/private routes are protected by authorization, not merely robots directives.
+- **Required follow-up:** restrict IndexNow POST to canonical owned-host URLs, validate scheme/host/path, cap request size/count and rate-limit; add auth or a signed internal trigger if endpoint is intended for internal use; dynamically set trustworthy lastmod values; verify sitemap URL responses and content; fact-check `llms.txt` claims; explicitly approve crawler policy.
+
+### 7.6 Updated completion status
+
+| Area | Status after this pass | Still required |
+|---|---|---|
+| Production route parity | Partial source inventory | Route-by-route mapping and approved preserve/merge/defer/retire decisions |
+| Athlete profiles and Sports CV | Source review found material gaps | Effective RLS chain, write-path audit, owner-scoped persistence, secure share-token design and access tests |
+| Venue operations | Partial source review; safeguards exist in code/migrations | Verify effective policies/RPCs, server-calculated pricing, concurrency, expiry and cancellation tests |
+| Trials and opportunity lifecycle | Source audit found split data paths | Unify authoritative DB/API/sitemap path; source verification and lifecycle tests |
+| Notifications | Source audit found demo defaults and persistence/ownership risks | Remove samples, owner-bound access, real delivery worker, honest persistence status |
+| Live sports | Source audit found static fixtures and inferred news/Gemini data path | Genuine licensed structured provider and verified freshness/error handling |
+| Monetization and consent | Source review only | Test actual provider/tag behaviour, all consent states, geography and native app |
+| Mobile/PWA | Not yet audited in detail | Inspect manifests, service worker, Android permissions/ad consent/deep links |
+| AI/LLM/MCP | Partial source inventory only | Inspect tool schemas, auth, least privilege, injection/data leakage, quotas and logging |
+| Operations | Partial source inventory only | Inspect workflows, backup/restore evidence, release gates, monitoring and secret scopes |
+| Technical endpoints | Source audit found IndexNow and SEO consistency risks | Harden endpoint, verify sitemap/crawler/llms claims against real responses |
+
+**Safety boundary unchanged:** no production files, database, settings, migrations or deployments were changed. This pass edited only the private planning audit document. No tests or live endpoint checks were run as part of this source-only pass.
+
+
+## 8. Follow-up source audit: mobile app, MCP, CI and backup operations
+
+**Scope:** read-only inspection of production `main` files `.github/workflows/weekly-supabase-backup.yml`, `.github/workflows/trial-opportunity-data-policy.yml`, `.github/workflows/chatgpt-mcp.yml`, `chatgpt-mcp/README.md`, `chatgpt-mcp/api/mcp.ts`, `app/src/main/AndroidManifest.xml`, `app/src/main/java/com/khelgrid/app/MainActivity.kt`, `app/src/main/java/com/khelgrid/app/ads/AdMobManager.kt`, `package.json` and `vite.config.ts`. No workflow was executed and no mobile build was run.
+
+### 8.1 Android / mobile app — source exists, release readiness not established
+
+- Android manifest requests internet, network-state and advertising ID permissions; declares the Google official sample AdMob application ID. This is appropriate for test builds but not evidence of a production AdMob configuration or monetization readiness.
+- `MainActivity` calls `initialiseAdsWithConsent(this)` before rendering the Compose UI and includes a banner-ad component in the bottom navigation layout. The consent implementation was not fully traced end-to-end in this pass; verify that no ad request or SDK initialization capable of requesting ads occurs before the UMP consent callback resolves for the relevant geography.
+- The manifest has `allowBackup="true"`; inventory the local/session data written by the app and decide whether backups should include any tokens, personal data, cached profile information or wallet/session state. Do not assume Android backup settings are safe by default.
+- The source tree contains a native app and ad manager, but this audit did not inspect the full navigation/deep-link/session implementation, app signing, release workflow, Play Store listing, accessibility or device tests. No claim of native parity or release readiness is warranted.
+- **Required follow-up:** maintain separate test/production ad identifiers; confirm UMP gating through instrumentation/network tests; review Android backup/data-extraction rules and sensitive local storage; document deep links and supported screens; build and test release variants on representative Android versions.
+
+### 8.2 ChatGPT MCP integration — appropriately read-only in design, but not launch-verified
+
+- `chatgpt-mcp/README.md` describes a separate Vercel project using Supabase URL plus anon key, expressly rejects a service-role key, and limits the first version to public opportunity search/detail tools. The MCP handler selects published opportunities and enforces the same status filter in its query.
+- The tool schema caps query fields and result counts; database errors return a generic user-facing message while logging an error code. This is a useful least-privilege direction.
+- The README itself says this is a development scaffold, requires PR typecheck and a real MCP Inspector test, and calls out missing rate limiting/abuse monitoring. The endpoint has not been proven deployed, connected to the intended Supabase project, or tested with MCP Inspector in this audit.
+- **Required follow-up:** verify effective anonymous RLS on the actual project; test malformed requests, query escaping, published/unpublished filtering and sensitive-field minimization; add rate limits/abuse controls and request-size limits at the hosting edge; verify canonical opportunity URLs; run typecheck and MCP Inspector; document data retention and prompt-injection boundaries. Never include private profile, application, payment, wallet or booking tools without a separate authorization design and approval.
+
+### 8.3 CI and release checks — declared gates are not evidence they passed
+
+- The data-policy workflow pins Node.js 22 and runs `npm ci`, the mandatory data-policy script, tests, lint and build for pull requests and pushes to `main`. This is a useful declared quality gate; actual run status was not queried in this source review.
+- The MCP workflow uses Node.js 22 but runs `npm install` rather than `npm ci`, then typecheck only. Reproducible install should be preferred where a committed lockfile exists; add tests and security checks as the endpoint matures.
+- `vite.config.ts` configures the dev server with `allowedHosts: true`, `cors: true`, and `Access-Control-Allow-Origin: *`. This is development-server configuration, not a production security guarantee; verify that these settings are limited to local/dev and do not unintentionally broaden any exposed preview server.
+- **Required follow-up:** inspect recent workflow runs and required branch checks, confirm lockfile and exact Node/npm versions, test the production build, and keep protected deployment/merge gated on passing checks. No checks are represented as passing based solely on workflow YAML.
+
+### 8.4 Backup and recovery — encrypted scheduled dump exists, restore proof is missing
+
+- The weekly backup workflow schedules a Sunday run and also permits manual dispatch. It checks for a database URL and passphrase, creates a PostgreSQL custom-format dump, encrypts it with OpenSSL AES-256-CBC/PBKDF2, calculates a SHA-256 checksum, removes the unencrypted dump, and uploads the encrypted artifact with 90-day retention.
+- The inspected workflow does **not** perform a restore drill or validate the backup by restoring into an isolated disposable database. A non-empty encrypted file plus checksum does not prove decryption, logical consistency or recoverability.
+- The workflow uses repository secrets; verify the scope and environment protection of these secrets, access to backup artifacts, retention needs, passphrase escrow/rotation, artifact download permissions and whether backups include Supabase-managed objects or only the database dump.
+- **Required follow-up:** create a documented restore runbook and scheduled isolated restore verification; verify checksums before decryption; run `pg_restore --list` and an actual restore against a disposable database; test schema/data counts and key constraints; record recovery time and recovery point objectives; ensure backup credentials are read-only where possible and artifact access is restricted. Never run a restore against production as part of an audit.
+
+### 8.5 Operations and release status summary
+
+| Area | Source-level conclusion | Not yet proven |
+|---|---|---|
+| Android / PWA | Native Android source and UMP/AdMob code exist; test ad ID is configured | Consent timing, backup privacy, release signing, actual builds/device tests, full PWA scope |
+| AI / MCP | Read-only public opportunities scaffold with anon key and published-status filter | Deployment, effective RLS, MCP Inspector, rate limits and abuse tests |
+| CI / release | Workflows declare Node 22, tests/lint/build and MCP typecheck | Current run results, required checks, successful build or merge readiness |
+| Backups | Scheduled encrypted dump workflow and 90-day artifact retention exist | Successful scheduled runs, decryption/restore drills, recovery evidence, artifact/secret access review |
+
+**Current audit coverage:** all ten requested parity areas now have at least some source-level inventory or findings in this document. This does **not** mean all ten are fully audited or implemented. Highest priority remaining work is runtime/effective-RLS verification, test execution, canonical route mapping and documented acceptance criteria. No production files, DB, settings, migrations, deployments or PR merge actions were performed.
+
+
+## 9. User-requested six-area status table and completion criteria
+
+This table supersedes any older summary that says these areas simply “need detailed audit.” Source inspection has begun for all six, but source inspection is not the same as end-to-end verification.
+
+| Priority | Area | Current status | What remains to call it complete |
+|---|---|---|---|
+| P0 | Production route parity | **Partially checked — source route inventory recorded** | Generate a canonical route/alias/redirect matrix from production source and private routes; decide preserve/merge/defer/retire for every route; check navigation, HTTP status, canonical URLs, metadata, auth gates and tests. |
+| P0 | Athlete profiles and Sports CV | **Detailed source review started; material security/data gaps found** | Trace every read/write path and final effective RLS policy for legacy and current profile tables; prove owner isolation; replace local-only profile/CV persistence where cross-device persistence is required; remove unverified “verified” claims/sample fallbacks; design private-by-default sharing with revocable opaque tokens and field allowlist; test exports and unauthorized access. |
+| P0 | Venue operations | **Detailed source review started; some safeguards found, runtime unverified** | Verify all migrations/RPC definitions are actually applied to the intended non-production DB; prove admin-only publication, owner-scoped submissions/bookings, server-calculated published price, hours and court availability, hold expiry, overlap/concurrency safety, cancellation transitions and UI loading/empty/error states; execute integration tests. |
+| P1 | Trial applications and notifications | **Source review started; split data paths and notification risks found** | Trace application state transitions and authorization; define evidence and expiry rules; unify DB/API/detail/sitemap as one authoritative source; remove demo notification defaults; prove owner-bound subscriptions, actual durable persistence, push delivery, retries, opt-out and schedule behaviour. |
+| P1 | Live sports | **Source review started; no verified structured score provider established** | Choose provider with documented terms/coverage and commercial redistribution permission; implement real server-side adapter and match IDs; validate freshness/stale states, caching, rate limits, audio controls and provider outages; prove UI never presents fixtures or inferred headlines as live scores. |
+| P1 | Monetization and consent | **Source review started; consent implementation exists, compliance unverified** | Inventory every ad/analytics/third-party tag and placement including native Android; test actual network requests before choice, after grant, after denial and after withdrawal; validate regional consent/UMP behaviour, AdSense account/ads.txt and provider configuration; check layout, frequency, policy disclosures and privacy settings. |
+
+### Acceptance gate for these six areas
+
+Mark an area **verified** only after all applicable evidence exists in the private branch: (1) source diff/review, (2) migrations and effective DB policies reviewed against the intended dev/staging project, (3) automated tests executed with recorded result, (4) manual or integration test evidence for key success and failure paths, and (5) product-owner approval of route/data/provider decisions. Until then, use “partial source audit” or “blocked on verification,” not “complete.”
+
+**Execution boundary:** this update is a status/acceptance-criteria document only. It does not claim tests were run, provider licensing was confirmed, migrations were applied, production was changed, or any feature is complete.
+
+
+## 10. User-requested P1 audit tracker: mobile/PWA, AI/LLM, technical endpoints and operations
+
+These four areas have source-level notes in earlier sections, but the user requests that they remain explicit tracker rows. They are **not complete**; the statuses below distinguish source inspection from runtime/security verification.
+
+| Priority | Area | Current status | What remains |
+|---|---|---|---|
+| P1 | Mobile and PWA | **Partial source audit; needs detailed verification** | Inspect the complete Android/PWA implementation, manifest, service worker/offline caching, install prompts and update flow; test deep links and route handling; compare web/mobile screens and account/data behaviour; verify permissions, local storage/backup exclusions, consent-before-ad-request, accessibility, signing and real device/release builds. |
+| P1 | AI and LLM integration | **Partial source audit; needs detailed verification** | Inventory all MCP/LLM tools and provider configuration; verify the deployed endpoint and environment separation; test effective authorization/RLS and private-data boundaries; validate input/output schemas, prompt-injection resistance, untrusted source handling, secret exposure, tool permissions, rate limits, logging/retention and failure behaviour; run MCP Inspector and relevant automated security tests. |
+| P1 | Technical endpoints | **Source review found IndexNow/SEO consistency risks; needs endpoint tests** | Enumerate every API, text and verification endpoint; check actual status codes, response schemas, cache/CORS/security headers, authentication, validation, rate limits and error responses; constrain IndexNow URLs to the canonical owned host; test robots.txt, sitemap.xml, ads.txt, llms.txt, API endpoints and canonical/indexing rules against the intended release. |
+| P1 | Operations | **Partial workflow source audit; needs operational evidence** | Inspect actual CI/deployment runs, required checks, branch protections and release approvals; confirm Node/npm/lockfile reproducibility; verify secret scopes, monitoring/alerts and error reporting; prove encrypted backups can be decrypted and restored into an isolated database; document incident response, rollback, RPO/RTO and recovery ownership. |
+
+### Evidence required before changing status to complete
+
+- **Mobile/PWA:** a real production build plus installation, navigation/deep-link, offline/update and consent tests on supported browsers/devices.
+- **AI/LLM:** tool-by-tool authorization matrix, privacy/data-flow review, injection and unauthorized-access tests, and successful MCP Inspector verification against a non-production deployment.
+- **Technical endpoints:** automated contract/security tests plus real HTTP response checks for success, invalid input, unauthenticated requests, rate limits and unavailable dependencies.
+- **Operations:** links/results for required CI and deployment checks, monitoring/error reporting evidence, and a successful isolated backup restore drill.
+
+**Safety and accuracy note:** this is a private-repository audit-tracker update. It does not claim that the above tests were executed, the backup restored successfully, any provider is live, or production was changed. The production repository, database and deployment remain untouched.
+
+
+## 11. Consolidated ten-area tracker (latest status)
+
+Use this consolidated table as the current summary. Earlier sections preserve detailed source findings and audit notes.
+
+| Priority | Area | Current status | What remains |
+|---|---|---|---|
+| P0 | Production route parity | **Partially checked** | Reconcile every production source route, alias, dynamic route, API/text endpoint and redirect against the private plan; approve preserve/merge/defer/retire decisions; test navigation, status codes, canonical metadata and auth gates. |
+| P0 | Athlete profiles and Sports CV | **Needs detailed verification; source review has identified material gaps** | Verify onboarding, profile visibility, CV editor, sharing/export, persistence and final effective access rules; audit every read/write path; test owner isolation and remove unverified “verified” claims/sample fallback. |
+| P0 | Venue operations | **Needs detailed verification; source safeguards found** | Verify owner submissions, admin review/publication, DB-authoritative pricing, operating hours, availability, expired holds, concurrent booking transactions, ownership, cancellation and applied migrations/RPCs in non-production; execute integration tests. |
+| P1 | Trial applications and notifications | **Needs detailed verification; source review found split paths and notification risks** | Trace application state machine, applicant ownership, evidence and expiry; unify DB/API/detail/sitemap truth; verify real subscription persistence, scheduled delivery, retry/idempotency, unsubscribe and opt-out; remove sample defaults. |
+| P1 | Live sports | **Needs detailed verification; no authoritative structured score provider established in inspected source** | Inspect adapters, caching, audio and stale-data behaviour; confirm provider coverage, licensing/redistribution terms and real credentials; test freshness, failures and rate limits; prevent fixtures/news inference from appearing as live scores. |
+| P1 | Monetization and consent | **Needs detailed verification; consent implementation exists, compliance unverified** | Trace every ad loader/placement, analytics tag and third-party integration; test unknown/granted/denied/withdrawn states and actual network requests; validate UMP/geography, AdSense/ads.txt configuration, privacy disclosures and native app behaviour. |
+| P1 | Mobile and PWA | **Needs detailed verification; partial Android source audit recorded** | Inspect Android/PWA install, manifest, service worker/offline updates, deep links, permissions, web/mobile parity, local-data backup rules and consent; run real device and release-build tests. |
+| P1 | AI and LLM integration | **Needs detailed verification; partial read-only MCP source audit recorded** | Inspect every MCP tool/provider and environment; verify authorization/RLS, private-data boundaries, input/output validation, prompt-injection resistance, secrets, rate limits and retention; run security tests and MCP Inspector against non-production. |
+| P1 | Technical endpoints | **Needs detailed verification; IndexNow and SEO risks found in source** | Verify endpoint implementations and real responses/status codes, access controls, validation, cache/CORS/security headers and errors; harden IndexNow; test robots, sitemap, ads.txt, llms.txt and canonical/indexing rules. |
+| P1 | Operations | **Needs detailed verification; workflow definitions reviewed, operational evidence missing** | Inspect actual workflow runs and release gates, monitoring/error reporting, branch protection and secret scopes; confirm dependency/toolchain reproducibility; perform an isolated backup restore drill and document rollback, incident response and RPO/RTO. |
+
+**Global status:** no area is fully verified end-to-end from the evidence gathered so far. “Source reviewed” means code/configuration was inspected; it does not mean tests passed or a live service is working. Completion requires recorded test/runtime evidence and owner approval where decisions affect data, providers, migrations or production.
+
+
+## Documentation follow-through (2026-10-25)
+
+The following supporting documents were added to the private rebuild branch to make the audit actionable. They are baselines, not evidence that the implementation is already compliant:
+
+- [Documentation Index](DOCUMENTATION_INDEX.md)
+- [Requirements and Acceptance Criteria](REQUIREMENTS_AND_ACCEPTANCE_CRITERIA.md)
+- [Security and Authorization Matrix](SECURITY_AND_AUTHORIZATION_MATRIX.md)
+- [Testing and Release Gates](TESTING_AND_RELEASE_GATES.md)
+- [External Provider and Licensing Register](EXTERNAL_PROVIDER_AND_LICENSING_REGISTER.md)
+- [Incident Response and Disaster Recovery](INCIDENT_RESPONSE_AND_DISASTER_RECOVERY.md)
+
+Next evidence-driven steps: map each P0 audit finding to a requirement and test; inspect effective policies and RPCs in an isolated non-production environment; record exact CI run results; complete a restore drill; and obtain owner approval before any production change. No production changes or deployment were performed as part of this documentation update.
+
+
+## P0 execution gate — current private-rebuild source check (2026-10-25)
+
+This is a source-level follow-up to the tracker above, not an end-to-end verification.
+
+### Repository and CI evidence
+- The current `feat/app-shell-discovery-modules` branch head during this check was `45cca41bce857b9e889dd609389ad7b85589a682`.
+- PR #2 (`Build responsive app shell and discovery modules`) is **merged and closed**, with merge commit `4759d8f2d66f7504ffb4e29bfc48eb410cec38f7`; it is not currently a draft PR.
+- The branch metadata reported branch protection disabled.
+- GitHub commit-status and PR-workflow-run lookups returned no status entries/workflow runs for the checked commits. This is **no CI evidence available from those queries**, not proof that commands pass or that no workflow ever ran.
+- The repo package scripts declare Node >=22 and `typecheck`, `lint`, `test`, and `build`. They have not been executed in a real checkout in this session.
+
+### Route parity observations
+- `src/App.tsx` currently implements the Home, Sports, Opportunities and Venues discovery pages plus aliases for trials/combines/scholarships/camps and `/book`.
+- `/sports/:slug` currently renders the generic SportsPage instead of a distinct sport-detail page. This should be recorded as incomplete detail-route parity until a real detail journey and test exist.
+- `/book` currently renders the venue directory. The footer and venue page correctly state booking/live availability are not enabled, but this route is not a booking workflow and must not be advertised as one.
+- Unknown paths render an in-app not-found section; direct-load, back/forward, refresh and canonical/redirect behaviour still need automated/browser tests.
+
+### Athlete profile and Sports CV observations
+- `src/modules/sports-cv/README.md` and `docs/features/SPORTS_CV.md` are specifications only; a CV builder, persistence, PDF export and profile/share routes are not implemented in this private rebuild source tree.
+- The current core schema includes a private owner-scoped `profiles` table but no CV, application, share-token or athlete-achievement tables in the inspected initial schema.
+- Do not add server-side CV persistence or public sharing until storage scope, privacy defaults, field allowlist, export requirements and authentication are approved. A private local-only builder/export can be scoped separately if accepted.
+
+### Venue and database safeguards observations
+- The initial schema creates RLS policies for own-profile access and published-only catalogue reads, and grants authenticated users profile writes while denying catalogue writes through the public client roles. The included SQL assertions inspect configured grants/policies but explicitly do not replace JWT/PostgREST tests.
+- The inspected initial schema contains venue/court directory fields, but no booking, hold, availability, operating-hours or atomic booking RPC objects. Therefore this rebuild cannot yet safely accept bookings; keep booking disabled and do not imply slot availability.
+- Static source review is not confirmation that this migration is applied to the intended dev project or that the effective database policy set matches the file. Verify project identity, migrations, grants, effective policies and anon/authenticated JWT behaviour in isolated non-production before any write or booking implementation.
+
+### Required next evidence
+1. Add tests for supported routes, sport-detail behaviour, aliases, 404, refresh and history navigation.
+2. Decide whether first-release Sports CV is local-only export or authenticated server persistence; then implement only that approved scope and test privacy.
+3. Keep `/book` explicitly informational until the owner approves booking scope and database safeguards exist.
+4. Run `npm ci`, `npm run typecheck`, `npm run lint`, `npm run test`, and `npm run build` in a real checkout using Node 22; attach exact commit and logs.
+5. In the verified development Supabase project, run the read-only catalog assertions and inspect effective grants/policies; do not apply migrations or run writes until target project and migration plan are explicitly confirmed.
+
+No production resources were accessed for mutation, and no migration, deployment or code change was performed in this source-check step.
