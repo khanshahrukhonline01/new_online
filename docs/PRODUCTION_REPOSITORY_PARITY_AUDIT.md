@@ -223,3 +223,47 @@ This is the initial disposition proposal for source-defined routes. The product 
 - [ ] Confirm all current production feature claims before copying them to the rebuild.
 - [ ] Keep unimplemented/deferred routes out of navigation or show a clear, honest unavailable state.
 - [ ] Record each decision with owner and date; review before release.
+
+
+## 11. Detailed audit — athlete profiles and Sports CV (P0 parity gate)
+
+**Status: Gap found — source implementation inspected; end-to-end behaviour and deployed runtime not verified.** This is a source-code review of the production repository's `main` branch, not an authorization to copy the implementation or deploy changes. Evidence links below point to the inspected source files.
+
+### Evidence reviewed
+
+- [`SportsCV.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/components/SportsCV.tsx): card/edit/split/wizard views; editor changes call the CV save helper; PNG export and sharing controls exist; reset starts with blank achievements and sets `verified: false`.
+- [`SportsCVEditor.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/components/SportsCVEditor.tsx): editor supports athlete identity, sport/position, achievements, stats and performance metrics; Hindi label support is present in the component.
+- [`AthleteOnboardingWizard.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/components/AthleteOnboardingWizard.tsx): six-step onboarding UI exists (identity, position, benchmarks, honours, socials/reels, finalize); imports `updateUserProfile` and CV storage helpers. A complete persistence/authorization journey was not established by this file alone.
+- [`sports-cv-storage.ts`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/lib/sports-cv-storage.ts): CV load/save uses browser `localStorage` under `khelgrid_athlete_sports_cv_v2`, with in-memory fallback. `getBlankSportsCV()` is empty and unverified, but `getDefaultSportsCV()` contains a fully populated fictional-looking athlete, achievements, statistics, a coach contact and `verified: true`; all consumers must be checked to ensure it is used only in clearly labelled demos/tests.
+- [`sports-cv-sharing.ts`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/lib/sports-cv-sharing.ts): public CV links can encode the entire CV as a base64url `data` query parameter; a localStorage/in-memory registry is also used for slug resolution. That registry is browser-local, not a cross-device server source of truth. Base64 encoding is not encryption or access control.
+- [`ShareSportsCVModal.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/components/ShareSportsCVModal.tsx): sharing UI creates link/QR/social-share actions. Its success copy describes a public profile, but a production-safe server-side publication, owner authorization and revocation workflow were not demonstrated by this component.
+- [`user-profile-service.ts`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/lib/user-profile-service.ts): profile reads attempt Supabase only when configured and a current authenticated user is available, then fall back to browser-local data and default profile data. The file includes seeded default profile, achievement, membership and enrollment examples. A complete write-path/RLS review is still required before relying on it for real accounts.
+
+### Checklist and findings
+
+| Requirement | Status | Evidence-based finding / remaining work |
+|---|---|---|
+| Onboarding flow | Partially verified | A six-step wizard exists. Verify required-field validation, cancel/resume behaviour, age/minor consent, accessibility, duplicate submissions and success/error states with tests. |
+| Profile visibility | Gap found | Private self-profile versus public athlete profile is not proven to be enforced end-to-end. Define explicit visibility states (private, unlisted/share-link, public), consent, field-level exposure and revocation. |
+| CV editor | Partially verified | A structured editor and update handler exist. Test all fields, validation, malformed/oversized input, mobile layouts and keyboard/screen-reader access. |
+| Export | Partially verified | PNG card export is present. Verify generated output, failure handling, font/image loading, and whether a PDF export is actually supported; do not claim PDF parity without evidence. |
+| Share links / QR | Gap found | Share URL can carry the full CV in a query string and browser-local registry. Query strings can be retained in browser history, server/proxy logs, analytics and referrer data. Prefer an opaque, revocable share token backed by a server record; exclude private contact/identity fields by default. |
+| Persistence | Gap found | Sports CV data is browser-local, not a server-persisted athlete-owned record. Device/browser changes can lose access; browser data is not an authenticated source of truth. Define local draft vs account-synced state and conflict/recovery behaviour. |
+| Authentication and ownership | Unable to verify | Profile service calls Supabase auth for a profile read, but this does not establish that every CV/profile read and write is authorized. Inspect all write paths, route guards, RLS policies and service-role boundaries. |
+| Access rules / RLS | Unable to verify | This review has not yet traced the relevant migrations and database policies to prove that users can read/write only their own private records and that public shares expose only approved fields. |
+| Verification claims | Gap found | The default CV fixture includes `verified: true` and sample achievements with verified flags. Prohibit fixture/default data from real-user flows; verification badges must be derived from a trusted review record, not user-editable CV fields. |
+| Demo/sample data | Gap found | Default profile/achievement/membership fixtures exist in `user-profile-service.ts`. Confirm every consumer labels these as examples and that no seeded fixture appears as a genuine athlete, award, membership or verification in production. |
+| Language support | Partially verified | English/Hindi labels and a language helper are present. Validate the full wizard, errors, exported artifacts and persistence in both languages; document unsupported translations honestly. |
+
+### Required private-platform decisions before implementation
+
+1. **Stage A:** Keep account/auth and private profile editing explicitly unconnected until authentication, ownership, RLS and privacy controls are implemented and tested. A local-only CV draft may be offered only with a clear local-storage warning.
+2. **CV data model:** Separate private profile fields, CV content, verified achievements/evidence and public-share projection. Never trust client-supplied `verified` flags.
+3. **Sharing:** Do not reproduce the full-CV-in-query-string pattern. Use a high-entropy opaque share token, server-side allowlisted projection, explicit opt-in, revocation/expiry and no-index metadata where appropriate. Avoid exposing email, phone, exact birth date, private coach contacts or evidence documents by default.
+4. **Persistence:** Use authenticated owner-scoped server persistence for account-synced data; enforce access in database policies and server operations, not only in UI. Retain a separately labelled local draft mode if needed.
+5. **Fixture policy:** Sample athletes, achievements, metrics, coach references, memberships and verification badges must never be presented as real records. Use empty defaults in real-user creation flows.
+6. **Acceptance tests:** Cover unauthenticated access, cross-user read/write attempts, public projection allowlist, share-token revocation/expiry, local draft recovery, save failures, onboarding validation, export and Hindi/English rendering.
+
+### Audit boundary / next steps
+
+The source files above were inspected, but no production code or data was changed. Before marking this area **Verified**, inspect the profile/CV route definitions and guards, all profile/CV write operations, Supabase migrations/RLS policies, and relevant unit/integration/e2e tests; then execute those tests in the private platform checkout. The presence of a migration or test file alone is not proof of a passing security control.
