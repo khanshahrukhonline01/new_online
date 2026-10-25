@@ -44,7 +44,11 @@ jobs:
           rm -f public.dump
           test -s khelgrid-public.dump.age
           sha256sum khelgrid-public.dump.age > khelgrid-public.dump.age.sha256
-          printf '%s\n' "$AGE_IDENTITY" > age-identity.txt
+          # Keep only the age secret-identity line; omit generated comments or accidental labels.
+          printf '%s\n' "$AGE_IDENTITY" | tr -d '\r' | grep -E '^AGE-SECRET-KEY-[0-9A-Z]+' > age-identity.txt || {
+            echo "BACKUP_AGE_IDENTITY must contain the private line beginning AGE-SECRET-KEY-1; update the GitHub secret from identity.txt without sharing it."
+            exit 1
+          }
           chmod 600 age-identity.txt
           age --decrypt --identity age-identity.txt khelgrid-public.dump.age >/dev/null
           rm -f age-identity.txt
