@@ -4,6 +4,71 @@
 **Scope:** Proposed pages/routes to build; this is not a claim that these routes already exist.  
 **Production safety:** This inventory applies only to this repository and its development Supabase project. Do not modify or deploy to the production `khelgrid-monetization-studio` project as part of this work.
 
+## Architecture requirement: scalable, modular platform
+
+The page inventory must be implemented as independent feature modules inside one cohesive application, not as one giant page/component or a flat collection of unrelated routes.
+
+### Module boundaries
+
+Each feature module should own its route definitions, pages, reusable components, data-access functions, validation/types, tests, and feature-specific documentation. Modules communicate through explicit shared contracts and services rather than importing each other's internal files.
+
+Suggested structure (adapt as the project grows; do not create empty boilerplate for every future feature):
+
+    src/
+      app/                 # router, providers, layouts, navigation, route guards
+      shared/              # UI, hooks, types, validation, utilities, errors
+      modules/
+        home/
+        search/
+        sports/
+        opportunities/
+        venues/
+        booking/
+        coaches/
+        academies/
+        athletes/
+        sports-cv/
+        live-sports/
+        events/
+        guides/
+        cities/
+        account/
+        submissions/
+        notifications/
+        admin/
+      integrations/        # Supabase and external provider adapters
+      styles/
+
+A module is added when its implementation is prioritized; future modules may remain documented without empty folders.
+
+### Module design rules
+
+1. **Route composition:** a central router composes route exports from modules. Modules own their paths and page components. Use lazy loading/code splitting for larger or optional modules.
+2. **Single responsibility:** pages compose UI; components render UI; services implement use cases; repositories/data-access functions talk to the backend; schemas validate inputs/outputs. Keep complex business rules out of page components.
+3. **Dependency direction:** modules may depend on shared code and approved integrations; shared code must not depend on feature modules. Cross-module calls use public exports or application-level use cases, not deep imports.
+4. **Backend boundary:** keep Supabase access behind typed data-access/service functions. Never put service-role keys or secrets in browser code. Database RLS and constraints are the security boundary; client route guards are only UX.
+5. **Contracts first:** define typed domain models and validated inputs/outputs for opportunities, venues, courts, bookings, athletes, and sports. Use stable IDs; slugs are URL identifiers, not authorization.
+6. **Feature availability:** optional features (authentication, booking, payments, live data, paid plans) stay disabled until real backend/provider integrations and acceptance tests are ready. Feature flags are not security controls.
+7. **Failure states:** data modules handle loading, empty, validation, permission-denied, not-found, provider-unavailable, and unexpected-error cases consistently.
+8. **Testing:** add unit tests for domain rules/services, component tests for key states, integration tests for data access where feasible, and end-to-end tests for critical journeys.
+9. **Design system:** shared design tokens, accessible UI primitives, responsive layouts, consistent forms, feedback, and error messages live in shared UI; feature modules compose them.
+10. **SEO:** public route metadata, canonical URLs, indexability, structured data, and sitemap eligibility are defined per route. Private/admin pages must not be indexable.
+11. **Observability:** use structured, privacy-safe logs. Never log secrets, authentication tokens, or sensitive athlete data.
+12. **Migrations and portability:** schema changes are versioned migrations, reviewed, tested against development, and reversible where possible. Avoid undocumented provider-specific dependencies.
+13. **No speculative functionality:** fake data must never be presented as real. A route rendering is not proof a feature is complete.
+
+### Shared platform services
+
+Introduce shared services only when a real use case exists: typed data access, authentication/session interface, permissions mapping, shared search/filter contract, SEO helpers, privacy-conscious analytics, feature flags, safe error reporting, and notifications. Feature flags never replace authorization. Avoid generic abstractions before multiple real features need them.
+
+### Module delivery contract
+
+Every module defines its purpose and scope; owned routes/navigation; domain types and validation; public exports; backend tables/policies/migrations; loading/empty/error/unauthorized/not-found states; tests; accessibility/responsive requirements; SEO rules; dependencies; rollout status; and acceptance criteria.
+
+### Module implementation status
+
+Track each module as **Planned**, **In progress**, **Blocked**, **Implemented**, or **Verified**. Use **Verified** only after relevant tests pass and real data/security behaviour is checked. Route existence alone is not proof of completion.
+
 ## Route principles
 
 - Build shared layouts and reusable page templates rather than one-off pages.
