@@ -41,3 +41,7 @@
 - [Implementation Checklist](IMPLEMENTATION_CHECKLIST.md) — additive execution tracker; unchecked items are not complete.
 - The full website development plan is the frozen planning baseline. Preserve existing documentation and audit history; record future scope changes additively with explicit approval.
 - This freeze is not evidence of implementation, passing tests, completed content audit, or production deployment approval.
+
+
+## Route parity and test evidence (2026-10-25)
+- [Production Route Parity and Baseline Report](PRODUCTION_ROUTE_PARITY_AND_BASELINE_REPORT.md) — source-based inventory of production web routes, proposed MVP/deferred dispositions, critical parity gaps, and exact-commit CI evidence. This is not a runtime route audit or production release approval.
