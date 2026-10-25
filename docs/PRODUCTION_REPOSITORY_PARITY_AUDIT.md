@@ -553,3 +553,17 @@ Use this consolidated table as the current summary. Earlier sections preserve de
 | P1 | Operations | **Needs detailed verification; workflow definitions reviewed, operational evidence missing** | Inspect actual workflow runs and release gates, monitoring/error reporting, branch protection and secret scopes; confirm dependency/toolchain reproducibility; perform an isolated backup restore drill and document rollback, incident response and RPO/RTO. |
 
 **Global status:** no area is fully verified end-to-end from the evidence gathered so far. “Source reviewed” means code/configuration was inspected; it does not mean tests passed or a live service is working. Completion requires recorded test/runtime evidence and owner approval where decisions affect data, providers, migrations or production.
+
+
+## Documentation follow-through (2026-10-25)
+
+The following supporting documents were added to the private rebuild branch to make the audit actionable. They are baselines, not evidence that the implementation is already compliant:
+
+- [Documentation Index](DOCUMENTATION_INDEX.md)
+- [Requirements and Acceptance Criteria](REQUIREMENTS_AND_ACCEPTANCE_CRITERIA.md)
+- [Security and Authorization Matrix](SECURITY_AND_AUTHORIZATION_MATRIX.md)
+- [Testing and Release Gates](TESTING_AND_RELEASE_GATES.md)
+- [External Provider and Licensing Register](EXTERNAL_PROVIDER_AND_LICENSING_REGISTER.md)
+- [Incident Response and Disaster Recovery](INCIDENT_RESPONSE_AND_DISASTER_RECOVERY.md)
+
+Next evidence-driven steps: map each P0 audit finding to a requirement and test; inspect effective policies and RPCs in an isolated non-production environment; record exact CI run results; complete a restore drill; and obtain owner approval before any production change. No production changes or deployment were performed as part of this documentation update.
