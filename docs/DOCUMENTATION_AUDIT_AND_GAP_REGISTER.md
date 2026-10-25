@@ -5,6 +5,8 @@
 
 ## 1. Audit summary
 
+A separate read-only comparison against the public production source repository is now available in [Production Repository Parity Audit](PRODUCTION_REPOSITORY_PARITY_AUDIT.md). It records source-defined routes, feature families, backend/workflow areas and public/private asset requirements that need explicit reconciliation with the private plan. Treat these as source-tree findings, not proof of live runtime behaviour.
+
 The repository has an established planning baseline: master plan, page inventory, product requirements, roadmap, route catalogue, data dictionary/schema documents, feature specifications, security/reliability documents, policy drafts and release procedures. The initial audit found a few references in the master plan that pointed to files not yet present, plus overlaps between menu labels that need canonical ownership.
 
 ### Evidence rules
