@@ -302,3 +302,55 @@ Legal pages must be reviewed for the actual product and jurisdiction before laun
 ## Scope decision record
 
 This is a comprehensive proposed inventory, not a promise to build every route in the first release. Prioritize pages that have real data and a tested user journey. Keep optional, paid, provider-dependent, or account-dependent pages hidden or clearly marked unavailable until ready.
+
+## Additional architecture and launch safeguards
+
+### Route correctness and URL governance
+
+- Resolve static paths before dynamic parameter paths. For example, `/opportunities/submit` must be matched as a static route before `/opportunities/:id`; likewise `/venues/submit` must not be interpreted as a venue slug. Add explicit route tests for these collisions.
+- Prefer one canonical URL for each page. Redirect aliases such as `/membership` to `/memberships` instead of creating duplicate content.
+- Define trailing-slash, case, slug, query-parameter, pagination, and filter URL rules consistently. Preserve meaningful search filters while avoiding infinite combinations of indexable URLs.
+- Use stable IDs for record lookups and human-readable slugs for URLs. Validate that a slug belongs to the requested record and return a real 404 for missing/deleted/unpublished content.
+- Decide which routes are public, authenticated, role-restricted, noindex, redirect-only, or not yet enabled. Keep this registry alongside the router so sitemap, navigation, and access behaviour do not drift.
+
+### Scalable without premature complexity
+
+- Start with a **modular monolith**: one frontend app, one development Supabase project, clearly separated feature modules, and explicit interfaces. Do not split into microservices or separate deployments until measured operational needs justify it.
+- Keep module APIs small. A module exports its route registration, public UI pieces, and approved use cases; internal components and repositories stay private.
+- Use shared packages only for code that has multiple real consumers. Avoid a generic CMS, event bus, plugin marketplace, or elaborate permissions framework until the product requires it.
+- Apply code splitting to large or rarely used modules (such as admin tools and the CV editor) and measure bundle size rather than splitting every tiny component.
+- Use database indexes based on actual query/filter patterns, pagination for large lists, and bounded queries by default. Avoid fetching whole tables into the browser.
+- Add caching only where staleness and invalidation rules are understood. Booking availability and authorization-sensitive data must not rely on stale public caches.
+
+### Data lifecycle and moderation
+
+- Model listing lifecycle explicitly: draft/submitted, under review, published, rejected, expired/closed, archived, and removed where applicable. Document legal transitions and which roles may perform them.
+- Keep source URL, source checked-at time, status, and moderation/audit history for sourced opportunities. Expired records should automatically stop appearing in active listings based on verified event dates/status.
+- Use server/database constraints for critical invariants, atomic operations for reservations, and idempotency for retryable submissions/actions where relevant.
+- Define deletion, correction, retention, export, and user privacy workflows before collecting sensitive athlete or minor-related data.
+- Do not collect precise location, date of birth, identity documents, health data, or other sensitive details unless there is a documented need, appropriate safeguards, and consent/legal review.
+
+### Accessibility, localization, and responsive behaviour
+
+- Target WCAG 2.2 AA as the accessibility goal: semantic landmarks, keyboard navigation, visible focus, adequate contrast, accessible validation, reduced-motion support, and screen-reader announcements for async status changes.
+- Design mobile-first and test small screens, touch targets, long Indian place names, and slow connections. Keep navigation usable without hover.
+- Prepare translation-ready UI strings and locale-aware dates/numbers. Add Hindi and other languages only with reviewed translations; do not mix translated labels with untranslated validation messages.
+- Ensure forms preserve safe user input after recoverable errors and explain what can be corrected.
+
+### Operational quality gates
+
+Before a module can be marked **Implemented**: its routes render, core interactions work, and lint/typecheck/build pass.
+Before a module can be marked **Verified**: route collision and permission tests pass; real data access and RLS are checked where applicable; loading/empty/error/not-found states are tested; mobile and accessibility checks are performed; and critical user journeys have automated tests or a recorded manual test.
+
+Every release should run formatting/lint, TypeScript checks, unit tests, production build, migration validation, and critical end-to-end tests available in the project. Dependency/security checks and bundle-size monitoring should be added to CI where feasible. A green build alone does not prove correct data or authorization behaviour.
+
+### Inventory governance
+
+- Treat this file as the route proposal; maintain a separate route registry or typed route manifest as implementation begins. Do not maintain duplicate hand-written route lists across navigation, sitemap, and access rules.
+- For each route, track: owner module, visibility, authentication/role requirement, data source, indexability, status, acceptance criteria, and tests.
+- Review the inventory whenever a module is added, retired, renamed, or its access/data requirements change. Document redirects before removing public URLs.
+- Build only prioritized modules; planned routes are not promised features and should not appear in navigation until ready.
+
+### Immediate implementation gate
+
+Before adding all planned pages, inspect the starter app and dependencies, choose and document the routing approach, add the shared application shell and error boundaries, and establish lint/typecheck/test/build checks. Then migrate one small vertical slice (for example, sports directory) through route, UI, typed data access, loading/error states, tests, and SEO before repeating the pattern for other modules. This validates the architecture without generating empty folders or fake content.
