@@ -261,3 +261,42 @@ Use one status per route:
 - **Retired** — route removed/redirected with migration plan.
 
 Do not mark a route released based on documentation or a rendered placeholder alone.
+
+
+## 10. Production parity additions: routes missing from the main tree
+
+The production repository parity audit is the detailed disposition register. Add these source-derived routes to the route catalogue so the main route inventory is complete. Proposed destinations are subject to approval and redirect planning.
+
+- `/district-infrastructure` — sports infrastructure directory; include geographic coverage, source and last-updated date.
+- `/sport/:slug` — legacy alias for `/sports/:sportSlug`; redirect to the canonical route if equivalent.
+- `/sport-in-city/:slug` — sport/city landing; specify both identifiers and index only when the page has unique useful content.
+- `/city/:slug` — legacy alias for `/cities/:citySlug`.
+- `/live-scores` — live score and match centre; only display licensed, genuine provider data and a truthful unavailable/stale state.
+- `/my-stats` — future private athlete statistics view; define metric source and profile ownership.
+- `/recommendations` — future recommendations page; document ranking inputs, explainability and avoid unsupported AI claims.
+- `/cv` and `/cv/:id` — legacy CV routes; reconcile with `/sports-cv`, separate private editing from public sharing, and provide revocable share access.
+- `/guide/:slug` — legacy guide alias for `/guides/:guideSlug`.
+- `/top-guides/:category` — category landing; merge into guide taxonomy if there is unique useful content.
+- `/best-tools/:category` — tool-category landing; avoid thin SEO pages and unsupported rankings.
+- `/blog/write` — private editorial authoring workflow; require roles, audit trail and publication review.
+- `/admin-venue-submissions` — private admin alias; use `/admin/venue-submissions` with backend-enforced access.
+- `/verification-policy`, `/trust-center`, `/cancellation-policy`, `/copyright-policy`, `/ipr-policy`, `/correction-policy`, `/editorial-policy`, `/posh-policy` — policy/trust pages; consolidate overlapping policies carefully, preserve valid legacy links and obtain owner/legal review.
+- `/api/indexnow` — server-side indexing notification endpoint, only if required; validate method, authorization, rate limits and secret handling.
+- `/api/trials` — typed trial/opportunity API; define schema, public-only filters, query validation, rate limits and stable errors.
+- verification-token text endpoint — keep only if an active provider requires it; document purpose, ownership and expiry.
+- `/robots.txt`, `/sitemap.xml`, `/ads.txt`, `/llms.txt` — technical/public metadata endpoints with distinct rules; never treat `llms.txt` as access control.
+
+## 11. Production shared-component capabilities to map
+
+These are component or service capabilities, not automatically separate routes:
+- venue detail/court cards, facilities/amenities, venue policies, photos/carousel, reviews, operating hours, court-specific pricing, date picker, availability, booking form, confirmation and cancellation;
+- game hosting/detail, pickup-game lobby, play FAQ and safety guidance;
+- event calendar cards, event countdown, filters, saved-event UI and sourced calendar content;
+- sports news, match analysis, statistics and prediction tools;
+- athlete onboarding/profile agent, CV editor, PDF/export, share-CV modal, notifications and preferences;
+- newsletter signup and consented communications;
+- ad consent, ad wrappers/slots, mobile sticky ad, ad loader/diagnostics and analytics;
+- PWA install prompt and native Android parity;
+- trial data policy automation, scheduled notification worker, weekly backup, release workflows and MCP deployment.
+
+For each capability, document its canonical owning route, API/data source, access class, consent/licence requirements, error states, tests and disposition in the parity audit. Shared components should not create duplicate route definitions.
