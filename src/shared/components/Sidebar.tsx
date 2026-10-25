@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, type MouseEvent, type RefObject } from 'react'
 import { navigationModules, type NavigationItem } from '../navigation/navigationRegistry'
 
 type SidebarProps = {
   activePath: string
-  onNavigate: (event: React.MouseEvent<HTMLAnchorElement>, target: string) => void
+  onNavigate: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
   open: boolean
   onClose: () => void
-  toggleRef: React.RefObject<HTMLButtonElement | null>
+  toggleRef: RefObject<HTMLButtonElement | null>
 }
 
 function isActive(item: NavigationItem, activePath: string) {
@@ -35,8 +35,8 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false 
 }
 
 export default function Sidebar({ activePath, onNavigate, open, onClose, toggleRef }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false)
   const closeRef = useRef<HTMLButtonElement>(null)
+  const drawerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (open) closeRef.current?.focus()
@@ -44,43 +44,60 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
 
   useEffect(() => {
     if (!open) return
-    function handleEscape(event: KeyboardEvent) {
+    function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
+        event.preventDefault()
         onClose()
         toggleRef.current?.focus()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const drawer = drawerRef.current
+      if (!drawer) return
+      const focusable = Array.from(drawer.querySelectorAll<HTMLElement>('a[href]:not([aria-disabled="true"]), button:not(:disabled), [tabindex="0"]'))
+        .filter(element => element.offsetParent !== null)
+      if (!focusable.length) {
+        event.preventDefault()
+        return
+      }
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && (document.activeElement === first || !drawer.contains(document.activeElement))) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && (document.activeElement === last || !drawer.contains(document.activeElement))) {
+        event.preventDefault()
+        first.focus()
       }
     }
-    window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open, onClose, toggleRef])
 
   return <>
-    <button className={open ? 'sidebar-backdrop is-visible' : 'sidebar-backdrop'} type="button" aria-label="Close navigation menu" tabIndex={open ? 0 : -1} onClick={() => { onClose(); toggleRef.current?.focus() }} />
-    <aside className={collapsed ? 'app-sidebar is-collapsed' : 'app-sidebar'} aria-label="Sidebar navigation">
+    <button className={open ? 'sidebar-backdrop is-visible' : 'sidebar-backdrop'} type="button" aria-label="Close navigation menu" aria-hidden={!open} tabIndex={open ? 0 : -1} onClick={() => { onClose(); toggleRef.current?.focus() }} />
+    <aside className="app-sidebar" aria-label="Sidebar navigation">
       <div className="sidebar-brand-row">
         <a className="sidebar-brand" href="/" onClick={event => onNavigate(event, '/')} aria-label="KhelGrid home">
           <span className="brand-mark" aria-hidden="true">K</span>
           <span className="sidebar-brand-name">KHELGRID</span>
         </a>
-        <button className="sidebar-collapse-button" type="button" onClick={() => setCollapsed(value => !value)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-pressed={collapsed}>{collapsed ? '»' : '«'}</button>
-        <button ref={closeRef} className="sidebar-mobile-close" type="button" onClick={() => { onClose(); toggleRef.current?.focus() }} aria-label="Close navigation">×</button>
       </div>
       <nav className="sidebar-navigation" aria-label="Feature navigation">
         {navigationModules.map(section => <section className="sidebar-module" key={section.id} aria-label={section.label}>
-          {!collapsed ? <p className="sidebar-module-label">{section.label}</p> : null}
-          {section.items.map(item => <SidebarLink key={item.id} item={item} activePath={activePath} onNavigate={onNavigate} collapsed={collapsed} onClose={onClose} />)}
+          <p className="sidebar-module-label">{section.label}</p>
+          {section.items.map(item => <SidebarLink key={item.id} item={item} activePath={activePath} onNavigate={onNavigate} onClose={onClose} />)}
         </section>)}
       </nav>
-      {!collapsed ? <div className="sidebar-promo"><span className="sidebar-promo-icon" aria-hidden="true">✦</span><strong>Create your Sports CV</strong><p>Build a profile-ready CV and export it when you're ready.</p><a href="/sports-cv" onClick={event => onNavigate(event, '/sports-cv')}>Explore CV tools <span aria-hidden="true">↗</span></a></div> : null}
+      <div className="sidebar-promo"><strong>Create your Sports CV</strong><p>Build a profile-ready CV and export it when you're ready.</p><a href="/sports-cv" onClick={event => onNavigate(event, '/sports-cv')}>Explore CV tools <span aria-hidden="true">↗</span></a></div>
       <div className="sidebar-bottom">
-        <a className="sidebar-link sidebar-muted-link" href="/settings" aria-disabled="true" onClick={event => event.preventDefault()} title={collapsed ? 'Settings (not available yet)' : undefined}><span className="sidebar-icon" aria-hidden="true">⚙</span><span className="sidebar-link-label">Settings <small>Coming later</small></span></a>
-        <span className="sidebar-build-note">{collapsed ? 'DEV' : 'Development build'}</span>
+        <span className="sidebar-build-note">Development build</span>
       </div>
     </aside>
-    <div className={open ? 'mobile-drawer is-open' : 'mobile-drawer'} aria-hidden={!open}>
+    <div ref={drawerRef} id="mobile-sidebar-drawer" className={open ? 'mobile-drawer is-open' : 'mobile-drawer'} aria-hidden={!open} role="dialog" aria-modal={open ? 'true' : undefined} aria-label="Mobile navigation">
       <div className="mobile-drawer-header">
         <a className="sidebar-brand" href="/" onClick={event => { onNavigate(event, '/'); onClose() }}><span className="brand-mark" aria-hidden="true">K</span><span className="sidebar-brand-name">KHELGRID</span></a>
-        <button className="sidebar-mobile-close" type="button" onClick={() => { onClose(); toggleRef.current?.focus() }} aria-label="Close navigation">×</button>
+        <button ref={closeRef} className="sidebar-mobile-close" type="button" onClick={() => { onClose(); toggleRef.current?.focus() }} aria-label="Close navigation">×</button>
       </div>
       <nav className="sidebar-navigation" aria-label="Mobile feature navigation">
         {navigationModules.map(section => <section className="sidebar-module" key={section.id} aria-label={section.label}>
