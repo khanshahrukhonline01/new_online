@@ -267,3 +267,17 @@ This is the initial disposition proposal for source-defined routes. The product 
 ### Audit boundary / next steps
 
 The source files above were inspected, but no production code or data was changed. Before marking this area **Verified**, inspect the profile/CV route definitions and guards, all profile/CV write operations, Supabase migrations/RLS policies, and relevant unit/integration/e2e tests; then execute those tests in the private platform checkout. The presence of a migration or test file alone is not proof of a passing security control.
+
+
+### Additional profile-service review (write-path and query scope)
+
+Further inspection of `user-profile-service.ts` and `supabase.ts` found additional items that must be checked before any profile service is treated as safe:
+
+- `getUserProfile()` attempts to query the `profiles` row using the current authenticated user's ID, then falls back to local cached/default data. The default profile contains realistic-looking personal, sport and achievement claims and must not appear as a real signed-in user's record.
+- `getSportsAchievements()` queries `sports_achievements` ordered by year without a visible `user_id` filter in the reviewed query, then merges locally stored achievements. Whether RLS safely scopes results is not established here. Treat this as a **high-priority authorization check**, not proof of a confirmed vulnerability until policies and runtime identity are examined.
+- `getEnrolledPrograms()` queries `coaching_enrollments` joined to `coaching_programs` without a visible owner filter in the reviewed client query and falls back to sample enrollments. Verify that RLS enforces per-user access and that contact details cannot leak across accounts.
+- `getUserMembership()` selects active `user_memberships` rows with `.limit(1)` but no visible user filter in the reviewed query. Verify RLS and ownership scoping; membership/entitlement status must not be inferred from an arbitrary active row.
+- `addSportsAchievement()` contains a client-side insert path. Inspect the remainder of its payload and all database policies to confirm that a client cannot self-assign trusted verification fields, spoof ownership, or create records visible to other users.
+- `src/lib/supabase.ts` initializes the browser client with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, and includes a fallback project URL if the environment is not configured. The anon key is expected to be public; security must rely on RLS and server-side authorization. The fallback URL should be reviewed for environment isolation so a misconfigured build cannot silently point at the wrong project.
+
+**Required action for the private platform:** model all profile, achievement, enrollment and membership records with an explicit owner/tenant boundary; add owner filters where appropriate; enforce equivalent database RLS; derive verified status only from privileged review records; test cross-user reads/writes and unauthenticated requests. Keep production unchanged while doing this review.
