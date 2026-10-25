@@ -512,3 +512,24 @@ This table supersedes any older summary that says these areas simply “need det
 Mark an area **verified** only after all applicable evidence exists in the private branch: (1) source diff/review, (2) migrations and effective DB policies reviewed against the intended dev/staging project, (3) automated tests executed with recorded result, (4) manual or integration test evidence for key success and failure paths, and (5) product-owner approval of route/data/provider decisions. Until then, use “partial source audit” or “blocked on verification,” not “complete.”
 
 **Execution boundary:** this update is a status/acceptance-criteria document only. It does not claim tests were run, provider licensing was confirmed, migrations were applied, production was changed, or any feature is complete.
+
+
+## 10. User-requested P1 audit tracker: mobile/PWA, AI/LLM, technical endpoints and operations
+
+These four areas have source-level notes in earlier sections, but the user requests that they remain explicit tracker rows. They are **not complete**; the statuses below distinguish source inspection from runtime/security verification.
+
+| Priority | Area | Current status | What remains |
+|---|---|---|---|
+| P1 | Mobile and PWA | **Partial source audit; needs detailed verification** | Inspect the complete Android/PWA implementation, manifest, service worker/offline caching, install prompts and update flow; test deep links and route handling; compare web/mobile screens and account/data behaviour; verify permissions, local storage/backup exclusions, consent-before-ad-request, accessibility, signing and real device/release builds. |
+| P1 | AI and LLM integration | **Partial source audit; needs detailed verification** | Inventory all MCP/LLM tools and provider configuration; verify the deployed endpoint and environment separation; test effective authorization/RLS and private-data boundaries; validate input/output schemas, prompt-injection resistance, untrusted source handling, secret exposure, tool permissions, rate limits, logging/retention and failure behaviour; run MCP Inspector and relevant automated security tests. |
+| P1 | Technical endpoints | **Source review found IndexNow/SEO consistency risks; needs endpoint tests** | Enumerate every API, text and verification endpoint; check actual status codes, response schemas, cache/CORS/security headers, authentication, validation, rate limits and error responses; constrain IndexNow URLs to the canonical owned host; test robots.txt, sitemap.xml, ads.txt, llms.txt, API endpoints and canonical/indexing rules against the intended release. |
+| P1 | Operations | **Partial workflow source audit; needs operational evidence** | Inspect actual CI/deployment runs, required checks, branch protections and release approvals; confirm Node/npm/lockfile reproducibility; verify secret scopes, monitoring/alerts and error reporting; prove encrypted backups can be decrypted and restored into an isolated database; document incident response, rollback, RPO/RTO and recovery ownership. |
+
+### Evidence required before changing status to complete
+
+- **Mobile/PWA:** a real production build plus installation, navigation/deep-link, offline/update and consent tests on supported browsers/devices.
+- **AI/LLM:** tool-by-tool authorization matrix, privacy/data-flow review, injection and unauthorized-access tests, and successful MCP Inspector verification against a non-production deployment.
+- **Technical endpoints:** automated contract/security tests plus real HTTP response checks for success, invalid input, unauthenticated requests, rate limits and unavailable dependencies.
+- **Operations:** links/results for required CI and deployment checks, monitoring/error reporting evidence, and a successful isolated backup restore drill.
+
+**Safety and accuracy note:** this is a private-repository audit-tracker update. It does not claim that the above tests were executed, the backup restored successfully, any provider is live, or production was changed. The production repository, database and deployment remain untouched.
