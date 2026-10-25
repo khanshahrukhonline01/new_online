@@ -10,6 +10,9 @@ KhelGrid helps people discover sports, credible selection opportunities/trials, 
 - Coaches, academies, organisers and venue operators.
 - Visitors researching sports and facilities.
 
+## Navigation and route source of truth
+The complete planned navigation and route catalogue is maintained in [Navigation and Route Catalogue](NAVIGATION_AND_ROUTE_CATALOGUE.md). Treat it as product scope, not evidence of implementation. Each route must be prioritized in the roadmap and have feature acceptance criteria before development.
+
 ## Stage A scope
 - Responsive home, navigation, search/discovery foundations.
 - Published sports directory.
