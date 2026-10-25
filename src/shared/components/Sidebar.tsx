@@ -79,7 +79,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
     <aside className="app-sidebar" aria-label="Sidebar navigation">
       <div className="sidebar-brand-row">
         <a className="sidebar-brand" href="/" onClick={event => onNavigate(event, '/')} aria-label="KhelGrid home">
-          <span className="brand-mark" aria-hidden="true">K</span>
+          <img className="brand-logo" src="/assets/kg-logo.svg" alt="" aria-hidden="true" />
           <span className="sidebar-brand-name">KHELGRID</span>
         </a>
       </div>
