@@ -27,6 +27,7 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+          AGE_IDENTITY: ${{ secrets.BACKUP_AGE_IDENTITY }}
         run: |
           set -euo pipefail
           umask 077
@@ -36,7 +37,10 @@ jobs:
           rm -f public.dump
           test -s khelgrid-public.dump.age
           sha256sum khelgrid-public.dump.age > khelgrid-public.dump.age.sha256
-          age --decrypt --identity <(printf '%s' "${{ secrets.BACKUP_AGE_IDENTITY }}") khelgrid-public.dump.age >/dev/null
+          printf '%s\n' "$AGE_IDENTITY" > age-identity.txt
+          chmod 600 age-identity.txt
+          age --decrypt --identity age-identity.txt khelgrid-public.dump.age >/dev/null
+          rm -f age-identity.txt
         shell: bash
       - name: Upload encrypted backup only
         uses: actions/upload-artifact@v4
