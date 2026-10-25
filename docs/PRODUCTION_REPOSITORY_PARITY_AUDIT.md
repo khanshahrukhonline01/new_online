@@ -533,3 +533,23 @@ These four areas have source-level notes in earlier sections, but the user reque
 - **Operations:** links/results for required CI and deployment checks, monitoring/error reporting evidence, and a successful isolated backup restore drill.
 
 **Safety and accuracy note:** this is a private-repository audit-tracker update. It does not claim that the above tests were executed, the backup restored successfully, any provider is live, or production was changed. The production repository, database and deployment remain untouched.
+
+
+## 11. Consolidated ten-area tracker (latest status)
+
+Use this consolidated table as the current summary. Earlier sections preserve detailed source findings and audit notes.
+
+| Priority | Area | Current status | What remains |
+|---|---|---|---|
+| P0 | Production route parity | **Partially checked** | Reconcile every production source route, alias, dynamic route, API/text endpoint and redirect against the private plan; approve preserve/merge/defer/retire decisions; test navigation, status codes, canonical metadata and auth gates. |
+| P0 | Athlete profiles and Sports CV | **Needs detailed verification; source review has identified material gaps** | Verify onboarding, profile visibility, CV editor, sharing/export, persistence and final effective access rules; audit every read/write path; test owner isolation and remove unverified “verified” claims/sample fallback. |
+| P0 | Venue operations | **Needs detailed verification; source safeguards found** | Verify owner submissions, admin review/publication, DB-authoritative pricing, operating hours, availability, expired holds, concurrent booking transactions, ownership, cancellation and applied migrations/RPCs in non-production; execute integration tests. |
+| P1 | Trial applications and notifications | **Needs detailed verification; source review found split paths and notification risks** | Trace application state machine, applicant ownership, evidence and expiry; unify DB/API/detail/sitemap truth; verify real subscription persistence, scheduled delivery, retry/idempotency, unsubscribe and opt-out; remove sample defaults. |
+| P1 | Live sports | **Needs detailed verification; no authoritative structured score provider established in inspected source** | Inspect adapters, caching, audio and stale-data behaviour; confirm provider coverage, licensing/redistribution terms and real credentials; test freshness, failures and rate limits; prevent fixtures/news inference from appearing as live scores. |
+| P1 | Monetization and consent | **Needs detailed verification; consent implementation exists, compliance unverified** | Trace every ad loader/placement, analytics tag and third-party integration; test unknown/granted/denied/withdrawn states and actual network requests; validate UMP/geography, AdSense/ads.txt configuration, privacy disclosures and native app behaviour. |
+| P1 | Mobile and PWA | **Needs detailed verification; partial Android source audit recorded** | Inspect Android/PWA install, manifest, service worker/offline updates, deep links, permissions, web/mobile parity, local-data backup rules and consent; run real device and release-build tests. |
+| P1 | AI and LLM integration | **Needs detailed verification; partial read-only MCP source audit recorded** | Inspect every MCP tool/provider and environment; verify authorization/RLS, private-data boundaries, input/output validation, prompt-injection resistance, secrets, rate limits and retention; run security tests and MCP Inspector against non-production. |
+| P1 | Technical endpoints | **Needs detailed verification; IndexNow and SEO risks found in source** | Verify endpoint implementations and real responses/status codes, access controls, validation, cache/CORS/security headers and errors; harden IndexNow; test robots, sitemap, ads.txt, llms.txt and canonical/indexing rules. |
+| P1 | Operations | **Needs detailed verification; workflow definitions reviewed, operational evidence missing** | Inspect actual workflow runs and release gates, monitoring/error reporting, branch protection and secret scopes; confirm dependency/toolchain reproducibility; perform an isolated backup restore drill and document rollback, incident response and RPO/RTO. |
+
+**Global status:** no area is fully verified end-to-end from the evidence gathered so far. “Source reviewed” means code/configuration was inspected; it does not mean tests passed or a live service is working. Completion requires recorded test/runtime evidence and owner approval where decisions affect data, providers, migrations or production.
