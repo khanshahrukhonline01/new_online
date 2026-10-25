@@ -492,3 +492,23 @@ Files inspected: `src/routes/api.indexnow.ts`, `src/lib/indexnow.ts`, `src/route
 | Backups | Scheduled encrypted dump workflow and 90-day artifact retention exist | Successful scheduled runs, decryption/restore drills, recovery evidence, artifact/secret access review |
 
 **Current audit coverage:** all ten requested parity areas now have at least some source-level inventory or findings in this document. This does **not** mean all ten are fully audited or implemented. Highest priority remaining work is runtime/effective-RLS verification, test execution, canonical route mapping and documented acceptance criteria. No production files, DB, settings, migrations, deployments or PR merge actions were performed.
+
+
+## 9. User-requested six-area status table and completion criteria
+
+This table supersedes any older summary that says these areas simply “need detailed audit.” Source inspection has begun for all six, but source inspection is not the same as end-to-end verification.
+
+| Priority | Area | Current status | What remains to call it complete |
+|---|---|---|---|
+| P0 | Production route parity | **Partially checked — source route inventory recorded** | Generate a canonical route/alias/redirect matrix from production source and private routes; decide preserve/merge/defer/retire for every route; check navigation, HTTP status, canonical URLs, metadata, auth gates and tests. |
+| P0 | Athlete profiles and Sports CV | **Detailed source review started; material security/data gaps found** | Trace every read/write path and final effective RLS policy for legacy and current profile tables; prove owner isolation; replace local-only profile/CV persistence where cross-device persistence is required; remove unverified “verified” claims/sample fallbacks; design private-by-default sharing with revocable opaque tokens and field allowlist; test exports and unauthorized access. |
+| P0 | Venue operations | **Detailed source review started; some safeguards found, runtime unverified** | Verify all migrations/RPC definitions are actually applied to the intended non-production DB; prove admin-only publication, owner-scoped submissions/bookings, server-calculated published price, hours and court availability, hold expiry, overlap/concurrency safety, cancellation transitions and UI loading/empty/error states; execute integration tests. |
+| P1 | Trial applications and notifications | **Source review started; split data paths and notification risks found** | Trace application state transitions and authorization; define evidence and expiry rules; unify DB/API/detail/sitemap as one authoritative source; remove demo notification defaults; prove owner-bound subscriptions, actual durable persistence, push delivery, retries, opt-out and schedule behaviour. |
+| P1 | Live sports | **Source review started; no verified structured score provider established** | Choose provider with documented terms/coverage and commercial redistribution permission; implement real server-side adapter and match IDs; validate freshness/stale states, caching, rate limits, audio controls and provider outages; prove UI never presents fixtures or inferred headlines as live scores. |
+| P1 | Monetization and consent | **Source review started; consent implementation exists, compliance unverified** | Inventory every ad/analytics/third-party tag and placement including native Android; test actual network requests before choice, after grant, after denial and after withdrawal; validate regional consent/UMP behaviour, AdSense account/ads.txt and provider configuration; check layout, frequency, policy disclosures and privacy settings. |
+
+### Acceptance gate for these six areas
+
+Mark an area **verified** only after all applicable evidence exists in the private branch: (1) source diff/review, (2) migrations and effective DB policies reviewed against the intended dev/staging project, (3) automated tests executed with recorded result, (4) manual or integration test evidence for key success and failure paths, and (5) product-owner approval of route/data/provider decisions. Until then, use “partial source audit” or “blocked on verification,” not “complete.”
+
+**Execution boundary:** this update is a status/acceptance-criteria document only. It does not claim tests were run, provider licensing was confirmed, migrations were applied, production was changed, or any feature is complete.
