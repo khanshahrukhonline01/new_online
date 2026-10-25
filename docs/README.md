@@ -4,6 +4,7 @@ Start with [Master Project Plan](MASTER_PROJECT_PLAN.md). It records the full 54
 
 ## Start with the audit
 - [Documentation Audit and Gap Register](DOCUMENTATION_AUDIT_AND_GAP_REGISTER.md)
+- [Production Repository Parity Audit](PRODUCTION_REPOSITORY_PARITY_AUDIT.md)
 - [Navigation and Route Catalogue](product/NAVIGATION_AND_ROUTE_CATALOGUE.md)
 - [Frontend Architecture](architecture/FRONTEND_ARCHITECTURE.md)
 - [Editorial, Verification, Corrections and IPR](policies/EDITORIAL_VERIFICATION_AND_IPR.md)
