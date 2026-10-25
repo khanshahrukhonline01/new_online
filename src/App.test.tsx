@@ -54,6 +54,7 @@ describe('catalogue search', () => {
     const html = renderToStaticMarkup(<SearchPage />)
     expect(html).toContain('Search the catalogue')
     expect(html).toContain('catalogue-search')
-    expect(html).toContain('No sample listings are shown')
+    expect(html).toContain('not sample listings')
+    expect(html).toContain('Results come from the connected catalogue')
   })
 })
