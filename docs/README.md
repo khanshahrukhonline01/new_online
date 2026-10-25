@@ -2,6 +2,10 @@
 
 Start with [Master Project Plan](MASTER_PROJECT_PLAN.md). It records the full 54-topic documentation catalogue, staged roadmap, engineering rules, and release gates.
 
+## Start with the audit
+- [Documentation Audit and Gap Register](DOCUMENTATION_AUDIT_AND_GAP_REGISTER.md)
+- [Navigation and Route Catalogue](product/NAVIGATION_AND_ROUTE_CATALOGUE.md)
+
 ## Existing planning documents
 - [Website Page Inventory](WEBSITE_PAGE_INVENTORY.md)
 - [Domain Model and Data Dictionary](DOMAIN_MODEL_AND_DATA_DICTIONARY.md)
