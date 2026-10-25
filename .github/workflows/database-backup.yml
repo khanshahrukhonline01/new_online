@@ -19,10 +19,17 @@ jobs:
           test -n "$SUPABASE_DB_URL" || { echo "Missing SUPABASE_DB_URL secret"; exit 1; }
           test -n "$AGE_RECIPIENT" || { echo "Missing BACKUP_AGE_RECIPIENT secret"; exit 1; }
           test -n "$AGE_IDENTITY" || { echo "Missing BACKUP_AGE_IDENTITY secret"; exit 1; }
-      - name: Install PostgreSQL client and age
+      - name: Install PostgreSQL 17 client and age
         run: |
           sudo apt-get update
-          sudo apt-get install -y postgresql-client age
+          sudo apt-get install -y ca-certificates curl gnupg age
+          sudo install -d /usr/share/postgresql-common/pgdg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor --yes -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          pg_dump --version
+          pg_dump --version | grep -q " 17\."
       - name: Export public application schema and encrypt immediately
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
