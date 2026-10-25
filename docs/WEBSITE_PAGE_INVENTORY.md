@@ -1,5 +1,8 @@
 # KhelGrid Platform — Page Inventory & Sitemap
 
+> **Navigation source of truth:** [Navigation and Route Catalogue](product/NAVIGATION_AND_ROUTE_CATALOGUE.md). Keep this inventory aligned with that catalogue; a listed page is planned inventory, not proof it is implemented.
+
+
 **Status:** Planning baseline for the separate `khelgrid-platform` development project.  
 **Scope:** Proposed pages/routes to build; this is not a claim that these routes already exist.  
 **Production safety:** This inventory applies only to this repository and its development Supabase project. Do not modify or deploy to the production `khelgrid-monetization-studio` project as part of this work.
