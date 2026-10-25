@@ -242,3 +242,10 @@ h3 { margin: 31px 0 10px; font-size: 18px; letter-spacing: -.025em; }
 @media(max-width:900px){.home-hero-panel{grid-template-columns:minmax(0,1fr) minmax(210px,.75fr);gap:20px;padding:30px}.home-hero-art{min-height:230px}.foundation-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.home-stats>div,.home-stats>div:first-child{padding:17px 14px}}
 @media(max-width:700px){.home-hero-panel{grid-template-columns:1fr;gap:24px;margin-top:20px;padding:26px 21px;border-radius:16px}.home-hero-copy h1{font-size:clamp(39px,11vw,56px)}.home-hero-art{min-height:205px}.hero-art-ball{width:86px;height:86px;border-radius:25px;font-size:49px}.home-trust-points{gap:9px 13px}.home-catalogue-status{padding-top:39px}.home-stats{grid-template-columns:1fr}.home-stats>div,.home-stats>div:first-child{display:grid;grid-template-columns:1fr auto;align-items:center;gap:7px 12px;border-right:0;border-bottom:1px solid var(--line);padding:14px 16px}.home-stats>div:last-child{border-bottom:0}.home-stats>div>span{grid-row:span 2}.home-stats strong{font-size:24px}.home-stats small{text-align:right}.home-explore-section{padding-top:48px}.home-feature-card{min-height:0}.foundation-strip{padding-bottom:42px;gap:8px}.foundation-strip>div{grid-template-columns:28px 1fr;padding:13px 10px;column-gap:8px}.foundation-strip>div>span{width:27px;height:27px}.foundation-strip strong{font-size:10px}}
 @media(max-width:380px){.home-hero-panel{padding:22px 17px}.home-hero-copy h1{font-size:37px}.foundation-strip{grid-template-columns:1fr}.home-trust-points{flex-direction:column;align-items:flex-start}}
+
+/* Official KhelGrid logo */
+.brand-logo { display: block; width: 34px; height: 34px; flex: 0 0 auto; object-fit: contain; border-radius: 8px; }
+.sidebar-brand .brand-logo { width: 31px; height: 31px; }
+.footer-brand { display: inline-flex; align-items: center; }
+.footer-brand-logo { display: block; width: 112px; max-height: 36px; object-fit: contain; object-position: left center; }
+@media (max-width: 700px) { .brand-logo { width: 31px; height: 31px; } }
