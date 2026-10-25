@@ -223,3 +223,154 @@ This is the initial disposition proposal for source-defined routes. The product 
 - [ ] Confirm all current production feature claims before copying them to the rebuild.
 - [ ] Keep unimplemented/deferred routes out of navigation or show a clear, honest unavailable state.
 - [ ] Record each decision with owner and date; review before release.
+
+
+## 11. Detailed audit — athlete profiles and Sports CV (P0 parity gate)
+
+**Status: Gap found — source implementation inspected; end-to-end behaviour and deployed runtime not verified.** This is a source-code review of the production repository's `main` branch, not an authorization to copy the implementation or deploy changes. Evidence links below point to the inspected source files.
+
+### Evidence reviewed
+
+- [`SportsCV.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/components/SportsCV.tsx): card/edit/split/wizard views; editor changes call the CV save helper; PNG export and sharing controls exist; reset starts with blank achievements and sets `verified: false`.
+- [`SportsCVEditor.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/components/SportsCVEditor.tsx): editor supports athlete identity, sport/position, achievements, stats and performance metrics; Hindi label support is present in the component.
+- [`AthleteOnboardingWizard.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/components/AthleteOnboardingWizard.tsx): six-step onboarding UI exists (identity, position, benchmarks, honours, socials/reels, finalize); imports `updateUserProfile` and CV storage helpers. A complete persistence/authorization journey was not established by this file alone.
+- [`sports-cv-storage.ts`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/lib/sports-cv-storage.ts): CV load/save uses browser `localStorage` under `khelgrid_athlete_sports_cv_v2`, with in-memory fallback. `getBlankSportsCV()` is empty and unverified, but `getDefaultSportsCV()` contains a fully populated fictional-looking athlete, achievements, statistics, a coach contact and `verified: true`; all consumers must be checked to ensure it is used only in clearly labelled demos/tests.
+- [`sports-cv-sharing.ts`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/lib/sports-cv-sharing.ts): public CV links can encode the entire CV as a base64url `data` query parameter; a localStorage/in-memory registry is also used for slug resolution. That registry is browser-local, not a cross-device server source of truth. Base64 encoding is not encryption or access control.
+- [`ShareSportsCVModal.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/components/ShareSportsCVModal.tsx): sharing UI creates link/QR/social-share actions. Its success copy describes a public profile, but a production-safe server-side publication, owner authorization and revocation workflow were not demonstrated by this component.
+- [`user-profile-service.ts`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/lib/user-profile-service.ts): profile reads attempt Supabase only when configured and a current authenticated user is available, then fall back to browser-local data and default profile data. The file includes seeded default profile, achievement, membership and enrollment examples. A complete write-path/RLS review is still required before relying on it for real accounts.
+
+### Checklist and findings
+
+| Requirement | Status | Evidence-based finding / remaining work |
+|---|---|---|
+| Onboarding flow | Partially verified | A six-step wizard exists. Verify required-field validation, cancel/resume behaviour, age/minor consent, accessibility, duplicate submissions and success/error states with tests. |
+| Profile visibility | Gap found | Private self-profile versus public athlete profile is not proven to be enforced end-to-end. Define explicit visibility states (private, unlisted/share-link, public), consent, field-level exposure and revocation. |
+| CV editor | Partially verified | A structured editor and update handler exist. Test all fields, validation, malformed/oversized input, mobile layouts and keyboard/screen-reader access. |
+| Export | Partially verified | PNG card export is present. Verify generated output, failure handling, font/image loading, and whether a PDF export is actually supported; do not claim PDF parity without evidence. |
+| Share links / QR | Gap found | Share URL can carry the full CV in a query string and browser-local registry. Query strings can be retained in browser history, server/proxy logs, analytics and referrer data. Prefer an opaque, revocable share token backed by a server record; exclude private contact/identity fields by default. |
+| Persistence | Gap found | Sports CV data is browser-local, not a server-persisted athlete-owned record. Device/browser changes can lose access; browser data is not an authenticated source of truth. Define local draft vs account-synced state and conflict/recovery behaviour. |
+| Authentication and ownership | Unable to verify | Profile service calls Supabase auth for a profile read, but this does not establish that every CV/profile read and write is authorized. Inspect all write paths, route guards, RLS policies and service-role boundaries. |
+| Access rules / RLS | Unable to verify | This review has not yet traced the relevant migrations and database policies to prove that users can read/write only their own private records and that public shares expose only approved fields. |
+| Verification claims | Gap found | The default CV fixture includes `verified: true` and sample achievements with verified flags. Prohibit fixture/default data from real-user flows; verification badges must be derived from a trusted review record, not user-editable CV fields. |
+| Demo/sample data | Gap found | Default profile/achievement/membership fixtures exist in `user-profile-service.ts`. Confirm every consumer labels these as examples and that no seeded fixture appears as a genuine athlete, award, membership or verification in production. |
+| Language support | Partially verified | English/Hindi labels and a language helper are present. Validate the full wizard, errors, exported artifacts and persistence in both languages; document unsupported translations honestly. |
+
+### Required private-platform decisions before implementation
+
+1. **Stage A:** Keep account/auth and private profile editing explicitly unconnected until authentication, ownership, RLS and privacy controls are implemented and tested. A local-only CV draft may be offered only with a clear local-storage warning.
+2. **CV data model:** Separate private profile fields, CV content, verified achievements/evidence and public-share projection. Never trust client-supplied `verified` flags.
+3. **Sharing:** Do not reproduce the full-CV-in-query-string pattern. Use a high-entropy opaque share token, server-side allowlisted projection, explicit opt-in, revocation/expiry and no-index metadata where appropriate. Avoid exposing email, phone, exact birth date, private coach contacts or evidence documents by default.
+4. **Persistence:** Use authenticated owner-scoped server persistence for account-synced data; enforce access in database policies and server operations, not only in UI. Retain a separately labelled local draft mode if needed.
+5. **Fixture policy:** Sample athletes, achievements, metrics, coach references, memberships and verification badges must never be presented as real records. Use empty defaults in real-user creation flows.
+6. **Acceptance tests:** Cover unauthenticated access, cross-user read/write attempts, public projection allowlist, share-token revocation/expiry, local draft recovery, save failures, onboarding validation, export and Hindi/English rendering.
+
+### Audit boundary / next steps
+
+The source files above were inspected, but no production code or data was changed. Before marking this area **Verified**, inspect the profile/CV route definitions and guards, all profile/CV write operations, Supabase migrations/RLS policies, and relevant unit/integration/e2e tests; then execute those tests in the private platform checkout. The presence of a migration or test file alone is not proof of a passing security control.
+
+
+### Additional profile-service review (write-path and query scope)
+
+Further inspection of `user-profile-service.ts` and `supabase.ts` found additional items that must be checked before any profile service is treated as safe:
+
+- `getUserProfile()` attempts to query the `profiles` row using the current authenticated user's ID, then falls back to local cached/default data. The default profile contains realistic-looking personal, sport and achievement claims and must not appear as a real signed-in user's record.
+- `getSportsAchievements()` queries `sports_achievements` ordered by year without a visible `user_id` filter in the reviewed query, then merges locally stored achievements. Whether RLS safely scopes results is not established here. Treat this as a **high-priority authorization check**, not proof of a confirmed vulnerability until policies and runtime identity are examined.
+- `getEnrolledPrograms()` queries `coaching_enrollments` joined to `coaching_programs` without a visible owner filter in the reviewed client query and falls back to sample enrollments. Verify that RLS enforces per-user access and that contact details cannot leak across accounts.
+- `getUserMembership()` selects active `user_memberships` rows with `.limit(1)` but no visible user filter in the reviewed query. Verify RLS and ownership scoping; membership/entitlement status must not be inferred from an arbitrary active row.
+- `addSportsAchievement()` contains a client-side insert path. Inspect the remainder of its payload and all database policies to confirm that a client cannot self-assign trusted verification fields, spoof ownership, or create records visible to other users.
+- `src/lib/supabase.ts` initializes the browser client with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, and includes a fallback project URL if the environment is not configured. The anon key is expected to be public; security must rely on RLS and server-side authorization. The fallback URL should be reviewed for environment isolation so a misconfigured build cannot silently point at the wrong project.
+
+**Required action for the private platform:** model all profile, achievement, enrollment and membership records with an explicit owner/tenant boundary; add owner filters where appropriate; enforce equivalent database RLS; derive verified status only from privileged review records; test cross-user reads/writes and unauthenticated requests. Keep production unchanged while doing this review.
+
+
+## 12. Detailed source review — CV routes, auth guard and profile/achievement RLS
+
+**Status: Gap found — concrete unsafe patterns are visible in source/migrations.** This remains a read-only audit of production `main`; no production migration or code was changed.
+
+### Route and access findings
+
+- [`src/routes/profile.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/routes/profile.tsx) wraps the profile page in `ProtectedRoute` and marks it noindex. This is a useful UI guard, but it is not a substitute for database authorization.
+- [`src/routes/onboarding.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/routes/onboarding.tsx) renders the onboarding wizard without a route-level `ProtectedRoute`. If onboarding is intended to create account-bound records, its public access and persistence must be explicitly designed and tested.
+- [`src/routes/cv.index.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/routes/cv.index.tsx) redirects to a CV slug derived from browser-local CV data and falls back to `aarav-sharma-cricket`.
+- [`src/routes/cv.$id.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/routes/cv.$id.tsx) resolves the CV from a query payload or local registry/sample fallback, and its SEO title/description label the profile “Verified” / “official verified” without an evidenced verification lookup in this route. The public CV page also renders a “KhelGrid Verified Dossier” badge. This is a **high-priority trust and accuracy gap**.
+- [`src/components/ProtectedRoute.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/components/ProtectedRoute.tsx) checks client auth state and an app role to decide what UI to render. It is only a frontend boundary; the data layer must independently authorize every operation.
+
+### Share implementation and tests
+
+- [`sports-cv-sharing.ts`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/lib/sports-cv-sharing.ts) decodes arbitrary `data` query payloads into `SportsCVData` and returns them as a public CV; the shape check only requires `athleteName` and `sport`. A payload can be supplied by the link sender; it is not authenticated, verified, owner-approved or revocable.
+- Unknown slugs can fall back to generated sample athlete data; specific demo slugs return populated sample athletes. This can make a guessed/unregistered URL display data as if it were an actual public athlete.
+- [`SportsCVSharing.test.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/components/SportsCVSharing.test.tsx) explicitly tests the `?data=` portable payload and the demo fallback records (including a “verified” sample). These tests document existing behaviour; they do not establish privacy or trust safety.
+- [`ProtectedRoute.test.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/components/ProtectedRoute.test.tsx) tests rendered client-side auth/role states. It does not test Supabase RLS, direct REST access, or cross-user data isolation.
+
+### Database policy findings from reviewed migrations
+
+- [`20260916_user_profile_achievements_memberships.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20260916_user_profile_achievements_memberships.sql) initially creates broad policies on `user_profiles`, `sports_achievements` and `user_memberships`: public SELECT/INSERT/UPDATE for several tables and public DELETE for achievements. The migration includes `user_id` columns, but these original policies do not constrain operations to the current owner.
+- [`20260927_production_hardening_and_integrity.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20260927_production_hardening_and_integrity.sql) replaces some update/delete policies with owner-or-admin checks. However, the reviewed portion does not demonstrate that the earlier public SELECT/INSERT policies were all removed/replaced for all three tables. Since permissive PostgreSQL RLS policies combine with OR semantics, a restrictive policy does not neutralize a remaining permissive policy by itself.
+- [`20261020220000_harden_profile_column_privileges.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20261020220000_harden_profile_column_privileges.sql) hardens the separate `public.profiles` table's column privileges and revokes anon SELECT. This is a positive control for that table, but it does not prove that the separate legacy `user_profiles`, `sports_achievements`, `user_memberships`, CV share flow, or every client write path is safe.
+- [`20261020220500_revoke_unsafe_api_role_table_privileges.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20261020220500_revoke_unsafe_api_role_table_privileges.sql) revokes TRUNCATE/TRIGGER/REFERENCES from browser-facing roles, but this does not itself correct broad row-level policies.
+- [`20261020224000_restrict_verification_self_approval.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20261020224000_restrict_verification_self_approval.sql) applies column-level restrictions to academy/organizer verification. That is a useful pattern, but athlete achievement verification requires its own equivalent control and evidence-backed review workflow.
+
+### Audit conclusion for P0 athlete/CV
+
+**Do not copy the current CV share implementation or legacy profile/achievement policies into the private rebuild.** The private plan should use:
+1. Authenticated owner-scoped private profile/CV storage.
+2. Database RLS and grants verified with anonymous, authenticated-owner, authenticated-other-user and admin test identities.
+3. Separate public CV projection with an explicit field allowlist and an opt-in publication record.
+4. Opaque random share tokens stored server-side, with expiry/revocation and no private data in URL query strings.
+5. Trusted verification status stored separately and only writable through a privileged, audited review workflow.
+6. Empty/unverified defaults for real users; clearly labelled sample fixtures only in isolated demo/test contexts.
+7. SEO metadata that says “verified” only when a trusted verification record exists; no fabricated fallback CV on unknown slugs.
+8. Tests for direct API access and RLS, not only React component render tests.
+
+### Completion state
+
+| Check | Status |
+|---|---|
+| Profile route client guard | Partially checked; UI guard exists, server/database boundary still required |
+| CV route access | Gap found; public route accepts client-provided CV payload and sample fallbacks |
+| CV persistence | Gap found; browser-local storage/registry, no server-owned CV record demonstrated |
+| Share revocation and access | Gap found; no server-side token lifecycle demonstrated |
+| Verification integrity | Gap found; default sample and route metadata imply verification without route-level evidence |
+| RLS for legacy profile/achievement/membership tables | Gap found; reviewed historical migration defines broad public policies; full final effective policy state still needs complete migration-chain and live-schema confirmation |
+| Runtime security tests | Unable to verify; no live tests executed as part of this source review |
+
+
+## 13. Next parity area — venue directory, submissions and booking operations
+
+**Status: Partially checked; source/migration review found both safeguards and unresolved operational questions.** This section is a source-level audit only. It does not confirm the current production database has these migrations applied or that the live booking journey works.
+
+### Evidence reviewed
+
+- [`src/routes/book.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/routes/book.tsx) loads directory venues from Supabase when configured and does not automatically fill the directory with the imported sample `VENUES` list in the inspected effect. However, its SEO description says “verified” and “instantly reserve” more broadly than this source inspection can substantiate. Loading/empty/error presentation and all booking paths require a UI test pass.
+- [`src/lib/booking-service.ts`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/lib/booking-service.ts) reads booking records from Supabase only, requires a selected court, calls a slot-availability RPC, and refuses to use a non-atomic insert fallback when the atomic RPC fails. It also checks that the selected venue exists in the database and rejects nonpositive/missing hold prices. These are positive source-level controls.
+- [`20261024060000_venue_court_pricing_hours_phase1.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20261024060000_venue_court_pricing_hours_phase1.sql) introduces explicit `booking_enabled`, court-specific pricing and operating-hour validation; booking requires an active court and positive published rate.
+- [`20261024070000_court_availability_phase2.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20261024070000_court_availability_phase2.sql) defines a court/date availability RPC and comments that the atomic booking RPC validates enabled court, rate, verified hours, overlaps and creates pending requests. The actual deployed RPC definition was not retrieved/verified in this review.
+- [`20261024030000_venue_submission_intake.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20261024030000_venue_submission_intake.sql) creates a private intake queue, allows public submission only in pending/unreviewed state and restricts reads/review to admins under the migration's role model.
+- [`20261024040000_venue_submission_review_publish.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20261024040000_venue_submission_review_publish.sql) implements admin-only review/publication and requires approval, address and supported booking method before publication. The created venue starts without a published price/rating, which is safer than guessing one.
+
+### Findings and remaining checks
+
+| Requirement | Status | Finding / next action |
+|---|---|---|
+| Live directory source | Partially verified | Supabase query is present; verify configured/unconfigured, empty, permission error and network error UI states. |
+| Fake/sample venue separation | Partially verified | Booking rejects a venue not found in DB. Audit every UI action to ensure sample cards cannot enter a booking flow and no sample listing is described as verified. |
+| Court-specific rate | Partially verified | Client requires a published positive rate for holds and migration adds constraints. Verify atomic booking RPC independently recalculates and persists the authoritative DB rate, ignoring client totals. |
+| Operating hours | Partially verified | Validation helper exists. Verify booking RPC checks the selected court's schedule and the venue/court verification timestamp; test closed days, missing hours, invalid time, overnight and timezone cases. |
+| Availability / overlap | Partially verified | Availability RPC and atomic booking call exist in source; deployed function body and concurrent booking test results remain unverified. Confirm expired holds are ignored and two simultaneous requests cannot both succeed. |
+| Booking access and privacy | Unable to verify | `getVenueBookings()` selects booking rows without a visible user filter in the client query. RLS must ensure users see only their own bookings (and admins/venue operators only authorized scopes). Test direct API access, not only UI filtering. |
+| Booking confirmation / cancellation | Partially checked | Current flow reports a pending request and says to contact the venue for confirmation. Inspect cancellation RPC, status transitions and authorization before claiming end-to-end transactional booking. |
+| Venue submission intake | Partially verified | Migration has validation and admin-only review intent. Verify the admin role lookup is consistent with the canonical auth/profile schema and test anonymous submit, user read denial, admin review and non-admin rejection. |
+| Publication quality | Partially verified | Publication checks address and booking method and avoids guessed rating/price. Ensure published venue remains non-bookable until each court has confirmed hours and a verified positive court rate. |
+| Migration/deployment state | Unable to verify | Repository migration files do not prove they are applied to the target DB. Confirm migration history and inspect live RPC/table/policy definitions in the intended non-production environment only. |
+
+### Private-platform acceptance rules
+
+1. Keep venue directory discovery read-only until there are genuinely reviewed venue records.
+2. Make booking impossible unless the venue is published, the selected court is active and booking-enabled, its own verified price and schedule are present, and the server confirms availability.
+3. The database—not the browser—must compute total price from the selected court's current published price and duration. Reject client-submitted price overrides.
+4. Enforce overlap prevention and idempotency inside one database transaction/RPC; fail closed if the protection service is unavailable.
+5. Keep booking details private by owner; public availability responses must expose only minimum slot status and times, not names, contact details, email or booking identifiers.
+6. Use explicit statuses such as requested/pending, venue-confirmed, cancelled and completed; never show “confirmed” merely because a request was inserted.
+7. Test venue owner intake, admin review, publication, court setup, pricing, operating hours, holds, overlapping requests, cancellation and unauthorized access using a disposable development database.
+8. Do not apply migrations to production during this parity audit. Do not seed fake venues or publish guessed prices.
+
