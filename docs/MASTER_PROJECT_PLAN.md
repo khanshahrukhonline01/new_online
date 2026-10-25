@@ -71,6 +71,8 @@ Existing documents at the top of `docs/` remain valid. Do not move or rename the
 
 ## 4. Documentation catalogue and coverage
 
+The production source-tree parity review is documented in [Production Repository Parity Audit](PRODUCTION_REPOSITORY_PARITY_AUDIT.md). Use it alongside the planned route list; the source tree is not proof of runtime availability. The audit is read-only and does not authorize production changes.
+
 The initial document/path and route-overlap audit is tracked in `DOCUMENTATION_AUDIT_AND_GAP_REGISTER.md`. The full proposed navigation is in `product/NAVIGATION_AND_ROUTE_CATALOGUE.md`. Frontend architecture requirements are in `architecture/FRONTEND_ARCHITECTURE.md`; editorial verification and rights requirements are in `policies/EDITORIAL_VERIFICATION_AND_IPR.md`. A referenced document is not evidence of implementation or verification.
 
 The supplied navigation inventory is tracked in `product/NAVIGATION_AND_ROUTE_CATALOGUE.md`. The initial documentation gap and duplication audit is tracked in `DOCUMENTATION_AUDIT_AND_GAP_REGISTER.md`. These are living registers; a document reference alone does not mean a requirement has been implemented or verified.
