@@ -1,6 +1,6 @@
 # KhelGrid Platform — Page Inventory & Sitemap
 
-> **Navigation source of truth:** [Navigation and Route Catalogue](product/NAVIGATION_AND_ROUTE_CATALOGUE.md). Keep this inventory aligned with that catalogue; a listed page is planned inventory, not proof it is implemented.
+ > **Navigation source of truth:** [Navigation and Route Catalogue](product/NAVIGATION_AND_ROUTE_CATALOGUE.md). The catalogue now contains the detailed parent/child route tree, page responsibilities, shared page specification template and route status vocabulary. Keep this inventory aligned with it; a listed page is planned inventory, not proof it is implemented.
 
 
 **Status:** Planning baseline for the separate `khelgrid-platform` development project.  
