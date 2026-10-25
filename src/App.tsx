@@ -1,14 +1,47 @@
-const focusAreas = [
-  { number: '01', title: 'Discover opportunities', description: 'A foundation for verified trials, scholarships, academies, and sports programmes.' },
-  { number: '02', title: 'Follow the action', description: 'A sports centre designed for authorized feeds and clearly labelled data status.' },
-  { number: '03', title: 'Build your sports profile', description: 'A future home for athletes, coaches, academies, and organizers.' },
+import { useEffect, useState, type MouseEvent } from 'react'
+import HomePage from './modules/home/HomePage'
+import SportsPage from './modules/sports/SportsPage'
+import OpportunitiesPage from './modules/opportunities/OpportunitiesPage'
+import VenuesPage from './modules/venues/VenuesPage'
+
+const routes = [
+  { path: '/', label: 'Home' },
+  { path: '/sports', label: 'Sports' },
+  { path: '/opportunities', label: 'Opportunities' },
+  { path: '/venues', label: 'Venues' },
 ]
 
+function currentPath() {
+  if (typeof window === 'undefined') return '/'
+  return window.location.pathname.replace(/\/$/, '') || '/'
+}
+
 export default function App() {
-  return <main className="page-shell">
-    <header className="topbar"><a className="brand" href="/" aria-label="Khelgrid home"><span className="brand-mark" aria-hidden="true">K</span><span>KHELGRID</span></a><span className="environment-label"><span className="status-dot" />New platform · Development</span></header>
-    <section className="hero" aria-labelledby="hero-title"><p className="eyebrow">YOUR GAME. YOUR NEXT MOVE.</p><h1 id="hero-title">India’s next sporting opportunity starts here.</h1><p className="hero-copy">A fresh foundation for athletes, families, coaches, academies, and fans to discover what is next in sport.</p><a className="primary-link" href="#focus">Explore what we’re building <span aria-hidden="true">↘</span></a><div className="hero-footnote"><span className="status-dot warning" /><span>Early build — live feeds and account services are not connected yet.</span></div></section>
-    <section className="focus-section" id="focus" aria-labelledby="focus-title"><div className="section-heading"><p className="eyebrow">A CLEAN START</p><h2 id="focus-title">Built around the sports journey.</h2></div><div className="focus-grid">{focusAreas.map(area => <article className="focus-card" key={area.number}><span className="card-number">{area.number}</span><h3>{area.title}</h3><p>{area.description}</p></article>)}</div></section>
-    <footer className="footer"><span>© {new Date().getFullYear()} Khelgrid</span><span>Built from scratch. Production site unchanged.</span></footer>
-  </main>
+  const [path, setPath] = useState('/')
+  const [menuOpen, setMenuOpen] = useState(false)
+  useEffect(() => {
+    setPath(currentPath())
+    const handlePopState = () => { setPath(currentPath()); setMenuOpen(false) }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+  useEffect(() => { setMenuOpen(false) }, [path])
+  function navigate(event: MouseEvent<HTMLAnchorElement>, target: string) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
+    event.preventDefault()
+    if (typeof window !== 'undefined') {
+      if (target !== path) window.history.pushState({}, '', target)
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    }
+    setPath(target)
+  }
+  const active = routes.find(route => route.path === path)?.path ?? (path.startsWith('/sports/') ? '/sports' : path.startsWith('/opportunities/') ? '/opportunities' : path.startsWith('/venues/') ? '/venues' : '')
+  let page
+  if (path === '/') page = <HomePage />
+  else if (path === '/sports' || path.startsWith('/sports/')) page = <SportsPage />
+  else if (path === '/opportunities' || path === '/trials' || path === '/combines' || path === '/scholarships' || path === '/camps') page = <OpportunitiesPage />
+  else if (path === '/venues' || path === '/book') page = <VenuesPage />
+  else page = <section className="content-page"><p className="eyebrow">NOT FOUND</p><h1>This page isn’t here yet.</h1><p className="page-intro">This route has not been implemented. Return to the home page to continue exploring.</p><a className="primary-link" href="/" onClick={event => navigate(event, '/')}>Back home ↗</a></section>
+
+  return <div className="app-shell"><header className="site-header"><a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><span className="brand-mark" aria-hidden="true">K</span><span>KHELGRID</span></a><button className="menu-toggle" type="button" aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen(open => !open)}>{menuOpen ? 'Close' : 'Menu'} <span aria-hidden="true">{menuOpen ? '×' : '☰'}</span></button><nav id="primary-navigation" className={menuOpen ? 'primary-navigation is-open' : 'primary-navigation'} aria-label="Main navigation">{routes.map(route => <a key={route.path} href={route.path} onClick={event => navigate(event, route.path)} className={active === route.path ? 'nav-link active' : 'nav-link'} aria-current={active === route.path ? 'page' : undefined}>{route.label}</a>)}</nav><span className="environment-label"><span className="status-dot warning" />Development</span></header><main id="main-content" className="page-shell">{page}</main><footer className="site-footer"><a className="footer-brand" href="/" onClick={event => navigate(event, '/')}>KHELGRID</a><span>India’s sports discovery platform</span><span>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</span></footer></div>
 }
