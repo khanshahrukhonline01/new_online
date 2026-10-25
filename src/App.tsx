@@ -12,14 +12,15 @@ const routes = [
 ]
 
 function currentPath() {
-  const path = window.location.pathname.replace(/\/$/, '') || '/'
-  return path
+  if (typeof window === 'undefined') return '/'
+  return window.location.pathname.replace(/\/$/, '') || '/'
 }
 
 export default function App() {
-  const [path, setPath] = useState(currentPath)
+  const [path, setPath] = useState('/')
   const [menuOpen, setMenuOpen] = useState(false)
   useEffect(() => {
+    setPath(currentPath())
     const handlePopState = () => { setPath(currentPath()); setMenuOpen(false) }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
@@ -28,9 +29,11 @@ export default function App() {
   function navigate(event: MouseEvent<HTMLAnchorElement>, target: string) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
     event.preventDefault()
-    if (target !== path) window.history.pushState({}, '', target)
+    if (typeof window !== 'undefined') {
+      if (target !== path) window.history.pushState({}, '', target)
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    }
     setPath(target)
-    window.scrollTo({ top: 0, behavior: 'auto' })
   }
   const active = routes.find(route => route.path === path)?.path ?? (path.startsWith('/sports/') ? '/sports' : path.startsWith('/opportunities/') ? '/opportunities' : path.startsWith('/venues/') ? '/venues' : '')
   let page
