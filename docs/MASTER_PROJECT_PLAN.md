@@ -29,10 +29,12 @@ Use this structure as the canonical location for new planning and operational do
 docs/
 ├── MASTER_PROJECT_PLAN.md
 ├── README.md
+├── DOCUMENTATION_AUDIT_AND_GAP_REGISTER.md
 ├── product/
 │   ├── PRODUCT_REQUIREMENTS.md
 │   ├── ROADMAP_AND_DEPENDENCIES.md
-│   └── UX_UI_AND_ACCESSIBILITY.md
+│   ├── UX_UI_AND_ACCESSIBILITY.md
+│   └── NAVIGATION_AND_ROUTE_CATALOGUE.md
 ├── architecture/
 │   ├── FRONTEND_AND_SYSTEM_ARCHITECTURE.md
 │   ├── BACKEND_API_AND_INTEGRATIONS.md
@@ -69,6 +71,8 @@ Existing documents at the top of `docs/` remain valid. Do not move or rename the
 
 ## 4. Documentation catalogue and coverage
 
+The supplied navigation inventory is tracked in `product/NAVIGATION_AND_ROUTE_CATALOGUE.md`. The initial documentation gap and duplication audit is tracked in `DOCUMENTATION_AUDIT_AND_GAP_REGISTER.md`. These are living registers; a document reference alone does not mean a requirement has been implemented or verified.
+
 The numbers below preserve the 54-topic checklist for traceability. Topics are consolidated into master documents listed in the directory tree.
 
 ### Product and UX
@@ -79,7 +83,9 @@ The numbers below preserve the 54-topic checklist for traceability. Topics are c
 5. Roadmap and dependency plan — `product/ROADMAP_AND_DEPENDENCIES.md`.
 6. UX/UI and design system — `product/UX_UI_AND_ACCESSIBILITY.md`.
 7. Frontend architecture — `architecture/FRONTEND_AND_SYSTEM_ARCHITECTURE.md`.
-8. Page and feature specifications — product and feature specifications.
+8. Page and feature specifications — product and feature specifications; full route list: `product/NAVIGATION_AND_ROUTE_CATALOGUE.md`.
+9. Navigation and route catalogue — `product/NAVIGATION_AND_ROUTE_CATALOGUE.md`.
+10. Initial documentation gap/duplication audit — `DOCUMENTATION_AUDIT_AND_GAP_REGISTER.md`.
 9. Navigation and URL standards — product requirements and frontend architecture.
 10. Accessibility and responsive design — `product/UX_UI_AND_ACCESSIBILITY.md`.
 11. Content and media standards — `policies/EDITORIAL_VERIFICATION_AND_IPR.md`.
