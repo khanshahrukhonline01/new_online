@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import HomePage from './modules/home/HomePage'
 import SportsPage from './modules/sports/SportsPage'
 import OpportunitiesPage from './modules/opportunities/OpportunitiesPage'
@@ -25,7 +25,7 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
   useEffect(() => { setMenuOpen(false) }, [path])
-  function navigate(event: React.MouseEvent<HTMLAnchorElement>, target: string) {
+  function navigate(event: MouseEvent<HTMLAnchorElement>, target: string) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
     event.preventDefault()
     if (target !== path) window.history.pushState({}, '', target)
