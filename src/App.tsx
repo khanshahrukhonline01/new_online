@@ -4,6 +4,7 @@ import SportsPage from './modules/sports/SportsPage'
 import OpportunitiesPage from './modules/opportunities/OpportunitiesPage'
 import VenuesPage from './modules/venues/VenuesPage'
 import SearchPage from './modules/search/SearchPage'
+import Sidebar from './shared/components/Sidebar'
 import { resolveRoute } from './shared/routing'
 
 const routes = [
@@ -22,24 +23,16 @@ export default function App() {
   const [path, setPath] = useState('/')
   const [menuOpen, setMenuOpen] = useState(false)
   const menuToggleRef = useRef<HTMLButtonElement>(null)
+
   useEffect(() => {
     setPath(currentPath())
     const handlePopState = () => { setPath(currentPath()); setMenuOpen(false) }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
+
   useEffect(() => { setMenuOpen(false) }, [path])
-  useEffect(() => {
-    if (!menuOpen) return
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setMenuOpen(false)
-        menuToggleRef.current?.focus()
-      }
-    }
-    window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
-  }, [menuOpen])
+
   function navigate(event: MouseEvent<HTMLAnchorElement>, target: string) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
     event.preventDefault()
@@ -47,8 +40,9 @@ export default function App() {
       if (target !== path) window.history.pushState({}, '', target)
       window.scrollTo({ top: 0, behavior: 'auto' })
     }
-    if (menuOpen) menuToggleRef.current?.focus()
     setPath(target)
+    setMenuOpen(false)
+    menuToggleRef.current?.focus()
   }
 
   const match = resolveRoute(path)
@@ -71,5 +65,19 @@ export default function App() {
       page = <section className="content-page"><p className="eyebrow">PAGE NOT AVAILABLE</p><h1>This page isn’t here yet.</h1><p className="page-intro">This route has not been implemented. Return to a published section to continue exploring.</p><a className="primary-link" href="/" onClick={event => navigate(event, '/')}>Back home ↗</a></section>
   }
 
-  return <div className="app-shell"><a className="skip-link" href="#main-content">Skip to content</a><header className="site-header"><a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><span className="brand-mark" aria-hidden="true">K</span><span>KHELGRID</span></a><button ref={menuToggleRef} className="menu-toggle" type="button" aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen(open => !open)} aria-label={menuOpen ? 'Close main navigation' : 'Open main navigation'}>{menuOpen ? 'Close' : 'Menu'} <span aria-hidden="true">{menuOpen ? '×' : '☰'}</span></button><nav id="primary-navigation" className={menuOpen ? 'primary-navigation is-open' : 'primary-navigation'} aria-label="Main navigation">{routes.map(route => <a key={route.path} href={route.path} onClick={event => navigate(event, route.path)} className={active === route.path ? 'nav-link active' : 'nav-link'} aria-current={active === route.path ? 'page' : undefined}>{route.label}</a>)}</nav><a className={match.name === 'search' ? 'header-search-link active' : 'header-search-link'} href="/search" aria-current={match.name === 'search' ? 'page' : undefined} onClick={event => navigate(event, '/search')} aria-label="Search KhelGrid">Search <span aria-hidden="true">⌕</span></a><span className="environment-label"><span className="status-dot warning" />Development</span></header><main id="main-content" className="page-shell">{page}</main><footer className="site-footer"><a className="footer-brand" href="/" onClick={event => navigate(event, '/')}>KHELGRID</a><span>India’s sports discovery platform</span><span>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</span></footer></div>
+  return <div className="app-shell">
+    <a className="skip-link" href="#main-content">Skip to content</a>
+    <header className="site-header">
+      <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><span className="brand-mark" aria-hidden="true">K</span><span>KHELGRID</span></a>
+      <button ref={menuToggleRef} className="menu-toggle" type="button" aria-expanded={menuOpen} aria-controls="mobile-sidebar-drawer" onClick={() => setMenuOpen(open => !open)} aria-label={menuOpen ? 'Close main navigation' : 'Open main navigation'}>{menuOpen ? 'Close' : 'Menu'} <span aria-hidden="true">{menuOpen ? '×' : '☰'}</span></button>
+      <nav className="primary-navigation" aria-label="Main navigation">{routes.map(route => <a key={route.path} href={route.path} onClick={event => navigate(event, route.path)} className={active === route.path ? 'nav-link active' : 'nav-link'} aria-current={active === route.path ? 'page' : undefined}>{route.label}</a>)}</nav>
+      <a className={match.name === 'search' ? 'header-search-link active' : 'header-search-link'} href="/search" aria-current={match.name === 'search' ? 'page' : undefined} onClick={event => navigate(event, '/search')} aria-label="Search KhelGrid">Search <span aria-hidden="true">⌕</span></a>
+      <span className="environment-label"><span className="status-dot warning" />Development</span>
+    </header>
+    <div className="app-workspace">
+      <Sidebar activePath={path} onNavigate={navigate} open={menuOpen} onClose={() => setMenuOpen(false)} toggleRef={menuToggleRef} />
+      <main id="main-content" className="page-shell">{page}</main>
+    </div>
+    <footer className="site-footer"><a className="footer-brand" href="/" onClick={event => navigate(event, '/')}>KHELGRID</a><span>India’s sports discovery platform</span><span>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</span></footer>
+  </div>
 }
