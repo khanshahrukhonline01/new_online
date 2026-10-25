@@ -3,6 +3,7 @@ import HomePage from './modules/home/HomePage'
 import SportsPage from './modules/sports/SportsPage'
 import OpportunitiesPage from './modules/opportunities/OpportunitiesPage'
 import VenuesPage from './modules/venues/VenuesPage'
+import { resolveRoute } from './shared/routing'
 
 const routes = [
   { path: '/', label: 'Home' },
@@ -35,13 +36,26 @@ export default function App() {
     }
     setPath(target)
   }
-  const active = routes.find(route => route.path === path)?.path ?? (path.startsWith('/sports/') ? '/sports' : path.startsWith('/opportunities/') ? '/opportunities' : path.startsWith('/venues/') ? '/venues' : '')
-  let page
-  if (path === '/') page = <HomePage />
-  else if (path === '/sports' || path.startsWith('/sports/')) page = <SportsPage />
-  else if (path === '/opportunities' || path === '/trials' || path === '/combines' || path === '/scholarships' || path === '/camps') page = <OpportunitiesPage />
-  else if (path === '/venues' || path === '/book') page = <VenuesPage />
-  else page = <section className="content-page"><p className="eyebrow">NOT FOUND</p><h1>This page isn’t here yet.</h1><p className="page-intro">This route has not been implemented. Return to the home page to continue exploring.</p><a className="primary-link" href="/" onClick={event => navigate(event, '/')}>Back home ↗</a></section>
 
-  return <div className="app-shell"><header className="site-header"><a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><span className="brand-mark" aria-hidden="true">K</span><span>KHELGRID</span></a><button className="menu-toggle" type="button" aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen(open => !open)}>{menuOpen ? 'Close' : 'Menu'} <span aria-hidden="true">{menuOpen ? '×' : '☰'}</span></button><nav id="primary-navigation" className={menuOpen ? 'primary-navigation is-open' : 'primary-navigation'} aria-label="Main navigation">{routes.map(route => <a key={route.path} href={route.path} onClick={event => navigate(event, route.path)} className={active === route.path ? 'nav-link active' : 'nav-link'} aria-current={active === route.path ? 'page' : undefined}>{route.label}</a>)}</nav><span className="environment-label"><span className="status-dot warning" />Development</span></header><main id="main-content" className="page-shell">{page}</main><footer className="site-footer"><a className="footer-brand" href="/" onClick={event => navigate(event, '/')}>KHELGRID</a><span>India’s sports discovery platform</span><span>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</span></footer></div>
+  const match = resolveRoute(path)
+  const active = routes.find(route => route.path === path)?.path
+    ?? (match.name === 'sport-detail' ? '/sports'
+      : match.name === 'opportunity-detail' || match.name === 'opportunities-index' ? '/opportunities'
+      : match.name === 'venue-detail' || match.name === 'venues-index' ? '/venues' : '')
+
+  let page
+  switch (match.name) {
+    case 'home': page = <HomePage />; break
+    case 'sports-index':
+    case 'sport-detail': page = <SportsPage />; break
+    case 'opportunities-index':
+    case 'opportunity-detail': page = <OpportunitiesPage />; break
+    case 'venues-index':
+    case 'venue-detail': page = <VenuesPage />; break
+    case 'search': page = <section className="content-page"><p className="eyebrow">SEARCH</p><h1>Search KhelGrid.</h1><p className="page-intro">Search is being prepared. Browse the published sports, opportunities and venues using the main navigation.</p><div className="hero-actions"><a className="primary-link" href="/sports" onClick={event => navigate(event, '/sports')}>Browse sports</a><a className="secondary-link" href="/opportunities" onClick={event => navigate(event, '/opportunities')}>Browse opportunities</a></div></section>; break
+    default:
+      page = <section className="content-page"><p className="eyebrow">PAGE NOT AVAILABLE</p><h1>This page isn’t here yet.</h1><p className="page-intro">This route has not been implemented. Return to a published section to continue exploring.</p><a className="primary-link" href="/" onClick={event => navigate(event, '/')}>Back home ↗</a></section>
+  }
+
+  return <div className="app-shell"><header className="site-header"><a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><span className="brand-mark" aria-hidden="true">K</span><span>KHELGRID</span></a><button className="menu-toggle" type="button" aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen(open => !open)}>{menuOpen ? 'Close' : 'Menu'} <span aria-hidden="true">{menuOpen ? '×' : '☰'}</span></button><nav id="primary-navigation" className={menuOpen ? 'primary-navigation is-open' : 'primary-navigation'} aria-label="Main navigation">{routes.map(route => <a key={route.path} href={route.path} onClick={event => navigate(event, route.path)} className={active === route.path ? 'nav-link active' : 'nav-link'} aria-current={active === route.path ? 'page' : undefined}>{route.label}</a>)}</nav><a className="header-search-link" href="/search" onClick={event => navigate(event, '/search')} aria-label="Search KhelGrid">Search <span aria-hidden="true">⌕</span></a><span className="environment-label"><span className="status-dot warning" />Development</span></header><main id="main-content" className="page-shell">{page}</main><footer className="site-footer"><a className="footer-brand" href="/" onClick={event => navigate(event, '/')}>KHELGRID</a><span>India’s sports discovery platform</span><span>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</span></footer></div>
 }
