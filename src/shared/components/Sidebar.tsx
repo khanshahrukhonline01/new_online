@@ -79,7 +79,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
     <aside className="app-sidebar" aria-label="Sidebar navigation">
       <div className="sidebar-brand-row">
         <a className="sidebar-brand" href="/" onClick={event => onNavigate(event, '/')} aria-label="KhelGrid home">
-          <img className="brand-logo" src="/assets/kg-logo.svg" alt="" aria-hidden="true" />
+          <img className="brand-logo" src="https://raw.githubusercontent.com/khelgrid-dotcom/khelgrid-monetization-studio/main/public/assets/kg-logo.webp" alt="" aria-hidden="true" />
           <span className="sidebar-brand-name">KHELGRID</span>
         </a>
       </div>
@@ -96,7 +96,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
     </aside>
     <div ref={drawerRef} id="mobile-sidebar-drawer" className={open ? 'mobile-drawer is-open' : 'mobile-drawer'} aria-hidden={!open} role="dialog" aria-modal={open ? 'true' : undefined} aria-label="Mobile navigation">
       <div className="mobile-drawer-header">
-        <a className="sidebar-brand" href="/" onClick={event => { onNavigate(event, '/'); onClose() }}><img className="brand-logo" src="/assets/kg-logo.svg" alt="" aria-hidden="true" /><span className="sidebar-brand-name">KHELGRID</span></a>
+        <a className="sidebar-brand" href="/" onClick={event => { onNavigate(event, '/'); onClose() }}><img className="brand-logo" src="https://raw.githubusercontent.com/khelgrid-dotcom/khelgrid-monetization-studio/main/public/assets/kg-logo.webp" alt="" aria-hidden="true" /><span className="sidebar-brand-name">KHELGRID</span></a>
         <button ref={closeRef} className="sidebar-mobile-close" type="button" onClick={() => { onClose(); toggleRef.current?.focus() }} aria-label="Close navigation">×</button>
       </div>
       <nav className="sidebar-navigation" aria-label="Mobile feature navigation">
