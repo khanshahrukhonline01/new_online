@@ -447,3 +447,48 @@ Files inspected: `src/routes/api.indexnow.ts`, `src/lib/indexnow.ts`, `src/route
 | Technical endpoints | Source audit found IndexNow and SEO consistency risks | Harden endpoint, verify sitemap/crawler/llms claims against real responses |
 
 **Safety boundary unchanged:** no production files, database, settings, migrations or deployments were changed. This pass edited only the private planning audit document. No tests or live endpoint checks were run as part of this source-only pass.
+
+
+## 8. Follow-up source audit: mobile app, MCP, CI and backup operations
+
+**Scope:** read-only inspection of production `main` files `.github/workflows/weekly-supabase-backup.yml`, `.github/workflows/trial-opportunity-data-policy.yml`, `.github/workflows/chatgpt-mcp.yml`, `chatgpt-mcp/README.md`, `chatgpt-mcp/api/mcp.ts`, `app/src/main/AndroidManifest.xml`, `app/src/main/java/com/khelgrid/app/MainActivity.kt`, `app/src/main/java/com/khelgrid/app/ads/AdMobManager.kt`, `package.json` and `vite.config.ts`. No workflow was executed and no mobile build was run.
+
+### 8.1 Android / mobile app — source exists, release readiness not established
+
+- Android manifest requests internet, network-state and advertising ID permissions; declares the Google official sample AdMob application ID. This is appropriate for test builds but not evidence of a production AdMob configuration or monetization readiness.
+- `MainActivity` calls `initialiseAdsWithConsent(this)` before rendering the Compose UI and includes a banner-ad component in the bottom navigation layout. The consent implementation was not fully traced end-to-end in this pass; verify that no ad request or SDK initialization capable of requesting ads occurs before the UMP consent callback resolves for the relevant geography.
+- The manifest has `allowBackup="true"`; inventory the local/session data written by the app and decide whether backups should include any tokens, personal data, cached profile information or wallet/session state. Do not assume Android backup settings are safe by default.
+- The source tree contains a native app and ad manager, but this audit did not inspect the full navigation/deep-link/session implementation, app signing, release workflow, Play Store listing, accessibility or device tests. No claim of native parity or release readiness is warranted.
+- **Required follow-up:** maintain separate test/production ad identifiers; confirm UMP gating through instrumentation/network tests; review Android backup/data-extraction rules and sensitive local storage; document deep links and supported screens; build and test release variants on representative Android versions.
+
+### 8.2 ChatGPT MCP integration — appropriately read-only in design, but not launch-verified
+
+- `chatgpt-mcp/README.md` describes a separate Vercel project using Supabase URL plus anon key, expressly rejects a service-role key, and limits the first version to public opportunity search/detail tools. The MCP handler selects published opportunities and enforces the same status filter in its query.
+- The tool schema caps query fields and result counts; database errors return a generic user-facing message while logging an error code. This is a useful least-privilege direction.
+- The README itself says this is a development scaffold, requires PR typecheck and a real MCP Inspector test, and calls out missing rate limiting/abuse monitoring. The endpoint has not been proven deployed, connected to the intended Supabase project, or tested with MCP Inspector in this audit.
+- **Required follow-up:** verify effective anonymous RLS on the actual project; test malformed requests, query escaping, published/unpublished filtering and sensitive-field minimization; add rate limits/abuse controls and request-size limits at the hosting edge; verify canonical opportunity URLs; run typecheck and MCP Inspector; document data retention and prompt-injection boundaries. Never include private profile, application, payment, wallet or booking tools without a separate authorization design and approval.
+
+### 8.3 CI and release checks — declared gates are not evidence they passed
+
+- The data-policy workflow pins Node.js 22 and runs `npm ci`, the mandatory data-policy script, tests, lint and build for pull requests and pushes to `main`. This is a useful declared quality gate; actual run status was not queried in this source review.
+- The MCP workflow uses Node.js 22 but runs `npm install` rather than `npm ci`, then typecheck only. Reproducible install should be preferred where a committed lockfile exists; add tests and security checks as the endpoint matures.
+- `vite.config.ts` configures the dev server with `allowedHosts: true`, `cors: true`, and `Access-Control-Allow-Origin: *`. This is development-server configuration, not a production security guarantee; verify that these settings are limited to local/dev and do not unintentionally broaden any exposed preview server.
+- **Required follow-up:** inspect recent workflow runs and required branch checks, confirm lockfile and exact Node/npm versions, test the production build, and keep protected deployment/merge gated on passing checks. No checks are represented as passing based solely on workflow YAML.
+
+### 8.4 Backup and recovery — encrypted scheduled dump exists, restore proof is missing
+
+- The weekly backup workflow schedules a Sunday run and also permits manual dispatch. It checks for a database URL and passphrase, creates a PostgreSQL custom-format dump, encrypts it with OpenSSL AES-256-CBC/PBKDF2, calculates a SHA-256 checksum, removes the unencrypted dump, and uploads the encrypted artifact with 90-day retention.
+- The inspected workflow does **not** perform a restore drill or validate the backup by restoring into an isolated disposable database. A non-empty encrypted file plus checksum does not prove decryption, logical consistency or recoverability.
+- The workflow uses repository secrets; verify the scope and environment protection of these secrets, access to backup artifacts, retention needs, passphrase escrow/rotation, artifact download permissions and whether backups include Supabase-managed objects or only the database dump.
+- **Required follow-up:** create a documented restore runbook and scheduled isolated restore verification; verify checksums before decryption; run `pg_restore --list` and an actual restore against a disposable database; test schema/data counts and key constraints; record recovery time and recovery point objectives; ensure backup credentials are read-only where possible and artifact access is restricted. Never run a restore against production as part of an audit.
+
+### 8.5 Operations and release status summary
+
+| Area | Source-level conclusion | Not yet proven |
+|---|---|---|
+| Android / PWA | Native Android source and UMP/AdMob code exist; test ad ID is configured | Consent timing, backup privacy, release signing, actual builds/device tests, full PWA scope |
+| AI / MCP | Read-only public opportunities scaffold with anon key and published-status filter | Deployment, effective RLS, MCP Inspector, rate limits and abuse tests |
+| CI / release | Workflows declare Node 22, tests/lint/build and MCP typecheck | Current run results, required checks, successful build or merge readiness |
+| Backups | Scheduled encrypted dump workflow and 90-day artifact retention exist | Successful scheduled runs, decryption/restore drills, recovery evidence, artifact/secret access review |
+
+**Current audit coverage:** all ten requested parity areas now have at least some source-level inventory or findings in this document. This does **not** mean all ten are fully audited or implemented. Highest priority remaining work is runtime/effective-RLS verification, test execution, canonical route mapping and documented acceptance criteria. No production files, DB, settings, migrations, deployments or PR merge actions were performed.
