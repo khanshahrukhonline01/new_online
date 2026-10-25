@@ -14,9 +14,11 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+          AGE_IDENTITY: ${{ secrets.BACKUP_AGE_IDENTITY }}
         run: |
           test -n "$SUPABASE_DB_URL" || { echo "Missing SUPABASE_DB_URL secret"; exit 1; }
           test -n "$AGE_RECIPIENT" || { echo "Missing BACKUP_AGE_RECIPIENT secret"; exit 1; }
+          test -n "$AGE_IDENTITY" || { echo "Missing BACKUP_AGE_IDENTITY secret"; exit 1; }
       - name: Install PostgreSQL client and age
         run: |
           sudo apt-get update
