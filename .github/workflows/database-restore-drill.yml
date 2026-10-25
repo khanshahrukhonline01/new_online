@@ -34,10 +34,16 @@ jobs:
           name: khelgrid-db-backup-${{ inputs.backup_run_id }}
           run-id: ${{ inputs.backup_run_id }}
           github-token: ${{ github.token }}
-      - name: Install PostgreSQL client and age
+      - name: Install PostgreSQL 17 client and age
         run: |
           sudo apt-get update
-          sudo apt-get install -y postgresql-client age
+          sudo apt-get install -y ca-certificates curl gnupg age
+          sudo install -d /usr/share/postgresql-common/pgdg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor --yes -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          /usr/lib/postgresql/17/bin/pg_restore --version
       - name: Verify checksum, decrypt, restore into isolated PostgreSQL, and assert schema
         env:
           AGE_IDENTITY: ${{ secrets.BACKUP_AGE_IDENTITY }}
@@ -51,11 +57,17 @@ jobs:
           set -euo pipefail
           test -n "$AGE_IDENTITY" || { echo "Missing BACKUP_AGE_IDENTITY secret"; exit 1; }
           sha256sum --check khelgrid-public.dump.age.sha256
-          age --decrypt --identity <(printf '%s' "$AGE_IDENTITY") --output public.dump khelgrid-public.dump.age
+          printf '%s\n' "$AGE_IDENTITY" | tr -d '\r' | grep -E '^AGE-SECRET-KEY-[0-9A-Z]+' > age-identity.txt || {
+            echo "BACKUP_AGE_IDENTITY must contain the private line beginning AGE-SECRET-KEY-1."
+            exit 1
+          }
+          chmod 600 age-identity.txt
+          age --decrypt --identity age-identity.txt --output public.dump khelgrid-public.dump.age
+          rm -f age-identity.txt
           test -s public.dump
           psql -v ON_ERROR_STOP=1 -c 'CREATE SCHEMA auth; CREATE TABLE auth.users (id uuid PRIMARY KEY);'
-          pg_restore --exit-on-error --no-owner --no-acl --dbname="$PGDATABASE" public.dump
+          /usr/lib/postgresql/17/bin/pg_restore --exit-on-error --no-owner --no-acl --dbname="$PGDATABASE" public.dump
           psql -v ON_ERROR_STOP=1 -Atc "select count(*) from information_schema.tables where table_schema='public' and table_name in ('profiles','sports','opportunities','venues','venue_courts')" | grep -qx '5'
           psql -v ON_ERROR_STOP=1 -Atc "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in ('profiles','sports','opportunities','venues','venue_courts') and c.relrowsecurity" | grep -qx '5'
           psql -v ON_ERROR_STOP=1 -Atc "select count(*) from pg_policies where schemaname='public'" | grep -Eq '^[1-9][0-9]*$'
-          echo "Restore drill passed: encrypted artifact checksum verified; dump decrypted and restored in isolated PostgreSQL; five core tables have RLS enabled and policies exist."
+          echo "Restore drill passed: encrypted artifact checksum verified; dump decrypted and restored in isolated PostgreSQL 17; five core tables have RLS enabled and policies exist."
