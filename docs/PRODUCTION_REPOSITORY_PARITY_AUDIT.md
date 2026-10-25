@@ -374,3 +374,76 @@ Further inspection of `user-profile-service.ts` and `supabase.ts` found addition
 7. Test venue owner intake, admin review, publication, court setup, pricing, operating hours, holds, overlapping requests, cancellation and unauthorized access using a disposable development database.
 8. Do not apply migrations to production during this parity audit. Do not seed fake venues or publish guessed prices.
 
+
+
+## 7. Follow-up source audit: trials, notifications, live sports, ads and technical endpoints
+
+**Scope:** read-only inspection of named files on production repository `main`; no runtime execution, provider verification, deployment inspection or database-policy evaluation was performed. These are source findings, not claims about current production runtime.
+
+### 7.1 Trials and opportunity data — gaps found
+
+Files inspected: `src/lib/trials-service.ts`, `src/services/trials-database-service.ts`, `src/routes/api.trials.ts`, `src/routes/sitemap[.]xml.ts`.
+
+- `fetchAvailableTrialsFromSupabase` queries the `trials` table and filters active/upcoming statuses, then filters by event end date. It returns query errors and does not merge static cards into a successful database response. This is a positive fail-closed behaviour for that service.
+- A separate `trialsDatabaseService` still falls back to the static `TRIALS` array for summary stats and individual trial detail when the database is unavailable or a lookup fails. Callers must visibly distinguish that fallback from current, source-verified database records; otherwise the same site can have inconsistent source-of-truth behaviour.
+- `/api/trials` directly serializes static `TRIALS`, with public wildcard CORS and a cache lifetime up to 24 hours at shared caches. Its payload includes source URLs and a `verified` value derived from `verifiedLabel`; this endpoint is not database-backed in the inspected file. A client could therefore receive dated static records even if the live database service has no rows.
+- Sitemap opportunity URLs are generated from static `TRIALS`; its last-modified date is a hard-coded constant. Venue URLs likewise come from static `VENUES`. This can index stale/non-authoritative listings or URLs that don't correspond to live database entities.
+- **Required follow-up:** consolidate public listing/API/sitemap/detail views onto one authoritative data path; distinguish source-published vs independently verified; validate source evidence, fee/eligibility/date/expiry; use bounded cache invalidation; add tests for empty/error/archive/upcoming cases and sitemap/API consistency. Do not delete data or alter production until owner approval and evidence review.
+
+### 7.2 Notifications — prototype/local state and authorization risks
+
+File inspected: `src/services/notification-worker-service.ts`.
+
+- The module contains hard-coded sample subscriptions and a test-looking FCM token in `DEFAULT_SUBSCRIPTIONS`; local storage falls back to these defaults when there is no saved value or parsing fails. This is demonstration state and must never be treated as a real subscriber/device.
+- `subscribeToTrialAlerts` accepts `userId` and `fcmToken` from the caller, tries a Supabase upsert, then returns `success: true` even if the database write did not succeed. The return shape exposes `isSupabaseLive`, but callers must not interpret `success` alone as durable subscription.
+- `getNotificationSubscriptions` queries using caller-provided user ID or FCM token. Its fallback returns the entire local list if the requested filter finds no matches, which can expose unrelated local subscription records to UI callers. The function also starts with `isSupabaseLive = false` and only returns true on one successful non-empty branch.
+- `unsubscribeFromTrialAlerts` updates by subscription ID without a visible user filter in this client function and returns `success: true` even if persistence failed. Effective RLS/constraints may mitigate database access, but they were not evaluated here.
+- **Required follow-up:** remove sample tokens/subscriptions from production defaults; make persistence result explicit; require authenticated identity and server/database ownership checks; make reads return only exact matches (no unfiltered fallback); bind unsubscribe to owner or an unguessable verified device credential; implement real server-side push delivery and retry/idempotency before claiming notifications work. Test unauthorized cross-user reads/writes and opt-out behaviour.
+
+### 7.3 Live sports — external headlines are not a score API
+
+Files inspected: `src/routes/live-scores.tsx`, `src/lib/live-sports-service.ts`, `src/data/liveSports.ts`.
+
+- The live-score page initializes its state from `LIVE_SPORTS_UPDATES`, a static fixture array. The page itself labels its refresh action as a status check and tells users that live data is not connected; refresh does not fetch scores.
+- A separate service tries to parse Google News RSS search results using regular expressions and infers teams, sport, status and scores from article headlines. It can also ask a server-side Gemini model to return a JSON list of purported current matches. News headlines and generated search summaries are not authoritative structured match-state feeds; inference can misclassify sports, scores or live status.
+- The service response type and source comments should not be interpreted as proof that a licensed/official score provider is connected. The inspected code does not establish a provider contract, match identifiers, score validation, per-sport structured endpoints, source freshness guarantees or rights to redistribute official live data.
+- **Required follow-up:** keep fixture/demo data visibly marked and excluded from claims of live service; select a real provider with documented terms, coverage, attribution and commercial redistribution rights; implement server-side adapters, secret handling, normalization, stale-data detection and rate limits; use official match IDs/status and never derive scores from news text; test stale/error/empty states. No provider should be called “connected” until a real integration is configured and verified.
+
+### 7.4 Advertising and consent — implementation exists, policy compliance unverified
+
+Files inspected: `src/components/ads/AdConsent.tsx`, `src/components/ads/AdConsentBanner.tsx`, `src/components/ads/AdSenseLoader.tsx`, `src/lib/ump-web.ts` (loader integration referenced from consent module).
+
+- Consent is stored in browser local storage with `unknown`, `granted`, and `denied` states. The banner labels “Non-personalized” and “Accept all”; the code comment says ads are not requested until consent is resolved in consent-required mode.
+- The provider's default `requireConsent` is `false`; therefore the actual application-level provider configuration and every loader/slot call site determine whether script loading waits for a choice. The banner alone is not proof that all ad requests are blocked before consent.
+- “Non-personalized” is not the same as “no tracking/no storage” or a legally valid consent refusal in every jurisdiction. Consent Mode/UMP wiring, geography, vendor disclosures, retention, withdrawal, tag order, mobile/native ad consent and actual network requests were not tested.
+- AdSense loader is guarded by an environment-variable wrapper according to its comments, but the actual production environment and AdSense account approval/ads.txt state were not checked.
+- **Required follow-up:** audit provider props and all ad slot/analytics tags; verify real network requests in clean browser sessions for unknown/granted/denied and privacy-settings reset; confirm current Google publisher policies and applicable privacy rules; test native Android consent separately; ensure denied/unknown states do not load unauthorized trackers or personalized ad requests. Do not promise compliance from source comments alone.
+
+### 7.5 Technical endpoints and SEO — actionable source issues
+
+Files inspected: `src/routes/api.indexnow.ts`, `src/lib/indexnow.ts`, `src/routes/api.trials.ts`, `src/routes/robots[.]txt.ts`, `src/routes/sitemap[.]xml.ts`, `src/routes/llms[.]txt.ts`.
+
+- `GET /api/indexnow` submits the first 100 sitemap URLs to an external indexing service. `POST /api/indexnow` accepts a caller-supplied `urls` array and forwards it after only basic normalization/length bounding. There is no visible authentication, rate limiting, same-host allowlist, or URL validation in this route/service. This creates an abuse surface and permits submissions outside the intended canonical host because absolute URLs beginning with `http` are passed through.
+- The IndexNow key is a public protocol key and is returned in the GET JSON; the important controls are correct host/key-file verification and abuse resistance, not treating that public key as a password.
+- Sitemap generation uses a fixed last-modified date, includes static trial and venue catalog entries, and includes a query-string archive URL. It does not prove every URL returns canonical 200 or has index-worthy content.
+- The `llms.txt` fallback contains strong claims such as “verified,” “zero fake trials,” “real-time searchable,” “Khelo India accredited,” “real-time scores,” and “book ... across Indian metro cities.” These claims need evidence and should not be emitted as fallback copy unless current capabilities substantiate them. It also advertises the static-backed trials API as delivering verified trials.
+- `robots.txt` explicitly allows many crawlers, including LLM-related user agents; that is a policy choice, not an automatic compliance requirement. Confirm desired crawl permissions and ensure disallowed/private routes are protected by authorization, not merely robots directives.
+- **Required follow-up:** restrict IndexNow POST to canonical owned-host URLs, validate scheme/host/path, cap request size/count and rate-limit; add auth or a signed internal trigger if endpoint is intended for internal use; dynamically set trustworthy lastmod values; verify sitemap URL responses and content; fact-check `llms.txt` claims; explicitly approve crawler policy.
+
+### 7.6 Updated completion status
+
+| Area | Status after this pass | Still required |
+|---|---|---|
+| Production route parity | Partial source inventory | Route-by-route mapping and approved preserve/merge/defer/retire decisions |
+| Athlete profiles and Sports CV | Source review found material gaps | Effective RLS chain, write-path audit, owner-scoped persistence, secure share-token design and access tests |
+| Venue operations | Partial source review; safeguards exist in code/migrations | Verify effective policies/RPCs, server-calculated pricing, concurrency, expiry and cancellation tests |
+| Trials and opportunity lifecycle | Source audit found split data paths | Unify authoritative DB/API/sitemap path; source verification and lifecycle tests |
+| Notifications | Source audit found demo defaults and persistence/ownership risks | Remove samples, owner-bound access, real delivery worker, honest persistence status |
+| Live sports | Source audit found static fixtures and inferred news/Gemini data path | Genuine licensed structured provider and verified freshness/error handling |
+| Monetization and consent | Source review only | Test actual provider/tag behaviour, all consent states, geography and native app |
+| Mobile/PWA | Not yet audited in detail | Inspect manifests, service worker, Android permissions/ad consent/deep links |
+| AI/LLM/MCP | Partial source inventory only | Inspect tool schemas, auth, least privilege, injection/data leakage, quotas and logging |
+| Operations | Partial source inventory only | Inspect workflows, backup/restore evidence, release gates, monitoring and secret scopes |
+| Technical endpoints | Source audit found IndexNow and SEO consistency risks | Harden endpoint, verify sitemap/crawler/llms claims against real responses |
+
+**Safety boundary unchanged:** no production files, database, settings, migrations or deployments were changed. This pass edited only the private planning audit document. No tests or live endpoint checks were run as part of this source-only pass.
