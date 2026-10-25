@@ -1,0 +1,47 @@
+name: Encrypted database backup
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 2 * * 1"
+permissions:
+  contents: read
+  actions: write
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require backup secrets
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+        run: |
+          test -n "$SUPABASE_DB_URL" || { echo "Missing SUPABASE_DB_URL secret"; exit 1; }
+          test -n "$AGE_RECIPIENT" || { echo "Missing BACKUP_AGE_RECIPIENT secret"; exit 1; }
+      - name: Install PostgreSQL client and age
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client age
+      - name: Export public application schema and encrypt immediately
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+        run: |
+          set -euo pipefail
+          umask 077
+          pg_dump "$SUPABASE_DB_URL" --schema=public --no-owner --no-acl --format=custom --file=public.dump
+          test -s public.dump
+          age --encrypt --recipient "$AGE_RECIPIENT" --output khelgrid-public.dump.age public.dump
+          rm -f public.dump
+          test -s khelgrid-public.dump.age
+          sha256sum khelgrid-public.dump.age > khelgrid-public.dump.age.sha256
+          age --decrypt --identity <(printf '%s' "${{ secrets.BACKUP_AGE_IDENTITY }}") khelgrid-public.dump.age >/dev/null
+        shell: bash
+      - name: Upload encrypted backup only
+        uses: actions/upload-artifact@v4
+        with:
+          name: khelgrid-db-backup-${{ github.run_id }}
+          path: |
+            khelgrid-public.dump.age
+            khelgrid-public.dump.age.sha256
+          if-no-files-found: error
+          retention-days: 30
