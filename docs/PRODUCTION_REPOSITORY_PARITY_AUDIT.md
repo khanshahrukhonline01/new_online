@@ -333,3 +333,44 @@ Further inspection of `user-profile-service.ts` and `supabase.ts` found addition
 | Verification integrity | Gap found; default sample and route metadata imply verification without route-level evidence |
 | RLS for legacy profile/achievement/membership tables | Gap found; reviewed historical migration defines broad public policies; full final effective policy state still needs complete migration-chain and live-schema confirmation |
 | Runtime security tests | Unable to verify; no live tests executed as part of this source review |
+
+
+## 13. Next parity area — venue directory, submissions and booking operations
+
+**Status: Partially checked; source/migration review found both safeguards and unresolved operational questions.** This section is a source-level audit only. It does not confirm the current production database has these migrations applied or that the live booking journey works.
+
+### Evidence reviewed
+
+- [`src/routes/book.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/routes/book.tsx) loads directory venues from Supabase when configured and does not automatically fill the directory with the imported sample `VENUES` list in the inspected effect. However, its SEO description says “verified” and “instantly reserve” more broadly than this source inspection can substantiate. Loading/empty/error presentation and all booking paths require a UI test pass.
+- [`src/lib/booking-service.ts`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/lib/booking-service.ts) reads booking records from Supabase only, requires a selected court, calls a slot-availability RPC, and refuses to use a non-atomic insert fallback when the atomic RPC fails. It also checks that the selected venue exists in the database and rejects nonpositive/missing hold prices. These are positive source-level controls.
+- [`20261024060000_venue_court_pricing_hours_phase1.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20261024060000_venue_court_pricing_hours_phase1.sql) introduces explicit `booking_enabled`, court-specific pricing and operating-hour validation; booking requires an active court and positive published rate.
+- [`20261024070000_court_availability_phase2.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20261024070000_court_availability_phase2.sql) defines a court/date availability RPC and comments that the atomic booking RPC validates enabled court, rate, verified hours, overlaps and creates pending requests. The actual deployed RPC definition was not retrieved/verified in this review.
+- [`20261024030000_venue_submission_intake.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20261024030000_venue_submission_intake.sql) creates a private intake queue, allows public submission only in pending/unreviewed state and restricts reads/review to admins under the migration's role model.
+- [`20261024040000_venue_submission_review_publish.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20261024040000_venue_submission_review_publish.sql) implements admin-only review/publication and requires approval, address and supported booking method before publication. The created venue starts without a published price/rating, which is safer than guessing one.
+
+### Findings and remaining checks
+
+| Requirement | Status | Finding / next action |
+|---|---|---|
+| Live directory source | Partially verified | Supabase query is present; verify configured/unconfigured, empty, permission error and network error UI states. |
+| Fake/sample venue separation | Partially verified | Booking rejects a venue not found in DB. Audit every UI action to ensure sample cards cannot enter a booking flow and no sample listing is described as verified. |
+| Court-specific rate | Partially verified | Client requires a published positive rate for holds and migration adds constraints. Verify atomic booking RPC independently recalculates and persists the authoritative DB rate, ignoring client totals. |
+| Operating hours | Partially verified | Validation helper exists. Verify booking RPC checks the selected court's schedule and the venue/court verification timestamp; test closed days, missing hours, invalid time, overnight and timezone cases. |
+| Availability / overlap | Partially verified | Availability RPC and atomic booking call exist in source; deployed function body and concurrent booking test results remain unverified. Confirm expired holds are ignored and two simultaneous requests cannot both succeed. |
+| Booking access and privacy | Unable to verify | `getVenueBookings()` selects booking rows without a visible user filter in the client query. RLS must ensure users see only their own bookings (and admins/venue operators only authorized scopes). Test direct API access, not only UI filtering. |
+| Booking confirmation / cancellation | Partially checked | Current flow reports a pending request and says to contact the venue for confirmation. Inspect cancellation RPC, status transitions and authorization before claiming end-to-end transactional booking. |
+| Venue submission intake | Partially verified | Migration has validation and admin-only review intent. Verify the admin role lookup is consistent with the canonical auth/profile schema and test anonymous submit, user read denial, admin review and non-admin rejection. |
+| Publication quality | Partially verified | Publication checks address and booking method and avoids guessed rating/price. Ensure published venue remains non-bookable until each court has confirmed hours and a verified positive court rate. |
+| Migration/deployment state | Unable to verify | Repository migration files do not prove they are applied to the target DB. Confirm migration history and inspect live RPC/table/policy definitions in the intended non-production environment only. |
+
+### Private-platform acceptance rules
+
+1. Keep venue directory discovery read-only until there are genuinely reviewed venue records.
+2. Make booking impossible unless the venue is published, the selected court is active and booking-enabled, its own verified price and schedule are present, and the server confirms availability.
+3. The database—not the browser—must compute total price from the selected court's current published price and duration. Reject client-submitted price overrides.
+4. Enforce overlap prevention and idempotency inside one database transaction/RPC; fail closed if the protection service is unavailable.
+5. Keep booking details private by owner; public availability responses must expose only minimum slot status and times, not names, contact details, email or booking identifiers.
+6. Use explicit statuses such as requested/pending, venue-confirmed, cancelled and completed; never show “confirmed” merely because a request was inserted.
+7. Test venue owner intake, admin review, publication, court setup, pricing, operating hours, holds, overlapping requests, cancellation and unauthorized access using a disposable development database.
+8. Do not apply migrations to production during this parity audit. Do not seed fake venues or publish guessed prices.
+
