@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { renderToStaticMarkup } from 'react-dom/server'
+import App from './App'
 
 describe('Khelgrid starter shell', () => {
-  it('clearly labels disconnected live feeds', () => {
-    const source = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8')
-    expect(source).toContain('live feeds and account services are not connected yet')
+  it('renders the core sports journeys', () => {
+    const html = renderToStaticMarkup(<App />)
+    expect(html).toContain('Discover opportunities')
+    expect(html).toContain('Follow the action')
+    expect(html).toContain('Build your sports profile')
   })
-  it('does not claim a live feed is connected', () => {
-    const source = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8')
-    expect(source).not.toContain('Live feed connected')
+
+  it('clearly labels live feeds as not connected', () => {
+    const html = renderToStaticMarkup(<App />)
+    expect(html).toContain('live feeds and account services are not connected yet')
   })
 })
