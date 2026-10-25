@@ -40,7 +40,11 @@ The repository has an established planning baseline: master plan, page inventory
 | Cost/maintenance | `operations/COST_CAPACITY_AND_MAINTENANCE.md` | Present — draft | Populate approved provider/owner information |
 | Feature specs | `features/*.md` | Core specs present | Extend for every later-stage route listed below |
 
-## 3. Navigation coverage and overlaps
+## 3. Detailed page/subpage coverage update
+
+The canonical [Navigation and Route Catalogue](product/NAVIGATION_AND_ROUTE_CATALOGUE.md) now contains a hierarchical page/subpage list for global/home, Compete, Play & train, Learn, Grow, future account pages, legal/system pages and future private admin pages. It also includes a per-page specification template and route lifecycle status vocabulary. This closes the documentation gap for a consolidated route tree, but it does not mean each individual feature has a complete implementation-ready specification.
+
+## 4. Navigation coverage and overlaps
 
 The navigation catalogue is a planning inventory. Listed routes are not proof of existing implementation.
 
@@ -61,14 +65,14 @@ The navigation catalogue is a planning inventory. Listed routes are not proof of
 | AI Guide | User-facing AI feature | Create separate functional specification before integrating provider-neutral LLM layer |
 | Cities | Geographic discovery taxonomy | Define canonical city identifiers and only show cities with real supported content |
 
-## 4. Missing or incomplete specifications
+## 5. Missing or incomplete specifications
 
 Priorities:
 - **P0:** Before the next major implementation expansion: approve route catalogue, route-to-stage mapping, core acceptance criteria, data/publication rules and security/privacy boundaries.
 - **P1:** Before relevant feature implementation: add detailed specifications for Calendar/Events, Verify, Play/community, Coaches/Academies, Talent Scanner/Scout Portal, AI Guide, content taxonomy, tools/calculators, venue submission, memberships/pricing, Careers and Mobile App.
 - **P2:** Before public launch of each applicable capability: validate SEO, analytics/advertising consent, monitoring, backup restore, operational ownership and release runbooks against real configuration.
 
-## 5. Consolidation rules
+## 6. Consolidation rules
 
 1. One canonical `/events` route may be linked from multiple navigation groups; do not build duplicate pages.
 2. Search, trials, opportunities and calendar views should reference a shared domain model rather than copy records into parallel tables.
@@ -78,7 +82,7 @@ Priorities:
 6. Multi-LLM architecture is shared infrastructure; each user-facing AI feature needs its own UX, source, safety and acceptance requirements.
 7. Public/private asset labels must align with actual storage policies, API responses, indexing, caches and model retrieval.
 
-## 6. Current stage recommendation
+## 7. Current stage recommendation
 
 **Stage A candidate:** app shell, public sports directory, sourced opportunities/trials, public venue directory, local-first Sports CV, shared navigation, legal/footer foundations, SEO/accessibility and CI gates.
 
@@ -86,7 +90,7 @@ Priorities:
 
 The project owner should approve sequencing and scope before expanding implementation.
 
-## 7. Acceptance and follow-up
+## 8. Acceptance and follow-up
 
 - [ ] Each route has a stage, owner, public/private classification, source of truth, dependencies and acceptance criteria.
 - [ ] Every master-plan reference resolves to a real file or is explicitly marked missing.
@@ -96,6 +100,6 @@ The project owner should approve sequencing and scope before expanding implement
 - [ ] Feature-specific specifications are completed before implementation begins.
 - [ ] Re-audit after scope approval and again before production release.
 
-## 8. Limitations
+## 9. Limitations
 
 The public URLs supplied for the existing website were not reliably retrievable during the earlier review, so this audit treats the user's navigation list as intended scope rather than evidence of live-site behaviour. This audit verifies documentation paths and planning consistency only; it does not establish that code, production behaviour, legal compliance, accessibility, security or external provider permissions have been verified. No production changes were made.
