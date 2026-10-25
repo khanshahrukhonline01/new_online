@@ -281,3 +281,55 @@ Further inspection of `user-profile-service.ts` and `supabase.ts` found addition
 - `src/lib/supabase.ts` initializes the browser client with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, and includes a fallback project URL if the environment is not configured. The anon key is expected to be public; security must rely on RLS and server-side authorization. The fallback URL should be reviewed for environment isolation so a misconfigured build cannot silently point at the wrong project.
 
 **Required action for the private platform:** model all profile, achievement, enrollment and membership records with an explicit owner/tenant boundary; add owner filters where appropriate; enforce equivalent database RLS; derive verified status only from privileged review records; test cross-user reads/writes and unauthenticated requests. Keep production unchanged while doing this review.
+
+
+## 12. Detailed source review — CV routes, auth guard and profile/achievement RLS
+
+**Status: Gap found — concrete unsafe patterns are visible in source/migrations.** This remains a read-only audit of production `main`; no production migration or code was changed.
+
+### Route and access findings
+
+- [`src/routes/profile.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/routes/profile.tsx) wraps the profile page in `ProtectedRoute` and marks it noindex. This is a useful UI guard, but it is not a substitute for database authorization.
+- [`src/routes/onboarding.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/routes/onboarding.tsx) renders the onboarding wizard without a route-level `ProtectedRoute`. If onboarding is intended to create account-bound records, its public access and persistence must be explicitly designed and tested.
+- [`src/routes/cv.index.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/routes/cv.index.tsx) redirects to a CV slug derived from browser-local CV data and falls back to `aarav-sharma-cricket`.
+- [`src/routes/cv.$id.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/routes/cv.$id.tsx) resolves the CV from a query payload or local registry/sample fallback, and its SEO title/description label the profile “Verified” / “official verified” without an evidenced verification lookup in this route. The public CV page also renders a “KhelGrid Verified Dossier” badge. This is a **high-priority trust and accuracy gap**.
+- [`src/components/ProtectedRoute.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/components/ProtectedRoute.tsx) checks client auth state and an app role to decide what UI to render. It is only a frontend boundary; the data layer must independently authorize every operation.
+
+### Share implementation and tests
+
+- [`sports-cv-sharing.ts`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/lib/sports-cv-sharing.ts) decodes arbitrary `data` query payloads into `SportsCVData` and returns them as a public CV; the shape check only requires `athleteName` and `sport`. A payload can be supplied by the link sender; it is not authenticated, verified, owner-approved or revocable.
+- Unknown slugs can fall back to generated sample athlete data; specific demo slugs return populated sample athletes. This can make a guessed/unregistered URL display data as if it were an actual public athlete.
+- [`SportsCVSharing.test.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/components/SportsCVSharing.test.tsx) explicitly tests the `?data=` portable payload and the demo fallback records (including a “verified” sample). These tests document existing behaviour; they do not establish privacy or trust safety.
+- [`ProtectedRoute.test.tsx`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/src/components/ProtectedRoute.test.tsx) tests rendered client-side auth/role states. It does not test Supabase RLS, direct REST access, or cross-user data isolation.
+
+### Database policy findings from reviewed migrations
+
+- [`20260916_user_profile_achievements_memberships.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20260916_user_profile_achievements_memberships.sql) initially creates broad policies on `user_profiles`, `sports_achievements` and `user_memberships`: public SELECT/INSERT/UPDATE for several tables and public DELETE for achievements. The migration includes `user_id` columns, but these original policies do not constrain operations to the current owner.
+- [`20260927_production_hardening_and_integrity.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20260927_production_hardening_and_integrity.sql) replaces some update/delete policies with owner-or-admin checks. However, the reviewed portion does not demonstrate that the earlier public SELECT/INSERT policies were all removed/replaced for all three tables. Since permissive PostgreSQL RLS policies combine with OR semantics, a restrictive policy does not neutralize a remaining permissive policy by itself.
+- [`20261020220000_harden_profile_column_privileges.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20261020220000_harden_profile_column_privileges.sql) hardens the separate `public.profiles` table's column privileges and revokes anon SELECT. This is a positive control for that table, but it does not prove that the separate legacy `user_profiles`, `sports_achievements`, `user_memberships`, CV share flow, or every client write path is safe.
+- [`20261020220500_revoke_unsafe_api_role_table_privileges.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20261020220500_revoke_unsafe_api_role_table_privileges.sql) revokes TRUNCATE/TRIGGER/REFERENCES from browser-facing roles, but this does not itself correct broad row-level policies.
+- [`20261020224000_restrict_verification_self_approval.sql`](https://github.com/khelgrid-dotcom/khelgrid-monetization-studio/blob/main/supabase/migrations/20261020224000_restrict_verification_self_approval.sql) applies column-level restrictions to academy/organizer verification. That is a useful pattern, but athlete achievement verification requires its own equivalent control and evidence-backed review workflow.
+
+### Audit conclusion for P0 athlete/CV
+
+**Do not copy the current CV share implementation or legacy profile/achievement policies into the private rebuild.** The private plan should use:
+1. Authenticated owner-scoped private profile/CV storage.
+2. Database RLS and grants verified with anonymous, authenticated-owner, authenticated-other-user and admin test identities.
+3. Separate public CV projection with an explicit field allowlist and an opt-in publication record.
+4. Opaque random share tokens stored server-side, with expiry/revocation and no private data in URL query strings.
+5. Trusted verification status stored separately and only writable through a privileged, audited review workflow.
+6. Empty/unverified defaults for real users; clearly labelled sample fixtures only in isolated demo/test contexts.
+7. SEO metadata that says “verified” only when a trusted verification record exists; no fabricated fallback CV on unknown slugs.
+8. Tests for direct API access and RLS, not only React component render tests.
+
+### Completion state
+
+| Check | Status |
+|---|---|
+| Profile route client guard | Partially checked; UI guard exists, server/database boundary still required |
+| CV route access | Gap found; public route accepts client-provided CV payload and sample fallbacks |
+| CV persistence | Gap found; browser-local storage/registry, no server-owned CV record demonstrated |
+| Share revocation and access | Gap found; no server-side token lifecycle demonstrated |
+| Verification integrity | Gap found; default sample and route metadata imply verification without route-level evidence |
+| RLS for legacy profile/achievement/membership tables | Gap found; reviewed historical migration defines broad public policies; full final effective policy state still needs complete migration-chain and live-schema confirmation |
+| Runtime security tests | Unable to verify; no live tests executed as part of this source review |
