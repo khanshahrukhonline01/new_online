@@ -425,3 +425,137 @@ Before any public release, test on real Android devices and, if iOS is targeted,
 ### Mobile delivery status
 
 Track mobile work separately from web modules with statuses **Planned**, **In progress**, **Blocked**, **Implemented**, and **Verified**. This document update only records the mobile strategy and screen inventory; it does not create, build, publish, or submit an app to any app store.
+
+
+## Planning completeness additions (planning only)
+
+This section records cross-cutting decisions that should be settled before implementation expands. It does not authorize code changes, production changes, paid services, or a public launch.
+
+### Product goals, audiences, and release scope
+
+- Define the primary audiences and their jobs-to-be-done: athletes/parents, coaches, academies, venue owners, trial/event organizers, and visitors looking for sports information. Do not assume all audiences need accounts.
+- Write a concise product promise and explicit non-goals. The platform helps people discover sports opportunities and venues; it must not imply that KhelGrid itself organizes, endorses, or guarantees third-party trials unless that is true.
+- Maintain a prioritized release plan: **MVP**, next release, later/optional, and explicitly out of scope. For every MVP feature, name a user problem, owner module, dependency, success measure, risk, and acceptance criteria.
+- Establish a decision log for major choices (routing, mobile framework, authentication, sports-data provider, search, analytics, monetization, and account eligibility), including alternatives considered, costs/limits, date, and revisit trigger.
+- Define a visible feature-status vocabulary for internal planning: Planned, In progress, Blocked, Implemented, Verified, Deprecated. Keep user-facing states separate; never expose internal statuses as product claims.
+
+### Roles, permissions, and account lifecycle
+
+Plan a permission matrix before enabling accounts or submissions. Consider anonymous visitor, registered user, athlete, parent/guardian where applicable, coach, academy/venue owner, organizer, moderator, administrator, and service integration. Roles are not automatically proof of identity or qualification.
+
+- Define who can view, create, edit, submit, publish, reject, archive, delete, export, and report each record type.
+- Decide how role grants are approved, reviewed, revoked, and audited; prevent users from granting themselves privileged roles.
+- Plan account deletion, data export, consent withdrawal, email/account change, recovery, session revocation, and handling of records that must be retained for security or legal reasons.
+- Treat minors and parent/guardian consent as a dedicated product/legal review before collecting their personal information, enabling direct messaging, publishing profiles, or enabling location-based features.
+
+### Source provenance, data rights, and third-party integrations
+
+Create a source/provider register before ingesting external listings or live sports data. For each source, record owner, canonical URL/API, permitted purpose, license/terms, attribution requirements, update frequency, rate limits, cost, data retention/cache limits, contact/expiry date, and fallback behaviour.
+
+- Do not assume publicly visible information is free to scrape, republish, or commercially use. Review each source's terms, copyright/database rights, robots rules, privacy requirements, and applicable laws before automated collection.
+- For sports scores, fixtures, logos, photos, and commentary, confirm written or otherwise valid authorization and redistribution/display rights for the intended website and mobile app. A technically working API is not by itself permission to publish its data.
+- Record provenance at field/listing level where practical: source, source-record identifier, retrieved/checked timestamp, editor/reviewer, confidence/status, and correction history.
+- Define freshness thresholds per data type and a clear stale-data label. If a provider fails, show a truthful unavailable/stale state or a permitted fallback; never fabricate current values.
+- Use provider adapters behind an internal contract so providers can be replaced without rewriting page components. Document quotas, timeouts, retry/backoff, caching, attribution, outage handling, and budget alerts.
+- Never bypass paywalls, access controls, CAPTCHA, authentication, or rate limits. Do not copy third-party articles or images without the relevant rights.
+
+### Content quality and editorial operations
+
+- Define minimum publication requirements per content type. Opportunities should include source evidence, organizer, sport, location, eligibility, date/deadline, fees (or clearly stated unknown/free), contact/application method, and status when applicable. Do not invent missing values.
+- Create a correction/expiry process with ownership and service targets: when to re-check, when to label stale, when to unpublish, how users report an error, and how disputes are resolved.
+- Define duplicate detection and merge rules for repeated opportunities, venues, coaches, events, and city/sport pages. Preserve canonical IDs and redirect old public URLs when appropriate.
+- Define editorial review for generated or AI-assisted copy. AI output is a draft, not evidence; a person or reliable source must validate factual claims before publication.
+- Decide whether comments, reviews, messaging, user photos, or public athlete profiles are in the initial scope. If not, explicitly defer them rather than leaving moderation and abuse handling implicit.
+
+### Search, discovery, and SEO governance
+
+- Specify search behaviour: supported entity types, ranking principles, filters, sorting, pagination, typo/no-result behaviour, and how archived or stale records are treated.
+- Plan query privacy and abuse limits for search and submission endpoints; do not expose private records through search, autocomplete, structured data, or cached responses.
+- Define indexability rules for filter combinations, pagination, empty category pages, expired listings, user profiles, internal search results, and duplicate URLs. Private, personal, admin, and thin pages should not be indexable.
+- Set standards for structured data only when visible page content supports it. Do not use fake ratings, prices, availability, reviews, or event status in SEO markup.
+- Plan redirect ownership and a redirect map before route changes. Monitor broken links, indexing/canonical issues, and sitemap coverage after releases.
+
+### Privacy, security, abuse, and legal review
+
+- Create a data inventory: each field, purpose, sensitivity, lawful basis/consent where applicable, who can access it, where it is stored, retention/deletion period, and whether it is sent to third parties.
+- Threat-model public forms, file uploads, admin actions, account recovery, booking, search, external callbacks, and mobile deep links. Plan validation, output encoding, rate limiting, spam/bot controls, upload type/size checks, and safe error responses.
+- Define secure handling of secrets, environment separation, least-privilege access, dependency updates, vulnerability response, audit logging, and access reviews. Client-side checks are not security controls.
+- Plan a report/appeal workflow for fraud, impersonation, unsafe listings, copyright complaints, harassment, and incorrect verification claims, with escalation and documented outcomes.
+- Review privacy, consumer, advertising, accessibility, copyright, child-safety, and other legal obligations for the actual operating regions and product behaviour before launch. Obtain qualified legal advice where needed; this plan is not a substitute for it.
+
+### Analytics, advertising, and monetization
+
+- Decide what product analytics are needed to measure success (for example, successful searches, opportunity detail views, source clicks, CV exports, venue enquiries, and booking completion) and explicitly exclude unnecessary personal or sensitive data.
+- Define consent, retention, opt-out, cookie/tracker disclosure, and vendor data-sharing rules before adding analytics or advertising SDKs. Do not place ad scripts on sensitive/account flows by default.
+- Advertising must not obscure critical eligibility, fees, safety notices, booking terms, or source attribution. Label sponsored placements clearly and keep ranking decisions transparent.
+- Treat advertising network approval, ads.txt, consent tooling, and policy compliance as launch gates, not assumed capabilities. Never promise revenue or approval.
+- Do not launch paid memberships, subscriptions, booking fees, or payment collection until pricing, taxes/receipts, refunds/cancellations, dispute handling, payment-provider terms, reconciliation, and support ownership have been reviewed and tested.
+
+### Reliability, operations, and continuity
+
+- Set initial service expectations for availability, performance, data freshness, support response, and maintenance windows; do not promise an SLA that the team cannot meet.
+- Define monitoring for application errors, failed database operations, provider outages, stale data, queue/retry failures, suspicious activity, and budget/quota thresholds. Alerts must reach a named owner.
+- Document backup scope and limitations, retention, encryption/key custody, restore ownership, and recovery objectives (RPO/RTO). A successful backup job is not proof of recoverability; schedule restore drills before launch and after material schema changes.
+- Define incident severity, decision-maker, user communication, containment, evidence preservation, post-incident review, and secret/key rotation. Avoid logging personal data or credentials in incident records.
+- Plan graceful degradation: public browsing should not fail entirely because an optional provider, analytics tool, or mobile-only capability is unavailable.
+
+### API and integration contracts
+
+- Version internal API/data contracts deliberately. Define pagination, filtering, validation errors, authorization failures, idempotency, rate limits, and deprecation behaviour before multiple clients depend on them.
+- Keep domain logic independent of web-only components and vendor SDKs where practical, so web and mobile share rules without sharing incompatible UI code.
+- Document each integration's owner, credentials location, environment, data sent/received, failure mode, testing strategy, cost/limit, and replacement/exit plan.
+- Avoid exposing internal database schemas as a permanent public API. Use stable domain contracts and least-privilege endpoints.
+
+### Testing strategy and acceptance criteria
+
+For each high-priority user journey, write Given/When/Then acceptance criteria and identify the evidence needed to mark it verified. At minimum plan tests for:
+
+- Anonymous browsing, search/filter/pagination, source links, expired/unpublished/not-found records, and empty results.
+- Submission validation, duplicate detection, spam/rate limiting, moderation transitions, audit history, and unauthorized mutations.
+- RLS/permissions using different user roles, including attempts to read or alter another user's private data.
+- Booking concurrency, expired holds, court-specific price and hours, cancellation transitions, duplicate requests, stale availability, and provider/database failures before booking is enabled.
+- CV privacy, preview/export, malformed input, mobile layout, and deletion/consent behaviour.
+- Accessibility keyboard/screen-reader flows, responsive layouts, localization, slow/offline networks, and recovery from interrupted requests.
+- Migration upgrade and rollback/recovery procedures on the development project, plus a clean production build from a fresh install.
+- Web and mobile deep links, session expiry, denied permissions, app upgrade paths, and real-device smoke tests before mobile release.
+
+### Delivery, environments, and release management
+
+- Keep development, test/staging (if available within budget), and production isolated with separate credentials and explicit deployment targets. No production deploy or production database change is implied by this planning work.
+- Define branch/PR review rules, required CI checks, migration review, release notes, smoke tests, rollback/forward-fix decisions, and post-release monitoring.
+- Establish a change gate for schema changes: migration reviewed, backup/recovery plan considered, test data prepared, RLS verified, migration applied only to the intended development environment, and results recorded.
+- Track third-party costs and free-tier quotas. The free tier is a constraint, not a guarantee of unlimited capacity; plan limits, usage monitoring, and feature degradation before approaching caps.
+- Define app ownership and ongoing maintenance: who handles support, moderation, provider renewals, dependency/security updates, store submissions, signing-key custody, and emergency releases.
+
+### Risks and unresolved decisions register
+
+Maintain a small register with **risk/decision**, **impact**, **likelihood**, **mitigation**, **owner**, **due/review date**, and **status**. Initial items to resolve before the related feature begins:
+
+1. Which external sources and live-score provider are legally permitted, affordable, and reliable for web plus mobile?
+2. Which features are in MVP, and which are explicitly deferred (accounts, bookings, payments, reviews, messaging, public profiles)?
+3. What is the account/role model and what actions require identity or organizer verification?
+4. What personal data is necessary, especially for minors, athlete profiles, CVs, and location features?
+5. Which analytics and ad vendors, if any, meet consent, privacy, and publisher-policy requirements?
+6. What search/indexing strategy is justified by current dataset size and budget?
+7. What support, moderation, backup recovery, incident response, and release ownership can the team realistically maintain?
+8. What objective criteria must pass before web modules, live data, booking, authentication, payments, and mobile are enabled?
+
+### Planning completion checklist
+
+Before implementation scope is expanded, mark each item **Decided**, **Deferred with reason**, or **Open**:
+
+- [ ] MVP and non-goals agreed
+- [ ] Primary audiences and key journeys defined
+- [ ] Route registry includes access, indexability, data source, owner, and status
+- [ ] Domain model and listing lifecycle agreed
+- [ ] Source/provider rights and freshness rules recorded
+- [ ] Role/permission matrix and moderation process agreed
+- [ ] Privacy/data inventory and minor-safety review completed for relevant features
+- [ ] Acceptance criteria and verification evidence defined
+- [ ] Environment/release/migration gates agreed
+- [ ] Backup scope, restore owner, RPO/RTO, and incident process defined
+- [ ] Analytics/advertising/monetization decisions documented or explicitly deferred
+- [ ] Web/mobile shared contracts and separate release gates agreed
+- [ ] Risks, dependencies, costs, and decision owners recorded
+
+A checklist item may remain open during planning, but it must not silently become an implementation assumption. This is a planning checklist, not a claim that the items have already been completed.
