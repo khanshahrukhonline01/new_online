@@ -10,6 +10,10 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('Explore opportunities')
     expect(html).toContain('Browse venues')
     expect(html).toContain('India’s sports journey, connected.')
+    expect(html).toContain('Skip to content')
+    expect(html).toContain('Search KhelGrid')
+    expect(html).toContain('aria-label="Main navigation"')
+    expect(html).toContain('aria-current="page"')
   })
 
   it('clearly states that live feeds and account services are not connected yet', () => {
@@ -40,5 +44,16 @@ describe('route resolution', () => {
   it('normalizes trailing slashes and safely handles malformed URL encoding', () => {
     expect(resolveRoute('/sports/football/').name).toBe('sport-detail')
     expect(resolveRoute('/sports/%E0%A4%A')).toMatchObject({ name: 'sport-detail', slug: '%E0%A4%A' })
+  })
+})
+
+
+describe('catalogue search', () => {
+  it('renders an accessible search field without inventing result records', async () => {
+    const { default: SearchPage } = await import('./modules/search/SearchPage')
+    const html = renderToStaticMarkup(<SearchPage />)
+    expect(html).toContain('Search the catalogue')
+    expect(html).toContain('catalogue-search')
+    expect(html).toContain('No sample listings are shown')
   })
 })
