@@ -35,3 +35,9 @@
 ## Approved scope notes
 - The full website plan records the approved 100+ scalable sports catalogue, KhelGrid editorial verification states, and comprehensive private Sports CV with PDF as the first-release export format.
 - These are planning and acceptance requirements, not claims that these features have been implemented or tested.
+
+
+## Baseline freeze and execution tracking (2026-10-25)
+- [Implementation Checklist](IMPLEMENTATION_CHECKLIST.md) — additive execution tracker; unchecked items are not complete.
+- The full website development plan is the frozen planning baseline. Preserve existing documentation and audit history; record future scope changes additively with explicit approval.
+- This freeze is not evidence of implementation, passing tests, completed content audit, or production deployment approval.
