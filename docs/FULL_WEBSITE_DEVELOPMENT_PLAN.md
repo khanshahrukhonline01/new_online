@@ -316,3 +316,94 @@ The baseline is now defined. The owner can defer the following decisions until t
 - Whether/how to accept correction requests and support contact.
 - Performance budgets after baseline measurements.
 - Any later provider, advertising, account or booking scope and its budget.
+
+
+## 16. Owner decisions: sports scale, editorial policy and complete Sports CV
+
+Confirmed by the owner on 2026-10-25. These decisions update the first-release planning baseline; they do not authorize a production deployment.
+
+### 16.1 Sports coverage: 100+ sports, designed to scale
+- Product requirement: the sports directory must support at least 100 sports at launch, with architecture that can grow beyond that without hard-coded per-sport pages or schema rewrites.
+- Initial geography: India-wide discovery is the planning default, consistent with KhelGrid's India focus. City/state filters must show only supported, evidenced data; do not imply every sport is available in every city.
+- Sports catalogue fields: stable sport ID; canonical name; aliases/search terms; category; description; supported disciplines/variants; image/icon rights and attribution; active/retired status; sort order; SEO title/description/slug; localization-ready display labels; source/review metadata where claims need evidence.
+- Data-driven design: sports are catalogue records, and sport detail pages use a reusable template. Filters and navigation derive from the catalogue; do not duplicate hard-coded sport lists across the UI.
+- Scalability acceptance: 100+ records render and search correctly; aliases resolve to canonical records; duplicate names/slugs are handled; keyboard/mobile use works; adding a sport is a data/content operation rather than a custom code path.
+- Quality rule: a sport may exist in the catalogue without current trials, venues or events. Show a genuine empty state rather than generating listings to fill the page.
+- Launch coverage is not a claim that each sport has a verified opportunity, venue or live data feed.
+
+### 16.2 Editorial ownership and verified/unverified listing policy
+- Editorial owner: **KhelGrid editorial/review team** is the accountable reviewer, using a documented standard template. Individual staff assignments and backup reviewer remain an operations detail to record before launch.
+- Listings may be ingested/drafted directly into the catalogue for editorial workflow, but publication status must remain explicit. Unreviewed records must not appear in public active listings by default.
+- Publicly listing an item marked “unverified” is allowed only as a deliberate, clearly labelled editorial state after basic source/safety checks. It must not be presented as verified, endorsed, officially partnered or confirmed by KhelGrid.
+- If a record is merely discovered and has not passed basic authenticity, relevance, safety and source checks, keep it internal as a draft/rejected item; do not publish it just because it is labelled unverified.
+- Public labels must distinguish at least: **Verified by KhelGrid** (criteria met and evidence retained), **Source listed — not independently verified** (source is traceable, but key claims have not been independently confirmed), **Under review** (not public active by default), **Expired/closed**, **Cancelled**, and **Rejected/removed** (not public active).
+- “Verified by KhelGrid” means KhelGrid performed the documented checks; it does not imply government endorsement, organizer partnership, guaranteed selection, or a guarantee against later changes.
+- A listing must never be described as “official” unless its issuing organization and official source are evidenced. Preserve source wording and avoid implying endorsement.
+- Each public record must carry a stable ID, original publisher/source URL, source organization, evidence snapshot/reference, date checked, reviewer or reviewer ID, review date, event dates, location, sport/category, eligibility, fee (amount or “not stated”), contact (or “not published”), status, confidence/verification level, expiry/recheck date, correction history and attribution/reuse basis.
+- The common editorial template must require:
+  1. Identity and source provenance.
+  2. Event title, sport/disciplines and organizer.
+  3. Event date/deadline and last checked timestamp.
+  4. Venue/city/state and eligibility/age/gender/category only when stated by source.
+  5. Fees, documents, equipment, contact and registration instructions only when evidenced; otherwise mark “not stated”.
+  6. Source reliability, corroboration and any conflicts.
+  7. Verification state, reviewer decision, rationale and next recheck/expiry.
+  8. Copyright/quotation/attribution and correction/withdrawal procedure.
+- Review outcomes: publish verified; publish with “not independently verified” label; request clarification; hold for review; reject; expire/archive; withdraw/correct. Record reviewer, timestamp and reason for each decision.
+- Review checks: source identity and legitimacy; date/currentness; source-to-listing consistency; eligibility and fee accuracy; location/contact plausibility; duplicate detection; misleading claims; minors/safeguarding or sensitive personal information; reuse/licensing; and fraud/scam indicators.
+- Conflicting or missing facts remain explicitly unknown. Never infer fees, eligibility, dates, contacts, event status or official affiliation. Never create an active listing from AI-generated details alone.
+- Recheck schedule: set a record-specific next-check date based on event timing and source reliability. Recheck before event/deadline; archive after deadline or cancellation unless a source explicitly confirms extension. Provide a correction report route and retain an audit trail.
+- Editorial service levels and staff names should be finalized before launch; do not promise review times until the team can meet them.
+
+### 16.3 Sports CV: comprehensive field catalogue, optional sections
+Requirement: include a comprehensive field set so athletes can create a full CV. “All fields included” means the builder supports the relevant fields and optional sections, not that every field is mandatory or shown in every export.
+
+#### Identity and contact
+- Full name; preferred/display name; profile photo (optional, user-supplied); date of birth or age (optional; minimize where possible); gender (optional); nationality; state/city; phone; email; preferred contact method; address (optional and excluded from public/export presets unless user selects it); emergency contact (optional, private and excluded from default CV export).
+- Guardian/parent contact only when appropriate for a minor and with privacy/safeguarding controls.
+
+#### Athletic profile
+- Primary sport; secondary sports; discipline/event; playing position/role; dominant hand/foot where relevant; competition category; weight/height only where relevant and user supplied; playing style; athlete summary/objective; preferred playing level; current club/team/academy; coach; training base; years active; availability and preferred locations (optional).
+
+#### Performance and measurements
+- Sport-specific personal bests, official results, rankings/rating with issuing body and date; event/competition name, date, venue and result; statistics with units, season/context and source; fitness tests and measurements only when relevant, voluntary and dated.
+- Do not invent scores, statistics, rankings or personal bests. Distinguish self-reported from source-verified results and record evidence/source if provided.
+
+#### Career and participation history
+- Clubs, teams, academies, schools/colleges and training centres; role/position; level/division; start/end dates; participation history; representative selection; camp/academy history; captaincy and leadership; coaching/training experience if relevant.
+
+#### Achievements and competition record
+- Medals, awards, titles, records, selections, squads, tournaments, league/season results, placements and milestones; date, organizer/issuing body, category, result and evidence/source for each item.
+- Label self-reported achievements distinctly from reviewed/verified evidence; do not use a generic “verified athlete” badge.
+
+#### Education and eligibility
+- Education institution, qualification, course/grade where relevant, graduation year; academic eligibility and exam details only where relevant; certificates and licenses; eligibility documentation checklist/status without collecting unnecessary document images.
+- Sensitive identifiers, government ID numbers, full certificates and medical records are excluded from the default CV and should not be requested unless a separately approved necessity and secure handling process exists.
+
+#### Coaching, skills and support
+- Technical/tactical skills; fitness/strength/endurance/flexibility skills; certifications; coaching/refereeing/official qualifications; languages; leadership/teamwork; accessibility/accommodation request only if the athlete voluntarily chooses to include it and understands the privacy implications.
+- References/recommendations are optional, consent-based and not included by default without permission.
+
+#### Media, documents and links
+- Portfolio/video highlights, approved public links, image/media captions and rights/consent confirmation; certificate/award attachment references only if a later secure storage scope is approved.
+- No arbitrary public links or uploads should be treated as verified evidence automatically.
+
+#### Goals and availability
+- Short/long-term goals; target trials/competitions; preferred teams/academies; training schedule/availability; relocation/travel preference; scholarship/sponsorship interest; role sought; personal statement.
+- Sensitive financial, health or family information is not part of the default CV.
+
+#### CV management and export
+- CV title/version; created/updated date; selected sections; preferred template; language; privacy/export options; athlete consent confirmation where relevant.
+- Export formats: **PDF is the required first-release format**. Structure the model so DOCX or other formats can be added later, but do not delay the MVP for them.
+- Export presets: concise one-page profile and full detailed CV; user can choose sections and reorder optional sections.
+- Accessibility: logical heading order, readable typography, sufficient contrast, selectable text, correct Unicode/font embedding where supported, and sensible page breaks.
+- Allow save/edit within the chosen local-first design, preview before export, delete/reset data and download a copy. Explain that browser storage can be lost when browser data is cleared or the device is changed.
+- No login, backend sync, public profile, share link or remote analytics of CV contents in the initial release.
+- Never include private address, emergency/guardian contact or other sensitive fields in the default export. Provide explicit inclusion controls for optional personal contact fields.
+- CV acceptance tests cover sport-specific optional fields, validation, long text, Unicode names, empty sections, multiple pages, preview/PDF consistency, local persistence behaviour, delete/reset, private-by-default data flow and no accidental network transmission of CV contents.
+
+### 16.4 Decisions still open but not blocking the plan
+- Named primary and backup editorial reviewers and review service levels.
+- Exact launch sport catalogue and content-entry method for the initial 100+ records; ensure no unsupported sport-specific claims.
+- CV field-level mandatory/optional rules by sport and country; default should be minimum necessary with optional relevant sections.
+- PDF design variants, translation schedule and whether any later server-side document storage is justified.
