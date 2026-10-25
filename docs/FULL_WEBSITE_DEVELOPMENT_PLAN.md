@@ -452,3 +452,68 @@ Requirement: include a comprehensive field set so athletes can create a full CV.
 8. Homepage, category/city pages, APIs, sitemap, structured data and caches agree on active/archive status.
 9. Archive pages show historical status and do not claim availability; rejected/private records never appear publicly.
 10. Date/timezone boundaries are tested, including date-only deadlines and India Standard Time handling where relevant.
+
+
+## 18. Site-wide content quality and AdSense thin-content remediation (owner requirement, 2026-10-25)
+
+### Objective
+Every public, indexable part of KhelGrid must provide substantial, useful, original and accurate value to its intended audience. The platform must not rely on empty category templates, near-duplicate location pages, thin listings, automatically generated text, placeholder/demo content or unsupported claims to create apparent scale. This is a content-quality programme, not a guarantee of Google AdSense approval; the publisher must review current Google policies and the actual site before reapplying.
+
+### Content standards by page type
+- **Homepage:** clearly explain KhelGrid's purpose and supported capabilities, show real and current content, explain editorial/verification labels and how users can report corrections. Do not use unsupported user counts, verification guarantees or coverage claims.
+- **Sports index and 100+ sport detail pages:** every sport page needs sport-specific information and practical usefulness—not just a name, generic paragraph and empty cards. Include a clear sport overview, disciplines/variants where supported, rules/format or getting-started guidance from reputable sources, participation/eligibility considerations when relevant, training/safety guidance where responsibly sourced, Indian governing/official bodies when verified, and genuinely available KhelGrid opportunities/venues with status and source. Cite/link sources and distinguish general editorial guidance from official rules. If a page cannot meet the minimum quality threshold, keep it noindex or do not publish it yet; do not pad it with repetitive copy.
+- **Opportunity/trial details:** provide the actual source-backed facts, dates/deadlines, eligibility as stated, fees or “not stated”, location, organizer/source, how to verify/apply at the source, last checked time, status, correction/report path and editorial context. Summarize rather than copy publisher articles; link to the original. Thin or incomplete records must be held, excluded from indexation, or published only if they still meet the minimum usefulness and safety bar.
+- **Archive pages:** retain useful historical facts, original source, event date and clear expired/closed/cancelled status. Archive listings must not masquerade as current offers. Use a deliberate indexing strategy; thin archive/filter combinations may be noindex or excluded from sitemap.
+- **Venue pages:** publish only reviewed facts such as location, supported sports, facilities, access/contact, operator source and verified price/hours where known. Clearly mark missing information. No fabricated photos, amenities, reviews, prices or availability. A page with insufficient unique verified information should remain unpublished/noindex until improved.
+- **Search, filters and empty states:** explain the filters and what the user can do next. Avoid indexable, near-identical parameter URLs and empty city/sport combinations. No-result pages should be useful to users but normally not indexed as standalone SEO landing pages.
+- **Sports CV/tool pages:** explain purpose, steps, field choices, privacy/storage limitations, how PDF export works, and include useful examples/templates without publishing user data. Do not make unsupported promises about athlete selection or verification.
+- **Policy/help/about pages:** provide specific, accurate information about editorial standards, verification definitions, correction/complaint handling, source attribution, privacy, contact, advertising and limitations. Policies must match actual implementation and ownership.
+
+### Editorial depth and originality
+- Each indexable page must answer a real user need and offer information beyond a list of links or a repeated template.
+- Use page-type-specific outlines with human editorial review, meaningful headings, concrete facts, examples/checklists where helpful, and relevant primary sources.
+- Avoid mass-generating 100+ interchangeable sport pages. Catalogue breadth and content depth are separate requirements; publish pages in quality-controlled batches.
+- Do not copy full source articles or source images without permission. Use brief factual summaries, links, required attribution and licensed/owned media.
+- Do not use AI to invent facts, fill missing data, manufacture testimonials/reviews, or imply an editor verified material that was not reviewed. AI-assisted drafts require source checks and human editorial approval.
+- Keep claims, statistics, dates, rankings, governing-body references and contact information tied to evidence and checked dates.
+- Use author/editor attribution where appropriate and describe editorial process honestly; do not invent expert credentials or author bios.
+- Provide a visible correction/report mechanism and record significant corrections.
+
+### Publication quality gate
+Create a per-URL content inventory and quality checklist. Before a page is indexable, require:
+1. A clear intended audience and user task.
+2. A unique page purpose and non-duplicative useful content.
+3. Evidence for factual/current claims and links to reliable sources.
+4. Correct lifecycle/status and no misleading CTA.
+5. Editorial review and source attribution/rights review as applicable.
+6. Appropriate title, meta description, canonical and structured data matching visible content.
+7. Mobile readability, accessibility and no broken/empty primary content.
+8. No private, personal, rejected, stale or internal-review data leakage.
+9. A decision to index, noindex, consolidate, redirect or not publish.
+10. Named reviewer, review date and recheck date for time-sensitive content.
+
+### AdSense and search-quality verification workflow
+- Inventory all public URLs, templates, indexable filter pages, subdomains, technical endpoints and third-party scripts.
+- Review the latest AdSense publisher policies and Google Search guidance at implementation/reapplication time; policy requirements can change.
+- Audit site navigation, ownership/contact transparency, original value, content depth, duplication, broken links, ads-to-content balance, mobile experience and privacy disclosures.
+- Ensure ads do not cover navigation/content or make thin pages appear content-rich. Do not add more ads to solve a thin-content rejection.
+- Use Search Console indexing/coverage and manual URL inspections to find indexed thin/duplicate/empty pages; sitemap only includes canonical, useful public URLs.
+- Validate ads.txt and publisher configuration separately; technical approval checks do not fix low-value content.
+- Reapply only after material improvements are live and the full domain has been reviewed. Approval is Google's decision and cannot be guaranteed by this plan.
+
+### Content measurement and release gates
+Track a reviewed URL inventory with: route/template, intended query/task, original value, sources, reviewer, word/section completeness where appropriate, indexability, canonical, last checked, archive status and action.
+Do not use a universal word-count target as a proxy for quality. Define page-type-specific completeness criteria and review usefulness, accuracy and originality.
+Before release/reapplication, every indexable page must pass the quality gate; weak pages are improved, consolidated, noindexed or withheld. The goal is not “text on every page” but useful content across the whole indexable site.
+
+### Acceptance tests
+- Every indexable route has a recorded content review and disposition.
+- No indexable page consists only of a title, generic paragraph, repeated template and empty listing cards.
+- Sport pages are genuinely sport-specific and sources are visible where facts require them.
+- Current and archived opportunities are accurately distinguished and source-linked.
+- Venue pages contain only evidenced claims and never invent pricing, amenities, reviews or availability.
+- Empty/parameterized pages are not accidentally indexable at scale.
+- Technical metadata, canonical URLs, sitemap and structured data agree with visible content and lifecycle status.
+- AI-generated drafts cannot bypass human review or populate unsupported facts.
+- Ads and third-party scripts respect the actual consent/privacy design and do not obscure primary content.
+- The content audit report records all exceptions, remediation and final re-review before AdSense reapplication.
