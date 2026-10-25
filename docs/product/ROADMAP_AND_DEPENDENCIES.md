@@ -2,6 +2,9 @@
 
 **Status:** Draft planning baseline
 
+## Route prioritization
+Use the [Navigation and Route Catalogue](NAVIGATION_AND_ROUTE_CATALOGUE.md) as the full candidate route list. A route does not automatically belong in Stage A; sequence it according to product priority, dependencies, privacy/security risk and capacity. See the [Documentation Audit and Gap Register](../DOCUMENTATION_AUDIT_AND_GAP_REGISTER.md) for unresolved overlaps and gaps.
+
 ## Stage A — Discovery MVP
 App shell; sports discovery; sourced opportunities; published venue directory; local-first Sports CV; footer/legal routes; SEO basics; responsive/accessibility checks; CI and release controls.
 
