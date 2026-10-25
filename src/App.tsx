@@ -47,6 +47,7 @@ export default function App() {
       if (target !== path) window.history.pushState({}, '', target)
       window.scrollTo({ top: 0, behavior: 'auto' })
     }
+    if (menuOpen) menuToggleRef.current?.focus()
     setPath(target)
   }
 
