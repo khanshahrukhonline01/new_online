@@ -567,3 +567,40 @@ The following supporting documents were added to the private rebuild branch to m
 - [Incident Response and Disaster Recovery](INCIDENT_RESPONSE_AND_DISASTER_RECOVERY.md)
 
 Next evidence-driven steps: map each P0 audit finding to a requirement and test; inspect effective policies and RPCs in an isolated non-production environment; record exact CI run results; complete a restore drill; and obtain owner approval before any production change. No production changes or deployment were performed as part of this documentation update.
+
+
+## P0 execution gate — current private-rebuild source check (2026-10-25)
+
+This is a source-level follow-up to the tracker above, not an end-to-end verification.
+
+### Repository and CI evidence
+- The current `feat/app-shell-discovery-modules` branch head during this check was `45cca41bce857b9e889dd609389ad7b85589a682`.
+- PR #2 (`Build responsive app shell and discovery modules`) is **merged and closed**, with merge commit `4759d8f2d66f7504ffb4e29bfc48eb410cec38f7`; it is not currently a draft PR.
+- The branch metadata reported branch protection disabled.
+- GitHub commit-status and PR-workflow-run lookups returned no status entries/workflow runs for the checked commits. This is **no CI evidence available from those queries**, not proof that commands pass or that no workflow ever ran.
+- The repo package scripts declare Node >=22 and `typecheck`, `lint`, `test`, and `build`. They have not been executed in a real checkout in this session.
+
+### Route parity observations
+- `src/App.tsx` currently implements the Home, Sports, Opportunities and Venues discovery pages plus aliases for trials/combines/scholarships/camps and `/book`.
+- `/sports/:slug` currently renders the generic SportsPage instead of a distinct sport-detail page. This should be recorded as incomplete detail-route parity until a real detail journey and test exist.
+- `/book` currently renders the venue directory. The footer and venue page correctly state booking/live availability are not enabled, but this route is not a booking workflow and must not be advertised as one.
+- Unknown paths render an in-app not-found section; direct-load, back/forward, refresh and canonical/redirect behaviour still need automated/browser tests.
+
+### Athlete profile and Sports CV observations
+- `src/modules/sports-cv/README.md` and `docs/features/SPORTS_CV.md` are specifications only; a CV builder, persistence, PDF export and profile/share routes are not implemented in this private rebuild source tree.
+- The current core schema includes a private owner-scoped `profiles` table but no CV, application, share-token or athlete-achievement tables in the inspected initial schema.
+- Do not add server-side CV persistence or public sharing until storage scope, privacy defaults, field allowlist, export requirements and authentication are approved. A private local-only builder/export can be scoped separately if accepted.
+
+### Venue and database safeguards observations
+- The initial schema creates RLS policies for own-profile access and published-only catalogue reads, and grants authenticated users profile writes while denying catalogue writes through the public client roles. The included SQL assertions inspect configured grants/policies but explicitly do not replace JWT/PostgREST tests.
+- The inspected initial schema contains venue/court directory fields, but no booking, hold, availability, operating-hours or atomic booking RPC objects. Therefore this rebuild cannot yet safely accept bookings; keep booking disabled and do not imply slot availability.
+- Static source review is not confirmation that this migration is applied to the intended dev project or that the effective database policy set matches the file. Verify project identity, migrations, grants, effective policies and anon/authenticated JWT behaviour in isolated non-production before any write or booking implementation.
+
+### Required next evidence
+1. Add tests for supported routes, sport-detail behaviour, aliases, 404, refresh and history navigation.
+2. Decide whether first-release Sports CV is local-only export or authenticated server persistence; then implement only that approved scope and test privacy.
+3. Keep `/book` explicitly informational until the owner approves booking scope and database safeguards exist.
+4. Run `npm ci`, `npm run typecheck`, `npm run lint`, `npm run test`, and `npm run build` in a real checkout using Node 22; attach exact commit and logs.
+5. In the verified development Supabase project, run the read-only catalog assertions and inspect effective grants/policies; do not apply migrations or run writes until target project and migration plan are explicitly confirmed.
+
+No production resources were accessed for mutation, and no migration, deployment or code change was performed in this source-check step.
