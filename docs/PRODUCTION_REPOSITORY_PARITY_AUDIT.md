@@ -131,3 +131,95 @@ For every production source route/component, record:
 ## 9. Audit limitations
 
 This is a source-tree audit of `main` as observed on 2026-10-25. It is not a runtime crawl, security certification, legal opinion, third-party policy approval or proof that a named route is currently deployed. The private platform plan should record these as candidate capabilities until implementation evidence confirms otherwise.
+
+
+## 10. Route-by-route parity and disposition register
+
+This is the initial disposition proposal for source-defined routes. The product owner should approve changes before implementation. “Merge” means one canonical experience may satisfy multiple navigation entries; it does not mean delete a route without a redirect or link strategy.
+
+| Production source route | Planned canonical route / destination | Proposed disposition | Priority / stage | Notes and acceptance condition |
+|---|---|---|---|---|
+| `/` | `/` | Preserve | P0 / Stage A | Reconcile content blocks, claims and data states |
+| `/about` | `/about` | Add to catalogue | P2 / public foundations | Use factual organization/service claims |
+| `/contact` | `/contact` | Add to catalogue | P1 / public foundations | Confirm inbox/endpoint and spam controls |
+| `/search` | `/search` | Preserve | P0 / Stage A | Shared query/filter state and empty/error states |
+| `/sports` | `/sports` | Preserve | P0 / Stage A | Published sports only |
+| `/sports/:slug` | `/sports/:sportSlug` | Preserve/canonicalize | P0 / Stage A | One slug convention |
+| `/sport/:slug` | `/sports/:sportSlug` | Merge + redirect/alias | P1 | Avoid duplicate indexing/content |
+| `/sport-in-city/:slug` | `/cities/:citySlug/sports/:sportSlug` (proposed) | Add or redirect after content review | P2 | Do not create thin doorway pages; define both city and sport keys |
+| `/cities` | `/cities` | Preserve | P1 | Generate only supported cities |
+| `/city/:slug` | `/cities/:citySlug` | Merge + redirect/alias | P1 | Single city URL convention |
+| `/district-infrastructure` | `/district-infrastructure` | Add to catalogue | P2 | Define provenance and update cadence for infrastructure data |
+| `/calendar` | `/calendar` | Preserve | P1 | Shared event/trial domain; explicit timezone |
+| `/events` | `/events` | Preserve | P1 | One route despite multiple menu placements |
+| `/trials` | `/trials` | Preserve | P0 | Shared opportunity records and date/status rules |
+| `/trial/:id` | `/trials/:opportunitySlug` or stable ID URL | Merge/canonicalize | P0 | Preserve inbound links with redirects; do not expose private IDs unnecessarily |
+| `/opportunities` | `/opportunities` | Preserve | P0 | One canonical public listing |
+| `/opportunities/:id` | `/opportunities/:opportunitySlug` or stable ID URL | Merge/canonicalize | P0 | Ensure old links resolve and canonical metadata is consistent |
+| `/live-scores` | `/live-scores` (or approved `/live` alias) | Add explicit canonical route | P1 / later integration | Only real licensed provider data; stale/unavailable state; no mock scores |
+| `/play` | `/play` | Preserve, initially limited | P2 | User-generated features deferred until moderation/auth |
+| `/book` | `/book` | Preserve | P0 directory; booking later | Clearly distinguish directory from live transactional booking |
+| `/train` | `/train` | Preserve | P1 | Coaching discovery overview |
+| `/coaches` | `/coaches` | Preserve | P1 | Real public profiles only |
+| `/academy` | `/academy` | Keep as academy landing/onboarding | P1 | Clarify relation to directory |
+| `/memberships` | `/memberships` | Defer purchase; preserve info route | P2 | Do not promise entitlements before billing/access checks |
+| `/login` | `/login` | Defer safely | P2 | No dead buttons; account feature only after auth/security approval |
+| `/forgot-password` | `/forgot-password` | Defer with auth | P2 | Must work with chosen auth provider |
+| `/onboarding` | `/onboarding` | Defer with auth | P2 | Consent, validation and data minimization |
+| `/profile` | `/dashboard/profile` or public `/athletes/:slug` | Split/clarify | P1 planning, later implementation | Distinguish private self-profile from public athlete profile |
+| `/dashboard` | `/dashboard` | Defer with auth | P2 | Server-side authorization required |
+| `/settings` | `/dashboard/settings` | Merge/canonicalize | P2 | Include security and privacy controls |
+| `/my-stats` | `/dashboard/my-stats` | Defer with profile | P2 | Define source and ownership of statistics |
+| `/recommendations` | `/dashboard/recommendations` | Defer/specify | P2 | Explain ranking logic; no unsupported AI claims |
+| `/cv` | `/sports-cv` | Merge/canonicalize | P1 / local-first candidate | Preserve local-only behavior and export |
+| `/cv/:id` | `/sports-cv/:cvId` or `/share/cv/:token` | Split public share from private editor | P1 planning, later implementation | Public share must use revocable, scoped access; never expose private CV by guessed ID |
+| `/start-from-zero` | `/start-from-zero` | Preserve | P1 | Content provenance and reviewed learning pathways |
+| `/ai-guide` | `/ai-guide` | Preserve as informational page first | P1 planning; model calls later | Provider review, privacy, costs, safety and citations |
+| `/learning-hub` | `/learning-hub` | Preserve | P1 | Curate canonical content rather than duplicate articles |
+| `/guides` | `/guides` | Preserve | P1 | Editorial taxonomy |
+| `/guide/:slug` | `/guides/:guideSlug` | Merge + redirect/alias | P1 | One canonical plural route |
+| `/top-guides/:category` | `/guides/category/:category` (proposed) | Merge if useful | P2 | Only index pages with substantive content |
+| `/blog` | `/blog` | Preserve only if distinct from Chronicle | P2 | Decide content ownership and canonical taxonomy |
+| `/blog/:slug` | `/blog/:postSlug` | Preserve if blog remains distinct | P2 | Canonical metadata, source and author |
+| `/blog/write` | private editorial workflow | Defer/private | P2 | Never public-write without roles, moderation and audit trail |
+| `/chronicle` | `/chronicle` | Preserve if distinct | P2 | Avoid duplicating blog/guide content |
+| `/resources` | `/resources` | Preserve | P1 | Link to original resources and licences |
+| `/tools` | `/tools` | Preserve | P1 | Tool catalogue |
+| `/tools/:slug` | `/tools/:toolSlug` | Preserve | P1 | Formula, assumptions, validation and tests |
+| `/best-tools/:category` | `/tools/category/:category` (proposed) | Merge if substantive | P2 | No SEO doorway pages or unsupported rankings |
+| `/partner` | `/partner` | Preserve | P2 | Verified contact and partner criteria |
+| `/list-venue` | `/list-venue` | Preserve | P1 | Explain review; submitted data remains unpublished |
+| `/admin-venue-submissions` | `/admin/venue-submissions` | Move to private admin namespace | P1 dependency, implementation later | Server-enforced admin access and audit log |
+| `/careers` | `/careers` | Preserve | P2 | Current roles only |
+| `/pricing` | `/pricing` | Preserve information route | P2 | Price/terms must be current and approved |
+| `/mobile-app` | `/mobile-app` | Preserve information route | P2 | Only link to actually available app versions |
+| `/scout-portal` | `/scout-portal` | Defer protected functions | P2 | Role, consent and access audit |
+| `/talent-scanner` | `/talent-scanner` | Defer protected functions | P2 | Athlete privacy and authorized discovery |
+| `/verify` | `/verify` | Preserve | P1 | Explain exact scope of verification |
+| `/verification-policy` | `/verification-policy` or `/editorial-policy` | Merge after legal/editorial review | P1 | Avoid conflicting policy versions |
+| `/trust-center` | `/trust-center` | Add to catalogue | P1 | Public trust overview; no sensitive security disclosures |
+| `/privacy` | `/privacy` | Preserve | P0 before collection | Match actual processing and third-party providers |
+| `/terms` | `/terms` | Preserve | P0 before public service launch | Owner/legal review |
+| `/cancellation-policy` | `/cancellation` | Canonicalize/alias | P1 before bookings | Only describe actually offered booking terms |
+| `/copyright-policy` | `/ipr` or `/copyright-policy` | Consolidate | P1 | Takedown contact and response workflow |
+| `/ipr-policy` | `/ipr` or `/ipr-policy` | Consolidate | P1 | Avoid conflicting overlapping policy pages |
+| `/correction-policy` | `/corrections` | Canonicalize/alias | P1 | Provide correction request and handling |
+| `/editorial-policy` | `/editorial-policy` | Preserve | P1 | Link source and verification standards |
+| `/posh-policy` | `/posh-policy` | Preserve only after applicability/owner review | P1 legal review | Never invent committee or contact details |
+| `/robots.txt` | generated `/robots.txt` | Preserve technical endpoint | P0 before SEO launch | Environment-specific crawl policy |
+| `/sitemap.xml` | generated `/sitemap.xml` | Preserve technical endpoint | P0 before SEO launch | Only canonical public URLs |
+| `/ads.txt` | generated/static `/ads.txt` | Preserve when ad network requires it | P1 monetization | Exact authorized seller entries only |
+| `/llms.txt` | `/llms.txt` | Optional, review | P2 | Public content guidance only; not an access-control mechanism |
+| `/api/indexnow` | server-side API endpoint | Preserve if needed | P2 | Validate method, auth, key handling, abuse and provider rules |
+| `/api/trials` | typed opportunity/trials API | Preserve/merge with approved API contract | P0 | Validate query parameters, publication filter, rate limit and errors |
+| verification-token text route | static token verification endpoint | Preserve only if still required | P2 | No secrets or unrelated data; document ownership/expiry |
+
+## 11. Cross-cutting parity tasks
+
+- [ ] Add a production route alias/redirect map before changing public URLs.
+- [ ] Confirm public vs authenticated vs role-protected routes at both UI and backend.
+- [ ] Audit each route for source-of-truth data, SEO, analytics/ad behaviour, consent and error states.
+- [ ] Map shared components to pages instead of inventing one route per component.
+- [ ] Confirm all current production feature claims before copying them to the rebuild.
+- [ ] Keep unimplemented/deferred routes out of navigation or show a clear, honest unavailable state.
+- [ ] Record each decision with owner and date; review before release.
