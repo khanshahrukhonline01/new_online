@@ -30,3 +30,8 @@
 3. Record exact-CI and staging results in the testing/release gates.
 4. Complete a successful isolated restore drill and approve RPO/RTO.
 5. Obtain explicit product-owner approval for production credentials, migrations, merge and deployment.
+
+
+## Approved scope notes
+- The full website plan records the approved 100+ scalable sports catalogue, KhelGrid editorial verification states, and comprehensive private Sports CV with PDF as the first-release export format.
+- These are planning and acceptance requirements, not claims that these features have been implemented or tested.
