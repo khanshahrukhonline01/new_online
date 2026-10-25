@@ -559,3 +559,159 @@ Before implementation scope is expanded, mark each item **Decided**, **Deferred 
 - [ ] Risks, dependencies, costs, and decision owners recorded
 
 A checklist item may remain open during planning, but it must not silently become an implementation assumption. This is a planning checklist, not a claim that the items have already been completed.
+
+
+## Balanced MVP scope and priorities — planning decision
+
+**Selected strategy:** Balanced MVP. The initial product prioritizes public sports discovery, sourced opportunities, a trustworthy venue/court directory, and private Sports CV creation, with trust, security, accessibility, content quality and operational safeguards treated as foundational requirements.
+
+**Planning only:** This is a scope decision, not evidence of implementation or launch. It applies to the separate `khelgrid-platform` development project only. The production repository, production database and production deployment are out of scope.
+
+### MVP outcomes
+
+A visitor should be able to:
+1. Discover supported sports and search public content without an account.
+2. Browse trial/opportunity listings with evidence/source links, eligibility, dates, known fees/contact details, last-checked context where available, and honest status.
+3. Discover reviewed venues/courts with published facilities, location and prices only when supported by evidence.
+4. Create, preview, correct and export a Sports CV without making personal information public by default.
+5. Report incorrect, expired, unsafe or potentially infringing content and find relevant privacy, sourcing, safety and correction policies.
+
+Prioritize complete, trustworthy user journeys over the number of pages or features.
+
+### Priority tiers
+
+| Priority | Scope | Decision |
+|---|---|---|
+| **P0 — foundation and trust** | Responsive shell/navigation, route registry, accessible loading/empty/error/not-found states, typed domain contracts, development-only data access, migration/RLS review, CI checks, privacy/security baseline, sourcing and moderation rules | Required before release readiness |
+| **P1 — core MVP** | Home, public search, supported sports directory, opportunity list/detail, source/status/expiry display, venue/court directory/detail, reviewed venue submission if safe to operate, Sports CV create/preview/export, report/correction path | Primary journeys to build and verify |
+| **P1 — launch operations** | SEO/canonical/sitemap rules, performance baseline, privacy-conscious analytics decision, error/provider monitoring, tested backup/recovery procedure, support and incident ownership | Required where applicable before public launch |
+| **P2 — later** | Accounts, saved items, notifications, public athlete profiles, coach/academy directories, community/pickup games, expanded editorial content, advanced search, dedicated native mobile app | Plan interfaces now; implement when core needs and dependencies are proven |
+| **P3 — gated** | Live scores/fixtures, court booking, payments/subscriptions, reviews/messaging, premium plans, ads/sponsored placements, advanced AI features | Deferred until provider rights, costs, safeguards and operations are ready |
+
+These tiers are the proposed release boundary. Changes require an explicit scope decision rather than silent expansion.
+
+### Module requirements and acceptance criteria
+
+#### Platform foundation and sports discovery — P0/P1
+**Dependencies:** Existing React/TypeScript/Vite starter; routing decision; shared layout and design tokens; route registry; typed domain contracts; approved development data access.
+
+**Acceptance criteria**
+- Public browsing works without an account on small, medium and desktop screens.
+- Navigation, headings, forms, focus, validation and async status are usable by keyboard and screen readers to the agreed accessibility target.
+- The route registry records module owner, access, data source, indexability, status and tests; static routes take precedence over dynamic routes.
+- Search documents supported entities, filters, pagination, no-results and error behaviour; private/unpublished records never leak into results.
+- Unknown routes/missing records show a real not-found state; service failures are not disguised as successful empty results.
+- CI runs lint, typecheck, unit tests and production build; critical journeys have automated tests or recorded acceptance evidence.
+- Public counts, ratings, statistics and verification claims are evidence-backed or omitted.
+
+#### Opportunities and trials — P1
+**Dependencies:** Opportunity schema and lifecycle; permitted source register; provenance fields; expiry/duplicate rules; moderation roles; RLS and validation tests.
+
+**Acceptance criteria**
+- Only eligible published records appear in active lists; expired/closed opportunities are not shown as open.
+- Listings provide source evidence and relevant organizer, sport, location, eligibility, dates/deadline, fee status, contact/application method and checked/status information where applicable. Unknowns are not guessed.
+- Invalid, duplicate, incomplete or unauthorized submissions cannot publish outside the documented review path.
+- Users can report errors; reports enter a restricted workflow with an owner, status and escalation path.
+- Publication/moderation transitions are authorized by trusted backend/database rules and audited, not just hidden behind browser UI.
+- Tests cover expiry boundaries, missing source, unpublished records, duplicate submissions, unauthorized edits and corrections.
+- AI-generated/imported content is not treated as verified merely because it was generated or ingested.
+
+#### Venue and court directory — P1; booking excluded
+**Dependencies:** Venue/court model; reviewed submission process; publication and duplicate rules; price evidence; location/privacy decisions; reporting and moderation.
+
+**Acceptance criteria**
+- Only reviewed, published venue/court records are public.
+- Prices, hours, facilities, images, ownership and verification claims appear only when supported and approved for publication.
+- Unknown information is omitted or clearly marked unknown; no fake venues, ratings, prices, facilities or availability.
+- Venue/court records have stable IDs, canonical routes, correction/report paths and appropriate privacy controls.
+- Submitting a venue is a proposal, not automatic publication or proof of ownership.
+- Tests cover unpublished/removed venues, venue-court relationships, invalid prices, duplicates, permission boundaries and empty/error states.
+- The directory never implies live slot availability or booking completion. Booking remains a separate deferred feature.
+
+#### Sports CV — P1
+**Dependencies:** CV field/data inventory; private-by-default design; validation; export approach; retention/deletion decision; privacy review, including athlete/minor-related considerations.
+
+**Acceptance criteria**
+- A visitor can enter information, preview, correct errors and export a readable CV without being forced to publish a profile or create an account unless separately approved.
+- Required/optional fields are documented; accessible validation preserves safe input after recoverable errors.
+- Export is tested for page breaks, long names, missing optional values, malformed input and mobile usability.
+- CV data is not sent to analytics or third parties without a documented purpose and controls.
+- CVs are not public/indexable by default. Sharing requires explicit consent plus revocation/deletion rules.
+- If data is stored, access is restricted to the owner and authorized operations; if generated locally, document what is and is not stored.
+- Tests cover privacy defaults, preview/export, validation and deletion/consent behaviour.
+
+#### Trust, safety and moderation — P0
+**Dependencies:** Data inventory; role/permission matrix; content lifecycle; privacy/security review; correction and incident ownership; legal review for actual launch scope.
+
+**Acceptance criteria**
+- Relevant privacy, terms, contact/help, editorial/sourcing, verification, corrections, safety, accessibility and copyright information is available.
+- Reports have a defined destination, restricted access, triage owner, status tracking and escalation for serious safety/copyright concerns.
+- Publication, role and private-data mutations are authorized in the trusted backend/database and auditable.
+- Secrets never ship to the client; logs exclude credentials, session tokens and unnecessary personal/athlete data.
+- Retention/deletion, consent, incident response, backup scope and recovery ownership are documented before higher-risk data is collected.
+- Legal content is reviewed against actual product behaviour and operating jurisdictions; boilerplate is not treated as legal advice.
+- Public forms have validation, safe output handling and abuse/rate-limit protections.
+
+### Explicitly deferred from the Balanced MVP
+
+- **Accounts/workspace:** login, signup, saved items, applications, notifications and dashboards. Gate on approved authentication/session, role, recovery, deletion, privacy and RLS design.
+- **Booking:** reservations, holds, live availability, cancellation and booking notifications. Gate on atomic database conflict prevention, expired-hold handling, court-specific published pricing, hours validation, idempotency and concurrency tests.
+- **Payments/memberships:** gate on pricing, receipts/taxes, refunds, disputes, reconciliation, provider terms, support ownership and testing.
+- **Live sports:** scores, fixtures, match centre, commentary and logos require an authorized provider, display/redistribution rights, attribution, freshness/outage handling, cost/quota review and real-data tests. No simulated live data.
+- **Native mobile app:** first validate responsive web and core contracts; then decide Android/iOS scope, React Native/Expo suitability, maintenance owner, signing, store disclosures, device testing and release budget.
+- **Public athlete profiles, coaches/academies, reviews, messaging, community games and user-generated media:** defer until consent, verification, moderation, abuse handling, privacy and support are ready.
+- **Advertising/paid promotion:** defer until content usefulness, consent, placements, attribution, network terms and policy requirements are reviewed.
+- **Advanced AI/personalization/large-scale ingestion:** defer until permitted data, clear user value, quality checks, measurable outcomes and operating costs are established.
+
+Deferred does not mean rejected permanently. These features must not be shown as available or operational before their gates pass.
+
+### Risks, dependencies and mitigations
+
+| Risk | Potential impact | Mitigation / gate |
+|---|---|---|
+| Source rights do not permit reuse | Legal exposure or takedowns | Record terms, rights, attribution and allowed uses before ingesting/republishing |
+| Sparse/stale opportunities | Low trust and weak discovery | Start with a smaller useful catalogue; source, expiry and correction rules are mandatory |
+| Unverified venue facts/prices | Misleading users or disputes | Review before publication; unknown values stay unknown; keep booking disabled |
+| Scope expansion | Delay and maintenance burden | Enforce P0/P1/P2/P3 tiers and document changes |
+| Weak RLS/role model | Data exposure or unauthorized publication | Test allowed and denied access in the development environment |
+| Athlete/minor data over-collection | Privacy and safety risks | Minimize fields; private-by-default CV; feature-specific review |
+| Free-tier/provider limits | Outages or unexpected costs | Usage monitoring, quotas, pagination, graceful degradation; no paid upgrade without approval |
+| Thin or misleading SEO pages | Poor index quality and user trust | Index only useful canonical pages with real visible content |
+| No operational owner | Unresolved reports, outages or failed recovery | Assign owners for moderation, support, providers, backups, security and releases |
+| Web/mobile contract drift | Inconsistent behaviour and duplicated rules | Version shared domain/API contracts; separate client release gates |
+
+Each risk needs an owner and review date before the related feature is considered ready. No owner is assumed by this document.
+
+### Balanced MVP go/no-go release gate
+
+Do not call the MVP release-ready until applicable checks have evidence:
+
+- [ ] Core public journeys work end-to-end with permitted real data; no fake production-facing content.
+- [ ] Opportunity provenance, freshness, expiry, correction and moderation behaviour is tested.
+- [ ] Venue/court publication and privacy rules are tested; booking is clearly unavailable rather than implied.
+- [ ] Sports CV preview/export works and privacy defaults are verified.
+- [ ] Database policies/constraints are tested for permitted and denied access in development.
+- [ ] Responsive and agreed accessibility checks pass for core journeys.
+- [ ] Loading, empty, error, stale/unavailable, expired and not-found states are tested.
+- [ ] CI passes from a clean install; critical journeys have automated tests or recorded manual evidence.
+- [ ] SEO metadata, canonicals, sitemap/robots and redirects match the route registry.
+- [ ] Backup scope and recovery procedure are tested; an operational owner is assigned.
+- [ ] Privacy/legal review, report handling, support contact and incident process fit the actual release scope.
+- [ ] Target environment, credentials, rollback/forward-fix plan and post-release monitoring are reviewed.
+- [ ] Deferred features are hidden or explicitly unavailable, not advertised as working.
+
+A failed gate means **Blocked** or **In progress**, not Verified. A pass applies only to the tested version and environment.
+
+### Next planning deliverables
+
+Prepare these in order before widening implementation scope:
+
+1. **MVP decision record:** scope, non-goals, success measures and explicit deferrals.
+2. **Route registry:** route, module owner, access, data source, indexability, status, acceptance criteria and tests.
+3. **Domain/data dictionary:** entities, field definitions, lifecycle transitions, provenance, retention and relationships.
+4. **Role/permission matrix:** who may view, submit, moderate, publish, edit, archive and delete each entity.
+5. **Source/provider register:** usage rights, attribution, freshness, quotas, costs, fallback and review owner.
+6. **Journey acceptance plan:** Given/When/Then cases for the core user outcomes and trust/security.
+7. **Release/operations checklist:** environments, migrations, CI, recovery, incidents, support and go/no-go ownership.
+
+These are planning artifacts. Their inclusion does not claim implementation, testing, security verification, legal review or launch readiness has occurred.
