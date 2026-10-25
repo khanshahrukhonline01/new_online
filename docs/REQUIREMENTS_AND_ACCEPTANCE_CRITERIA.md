@@ -110,3 +110,17 @@ Accounts/authentication, server-side CV sync, public athlete profiles/sharing, t
 - PDF is the required first-release export format. DOCX or other formats may follow later.
 - Provide concise and full CV layouts, optional section selection/reordering, preview, local-first edit/save, export and delete/reset.
 - No account, server sync, public profile or sharing in the initial release. Clearly disclose local storage limitations and test that CV contents are not sent to a backend or analytics by default.
+
+
+## Automatic expiry and public archive acceptance criteria (2026-10-25)
+
+- Trial/opportunity lifecycle must be based on the source-supported registration deadline, event end date or documented listing-specific rule—not an invented date.
+- When due, a listing automatically leaves all active website surfaces and becomes available from the public Archive area with an accurate expired/closed/cancelled state.
+- Archive is a non-destructive lifecycle transition; preserve stable ID, source/evidence, dates, review state and correction history.
+- The authoritative active query must exclude overdue records even if a scheduled reconciliation job is delayed. The scheduled job reconciles persisted status and is idempotent/retry-safe.
+- Confirmed extensions require editorial review and recorded evidence. Missing/conflicting dates are flagged for review rather than guessed.
+- Homepage, category/city pages, APIs, search, sitemap, structured data and caches must agree. No static fallback may reintroduce expired items into active listings.
+- Archive UX supports search and appropriate filters; archived pages show the actual lifecycle status and do not imply the event is open or currently available.
+- Public archive excludes rejected/private/internal review records and must respect canonical/indexing rules.
+
+Required tests: deadline rollover, multi-day events, cancellations, approved extensions, missing dates, timezone boundaries, scheduler failure/retry, idempotency, cache/API/sitemap consistency and archive visibility.
