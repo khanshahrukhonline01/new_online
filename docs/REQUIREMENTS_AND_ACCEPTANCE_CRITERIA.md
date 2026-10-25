@@ -124,3 +124,20 @@ Accounts/authentication, server-side CV sync, public athlete profiles/sharing, t
 - Public archive excludes rejected/private/internal review records and must respect canonical/indexing rules.
 
 Required tests: deadline rollover, multi-day events, cancellations, approved extensions, missing dates, timezone boundaries, scheduler failure/retry, idempotency, cache/API/sitemap consistency and archive visibility.
+
+
+## Site-wide content quality and AdSense remediation acceptance criteria (2026-10-25)
+
+- Every public indexable URL must provide original, accurate, audience-useful value; text quantity alone does not count as quality.
+- Maintain a URL-level inventory with intended user task, template, sources, editorial reviewer, last-checked/recheck dates, canonical/indexability decision and remediation status.
+- Sport pages must be genuinely sport-specific; do not mass-publish interchangeable templates for 100+ sports. Low-quality pages stay noindex or unpublished until improved.
+- Opportunity/trial pages require source-backed facts, current lifecycle state, date/eligibility/fee disclosure (including “not stated”), source attribution and correction path.
+- Archive pages clearly state historical status; thin filter combinations and empty category/location pages must not be indexed at scale.
+- Venue pages show only reviewed facts and do not fabricate photos, amenities, prices, reviews or availability.
+- CV/tool and policy pages explain functionality, limitations, privacy/storage and actual editorial/ad practices.
+- All current factual claims and statistics must be evidence-backed; AI-assisted drafts require human review. No invented credentials, testimonials, user counts or verification claims.
+- Canonical, sitemap, robots/noindex and structured data must align with visible content and status.
+- Review current Google AdSense publisher policies before reapplication. A technical integration or longer copy does not guarantee approval.
+- Reapply only after a site-wide audit confirms material improvements are live, weak pages have been improved/consolidated/noindexed/withheld, and privacy/navigation/content quality are reviewed.
+
+Required tests/reviews: URL inventory completeness, thin/duplicate/empty page detection, source/expiry consistency, unsupported claim review, canonical/sitemap/structured-data alignment, mobile readability, and documented human sign-off.
