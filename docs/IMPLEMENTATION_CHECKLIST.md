@@ -102,3 +102,11 @@ Still required before calling the foundation complete:
 - [ ] Add or adjust shared component tests for menu/navigation, loading/error/empty states and mobile-safe controls where test setup permits.
 - [ ] Confirm the deployment preview (if available) uses only development configuration and cannot call production services.
 
+
+
+## Mobile navigation accessibility follow-up — 2026-10-25
+
+- Added a focus return to the mobile menu toggle when Escape closes the menu and when a navigation link is selected from the open menu.
+- Added server-rendered shell assertions for the navigation landmark ID, `aria-controls`, default `aria-expanded` state and accessible open-menu label.
+- [ ] Execute the test suite and confirm these assertions pass on the exact commit; static source changes are not evidence of a passing test run.
+- [ ] Verify Escape, link activation, browser back/forward and focus visibility in a real browser at mobile widths; SSR tests do not exercise interactive keyboard behavior.

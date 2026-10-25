@@ -13,6 +13,10 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('Skip to content')
     expect(html).toContain('Search KhelGrid')
     expect(html).toContain('aria-label="Main navigation"')
+    expect(html).toContain('id="primary-navigation"')
+    expect(html).toContain('aria-controls="primary-navigation"')
+    expect(html).toContain('aria-expanded="false"')
+    expect(html).toContain('aria-label="Open main navigation"')
     expect(html).toContain('aria-current="page"')
   })
 
