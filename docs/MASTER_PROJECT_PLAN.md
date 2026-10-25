@@ -92,18 +92,19 @@ The numbers below preserve the 54-topic checklist for traceability. Topics are c
 16. Data lifecycle and quality — `data/DATA_QUALITY_AND_PROVENANCE.md`.
 17. Third-party integration register — `architecture/BACKEND_API_AND_INTEGRATIONS.md`.
 18. Environment and secrets management — `architecture/ENVIRONMENTS_AND_SECRETS.md`.
+19. Multi-LLM provider architecture, model governance and public/private asset classification — `architecture/LLM_INTEGRATION_AND_ASSET_GOVERNANCE.md`.
 
 ### Features
-19. Sports directory — `features/SPORTS_AND_DISCOVERY.md`.
-20. Trials/opportunities — `features/OPPORTUNITIES_AND_VERIFICATION.md`.
-21. Venues and courts — `features/VENUES_AND_BOOKING.md`.
-22. Booking and availability — `features/VENUES_AND_BOOKING.md`.
-23. Sports CV — `features/SPORTS_CV.md`.
-24. Authentication and profiles — `features/ACCOUNTS_PAYMENTS_AND_NOTIFICATIONS.md`.
-25. Payments and monetization — `features/ACCOUNTS_PAYMENTS_AND_NOTIFICATIONS.md` and `growth/ANALYTICS_AND_ADVERTISING.md`.
-26. Live scores and sports data — `features/LIVE_SPORTS_DATA.md`.
-27. Search and discovery — `features/SPORTS_AND_DISCOVERY.md`.
-28. Notifications and user actions — `features/ACCOUNTS_PAYMENTS_AND_NOTIFICATIONS.md`.
+20. Sports directory — `features/SPORTS_AND_DISCOVERY.md`.
+21. Trials/opportunities — `features/OPPORTUNITIES_AND_VERIFICATION.md`.
+22. Venues and courts — `features/VENUES_AND_BOOKING.md`.
+23. Booking and availability — `features/VENUES_AND_BOOKING.md`.
+24. Sports CV — `features/SPORTS_CV.md`.
+25. Authentication and profiles — `features/ACCOUNTS_PAYMENTS_AND_NOTIFICATIONS.md`.
+26. Payments and monetization — `features/ACCOUNTS_PAYMENTS_AND_NOTIFICATIONS.md` and `growth/ANALYTICS_AND_ADVERTISING.md`.
+27. Live scores and sports data — `features/LIVE_SPORTS_DATA.md`.
+28. Search and discovery — `features/SPORTS_AND_DISCOVERY.md`.
+29. Notifications and user actions — `features/ACCOUNTS_PAYMENTS_AND_NOTIFICATIONS.md`.
 
 ### Policies and security
 29. Footer, legal pages and privacy controls — existing: `FOOTER_LEGAL_PAGES_AND_PRIVACY_SETTINGS.md`; planned canonical copy: `policies/FOOTER_LEGAL_PAGES_AND_PRIVACY_SETTINGS.md`.
@@ -135,7 +136,13 @@ The numbers below preserve the 54-topic checklist for traceability. Topics are c
 53. Cost/capacity — `operations/COST_CAPACITY_AND_MAINTENANCE.md`.
 54. Maintenance/ownership register — `operations/COST_CAPACITY_AND_MAINTENANCE.md`.
 
-## 5. Release stages
+## 5. Cross-cutting AI and asset requirements
+
+Future multi-LLM integrations must use a provider-neutral server-side adapter, with provider terms, costs, privacy/retention, data-region and capability differences documented. Enforce access controls before retrieving context for a model; treat prompts, retrieved documents and model output as untrusted; validate outputs and require approval for consequential actions. Never expose provider keys in frontend code.
+
+Classify assets as public, internal, confidential or restricted/secrets. Use public storage only for reviewed, licensed, intentionally published assets; keep private assets behind authorization and private storage. Do not rely on obscure URLs as access control. Prevent private assets from entering public APIs, search indexes, sitemaps, client bundles, analytics and logs. Test anonymous and unauthorized access. See `architecture/LLM_INTEGRATION_AND_ASSET_GOVERNANCE.md`.
+
+## 6. Release stages
 
 ### Stage A — Discovery MVP
 - Responsive navigation and homepage.
@@ -166,7 +173,7 @@ The numbers below preserve the 54-topic checklist for traceability. Topics are c
 
 Stages are planning targets, not claims that these features currently exist.
 
-## 6. Mandatory engineering rules
+## 7. Mandatory engineering rules
 
 1. No mock, simulated, or fabricated data may be presented as genuine production data.
 2. No unverified opportunity may be labelled officially verified.
@@ -179,7 +186,7 @@ Stages are planning targets, not claims that these features currently exist.
 9. No merge, production database change, domain/DNS change, or production deployment without explicit owner approval.
 10. Legal and privacy wording must reflect actual behaviour and receive appropriate review before launch.
 
-## 7. Definition of done for each feature
+## 8. Definition of done for each feature
 
 A feature is complete only when:
 - Its requirement and exclusions are documented.
@@ -193,17 +200,19 @@ A feature is complete only when:
 - The PR review is complete and required CI checks pass.
 - Production release has separate explicit approval.
 
-## 8. Open decisions to track
+## 9. Open decisions to track
 
 - Confirm official social profile URLs.
 - Confirm contact and legal entity details before publishing legal notices.
 - Select and approve any real live-sports data provider before integrating it.
+- Select LLM providers and approve their data handling, retention/training terms, costs and tool permissions before integration.
+- Inventory public/private assets and confirm storage, classification, rights, access and retention rules.
 - Decide when account, booking, payment, analytics, and ad features are in scope.
 - Confirm applicable legal jurisdictions and review requirements.
 - Confirm staging/preview setup and deployment permissions.
 - Set measurable performance, recovery, and availability targets.
 
-## 9. Document maintenance
+## 10. Document maintenance
 
 Each substantive document should include status, owner/maintainer, last-reviewed date, scope, dependencies, and acceptance criteria. Update this master index when a document is created, renamed, superseded, or accepted. Mark incomplete items as planned rather than implying that the underlying capability is implemented.
 
