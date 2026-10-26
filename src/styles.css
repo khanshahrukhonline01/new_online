@@ -323,3 +323,33 @@ body { color: var(--text); background: var(--page); }
 @media (prefers-reduced-motion: reduce) {
   .foundation-v1 *, .foundation-v1 *::before, .foundation-v1 *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+
+/* Consistent alignment for integrated functional and sport icons */
+.foundation-v1 .home-trust-points > span,
+.foundation-v1 .stat-icon,
+.foundation-v1 .feature-icon,
+.foundation-v1 .tag,
+.foundation-v1 .verification,
+.foundation-v1 .listing-meta > span,
+.foundation-v1 .text-link,
+.foundation-v1 .search-result-arrow,
+.foundation-v1 .card-kicker,
+.foundation-v1 .venue-card > p,
+.foundation-v1 .availability-note,
+.foundation-v1 .primary-link,
+.foundation-v1 .secondary-link,
+.foundation-v1 .card-action,
+.foundation-v1 .menu-toggle,
+.foundation-v1 .header-search-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.foundation-v1 .stat-icon,
+.foundation-v1 .feature-icon { justify-content: center; }
+.foundation-v1 .sport-card-icon { display: flex; align-items: center; justify-content: flex-start; margin-bottom: 12px; }
+.foundation-v1 .sport-card-icon svg { display: block; }
+.foundation-v1 .listing-meta { display: flex; flex-wrap: wrap; gap: 12px 18px; }
+.foundation-v1 .search-result-arrow { justify-content: center; }
+.foundation-v1 .primary-link svg, .foundation-v1 .secondary-link svg { flex: 0 0 auto; }
