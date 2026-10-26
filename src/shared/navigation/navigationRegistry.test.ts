@@ -10,19 +10,19 @@ describe('shared navigation registry', () => {
     )
   })
 
-  it('keeps the header destinations in the Explore module', () => {
-    const explore = navigationModules.find(section => section.id === 'core')
+  it('keeps the header destinations in the Discover module', () => {
+    const explore = navigationModules.find(section => section.id === 'discover')
     expect(explore?.items.map(item => item.href)).toEqual([
       '/', '/sports', '/opportunities', '/venues',
     ])
   })
 
-  it('keeps Search available without adding it to the header destinations', () => {
-    const discovery = navigationModules.find(section => section.id === 'discovery-tools')
+  it('keeps Search available in Tools without adding it to header destinations', () => {
+    const discovery = navigationModules.find(section => section.id === 'tools')
     expect(discovery?.items.map(item => item.href)).toEqual(['/search'])
   })
 
-  it('does not expose future tools as core header destinations', () => {
+  it('does not expose future tools as Discover header destinations', () => {
     const explore = navigationModules.find(section => section.id === 'core')
     expect(explore?.items.some(item => item.href === '/sports-cv')).toBe(false)
   })
