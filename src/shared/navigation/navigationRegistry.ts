@@ -16,8 +16,8 @@ export type NavigationModule = {
 }
 
 /** Shared navigation source for desktop header, sidebar, and mobile drawer.
- * Only routes currently handled by App.tsx are listed; future destinations
- * must not be added until their routes exist.
+ * Only routes handled by App.tsx are listed. Search stays in its own module
+ * because the header renders a dedicated search control outside its links.
  */
 export const navigationModules: NavigationModule[] = [
   {
@@ -37,6 +37,12 @@ export const navigationModules: NavigationModule[] = [
       },
       { id: 'opportunities', label: 'Trials & opportunities', href: '/opportunities', icon: 'opportunities', module: 'opportunities' },
       { id: 'venues', label: 'Venues', href: '/venues', icon: 'venues', module: 'venues' },
+    ],
+  },
+  {
+    id: 'discovery-tools',
+    label: 'Discovery tools',
+    items: [
       { id: 'search', label: 'Search', href: '/search', icon: 'search', module: 'search' },
     ],
   },
