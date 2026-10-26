@@ -525,3 +525,68 @@ body { color: var(--text); background: var(--page); }
 
 /* Keep all five primary mobile destinations visible in the quick-navigation bar. */
 @media (max-width: 720px) { .foundation-v1 .mobile-bottom-nav { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+
+
+/* Gmail-inspired navigation shell: retain every existing page and its content. */
+.foundation-v1 .site-header {
+  position: sticky; top: 0; z-index: 50; display: flex; flex-wrap: nowrap;
+  min-height: 58px; gap: 14px; padding: 0 18px;
+  background: rgba(255,255,255,.97); border-bottom: 1px solid #e4eaf1;
+  box-shadow: 0 1px 4px rgba(16,35,63,.04);
+}
+.foundation-v1 .site-header .menu-toggle {
+  display: inline-flex; order: 0; flex: 0 0 36px; align-items: center;
+  justify-content: center; width: 36px; min-width: 36px; min-height: 36px;
+  padding: 0; border: 0; border-radius: 10px; color: #26364b;
+  background: transparent; cursor: pointer;
+}
+.foundation-v1 .site-header .menu-toggle:hover { background: #f0f5f8; }
+.foundation-v1 .site-header .brand { order: 1; gap: 8px; font-size: 12px; letter-spacing: .08em; }
+.foundation-v1 .site-header .header-search-form {
+  order: 2; flex: 1 1 460px; max-width: 620px; min-width: 120px;
+  height: 40px; margin: 0 0 0 18px; border-radius: 12px; background: #f1f5f9;
+}
+.foundation-v1 .site-header .environment-label { order: 3; margin-left: auto; white-space: nowrap; }
+.foundation-v1 .site-header .primary-navigation { display: none !important; }
+.foundation-v1 .app-workspace { min-height: calc(100vh - 124px); }
+.foundation-v1 .app-sidebar {
+  position: sticky; top: 58px; flex: 0 0 224px; width: 224px;
+  height: calc(100vh - 58px); min-height: 420px; padding: 12px 10px;
+  background: #fff; border-right: 1px solid #e5ebf2;
+}
+.foundation-v1 .app-sidebar.is-collapsed { flex-basis: 68px; width: 68px; }
+.foundation-v1 .app-sidebar .sidebar-brand-row { padding: 0 6px 12px; }
+.foundation-v1 .app-sidebar .sidebar-navigation { padding: 12px 0; }
+.foundation-v1 .app-sidebar .sidebar-module + .sidebar-module { margin-top: 12px; padding-top: 12px; }
+.foundation-v1 .app-sidebar .sidebar-link { min-height: 38px; margin: 2px 0; padding: 8px 10px; }
+.foundation-v1 .app-sidebar .sidebar-promo { margin-top: 8px; padding: 12px; }
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-brand-name,
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-link-label,
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-chevron,
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-module-label,
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-promo,
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-build-note { display: none; }
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-brand-row { justify-content: center; padding-inline: 0; }
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-link { justify-content: center; padding-inline: 4px; }
+.foundation-v1 .app-workspace .page-shell {
+  width: auto; max-width: 1480px; padding: 12px clamp(18px, 2.2vw, 34px) 34px;
+}
+.foundation-v1 .site-footer { margin-top: auto; }
+@media (max-width: 1000px) and (min-width: 701px) {
+  .foundation-v1 .app-sidebar { flex-basis: 68px; width: 68px; }
+  .foundation-v1 .app-sidebar .sidebar-brand-name,
+  .foundation-v1 .app-sidebar .sidebar-link-label,
+  .foundation-v1 .app-sidebar .sidebar-chevron,
+  .foundation-v1 .app-sidebar .sidebar-module-label,
+  .foundation-v1 .app-sidebar .sidebar-promo,
+  .foundation-v1 .app-sidebar .sidebar-build-note { display: none; }
+  .foundation-v1 .app-sidebar .sidebar-brand-row { justify-content: center; }
+  .foundation-v1 .app-sidebar .sidebar-link { justify-content: center; padding-inline: 4px; }
+  .foundation-v1 .site-header .header-search-form { margin-left: 6px; }
+}
+@media (max-width: 700px) {
+  .foundation-v1 .site-header { flex-wrap: wrap; gap: 9px; padding: 9px 12px; }
+  .foundation-v1 .site-header .header-search-form { order: 3; flex: 1 0 100%; max-width: none; margin: 0; }
+  .foundation-v1 .site-header .environment-label { display: none; }
+  .foundation-v1 .app-workspace .page-shell { width: 100%; padding: 0 14px 86px; }
+}
