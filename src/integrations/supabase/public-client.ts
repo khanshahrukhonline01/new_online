@@ -8,11 +8,16 @@ export type CatalogueResult<T> =
   | { status: 'unconfigured'; data: [] }
   | { status: 'unavailable'; data: []; message: string }
 
-async function readCatalogue<T>(table: string, select: string, order: string): Promise<CatalogueResult<T>> {
+async function readCatalogue<T>(
+  table: string,
+  select: string,
+  order: string,
+  filter: string,
+): Promise<CatalogueResult<T>> {
   if (!supabaseUrl || !anonKey) return { status: 'unconfigured', data: [] }
   try {
     const response = await fetch(
-      `${supabaseUrl}/rest/v1/${table}?select=${encodeURIComponent(select)}&${order}`,
+      `${supabaseUrl}/rest/v1/${table}?select=${encodeURIComponent(select)}&${order}&${filter}`,
       { headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` } },
     )
     if (!response.ok) return { status: 'unavailable', data: [], message: 'Catalogue data is temporarily unavailable.' }
@@ -25,7 +30,7 @@ async function readCatalogue<T>(table: string, select: string, order: string): P
 }
 
 export function getSports() {
-  return readCatalogue<Sport>('sports', 'id,slug,name', 'order=name.asc')
+  return readCatalogue<Sport>('sports', 'id,slug,name', 'order=name.asc', 'is_published=eq.true')
 }
 
 export function getOpportunities() {
@@ -33,6 +38,7 @@ export function getOpportunities() {
     'opportunities',
     'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status',
     'order=starts_at.asc.nullslast',
+    'publication_status=eq.published',
   )
 }
 
@@ -41,5 +47,6 @@ export function getVenues() {
     'venues',
     'id,slug,name,description,city,address,timezone',
     'order=name.asc',
+    'publication_status=eq.published',
   )
 }
