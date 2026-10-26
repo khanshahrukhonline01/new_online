@@ -23,7 +23,7 @@ describe('shared navigation registry', () => {
   })
 
   it('does not expose future tools as Discover header destinations', () => {
-    const explore = navigationModules.find(section => section.id === 'core')
+    const explore = navigationModules.find(section => section.id === 'discover')
     expect(explore?.items.some(item => item.href === '/sports-cv')).toBe(false)
   })
 })
