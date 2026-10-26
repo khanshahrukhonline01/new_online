@@ -5,11 +5,8 @@ import OpportunitiesPage from './modules/opportunities/OpportunitiesPage'
 import VenuesPage from './modules/venues/VenuesPage'
 import SearchPage from './modules/search/SearchPage'
 import Sidebar from './shared/components/Sidebar'
-import { navigationModules } from './shared/navigation/navigationRegistry'
 import { resolveRoute } from './shared/routing'
 import { SiteIcon } from './shared/components/SiteIcon'
-
-const allRoutes = navigationModules.flatMap(section => section.items)
 
 function currentPath() {
   if (typeof window === 'undefined') return '/'
@@ -67,11 +64,6 @@ export default function App() {
   }
 
   const match = resolveRoute(path)
-  const active = allRoutes.find(route => route.href === path)?.href
-    ?? (match.name === 'sport-detail' ? '/sports'
-      : match.name === 'opportunity-detail' || match.name === 'opportunities-index' ? '/opportunities'
-      : match.name === 'venue-detail' || match.name === 'venues-index' ? '/venues' : '')
-
   let page
   switch (match.name) {
     case 'home': page = <HomePage />; break
