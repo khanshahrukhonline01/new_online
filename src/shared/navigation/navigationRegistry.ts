@@ -33,6 +33,7 @@ export const navigationModules: NavigationModule[] = [
     id: 'play',
     label: 'Play & Match Center',
     items: [
+      { id: 'sports', label: 'Explore sports', href: '/sports', icon: 'sports', module: 'play', available: true },
       { id: 'trials', label: 'Search Trials & Opportunities', href: '/opportunities', icon: 'opportunities', module: 'play', available: true },
       { id: 'live-scores', label: 'Live Scores', href: '/live', icon: 'activity', module: 'play' },
       { id: 'find-games', label: 'Play · Find games', href: '/play', icon: 'sports', module: 'play' },
@@ -62,6 +63,7 @@ export const navigationModules: NavigationModule[] = [
       { id: 'ai-guide', label: 'AI Guide', href: '/ai-guide', icon: 'activity', module: 'knowledge' },
       { id: 'blog', label: 'Blog · KhelChronicle', href: '/khelchronicle', icon: 'file-text', module: 'knowledge' },
       { id: 'community', label: 'Community', href: '/community', icon: 'users', module: 'knowledge' },
+      { id: 'search', label: 'Search', href: '/search', icon: 'search', module: 'knowledge', available: true },
       { id: 'tools', label: 'Tools & calculators', href: '/tools', icon: 'sliders', module: 'knowledge' },
     ],
   },
