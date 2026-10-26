@@ -88,7 +88,10 @@ export default function App() {
         <a className="header-action-link" href="mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue%20on%20KhelGrid"><SiteIcon name="plus" size={16} /><span>List your venue</span></a>
         <a className="header-action-link header-action-secondary" href="mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial%20or%20opportunity"><SiteIcon name="calendar-check" size={16} /><span>Submit a trial</span></a>
       </nav>
-      <a className="header-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback" title="Help and feedback"><SiteIcon name="help-circle" size={19} /></a>
+      <button className="header-icon-button" type="button" disabled aria-label="Notifications coming soon" title="Notifications coming soon"><SiteIcon name="bell" size={19} /></button>
+      <a className="header-icon-button" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20settings%20help" aria-label="Settings help" title="Settings help"><SiteIcon name="settings" size={19} /></a>
+      <a className="header-login-link" href="https://www.khelgrid.com/login" title="Login coming soon"><SiteIcon name="user-round" size={17} /><span>Login <small>Coming Soon</small></span></a>
+      <a className="header-go-pro" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20Pro%20enquiry"><SiteIcon name="zap" size={16} /><span>Go Pro</span></a>
       <span className="environment-label"><span className="status-dot warning" />Development</span>
     </header>
     <div className="app-workspace">
