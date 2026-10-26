@@ -58,6 +58,7 @@ export function getSportIconId(name?: string | null): SportIconId | undefined {
 type SportIconProps = SVGProps<SVGSVGElement> & {
   name: string
   size?: number
+  title?: string
 }
 
 /** Accessible, offline-friendly SVG icon. Unknown sport names render a neutral fallback. */
