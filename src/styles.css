@@ -367,3 +367,144 @@ body { color: var(--text); background: var(--page); }
   .site-footer { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
   .page-shell { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 }
+
+
+/* Gmail-inspired KhelGrid app shell refinement — keep KhelGrid navy/green identity. */
+.foundation-v1 .site-header {
+  min-height: 70px;
+  gap: 18px;
+  box-shadow: 0 1px 3px rgba(16,35,63,.035);
+}
+.foundation-v1 .brand { flex: 0 0 auto; }
+.foundation-v1 .primary-navigation { margin-left: auto; }
+.foundation-v1 .header-search-link {
+  min-height: 38px;
+  min-width: 96px;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 14px;
+  color: var(--muted-strong);
+  background: #f6f8fb;
+  border-color: #e5eaf0;
+  transition: border-color .16s ease, background .16s ease, color .16s ease;
+}
+.foundation-v1 .header-search-link:hover,
+.foundation-v1 .header-search-link.active {
+  color: var(--navy);
+  border-color: #b9e2ca;
+  background: #edf7f1;
+}
+.foundation-v1 .app-workspace { min-height: calc(100vh - 138px); }
+.foundation-v1 .app-sidebar {
+  top: 70px;
+  height: calc(100vh - 70px);
+  min-height: 420px;
+  padding: 18px 12px 14px;
+  border-right-color: #e7ecf2;
+}
+.foundation-v1 .sidebar-brand-row {
+  padding: 0 8px 15px;
+  border-bottom: 1px solid #edf0f4;
+}
+.foundation-v1 .sidebar-brand { gap: 9px; text-decoration: none; }
+.foundation-v1 .sidebar-brand-name {
+  color: var(--navy);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .12em;
+}
+.foundation-v1 .sidebar-navigation { padding: 14px 0; }
+.foundation-v1 .sidebar-module + .sidebar-module {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top-color: #edf0f4;
+}
+.foundation-v1 .sidebar-module-label {
+  margin: 0 12px 8px;
+  color: #7a8798;
+  font-size: 9px;
+  letter-spacing: .1em;
+}
+.foundation-v1 .sidebar-link {
+  min-height: 40px;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.foundation-v1 .sidebar-link:hover { background: #f5f8f6; }
+.foundation-v1 .sidebar-link.is-active {
+  color: #075f35;
+  background: #e7f5ec;
+  box-shadow: inset 3px 0 #07964f;
+  font-weight: 750;
+}
+.foundation-v1 .sidebar-icon { display: inline-flex; align-items: center; justify-content: center; }
+.foundation-v1 .sidebar-promo {
+  margin: 7px 2px 12px;
+  padding: 13px;
+  border-radius: 10px;
+  background: #f4faf6;
+}
+.foundation-v1 .sidebar-promo p { color: #59697d; }
+.foundation-v1 .sidebar-bottom { border-top: 1px solid #edf0f4; padding: 12px 8px 0; }
+.foundation-v1 .sidebar-build-note { color: #8994a3; font-size: 9px; }
+.foundation-v1 .app-workspace .page-shell {
+  max-width: 1360px;
+  padding-top: 8px;
+}
+.foundation-v1 .site-footer {
+  min-height: 66px;
+  gap: 12px 24px;
+  padding-top: 17px;
+  padding-bottom: 18px;
+  font-size: 10px;
+}
+.foundation-v1 .mobile-drawer {
+  background: #fff;
+  border-right-color: var(--line);
+}
+.foundation-v1 .mobile-drawer-header { border-bottom-color: #edf0f4; }
+.foundation-v1 .mobile-drawer .sidebar-mobile-close {
+  color: var(--navy);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+}
+.foundation-v1 .mobile-bottom-nav {
+  right: 10px;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  left: 10px;
+  border-color: #dce5e0;
+  border-radius: 14px;
+  background: rgba(255,255,255,.97);
+  box-shadow: 0 -5px 22px rgba(16,35,63,.09);
+  backdrop-filter: blur(16px);
+}
+.foundation-v1 .mobile-bottom-link {
+  min-height: 48px;
+  color: #65748a;
+  border-radius: 10px;
+}
+.foundation-v1 .mobile-bottom-link.is-active,
+.foundation-v1 .mobile-bottom-link[aria-current="page"] {
+  color: #075f35;
+  background: #e7f5ec;
+}
+.foundation-v1 .mobile-bottom-link small { font-size: 10px; }
+@media (max-width: 1000px) and (min-width: 761px) {
+  .foundation-v1 .site-header { gap: 10px; }
+  .foundation-v1 .nav-link { padding-inline: 8px; }
+  .foundation-v1 .header-search-link { min-width: 40px; padding-inline: 10px; }
+}
+@media (max-width: 760px) {
+  .foundation-v1 .site-header { gap: 10px; }
+  .foundation-v1 .header-search-link { margin-left: auto; min-width: 40px; padding-inline: 11px; }
+  .foundation-v1 .app-workspace { min-height: calc(100vh - 130px); }
+  .foundation-v1 .app-workspace .page-shell { padding-top: 0; }
+  .foundation-v1 .mobile-drawer .sidebar-link { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .foundation-v1 .header-search-link { transition: none; }
+}
