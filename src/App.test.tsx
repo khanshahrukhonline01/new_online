@@ -68,10 +68,10 @@ describe('catalogue search', () => {
 
 
 describe('shared navigation route coverage', () => {
-  it('keeps Search in Discovery tools while including it in combined navigation', () => {
-    expect(navigationModules.find(section => section.id === 'core')?.items.map(item => item.href))
+  it('keeps Search in Tools while including it in combined navigation', () => {
+    expect(navigationModules.find(section => section.id === 'discover')?.items.map(item => item.href))
       .toEqual(['/', '/sports', '/opportunities', '/venues'])
-    expect(navigationModules.find(section => section.id === 'discovery-tools')?.items.map(item => item.href))
+    expect(navigationModules.find(section => section.id === 'tools')?.items.map(item => item.href))
       .toContain('/search')
     expect(primaryNavigation.map(item => item.href)).toContain('/search')
   })
