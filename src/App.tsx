@@ -61,7 +61,7 @@ export default function App() {
       page = <section className="content-page"><p className="eyebrow">PAGE NOT AVAILABLE</p><h1>This page isn’t here yet.</h1><p className="page-intro">This route has not been implemented. Return to a published section to continue exploring.</p><a className="primary-link" href="/" onClick={event => navigate(event, '/')}>Back home ↗</a></section>
   }
 
-  return <div className="app-shell">
+  return <div className="app-shell foundation-v1">
     <a className="skip-link" href="#main-content">Skip to content</a>
     <header className="site-header">
       <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /><span>KHELGRID</span></a>
