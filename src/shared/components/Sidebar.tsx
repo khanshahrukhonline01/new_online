@@ -30,7 +30,7 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false 
     <a href={item.href} className={active ? 'sidebar-link is-active' : 'sidebar-link'} aria-current={active ? 'page' : undefined} aria-label={collapsed ? item.label : undefined} title={collapsed ? item.label : undefined} onClick={event => { onNavigate(event, item.href); onClose?.() }}>
       <span className="sidebar-icon" aria-hidden="true"><SiteIcon name={item.icon} size={18} /></span>
       <span className="sidebar-link-label">{item.label}</span>
-      {item.children?.length ? <span className="sidebar-chevron" aria-hidden="true">›</span> : null}
+      {item.children?.length ? <span className="sidebar-chevron" aria-hidden="true"><SiteIcon name="chevron-right" size={14} /></span> : null}
     </a>
     {item.children?.length && !collapsed ? <div className="sidebar-children">{item.children.map(child => <a key={child.id} href={child.href} className="sidebar-child-link" aria-current={activePath === child.href ? 'page' : undefined} onClick={event => { onNavigate(event, child.href); onClose?.() }}>{child.label}</a>)}</div> : null}
   </div>
@@ -93,7 +93,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
           {section.items.map(item => <SidebarLink key={item.id} item={item} activePath={activePath} onNavigate={onNavigate} onClose={onClose} />)}
         </section>)}
       </nav>
-      <div className="sidebar-promo"><strong>Create your Sports CV</strong><p>Build a profile-ready CV and export it when you're ready.</p><a href="/sports-cv" onClick={event => onNavigate(event, '/sports-cv')}>Explore CV tools <span aria-hidden="true">↗</span></a></div>
+      <div className="sidebar-promo"><strong>Create your Sports CV</strong><p>Build a profile-ready CV and export it when you're ready.</p><a href="/sports-cv" onClick={event => onNavigate(event, '/sports-cv')}>Explore CV tools <SiteIcon name="arrow-up-right" size={14} /></a></div>
       <div className="sidebar-bottom">
         <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback" title="Help and feedback">
           <SiteIcon name="help-circle" size={18} />
@@ -104,7 +104,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
     </aside>
     <div ref={drawerRef} id="mobile-sidebar-drawer" className={open ? 'mobile-drawer is-open' : 'mobile-drawer'} aria-hidden={!open} role="dialog" aria-modal={open ? 'true' : undefined} aria-label="Mobile navigation">
       <div className="mobile-drawer-header">
-        <button ref={closeRef} className="sidebar-mobile-close" type="button" onClick={() => { onClose(); toggleRef.current?.focus() }} aria-label="Close navigation">×</button>
+        <button ref={closeRef} className="sidebar-mobile-close" type="button" onClick={() => { onClose(); toggleRef.current?.focus() }} aria-label="Close navigation"><SiteIcon name="close" size={20} /></button>
       </div>
       <nav className="sidebar-navigation" aria-label="Mobile feature navigation">
         {navigationModules.map(section => <section className="sidebar-module" key={section.id} aria-label={section.label}>
@@ -112,7 +112,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
           {section.items.map(item => <SidebarLink key={item.id} item={item} activePath={activePath} onNavigate={onNavigate} onClose={onClose} />)}
         </section>)}
       </nav>
-      <div className="sidebar-promo"><strong>Create your Sports CV</strong><p>Build a profile-ready CV and export it when you're ready.</p><a href="/sports-cv" onClick={event => { onNavigate(event, '/sports-cv'); onClose() }}>Explore CV tools ↗</a></div>
+      <div className="sidebar-promo"><strong>Create your Sports CV</strong><p>Build a profile-ready CV and export it when you're ready.</p><a href="/sports-cv" onClick={event => { onNavigate(event, '/sports-cv'); onClose() }}>Explore CV tools <SiteIcon name="arrow-up-right" size={14} /></a></div>
     </div>
     <nav className="mobile-bottom-nav" aria-label="Quick navigation">
       {mobileItems.map(item => {
