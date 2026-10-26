@@ -22,7 +22,7 @@ describe('KhelGrid discovery shell', () => {
     // control targets the desktop sidebar. The client switches to the mobile
     // drawer after matchMedia is read in the viewport effect.
     expect(html).toContain('aria-controls="app-sidebar"')
-    expect(html).toContain('aria-expanded="true"')
+    expect(html).toContain('aria-expanded="false"')
     expect(html).toContain('aria-label="Toggle main navigation"')
     expect(html).toContain('aria-current="page"')
   })
