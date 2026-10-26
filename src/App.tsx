@@ -20,9 +20,19 @@ function currentPath() {
 export default function App() {
   const [path, setPath] = useState('/')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const [headerQuery, setHeaderQuery] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const menuToggleRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 700px)')
+    const updateViewport = () => setIsMobile(media.matches)
+    updateViewport()
+    media.addEventListener?.('change', updateViewport)
+    return () => media.removeEventListener?.('change', updateViewport)
+  }, [])
 
   useEffect(() => {
     setPath(currentPath())
@@ -34,6 +44,14 @@ export default function App() {
   }, [])
 
   useEffect(() => { setMenuOpen(false) }, [path])
+
+  function toggleMainMenu() {
+    if (isMobile) {
+      setMenuOpen(open => !open)
+    } else {
+      setSidebarCollapsed(collapsed => !collapsed)
+    }
+  }
 
   function navigate(event: MouseEvent<HTMLAnchorElement>, target: string) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
@@ -72,14 +90,14 @@ export default function App() {
   return <div className="app-shell foundation-v1">
     <a className="skip-link" href="#main-content">Skip to content</a>
     <header className="site-header">
-      <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /><span>KHELGRID</span></a>
-      <button ref={menuToggleRef} className="menu-toggle" type="button" aria-expanded={menuOpen} aria-controls="mobile-sidebar-drawer" onClick={() => setMenuOpen(open => !open)} aria-label={menuOpen ? 'Close main navigation' : 'Open main navigation'}>{menuOpen ? 'Close' : 'Menu'} <SiteIcon name={menuOpen ? "close" : "menu"} size={18} /></button>
+      <button ref={menuToggleRef} className="menu-toggle" type="button" aria-expanded={isMobile ? menuOpen : !sidebarCollapsed} aria-controls={isMobile ? 'mobile-sidebar-drawer' : 'app-sidebar'} onClick={toggleMainMenu} aria-label="Toggle main navigation">{isMobile && menuOpen ? 'Close' : 'Menu'} <SiteIcon name={isMobile && menuOpen ? 'close' : 'menu'} size={18} /></button>
       <nav id="primary-navigation" className="primary-navigation" aria-label="Main navigation">{routes.map(route => <a key={route.id} href={route.href} onClick={event => navigate(event, route.href)} className={active === route.href ? 'nav-link active' : 'nav-link'} aria-current={active === route.href ? 'page' : undefined}><SiteIcon name={route.icon} size={16} /> {route.label}</a>)}</nav>
+      <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /><span>KHELGRID</span></a>
       <form className="header-search-form" role="search" onSubmit={event => { event.preventDefault(); const value = headerQuery.trim(); const target = '/search' + (value ? '?q=' + encodeURIComponent(value) : ''); if (typeof window !== 'undefined') { window.history.pushState({}, '', target); window.scrollTo({ top: 0, behavior: 'auto' }) } setPath('/search'); setSearchQuery(value); setMenuOpen(false) }}><SiteIcon name="search" size={18} /><input aria-label="Search KhelGrid catalogue" type="search" placeholder="Search sports, trials, venues" value={headerQuery} onChange={event => setHeaderQuery(event.target.value)} autoComplete="off" /><button type="submit" aria-label="Submit search"><SiteIcon name="arrow-up-right" size={16} /></button></form>
       <span className="environment-label"><span className="status-dot warning" />Development</span>
     </header>
     <div className="app-workspace">
-      <Sidebar activePath={path} onNavigate={navigate} open={menuOpen} onClose={() => setMenuOpen(false)} toggleRef={menuToggleRef} />
+      <Sidebar activePath={path} onNavigate={navigate} open={menuOpen} onClose={() => setMenuOpen(false)} toggleRef={menuToggleRef} collapsed={sidebarCollapsed} />
       <main id="main-content" className="page-shell">{page}</main>
     </div>
 
