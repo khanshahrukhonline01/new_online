@@ -84,6 +84,13 @@ export default function App() {
       <button ref={menuToggleRef} className="menu-toggle" type="button" aria-expanded={isMobile ? menuOpen : !sidebarCollapsed} aria-controls={isMobile ? 'mobile-sidebar-drawer' : 'app-sidebar'} onClick={toggleMainMenu} aria-label="Toggle main navigation"><SiteIcon name={isMobile && menuOpen ? 'close' : 'menu'} size={20} /></button>
       <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /><span>KHELGRID</span></a>
       <form className="header-search-form" role="search" onSubmit={event => { event.preventDefault(); const value = headerQuery.trim(); const target = '/search' + (value ? '?q=' + encodeURIComponent(value) : ''); if (typeof window !== 'undefined') { window.history.pushState({}, '', target); window.scrollTo({ top: 0, behavior: 'auto' }) } setPath('/search'); setSearchQuery(value); setMenuOpen(false) }}><SiteIcon name="search" size={18} /><input aria-label="Search KhelGrid catalogue" type="search" placeholder="Search sports, trials, venues, athletes…" value={headerQuery} onChange={event => setHeaderQuery(event.target.value)} autoComplete="off" /><button type="submit" aria-label="Submit search"><SiteIcon name="arrow-up-right" size={16} /></button></form>
+      <nav className="header-quick-links" aria-label="Quick links">
+        <a href="/sports" className={path === '/sports' ? 'header-quick-link is-active' : 'header-quick-link'} onClick={event => navigate(event, '/sports')}><SiteIcon name="sports" size={17} /><span>Sports</span></a>
+        <a href="/opportunities" className={path.startsWith('/opportunities') ? 'header-quick-link is-active' : 'header-quick-link'} onClick={event => navigate(event, '/opportunities')}><SiteIcon name="calendar" size={17} /><span>Trials</span></a>
+        <a href="/venues" className={path.startsWith('/venues') || path === '/book' ? 'header-quick-link is-active' : 'header-quick-link'} onClick={event => navigate(event, '/venues')}><SiteIcon name="map-pin" size={17} /><span>Venues</span></a>
+        <a href="/sports-cv" className={path === '/sports-cv' ? 'header-quick-link is-active' : 'header-quick-link'} onClick={event => navigate(event, '/sports-cv')}><SiteIcon name="sports-cv" size={17} /><span>Sports CV</span></a>
+      </nav>
+      <a className="header-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback" title="Help and feedback"><SiteIcon name="help-circle" size={19} /></a>
       <span className="environment-label"><span className="status-dot warning" />Development</span>
     </header>
     <div className="app-workspace">
