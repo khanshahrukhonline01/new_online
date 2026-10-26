@@ -95,7 +95,11 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
       </nav>
       <div className="sidebar-promo"><strong>Create your Sports CV</strong><p>Build a profile-ready CV and export it when you're ready.</p><a href="/sports-cv" onClick={event => onNavigate(event, '/sports-cv')}>Explore CV tools <span aria-hidden="true">↗</span></a></div>
       <div className="sidebar-bottom">
-        <span className="sidebar-build-note">Development build</span>
+        <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback" title="Help and feedback">
+          <SiteIcon name="help-circle" size={18} />
+          <span className="sidebar-utility-label">Help &amp; feedback</span>
+        </a>
+        <span className="sidebar-bottom-note">KhelGrid · India</span>
       </div>
     </aside>
     <div ref={drawerRef} id="mobile-sidebar-drawer" className={open ? 'mobile-drawer is-open' : 'mobile-drawer'} aria-hidden={!open} role="dialog" aria-modal={open ? 'true' : undefined} aria-label="Mobile navigation">
