@@ -5,11 +5,11 @@ import OpportunitiesPage from './modules/opportunities/OpportunitiesPage'
 import VenuesPage from './modules/venues/VenuesPage'
 import SearchPage from './modules/search/SearchPage'
 import Sidebar from './shared/components/Sidebar'
-import { navigationModules } from './shared/navigation/navigationRegistry'
+import { navigationModules, headerNavigation } from './shared/navigation/navigationRegistry'
 import { resolveRoute } from './shared/routing'
 import { SiteIcon } from './shared/components/SiteIcon'
 
-const routes = navigationModules.find(section => section.id === 'core')?.items ?? []
+const routes = headerNavigation
 const allRoutes = navigationModules.flatMap(section => section.items)
 
 function currentPath() {
