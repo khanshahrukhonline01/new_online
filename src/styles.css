@@ -889,3 +889,34 @@ body { color: var(--text); background: var(--page); }
   .foundation-v1 .site-header .header-login-link,
   .foundation-v1 .site-header .header-go-pro { display: none; }
 }
+
+
+/* Header order requested: main menu → KhelGrid brand → search → actions. */
+.foundation-v1 .site-header { display: flex; align-items: center; }
+.foundation-v1 .site-header > .menu-toggle { order: 0; flex: 0 0 auto; }
+.foundation-v1 .site-header > .brand { order: 1; flex: 0 0 auto; }
+.foundation-v1 .site-header > .header-search-form { order: 2; flex: 1 1 320px; min-width: 160px; max-width: 620px; margin: 0 8px; }
+.foundation-v1 .site-header > .header-actions { order: 3; margin-left: auto; }
+.foundation-v1 .site-header > .header-icon-button,
+.foundation-v1 .site-header > .header-login-link,
+.foundation-v1 .site-header > .header-go-pro { order: 4; }
+@media (max-width: 760px) {
+  .foundation-v1 .site-header { flex-wrap: wrap; gap: 8px; }
+  .foundation-v1 .site-header > .menu-toggle { order: 0; }
+  .foundation-v1 .site-header > .brand { order: 1; }
+  .foundation-v1 .site-header > .header-search-form {
+    order: 2;
+    flex: 1 1 180px;
+    min-width: 0;
+    max-width: none;
+    height: 40px;
+    margin: 0 0 0 auto;
+  }
+  .foundation-v1 .site-header > .header-actions { order: 3; }
+}
+@media (max-width: 440px) {
+  .foundation-v1 .site-header { gap: 6px; padding-inline: 12px; }
+  .foundation-v1 .site-header > .brand { gap: 5px; font-size: 10px; letter-spacing: .04em; }
+  .foundation-v1 .site-header > .brand .brand-logo { width: 25px; height: 25px; }
+  .foundation-v1 .site-header > .header-search-form { flex-basis: 100%; }
+}
