@@ -695,3 +695,62 @@ body { color: var(--text); background: var(--page); }
   .foundation-v1 .mobile-drawer .sidebar-utility-label,
   .foundation-v1 .mobile-drawer .sidebar-bottom-note { display: inline; }
 }
+
+
+/* Gmail-inspired quick actions in the global KhelGrid header. */
+.foundation-v1 .site-header .header-quick-links {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  margin-left: auto;
+}
+.foundation-v1 .header-quick-link,
+.foundation-v1 .header-utility-link {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #536176;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color .16s ease, background .16s ease, border-color .16s ease;
+}
+.foundation-v1 .header-quick-link:hover,
+.foundation-v1 .header-utility-link:hover,
+.foundation-v1 .header-quick-link.is-active {
+  color: #075f35;
+  background: #edf7f1;
+}
+.foundation-v1 .header-quick-link.is-active { border-color: #d8eee0; }
+.foundation-v1 .header-utility-link { width: 36px; padding: 0; }
+.foundation-v1 .header-quick-link:focus-visible,
+.foundation-v1 .header-utility-link:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+@media (max-width: 1180px) {
+  .foundation-v1 .header-quick-link { padding-inline: 7px; }
+  .foundation-v1 .header-quick-link span { display: none; }
+  .foundation-v1 .header-quick-link { width: 36px; }
+}
+@media (max-width: 760px) {
+  .foundation-v1 .site-header { flex-wrap: wrap; }
+  .foundation-v1 .site-header .header-quick-links { display: none; }
+  .foundation-v1 .site-header .header-utility-link { display: none; }
+  .foundation-v1 .site-header .header-search-form { order: 3; flex: 1 0 100%; max-width: none; margin: 0; }
+  .foundation-v1 .site-header .environment-label { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .foundation-v1 .header-quick-link,
+  .foundation-v1 .header-utility-link { transition: none; }
+}
