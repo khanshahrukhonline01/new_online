@@ -62,6 +62,20 @@ const paths: Record<SiteIconName, string> = {
   'arrow-left': 'M19 12H5M12 5l-7 7 7 7', 'arrow-right': 'M5 12h14M12 5l7 7-7 7', external: 'M14 4h6v6M20 4l-9 9M18 13v6H4V5h6', logout: 'M10 17l5-5-5-5M15 12H3M12 3h8v18h-8'
 }
 
+const assetIconIds: Partial<Record<SiteIconName, string>> = {
+  menu: 'menu', close: 'close', search: 'search', bell: 'bell', settings: 'settings',
+  user: 'user', 'user-round': 'user', star: 'star', plus: 'plus',
+  'calendar-check': 'calendar-check', 'arrow-up-right': 'arrow-up-right',
+  home: 'home', trophy: 'trophy', calendar: 'calendar', 'map-pin': 'map-pin',
+  building: 'building', users: 'users', bookmark: 'bookmark', share: 'share',
+  filter: 'filter', 'chevron-down': 'chevron-down', 'chevron-right': 'chevron-right',
+  mail: 'mail', phone: 'phone', clock: 'clock', check: 'check',
+  'alert-circle': 'alert-circle', info: 'info', upload: 'upload', image: 'image',
+  'file-text': 'file-text', activity: 'activity', play: 'play', refresh: 'refresh',
+  heart: 'heart', message: 'message', 'help-circle': 'help-circle', wallet: 'wallet',
+  'credit-card': 'credit-card', 'external-link': 'external-link', lock: 'lock'
+}
+
 export function SiteIcon({ name, size = 20, strokeWidth = 1.8, ...props }: SVGProps<SVGSVGElement> & { name: SiteIconName; size?: number; strokeWidth?: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" {...props}><path d={paths[name]} /></svg>
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" {...props}>{assetIconIds[name] ? <use href={'/assets/icons/khelgrid-icons.svg#' + assetIconIds[name]} /> : <path d={paths[name]} />}</svg>
 }
