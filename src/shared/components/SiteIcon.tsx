@@ -73,7 +73,14 @@ const assetIconIds: Partial<Record<SiteIconName, string>> = {
   'alert-circle': 'alert-circle', info: 'info', upload: 'upload', image: 'image',
   'file-text': 'file-text', activity: 'activity', play: 'play', refresh: 'refresh',
   heart: 'heart', message: 'message', 'help-circle': 'help-circle', wallet: 'wallet',
-  'credit-card': 'credit-card', 'external-link': 'external-link', lock: 'lock'
+  'credit-card': 'credit-card', 'external-link': 'external-link', lock: 'lock',
+  sports: 'sports', opportunities: 'opportunities', venues: 'venues', 'sports-cv': 'sports-cv',
+  smartphone: 'smartphone', map: 'map', sliders: 'sliders', sort: 'sort', 'check-circle': 'check-circle',
+  'alert-triangle': 'alert-triangle', loader: 'loader', 'badge-check': 'badge-check',
+  download: 'download', copy: 'copy', globe: 'globe', link: 'link', minus: 'minus',
+  edit: 'edit', trash: 'trash', unlock: 'unlock', eye: 'eye', 'eye-off': 'eye-off',
+  camera: 'camera', medal: 'medal', target: 'target', pause: 'pause', volume: 'volume',
+  'arrow-left': 'arrow-left', 'arrow-right': 'arrow-right', logout: 'logout'
 }
 
 export function SiteIcon({ name, size = 20, strokeWidth = 1.8, ...props }: SVGProps<SVGSVGElement> & { name: SiteIconName; size?: number; strokeWidth?: number }) {
