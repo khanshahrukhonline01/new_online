@@ -811,3 +811,81 @@ body { color: var(--text); background: var(--page); }
 @media (prefers-reduced-motion: reduce) {
   .foundation-v1 .site-header .header-action-link { transition: none; }
 }
+
+
+/* Final header sequence: menu, brand, search, actions, account utilities. */
+.foundation-v1 .site-header .header-actions {
+  order: 3;
+  margin-left: auto;
+}
+.foundation-v1 .site-header .header-utility-link { display: none; }
+.foundation-v1 .site-header .header-icon-button {
+  display: inline-flex;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  color: #536176;
+  background: transparent;
+  text-decoration: none;
+}
+.foundation-v1 .site-header .header-icon-button:hover:not(:disabled) { background: #f0f5f8; color: #18334c; }
+.foundation-v1 .site-header .header-icon-button:disabled { opacity: .58; cursor: not-allowed; }
+.foundation-v1 .site-header .header-icon-button:focus-visible,
+.foundation-v1 .site-header .header-login-link:focus-visible,
+.foundation-v1 .site-header .header-go-pro:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.foundation-v1 .site-header .header-login-link {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  color: #334155;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.foundation-v1 .site-header .header-login-link span { display: flex; flex-direction: column; gap: 1px; }
+.foundation-v1 .site-header .header-login-link small { color: #8994a3; font-size: 9px; font-weight: 500; }
+.foundation-v1 .site-header .header-login-link:hover { background: #f5f7fa; }
+.foundation-v1 .site-header .header-go-pro {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border: 1px solid #176b43;
+  border-radius: 999px;
+  color: #fff;
+  background: #176b43;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.foundation-v1 .site-header .header-go-pro:hover { border-color: #105735; background: #105735; }
+@media (max-width: 1180px) {
+  .foundation-v1 .site-header .header-login-link small { display: none; }
+  .foundation-v1 .site-header .header-login-link { gap: 4px; padding-inline: 5px; }
+  .foundation-v1 .site-header .header-action-link span { display: inline; }
+}
+@media (max-width: 1000px) {
+  .foundation-v1 .site-header .header-action-link span { display: none; }
+  .foundation-v1 .site-header .header-action-link { width: 38px; padding: 0; }
+  .foundation-v1 .site-header .header-login-link span { display: none; }
+  .foundation-v1 .site-header .header-login-link { width: 36px; height: 36px; justify-content: center; }
+}
+@media (max-width: 760px) {
+  .foundation-v1 .site-header .header-actions { display: none; }
+  .foundation-v1 .site-header .header-icon-button,
+  .foundation-v1 .site-header .header-login-link,
+  .foundation-v1 .site-header .header-go-pro { display: none; }
+}
