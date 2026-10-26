@@ -590,3 +590,50 @@ body { color: var(--text); background: var(--page); }
   .foundation-v1 .site-header .environment-label { display: none; }
   .foundation-v1 .app-workspace .page-shell { width: 100%; padding: 0 14px 86px; }
 }
+
+
+/* Gmail-style rail: compact by default, expand on hover or keyboard focus. */
+@media (min-width: 701px) and (hover: hover) {
+  .foundation-v1 .app-sidebar.is-collapsed {
+    flex-basis: 68px;
+    width: 68px;
+    transition: flex-basis .18s ease, width .18s ease;
+    overflow-x: hidden;
+  }
+  .foundation-v1 .app-sidebar.is-collapsed:hover,
+  .foundation-v1 .app-sidebar.is-collapsed:focus-within {
+    flex-basis: 224px;
+    width: 224px;
+    overflow-x: visible;
+    box-shadow: 8px 0 22px rgba(16,35,63,.07);
+    z-index: 40;
+  }
+  .foundation-v1 .app-sidebar.is-collapsed:hover .sidebar-link-label,
+  .foundation-v1 .app-sidebar.is-collapsed:focus-within .sidebar-link-label,
+  .foundation-v1 .app-sidebar.is-collapsed:hover .sidebar-module-label,
+  .foundation-v1 .app-sidebar.is-collapsed:focus-within .sidebar-module-label,
+  .foundation-v1 .app-sidebar.is-collapsed:hover .sidebar-chevron,
+  .foundation-v1 .app-sidebar.is-collapsed:focus-within .sidebar-chevron,
+  .foundation-v1 .app-sidebar.is-collapsed:hover .sidebar-promo,
+  .foundation-v1 .app-sidebar.is-collapsed:focus-within .sidebar-promo,
+  .foundation-v1 .app-sidebar.is-collapsed:hover .sidebar-build-note,
+  .foundation-v1 .app-sidebar.is-collapsed:focus-within .sidebar-build-note {
+    display: revert;
+  }
+  .foundation-v1 .app-sidebar.is-collapsed:hover .sidebar-link,
+  .foundation-v1 .app-sidebar.is-collapsed:focus-within .sidebar-link {
+    justify-content: flex-start;
+    padding-inline: 10px;
+  }
+  .foundation-v1 .app-sidebar.is-collapsed:hover .sidebar-module-label,
+  .foundation-v1 .app-sidebar.is-collapsed:focus-within .sidebar-module-label {
+    display: block;
+  }
+  .foundation-v1 .app-sidebar.is-collapsed:hover .sidebar-promo,
+  .foundation-v1 .app-sidebar.is-collapsed:focus-within .sidebar-promo {
+    display: block;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .foundation-v1 .app-sidebar.is-collapsed { transition: none; }
+}
