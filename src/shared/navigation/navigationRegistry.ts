@@ -15,6 +15,10 @@ export type NavigationModule = {
   items: NavigationItem[]
 }
 
+/** Shared navigation source for desktop header, sidebar, and mobile drawer.
+ * Only routes currently handled by App.tsx are listed; future destinations
+ * must not be added until their routes exist.
+ */
 export const navigationModules: NavigationModule[] = [
   {
     id: 'core',
@@ -33,6 +37,7 @@ export const navigationModules: NavigationModule[] = [
       },
       { id: 'opportunities', label: 'Trials & opportunities', href: '/opportunities', icon: 'opportunities', module: 'opportunities' },
       { id: 'venues', label: 'Venues', href: '/venues', icon: 'venues', module: 'venues' },
+      { id: 'search', label: 'Search', href: '/search', icon: 'search', module: 'search' },
     ],
   },
   {
