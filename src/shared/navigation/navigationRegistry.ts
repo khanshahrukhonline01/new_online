@@ -16,13 +16,13 @@ export type NavigationModule = {
 }
 
 /** Shared navigation source for desktop header, sidebar, and mobile drawer.
- * Only routes handled by App.tsx are listed. Search stays in its own module
- * because the header renders a dedicated search control outside its links.
+ * Only routes handled by App.tsx are listed. The groups are shared by the
+ * desktop sidebar and mobile drawer; global search also remains in the header.
  */
 export const navigationModules: NavigationModule[] = [
   {
-    id: 'core',
-    label: 'Explore',
+    id: 'discover',
+    label: 'Discover',
     items: [
       { id: 'home', label: 'Home', href: '/', icon: 'home', module: 'core' },
       {
@@ -31,17 +31,14 @@ export const navigationModules: NavigationModule[] = [
         href: '/sports',
         icon: 'sports',
         module: 'sports',
-        children: [
-          { id: 'all-sports', label: 'All sports', href: '/sports', icon: 'sports', module: 'sports' },
-        ],
       },
       { id: 'opportunities', label: 'Trials & opportunities', href: '/opportunities', icon: 'opportunities', module: 'opportunities' },
       { id: 'venues', label: 'Venues', href: '/venues', icon: 'venues', module: 'venues' },
     ],
   },
   {
-    id: 'discovery-tools',
-    label: 'Discovery tools',
+    id: 'tools',
+    label: 'Tools',
     items: [
       { id: 'search', label: 'Search', href: '/search', icon: 'search', module: 'search' },
     ],
@@ -56,6 +53,9 @@ export const navigationModules: NavigationModule[] = [
 ]
 
 export const primaryNavigation = navigationModules.flatMap(section => section.items)
+
+/** Main header links come from the Discover group; full menu remains grouped. */
+export const headerNavigation = navigationModules.find(section => section.id === 'discover')?.items ?? []
 
 export function getNavigationHref(item: NavigationItem): string {
   return item.href
