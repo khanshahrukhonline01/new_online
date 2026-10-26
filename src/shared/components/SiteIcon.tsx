@@ -1,7 +1,7 @@
 import type { SVGProps } from 'react'
 
 export const siteIconNames = [
-  'home','sports','opportunities','venues','sports-cv','search','menu','close','chevron-right',
+  'home','sports','opportunities','venues','sports-cv','smartphone','search','menu','close','chevron-right',
   'chevron-down','arrow-up-right','external-link','calendar','calendar-check','clock','map-pin',
   'map','filter','sliders','sort','check','check-circle','info','alert-circle','alert-triangle',
   'refresh','loader','shield-check','badge-check','file-text','download','upload','share','copy',
@@ -15,6 +15,7 @@ export type SiteIconName = typeof siteIconNames[number]
 const paths: Record<SiteIconName, string> = {
   home: 'M3 10.5 12 3l9 7.5M5.5 9v11h13V9M9 20v-6h6v6',
   sports: 'M12 2.8 21.2 8v8L12 21.2 2.8 16V8zM2.8 8 12 13.3 21.2 8M12 13.3v7.9',
+  smartphone: 'M7 2h10v20H7zM10 5h4M11 18h2',
   opportunities: 'M8 3h8l4 4v14H4V3zM16 3v5h4M8 12h8M8 16h8',
   venues: 'M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12zM12 9a2.2 2.2 0 1 0 0-4.4A2.2 2.2 0 0 0 12 9z',
   'sports-cv': 'M7 3h8l5 5v13H7zM15 3v5h5M10 13h7M10 17h7',
