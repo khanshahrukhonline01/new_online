@@ -16,7 +16,7 @@ function currentPath() {
 export default function App() {
   const [path, setPath] = useState('/')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const [headerQuery, setHeaderQuery] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
