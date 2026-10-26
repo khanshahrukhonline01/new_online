@@ -8,8 +8,9 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 
 type SearchRecord = { type: 'Sport' | 'Opportunity' | 'Venue'; title: string; detail: string; href: string }
 
-export default function SearchPage() {
-  const [query, setQuery] = useState('')
+export default function SearchPage({ initialQuery = '' }: { initialQuery?: string }) {
+  const [query, setQuery] = useState(initialQuery)
+  useEffect(() => { setQuery(initialQuery) }, [initialQuery])
   const [sports, setSports] = useState<CatalogueResult<Sport> | { status: 'loading'; data: [] }>({ status: 'loading', data: [] })
   const [opportunities, setOpportunities] = useState<CatalogueResult<Opportunity> | { status: 'loading'; data: [] }>({ status: 'loading', data: [] })
   const [venues, setVenues] = useState<CatalogueResult<Venue> | { status: 'loading'; data: [] }>({ status: 'loading', data: [] })

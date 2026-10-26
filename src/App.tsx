@@ -20,11 +20,15 @@ function currentPath() {
 export default function App() {
   const [path, setPath] = useState('/')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [headerQuery, setHeaderQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const menuToggleRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     setPath(currentPath())
-    const handlePopState = () => { setPath(currentPath()); setMenuOpen(false) }
+    setHeaderQuery(new URLSearchParams(window.location.search).get('q') ?? '')
+    setSearchQuery(new URLSearchParams(window.location.search).get('q') ?? '')
+    const handlePopState = () => { setPath(currentPath()); setHeaderQuery(new URLSearchParams(window.location.search).get('q') ?? ''); setSearchQuery(new URLSearchParams(window.location.search).get('q') ?? ''); setMenuOpen(false) }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
@@ -38,7 +42,9 @@ export default function App() {
       if (target !== path) window.history.pushState({}, '', target)
       window.scrollTo({ top: 0, behavior: 'auto' })
     }
-    setPath(target)
+    const nextPath = target.split('?')[0].replace(/\/$/, '') || '/'
+    setPath(nextPath)
+    if (nextPath === '/search') { const nextQuery = new URLSearchParams(target.split('?')[1] ?? '').get('q') ?? ''; setSearchQuery(nextQuery); setHeaderQuery(nextQuery) }
     setMenuOpen(false)
     menuToggleRef.current?.focus()
   }
@@ -58,7 +64,7 @@ export default function App() {
     case 'opportunity-detail': page = <OpportunitiesPage />; break
     case 'venues-index':
     case 'venue-detail': page = <VenuesPage />; break
-    case 'search': page = <SearchPage />; break
+    case 'search': page = <SearchPage initialQuery={searchQuery} />; break
     default:
       page = <section className="content-page"><p className="eyebrow">PAGE NOT AVAILABLE</p><h1>This page isn’t here yet.</h1><p className="page-intro">This route has not been implemented. Return to a published section to continue exploring.</p><a className="primary-link" href="/" onClick={event => navigate(event, '/')}>Back home <SiteIcon name="arrow-up-right" size={16} /></a></section>
   }
@@ -69,7 +75,7 @@ export default function App() {
       <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /><span>KHELGRID</span></a>
       <button ref={menuToggleRef} className="menu-toggle" type="button" aria-expanded={menuOpen} aria-controls="mobile-sidebar-drawer" onClick={() => setMenuOpen(open => !open)} aria-label={menuOpen ? 'Close main navigation' : 'Open main navigation'}>{menuOpen ? 'Close' : 'Menu'} <SiteIcon name={menuOpen ? "close" : "menu"} size={18} /></button>
       <nav id="primary-navigation" className="primary-navigation" aria-label="Main navigation">{routes.map(route => <a key={route.id} href={route.href} onClick={event => navigate(event, route.href)} className={active === route.href ? 'nav-link active' : 'nav-link'} aria-current={active === route.href ? 'page' : undefined}><SiteIcon name={route.icon} size={16} /> {route.label}</a>)}</nav>
-      <a className={match.name === 'search' ? 'header-search-link active' : 'header-search-link'} href="/search" aria-current={match.name === 'search' ? 'page' : undefined} onClick={event => navigate(event, '/search')} aria-label="Search KhelGrid">Search <SiteIcon name="search" size={16} /></a>
+      <form className="header-search-form" role="search" onSubmit={event => { event.preventDefault(); const value = headerQuery.trim(); const target = '/search' + (value ? '?q=' + encodeURIComponent(value) : ''); if (typeof window !== 'undefined') { window.history.pushState({}, '', target); window.scrollTo({ top: 0, behavior: 'auto' }) } setPath('/search'); setSearchQuery(value); setMenuOpen(false) }}><SiteIcon name="search" size={18} /><input aria-label="Search KhelGrid catalogue" type="search" placeholder="Search sports, trials, venues" value={headerQuery} onChange={event => setHeaderQuery(event.target.value)} autoComplete="off" /><button type="submit" aria-label="Submit search"><SiteIcon name="arrow-up-right" size={16} /></button></form>
       <span className="environment-label"><span className="status-dot warning" />Development</span>
     </header>
     <div className="app-workspace">
