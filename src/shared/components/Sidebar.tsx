@@ -2,8 +2,6 @@ import { useEffect, useRef, type MouseEvent, type RefObject } from 'react'
 import { navigationModules, type NavigationItem } from '../navigation/navigationRegistry'
 import { SiteIcon, type SiteIconName } from './SiteIcon'
 
-const navigationIcon: Record<string, SiteIconName> = { home: 'home', sports: 'sports', opportunities: 'opportunities', venues: 'venues', 'sports-cv': 'sports-cv' }
-
 type SidebarProps = {
   activePath: string
   onNavigate: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
@@ -29,7 +27,7 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false 
   const active = isActive(item, activePath)
   return <div className="sidebar-item-wrap">
     <a href={item.href} className={active ? 'sidebar-link is-active' : 'sidebar-link'} aria-current={active ? 'page' : undefined} aria-label={collapsed ? item.label : undefined} title={collapsed ? item.label : undefined} onClick={event => { onNavigate(event, item.href); onClose?.() }}>
-      <span className="sidebar-icon" aria-hidden="true"><SiteIcon name={navigationIcon[item.id] ?? "activity"} size={18} /></span>
+      <span className="sidebar-icon" aria-hidden="true"><SiteIcon name={item.icon} size={18} /></span>
       <span className="sidebar-link-label">{item.label}</span>
       {item.children?.length ? <span className="sidebar-chevron" aria-hidden="true">›</span> : null}
     </a>
@@ -77,6 +75,14 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open, onClose, toggleRef])
 
+  const mobileItems: { label: string; href: string; icon: SiteIconName }[] = [
+    { label: 'Home', href: '/', icon: 'home' },
+    { label: 'Sports', href: '/sports', icon: 'sports' },
+    { label: 'Trials', href: '/opportunities', icon: 'opportunities' },
+    { label: 'Venues', href: '/venues', icon: 'venues' },
+    { label: 'Search', href: '/search', icon: 'search' },
+  ]
+
   return <>
     <button className={open ? 'sidebar-backdrop is-visible' : 'sidebar-backdrop'} type="button" aria-label="Close navigation menu" aria-hidden={!open} tabIndex={open ? 0 : -1} onClick={() => { onClose(); toggleRef.current?.focus() }} />
     <aside className="app-sidebar" aria-label="Sidebar navigation">
@@ -111,15 +117,9 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
       <div className="sidebar-promo"><strong>Create your Sports CV</strong><p>Build a profile-ready CV and export it when you're ready.</p><a href="/sports-cv" onClick={event => { onNavigate(event, '/sports-cv'); onClose() }}>Explore CV tools ↗</a></div>
     </div>
     <nav className="mobile-bottom-nav" aria-label="Quick navigation">
-      {[
-        { label: 'Home', href: '/', icon: '⌂' },
-        { label: 'Sports', href: '/sports', icon: '◇' },
-        { label: 'Trials', href: '/opportunities', icon: '▦' },
-        { label: 'Venues', href: '/venues', icon: '⌖' },
-        { label: 'Search', href: '/search', icon: '⌕' },
-      ].map(item => {
+      {mobileItems.map(item => {
         const active = isActive({ ...item, id: item.label, module: 'quick' }, activePath)
-        return <a key={item.href} href={item.href} className={active ? 'mobile-bottom-link is-active' : 'mobile-bottom-link'} aria-current={active ? 'page' : undefined} onClick={event => onNavigate(event, item.href)}><span aria-hidden="true">{item.icon}</span><small>{item.label}</small></a>
+        return <a key={item.href} href={item.href} className={active ? 'mobile-bottom-link is-active' : 'mobile-bottom-link'} aria-current={active ? 'page' : undefined} aria-label={item.label} onClick={event => onNavigate(event, item.href)}><SiteIcon name={item.icon} size={20} /><small>{item.label}</small></a>
       })}
     </nav>
   </>

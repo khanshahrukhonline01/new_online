@@ -67,7 +67,7 @@ export default function App() {
     <header className="site-header">
       <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /><span>KHELGRID</span></a>
       <button ref={menuToggleRef} className="menu-toggle" type="button" aria-expanded={menuOpen} aria-controls="mobile-sidebar-drawer" onClick={() => setMenuOpen(open => !open)} aria-label={menuOpen ? 'Close main navigation' : 'Open main navigation'}>{menuOpen ? 'Close' : 'Menu'} <SiteIcon name={menuOpen ? "close" : "menu"} size={18} /></button>
-      <nav id="primary-navigation" className="primary-navigation" aria-label="Main navigation">{routes.map(route => <a key={route.id} href={route.href} onClick={event => navigate(event, route.href)} className={active === route.href ? 'nav-link active' : 'nav-link'} aria-current={active === route.href ? 'page' : undefined}>{route.label}</a>)}</nav>
+      <nav id="primary-navigation" className="primary-navigation" aria-label="Main navigation">{routes.map(route => <a key={route.id} href={route.href} onClick={event => navigate(event, route.href)} className={active === route.href ? 'nav-link active' : 'nav-link'} aria-current={active === route.href ? 'page' : undefined}><SiteIcon name={route.icon} size={16} /> {route.label}</a>)}</nav>
       <a className={match.name === 'search' ? 'header-search-link active' : 'header-search-link'} href="/search" aria-current={match.name === 'search' ? 'page' : undefined} onClick={event => navigate(event, '/search')} aria-label="Search KhelGrid">Search <SiteIcon name="search" size={16} /></a>
       <span className="environment-label"><span className="status-dot warning" />Development</span>
     </header>
@@ -75,6 +75,7 @@ export default function App() {
       <Sidebar activePath={path} onNavigate={navigate} open={menuOpen} onClose={() => setMenuOpen(false)} toggleRef={menuToggleRef} />
       <main id="main-content" className="page-shell">{page}</main>
     </div>
+
     <footer className="site-footer"><a className="footer-brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="footer-brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /></a><span>India’s sports discovery platform</span><span>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</span></footer>
   </div>
 }
