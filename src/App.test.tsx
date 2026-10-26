@@ -15,8 +15,9 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('What’s available now')
     expect(html).toContain('Skip to content')
     expect(html).toContain('Search KhelGrid')
-    expect(html).toContain('aria-label="Main navigation"')
-    expect(html).toContain('id="primary-navigation"')
+    expect(html).toContain('aria-label="Sidebar navigation"')
+    expect(html).toContain('Search KhelGrid catalogue')
+    expect(html).not.toContain('id="primary-navigation"')
     // Server rendering has no viewport information, so the initial accessible
     // control targets the desktop sidebar. The client switches to the mobile
     // drawer after matchMedia is read in the viewport effect.
