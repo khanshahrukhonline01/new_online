@@ -27,7 +27,7 @@ const paths: Record<SiteIconName, string> = {
   clock: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2',
   'map-pin': 'M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12zM12 9a2.2 2.2 0 1 0 0-4.4A2.2 2.2 0 0 0 12 9z',
   map: 'm3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15', filter: 'M4 5h16l-6 7v6l-4 2v-8z',
-  sliders: 'M4 6h16M4 12h16M4 18h16M8 3v6M15 9v6M10 15v6', check: 'm5 12 4 4L19 6',
+  sliders: 'M4 6h16M4 12h16M4 18h16M8 3v6M15 9v6M10 15v6', sort: 'M4 6h16M7 12h10M10 18h4', check: 'm5 12 4 4L19 6',
   'check-circle': 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0zM8 12l3 3 5-6',
   info: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 11v6M12 7h.01',
   'alert-circle': 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 8v5M12 17h.01',
