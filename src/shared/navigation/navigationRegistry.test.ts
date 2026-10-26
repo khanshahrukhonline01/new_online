@@ -6,7 +6,7 @@ describe('shared navigation registry', () => {
     const ids = primaryNavigation.map(item => item.id)
     expect(new Set(ids).size).toBe(ids.length)
     expect(primaryNavigation.map(item => item.href)).toEqual(
-      expect.arrayContaining(['/', '/sports', '/opportunities', '/venues', '/sports-cv']),
+      expect.arrayContaining(['/', '/sports', '/opportunities', '/venues', '/search', '/sports-cv']),
     )
   })
 
@@ -15,6 +15,11 @@ describe('shared navigation registry', () => {
     expect(explore?.items.map(item => item.href)).toEqual([
       '/', '/sports', '/opportunities', '/venues',
     ])
+  })
+
+  it('keeps Search available without adding it to the header destinations', () => {
+    const discovery = navigationModules.find(section => section.id === 'discovery-tools')
+    expect(discovery?.items.map(item => item.href)).toEqual(['/search'])
   })
 
   it('does not expose future tools as core header destinations', () => {
