@@ -8,6 +8,7 @@ type SidebarProps = {
   open: boolean
   onClose: () => void
   toggleRef: RefObject<HTMLButtonElement | null>
+  collapsed: boolean
 }
 
 function isActive(item: NavigationItem, activePath: string) {
@@ -35,7 +36,7 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false 
   </div>
 }
 
-export default function Sidebar({ activePath, onNavigate, open, onClose, toggleRef }: SidebarProps) {
+export default function Sidebar({ activePath, onNavigate, open, onClose, toggleRef, collapsed }: SidebarProps) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
 
@@ -85,7 +86,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
 
   return <>
     <button className={open ? 'sidebar-backdrop is-visible' : 'sidebar-backdrop'} type="button" aria-label="Close navigation menu" aria-hidden={!open} tabIndex={open ? 0 : -1} onClick={() => { onClose(); toggleRef.current?.focus() }} />
-    <aside className="app-sidebar" aria-label="Sidebar navigation">
+    <aside id="app-sidebar" className={collapsed ? "app-sidebar is-collapsed" : "app-sidebar"} aria-label="Sidebar navigation">
       <div className="sidebar-brand-row">
         <a className="sidebar-brand" href="/" onClick={event => onNavigate(event, '/')} aria-label="KhelGrid home">
           <img className="brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" />
