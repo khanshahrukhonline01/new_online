@@ -1,5 +1,8 @@
 import { useEffect, useRef, type MouseEvent, type RefObject } from 'react'
 import { navigationModules, type NavigationItem } from '../navigation/navigationRegistry'
+import { SiteIcon, type SiteIconName } from './SiteIcon'
+
+const navigationIcon: Record<string, SiteIconName> = { home: 'home', sports: 'sports', opportunities: 'opportunities', venues: 'venues', 'sports-cv': 'sports-cv' }
 
 type SidebarProps = {
   activePath: string
@@ -26,7 +29,7 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false 
   const active = isActive(item, activePath)
   return <div className="sidebar-item-wrap">
     <a href={item.href} className={active ? 'sidebar-link is-active' : 'sidebar-link'} aria-current={active ? 'page' : undefined} aria-label={collapsed ? item.label : undefined} title={collapsed ? item.label : undefined} onClick={event => { onNavigate(event, item.href); onClose?.() }}>
-      <span className="sidebar-icon" aria-hidden="true">{item.icon}</span>
+      <span className="sidebar-icon" aria-hidden="true"><SiteIcon name={navigationIcon[item.id] ?? "activity"} size={18} /></span>
       <span className="sidebar-link-label">{item.label}</span>
       {item.children?.length ? <span className="sidebar-chevron" aria-hidden="true">›</span> : null}
     </a>
