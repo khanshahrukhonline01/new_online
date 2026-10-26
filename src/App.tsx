@@ -62,8 +62,6 @@ export default function App() {
       page = <section className="content-page"><p className="eyebrow">PAGE NOT AVAILABLE</p><h1>This page isn’t here yet.</h1><p className="page-intro">This route has not been implemented. Return to a published section to continue exploring.</p><a className="primary-link" href="/" onClick={event => navigate(event, '/')}>Back home <SiteIcon name="arrow-up-right" size={16} /></a></section>
   }
 
-  const mobileRoutes = routes.filter(route => ['home', 'sports', 'opportunities', 'venues'].includes(route.id))
-
   return <div className="app-shell foundation-v1">
     <a className="skip-link" href="#main-content">Skip to content</a>
     <header className="site-header">
@@ -77,7 +75,7 @@ export default function App() {
       <Sidebar activePath={path} onNavigate={navigate} open={menuOpen} onClose={() => setMenuOpen(false)} toggleRef={menuToggleRef} />
       <main id="main-content" className="page-shell">{page}</main>
     </div>
-    <nav className="mobile-bottom-nav" aria-label="Quick navigation">{mobileRoutes.map(route => <a key={route.id} href={route.href} className={active === route.href ? 'mobile-bottom-link active' : 'mobile-bottom-link'} aria-current={active === route.href ? 'page' : undefined} onClick={event => navigate(event, route.href)}><SiteIcon name={route.icon} size={20} /><span>{route.id === 'opportunities' ? 'Trials' : route.label}</span></a>)}</nav>
+
     <footer className="site-footer"><a className="footer-brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="footer-brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /></a><span>India’s sports discovery platform</span><span>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</span></footer>
   </div>
 }
