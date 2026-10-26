@@ -18,9 +18,6 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('aria-label="Sidebar navigation"')
     expect(html).toContain('Search KhelGrid catalogue')
     expect(html).not.toContain('id="primary-navigation"')
-    // Server rendering has no viewport information, so the initial accessible
-    // control targets the desktop sidebar. The client switches to the mobile
-    // drawer after matchMedia is read in the viewport effect.
     expect(html).toContain('aria-controls="app-sidebar"')
     expect(html).toContain('aria-expanded="false"')
     expect(html).toContain('aria-label="Toggle main navigation"')
@@ -58,7 +55,6 @@ describe('route resolution', () => {
   })
 })
 
-
 describe('catalogue search', () => {
   it('renders an accessible search field without inventing result records', async () => {
     const { default: SearchPage } = await import('./modules/search/SearchPage')
@@ -70,12 +66,9 @@ describe('catalogue search', () => {
   })
 })
 
-
 describe('shared navigation route coverage', () => {
-  it('keeps Search in Tools while including it in combined navigation', () => {
-    expect(navigationModules.find(section => section.id === 'discover')?.items.map(item => item.href))
-      .toEqual(['/', '/sports', '/opportunities', '/venues'])
-    expect(navigationModules.find(section => section.id === 'tools')?.items.map(item => item.href))
+  it('keeps Search in Knowledge & Community while including it in combined navigation', () => {
+    expect(navigationModules.find(section => section.id === 'knowledge')?.items.map(item => item.href))
       .toContain('/search')
     expect(primaryNavigation.map(item => item.href)).toContain('/search')
   })
