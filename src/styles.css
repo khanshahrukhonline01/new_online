@@ -637,3 +637,61 @@ body { color: var(--text); background: var(--page); }
 @media (prefers-reduced-motion: reduce) {
   .foundation-v1 .app-sidebar.is-collapsed { transition: none; }
 }
+
+
+/* Sidebar bottom utilities: anchored, compact, and keyboard accessible. */
+.foundation-v1 .app-sidebar { min-height: 0; }
+.foundation-v1 .app-sidebar .sidebar-navigation { flex: 1 1 auto; min-height: 0; }
+.foundation-v1 .app-sidebar .sidebar-promo { flex: 0 0 auto; }
+.foundation-v1 .app-sidebar .sidebar-bottom {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  margin-top: auto;
+  padding: 10px 2px 2px;
+  border-top: 1px solid #edf0f4;
+}
+.foundation-v1 .sidebar-utility-link {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #536176;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.foundation-v1 .sidebar-utility-link:hover,
+.foundation-v1 .sidebar-utility-link:focus-visible {
+  color: var(--navy);
+  background: #f5f8f6;
+}
+.foundation-v1 .sidebar-utility-link:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.foundation-v1 .sidebar-utility-link > svg { flex: 0 0 22px; }
+.foundation-v1 .sidebar-bottom-note {
+  padding: 3px 10px 0;
+  color: #8994a3;
+  font-size: 9px;
+}
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-utility-label,
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-bottom-note { display: none; }
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-utility-link { justify-content: center; padding-inline: 4px; }
+@media (min-width: 701px) and (hover: hover) {
+  .foundation-v1 .app-sidebar.is-collapsed:hover .sidebar-utility-label,
+  .foundation-v1 .app-sidebar.is-collapsed:focus-within .sidebar-utility-label,
+  .foundation-v1 .app-sidebar.is-collapsed:hover .sidebar-bottom-note,
+  .foundation-v1 .app-sidebar.is-collapsed:focus-within .sidebar-bottom-note { display: revert; }
+  .foundation-v1 .app-sidebar.is-collapsed:hover .sidebar-utility-link,
+  .foundation-v1 .app-sidebar.is-collapsed:focus-within .sidebar-utility-link { justify-content: flex-start; padding-inline: 10px; }
+}
+.foundation-v1 .mobile-drawer .sidebar-bottom { margin-top: auto; }
+@media (max-width: 700px) {
+  .foundation-v1 .mobile-drawer .sidebar-bottom { display: flex; }
+  .foundation-v1 .mobile-drawer .sidebar-utility-label,
+  .foundation-v1 .mobile-drawer .sidebar-bottom-note { display: inline; }
+}
