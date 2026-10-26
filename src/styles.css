@@ -508,3 +508,17 @@ body { color: var(--text); background: var(--page); }
 @media (prefers-reduced-motion: reduce) {
   .foundation-v1 .header-search-link { transition: none; }
 }
+
+
+/* Gmail-inspired global catalogue search — responsive and keyboard accessible. */
+.foundation-v1 .header-search-form { display:flex; align-items:center; gap:10px; flex:1 1 320px; max-width:460px; min-width:150px; height:44px; margin-inline:8px auto; padding:0 7px 0 15px; border:1px solid transparent; border-radius:14px; color:#536176; background:#f1f4f8; transition:background .16s ease, box-shadow .16s ease, border-color .16s ease; }
+.foundation-v1 .header-search-form:focus-within { background:#fff; border-color:#d4e8dc; box-shadow:0 1px 3px rgba(16,35,63,.08), 0 0 0 3px rgba(7,150,79,.08); }
+.foundation-v1 .header-search-form > svg { flex:0 0 auto; color:#68778b; }
+.foundation-v1 .header-search-form input { flex:1 1 auto; min-width:0; width:100%; height:100%; padding:0; border:0; outline:0; color:var(--navy); background:transparent; font-size:13px; box-shadow:none; }
+.foundation-v1 .header-search-form input:focus-visible { outline:0; }
+.foundation-v1 .header-search-form input::placeholder { color:#738196; opacity:1; }
+.foundation-v1 .header-search-form button { display:grid; place-items:center; flex:0 0 32px; width:32px; height:32px; padding:0; border:0; border-radius:9px; color:#17683e; background:transparent; cursor:pointer; }
+.foundation-v1 .header-search-form button:hover { background:#e1f1e7; }
+.foundation-v1 .header-search-form button:focus-visible { outline:2px solid var(--green); outline-offset:2px; }
+@media(max-width:980px) { .foundation-v1 .header-search-form { flex-basis:220px; margin-left:0; } }
+@media(max-width:760px) { .foundation-v1 .site-header { flex-wrap:wrap; padding-block:10px; } .foundation-v1 .brand { order:0; } .foundation-v1 .menu-toggle { order:1; } .foundation-v1 .header-search-form { order:2; flex:1 0 100%; max-width:none; height:42px; margin:0; } }
