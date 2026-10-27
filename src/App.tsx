@@ -105,27 +105,55 @@ export default function App() {
           <a className="footer-brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="footer-brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /></a>
           <p className="footer-tagline">India’s grid for sports trials, venues, coaching and athlete profiles.</p>
           <p className="footer-region">India · 16 cities in the current grid</p>
+          <a className="footer-pro-link" href="/pricing" onClick={event => navigate(event, '/pricing')}>★ Go Pro · ₹499/month</a>
         </div>
         <nav className="footer-column" aria-label="Explore KhelGrid">
           <h2>Explore</h2>
-          <a href="/sports" onClick={event => navigate(event, '/sports')}>Explore sports</a>
+          <a href="/sports" onClick={event => navigate(event, '/sports')}>All sports</a>
           <a href="/opportunities" onClick={event => navigate(event, '/opportunities')}>Trials & opportunities</a>
-          <a href="/venues" onClick={event => navigate(event, '/venues')}>Book venues</a>
+          <a href="/venues" onClick={event => navigate(event, '/venues')}>Sports venues</a>
           <a href="/search" onClick={event => navigate(event, '/search')}>Search catalogue</a>
+          <a href="/calendar" onClick={event => navigate(event, '/calendar')}>Sports calendar</a>
         </nav>
-        <div className="footer-column">
-          <h2>For the sports community</h2>
+        <nav className="footer-column" aria-label="Play and train">
+          <h2>Play & train</h2>
+          <a href="/play" onClick={event => navigate(event, '/play')}>Find a game</a>
+          <a href="/venues" onClick={event => navigate(event, '/venues')}>Book venues</a>
+          <a href="/coaches" onClick={event => navigate(event, '/coaches')}>Coaches</a>
+          <a href="/academies" onClick={event => navigate(event, '/academies')}>Academies</a>
           <span className="footer-coming-soon">Sports CV Wizard <small>Coming soon</small></span>
+        </nav>
+        <nav className="footer-column" aria-label="Learn and discover">
+          <h2>Learn</h2>
+          <a href="/guides" onClick={event => navigate(event, '/guides')}>Sports guides</a>
+          <a href="/learning" onClick={event => navigate(event, '/learning')}>Sports & learning hub</a>
+          <a href="/khelchronicle" onClick={event => navigate(event, '/khelchronicle')}>KhelChronicle</a>
+          <a href="/live" onClick={event => navigate(event, '/live')}>Live scores</a>
+        </nav>
+        <nav className="footer-column" aria-label="About and support">
+          <h2>Grow with KhelGrid</h2>
           <a href="mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue">List your venue</a>
           <a href="mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial">Submit a trial</a>
           <a href="mailto:khelgrid@gmail.com">Contact KhelGrid</a>
+          <a href="/about" onClick={event => navigate(event, '/about')}>About KhelGrid</a>
+          <p className="footer-trust-copy">Check each organiser’s source, dates, eligibility, fees and venue before applying or travelling.</p>
+        </nav>
+      </div>
+      <div className="footer-quick-access">
+        <div className="footer-quick-heading">
+          <div><h2>Explore sports on KhelGrid</h2><p>Quick access to key parts of the sports catalogue.</p></div>
+          <a href="/sports" onClick={event => navigate(event, '/sports')}>Browse all sports <span aria-hidden="true">↗</span></a>
         </div>
-        <div className="footer-column footer-trust">
-          <h2>Use information carefully</h2>
-          <p>Check the organiser’s source, dates, eligibility, fees and venue before applying or travelling.</p>
-          <p>Listings and availability depend on the information published by their respective sources.</p>
+        <div className="footer-quick-chips">
+          <a href="/opportunities" onClick={event => navigate(event, '/opportunities')}><span aria-hidden="true">◎</span><span><strong>Sports trials</strong><small>Opportunities</small></span></a>
+          <a href="/venues" onClick={event => navigate(event, '/venues')}><span aria-hidden="true">⌖</span><span><strong>Sports venues</strong><small>Find a place to play</small></span></a>
+          <a href="/play" onClick={event => navigate(event, '/play')}><span aria-hidden="true">⚽</span><span><strong>Find a game</strong><small>Play with others</small></span></a>
+          <a href="/calendar" onClick={event => navigate(event, '/calendar')}><span aria-hidden="true">▦</span><span><strong>Sports calendar</strong><small>Events & dates</small></span></a>
+          <a href="/live" onClick={event => navigate(event, '/live')}><span aria-hidden="true">⌁</span><span><strong>Live scores</strong><small>Match centre</small></span></a>
+          <a href="/search" onClick={event => navigate(event, '/search')}><span aria-hidden="true">⌕</span><span><strong>Search KhelGrid</strong><small>Explore the catalogue</small></span></a>
         </div>
       </div>
+      <div className="footer-care-note"><strong>Use information carefully</strong><span>Listings and availability depend on information published by their respective sources. Confirm details with the organiser before making plans.</span></div>
       <div className="footer-legal">
         <p>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</p>
         <p><span>IPR</span><span>AI use</span><span>Copyright notice</span><span>© KhelGrid</span></p>
