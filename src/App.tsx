@@ -184,7 +184,7 @@ export default function App() {
       <div className="footer-care-note"><strong>Use information carefully</strong><span>Listings and availability depend on information published by their respective sources. Confirm details with the organiser before making plans.</span></div>
       <div className="footer-legal">
         <p>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</p>
-        <p><span>IPR</span><span>AI use</span><span>Copyright notice</span><span>© KhelGrid</span></p>
+        <p><span>{IPR_NOTICE_HEADING}</span><span>AI use</span><span>Copyright notice</span><span>© KhelGrid</span></p>
       </div>
     </footer>
   </div>
