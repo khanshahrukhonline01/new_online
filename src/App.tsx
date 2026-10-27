@@ -9,6 +9,8 @@ import SportsBar from './shared/components/SportsBar'
 import { resolveRoute } from './shared/routing'
 import { SiteIcon } from './shared/components/SiteIcon'
 
+const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
+
 function currentPath() {
   if (typeof window === 'undefined') return '/'
   return window.location.pathname.replace(/\/$/, '') || '/'
@@ -165,7 +167,7 @@ export default function App() {
         </div>
       </section>
       <section className="footer-ipr" aria-labelledby="footer-ipr-title">
-        <div><h2 id="footer-ipr-title">IPR, AI & Copyright Notice</h2><p>Website content and original editorial materials are protected by applicable copyright law. AI-assisted material may be used for informational purposes; outputs and rights depend on the underlying human contribution and applicable law. Do not misuse athlete identities, images, or personal information, and do not scrape or reuse protected content without permission.</p></div>
+        <div><h2 id="footer-ipr-title">{IPR_NOTICE_HEADING}</h2><p>Website content and original editorial materials are protected by applicable copyright law. AI-assisted material may be used for informational purposes; outputs and rights depend on the underlying human contribution and applicable law. Do not misuse athlete identities, images, or personal information, and do not scrape or reuse protected content without permission.</p></div>
         <a href="mailto:ipr@khelgrid.com">IPR & AI enquiries <span>ipr@khelgrid.com</span></a>
       </section>
       <nav className="footer-index" aria-label="Sports network index">
