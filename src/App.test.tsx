@@ -31,6 +31,10 @@ describe('KhelGrid discovery shell', () => {
     const html = renderToStaticMarkup(<App />)
     expect(html).toContain('live feeds and account services are not connected yet')
     expect(html).toContain('Not a booking or live-score service')
+    expect(html).toContain('India’s grid for sports trials, venues, coaching and athlete profiles.')
+    expect(html).toContain('aria-label="Explore KhelGrid"')
+    expect(html).toContain('Contact KhelGrid')
+    expect(html).toContain('Copyright notice')
   })
 })
 
