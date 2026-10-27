@@ -1253,3 +1253,50 @@ body { color: var(--text); background: var(--page); }
 @media (prefers-reduced-motion: reduce) {
   .foundation-v1 .hero-float-card { animation: none; }
 }
+
+
+/* Athlete-led homepage hero: responsive photo collage with readable overlays. */
+.foundation-v1 .hero-athlete-collage {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 1.05fr .95fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 10px;
+  min-height: 390px;
+  overflow: hidden;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 20px;
+  background: #0c1c31;
+  box-shadow: 0 24px 60px rgba(10,28,48,.2);
+}
+.foundation-v1 .hero-athlete-photo { position: relative; min-width: 0; min-height: 0; overflow: hidden; border-radius: 13px; background: #18314a; }
+.foundation-v1 .hero-athlete-photo::after { position: absolute; inset: 0; content: ""; background: linear-gradient(180deg,transparent 48%,rgba(5,16,29,.82)); }
+.foundation-v1 .hero-athlete-photo img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: cover; }
+.foundation-v1 .hero-athlete-photo > span { position: absolute; z-index: 1; right: 11px; bottom: 10px; left: 11px; color: #fff; font-size: 9px; font-weight: 850; letter-spacing: .15em; }
+.foundation-v1 .hero-athlete-football { grid-row: 1 / 3; }
+.foundation-v1 .hero-athlete-football img { object-position: 54% center; }
+.foundation-v1 .hero-athlete-cricket img { object-position: center; }
+.foundation-v1 .hero-athlete-overlay { position: absolute; z-index: 2; right: 23px; bottom: 23px; left: 23px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 18px 20px; border: 1px solid rgba(255,255,255,.2); border-radius: 14px; color: #fff; background: linear-gradient(110deg,rgba(8,25,44,.94),rgba(8,25,44,.7)); box-shadow: 0 12px 30px rgba(0,0,0,.2); backdrop-filter: blur(10px); }
+.foundation-v1 .hero-athlete-kicker { display: inline-flex; align-items: center; gap: 8px; color: #d4e7dc; font-size: 8px; font-weight: 850; letter-spacing: .13em; }
+.foundation-v1 .hero-athlete-kicker .status-dot { background: #6fe0a0; }
+.foundation-v1 .hero-athlete-overlay > strong { font-size: clamp(22px,2.4vw,31px); line-height: 1.02; letter-spacing: -.05em; }
+.foundation-v1 .hero-athlete-overlay em { color: #8ae6ad; font-style: normal; }
+.foundation-v1 .hero-athlete-tagline { color: #d1d9e4; font-size: 8px; font-weight: 800; letter-spacing: .14em; }
+@media (max-width: 1000px) {
+  .foundation-v1 .home-hero-panel { grid-template-columns: minmax(0,1fr) minmax(290px,.85fr); }
+  .foundation-v1 .hero-athlete-collage { min-height: 350px; }
+  .foundation-v1 .hero-athlete-overlay { right: 17px; bottom: 17px; left: 17px; padding: 14px; }
+}
+@media (max-width: 760px) {
+  .foundation-v1 .hero-athlete-collage { min-height: 350px; grid-template-columns: 1fr 1fr; gap: 8px; padding: 9px; }
+  .foundation-v1 .hero-athlete-overlay { right: 16px; bottom: 16px; left: 16px; padding: 14px 16px; }
+  .foundation-v1 .hero-athlete-overlay > strong { font-size: 28px; }
+}
+@media (max-width: 420px) {
+  .foundation-v1 .hero-athlete-collage { min-height: 315px; gap: 6px; padding: 7px; }
+  .foundation-v1 .hero-athlete-overlay { right: 12px; bottom: 12px; left: 12px; gap: 7px; padding: 12px; }
+  .foundation-v1 .hero-athlete-overlay > strong { font-size: 24px; }
+  .foundation-v1 .hero-athlete-photo > span { font-size: 8px; }
+}
