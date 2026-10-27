@@ -37,26 +37,28 @@ export default function HomePage() {
           <span><SiteIcon name="smartphone" size={15} /> Built for every screen</span>
         </div>
       </div>
-      <div className="home-hero-art" aria-label="Explore sports, opportunities and places to play">
-        <div className="hero-visual-grid" aria-hidden="true" />
-        <div className="hero-visual-kicker"><span className="status-dot" /> THE KHELGRID PLAYBOOK</div>
-        <div className="hero-visual-main">
-          <div className="hero-visual-emblem" aria-hidden="true"><span>K</span><i /></div>
-          <div className="hero-visual-title">Your next move<br /><strong>starts here.</strong></div>
+      <div className="home-hero-art hero-athlete-collage" aria-label="Athletes playing football, cricket, running and tennis">
+        <div className="hero-athlete-photo hero-athlete-football">
+          <img src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=900&q=85" alt="Football players competing on a pitch" loading="eager" fetchPriority="high" />
+          <span>FOOTBALL</span>
         </div>
-        <div className="hero-float-card hero-float-sport">
-          <span className="hero-float-icon" aria-hidden="true">↗</span>
-          <span><small>DISCOVER</small><strong>Sports</strong></span>
+        <div className="hero-athlete-photo hero-athlete-cricket">
+          <img src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=700&q=85" alt="Cricket players on the field" loading="lazy" />
+          <span>CRICKET</span>
         </div>
-        <div className="hero-float-card hero-float-opportunity">
-          <span className="hero-float-icon" aria-hidden="true">◎</span>
-          <span><small>TAKE YOUR SHOT</small><strong>Opportunities</strong></span>
+        <div className="hero-athlete-photo hero-athlete-running">
+          <img src="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=700&q=85" alt="Athletes running on a track" loading="lazy" />
+          <span>ATHLETICS</span>
         </div>
-        <div className="hero-float-card hero-float-venue">
-          <span className="hero-float-icon" aria-hidden="true">⌖</span>
-          <span><small>GET OUT THERE</small><strong>Places to play</strong></span>
+        <div className="hero-athlete-photo hero-athlete-tennis">
+          <img src="https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?auto=format&fit=crop&w=700&q=85" alt="Tennis player on court" loading="lazy" />
+          <span>TENNIS</span>
         </div>
-        <div className="hero-art-caption">DISCOVER <b>·</b> COMPETE <b>·</b> GROW <span>BUILT FOR YOUR NEXT MOVE</span></div>
+        <div className="hero-athlete-overlay">
+          <span className="hero-athlete-kicker"><span className="status-dot" /> MADE FOR EVERY SPORT</span>
+          <strong>Find your<br /><em>next move.</em></strong>
+          <span className="hero-athlete-tagline">DISCOVER · COMPETE · GROW</span>
+        </div>
       </div>
     </section>
     <section className="home-catalogue-status" aria-labelledby="catalogue-status-title">
