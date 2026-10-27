@@ -993,26 +993,31 @@ body { color: var(--text); background: var(--page); }
 .foundation-v1 .mobile-drawer .sidebar-navigation::-webkit-scrollbar-corner { background: transparent; }
 
 
-/* Shared horizontal sports navigation below the global header. */
-.foundation-v1 .sports-strip {
+/* Sports navigation belongs to the main content column, never the shared sidebar/workspace. */
+.foundation-v1 .app-workspace .page-shell { min-width: 0; }
+.foundation-v1 .app-workspace .page-shell > .sports-strip {
   position: sticky;
-  top: 78px;
+  top: 68px;
   z-index: 8;
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 12px 18px;
+  gap: 7px;
+  width: calc(100% + 48px);
+  margin: 0 0 18px -24px;
+  padding: 7px 14px;
+  min-height: 48px;
+  box-sizing: border-box;
   border-bottom: 1px solid var(--line);
-  background: rgba(248, 250, 252, .96);
-  backdrop-filter: blur(12px);
+  background: rgba(248, 250, 252, .97);
+  backdrop-filter: blur(10px);
 }
 .foundation-v1 .sports-strip-arrow {
   display: inline-grid;
   place-items: center;
-  flex: 0 0 38px;
-  width: 38px;
-  height: 38px;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   border: 1px solid #dce5e9;
   border-radius: 50%;
   background: #eaf6ef;
@@ -1023,7 +1028,7 @@ body { color: var(--text); background: var(--page); }
 .foundation-v1 .sports-strip-list {
   display: flex;
   flex: 1 1 auto;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -1037,35 +1042,42 @@ body { color: var(--text); background: var(--page); }
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  gap: 8px;
-  min-height: 44px;
-  padding: 8px 17px;
+  gap: 6px;
+  min-height: 34px;
+  padding: 5px 12px;
   border: 1px solid #dce5e9;
   border-radius: 999px;
   background: #edf7f1;
   color: #52627a;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.15;
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
   transition: color .16s var(--ease-standard), background .16s var(--ease-standard), border-color .16s var(--ease-standard);
 }
 .foundation-v1 .sports-strip-item:hover { border-color: #a7d9bd; color: var(--green-dark); background: #e3f4e9; }
-.foundation-v1 .sports-strip-item.is-active {
-  border-color: var(--green);
-  background: var(--green);
-  color: #fff;
-  box-shadow: 0 0 0 2px rgba(7,150,79,.12);
-}
-.foundation-v1 .sports-strip-icon { display: inline-grid; place-items: center; flex: 0 0 22px; width: 22px; height: 22px; }
-.foundation-v1 .sports-strip-icon svg { display: block; max-width: 22px; }
-.foundation-v1 .all-sports-icon { color: inherit; }
+.foundation-v1 .sports-strip-item.is-active { border-color: var(--green); background: var(--green); color: #fff; box-shadow: 0 0 0 2px rgba(7,150,79,.1); }
+.foundation-v1 .sports-strip-icon { display: inline-grid; place-items: center; flex: 0 0 18px; width: 18px; height: 18px; }
+.foundation-v1 .sports-strip-icon svg { display: block; max-width: 18px; max-height: 18px; }
 .foundation-v1 .sports-strip-item:focus-visible,
-.foundation-v1 .sports-strip-arrow:focus-visible { outline: 3px solid var(--green); outline-offset: 2px; }
+.foundation-v1 .sports-strip-arrow:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+@media (max-width: 1000px) {
+  .foundation-v1 .app-workspace .page-shell > .sports-strip { width: calc(100% + 32px); margin-left: -16px; padding-inline: 10px; }
+}
 @media (max-width: 700px) {
-  .foundation-v1 .sports-strip { position: relative; top: auto; gap: 5px; padding: 8px 8px; }
-  .foundation-v1 .sports-strip-arrow { flex-basis: 30px; width: 30px; height: 30px; }
-  .foundation-v1 .sports-strip-item { min-height: 38px; padding: 7px 12px; gap: 6px; font-size: 12px; }
+  .foundation-v1 .app-workspace .page-shell > .sports-strip {
+    position: relative;
+    top: auto;
+    width: calc(100% + 28px);
+    margin: 0 0 14px -14px;
+    min-height: 42px;
+    gap: 5px;
+    padding: 5px 7px;
+    backdrop-filter: none;
+  }
+  .foundation-v1 .sports-strip-arrow { flex-basis: 28px; width: 28px; height: 28px; }
+  .foundation-v1 .sports-strip-item { min-height: 32px; padding: 5px 10px; gap: 5px; font-size: 11px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .foundation-v1 .sports-strip-list { scroll-behavior: auto; }
