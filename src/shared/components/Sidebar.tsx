@@ -26,7 +26,7 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false 
   collapsed?: boolean
 }) {
   const active = isActive(item, activePath)
-  const label = <><span className="sidebar-icon" aria-hidden="true"><SiteIcon name={item.icon} size={18} /></span><span className="sidebar-link-label">{item.label}</span>{!item.available && !collapsed ? <span className="sidebar-coming-soon">Soon</span> : null}</>
+  const label = <><span className="sidebar-icon" aria-hidden="true"><SiteIcon name={item.icon} size={18} /></span><span className="sidebar-link-label">{item.label}</span>{!item.available && !collapsed ? <span className="sidebar-coming-soon">Coming soon</span> : null}</>
   if (!item.available) {
     return <div className="sidebar-item-wrap">
       <span className="sidebar-link is-disabled" aria-disabled="true" title={collapsed ? item.label + ' — coming soon' : 'Coming soon'}>{label}</span>
