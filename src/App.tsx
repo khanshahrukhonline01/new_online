@@ -93,7 +93,7 @@ export default function App() {
       </nav>
       <button className="header-icon-button" type="button" disabled aria-label="Notifications coming soon" title="Notifications coming soon"><SiteIcon name="bell" size={19} /></button>
       <a className="header-icon-button" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20settings%20help" aria-label="Settings help" title="Settings help"><SiteIcon name="settings" size={19} /></a>
-      <a className="header-login-link" href="https://www.khelgrid.com/login" title="Login coming soon"><SiteIcon name="user-round" size={17} /><span>Login <small>Coming Soon</small></span></a>
+      <span className="header-login-link is-unavailable" aria-disabled="true" title="Login coming soon"><SiteIcon name="user-round" size={17} /><span>Login <small>Coming Soon</small></span></span>
       <a className="header-go-pro" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20Pro%20enquiry"><SiteIcon name="star" size={16} /><span>Go Pro</span></a>
     </header>
     <div className="app-workspace">
@@ -163,7 +163,7 @@ export default function App() {
           <a className="footer-product" href="/opportunities" onClick={event => navigate(event, '/opportunities')}><strong>Find Trials</strong><span>Discover opportunities</span></a>
           <div className="footer-product"><strong>AI Sports Guide</strong><span>Plan your next step</span></div>
           <a className="footer-product" href="/venues" onClick={event => navigate(event, '/venues')}><strong>Book Venues</strong><span>Find places to play</span></a>
-          <a className="footer-product" href="/play" onClick={event => navigate(event, '/play')}><strong>Play & Match</strong><span>Find local games</span></a>
+          <div className="footer-product is-unavailable" aria-label="Play and Match, coming soon"><strong>Play &amp; Match</strong><span>Coming soon</span></div>
         </div>
       </section>
       <section className="footer-ipr" aria-labelledby="footer-ipr-title" data-footer-section="ipr-ai-copyright-v1">

@@ -1165,3 +1165,12 @@ body { color: var(--text); background: var(--page); }
 .foundation-v1 .footer-social-links a:hover{border-color:#a8d9bd;background:#f5fbf7;color:var(--green-dark)}
 .foundation-v1 .footer-social-mark{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;background:#eaf7ef;color:var(--green-dark);font-size:11px;font-weight:850}
 @media(max-width:700px){.foundation-v1 .footer-social{align-items:flex-start;flex-direction:column}.foundation-v1 .footer-social-links{width:100%}}
+
+
+/* Disabled destinations stay visible but never resemble working links. */
+.foundation-v1 .footer-quick-chips>.footer-quick-chip.is-unavailable { display:flex; align-items:center; gap:8px; min-width:0; padding:9px 10px; border:1px solid #e7ebef; border-radius:13px; background:#f8fafb; color:#8290a0; }
+.foundation-v1 .footer-quick-chips>.footer-quick-chip.is-unavailable>span:first-child { display:grid; place-items:center; flex:0 0 28px; width:28px; height:28px; border-radius:9px; background:#edf1f3; color:#8290a0; font-size:17px; }
+.foundation-v1 .footer-quick-chips>.footer-quick-chip.is-unavailable>span:last-child { display:flex; flex-direction:column; min-width:0; gap:3px; }
+.foundation-v1 .footer-product.is-unavailable { background:#f8fafb; border-style:dashed; }
+.foundation-v1 .site-header .header-login-link.is-unavailable { cursor:not-allowed; color:#77869a; }
+.sidebar-promo .sidebar-coming-soon { display:block; margin-top:8px; color:var(--muted); font-size:10px; font-weight:650; }
