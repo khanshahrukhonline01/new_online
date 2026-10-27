@@ -25,11 +25,11 @@ export default function SportsBar({ activePath, onNavigate }: SportsBarProps) {
 
   return <section className="sports-strip" aria-label="Browse sports">
     <button className="sports-strip-arrow" type="button" aria-label="Scroll sports left" onClick={() => listRef.current?.scrollBy({ left: -360, behavior: 'smooth' })}>
-      <SiteIcon name="chevron-left" size={18} />
+      <SiteIcon name="arrow-left" size={18} />
     </button>
     <div className="sports-strip-list" ref={listRef} role="list">
       <a className={allSportsActive ? 'sports-strip-item is-active' : 'sports-strip-item'} href={targetFor()} aria-current={allSportsActive ? 'page' : undefined} onClick={event => onNavigate(event, targetFor())}>
-        <span className="sports-strip-icon all-sports-icon" aria-hidden="true"><SiteIcon name="grid-2x2" size={17} /></span>
+        <span className="sports-strip-icon all-sports-icon" aria-hidden="true"><SiteIcon name="sports" size={17} /></span>
         <span>All Sports</span>
       </a>
       {sportIconManifest.map(sport => {
