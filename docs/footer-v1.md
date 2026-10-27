@@ -1,69 +1,61 @@
-# KhelGrid Footer — V1 Product and Engineering Specification
+# KhelGrid Footer — V1.1 Product and Engineering Specification
 
 **Implementation:** `src/App.tsx`, `src/styles.css`  
-**Scope:** Global site footer on desktop, tablet, and mobile.
+**Reference:** User-provided screenshot of the live KhelGrid homepage, captured 25 October 2026.  
+**Scope:** Global site footer on desktop, tablet, mobile, and narrow phones.
 
-## Purpose and ownership
+## Design direction
 
-The footer provides brand context, links to currently implemented public catalogue pages, organizer contact routes, careful-use guidance, and a compact legal/status line. It is a shared site-shell component and must not alter sidebar navigation, top navigation, or page-specific state.
+Follow the live site's richer footer hierarchy rather than a minimal footer: brand and Go Pro area, multiple navigation columns, quick-access catalogue chips, careful-use guidance, and a separate legal/status row. Preserve KhelGrid's light background, navy text, green accents, rounded controls, and restrained borders.
 
-## Content structure
+## Content and structure
 
-1. **Brand column:** KhelGrid logo, positioning statement, and “India · 16 cities in the current grid.”
-2. **Explore:** Explore sports, Trials & opportunities, Book venues, Search catalogue. These links point only to routes currently implemented in the platform.
-3. **For the sports community:** Sports CV Wizard marked “Coming soon”; email links for venue listing, trial submission, and general contact.
-4. **Use information carefully:** Remind users to check organiser source, dates, eligibility, fees, and venue. Do not claim listings are independently verified unless that process exists.
-5. **Legal/status row:** Honest development status (live feeds and account services are not connected yet; not a booking or live-score service), plus IPR, AI use, copyright notice, and copyright ownership labels.
+1. **Brand column:** KhelGrid logo, positioning statement, current-grid region line, and Go Pro action (₹499/month).
+2. **Explore:** All sports, Trials & opportunities, Sports venues, Search catalogue, Sports calendar.
+3. **Play & train:** Find a game, Book venues, Coaches, Academies, Sports CV Wizard labelled Coming soon.
+4. **Learn:** Sports guides, Sports & learning hub, KhelChronicle, Live scores.
+5. **Grow with KhelGrid:** List your venue, Submit a trial, Contact KhelGrid, About KhelGrid, and careful-use guidance.
+6. **Quick access chips:** Sports trials, Sports venues, Find a game, Sports calendar, Live scores, Search KhelGrid.
+7. **Careful-use note:** Listings and availability depend on source-published information; users should confirm with organisers.
+8. **Legal/status row:** Preserve the existing development/live-feed/account-services disclaimer, plus IPR, AI use, copyright notice, and © KhelGrid labels.
 
-The IPR/AI/copyright labels are plain text in V1 because dedicated policy routes have not been confirmed as implemented. Do not turn them into dead links or imply legal pages exist until those pages are created and reviewed.
+## Route and truthfulness rules
 
-## Visual system
+- Before merge, confirm each internal destination remains a real route. If a route is unavailable, render it as non-clickable “Coming soon” text rather than introducing a dead link.
+- Organizer submission/contact links use `khelgrid@gmail.com` with descriptive subjects.
+- Go Pro pricing is displayed as ₹499/month based on current KhelGrid product copy; verify the destination and offer before release.
+- Do not invent social URLs, app-store URLs, inventory totals, ratings, venue counts, or legal-page URLs.
+- IPR, AI-use, and copyright labels remain plain text until their dedicated reviewed pages/routes exist.
+- Preserve the existing disclaimer until live feeds and account services are implemented and tested. Do not imply all listings are independently verified.
 
-- White/light neutral background, subtle top border and divider, navy headings, muted blue-grey body text, KhelGrid green hover/focus accents.
-- Compact logo with preserved aspect ratio; clear positioning statement below.
-- Four columns on wide desktop: brand, explore, community, careful-use guidance.
-- Two-column grid on tablet; on narrow mobile the brand and guidance span the full width, with link columns beside one another.
-- Small but readable text, generous row gaps, no oversized promotional panels, and no heavy shadows.
-- The footer participates in normal document flow and never overlays page content.
+## Responsive layout
 
-## Responsive behavior
-
-| Viewport | Layout |
+| Viewport | Behavior |
 |---|---|
-| Wide desktop | Four-column grid; legal row split between status and legal labels. |
-| Tablet (≤1000 px) | Two-column grid. |
-| Mobile (≤600 px) | Two columns for link groups; brand and guidance span full width; legal row stacks vertically. |
-| Very narrow phone (≤360 px) | Single-column layout. |
-| Mobile with bottom navigation | Additional bottom padding respects the floating bottom nav and safe-area inset. |
+| Wide desktop | Five columns: brand plus four link/support columns. Quick chips in one row of six. |
+| Tablet (≤1100 px) | Three-column link grid; brand spans the row; quick chips form two rows of three. |
+| Mobile (≤700 px) | Two-column link grid; brand spans full width; quick chips in two columns; legal row stacks. |
+| Narrow phone (≤380 px) | Single-column footer and quick chips. |
+| Mobile with bottom navigation | Bottom padding respects the fixed bottom navigation and safe-area inset. |
 
-## Interaction and accessibility
+## Accessibility and behavior
 
-- Use semantic `footer`, `nav`, headings, and ordinary links.
-- Footer links to internal routes must use the app navigation handler and preserve browser modifier-click behavior.
-- Email links use the official contact address `khelgrid@gmail.com` and clear subjects.
-- “Sports CV Wizard” remains non-clickable and visibly marked Coming soon until its route is available.
-- Keyboard focus must be visible; hover must not be the only interaction cue.
-- Maintain meaningful contrast and avoid tiny low-contrast legal text.
-- Avoid duplicate logo/search/header actions in the footer.
-
-## Truthfulness and content governance
-
-- Do not invent social links, app-store links, legal policy URLs, venue inventory, user counts, or service capabilities.
-- “16 cities in the current grid” is approved footer wording, but should be revisited if the current catalogue coverage changes.
-- Keep the current limitation notice until live feeds, authentication, booking, and related account services are actually implemented and tested.
-- The footer must not imply the platform verifies every listing. Users should be directed to check organiser/source details.
-- Update the footer and this document together when route availability or legal policies change.
+- Semantic `footer`, labelled `nav` groups, descriptive headings, and standard anchors.
+- Visible keyboard focus; no hover-only functionality.
+- Decorative chip symbols are hidden from assistive technology; text provides accessible names.
+- Footer stays in normal document flow and must not overlap sidebar, top navigation, sports strip, or mobile bottom navigation.
+- Internal navigation must preserve browser modifier-click behavior via the shared handler.
 
 ## Verification checklist
 
-- [ ] Footer renders after page content on every implemented route.
-- [ ] No footer overlap with the sidebar, sticky header, or mobile bottom navigation.
-- [ ] All internal links lead to implemented routes.
-- [ ] Email links open the expected mail recipient and subject.
-- [ ] “Coming soon” items are not clickable.
-- [ ] Desktop, tablet, 600 px, 360 px, and 320 px layouts checked.
-- [ ] Keyboard focus and contrast reviewed.
-- [ ] Existing status/disclaimer tests pass.
-- [ ] Typecheck, lint, tests, build, and Vercel preview verified before merge.
+- [ ] Previously existing footer content and disclaimer remain present.
+- [ ] Brand, four link groups, six quick-access chips, careful-use note, and legal/status row render.
+- [ ] All internal routes confirmed; unavailable routes are not linked.
+- [ ] Contact links use the correct email and subject.
+- [ ] Go Pro destination and price are current.
+- [ ] Desktop, 1100 px, 700 px, 380 px, and 320 px checked.
+- [ ] Footer does not overlap sidebar or fixed mobile navigation.
+- [ ] Keyboard focus and contrast checked.
+- [ ] Typecheck, lint, tests, build, and Vercel preview pass before merge.
 
-**Maintenance rule:** This file is the V1 reference for future footer work. Keep content truthful, links live, and the shared shell responsive.
+**Maintenance rule:** Update this document and the footer together when routes, pricing, legal pages, or the live-site hierarchy changes.
