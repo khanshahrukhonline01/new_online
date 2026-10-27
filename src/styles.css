@@ -1146,3 +1146,10 @@ body { color: var(--text); background: var(--page); }
 @media(max-width:1100px){.foundation-v1 .footer-product-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:700px){.foundation-v1 .footer-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.foundation-v1 .footer-ipr{grid-template-columns:minmax(0,1fr)}.foundation-v1 .footer-index{grid-template-columns:minmax(0,1fr);gap:10px}}
 @media(max-width:380px){.foundation-v1 .footer-product-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Company and policy links requested for the site footer. */
+.foundation-v1 .footer-policy-links{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;max-width:1440px;margin:16px auto 0;padding:14px 0;border-top:1px solid #edf0f3;border-bottom:1px solid #edf0f3;font-size:11px;line-height:1.5}
+.foundation-v1 .footer-policy-links a{color:#596a80;text-decoration:none}
+.foundation-v1 .footer-policy-links a:hover{color:var(--green-dark);text-decoration:underline;text-underline-offset:3px}
+.foundation-v1 .footer-policy-links a strong{color:var(--navy);font-weight:800}
+@media(max-width:700px){.foundation-v1 .footer-policy-links{gap:10px 14px;padding:12px 0}}
