@@ -5,6 +5,7 @@ import OpportunitiesPage from './modules/opportunities/OpportunitiesPage'
 import VenuesPage from './modules/venues/VenuesPage'
 import SearchPage from './modules/search/SearchPage'
 import Sidebar from './shared/components/Sidebar'
+import SportsBar from './shared/components/SportsBar'
 import { resolveRoute } from './shared/routing'
 import { SiteIcon } from './shared/components/SiteIcon'
 
@@ -93,6 +94,7 @@ export default function App() {
       <a className="header-login-link" href="https://www.khelgrid.com/login" title="Login coming soon"><SiteIcon name="user-round" size={17} /><span>Login <small>Coming Soon</small></span></a>
       <a className="header-go-pro" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20Pro%20enquiry"><SiteIcon name="star" size={16} /><span>Go Pro</span></a>
     </header>
+    <SportsBar activePath={path} onNavigate={navigate} />
     <div className="app-workspace">
       <Sidebar activePath={path} onNavigate={navigate} open={menuOpen} onClose={() => setMenuOpen(false)} toggleRef={menuToggleRef} collapsed={sidebarCollapsed} />
       <main id="main-content" className="page-shell">{page}</main>
