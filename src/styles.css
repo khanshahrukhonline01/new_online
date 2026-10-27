@@ -969,3 +969,25 @@ body { color: var(--text); background: var(--page); }
 }
 .foundation-v1 .sidebar-module > div[id^="nav-section-"],
 .foundation-v1 .sidebar-module > div[id^="mobile-nav-section-"] { padding-bottom: 5px; }
+
+
+/* Sidebar V1: slim, low-distraction navigation scrollbar. */
+.foundation-v1 .app-sidebar .sidebar-navigation,
+.foundation-v1 .mobile-drawer .sidebar-navigation {
+  scrollbar-width: thin;
+  scrollbar-color: #c5ced8 transparent;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.foundation-v1 .app-sidebar .sidebar-navigation::-webkit-scrollbar,
+.foundation-v1 .mobile-drawer .sidebar-navigation::-webkit-scrollbar { width: 5px; height: 5px; }
+.foundation-v1 .app-sidebar .sidebar-navigation::-webkit-scrollbar-track,
+.foundation-v1 .mobile-drawer .sidebar-navigation::-webkit-scrollbar-track { background: transparent; }
+.foundation-v1 .app-sidebar .sidebar-navigation::-webkit-scrollbar-thumb,
+.foundation-v1 .mobile-drawer .sidebar-navigation::-webkit-scrollbar-thumb {
+  border: 1px solid transparent; border-radius: 999px; background: #c5ced8; background-clip: padding-box;
+}
+.foundation-v1 .app-sidebar .sidebar-navigation::-webkit-scrollbar-thumb:hover,
+.foundation-v1 .mobile-drawer .sidebar-navigation::-webkit-scrollbar-thumb:hover { background: #98a6b7; background-clip: padding-box; }
+.foundation-v1 .app-sidebar .sidebar-navigation::-webkit-scrollbar-corner,
+.foundation-v1 .mobile-drawer .sidebar-navigation::-webkit-scrollbar-corner { background: transparent; }
