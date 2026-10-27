@@ -99,6 +99,37 @@ export default function App() {
       <main id="main-content" className="page-shell"><SportsBar activePath={path} onNavigate={navigate} /><div className="page-content">{page}</div></main>
     </div>
 
-    <footer className="site-footer"><a className="footer-brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="footer-brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /></a><span>India’s sports discovery platform</span><span>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</span></footer>
+    <footer className="site-footer">
+      <div className="footer-main">
+        <div className="footer-about">
+          <a className="footer-brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="footer-brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /></a>
+          <p className="footer-tagline">India’s grid for sports trials, venues, coaching and athlete profiles.</p>
+          <p className="footer-region">India · 16 cities in the current grid</p>
+        </div>
+        <nav className="footer-column" aria-label="Explore KhelGrid">
+          <h2>Explore</h2>
+          <a href="/sports" onClick={event => navigate(event, '/sports')}>Explore sports</a>
+          <a href="/opportunities" onClick={event => navigate(event, '/opportunities')}>Trials & opportunities</a>
+          <a href="/venues" onClick={event => navigate(event, '/venues')}>Book venues</a>
+          <a href="/search" onClick={event => navigate(event, '/search')}>Search catalogue</a>
+        </nav>
+        <div className="footer-column">
+          <h2>For the sports community</h2>
+          <span className="footer-coming-soon">Sports CV Wizard <small>Coming soon</small></span>
+          <a href="mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue">List your venue</a>
+          <a href="mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial">Submit a trial</a>
+          <a href="mailto:khelgrid@gmail.com">Contact KhelGrid</a>
+        </div>
+        <div className="footer-column footer-trust">
+          <h2>Use information carefully</h2>
+          <p>Check the organiser’s source, dates, eligibility, fees and venue before applying or travelling.</p>
+          <p>Listings and availability depend on the information published by their respective sources.</p>
+        </div>
+      </div>
+      <div className="footer-legal">
+        <p>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</p>
+        <p><span>IPR</span><span>AI use</span><span>Copyright notice</span><span>© KhelGrid</span></p>
+      </div>
+    </footer>
   </div>
 }
