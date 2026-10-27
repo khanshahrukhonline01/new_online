@@ -1063,7 +1063,7 @@ body { color: var(--text); background: var(--page); }
 .foundation-v1 .sports-strip-item:focus-visible,
 .foundation-v1 .sports-strip-arrow:focus-visible { outline: 3px solid var(--green); outline-offset: 2px; }
 @media (max-width: 700px) {
-  .foundation-v1 .sports-strip { top: 0; gap: 5px; padding: 8px 8px; }
+  .foundation-v1 .sports-strip { position: relative; top: auto; gap: 5px; padding: 8px 8px; }
   .foundation-v1 .sports-strip-arrow { flex-basis: 30px; width: 30px; height: 30px; }
   .foundation-v1 .sports-strip-item { min-height: 38px; padding: 7px 12px; gap: 6px; font-size: 12px; }
 }
