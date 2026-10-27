@@ -5,13 +5,13 @@
 
 ## Purpose
 
-Provide a consistent, horizontally scrollable way to reach sport-specific catalogue pages without duplicating the KhelGrid logo or global search. The strip is shared across routes and uses the local sport icon manifest.
+Provide a consistent, horizontally scrollable way to reach sport-specific catalogue pages without duplicating the KhelGrid logo or global search. The strip is shared across routes and uses the local sport icon manifest. It must render inside the main content column, never as a sibling before the workspace, so it cannot push down, resize, or alter the universal sidebar.
 
 ## Appearance
 
 - Light neutral background, subtle bottom border, rounded pale-green chips, navy/muted labels, and KhelGrid green active state.
 - Each chip contains a sport icon and label. “All Sports” uses a grid icon.
-- Keep the strip compact and visually subordinate to the global header.
+- Keep the strip compact and visually subordinate to the global header; target a 48 px desktop band and 42 px mobile band. Chips should be about 32–34 px high.
 - Use fixed circular left/right controls to scroll the chip row.
 - The chip row itself supports horizontal touch, trackpad, and wheel scrolling; its scrollbar is visually hidden while the controls remain available.
 - Respect reduced-motion preferences.
@@ -29,7 +29,9 @@ Provide a consistent, horizontally scrollable way to reach sport-specific catalo
 
 - Desktop/tablet: a single horizontal row; chips do not wrap. Use arrow controls or horizontally scroll the strip.
 - Mobile: smaller spacing and arrow controls, with touch scrolling enabled.
-- On desktop, the strip is sticky immediately below the top header. On mobile, the strip follows the wrapped header in normal document flow so it cannot stick over and obscure the header.
+- Render the strip as the first child of the main content column. It spans the content column only, visually extending to its edges, and must not occupy space in the sidebar column.
+- On desktop, the strip is sticky at the bottom edge of the top header (68 px target, aligned to the actual rendered header height). On mobile, it follows the wrapped header in normal document flow; do not guess a fixed sticky offset for a variable-height header.
+- Keep the strip touching the header visually, with no extra vertical gap. The strip may add spacing below itself before page content, but must not add height to or change the sidebar.
 - Avoid horizontal overflow of the document itself; only the chip list should scroll horizontally.
 
 ## Accessibility
@@ -56,6 +58,8 @@ Provide a consistent, horizontally scrollable way to reach sport-specific catalo
 - [ ] Active state matches the current sport route.
 - [ ] Left/right controls scroll the strip.
 - [ ] Touch/trackpad scrolling works on mobile/tablet.
+- [ ] Sports strip is inside the main content column and does not push the sidebar down.
+- [ ] Strip touches the header with no gap; desktop target height is 48 px and mobile target height is 42 px.
 - [ ] No document-level horizontal overflow.
 - [ ] Sticky position is checked with the actual wrapped mobile header.
 - [ ] Keyboard focus and reduced-motion behavior work.
