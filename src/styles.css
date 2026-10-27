@@ -1153,3 +1153,15 @@ body { color: var(--text); background: var(--page); }
 .foundation-v1 .footer-policy-links a:hover{color:var(--green-dark);text-decoration:underline;text-underline-offset:3px}
 .foundation-v1 .footer-policy-links a strong{color:var(--navy);font-weight:800}
 @media(max-width:700px){.foundation-v1 .footer-policy-links{gap:10px 14px;padding:12px 0}}
+
+
+/* Social/community links in the footer. Only verified official profiles belong here. */
+.foundation-v1 .footer-social{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px 24px;max-width:1440px;margin:16px auto 0;padding:16px 0;border-top:1px solid #edf0f3}
+.foundation-v1 .footer-social-copy{min-width:0}
+.foundation-v1 .footer-social h2{margin:0 0 5px;color:var(--navy);font-size:12px;font-weight:800}
+.foundation-v1 .footer-social p{margin:0;color:#8290a0;font-size:10px;line-height:1.6}
+.foundation-v1 .footer-social-links{display:flex;flex-wrap:wrap;gap:8px}
+.foundation-v1 .footer-social-links a{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid #e1e8ed;border-radius:999px;background:#fff;color:#50617a;text-decoration:none;font-size:11px;font-weight:700}
+.foundation-v1 .footer-social-links a:hover{border-color:#a8d9bd;background:#f5fbf7;color:var(--green-dark)}
+.foundation-v1 .footer-social-mark{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;background:#eaf7ef;color:var(--green-dark);font-size:11px;font-weight:850}
+@media(max-width:700px){.foundation-v1 .footer-social{align-items:flex-start;flex-direction:column}.foundation-v1 .footer-social-links{width:100%}}
