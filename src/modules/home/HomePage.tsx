@@ -26,7 +26,7 @@ export default function HomePage() {
       <div className="home-hero-copy">
         <p className="eyebrow">YOUR GAME. YOUR NEXT MOVE.</p>
         <h1>Discover. Compete. <span>Grow.</span></h1>
-        <p className="hero-copy">Your sports discovery platform for sports, genuine opportunities, and places to play — with source details and clear data status.</p>
+        <p className="hero-copy">Explore sports, find opportunities, and discover places to play. Clear information helps you decide your next move.</p>
         <div className="hero-actions">
           <a className="primary-link" href="/opportunities">Explore opportunities <SiteIcon name="arrow-up-right" size={16} /></a>
           <a className="secondary-link" href="/sports">Browse sports</a>
@@ -37,11 +37,26 @@ export default function HomePage() {
           <span><SiteIcon name="smartphone" size={15} /> Built for every screen</span>
         </div>
       </div>
-      <div className="home-hero-art" aria-label="KhelGrid sports discovery illustration">
-        <div className="hero-art-orbit orbit-one" />
-        <div className="hero-art-orbit orbit-two" />
-        <div className="hero-art-ball" aria-hidden="true">K</div>
-        <div className="hero-art-caption"><span className="status-dot" /> SPORTS DISCOVERY <strong>FOUNDATION V1</strong></div>
+      <div className="home-hero-art" aria-label="Explore sports, opportunities and places to play">
+        <div className="hero-visual-grid" aria-hidden="true" />
+        <div className="hero-visual-kicker"><span className="status-dot" /> THE KHELGRID PLAYBOOK</div>
+        <div className="hero-visual-main">
+          <div className="hero-visual-emblem" aria-hidden="true"><span>K</span><i /></div>
+          <div className="hero-visual-title">Your next move<br /><strong>starts here.</strong></div>
+        </div>
+        <div className="hero-float-card hero-float-sport">
+          <span className="hero-float-icon" aria-hidden="true">↗</span>
+          <span><small>DISCOVER</small><strong>Sports</strong></span>
+        </div>
+        <div className="hero-float-card hero-float-opportunity">
+          <span className="hero-float-icon" aria-hidden="true">◎</span>
+          <span><small>TAKE YOUR SHOT</small><strong>Opportunities</strong></span>
+        </div>
+        <div className="hero-float-card hero-float-venue">
+          <span className="hero-float-icon" aria-hidden="true">⌖</span>
+          <span><small>GET OUT THERE</small><strong>Places to play</strong></span>
+        </div>
+        <div className="hero-art-caption">DISCOVER <b>·</b> COMPETE <b>·</b> GROW <span>BUILT FOR YOUR NEXT MOVE</span></div>
       </div>
     </section>
     <section className="home-catalogue-status" aria-labelledby="catalogue-status-title">
