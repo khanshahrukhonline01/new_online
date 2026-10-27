@@ -29,7 +29,7 @@ Provide a consistent, horizontally scrollable way to reach sport-specific catalo
 
 - Desktop/tablet: a single horizontal row; chips do not wrap. Use arrow controls or horizontally scroll the strip.
 - Mobile: smaller spacing and arrow controls, with touch scrolling enabled.
-- The strip is sticky below the desktop header. Verify sticky positioning on mobile where the header may wrap.
+- On desktop, the strip is sticky immediately below the top header. On mobile, the strip follows the wrapped header in normal document flow so it cannot stick over and obscure the header.
 - Avoid horizontal overflow of the document itself; only the chip list should scroll horizontally.
 
 ## Accessibility
