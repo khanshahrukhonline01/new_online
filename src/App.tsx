@@ -153,6 +153,32 @@ export default function App() {
           <a href="/search" onClick={event => navigate(event, '/search')}><span aria-hidden="true">⌕</span><span><strong>Search KhelGrid</strong><small>Explore the catalogue</small></span></a>
         </div>
       </div>
+      <section className="footer-products" aria-labelledby="footer-products-title">
+        <div className="footer-quick-heading"><div><h2 id="footer-products-title">Explore KhelGrid Products</h2><p>Tools to help athletes build, train, discover and get noticed.</p></div></div>
+        <div className="footer-product-grid">
+          <div className="footer-product"><strong>Sports CV</strong><span>Show your journey</span></div>
+          <div className="footer-product"><strong>Talent Scanner</strong><span>Track performance</span></div>
+          <a className="footer-product" href="/opportunities" onClick={event => navigate(event, '/opportunities')}><strong>Find Trials</strong><span>Discover opportunities</span></a>
+          <div className="footer-product"><strong>AI Sports Guide</strong><span>Plan your next step</span></div>
+          <a className="footer-product" href="/venues" onClick={event => navigate(event, '/venues')}><strong>Book Venues</strong><span>Find places to play</span></a>
+          <a className="footer-product" href="/play" onClick={event => navigate(event, '/play')}><strong>Play & Match</strong><span>Find local games</span></a>
+        </div>
+      </section>
+      <section className="footer-ipr" aria-labelledby="footer-ipr-title">
+        <div><h2 id="footer-ipr-title">IPR, AI & Copyright Notice</h2><p>Website content and original editorial materials are protected by applicable copyright law. AI-assisted material may be used for informational purposes; outputs and rights depend on the underlying human contribution and applicable law. Do not misuse athlete identities, images, or personal information, and do not scrape or reuse protected content without permission.</p></div>
+        <a href="mailto:ipr@khelgrid.com">IPR & AI enquiries <span>ipr@khelgrid.com</span></a>
+      </section>
+      <nav className="footer-index" aria-label="Sports network index">
+        <div><h2>Sports Network Index</h2><p>Explore sports and pathways across KhelGrid.</p></div>
+        <div className="footer-index-chips">
+          <a href="/sports" onClick={event => navigate(event, '/sports')}>All Sports</a>
+          <a href="/opportunities" onClick={event => navigate(event, '/opportunities')}>Trials & Opportunities</a>
+          <a href="/venues" onClick={event => navigate(event, '/venues')}>Sports Venues</a>
+          <a href="/calendar" onClick={event => navigate(event, '/calendar')}>Sports Calendar</a>
+          <a href="/play" onClick={event => navigate(event, '/play')}>Pickup Games</a>
+          <a href="/search" onClick={event => navigate(event, '/search')}>Search KhelGrid</a>
+        </div>
+      </nav>
       <div className="footer-care-note"><strong>Use information carefully</strong><span>Listings and availability depend on information published by their respective sources. Confirm details with the organiser before making plans.</span></div>
       <div className="footer-legal">
         <p>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</p>
