@@ -40,7 +40,7 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('Go Pro · ₹499/month')
     expect(html).toContain('Copyright notice')
     expect(html).toContain('Explore KhelGrid Products')
-    expect(html).toContain('IPR, AI & Copyright Notice')
+    expect(html).toContain('IPR, AI &amp; Copyright Notice')
     expect(html).toContain('Sports Network Index')
     expect(html).toContain('ipr@khelgrid.com')
   })
