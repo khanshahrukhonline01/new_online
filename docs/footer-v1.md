@@ -15,11 +15,16 @@ Follow the live site's richer footer hierarchy rather than a minimal footer: bra
 3. **Play & train:** Find a game, Book venues, Coaches, Academies, Sports CV Wizard labelled Coming soon.
 4. **Learn:** Sports guides, Sports & learning hub, KhelChronicle, Live scores.
 5. **Grow with KhelGrid:** List your venue, Submit a trial, Contact KhelGrid, About KhelGrid, and careful-use guidance.
-6. **Quick access chips:** Sports trials, Sports venues, Find a game, Sports calendar, Live scores, Search KhelGrid.
-7. **Careful-use note:** Listings and availability depend on source-published information; users should confirm with organisers.
-8. **Legal/status row:** Preserve the existing development/live-feed/account-services disclaimer, plus IPR, AI use, copyright notice, and © KhelGrid labels.
+6. **Product showcase and IPR:** Six compact product tiles (Sports CV, Talent Scanner, Find Trials, AI Sports Guide, Book Venues, Play & Match), followed by an IPR/AI/copyright notice and the published IPR contact address. Do not claim exclusive ownership of autonomous AI output or provide legal guarantees.
+7. **Sports network index:** A compact set of working route links for sports, opportunities, venues, calendar, games and search.
+8. **Quick access chips:** Sports trials, Sports venues, Find a game, Sports calendar, Live scores, Search KhelGrid.
+9. **Careful-use note:** Listings and availability depend on source-published information; users should confirm with organisers.
+10. **Legal/status row:** Preserve the existing development/live-feed/account-services disclaimer, plus IPR, AI use, copyright notice, and © KhelGrid labels.
 
 ## Route and truthfulness rules
+
+- The product showcase follows the live homepage hierarchy, but items without confirmed working routes are informational, non-clickable tiles. This avoids dead links while preserving the product names shown on the live reference.
+- The IPR/AI text is a general site notice, not legal advice. Do not state that all AI output is protected or that scraping is prohibited in all circumstances; refer legal enquiries to `ipr@khelgrid.com`.
 
 - Before merge, confirm each internal destination remains a real route. If a route is unavailable, render it as non-clickable “Coming soon” text rather than introducing a dead link.
 - Organizer submission/contact links use `khelgrid@gmail.com` with descriptive subjects.
