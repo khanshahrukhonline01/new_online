@@ -194,6 +194,15 @@ export default function App() {
           <a href="https://in.linkedin.com/in/khelgrid-dotcom-647b74418" target="_blank" rel="noopener noreferrer" aria-label="KhelGrid dotcom on LinkedIn">
             <span className="footer-social-mark" aria-hidden="true">in</span><span>LinkedIn</span><span aria-hidden="true">↗</span>
           </a>
+          <a href="https://www.youtube.com/@Khelgrid" target="_blank" rel="noopener noreferrer" aria-label="KhelGrid on YouTube">
+            <span className="footer-social-mark" aria-hidden="true">▶</span><span>YouTube</span><span aria-hidden="true">↗</span>
+          </a>
+          <a href="https://whatsapp.com/channel/0029VbDHTXY4dTnFvo8rKF1A" target="_blank" rel="noopener noreferrer" aria-label="KhelGrid on WhatsApp">
+            <span className="footer-social-mark" aria-hidden="true">WA</span><span>WhatsApp</span><span aria-hidden="true">↗</span>
+          </a>
+          <a href="https://x.com/Khelgrid" target="_blank" rel="noopener noreferrer" aria-label="KhelGrid on X">
+            <span className="footer-social-mark" aria-hidden="true">𝕏</span><span>X</span><span aria-hidden="true">↗</span>
+          </a>
         </div>
       </section>
       <nav className="footer-policy-links" aria-label="Company, policies and legal">
