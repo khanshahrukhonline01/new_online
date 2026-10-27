@@ -182,6 +182,20 @@ export default function App() {
         </div>
       </nav>
       <div className="footer-care-note"><strong>Use information carefully</strong><span>Listings and availability depend on information published by their respective sources. Confirm details with the organiser before making plans.</span></div>
+      <section className="footer-social" aria-labelledby="footer-social-title">
+        <div className="footer-social-copy">
+          <h2 id="footer-social-title">Follow KhelGrid</h2>
+          <p>Join the conversation and keep up with sports opportunities and community updates.</p>
+        </div>
+        <div className="footer-social-links">
+          <a href="https://www.reddit.com/r/Khelgridonline/" target="_blank" rel="noopener noreferrer" aria-label="KhelGrid on Reddit">
+            <span className="footer-social-mark" aria-hidden="true">r/</span><span>Reddit</span><span aria-hidden="true">↗</span>
+          </a>
+          <a href="https://in.linkedin.com/in/khelgrid-dotcom-647b74418" target="_blank" rel="noopener noreferrer" aria-label="KhelGrid dotcom on LinkedIn">
+            <span className="footer-social-mark" aria-hidden="true">in</span><span>LinkedIn</span><span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </section>
       <nav className="footer-policy-links" aria-label="Company, policies and legal">
         <a href="https://www.khelgrid.com/about">About</a>
         <a href="https://www.khelgrid.com/contact">Contact</a>
