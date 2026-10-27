@@ -166,7 +166,7 @@ export default function App() {
           <a className="footer-product" href="/play" onClick={event => navigate(event, '/play')}><strong>Play & Match</strong><span>Find local games</span></a>
         </div>
       </section>
-      <section className="footer-ipr" aria-labelledby="footer-ipr-title">
+      <section className="footer-ipr" aria-labelledby="footer-ipr-title" data-footer-section="ipr-ai-copyright-v1">
         <div><h2 id="footer-ipr-title">{IPR_NOTICE_HEADING}</h2><p>Website content and original editorial materials are protected by applicable copyright law. AI-assisted material may be used for informational purposes; outputs and rights depend on the underlying human contribution and applicable law. Do not misuse athlete identities, images, or personal information, and do not scrape or reuse protected content without permission.</p></div>
         <a href="mailto:ipr@khelgrid.com">IPR & AI enquiries <span>ipr@khelgrid.com</span></a>
       </section>
@@ -184,7 +184,7 @@ export default function App() {
       <div className="footer-care-note"><strong>Use information carefully</strong><span>Listings and availability depend on information published by their respective sources. Confirm details with the organiser before making plans.</span></div>
       <div className="footer-legal">
         <p>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</p>
-        <p><span>IPR</span><span>AI use</span><span>Copyright notice</span><span>© KhelGrid</span></p>
+        <p><span>{IPR_NOTICE_HEADING}</span><span>AI use</span><span>Copyright notice</span><span>© KhelGrid</span></p>
       </div>
     </footer>
   </div>
