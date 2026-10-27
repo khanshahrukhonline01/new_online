@@ -1,10 +1,10 @@
-import { useRef } from 'react'
+import { useRef, type MouseEvent } from 'react'
 import { SiteIcon } from './SiteIcon'
 import { SportIcon, sportIconManifest } from '../sports/sportIcons'
 
 type SportsBarProps = {
   activePath: string
-  onNavigate: (event: React.MouseEvent<HTMLAnchorElement>, target: string) => void
+  onNavigate: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
 function normalizedPath(path: string) {
@@ -20,8 +20,7 @@ export default function SportsBar({ activePath, onNavigate }: SportsBarProps) {
   const targetFor = (slug?: string) => {
     if (isCatalogueContext) return slug ? `/sports/${slug}` : '/sports'
     const label = slug ? sportIconManifest.find(sport => sport.id === slug)?.label ?? slug : ''
-    const query = path === '/search' ? label : label
-    return query ? `/search?q=${encodeURIComponent(query)}` : '/sports'
+    return label ? `/search?q=${encodeURIComponent(label)}` : '/sports'
   }
 
   return <section className="sports-strip" aria-label="Browse sports">
