@@ -45,3 +45,8 @@
 
 ## Route parity and test evidence (2026-10-25)
 - [Production Route Parity and Baseline Report](PRODUCTION_ROUTE_PARITY_AND_BASELINE_REPORT.md) — source-based inventory of production web routes, proposed MVP/deferred dispositions, critical parity gaps, and exact-commit CI evidence. This is not a runtime route audit or production release approval.
+
+
+## Page-by-page implementation reference
+
+- [Full Page and Workflow Specification](FULL_PAGE_AND_WORKFLOW_SPECIFICATION.md) — current dedicated routes, registered feature-information routes, planned route families, expected behaviour, data/security requirements, release gates and prioritized implementation roadmap. Route existence is explicitly distinguished from a working or verified workflow.
