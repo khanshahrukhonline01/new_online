@@ -25,6 +25,8 @@ describe('platform route coverage', () => {
     '/dashboard', '/profile', '/my-profile', '/saved', '/settings', '/notifications',
     '/login', '/signup', '/forgot-password', '/about', '/contact', '/partners', '/careers', '/trust',
     '/pricing', '/mobile-app', '/help', '/privacy', '/terms', '/cookies', '/for-you', '/referrals',
+    '/ipr-policy', '/cancellation-policy', '/posh-policy', '/editorial-policy',
+    '/verification-policy', '/correction-policy',
   ])('%s opens a registered feature page', path => {
     const match = resolveRoute(path)
     expect(match.name).toBe('feature')
