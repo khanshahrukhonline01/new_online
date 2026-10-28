@@ -47,7 +47,7 @@ export default function HomePage() {
       </div>
       <div className="home-hero-art home-hero-video" aria-label="Cinematic KhelGrid sports video">
         <div className="home-hero-video-poster" aria-hidden="true" />
-        {!reduceMotion && <video className="home-hero-video-media" autoPlay muted loop playsInline preload="metadata" poster="/assets/hero/hero-poster.jpg" aria-hidden="true">
+        {!reduceMotion && <video className="home-hero-video-media" autoPlay muted loop playsInline preload="metadata" poster="/assets/hero/hero-poster.svg" aria-hidden="true">
           <source src="/assets/hero/hero-loop.mp4" type="video/mp4" />
         </video>}
         <div className="home-hero-video-overlay" aria-hidden="true">
