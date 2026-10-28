@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import './sports-cv.css'
 
 type Achievement = { year: string; event: string; result: string }
 type Cv = {
