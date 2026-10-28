@@ -1333,3 +1333,12 @@ body { color: var(--text); background: var(--page); }
 .foundation-v1 .hero-carousel-dots button.is-active{width:24px;background:#a7f36b}
 @media(max-width:760px){.foundation-v1 .home-hero-carousel{min-height:300px}.foundation-v1 .home-hero-carousel-caption{left:14px;right:14px;bottom:58px}.foundation-v1 .home-hero-carousel-controls{left:10px;right:10px;bottom:10px;gap:7px}.foundation-v1 .home-hero-carousel-controls button{padding:5px 9px}}
 @media(prefers-reduced-motion:reduce){.foundation-v1 .home-hero-slide{transition:none!important}}
+
+
+/* Shared placeholder page for platform features awaiting real data or services */
+.foundation-v1 .coming-soon-page{max-width:820px;min-height:48vh;padding:clamp(36px,7vw,84px) 0}
+.foundation-v1 .coming-soon-mark{display:grid;place-items:center;width:58px;height:58px;margin:0 0 24px;border:1px solid rgba(7,150,79,.25);border-radius:16px;background:rgba(7,150,79,.08);color:var(--accent)}
+.foundation-v1 .coming-soon-status{display:inline-flex;align-items:center;gap:9px;margin:4px 0 18px;padding:9px 13px;border:1px solid var(--line);border-radius:999px;color:var(--text-soft);font-size:12px;font-weight:750}
+.foundation-v1 .coming-soon-note{max-width:620px;padding:15px 17px;border-left:3px solid var(--accent);background:var(--surface-soft);color:var(--muted-strong);font-size:13px;line-height:1.7}
+.foundation-v1 .coming-soon-path{margin-top:28px;color:var(--muted);font-size:11px}
+.foundation-v1 .coming-soon-path code{padding:3px 6px;border-radius:5px;background:var(--surface-raised)}
