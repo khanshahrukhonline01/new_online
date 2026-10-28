@@ -23,9 +23,9 @@ describe('platform route coverage', () => {
     '/live', '/play', '/coaches', '/academies', '/events', '/calendar',
     '/learning', '/guides', '/ai-guide', '/khelchronicle', '/community', '/tools',
     '/dashboard', '/profile', '/my-profile', '/saved', '/settings', '/notifications',
-    '/login', '/signup', '/about', '/contact', '/partners', '/careers', '/trust',
-    '/pricing', '/help', '/privacy', '/terms', '/cookies',
-  ])('%s opens a dedicated coming-soon route', path => {
+    '/login', '/signup', '/forgot-password', '/about', '/contact', '/partners', '/careers', '/trust',
+    '/pricing', '/mobile-app', '/help', '/privacy', '/terms', '/cookies', '/for-you', '/referrals',
+  ])('%s opens a registered feature page', path => {
     const match = resolveRoute(path)
     expect(match.name).toBe('feature')
     if (match.name === 'feature') {
