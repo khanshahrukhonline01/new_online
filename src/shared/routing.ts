@@ -30,7 +30,7 @@ const featurePages: Record<string, string> = {
 
 function normalizePath(pathname: string): string {
   if (!pathname || pathname === '/') return '/'
-  return pathname.replace(/\\/+$/, '') || '/'
+  return pathname.replace(/\/+$/, '') || '/'
 }
 export function resolveRoute(pathname: string): RouteMatch {
   const path = normalizePath(pathname)
