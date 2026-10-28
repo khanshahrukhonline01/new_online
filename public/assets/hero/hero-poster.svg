@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06111c"/><stop offset=".55" stop-color="#0a2630"/><stop offset="1" stop-color="#031018"/></linearGradient><radialGradient id="glow"><stop stop-color="#26ef9a" stop-opacity=".72"/><stop offset="1" stop-color="#26ef9a" stop-opacity="0"/></radialGradient><linearGradient id="trail"><stop stop-color="#27f0a0" stop-opacity="0"/><stop offset=".6" stop-color="#27f0a0" stop-opacity=".8"/><stop offset="1" stop-color="#b9ff72" stop-opacity="0"/></linearGradient></defs>
+<rect width="960" height="540" fill="url(#bg)"/><ellipse cx="670" cy="300" rx="360" ry="220" fill="url(#glow)"/>
+<g fill="#e5fff5" opacity=".9"><circle cx="85" cy="45" r="3"/><circle cx="108" cy="39" r="3"/><circle cx="131" cy="45" r="3"/><circle cx="154" cy="39" r="3"/><circle cx="790" cy="35" r="3"/><circle cx="812" cy="29" r="3"/><circle cx="834" cy="36" r="3"/><circle cx="856" cy="30" r="3"/></g>
+<g fill="none" stroke="url(#trail)" stroke-width="5"><path d="M280 360 C450 250 590 430 940 220"/><path d="M300 390 C500 280 670 460 960 270"/><path d="M320 420 C520 320 700 480 960 320"/></g>
+<path d="M0 445 Q250 400 480 440 T960 420 V540 H0Z" fill="#092d28"/><path d="M0 485H960 M0 520H960" stroke="#1c6b50" stroke-opacity=".45"/>
+<g fill="#07111b" stroke="#07111b" stroke-linejoin="round"><circle cx="676" cy="150" r="24"/><path d="M655 174 L625 258 L665 292 L707 238 L701 181Z"/><path d="M646 194 L594 239 L606 253 L661 225Z"/><path d="M692 196 L738 247 L725 258 L680 226Z"/><path d="M659 285 L628 371 L647 378 L689 302Z"/><path d="M689 286 L733 353 L750 345 L710 270Z"/></g>
+<g fill="none" stroke="#51ffad" stroke-width="3" opacity=".7"><path d="M730 187 Q800 165 910 215"/><path d="M727 205 Q805 190 920 245"/><path d="M722 222 Q805 215 935 275"/></g>
+<circle cx="608" cy="420" r="24" fill="#e8f3f3"/><path d="M608 403l10 7-4 12h-12l-4-12z M592 423l10-2 7 10-6 9z M624 423l-10-2-7 10 6 9z" fill="#122c36"/>
+<rect x="0" y="0" width="960" height="540" fill="none" stroke="#0a201e" stroke-width="16"/>
+</svg>

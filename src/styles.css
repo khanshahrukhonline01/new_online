@@ -1300,3 +1300,17 @@ body { color: var(--text); background: var(--page); }
   .foundation-v1 .hero-athlete-overlay > strong { font-size: 24px; }
   .foundation-v1 .hero-athlete-photo > span { font-size: 8px; }
 }
+
+
+/* KhelGrid signature video hero */
+.foundation-v1 .home-hero-panel { position: relative; }
+.foundation-v1 .home-hero-video { position: relative; min-height: 390px; overflow: hidden; isolation: isolate; border-radius: 20px; background: #06111c url('/assets/hero/hero-poster.svg') center/cover no-repeat; }
+.foundation-v1 .home-hero-video-poster,.foundation-v1 .home-hero-video-media { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:62% center; }
+.foundation-v1 .home-hero-video-poster { z-index:-1; background:linear-gradient(90deg,rgba(4,12,22,.15),rgba(4,12,22,.05)),url('/assets/hero/hero-poster.svg') center/cover no-repeat; }
+.foundation-v1 .home-hero-video-media { z-index:-1; }
+.foundation-v1 .home-hero-video::after { content:""; position:absolute; inset:0; z-index:-1; pointer-events:none; background:linear-gradient(90deg,rgba(4,12,22,.55),rgba(4,12,22,.05) 75%),linear-gradient(0deg,rgba(4,12,22,.5),transparent 50%); }
+.foundation-v1 .home-hero-video-overlay { position:absolute; left:18px; right:18px; bottom:18px; display:flex; flex-direction:column; gap:8px; color:#f8fbff; text-shadow:0 2px 12px rgba(0,0,0,.8); }
+.foundation-v1 .home-hero-video-overlay strong { font-size:clamp(20px,2.2vw,30px); line-height:1.05; letter-spacing:-.04em; }
+.foundation-v1 .home-hero-video-overlay em { color:#a7f36b; font-style:normal; }
+@media(max-width:760px){.foundation-v1 .home-hero-video{min-height:300px}.foundation-v1 .home-hero-video-media,.foundation-v1 .home-hero-video-poster{object-position:66% center}.foundation-v1 .home-hero-video-overlay{left:14px;right:14px;bottom:14px}.foundation-v1 .home-hero-video-overlay .hero-athlete-tagline{font-size:7px}}
+@media(prefers-reduced-motion:reduce){.foundation-v1 .home-hero-video-media{display:none!important}}
