@@ -55,3 +55,18 @@ The homepage hero uses a lightweight, five-slide sports image carousel (football
 - **Release checks:** run `npm run typecheck`, `npm run lint`, `npm run test`, and `npm run build`; inspect the Vercel preview on desktop and mobile, confirm image requests and lazy loading in browser devtools, test keyboard controls and reduced-motion settings, and check contrast/readability before merging.
 
 The carousel is a presentation-only feature and does not change catalogue, venue, opportunity, booking, or live-score data behavior.
+
+## Platform page coverage and coming-soon behavior
+
+Implemented catalogue pages:
+- `/` — homepage and sports hero.
+- `/sports` and `/sports/:slug` — published sports catalogue/detail route.
+- `/opportunities`, `/trials`, `/combines`, `/scholarships`, `/camps`, and `/opportunities/:slug` — opportunities catalogue/detail route.
+- `/venues`, `/book`, and `/venues/:slug` — venue catalogue/detail route; booking confirmation and live availability are not enabled.
+- `/search` — search across published sports, opportunities, and venues.
+
+The navigation registry also includes feature routes. Where a feature does not yet have a complete data source, backend, authentication, moderation workflow, or tested user flow, the app now renders the shared `FeatureComingSoonPage` rather than an empty or misleading screen. Registered routes include dashboard, live scores, find games, coaches, academies, events, athlete stats, Sports CV, Talent Scanner, Scout Portal, verification, learning, guides, AI guide, KhelChronicle, community, tools, sports calendar, For You, Trust Center, pricing, mobile app, careers, partners, About, contact, privacy, terms, cookies, settings, notifications, login/signup/recovery, profiles, saved items, referrals, and help.
+
+**Data integrity rule:** placeholders must clearly say “Coming soon” and must not invent sports records, match scores, venue availability, booking confirmations, athlete profiles, payment status, or account data. Feature routes are navigational placeholders only, not evidence that the corresponding backend capability exists. Legal and policy pages should be replaced with reviewed, jurisdiction-appropriate text before public launch; the current generic placeholder is not legal advice or a substitute for published policies.
+
+Before release, run `npm run typecheck`, `npm run lint`, `npm run test`, and `npm run build`, then manually visit every registered route and verify internal navigation, browser back/forward behavior, mobile navigation, and not-found handling.
