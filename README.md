@@ -70,3 +70,10 @@ The navigation registry also includes feature routes. Where a feature does not y
 **Data integrity rule:** placeholders must clearly say “Coming soon” and must not invent sports records, match scores, venue availability, booking confirmations, athlete profiles, payment status, or account data. Feature routes are navigational placeholders only, not evidence that the corresponding backend capability exists. Legal and policy pages should be replaced with reviewed, jurisdiction-appropriate text before public launch; the current generic placeholder is not legal advice or a substitute for published policies.
 
 Before release, run `npm run typecheck`, `npm run lint`, `npm run test`, and `npm run build`, then manually visit every registered route and verify internal navigation, browser back/forward behavior, mobile navigation, and not-found handling.
+
+
+### Feature route page foundation
+
+The feature route component now renders route-specific information rather than one identical generic placeholder. Athlete tools, live sports, play, coaching, events, learning, community, account, organisation and support routes explain the planned scope, current service status and relevant next steps. About, Contact, Help, Trust Center and Partners provide basic informational content and contact links. Privacy, Terms and Cookies clearly state that their content is not yet a complete, reviewed policy and must be replaced before public launch.
+
+This is still a page-content foundation, not a claim that the underlying features are implemented. Authentication, live sports feeds, account data, payments, booking confirmation, athlete verification, user-generated community content and other unavailable services remain disabled. Route tests cover the registered paths; a successful test run and deployed preview still need to be verified separately.
