@@ -77,3 +77,15 @@ Before release, run `npm run typecheck`, `npm run lint`, `npm run test`, and `np
 The feature route component now renders route-specific information rather than one identical generic placeholder. Athlete tools, live sports, play, coaching, events, learning, community, account, organisation and support routes explain the planned scope, current service status and relevant next steps. About, Contact, Help, Trust Center and Partners provide basic informational content and contact links. Privacy, Terms and Cookies clearly state that their content is not yet a complete, reviewed policy and must be replaced before public launch.
 
 This is still a page-content foundation, not a claim that the underlying features are implemented. Authentication, live sports feeds, account data, payments, booking confirmation, athlete verification, user-generated community content and other unavailable services remain disabled. Route tests cover the registered paths; a successful test run and deployed preview still need to be verified separately.
+
+### Additional policy route foundations
+
+The footer links for IPR & Copyright, Cancellation, POSH, Editorial, Verification, and Corrections now have registered internal routes and route-specific draft content:
+- `/ipr-policy`
+- `/cancellation-policy`
+- `/posh-policy`
+- `/editorial-policy`
+- `/verification-policy`
+- `/correction-policy`
+
+These are explicitly marked as requiring review before launch. Their presence is not a claim that a formal legal, workplace, verification, editorial, refund, or correction workflow exists. Review the content with appropriate qualified advisers and align it with actual operating practices before relying on it publicly.
