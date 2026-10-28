@@ -6,12 +6,20 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 
 export default function HomePage() {
   const [counts, setCounts] = useState<{ sports?: CatalogueResult<Sport>; opportunities?: CatalogueResult<Opportunity>; venues?: CatalogueResult<Venue> }>({})
+  const [reduceMotion, setReduceMotion] = useState(false)
   useEffect(() => {
     let active = true
     Promise.all([getSports(), getOpportunities(), getVenues()]).then(([sports, opportunities, venues]) => {
       if (active) setCounts({ sports, opportunities, venues })
     })
     return () => { active = false }
+  }, [])
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => setReduceMotion(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
   }, [])
   const countState = (value: CatalogueResult<unknown> | undefined) => {
     if (!value) return 'Loading catalogue…'
@@ -37,27 +45,15 @@ export default function HomePage() {
           <span><SiteIcon name="smartphone" size={15} /> Built for every screen</span>
         </div>
       </div>
-      <div className="home-hero-art hero-athlete-collage" aria-label="Athletes playing football, cricket, running and tennis">
-        <div className="hero-athlete-photo hero-athlete-football">
-          <img src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=900&q=85" alt="Football players competing on a pitch" loading="eager" fetchPriority="high" />
-          <span>FOOTBALL</span>
-        </div>
-        <div className="hero-athlete-photo hero-athlete-cricket">
-          <img src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=700&q=85" alt="Cricket players on the field" loading="lazy" />
-          <span>CRICKET</span>
-        </div>
-        <div className="hero-athlete-photo hero-athlete-running">
-          <img src="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=700&q=85" alt="Athletes running on a track" loading="lazy" />
-          <span>ATHLETICS</span>
-        </div>
-        <div className="hero-athlete-photo hero-athlete-tennis">
-          <img src="https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?auto=format&fit=crop&w=700&q=85" alt="Tennis player on court" loading="lazy" />
-          <span>TENNIS</span>
-        </div>
-        <div className="hero-athlete-overlay">
-          <span className="hero-athlete-kicker"><span className="status-dot" /> MADE FOR EVERY SPORT</span>
-          <strong>Find your<br /><em>next move.</em></strong>
-          <span className="hero-athlete-tagline">DISCOVER · COMPETE · GROW</span>
+      <div className="home-hero-art home-hero-video" aria-label="Cinematic KhelGrid sports video">
+        <div className="home-hero-video-poster" aria-hidden="true" />
+        {!reduceMotion && <video className="home-hero-video-media" autoPlay muted loop playsInline preload="metadata" poster="/assets/hero/hero-poster.jpg" aria-hidden="true">
+          <source src="/assets/hero/hero-loop.mp4" type="video/mp4" />
+        </video>}
+        <div className="home-hero-video-overlay" aria-hidden="true">
+          <span className="hero-athlete-kicker"><span className="status-dot" /> KHELGRID SPORTS UNIVERSE</span>
+          <strong>Discover.<br /><em>Compete. Grow.</em></strong>
+          <span className="hero-athlete-tagline">SPORTS · OPPORTUNITIES · VENUES</span>
         </div>
       </div>
     </section>
