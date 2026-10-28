@@ -147,7 +147,7 @@ The planning inventory in `docs/WEBSITE_PAGE_INVENTORY.md` contains additional r
 
 Current public catalogue access in `src/integrations/supabase/public-client.ts` reads `sports`, `opportunities`, and `venues`. The initial core migration also includes `venue_courts` and `profiles`. Do not assume the latest proposal migrations are applied to any Supabase project.
 
-The proposed directory/m moderation schema may add:
+The proposed directory/moderation schema may add:
 - `academies`, `coaches`, `events`
 - `academy_sports`, `coach_sports`, `coach_academies`, `venue_sports`
 - `listing_submissions` as a private intake queue
