@@ -4,6 +4,7 @@ import SportsPage from './modules/sports/SportsPage'
 import OpportunitiesPage from './modules/opportunities/OpportunitiesPage'
 import VenuesPage from './modules/venues/VenuesPage'
 import SearchPage from './modules/search/SearchPage'
+import FeatureComingSoonPage from './modules/coming-soon/FeatureComingSoonPage'
 import Sidebar from './shared/components/Sidebar'
 import SportsBar from './shared/components/SportsBar'
 import { resolveRoute } from './shared/routing'
@@ -77,6 +78,7 @@ export default function App() {
     case 'venues-index':
     case 'venue-detail': page = <VenuesPage />; break
     case 'search': page = <SearchPage initialQuery={searchQuery} />; break
+    case 'feature': page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />; break
     default:
       page = <section className="content-page"><p className="eyebrow">PAGE NOT AVAILABLE</p><h1>This page isn’t here yet.</h1><p className="page-intro">This route has not been implemented. Return to a published section to continue exploring.</p><a className="primary-link" href="/" onClick={event => navigate(event, '/')}>Back home <SiteIcon name="arrow-up-right" size={16} /></a></section>
   }
