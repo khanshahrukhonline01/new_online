@@ -1342,3 +1342,18 @@ body { color: var(--text); background: var(--page); }
 .foundation-v1 .coming-soon-note{max-width:620px;padding:15px 17px;border-left:3px solid var(--accent);background:var(--surface-soft);color:var(--muted-strong);font-size:13px;line-height:1.7}
 .foundation-v1 .coming-soon-path{margin-top:28px;color:var(--muted);font-size:11px}
 .foundation-v1 .coming-soon-path code{padding:3px 6px;border-radius:5px;background:var(--surface-raised)}
+
+
+/* Route-specific information pages: usable layout for real content and honest placeholders */
+.foundation-v1 .feature-info-page { max-width: 900px; }
+.foundation-v1 .feature-info-page > h1 { max-width: 760px; }
+.foundation-v1 .feature-info-sections { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:22px 0; }
+.foundation-v1 .feature-info-section { min-width:0; padding:20px; border:1px solid var(--line); border-radius:14px; background:var(--surface, #fff); }
+.foundation-v1 .feature-info-section h2 { margin:0 0 9px; font-size:15px; line-height:1.35; color:var(--text); }
+.foundation-v1 .feature-info-section p { margin:0; color:var(--text-soft); font-size:13px; line-height:1.75; }
+.foundation-v1 .feature-info-page .coming-soon-status { margin-top:12px; }
+.foundation-v1 .feature-info-page .hero-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:22px; }
+.foundation-v1 .feature-info-page .secondary-link { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:9px 14px; border:1px solid var(--line); border-radius:999px; color:var(--text); text-decoration:none; font-size:12px; font-weight:700; }
+.foundation-v1 .feature-info-page .secondary-link:hover { border-color:var(--accent); color:var(--accent); }
+.foundation-v1 .feature-info-page a:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+@media(max-width:650px){.foundation-v1 .feature-info-sections{grid-template-columns:1fr}.foundation-v1 .feature-info-section{padding:16px}}
