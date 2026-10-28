@@ -7,6 +7,15 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 export default function HomePage() {
   const [counts, setCounts] = useState<{ sports?: CatalogueResult<Sport>; opportunities?: CatalogueResult<Opportunity>; venues?: CatalogueResult<Venue> }>({})
   const [reduceMotion, setReduceMotion] = useState(false)
+  const [activeHeroSlide, setActiveHeroSlide] = useState(0)
+  const [heroPaused, setHeroPaused] = useState(false)
+  const heroSlides = [
+    { name: 'Football', image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=75', position: 'center 54%' },
+    { name: 'Cricket', image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=1200&q=75', position: 'center 48%' },
+    { name: 'Athletics', image: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=1200&q=75', position: 'center 42%' },
+    { name: 'Basketball', image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1200&q=75', position: 'center 48%' },
+    { name: 'Badminton', image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1200&q=75', position: 'center 45%' },
+  ]
   useEffect(() => {
     let active = true
     Promise.all([getSports(), getOpportunities(), getVenues()]).then(([sports, opportunities, venues]) => {
@@ -21,6 +30,11 @@ export default function HomePage() {
     media.addEventListener('change', update)
     return () => media.removeEventListener('change', update)
   }, [])
+  useEffect(() => {
+    if (reduceMotion || heroPaused) return
+    const timer = window.setInterval(() => setActiveHeroSlide(current => (current + 1) % heroSlides.length), 3000)
+    return () => window.clearInterval(timer)
+  }, [reduceMotion, heroPaused, heroSlides.length])
   const countState = (value: CatalogueResult<unknown> | undefined) => {
     if (!value) return 'Loading catalogue…'
     if (value.status === 'unconfigured') return 'Not configured'
@@ -45,15 +59,34 @@ export default function HomePage() {
           <span><SiteIcon name="smartphone" size={15} /> Built for every screen</span>
         </div>
       </div>
-      <div className="home-hero-art home-hero-video" aria-label="Cinematic KhelGrid sports video">
-        <div className="home-hero-video-poster" aria-hidden="true" />
-        {!reduceMotion && <video className="home-hero-video-media" autoPlay muted loop playsInline preload="metadata" poster="/assets/hero/hero-poster.svg" aria-hidden="true">
-          <source src="/assets/hero/hero-loop.mp4" type="video/mp4" />
-        </video>}
-        <div className="home-hero-video-overlay" aria-hidden="true">
+      <div className="home-hero-art home-hero-carousel" aria-label="KhelGrid sports image carousel">
+        <div className="home-hero-slides" aria-live="off">
+          {heroSlides.map((slide, index) => (
+            <img
+              key={slide.name}
+              className={`home-hero-slide${index === activeHeroSlide ? ' is-active' : ''}`}
+              src={slide.image}
+              alt={index === activeHeroSlide ? `${slide.name} at KhelGrid` : ''}
+              aria-hidden={index !== activeHeroSlide}
+              loading={index === 0 ? 'eager' : 'lazy'}
+              fetchPriority={index === 0 ? 'high' : 'auto'}
+              decoding="async"
+              style={{ objectPosition: slide.position }}
+            />
+          ))}
+        </div>
+        <div className="home-hero-carousel-shade" aria-hidden="true" />
+        <div className="home-hero-carousel-caption">
           <span className="hero-athlete-kicker"><span className="status-dot" /> KHELGRID SPORTS UNIVERSE</span>
-          <strong>Discover.<br /><em>Compete. Grow.</em></strong>
+          <strong>{heroSlides[activeHeroSlide].name}</strong>
           <span className="hero-athlete-tagline">SPORTS · OPPORTUNITIES · VENUES</span>
+        </div>
+        <div className="home-hero-carousel-controls" aria-label="Hero carousel controls">
+          <button type="button" className="hero-carousel-toggle" onClick={() => setHeroPaused(value => !value)} aria-label={heroPaused ? 'Play image carousel' : 'Pause image carousel'}>{heroPaused ? 'Play' : 'Pause'}</button>
+          <div className="hero-carousel-dots" aria-label="Choose sports image">
+            {heroSlides.map((slide, index) => <button key={slide.name} type="button" className={index === activeHeroSlide ? 'is-active' : ''} onClick={() => setActiveHeroSlide(index)} aria-label={`Show ${slide.name} image`} aria-pressed={index === activeHeroSlide} />)}
+          </div>
+          <button type="button" className="hero-carousel-next" onClick={() => setActiveHeroSlide(current => (current + 1) % heroSlides.length)} aria-label="Show next sports image">Next →</button>
         </div>
       </div>
     </section>
