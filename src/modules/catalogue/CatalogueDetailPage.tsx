@@ -4,6 +4,7 @@ import type { CatalogueResult } from '../../integrations/supabase/public-client'
 import type { Opportunity, Sport, Venue } from '../../shared/domain'
 import { AsyncState } from '../../shared/components/AsyncState'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import './catalogue-detail.css'
 
 type Kind = 'sport' | 'opportunity' | 'venue'
 type RecordValue = Sport | Opportunity | Venue
