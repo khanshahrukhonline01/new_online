@@ -78,7 +78,7 @@ export default function SportsCvWizard() {
         </div>)}
         <button type="button" className="secondary-link cv-add-button" onClick={() => setCv(current => ({ ...current, achievements: [...current.achievements, { year: '', event: '', result: '' }].slice(0, 12) }))} disabled={cv.achievements.length >= 12}>+ Add achievement</button>
       </fieldset>
-      <div className="cv-actions no-print"><button type="submit" className="primary-link"><SiteIcon name="file-down" size={17} /> Preview &amp; save as PDF</button><button type="button" className="secondary-link" onClick={() => { setCv(initialCv); setSavedForPrint(false) }}>Clear form</button></div>
+      <div className="cv-actions no-print"><button type="submit" className="primary-link"><SiteIcon name="download" size={17} /> Preview &amp; save as PDF</button><button type="button" className="secondary-link" onClick={() => { setCv(initialCv); setSavedForPrint(false) }}>Clear form</button></div>
       {savedForPrint && <p className="cv-help no-print" role="status">Print dialog opened. Choose “Save as PDF”. The CV has not been uploaded or saved to KhelGrid.</p>}
     </form>
     <section className="cv-print-preview" aria-label="Athlete CV preview">
