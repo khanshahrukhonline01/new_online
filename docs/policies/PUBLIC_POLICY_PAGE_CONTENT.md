@@ -21,6 +21,14 @@ The requested source is the live KhelGrid website. The following URLs were check
 | Verification | https://www.khelgrid.com/verification-policy | `/verification-policy` | Dedicated page added | Prohibits broad verification claims absent evidence and review workflow. |
 | Corrections & Complaints | https://www.khelgrid.com/correction-policy | `/correction-policy` | Dedicated page added | No response-time promise until an owner and SLA are approved. |
 
+## Live-source findings that need owner confirmation
+
+Search-indexed live content was available for these two pages during the review:
+
+- [Live IPR & Copyright Policy](https://www.khelgrid.com/ipr-policy) contains specific ownership, user-content licence, anti-scraping, AI training opt-out, notice requirements, and a stated 36-hour takedown target. These are source-site claims, not independently verified legal conclusions. The development draft deliberately does not repeat a statutory SLA, intermediary classification, blanket ownership statement, or license grant as fact until the owner and counsel confirm the wording and operational capability.
+- [Live POSH & Athlete Safeguarding Policy](https://www.khelgrid.com/posh-policy) states that an Independent Complaints Committee exists, identifies `posh@khelgrid.com`, and describes statutory timelines and minor-safeguarding escalation. The development draft does not invent or promise an ICC or claim that the inbox is monitored. Confirm the committee’s actual existence, membership, jurisdiction, contact ownership, and applicable statutory obligations before replacing the live claims.
+- The live footer links to all nine canonical policy routes and a sitemap. Other live policy URLs were attempted but their full text was not reliably retrievable in this pass. The new development copy is therefore a cautious first draft, not a verified verbatim migration of every live page.
+
 ## Content principles
 
 - This is a clean-room rewrite, not a word-for-word reproduction of protected text.
