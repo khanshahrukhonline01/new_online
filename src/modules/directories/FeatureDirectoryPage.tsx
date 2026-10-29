@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import './feature-directory.css'
 
 type Kind = 'coaches' | 'academies' | 'events' | 'calendar'
 type Item = { id: string; slug: string; name?: string; display_name?: string; title?: string; bio?: string; description?: string; city?: string; state?: string; organizer_name?: string; event_type?: string; venue_name?: string; starts_at?: string; ends_at?: string; source_name?: string; source_url?: string }
