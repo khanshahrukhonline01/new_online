@@ -129,15 +129,15 @@ const policies: Record<string, PolicyDocument> = {
   '/verification-policy': {
     eyebrow: 'TRUST & SAFETY',
     title: 'Verification Policy',
-    summary: 'The live Trust Center explains source checks, organiser context, listing review and corrections. A verification label must describe the checks actually completed and must never be treated as a selection guarantee.',
+    summary: 'KhelGrid describes itself as a discovery and information service. This policy reflects the published Trust Center process: source check, organiser context, listing review, and updates or corrections. A verification label is not a selection or payment-safety guarantee.',
     status: 'Live-site content adapted',
     updatedLabel: 'Live-site source checked: October 2026',
     sections: [
-      { heading: '1. Source check', paragraphs: ['Where possible, review the organiser’s official website, federation notice, academy channel or registration page. Record the source used and when it was checked. If only a secondary report or social post is available, disclose that limitation rather than presenting it as official confirmation.'] },
-      { heading: '2. Organiser context', paragraphs: ['Separate organiser-provided information from KhelGrid editorial notes. A “verified” label should identify the scope of the check—such as source or contact confirmation—and the date or evidence behind it. Do not imply that every detail or every listing has been independently verified unless the review record supports that claim.'] },
-      { heading: '3. Listing review', paragraphs: ['Review visible basics when available: sport, organiser, date, venue, eligibility, fees and registration instructions. Missing or contradictory details should be marked uncertain, referred for clarification, or withheld from publication when the risk warrants it.'] },
-      { heading: '4. What verification does not mean', paragraphs: ['A label is not a promise that an event will occur as planned, that a venue is safe or available, that a coach is suitable, that a fee is refundable, or that an athlete will be selected. Confirm the latest official notice and never pay for a guaranteed-selection promise.'] },
-      { heading: '5. Updates and reports', paragraphs: ['When a date changes, an event expires or a report is received, review the available evidence and update, annotate, pause or remove the listing as appropriate. The process should retain an audit trail while limiting access to private reporter information.'] }
+      { heading: '1. Source check', paragraphs: ['We look for an official organiser website, federation notice, academy channel or registration page and record the source used for the listing. If only a secondary report or social post is available, that limitation should be made clear rather than presented as official confirmation.'] },
+      { heading: '2. Organiser context', paragraphs: ['We distinguish information supplied by an organiser from KhelGrid editorial notes. Where a listing is marked verified, the published Trust Center says the check includes organiser identity and contact details, a match against the relevant association calendar or official confirmation, and checking that payment is not being requested in exchange for selection. The label should only be used where the underlying review record supports those checks.'] },
+      { heading: '3. Listing review', paragraphs: ['We review visible basics when available, including sport, city, date, venue, eligibility, fee and registration instructions. Missing or contradictory details should be clarified or clearly marked uncertain; do not infer missing facts.'] },
+      { heading: '4. What verification does not mean', paragraphs: ['Verification is not a promise that an organiser will select an athlete, that an event will happen as planned, or that a payment is risk-free. Confirm the latest official notice, keep receipts, and never pay for guaranteed selection.'] },
+      { heading: '5. Updates and reports', paragraphs: ['If a date changes, an event expires or a report is received, review the claim and update, annotate or remove the listing as appropriate. Reports can include the listing title, problem, and official source or screenshot when possible.'] }
     ],
     contact: { label: 'Verification and safety reports', email: 'support@khelgrid.com' },
     related: [{ label: 'Trust Center', href: '/trust-center' }, { label: 'How to check a trial', href: '/verify' }, { label: 'Correction Policy', href: '/correction-policy' }]
@@ -145,7 +145,7 @@ const policies: Record<string, PolicyDocument> = {
   '/correction-policy': {
     eyebrow: 'TRUST & SAFETY',
     title: 'Correction Policy',
-    summary: 'KhelGrid welcomes reports from athletes, parents, organisers and coaches so sports information can be corrected without hiding uncertainty.',
+    summary: 'KhelGrid welcomes reports from athletes, parents, organisers and coaches so sports information can be corrected without hiding uncertainty. Reports are reviewed against available sources; they are not automatically treated as fact.',
     status: 'Live-site content adapted',
     updatedLabel: 'Live-site source checked: October 2026',
     sections: [
