@@ -4,8 +4,8 @@
 
 - Public visitors can INSERT listing suggestions into `public.listing_submissions` using only the approved submission columns.
 - Public visitors cannot SELECT, UPDATE, or DELETE queue records.
-- Moderation access is exposed only through `get_listing_submissions()` and `review_listing_submission(uuid,text,text)`, which require an authenticated user whose UUID is active in `public.listing_moderators`.
-- The allowlist table has RLS enabled and no public/authenticated table grants. Only trusted database operators using the Supabase Dashboard/service role should manage allowlist rows.
+- Moderation access is exposed through invoker-security RPCs `get_listing_submissions()` and `review_listing_submission(uuid,text,text)`, protected by RLS and an active authenticated-user allowlist. The RPCs do not use SECURITY DEFINER.
+- The allowlist table has RLS enabled. Authenticated users can read only their own membership row; anonymous users cannot read it, and no API role can insert/update/delete allowlist entries. Only trusted database operators using the Supabase Dashboard/service role should manage membership.
 - A moderator decision changes the intake status and review metadata only. It does not publish a catalogue record. Publishing must remain a separate verified step.
 
 ## Enable a moderator safely
