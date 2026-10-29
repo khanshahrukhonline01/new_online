@@ -12,7 +12,7 @@ export default function LiveScoresPage() {
     <h1>Live scores, when the feed is ready.</h1>
     <p className="page-intro">This match centre will show scores only after an authorised provider is configured, its permitted use is confirmed, and live responses are validated. There are no simulated matches on this page.</p>
     <div className="state-panel state-unavailable" role="status">
-      <div className="state-symbol"><SiteIcon name="radio-tower" size={18} /></div>
+      <div className="state-symbol"><SiteIcon name="activity" size={18} /></div>
       <h2>Live feeds are not connected</h2>
       <p>No current scores, fixtures or match states are available from KhelGrid’s configured production feed. This does not mean there are no matches taking place.</p>
     </div>
