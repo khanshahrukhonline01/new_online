@@ -7,6 +7,7 @@ import SearchPage from './modules/search/SearchPage'
 import FeatureComingSoonPage from './modules/coming-soon/FeatureComingSoonPage'
 import SportsCvWizard from './modules/sports-cv/SportsCvWizard'
 import CatalogueDetailPage from './modules/catalogue/CatalogueDetailPage'
+import FeatureDirectoryPage from './modules/directories/FeatureDirectoryPage'
 import Sidebar from './shared/components/Sidebar'
 import SportsBar from './shared/components/SportsBar'
 import { resolveRoute } from './shared/routing'
@@ -80,7 +81,14 @@ export default function App() {
     case 'venues-index': page = <VenuesPage />; break
     case 'venue-detail': page = <CatalogueDetailPage kind="venue" slug={match.slug} />; break
     case 'search': page = <SearchPage initialQuery={searchQuery} />; break
-    case 'feature': page = match.canonicalPath === '/sports-cv' ? <SportsCvWizard /> : <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />; break
+    case 'feature':
+      if (match.canonicalPath === '/sports-cv') page = <SportsCvWizard />
+      else if (match.canonicalPath === '/coaches') page = <FeatureDirectoryPage kind="coaches" />
+      else if (match.canonicalPath === '/academies') page = <FeatureDirectoryPage kind="academies" />
+      else if (match.canonicalPath === '/events') page = <FeatureDirectoryPage kind="events" />
+      else if (match.canonicalPath === '/calendar') page = <FeatureDirectoryPage kind="calendar" />
+      else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
+      break
     default:
       page = <section className="content-page"><p className="eyebrow">PAGE NOT AVAILABLE</p><h1>This page isn’t here yet.</h1><p className="page-intro">This route has not been implemented. Return to a published section to continue exploring.</p><a className="primary-link" href="/" onClick={event => navigate(event, '/')}>Back home <SiteIcon name="arrow-up-right" size={16} /></a></section>
   }
