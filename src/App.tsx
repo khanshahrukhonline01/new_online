@@ -10,6 +10,7 @@ import CatalogueDetailPage from './modules/catalogue/CatalogueDetailPage'
 import FeatureDirectoryPage from './modules/directories/FeatureDirectoryPage'
 import LiveScoresPage from './modules/live/LiveScoresPage'
 import ListingSubmissionPage from './modules/listings/ListingSubmissionPage'
+import PolicyPage from './modules/policies/PolicyPage'
 import Sidebar from './shared/components/Sidebar'
 import SportsBar from './shared/components/SportsBar'
 import { resolveRoute } from './shared/routing'
@@ -91,6 +92,7 @@ export default function App() {
       else if (match.canonicalPath === '/calendar') page = <FeatureDirectoryPage kind="calendar" />
       else if (match.canonicalPath === '/live') page = <LiveScoresPage />
       else if (match.canonicalPath === '/submit-listing') page = <ListingSubmissionPage />
+      else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
       break
     default:
@@ -222,18 +224,18 @@ export default function App() {
         </div>
       </section>
       <nav className="footer-policy-links" aria-label="Company, policies and legal">
-        <a href="https://www.khelgrid.com/about">About</a>
-        <a href="https://www.khelgrid.com/contact">Contact</a>
-        <a href="https://www.khelgrid.com/privacy">Privacy</a>
-        <a href="https://www.khelgrid.com/terms">Terms</a>
-        <a href="https://www.khelgrid.com/ipr-policy"><strong>IPR &amp; Copyright</strong></a>
-        <a href="https://www.khelgrid.com/cancellation-policy">Cancellation</a>
-        <a href="https://www.khelgrid.com/posh-policy">POSH Policy</a>
-        <a href="https://www.khelgrid.com/editorial-policy">Editorial</a>
-        <a href="https://www.khelgrid.com/verification-policy">Verification</a>
-        <a href="https://www.khelgrid.com/correction-policy">Corrections</a>
-        <a href="https://www.khelgrid.com/sitemap.xml">Sitemap</a>
-        <a href="https://www.khelgrid.com/privacy#cookie-settings">Privacy &amp; Cookie Settings</a>
+        <a href="/about" onClick={event => navigate(event, '/about')}>About</a>
+        <a href="/contact" onClick={event => navigate(event, '/contact')}>Contact</a>
+        <a href="/privacy" onClick={event => navigate(event, '/privacy')}>Privacy</a>
+        <a href="/terms" onClick={event => navigate(event, '/terms')}>Terms</a>
+        <a href="/ipr-policy" onClick={event => navigate(event, '/ipr-policy')}><strong>IPR &amp; Copyright</strong></a>
+        <a href="/cancellation-policy" onClick={event => navigate(event, '/cancellation-policy')}>Cancellation</a>
+        <a href="/posh-policy" onClick={event => navigate(event, '/posh-policy')}>POSH Policy</a>
+        <a href="/editorial-policy" onClick={event => navigate(event, '/editorial-policy')}>Editorial</a>
+        <a href="/verification-policy" onClick={event => navigate(event, '/verification-policy')}>Verification</a>
+        <a href="/correction-policy" onClick={event => navigate(event, '/correction-policy')}>Corrections</a>
+        <a href="https://www.khelgrid.com/sitemap.xml" target="_blank" rel="noopener noreferrer">Sitemap</a>
+        <a href="/cookies" onClick={event => navigate(event, '/cookies')}>Privacy &amp; Cookie Settings</a>
       </nav>
       <div className="footer-legal">
         <p>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</p>
