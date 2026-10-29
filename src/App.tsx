@@ -9,6 +9,7 @@ import SportsCvWizard from './modules/sports-cv/SportsCvWizard'
 import CatalogueDetailPage from './modules/catalogue/CatalogueDetailPage'
 import FeatureDirectoryPage from './modules/directories/FeatureDirectoryPage'
 import LiveScoresPage from './modules/live/LiveScoresPage'
+import ListingSubmissionPage from './modules/listings/ListingSubmissionPage'
 import Sidebar from './shared/components/Sidebar'
 import SportsBar from './shared/components/SportsBar'
 import { resolveRoute } from './shared/routing'
@@ -89,6 +90,7 @@ export default function App() {
       else if (match.canonicalPath === '/events') page = <FeatureDirectoryPage kind="events" />
       else if (match.canonicalPath === '/calendar') page = <FeatureDirectoryPage kind="calendar" />
       else if (match.canonicalPath === '/live') page = <LiveScoresPage />
+      else if (match.canonicalPath === '/submit-listing') page = <ListingSubmissionPage />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
       break
     default:
