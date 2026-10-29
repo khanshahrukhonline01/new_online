@@ -1,6 +1,6 @@
 import './policy-pages.css'
 
-type PolicySection = { heading: string; paragraphs: string[]; bullets?: string[] }
+type PolicySection = { heading: string; paragraphs?: string[]; bullets?: string[] }
 type PolicyDocument = {
   eyebrow: string
   title: string
@@ -181,9 +181,9 @@ const policies: Record<string, PolicyDocument> = {
     status: 'Live-site content adapted',
     updatedLabel: 'Live-site source checked: October 2026',
     sections: [
-      { heading: '1. Confirm the organiser', paragraphs: [], bullets: ['Find the event on an official federation, government, school/university, club or academy channel.', 'Contact the organiser using a number or email published on its official website, not only a number forwarded in a message.', 'Ask for written eligibility, age criteria, dates, venue, required documents and fee terms.'] },
-      { heading: '2. Review the academy or venue', paragraphs: [], bullets: ['Ask to observe a session before paying where practical.', 'Request a written fee structure separating coaching, boarding, kit and travel.', 'Ask for named coach qualifications and a competition calendar relevant to your age group.', 'Check safeguarding arrangements and who is responsible for minors.'] },
-      { heading: '3. Be alert to red flags', paragraphs: [], bullets: ['Guaranteed selection in exchange for money.', 'Pressure to pay immediately through a personal account or unofficial agent.', 'Requests for unnecessary identity documents or sensitive information.', 'Unclear venue, changing dates, no official notice, or refusal to provide written terms.'] },
+      { heading: '1. Confirm the organiser', bullets: ['Find the event on an official federation, government, school/university, club or academy channel.', 'Contact the organiser using a number or email published on its official website, not only a number forwarded in a message.', 'Ask for written eligibility, age criteria, dates, venue, required documents and fee terms.'] },
+      { heading: '2. Review the academy or venue', bullets: ['Ask to observe a session before paying where practical.', 'Request a written fee structure separating coaching, boarding, kit and travel.', 'Ask for named coach qualifications and a competition calendar relevant to your age group.', 'Check safeguarding arrangements and who is responsible for minors.'] },
+      { heading: '3. Be alert to red flags', bullets: ['Guaranteed selection in exchange for money.', 'Pressure to pay immediately through a personal account or unofficial agent.', 'Requests for unnecessary identity documents or sensitive information.', 'Unclear venue, changing dates, no official notice, or refusal to provide written terms.'] },
       { heading: '4. What KhelGrid verification means', paragraphs: ['A verification label should describe checks on the source, organiser context and visible listing details. It is not a prediction of selection, a guarantee that an event will occur, or a promise that payment is risk-free. An unverified listing is not automatically fake; it means you should assess the evidence carefully.'] },
       { heading: '5. Report a concern', paragraphs: ['Send the listing link, concern and supporting source or screenshot. For suspected fraud, unsafe instructions, impersonation or unofficial payment demands, contact the support address below. If someone is in immediate danger, contact local emergency services.'] }
     ],

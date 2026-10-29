@@ -139,3 +139,8 @@ Create route and content requirements for each page:
 9. Complete legal review before public launch.
 
 **Not included in this document:** creating new social accounts, enabling advertising or analytics, adding social tracking, changing the database, or deploying production changes.
+
+
+## Implementation note — 2026-10-29
+
+The development app now has dedicated policy page content and internal footer links in PR branch `feature/policy-pages-live-parity`. The `/cookies` route is explanatory only; no consent UI, storage, or consent enforcement is claimed. Policy wording is draft and must be reconciled with live site content, actual data flows, and owner/legal review before production publication. See [Public Policy Page Content and Live-Site Parity](policies/PUBLIC_POLICY_PAGE_CONTENT.md).
