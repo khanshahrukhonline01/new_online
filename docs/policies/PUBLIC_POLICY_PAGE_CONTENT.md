@@ -62,3 +62,16 @@ Search-indexed live content was available for these two pages during the review:
 ## Change log
 
 - 2026-10-29: Initial dedicated policy page content and navigation specification added.
+
+
+## Post-merge accuracy follow-up — 2026-10-29
+
+The initial policy-pages PR was merged, but merge completion did not mean that all policy copy was final or that the public routes had been validated against the live site. A follow-up branch, `fix/policy-page-live-source-parity`, corrects the Verification Policy and Correction Policy against the current public source pages:
+
+- Trust Center / verification process: https://www.khelgrid.com/trust-center
+- Correction Policy: https://www.khelgrid.com/correction-policy
+- Contact routing: https://www.khelgrid.com/contact
+
+The follow-up clarifies that verification covers the scope of checks described by the Trust Center and does not guarantee selection, event delivery, or payment safety. Correction reports are reviewed against source evidence, safety reports are prioritized, and the public support address is `support@khelgrid.com`.
+
+**Still not complete:** the Privacy Policy must be reconciled with actual hosting/Supabase/analytics/advertising data flows; Cookie Settings must not be presented as an implemented consent manager unless one exists; Terms and IPR/POSH text require owner and qualified legal review; POSH committee details and monitoring arrangements must be confirmed before they are represented as operational. The live site's legal claims are source material, not independent proof of legal compliance. Do not remove draft/review caveats until those checks are complete.

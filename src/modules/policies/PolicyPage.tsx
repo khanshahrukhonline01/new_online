@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import './policy-page.css'
 
@@ -71,14 +72,14 @@ const links = [
  ['/privacy','Privacy Policy'],['/terms','Terms of Use'],['/cookies','Cookie Policy'],['/ipr-policy','IPR & Copyright'],['/cancellation-policy','Cancellation & Refunds'],['/posh-policy','POSH & Safeguarding'],['/editorial-policy','Editorial & Sources'],['/verification-policy','Verification'],['/correction-policy','Corrections & Complaints']
 ] as const
 
-export default function PolicyPage({ path }: { path: string }) {
+export default function PolicyPage({ path, onNavigate }: { path: string; onNavigate: (event: MouseEvent<HTMLAnchorElement>, target: string) => void }) {
  const policy = policies[path]
- if (!policy) return <main className="policy-page"><p className="eyebrow">POLICY</p><h1>Policy not found</h1><a href="/">Return home</a></main>
+ if (!policy) return <main className="policy-page"><p className="eyebrow">POLICY</p><h1>Policy not found</h1><a href="/" onClick={event => onNavigate(event, '/')}>Return home</a></main>
  return <main className="policy-page">
   <p className="eyebrow">{policy.eyebrow}</p><h1>{policy.title}</h1><p className="policy-summary">{policy.summary}</p>
   <div className="policy-status"><SiteIcon name="info" size={18}/><div><strong>{policy.status}</strong><p>Document date: {policy.reviewed}. This development copy is not a statement that legal review or an operational process is complete.</p></div></div>
-  <nav className="policy-index" aria-label="Policy pages"><strong>Policy directory</strong>{links.map(([href,label])=><a key={href} href={href} aria-current={href===path?'page':undefined}>{label}</a>)}</nav>
+  <nav className="policy-index" aria-label="Policy pages"><strong>Policy directory</strong>{links.map(([href,label])=><a key={href} href={href} onClick={event => onNavigate(event, href)} aria-current={href===path?'page':undefined}>{label}</a>)}</nav>
   <div className="policy-sections">{policy.sections.map(section=><section key={section.title}><h2>{section.title}</h2>{section.paragraphs.map((p,i)=><p key={i}>{p}</p>)}{section.bullets?.length?<ul>{section.bullets.map(item=><li key={item}>{item}</li>)}</ul>:null}</section>)}</div>
-  <div className="policy-contact"><h2>Related links and contact</h2><p>Read the <a href="/about">About KhelGrid</a> page or visit <a href="/contact">Contact KhelGrid</a>. For general enquiries, email <a href="mailto:khelgrid@gmail.com">khelgrid@gmail.com</a>; for IPR reports, email <a href="mailto:ipr@khelgrid.com">ipr@khelgrid.com</a>.</p></div>
+  <div className="policy-contact"><h2>Related links and contact</h2><p>Read the <a href="/about" onClick={event => onNavigate(event, '/about')}>About KhelGrid</a> page or visit <a href="/contact" onClick={event => onNavigate(event, '/contact')}>Contact KhelGrid</a>. For general enquiries, email <a href="mailto:khelgrid@gmail.com">khelgrid@gmail.com</a>; for IPR reports, email <a href="mailto:ipr@khelgrid.com">ipr@khelgrid.com</a>.</p></div>
  </main>
 }
