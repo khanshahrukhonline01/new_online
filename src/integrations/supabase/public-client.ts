@@ -121,7 +121,12 @@ export async function submitListingSuggestion(
     return { status: 'unavailable', message: 'The submission service must use HTTPS.' }
   }
 
-  const sourceUrl = new URL(input.source_url)
+  let sourceUrl: URL
+  try {
+    sourceUrl = new URL(input.source_url)
+  } catch {
+    return { status: 'unavailable', message: 'Please provide a valid official HTTPS source link.' }
+  }
   if (sourceUrl.protocol !== 'https:') {
     return { status: 'unavailable', message: 'Please provide an official HTTPS source link.' }
   }
