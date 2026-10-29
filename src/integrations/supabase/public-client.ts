@@ -88,3 +88,75 @@ export function getVenues() {
     filters: { publication_status: 'eq.published' },
   })
 }
+
+export type ListingSubmissionInput = {
+  listing_type: 'opportunity' | 'venue' | 'coach' | 'academy' | 'event'
+  title: string
+  city?: string
+  source_url: string
+  details?: string
+}
+
+export type ListingSubmissionResult =
+  | { status: 'submitted' }
+  | { status: 'unconfigured' }
+  | { status: 'unavailable'; message: string }
+
+/**
+ * Creates a private moderation-queue item. The database grants public roles
+ * INSERT on user-supplied columns only; status and review metadata are server-controlled.
+ */
+export async function submitListingSuggestion(
+  input: ListingSubmissionInput,
+): Promise<ListingSubmissionResult> {
+  if (!supabaseUrl || !anonKey) return { status: 'unconfigured' }
+
+  let baseUrl: URL
+  try {
+    baseUrl = new URL(supabaseUrl)
+  } catch {
+    return { status: 'unavailable', message: 'The submission service is not configured correctly.' }
+  }
+  if (baseUrl.protocol !== 'https:' && baseUrl.hostname !== 'localhost' && baseUrl.hostname !== '127.0.0.1') {
+    return { status: 'unavailable', message: 'The submission service must use HTTPS.' }
+  }
+
+  const sourceUrl = new URL(input.source_url)
+  if (sourceUrl.protocol !== 'https:') {
+    return { status: 'unavailable', message: 'Please provide an official HTTPS source link.' }
+  }
+
+  try {
+    const response = await fetch(
+      `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/listing_submissions`,
+      {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Prefer: 'return=minimal',
+        },
+        body: JSON.stringify({
+          listing_type: input.listing_type,
+          title: input.title.trim(),
+          city: input.city?.trim() || null,
+          source_url: sourceUrl.href,
+          details: input.details?.trim() || null,
+        }),
+      },
+    )
+    if (!response.ok) {
+      return {
+        status: 'unavailable',
+        message: response.status === 404
+          ? 'The submission queue is not installed in this database yet.'
+          : 'We could not submit this suggestion. Please try again later.',
+      }
+    }
+    return { status: 'submitted' }
+  } catch {
+    return { status: 'unavailable', message: 'Could not connect to the submission service. Check your connection and try again.' }
+  }
+}
