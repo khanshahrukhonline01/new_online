@@ -1,6 +1,6 @@
 import './policy-pages.css'
 
-type PolicySection = { heading: string; paragraphs: string[]; bullets?: string[] }
+type PolicySection = { heading: string; paragraphs?: string[]; bullets?: string[] }
 type PolicyDocument = {
   eyebrow: string
   title: string
@@ -206,7 +206,7 @@ export default function PolicyPages({ path }: { path: string }) {
     </div>
     {policy.status !== 'Live-site content adapted' ? <aside className="policy-review-note"><strong>Review notice</strong><p>This page is a responsible draft for the development project, not a representation that legal counsel has approved it or that every described process is operational. Confirm facts, contacts, data flows and applicability before publishing it as final policy.</p></aside> : null}
     <div className="policy-sections">
-      {policy.sections.map((section, index) => <section className="policy-section" key={section.heading}>
+      {policy.sections.map(section => <section className="policy-section" key={section.heading}>
         <h2>{section.heading}</h2>
         {section.paragraphs?.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
         {section.bullets ? <ul>{section.bullets.map(item => <li key={item}>{item}</li>)}</ul> : null}
