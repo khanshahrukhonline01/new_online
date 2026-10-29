@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 
 type Kind = 'coaches' | 'academies' | 'events' | 'calendar'
@@ -10,6 +10,7 @@ const config: Record<Kind, { title: string; eyebrow: string; intro: string; tabl
  events: { title: 'Events & tournaments', eyebrow: 'SPORTS EVENTS', intro: 'Discover published events with dates and source links where available. Verify changes with the organiser.', table: 'events', select: 'id,slug,title,event_type,organizer_name,city,venue_name,starts_at,ends_at,source_name,source_url,publication_status', order: 'starts_at.asc.nullslast' },
  calendar: { title: 'Sports calendar', eyebrow: 'SPORTS CALENDAR', intro: 'Filter published events by date. Dates are displayed in your browser’s local timezone; confirm changes with the organiser.', table: 'events', select: 'id,slug,title,event_type,organizer_name,city,venue_name,starts_at,ends_at,source_name,source_url,publication_status', order: 'starts_at.asc.nullslast' },
 }
+function isSafeExternalUrl(value: string) { try { const url = new URL(value); return url.protocol === 'https:' || url.protocol === 'http:' } catch { return false } }
 function formatDate(value?: string) { if (!value) return 'Date not provided'; const date = new Date(value); return Number.isNaN(date.getTime()) ? 'Date not provided' : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date) }
 
 export default function FeatureDirectoryPage({ kind }: { kind: Kind }) {
@@ -21,7 +22,7 @@ export default function FeatureDirectoryPage({ kind }: { kind: Kind }) {
  const [query, setQuery] = useState('')
  const [fromDate, setFromDate] = useState('')
  const [toDate, setToDate] = useState('')
- async function load() {
+ const load = useCallback(async () => {
   setStatus('loading')
   const url = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -34,8 +35,8 @@ export default function FeatureDirectoryPage({ kind }: { kind: Kind }) {
    if (!Array.isArray(data)) { setMessage('The directory returned an unexpected response.'); setStatus('unavailable'); return }
    setRecords(data as Item[]); setStatus('ready')
   } catch { setMessage('Could not connect to the directory. Check your connection and try again.'); setStatus('unavailable') }
- }
- useEffect(() => { void load() }, [kind])
+ }, [page])
+ useEffect(() => { void load() }, [load])
  const cities = useMemo(() => [...new Set(records.map(r => r.city?.trim()).filter((v): v is string => Boolean(v)))].sort((a,b) => a.localeCompare(b)), [records])
  const visible = useMemo(() => records.filter(r => {
   const name = r.display_name ?? r.name ?? r.title ?? ''
@@ -65,7 +66,7 @@ export default function FeatureDirectoryPage({ kind }: { kind: Kind }) {
     {(r.city || r.state) && <p>{[r.city,r.state].filter(Boolean).join(', ')}</p>}{(r.bio || r.description) && <p>{r.bio ?? r.description}</p>}
     {(kind === 'events' || kind === 'calendar') && <p><strong>Starts:</strong> {formatDate(r.starts_at)}{r.ends_at ? ' · Ends: ' + formatDate(r.ends_at) : ''}</p>}
     {r.organizer_name && <p><strong>Organiser:</strong> {r.organizer_name}</p>}{r.venue_name && <p><strong>Venue:</strong> {r.venue_name}</p>}{r.source_name && <p><strong>Source:</strong> {r.source_name}</p>}
-    {r.source_url && <a className="card-action" href={r.source_url} target="_blank" rel="noreferrer">Open organiser source <SiteIcon name="arrow-up-right" size={14} /></a>}
+    {r.source_url && isSafeExternalUrl(r.source_url) && <a className="card-action" href={r.source_url} target="_blank" rel="noopener noreferrer">Open organiser source <SiteIcon name="arrow-up-right" size={14} /></a>}
    </article>
   })}</div>}
   <p className="coming-soon-note">Publication does not mean independent verification. Confirm source, dates, fees, eligibility and availability with the organiser.</p>
