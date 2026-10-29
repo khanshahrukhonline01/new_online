@@ -81,7 +81,11 @@ These routes are registered as informational/draft foundations. Their existence 
 | Verification | `/verification-policy` | `/verification`, Trust Center | Define exactly what is checked and what a badge means. |
 | Corrections | `/correction-policy` | Listing pages, Trust Center, contact | Define intake, review, response and correction practices. |
 
-## 4. URL aliases and canonicalization
+## 4. Policy/legal routes and cross-links
+
+All nine policy routes are dispatched to the dedicated `PolicyPage` module in `src/modules/policies/PolicyPage.tsx` rather than the generic coming-soon page: `/privacy`, `/terms`, `/cookies`, `/ipr-policy`, `/cancellation-policy`, `/posh-policy`, `/editorial-policy`, `/verification-policy`, and `/correction-policy`. Each policy page links to the policy directory plus About and Contact; the footer links to the canonical internal policy paths. `/cookies` is an explanatory policy page, not a working consent manager. Public text remains in review pending owner/legal approval and comparison with the live policy content. See [Public Policy Page Content and Live-Site Parity](../policies/PUBLIC_POLICY_PAGE_CONTENT.md).
+
+## 5. URL aliases and canonicalization
 
 | Incoming route | Resolves to | Rule |
 |---|---|---|
@@ -94,7 +98,7 @@ These routes are registered as informational/draft foundations. Their existence 
 
 The current client router resolves aliases to a shared page but does not by itself guarantee an HTTP redirect or canonical metadata. Add/verify redirect and SEO canonical behavior separately if required.
 
-## 5. Page-to-page relationship map
+## 6. Page-to-page relationship map
 
 ```mermaid
 flowchart TD
@@ -138,7 +142,7 @@ flowchart TD
 
 **Interpretation:** This diagram describes intended user journeys and cross-links, not proof every arrow is currently rendered as a clickable link. The shared header search, sidebar, sports bar, footer navigation and quick-access/product sections are global navigation surfaces. Keep these surfaces pointed at the same canonical route and avoid building duplicate pages for the same data.
 
-## 6. Data and workflow boundaries
+## 7. Data and workflow boundaries
 
 | Page family | Source of truth | Safe behavior when unavailable | Do not claim |
 |---|---|---|---|
@@ -151,7 +155,7 @@ flowchart TD
 | Pricing/referrals | Approved pricing configuration and actual billing/referral service | Clearly state unavailable or enquiry-only | Successful payment, paid entitlements or referral rewards |
 | Policy pages | Reviewed content that matches actual operations | Clearly mark draft/review-required content | Legal compliance or a staffed process without evidence |
 
-## 7. Shared navigation and expected links
+## 8. Shared navigation and expected links
 
 | Surface | Expected role | Rules |
 |---|---|---|
@@ -165,7 +169,7 @@ flowchart TD
 | Footer company/policy | About, contact and policy routes | Use internal routes consistently where available; external links must be intentional. |
 | CTA links | Listing/contact/pricing pathways | Make clear whether the CTA opens email, navigates to a page, or starts a real transaction. |
 
-## 8. Route inventory maintenance checklist
+## 9. Route inventory maintenance checklist
 
 When adding, renaming or removing a page:
 
@@ -180,7 +184,7 @@ When adding, renaming or removing a page:
 9. Mark actual deployment and database migration status separately; never infer either from a successful CI run.
 10. Ensure new records enter through reusable database/data-ingestion workflows rather than hard-coded one-off cards.
 
-## 9. Known exclusions and follow-up
+## 10. Known exclusions and follow-up
 
 This document covers routes registered in the current app plus policy aliases documented in the repository. It does not claim that every planned subroute in the broader catalogue is implemented. Planned future subroutes such as booking checkout/status, admin moderation, coach/academy/event detail routes, scout workspaces, content admin, and richer account flows must remain marked planned until route code, authorization, data contracts, tests and operating processes exist.
 
