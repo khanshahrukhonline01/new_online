@@ -19,7 +19,7 @@ describe('platform route coverage', () => {
   )
 
   it.each([
-    '/sports-cv', '/stats', '/talent-scanner', '/scout-portal', '/verification',
+    '/sports-cv', '/submit-listing', '/stats', '/talent-scanner', '/scout-portal', '/verification',
     '/live', '/play', '/coaches', '/academies', '/events', '/calendar',
     '/learning', '/guides', '/ai-guide', '/khelchronicle', '/community', '/tools',
     '/dashboard', '/profile', '/my-profile', '/saved', '/settings', '/notifications',

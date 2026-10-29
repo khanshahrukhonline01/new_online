@@ -28,7 +28,7 @@ const featurePages: Record<string, string> = {
   '/settings': 'Account Settings', '/notifications': 'Notifications', '/login': 'Login',
   '/signup': 'Create Account', '/forgot-password': 'Password Recovery', '/book': 'Venue Booking',
   '/profile': 'Athlete Profile', '/my-profile': 'My Profile', '/saved': 'Saved Items',
-  '/referrals': 'Referrals', '/help': 'Help & Support',
+  '/referrals': 'Referrals', '/help': 'Help & Support', '/submit-listing': 'Suggest a Listing',
 }
 
 function normalizePath(pathname: string): string {
