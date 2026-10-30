@@ -8,16 +8,20 @@ import {
   getVenues,
 } from '../../integrations/supabase/public-client'
 import type { CatalogueResult } from '../../integrations/supabase/public-client'
+import { getChroniclePapers } from '../../integrations/supabase/chronicle-client'
+import type { ChronicleCatalogueResult } from '../../integrations/supabase/chronicle-client'
+import type { ResearchPaper } from '../khelchronicle/data/khelchronicleData'
 import type { Academy, Coach, EventItem, Opportunity, Sport, Venue } from '../../shared/domain'
 import { AsyncState } from '../../shared/components/AsyncState'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
 
 type SearchRecord = {
-  type: 'Sport' | 'Opportunity' | 'Venue' | 'Academy' | 'Coach' | 'Event'
+  type: 'Sport' | 'Opportunity' | 'Venue' | 'Academy' | 'Coach' | 'Event' | 'Research'
   title: string
   detail: string
   href: string
+  keywords?: string[]
 }
 
 export default function SearchPage({ initialQuery = '' }: { initialQuery?: string }) {
@@ -60,6 +64,12 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
     status: 'loading',
     data: [],
   })
+  const [chroniclePapers, setChroniclePapers] = useState<
+    ChronicleCatalogueResult<ResearchPaper[]> | { status: 'loading'; data: [] }
+  >({
+    status: 'loading',
+    data: [],
+  })
 
   useEffect(() => {
     let active = true
@@ -70,7 +80,8 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
       getAcademies(),
       getCoaches(),
       getEvents(),
-    ]).then(([s, o, v, a, c, e]) => {
+      getChroniclePapers(),
+    ]).then(([s, o, v, a, c, e, cp]) => {
       if (active) {
         setSports(s)
         setOpportunities(o)
@@ -78,6 +89,7 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
         setAcademies(a)
         setCoaches(c)
         setEvents(e)
+        setChroniclePapers(cp)
       }
     })
     return () => {
@@ -135,19 +147,34 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
             href: `/events?q=${encodeURIComponent(item.title)}`,
           }))
         : []),
+      ...(chroniclePapers.status === 'ready'
+        ? chroniclePapers.data.map(p => ({
+            type: 'Research' as const,
+            title: p.title,
+            detail: `${p.categoryName || p.category} · ${p.authors.map(a => a.name).join(', ')} · ${p.paperId}`,
+            href: `/khelchronicle/${encodeURIComponent(p.slug)}`,
+            keywords: [
+              p.paperId,
+              p.category,
+              p.categoryName || '',
+              ...(p.keywords || []),
+              ...(p.abstract ? [p.abstract.results, p.abstract.background, p.abstract.methods, p.abstract.conclusion] : []),
+            ],
+          }))
+        : []),
     ],
-    [sports, opportunities, venues, academies, coaches, events],
+    [sports, opportunities, venues, academies, coaches, events, chroniclePapers],
   )
 
-  const ready = [sports, opportunities, venues, academies, coaches, events].some(result => result.status === 'ready')
-  const pending = [sports, opportunities, venues, academies, coaches, events].some(result => result.status === 'loading')
+  const ready = [sports, opportunities, venues, academies, coaches, events, chroniclePapers].some(result => result.status === 'ready')
+  const pending = [sports, opportunities, venues, academies, coaches, events, chroniclePapers].some(result => result.status === 'loading')
 
   const q = query.trim().toLocaleLowerCase()
   const results = useMemo(
     () =>
       records
         .filter(item => {
-          const text = `${item.title} ${item.detail} ${item.type}`.toLocaleLowerCase()
+          const text = `${item.title} ${item.detail} ${item.type} ${item.keywords ? item.keywords.join(' ') : ''}`.toLocaleLowerCase()
           if (q && !text.includes(q)) return false
           if (filterSport && !text.includes(filterSport)) return false
           if (filterCity && !text.includes(filterCity)) return false
@@ -174,9 +201,9 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
       label: 'Content type',
       value: category,
       onChange: setCategory,
-      options: ['Sport', 'Opportunity', 'Venue', 'Academy', 'Coach', 'Event'].map(value => ({
+      options: ['Sport', 'Opportunity', 'Venue', 'Academy', 'Coach', 'Event', 'Research'].map(value => ({
         value: value.toLocaleLowerCase(),
-        label: value,
+        label: value === 'Research' ? 'Research (KhelChronicle)' : value,
       })),
     },
   ]
@@ -188,7 +215,7 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
       <p className="eyebrow">DISCOVER</p>
       <h1>Search KhelGrid.</h1>
       <p className="page-intro">
-        Search published sports, opportunities, venues, academies, coaches and events. Results come from the connected
+        Search published sports, opportunities, venues, academies, coaches, events and sports science research preprints. Results come from the connected
         catalogue, not sample listings.
       </p>
       <div className="kg-catalogue-layout kg-no-filter-fields">

@@ -16,6 +16,7 @@ function isActive(item: NavigationItem, activePath: string) {
   if (item.href === '/') return activePath === '/'
   if (item.href === '/opportunities') return ['/opportunities', '/trials', '/combines', '/scholarships', '/camps'].includes(activePath) || activePath.startsWith('/opportunities/')
   if (item.href === '/venues') return activePath === '/venues' || activePath === '/book' || activePath.startsWith('/venues/')
+  if (item.href === '/khelchronicle') return activePath.startsWith('/khelchronicle') || activePath.startsWith('/chronicle')
   return activePath === item.href || activePath.startsWith(item.href + '/')
 }
 
