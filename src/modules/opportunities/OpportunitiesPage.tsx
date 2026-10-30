@@ -40,8 +40,8 @@ export default function OpportunitiesPage() {
     { key: 'city', label: 'City', value: city, onChange: setCity, options: cities.map(value => ({ value, label: value })) },
     { key: 'type', label: 'Opportunity type', value: type, onChange: setType, options: ['trial','combine','scholarship','camp','job','other'].map(value => ({ value, label: value[0].toUpperCase()+value.slice(1) })) },
     { key: 'status', label: 'Source status', value: verification, onChange: setVerification, options: ['verified','pending_review','unverified'].map(value => ({ value, label: value.replace('_',' ') })) },
-    { key: 'from', label: 'Start date from', value: fromDate, onChange: setFromDate, options: [] },
-    { key: 'to', label: 'Start date to', value: toDate, onChange: setToDate, options: [] },
+    { key: 'from', label: 'Start date from', value: fromDate, onChange: setFromDate, options: [], inputType: 'date' as const },
+    { key: 'to', label: 'Start date to', value: toDate, onChange: setToDate, options: [], inputType: 'date' as const },
   ]
   return <section className="content-page"><p className="eyebrow">TRIALS · SELECTIONS · PROGRAMMES</p><h1>Your next opportunity.</h1><p className="page-intro">Published opportunities only. Check the source and organizer details before applying.</p>
     {result.status === 'ready' && <div className="kg-catalogue-layout"><CatalogueFilterPanel search={query} onSearch={setQuery} searchPlaceholder="Title, organiser, city…" fields={fields} onClear={() => { setQuery(''); setCity(''); setType(''); setVerification(''); setFromDate(''); setToDate('') }} /><div className="kg-catalogue-results"><div className="kg-results-toolbar"><span>Browse published opportunities</span><label>Sort by <select value={sort} onChange={e => setSort(e.target.value)}><option value="newest">Newest first</option><option value="oldest">Date: oldest first</option><option value="deadline">Deadline soonest</option></select></label></div>}
