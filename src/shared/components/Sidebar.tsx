@@ -42,9 +42,30 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false 
 export default function Sidebar({ activePath, onNavigate, open, onClose, toggleRef, collapsed }: SidebarProps) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => ({
     core: true, play: true, athlete: false, knowledge: false, network: false,
-  })
+  }))
+
+  // Persist section preferences while always revealing the active route's group.
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem('khelgrid-sidebar-sections-v1')
+      if (saved) {
+        const parsed = JSON.parse(saved) as Record<string, boolean>
+        setExpandedSections(previous => ({ ...previous, ...parsed }))
+      }
+    } catch { /* Storage is optional; navigation remains usable. */ }
+  }, [])
+
+  useEffect(() => {
+    try { window.localStorage.setItem('khelgrid-sidebar-sections-v1', JSON.stringify(expandedSections)) }
+    catch { /* Storage is optional; keep in-memory state. */ }
+  }, [expandedSections])
+
+  useEffect(() => {
+    const activeModule = navigationModules.find(section => section.items.some(item => isActive(item, activePath)))
+    if (activeModule) setExpandedSections(previous => previous[activeModule.id] ? previous : { ...previous, [activeModule.id]: true })
+  }, [activePath])
 
   useEffect(() => {
     if (open) closeRef.current?.focus()
@@ -98,7 +119,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
     }
     return navigationModules.map(section => {
       const expanded = expandedSections[section.id] ?? false
-      return <section className="sidebar-module" key={section.id} aria-label={section.label}>
+      return <section className={expanded ? 'sidebar-module is-expanded' : 'sidebar-module'} key={section.id} aria-label={section.label}>
         <button className="sidebar-module-toggle" type="button" aria-expanded={expanded} aria-controls={`${mobile ? 'mobile-' : ''}nav-section-${section.id}`} onClick={() => setExpandedSections(previous => ({ ...previous, [section.id]: !expanded }))}>
           <span className="sidebar-module-heading-icon" aria-hidden="true"><SiteIcon name={section.icon} size={17} /></span><span className="sidebar-module-label">{section.label}</span>
           {!collapsed || mobile ? <SiteIcon name={expanded ? 'chevron-down' : 'chevron-right'} size={14} /> : null}
@@ -116,7 +137,9 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
       <nav className="sidebar-navigation" aria-label="Feature navigation">{renderSections()}</nav>
       {!collapsed ? <div className="sidebar-promo"><strong>Create your Sports CV</strong><p>Build a profile-ready CV and export it when you're ready.</p><span className="sidebar-coming-soon" aria-disabled="true">Sports CV tools · Coming soon</span></div> : null}
       <div className="sidebar-bottom">
+        <a className="sidebar-utility-link" href="/notifications" aria-label="Notifications" title="Notifications"><SiteIcon name="bell" size={18} /><span className="sidebar-utility-label">Notifications</span></a>
         <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback" title="Help and feedback"><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">Help &amp; feedback</span></a>
+        <a className="sidebar-utility-link sidebar-profile-link" href="/profile" aria-label="Your profile" title="Your profile"><SiteIcon name="user-round" size={18} /><span className="sidebar-utility-label">Profile</span></a>
         {!collapsed ? <span className="sidebar-bottom-note">KhelGrid · India</span> : null}
       </div>
     </aside>
