@@ -16,6 +16,7 @@ import SportsBar from './shared/components/SportsBar'
 import { resolveRoute } from './shared/routing'
 import { SiteIcon } from './shared/components/SiteIcon'
 import TopSportsComplexes from './shared/components/TopSportsComplexes'
+import GameSportPlayAcrossIndia from './shared/components/GameSportPlayAcrossIndia'
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
 
@@ -121,6 +122,7 @@ export default function App() {
     </div>
 
     <footer className="site-footer">
+      <GameSportPlayAcrossIndia onNavigate={navigate} />
       <TopSportsComplexes onNavigate={navigate} />
       <div className="footer-main">
         <div className="footer-about">

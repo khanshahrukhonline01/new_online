@@ -55,6 +55,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Smartphone,
+  Sparkles,
   Star,
   Target,
   Trash2,
@@ -79,7 +80,7 @@ export const siteIconNames = [
   'bookmark','heart','star','user','users','user-round','settings','help-circle','mail','phone',
   'globe','link','plus','minus','edit','trash','lock','unlock','eye','eye-off','bell','message',
   'play','pause','volume','image','camera','trophy','medal','target','activity','chart','building',
-  'wallet','credit-card','arrow-left','arrow-right','external','logout'
+  'wallet','credit-card','arrow-left','arrow-right','external','logout','sparkles'
 ] as const
 
 export type SiteIconName = typeof siteIconNames[number]
@@ -159,6 +160,7 @@ const icons: Record<SiteIconName, LucideIcon> = {
   'arrow-right': ArrowRight,
   external: ExternalLink,
   logout: LogOut,
+  sparkles: Sparkles,
 }
 
 type SiteIconProps = SVGProps<SVGSVGElement> & {
