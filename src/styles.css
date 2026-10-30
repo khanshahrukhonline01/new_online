@@ -639,10 +639,7 @@ independent of footer height. */
     width: auto !important;
     margin: 0 0 0 var(--kg-nav-width) !important;
     transition: margin-left 180ms ease;
-  }/* Collapsed rail: icon-only */{
-    display: none !important;
-  }
-}/* Sidebar layout correction: fixed viewport rail,
+  }}/* Sidebar layout correction: fixed viewport rail,
 independent of page/footer height.
    The header stays full width; content and footer reserve the same sidebar column. */
 @media (min-width: 701px){.foundation-v1 .site-header{
