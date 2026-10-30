@@ -1789,3 +1789,81 @@ body { color: var(--text); background: var(--page); }
     background: #f0f4f8;
   }
 }
+
+
+/* Expanded sidebar: give every feature-group heading a visible icon and compact hierarchy. */
+.foundation-v1 .app-sidebar:not(.is-collapsed) .sidebar-module {
+  margin: 8px 0 0;
+  padding: 8px 0 10px;
+  border-top: 1px solid #e8edf2;
+}
+.foundation-v1 .app-sidebar:not(.is-collapsed) .sidebar-module:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.foundation-v1 .app-sidebar:not(.is-collapsed) .sidebar-module-toggle {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 11px;
+  color: #52637a;
+  background: #f1f5f8;
+}
+.foundation-v1 .app-sidebar:not(.is-collapsed) .sidebar-module-toggle:hover {
+  color: #10233f;
+  background: #e9f1f5;
+}
+.foundation-v1 .app-sidebar:not(.is-collapsed) .sidebar-module-heading-icon {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  color: #087b45;
+  background: #e1f3e8;
+}
+.foundation-v1 .app-sidebar:not(.is-collapsed) .sidebar-module-heading-icon svg {
+  width: 17px;
+  height: 17px;
+}
+.foundation-v1 .app-sidebar:not(.is-collapsed) .sidebar-module-toggle .sidebar-module-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  color: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .055em;
+  line-height: 1.35;
+}
+.foundation-v1 .app-sidebar:not(.is-collapsed) .sidebar-module-toggle > svg:last-child {
+  flex: 0 0 auto;
+  color: #8492a4;
+}
+.foundation-v1 .app-sidebar:not(.is-collapsed) .sidebar-module > div {
+  padding: 5px 0 0 5px;
+}
+.foundation-v1 .app-sidebar:not(.is-collapsed) .sidebar-module .sidebar-link {
+  min-height: 40px;
+  margin: 2px 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+.foundation-v1 .app-sidebar:not(.is-collapsed) .sidebar-module .sidebar-link.is-active {
+  color: #075f35;
+  background: #e7f5ec;
+  box-shadow: inset 3px 0 #07964f;
+}
+.foundation-v1 .app-sidebar:not(.is-collapsed) .sidebar-module .sidebar-link:focus-visible {
+  outline: 2px solid #07964f;
+  outline-offset: 2px;
+}
+@media (min-width: 701px) {
+  .foundation-v1 .app-sidebar.is-collapsed .sidebar-module-heading-icon { display: none; }
+}
