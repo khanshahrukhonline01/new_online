@@ -9,7 +9,7 @@ import { CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPan
 
 export default function SportsPage() {
   const [result, setResult] = useState<CatalogueResult<Sport> | { status: 'loading'; data: [] }>({ status: 'loading', data: [] })
-  const initial = new URLSearchParams(window.location.search)
+  const initial = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
   const [query, setQuery] = useState(initial.get('q') ?? '')
   const [sort, setSort] = useState(initial.get('sort') ?? 'name')
   useEffect(() => { let active = true; getSports().then(value => { if (active) setResult(value) }); return () => { active = false } }, [])
