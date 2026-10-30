@@ -18,7 +18,10 @@
 
 /* Desktop shell integration: the rail is a permanent part of the app layout. */
 @media (min-width: 701px) {
+  /* Reserve the compact rail once. The sidebar is fixed and overlays content
+     when expanded; it never participates in the page's flex sizing. */
   .foundation-v1 .app-workspace {
+    position: relative;
     display: flex;
     flex: 1 1 auto;
     flex-direction: row;
@@ -26,23 +29,23 @@
     min-width: 0;
     min-height: calc(100vh - var(--kg-sidebar-header-offset));
     margin: 0;
-    padding-left: 0;
+    padding-left: var(--kg-sidebar-collapsed-width);
   }
 
   .foundation-v1 .app-workspace > .app-sidebar {
-    position: sticky;
-    top: 0;
+    position: fixed;
+    top: var(--kg-sidebar-header-offset);
+    bottom: 0;
+    left: 0;
     z-index: 30;
     display: flex;
-    flex: 0 0 var(--kg-sidebar-collapsed-width);
     flex-direction: column;
-    align-self: flex-start;
     box-sizing: border-box;
     width: var(--kg-sidebar-collapsed-width);
     min-width: var(--kg-sidebar-collapsed-width);
-    height: calc(100vh - var(--kg-sidebar-header-offset));
-    min-height: 360px;
-    max-height: calc(100vh - var(--kg-sidebar-header-offset));
+    height: auto;
+    min-height: 0;
+    max-height: none;
     margin: 0;
     padding: 12px 7px;
     overflow: hidden;
@@ -52,11 +55,11 @@
     background: var(--kg-sidebar-bg);
     color: var(--kg-sidebar-text);
     box-shadow: none;
-    transition: width 180ms ease, min-width 180ms ease, flex-basis 180ms ease, box-shadow 180ms ease;
+    transition: width 180ms ease, min-width 180ms ease, box-shadow 180ms ease;
   }
 
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover {
-    flex-basis: var(--kg-sidebar-expanded-width);
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within {
     width: var(--kg-sidebar-expanded-width);
     min-width: var(--kg-sidebar-expanded-width);
     padding-inline: 12px;
@@ -176,10 +179,13 @@
 
   /* Hover temporarily reveals the full navigation without pinning it open. */
   .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-rail-links,
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-rail-group {
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-rail-group,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-rail-links,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-rail-group {
     align-items: stretch;
   }
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-link {
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-link,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-link {
     justify-content: flex-start;
     width: 100%;
     min-width: 0;
@@ -187,13 +193,18 @@
     padding: 0 10px;
   }
   .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-link-label,
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-utility-label {
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-utility-label,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-link-label,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-utility-label {
     display: flex;
     white-space: nowrap;
   }
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-coming-soon { display: inline-flex; }
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-bottom { align-items: stretch; }
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-utility-link {
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-coming-soon,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-coming-soon { display: inline-flex; }
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-bottom,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-bottom { align-items: stretch; }
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-utility-link,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-utility-link {
     justify-content: flex-start;
     width: 100%;
     padding-inline: 10px;
@@ -207,16 +218,19 @@
     margin: 0;
     padding: 0 28px;
   }
-  .foundation-v1 .site-footer { width: 100%; margin: 0; }
+  .foundation-v1 .site-footer {
+    width: calc(100% - var(--kg-sidebar-collapsed-width));
+    margin: 0 0 0 var(--kg-sidebar-collapsed-width);
+  }
 }
 
 /* Expanded state selected by the menu button remains a normal full-width sidebar. */
 @media (min-width: 701px) {
   .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) {
-    flex-basis: var(--kg-sidebar-expanded-width);
     width: var(--kg-sidebar-expanded-width);
     min-width: var(--kg-sidebar-expanded-width);
     padding-inline: 12px;
+    box-shadow: 8px 0 24px rgb(16 35 63 / 9%);
   }
   .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-navigation { padding: 12px 0; }
   .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-module + .sidebar-module {
@@ -297,7 +311,7 @@
 /* Mobile drawer and bottom navigation remain independent of the desktop rail. */
 .mobile-drawer,.sidebar-backdrop,.mobile-bottom-nav { display: none; }
 @media (max-width: 700px) {
-  .foundation-v1 .app-workspace { display: block; min-height: calc(100vh - 70px); margin: 0; }
+  .foundation-v1 .app-workspace { display: block; min-height: calc(100vh - 70px); margin: 0; padding-left: 0; }
   .foundation-v1 .app-workspace > .app-sidebar { display: none; }
   .foundation-v1 .app-workspace > .page-shell { width: 100%; max-width: none; padding: 0 14px 86px; }
   .foundation-v1 .site-footer { margin: 0; }

@@ -90,3 +90,33 @@ describe('shared navigation route coverage', () => {
     expect(primaryNavigation.map(item => item.href)).toContain('/search')
   })
 })
+
+
+describe('permanent sidebar layout contract', () => {
+  it('starts in the compact icon-rail state without changing the page shell structure', () => {
+    const html = renderToStaticMarkup(<App />)
+    expect(html).toContain('class="app-shell foundation-v1 sidebar-is-collapsed"')
+    expect(html).toContain('id="app-sidebar" class="app-sidebar is-collapsed"')
+    expect(html).toContain('<main id="main-content" class="page-shell">')
+    expect(html).toContain('class="site-footer')
+    expect(html).toContain('aria-label="Toggle main navigation"')
+  })
+
+  it('keeps navigation destinations and utility actions available in the compact rail', () => {
+    const html = renderToStaticMarkup(<App />)
+    expect(html).toContain('href="/sports"')
+    expect(html).toContain('href="/opportunities"')
+    expect(html).toContain('href="/venues"')
+    expect(html).toContain('href="/search"')
+    expect(html).toContain('aria-label="Notifications"')
+    expect(html).toContain('aria-label="Help and feedback"')
+    expect(html).toContain('aria-label="Your profile"')
+  })
+
+  it('keeps mobile drawer markup separate from the permanent desktop rail', () => {
+    const html = renderToStaticMarkup(<App />)
+    expect(html).toContain('id="mobile-sidebar-drawer"')
+    expect(html).toContain('class="mobile-bottom-nav"')
+    expect(html).toContain('aria-label="Mobile navigation"')
+  })
+})

@@ -89,3 +89,17 @@ The footer links for IPR & Copyright, Cancellation, POSH, Editorial, Verificatio
 - `/correction-policy`
 
 These are explicitly marked as requiring review before launch. Their presence is not a claim that a formal legal, workplace, verification, editorial, refund, or correction workflow exists. Review the content with appropriate qualified advisers and align it with actual operating practices before relying on it publicly.
+
+
+## Permanent sidebar architecture and layout contract
+
+The desktop sidebar is a permanent 64px icon rail. Hovering or keyboard-focusing it temporarily reveals a 256px overlay; the page content and footer do not resize or shift. The fixed sidebar begins below the 68px site header. The footer reserves the same 64px column. At mobile widths, the desktop reservation is removed and the separate drawer plus bottom navigation are used.
+
+Code ownership:
+- `src/shared/components/Sidebar.tsx`: navigation rendering, route interaction, section state and mobile drawer behaviour.
+- `src/shared/components/Sidebar.css`: sidebar presentation, responsive rules and the 64px shell reservation/overlay.
+- `src/shared/navigation/navigationRegistry.ts`: navigation labels, groups, routes and availability.
+- `src/App.tsx`: app-level route composition and collapsed/mobile state; no sidebar visual styling.
+- `src/styles.css`: global styling only; do not add sidebar-specific overrides.
+
+When changing the sidebar, update its regression tests and architecture documentation in the same pull request. The sidebar suite lives with the app tests in `src/App.test.tsx` and protects the default compact state, route/utility links, desktop shell structure and separate mobile navigation. CI checks are necessary but manual preview verification is also required for hover, keyboard focus, pointer-leave collapse, navigation, scrolling and no content/footer shift.
