@@ -147,6 +147,11 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
       <div className="mobile-drawer-header"><button ref={closeRef} className="sidebar-mobile-close" type="button" onClick={() => { onClose(); toggleRef.current?.focus() }} aria-label="Close navigation"><SiteIcon name="close" size={20} /></button></div>
       <nav className="sidebar-navigation" aria-label="Mobile feature navigation">{renderSections(true)}</nav>
       <div className="sidebar-promo"><strong>Create your Sports CV</strong><p>Build a profile-ready CV and export it when you're ready.</p><span className="sidebar-coming-soon" aria-disabled="true">Sports CV tools · Coming soon</span></div>
+      <div className="sidebar-bottom">
+        <a className="sidebar-utility-link" href="/notifications" aria-label="Notifications"><SiteIcon name="bell" size={18} /><span className="sidebar-utility-label">Notifications</span></a>
+        <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback"><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">Help &amp; feedback</span></a>
+        <a className="sidebar-utility-link sidebar-profile-link" href="/profile" aria-label="Your profile"><SiteIcon name="user-round" size={18} /><span className="sidebar-utility-label">Profile</span></a>
+      </div>
     </div>
     <nav className="mobile-bottom-nav" aria-label="Quick navigation">
       {mobileItems.map(item => {
