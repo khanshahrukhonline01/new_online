@@ -6,7 +6,6 @@ import { liveSportsEngine } from '../live/services/liveSportsEngine'
 import type { SportsMatch } from '../live/types'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { createBannerSvg } from './homeSvgBanners'
-import { FEATURED_ACADEMIES } from './featuredAcademiesData'
 import './home.css'
 
 interface PickupGame {
@@ -139,6 +138,133 @@ const COMMUNITY_PICKUP_GAMES: PickupGame[] = [
   },
 ]
 
+interface FormattedHomeAcademy {
+  id: string
+  slug: string
+  name: string
+  est: string
+  scoutBadge: string
+  location: string
+  sports: string
+  category: string
+  trialsLink: string
+  cardLink: string
+  svgBanner: string
+}
+
+const FEATURED_PROMINENCE_KEYWORDS = [
+  'inspire institute of sport',
+  'tata football academy',
+  'pullela gopichand badminton',
+  'mary kom boxing',
+  'army sports institute',
+  'reliance foundation young champs',
+  'gun for glory',
+  'prakash padukone badminton',
+  'bengaluru fc residential',
+  'netaji subhas national institute',
+  'bhaichung bhutia football',
+  'roundglass sports academy',
+]
+
+function getAcademyPriority(a: Academy): number {
+  const n = a.name.toLowerCase()
+  for (let i = 0; i < FEATURED_PROMINENCE_KEYWORDS.length; i++) {
+    if (n.includes(FEATURED_PROMINENCE_KEYWORDS[i])) return 100 - i
+  }
+  const d = (a.description || '').toLowerCase()
+  if (d.includes('olympic') || d.includes('khelo india accredited')) return 50
+  if (d.includes('center of excellence') || d.includes('ncoe')) return 40
+  return 10
+}
+
+function parseHomeAcademy(a: Academy): FormattedHomeAcademy {
+  const desc = a.description || ''
+  const text = `${a.name} ${desc}`.toLowerCase()
+
+  let emoji = '🏛️'
+  let sportName = 'Multi-Sport'
+  let theme: 'emerald' | 'cyan' | 'amber' | 'navy' = 'navy'
+
+  if (text.includes('football')) {
+    emoji = '⚽'
+    sportName = 'Football'
+    theme = 'emerald'
+  } else if (text.includes('badminton')) {
+    emoji = '🏸'
+    sportName = 'Badminton'
+    theme = 'cyan'
+  } else if (text.includes('shooting')) {
+    emoji = '🎯'
+    sportName = 'Shooting'
+    theme = 'amber'
+  } else if (text.includes('cricket') || text.includes('bowling')) {
+    emoji = '🏏'
+    sportName = 'Cricket'
+    theme = 'amber'
+  } else if (text.includes('boxing')) {
+    emoji = '🥊'
+    sportName = 'Boxing'
+    theme = 'amber'
+  } else if (text.includes('archery')) {
+    emoji = '🏹'
+    sportName = 'Archery'
+    theme = 'emerald'
+  } else if (text.includes('athletics') || text.includes('track')) {
+    emoji = '🏃'
+    sportName = 'Athletics'
+    theme = 'navy'
+  } else if (text.includes('swimming') || text.includes('swim')) {
+    emoji = '🏊'
+    sportName = 'Swimming'
+    theme = 'cyan'
+  } else if (text.includes('rowing')) {
+    emoji = '🚣'
+    sportName = 'Rowing'
+    theme = 'cyan'
+  } else if (text.includes('tennis')) {
+    emoji = '🎾'
+    sportName = 'Tennis'
+    theme = 'emerald'
+  } else if (text.includes('wrestling')) {
+    emoji = '🤼'
+    sportName = 'Wrestling'
+    theme = 'navy'
+  } else if (text.includes('basketball')) {
+    emoji = '🏀'
+    sportName = 'Basketball'
+    theme = 'amber'
+  }
+
+  const yearMatch = desc.match(/\b(19\d{2}|20\d{2})\b/)
+  const est = yearMatch ? `Est. ${yearMatch[1]}` : 'Accredited'
+
+  const accredMatch = desc.match(/Accreditation:\s*([^.;\n]+)/i)
+  const scoutBadge = accredMatch ? accredMatch[1].trim().slice(0, 32) : 'Verified Academy'
+
+  let category = 'Sports Academy'
+  if (text.includes('ncoe') || text.includes('excellence')) category = 'Center of Excellence'
+  else if (text.includes('olympic')) category = 'Olympic Training Center'
+  else if (text.includes('khelo india')) category = 'Khelo India Accredited'
+  else if (text.includes('high performance')) category = 'High Performance Hub'
+
+  const location = `${a.city}${a.state ? `, ${a.state}` : ''}`
+
+  return {
+    id: a.id,
+    slug: a.slug,
+    name: a.name,
+    est,
+    scoutBadge,
+    location,
+    sports: `${emoji} ${sportName}`,
+    category,
+    trialsLink: `/opportunities?city=${encodeURIComponent(a.city)}`,
+    cardLink: `/academies?q=${encodeURIComponent(a.name)}`,
+    svgBanner: createBannerSvg(a.name, location, emoji, theme),
+  }
+}
+
 export default function HomePage() {
   const [counts, setCounts] = useState<{
     sports?: CatalogueResult<Sport>
@@ -226,31 +352,21 @@ export default function HomePage() {
     return () => window.clearInterval(timer)
   }, [reduceMotion, heroPaused, heroSlides.length])
 
-  // Display academies: 8 featured national institutions with rich vector pitch art, est years, and trials links + Supabase records
+  // Display academies: 12 dynamic institutions from Supabase database (zero hardcoding, remaining on /academies)
   const displayAcademies = useMemo(() => {
-    const list = [...FEATURED_ACADEMIES]
-    if (counts.academies?.status === 'ready') {
-      const featuredSlugs = new Set(FEATURED_ACADEMIES.map(a => a.slug))
-      const others = counts.academies.data
-        .filter(a => !featuredSlugs.has(a.slug))
-        .map(a => {
-          const estMatch = a.description?.match(/19\d\d|20\d\d/)
-          return {
-            id: a.id,
-            slug: a.slug,
-            name: a.name,
-            est: estMatch ? `Est. ${estMatch[0]}` : 'Accredited',
-            scoutBadge: 'Verified Academy',
-            location: `${a.city}${a.state ? `, ${a.state}` : ''}`,
-            sports: a.description?.slice(0, 48) || 'Multi-Sport Training Center',
-            category: 'Accredited Sports Center',
-            trialsLink: `/opportunities?city=${encodeURIComponent(a.city)}`,
-            svgBanner: createBannerSvg(a.name, a.city, '🏛️', 'navy'),
-          }
-        })
-      list.push(...others)
+    if (counts.academies?.status !== 'ready') return []
+    const sorted = [...counts.academies.data].sort((a, b) => getAcademyPriority(b) - getAcademyPriority(a))
+    const seen = new Set<string>()
+    const selected: FormattedHomeAcademy[] = []
+    for (const item of sorted) {
+      const key = item.name.toLowerCase().replace(/\s*\([^)]*\)/g, '').slice(0, 20)
+      if (!seen.has(key)) {
+        seen.add(key)
+        selected.push(parseHomeAcademy(item))
+        if (selected.length === 12) break
+      }
     }
-    return list
+    return selected
   }, [counts.academies])
 
   const countState = (value: CatalogueResult<unknown> | undefined) => {
@@ -763,61 +879,71 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div
-          ref={academiesRailRef}
-          className="home-touch-rail"
-          tabIndex={0}
-          aria-label="Featured training institutions list"
-        >
-          {displayAcademies.map(acad => (
-            <div key={acad.id} className="home-academy-card">
-              <div>
-                <div className="home-card-media">
-                  <img
-                    src={acad.svgBanner}
-                    alt={`${acad.name} - Sports Academy in ${acad.location}`}
-                    loading="lazy"
-                    width={400}
-                    height={240}
-                  />
-                  <div className="home-card-overlay-top-left">
-                    <span className="home-media-badge-dark">{acad.est}</span>
+        {counts.academies?.status === 'ready' && displayAcademies.length > 0 ? (
+          <div
+            ref={academiesRailRef}
+            className="home-touch-rail"
+            tabIndex={0}
+            aria-label="Featured training institutions list"
+          >
+            {displayAcademies.map(acad => (
+              <div key={acad.id} className="home-academy-card">
+                <div>
+                  <div className="home-card-media">
+                    <img
+                      src={acad.svgBanner}
+                      alt={`${acad.name} - Sports Academy in ${acad.location}`}
+                      loading="lazy"
+                      width={400}
+                      height={240}
+                    />
+                    <div className="home-card-overlay-top-left">
+                      <span className="home-media-badge-dark">{acad.est}</span>
+                    </div>
+                    <div className="home-card-overlay-top-right">
+                      <span className="home-academy-verified-badge">
+                        <SiteIcon name="check-circle" size={11} />
+                        Verified
+                      </span>
+                    </div>
+                    <div className="home-card-overlay-bottom">
+                      <span className="home-academy-scout-badge">{acad.scoutBadge}</span>
+                    </div>
                   </div>
-                  <div className="home-card-overlay-top-right">
-                    <span className="home-academy-verified-badge">
-                      <SiteIcon name="check-circle" size={11} />
-                      Verified
-                    </span>
+                  <h3 className="home-academy-title">
+                    <a href={acad.cardLink} style={{ color: 'inherit', textDecoration: 'none' }}>
+                      {acad.name}
+                    </a>
+                  </h3>
+                  <div className="home-academy-location">
+                    <SiteIcon name="map-pin" size={12} />
+                    <span>{acad.location}</span>
                   </div>
-                  <div className="home-card-overlay-bottom">
-                    <span className="home-academy-scout-badge">{acad.scoutBadge}</span>
+                  <div className="home-academy-sports">
+                    {acad.sports}
                   </div>
                 </div>
-                <h3 className="home-academy-title">
-                  <a href="/academies" style={{ color: 'inherit', textDecoration: 'none' }}>
-                    {acad.name}
+                <div className="home-academy-footer">
+                  <span className="home-academy-category" title={acad.category}>
+                    {acad.category}
+                  </span>
+                  <a className="home-academy-trials-link" href={acad.trialsLink}>
+                    <span>Trials</span>
+                    <SiteIcon name="chevron-right" size={11} />
                   </a>
-                </h3>
-                <div className="home-academy-location">
-                  <SiteIcon name="map-pin" size={12} />
-                  <span>{acad.location}</span>
-                </div>
-                <div className="home-academy-sports">
-                  {acad.sports}
                 </div>
               </div>
-              <div className="home-academy-footer">
-                <span className="home-academy-category" title={acad.category}>
-                  {acad.category}
-                </span>
-                <a className="home-academy-trials-link" href={acad.trialsLink}>
-                  <span>Trials</span>
-                  <SiteIcon name="chevron-right" size={11} />
-                </a>
-              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="home-touch-rail home-rail-loading">
+            <div className="home-loading-chip">
+              {counts.academies?.status === 'ready'
+                ? 'No published academies yet.'
+                : 'Loading accredited institutions…'}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
       </section>
 
       {/* Focus / Explore Section */}
