@@ -2820,3 +2820,70 @@ body { color: var(--text); background: var(--page); }
   .foundation-v1 .app-workspace { width: 100% !important; margin-left: 0 !important; }
   .foundation-v1 .site-footer { width: 100% !important; margin-left: 0 !important; }
 }
+
+
+/* Hover-expand behavior for the compact desktop icon rail.
+   Pointer leave collapses it again; keyboard focus does not pin it open. */
+@media (min-width: 701px) {
+  .foundation-v1.app-shell.sidebar-is-collapsed .app-workspace > .app-sidebar:hover {
+    width: 256px !important;
+    min-width: 256px !important;
+    max-width: 256px !important;
+    box-shadow: 10px 0 28px rgb(16 35 57 / 10%) !important;
+  }
+  .foundation-v1.app-shell.sidebar-is-collapsed .app-workspace > .app-sidebar:hover .sidebar-rail-links {
+    align-items: stretch !important;
+    gap: 5px !important;
+    padding-inline: 2px !important;
+  }
+  .foundation-v1.app-shell.sidebar-is-collapsed .app-workspace > .app-sidebar:hover .sidebar-rail-group {
+    align-items: stretch !important;
+    justify-items: stretch !important;
+    padding: 7px 0 !important;
+    border-bottom: 1px solid #e5e9ee !important;
+  }
+  .foundation-v1.app-shell.sidebar-is-collapsed .app-workspace > .app-sidebar:hover .sidebar-link {
+    display: flex !important;
+    justify-content: flex-start !important;
+    gap: 11px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    margin: 1px 0 !important;
+    padding: 0 10px !important;
+    border-radius: 9px !important;
+    background: transparent !important;
+  }
+  .foundation-v1.app-shell.sidebar-is-collapsed .app-workspace > .app-sidebar:hover .sidebar-link-label,
+  .foundation-v1.app-shell.sidebar-is-collapsed .app-workspace > .app-sidebar:hover .sidebar-utility-label {
+    display: inline !important;
+    white-space: nowrap !important;
+  }
+  .foundation-v1.app-shell.sidebar-is-collapsed .app-workspace > .app-sidebar:hover .sidebar-icon {
+    width: 20px !important;
+    min-width: 20px !important;
+    height: 20px !important;
+    flex: 0 0 20px !important;
+  }
+  .foundation-v1.app-shell.sidebar-is-collapsed .app-workspace > .app-sidebar:hover .sidebar-bottom {
+    justify-items: stretch !important;
+    align-items: stretch !important;
+  }
+  .foundation-v1.app-shell.sidebar-is-collapsed .app-workspace > .app-sidebar:hover .sidebar-utility-link {
+    justify-content: flex-start !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 10px !important;
+    border-radius: 9px !important;
+  }
+  .foundation-v1.app-shell.sidebar-is-collapsed .app-workspace > .app-sidebar:not(:hover) {
+    width: 64px !important;
+    min-width: 64px !important;
+    max-width: 64px !important;
+    box-shadow: none !important;
+  }
+}
