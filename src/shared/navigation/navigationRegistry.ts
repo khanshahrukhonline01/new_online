@@ -12,6 +12,7 @@ export type NavigationItem = {
 export type NavigationModule = {
   id: string
   label: string
+  icon: SiteIconName
   items: NavigationItem[]
 }
 
@@ -24,6 +25,7 @@ export const navigationModules: NavigationModule[] = [
   {
     id: 'core',
     label: 'Your Space',
+    icon: 'user-round',
     items: [
       { id: 'home', label: 'Home', href: '/', icon: 'home', module: 'core', available: true },
       { id: 'dashboard', label: 'My Dashboard', href: '/dashboard', icon: 'chart', module: 'core' },
@@ -32,6 +34,7 @@ export const navigationModules: NavigationModule[] = [
   {
     id: 'play',
     label: 'Play & Match Center',
+    icon: 'trophy',
     items: [
       { id: 'sports', label: 'Explore sports', href: '/sports', icon: 'sports', module: 'play', available: true },
       { id: 'trials', label: 'Search Trials & Opportunities', href: '/opportunities', icon: 'opportunities', module: 'play', available: true },
@@ -46,6 +49,7 @@ export const navigationModules: NavigationModule[] = [
   {
     id: 'athlete',
     label: 'Scouting & Athlete Pipeline',
+    icon: 'target',
     items: [
       { id: 'my-stats', label: 'My Stats', href: '/stats', icon: 'chart', module: 'athlete' },
       { id: 'sports-cv', label: 'Sports CV Wizard', href: '/sports-cv', icon: 'sports-cv', module: 'athlete' },
@@ -57,6 +61,7 @@ export const navigationModules: NavigationModule[] = [
   {
     id: 'knowledge',
     label: 'Knowledge & Community',
+    icon: 'file-text',
     items: [
       { id: 'learning-hub', label: 'Sports & Learning Hub', href: '/learning', icon: 'sports', module: 'knowledge' },
       { id: 'guides', label: 'Guides', href: '/guides', icon: 'file-text', module: 'knowledge' },
@@ -70,6 +75,7 @@ export const navigationModules: NavigationModule[] = [
   {
     id: 'network',
     label: 'Network & Ecosystem',
+    icon: 'globe',
     items: [
       { id: 'calendar', label: 'Sports Calendar', href: '/calendar', icon: 'calendar', module: 'network' },
       { id: 'for-you', label: 'For You', href: '/for-you', icon: 'star', module: 'network' },
