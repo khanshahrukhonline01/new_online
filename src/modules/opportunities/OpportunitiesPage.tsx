@@ -14,7 +14,7 @@ function formatDate(value: string | null) {
 
 export default function OpportunitiesPage() {
   const [result, setResult] = useState<CatalogueResult<Opportunity> | { status: 'loading'; data: [] }>({ status: 'loading', data: [] })
-  const initial = new URLSearchParams(window.location.search)
+  const initial = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
   const [query, setQuery] = useState(initial.get('q') ?? '')
   const [city, setCity] = useState(initial.get('city') ?? '')
   const [type, setType] = useState(initial.get('type') ?? '')
