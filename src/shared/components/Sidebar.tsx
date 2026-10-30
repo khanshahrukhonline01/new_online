@@ -86,8 +86,11 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
 
   function renderSections(mobile = false) {
     if (collapsed && !mobile) {
-      return <div className="sidebar-rail-links">
-        {navigationModules.flatMap(section => section.items).map(item =>
+      const railItems = navigationModules.flatMap(section => section.items).filter(item =>
+        ['home', 'sports', 'trials', 'live-scores', 'venues', 'coaches', 'academies', 'events', 'search'].includes(item.id)
+      )
+      return <div className="sidebar-rail-links" aria-label="Quick navigation">
+        {railItems.map(item =>
           <SidebarLink key={item.id} item={item} activePath={activePath} onNavigate={onNavigate} onClose={onClose} collapsed />
         )}
       </div>
