@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { RESEARCH_CATEGORIES } from './data/khelchronicleData'
+import { submitChronicleManuscript } from '../../integrations/supabase/chronicle-client'
 import './khelchronicle.css'
 
 interface KhelChronicleSubmitPageProps {
@@ -8,16 +9,25 @@ interface KhelChronicleSubmitPageProps {
 }
 
 export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageProps) {
-  const [submitted, setSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submissionId, setSubmissionId] = useState<string | null>(null)
+  const [submissionNotice, setSubmissionNotice] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
   const [formData, setFormData] = useState({
     title: '',
     category: 'sports-biomechanics',
-    authors: '',
-    affiliation: '',
-    email: '',
+    primaryAuthorName: '',
+    primaryAuthorEmail: '',
+    primaryAuthorAffiliation: '',
+    orcid: '',
+    coAuthors: '',
+    keywords: 'Sports Biomechanics, Ground Reaction Force, Movement Screening',
+    fullTextOrUrl: '',
     abstract: '',
     ethicsDeclaration: false,
-    consentDeclaration: false,
+    minorConsentDeclaration: false,
+    licenseDeclaration: false,
   })
 
   const handleLink = (e: MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -26,9 +36,62 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     }
   }
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setErrorMessage(null)
+    setIsSubmitting(true)
+
+    try {
+      const res = await submitChronicleManuscript({
+        manuscript_title: formData.title,
+        category_slug: formData.category,
+        primary_author_name: formData.primaryAuthorName,
+        primary_author_email: formData.primaryAuthorEmail,
+        primary_author_affiliation: formData.primaryAuthorAffiliation,
+        orcid: formData.orcid.trim() || undefined,
+        co_authors: formData.coAuthors.trim() || undefined,
+        abstract_text: formData.abstract,
+        keywords: formData.keywords,
+        full_text_or_url: formData.fullTextOrUrl || 'Uploaded in manuscript intake',
+        human_ethics_confirmed: formData.ethicsDeclaration,
+        minor_consent_confirmed: formData.minorConsentDeclaration,
+      })
+
+      if (res.status === 'submitted') {
+        setSubmissionId(res.submissionId)
+        setSubmissionNotice('Manuscript successfully entered into the KhelChronicle peer-screening database queue.')
+      } else if (res.status === 'unconfigured') {
+        setSubmissionId(res.submissionId)
+        setSubmissionNotice(res.message)
+      } else {
+        setErrorMessage(res.message)
+      }
+    } catch {
+      setErrorMessage('Unexpected transmission error. Please check your network and try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const resetForm = () => {
+    setSubmissionId(null)
+    setSubmissionNotice(null)
+    setErrorMessage(null)
+    setFormData({
+      title: '',
+      category: 'sports-biomechanics',
+      primaryAuthorName: '',
+      primaryAuthorEmail: '',
+      primaryAuthorAffiliation: '',
+      orcid: '',
+      coAuthors: '',
+      keywords: '',
+      fullTextOrUrl: '',
+      abstract: '',
+      ethicsDeclaration: false,
+      minorConsentDeclaration: false,
+      licenseDeclaration: false,
+    })
   }
 
   return (
@@ -39,7 +102,7 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
           KhelChronicle
         </a>
         <span> / </span>
-        <span style={{ color: '#64748b' }}>Author Submission Guidelines</span>
+        <span style={{ color: '#64748b' }}>Author Submission &amp; Database Intake</span>
       </nav>
 
       {/* Header */}
@@ -47,10 +110,10 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
         <div className="kc-eyebrow-row">
           <span className="kc-badge-archive">
             <SiteIcon name="award" size={13} />
-            <span>Preprint Submission</span>
+            <span>Database Submission Queue</span>
           </span>
           <span className="kc-badge-open-access">Diamond Open Access</span>
-          <span className="kc-badge-open-access">Zero Submission Fees</span>
+          <span className="kc-badge-open-access">Zero Article Processing Charges (APC)</span>
         </div>
 
         <h1 className="kc-hero-title">Submit Research Manuscript</h1>
@@ -78,16 +141,24 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
             </ul>
           </div>
 
-          {/* Submission Form */}
-          {submitted ? (
+          {/* Submission Success State */}
+          {submissionId ? (
             <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '32px', textAlign: 'center' }}>
               <SiteIcon name="check-circle" size={40} style={{ color: '#16a34a', marginBottom: '14px' }} />
               <h2 style={{ margin: '0 0 8px', fontSize: '22px', fontWeight: 800, color: '#14532d' }}>
-                Manuscript Received for Screening
+                Manuscript Received for Editorial Screening
               </h2>
-              <p style={{ margin: '0 0 20px', fontSize: '14.5px', color: '#166534', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
-                Thank you! Your submission "{formData.title || 'Sports Science Research'}" has been logged in the KhelChronicle editorial screening queue. Our moderation desk will audit formatting and ethical clearances within 2 business days.
+              <div style={{ display: 'inline-block', background: '#dcfce7', border: '1px solid #86efac', padding: '6px 14px', borderRadius: '6px', fontSize: '14px', fontWeight: 700, color: '#166534', margin: '8px 0 14px' }}>
+                Accession Queue Reference: {submissionId}
+              </div>
+              <p style={{ margin: '0 0 10px', fontSize: '14.5px', color: '#166534', maxWidth: '640px', marginLeft: 'auto', marginRight: 'auto' }}>
+                Thank you! Your submission &ldquo;{formData.title || 'Sports Science Research'}&rdquo; has been registered in the KhelChronicle database screening table. Our moderation desk will audit formatting and ethical clearances within 2 business days.
               </p>
+              {submissionNotice && (
+                <p style={{ margin: '0 0 20px', fontSize: '12.5px', color: '#15803d', fontStyle: 'italic' }}>
+                  {submissionNotice}
+                </p>
+              )}
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
                 <a
                   href="/khelchronicle"
@@ -99,7 +170,7 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
                 <button
                   type="button"
                   className="kc-btn-secondary"
-                  onClick={() => { setSubmitted(false); setFormData({ title: '', category: 'sports-biomechanics', authors: '', affiliation: '', email: '', abstract: '', ethicsDeclaration: false, consentDeclaration: false }) }}
+                  onClick={resetForm}
                 >
                   Submit Another Paper
                 </button>
@@ -110,6 +181,13 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
               <h2 style={{ margin: '0 0 18px', fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
                 Manuscript Submission Intake
               </h2>
+
+              {errorMessage && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '12px 16px', color: '#b91c1c', fontSize: '13.5px', marginBottom: '18px' }}>
+                  <SiteIcon name="alert-circle" size={15} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+                  {errorMessage}
+                </div>
+              )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
@@ -143,33 +221,95 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
                   </select>
                 </div>
 
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label htmlFor="primary-author-name" style={{ display: 'block', fontSize: '13.5px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
+                      Primary / Corresponding Author *
+                    </label>
+                    <input
+                      id="primary-author-name"
+                      type="text"
+                      required
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                      placeholder="e.g. Dr. Rajeshwari Nair"
+                      value={formData.primaryAuthorName}
+                      onChange={e => setFormData({ ...formData, primaryAuthorName: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="primary-author-email" style={{ display: 'block', fontSize: '13.5px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
+                      Corresponding Author Email *
+                    </label>
+                    <input
+                      id="primary-author-email"
+                      type="email"
+                      required
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                      placeholder="author@institution.edu.in"
+                      value={formData.primaryAuthorEmail}
+                      onChange={e => setFormData({ ...formData, primaryAuthorEmail: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '16px' }}>
+                  <div>
+                    <label htmlFor="primary-affiliation" style={{ display: 'block', fontSize: '13.5px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
+                      Author Institution / University Affiliation *
+                    </label>
+                    <input
+                      id="primary-affiliation"
+                      type="text"
+                      required
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                      placeholder="e.g. Lakshmibai National Institute of Physical Education (LNIPE), Gwalior"
+                      value={formData.primaryAuthorAffiliation}
+                      onChange={e => setFormData({ ...formData, primaryAuthorAffiliation: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="author-orcid" style={{ display: 'block', fontSize: '13.5px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
+                      ORCID Identifier (Optional)
+                    </label>
+                    <input
+                      id="author-orcid"
+                      type="text"
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                      placeholder="0000-0002-8941-4412"
+                      value={formData.orcid}
+                      onChange={e => setFormData({ ...formData, orcid: e.target.value })}
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label htmlFor="authors-list" style={{ display: 'block', fontSize: '13.5px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
-                    Authors &amp; Affiliations *
+                  <label htmlFor="co-authors-list" style={{ display: 'block', fontSize: '13.5px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
+                    Co-Authors &amp; Affiliations (Optional)
                   </label>
                   <input
-                    id="authors-list"
+                    id="co-authors-list"
                     type="text"
-                    required
                     style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
-                    placeholder="e.g. Dr. Rajeshwari Nair (LNIPE Gwalior), Dr. Alok Sen (KhelGrid Lab)"
-                    value={formData.authors}
-                    onChange={e => setFormData({ ...formData, authors: e.target.value })}
+                    placeholder="e.g. Dr. Alok Sen (SAI NCOE Bengaluru), Priya Narang (Delhi University)"
+                    value={formData.coAuthors}
+                    onChange={e => setFormData({ ...formData, coAuthors: e.target.value })}
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="author-email" style={{ display: 'block', fontSize: '13.5px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
-                    Corresponding Author Email *
+                  <label htmlFor="keywords-input" style={{ display: 'block', fontSize: '13.5px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
+                    Keywords (comma-separated) *
                   </label>
                   <input
-                    id="author-email"
-                    type="email"
+                    id="keywords-input"
+                    type="text"
                     required
                     style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
-                    placeholder="author@institution.edu.in"
-                    value={formData.email}
-                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="Fast Bowling, Ground Reaction Force, Lumbar Spine, Biomechanics"
+                    value={formData.keywords}
+                    onChange={e => setFormData({ ...formData, keywords: e.target.value })}
                   />
                 </div>
 
@@ -188,7 +328,21 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px' }}>
+                <div>
+                  <label htmlFor="manuscript-url" style={{ display: 'block', fontSize: '13.5px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>
+                    Manuscript Full-Text Link (PDF URL or Institutional Repository Link)
+                  </label>
+                  <input
+                    id="manuscript-url"
+                    type="text"
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                    placeholder="https://drive.google.com/... or https://arxiv.org/abs/... or https://zenodo.org/..."
+                    value={formData.fullTextOrUrl}
+                    onChange={e => setFormData({ ...formData, fullTextOrUrl: e.target.value })}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '8px' }}>
                   <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: '#334155' }}>
                     <input
                       type="checkbox"
@@ -197,25 +351,41 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
                       onChange={e => setFormData({ ...formData, ethicsDeclaration: e.target.checked })}
                       style={{ marginTop: '3px' }}
                     />
-                    <span>I declare that human-subject research protocols, ethical review standards, and data integrity requirements have been fulfilled.</span>
+                    <span><strong>Human Subjects &amp; Ethics Declaration *</strong>: I confirm this research was conducted in compliance with the Declaration of Helsinki and Institutional Ethics Committee clearance.</span>
                   </label>
 
                   <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: '#334155' }}>
                     <input
                       type="checkbox"
                       required
-                      checked={formData.consentDeclaration}
-                      onChange={e => setFormData({ ...formData, consentDeclaration: e.target.checked })}
+                      checked={formData.minorConsentDeclaration}
+                      onChange={e => setFormData({ ...formData, minorConsentDeclaration: e.target.checked })}
                       style={{ marginTop: '3px' }}
                     />
-                    <span>I understand this submission will be published under Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0).</span>
+                    <span><strong>Youth &amp; Minor Athletes Protection *</strong>: If research involves junior/school athletes under 18 years, informed written parental/guardian consent was documented.</span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: '#334155' }}>
+                    <input
+                      type="checkbox"
+                      required
+                      checked={formData.licenseDeclaration}
+                      onChange={e => setFormData({ ...formData, licenseDeclaration: e.target.checked })}
+                      style={{ marginTop: '3px' }}
+                    />
+                    <span><strong>Diamond Open Access License *</strong>: I agree to license this preprint under Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0).</span>
                   </label>
                 </div>
 
                 <div style={{ paddingTop: '12px' }}>
-                  <button type="submit" className="kc-btn-primary" style={{ padding: '12px 24px', fontSize: '14px' }}>
-                    <SiteIcon name="upload" size={16} />
-                    <span>Submit Manuscript for Screening</span>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="kc-btn-primary"
+                    style={{ padding: '12px 24px', fontSize: '14px', opacity: isSubmitting ? 0.7 : 1 }}
+                  >
+                    <SiteIcon name={isSubmitting ? 'loader' : 'upload'} size={16} />
+                    <span>{isSubmitting ? 'Submitting to Database Queue...' : 'Submit Manuscript for Screening'}</span>
                   </button>
                 </div>
               </div>

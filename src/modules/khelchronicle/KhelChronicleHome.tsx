@@ -1,4 +1,4 @@
-import { useState, useMemo, type MouseEvent } from 'react'
+import { useState, useMemo, useEffect, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
   RESEARCH_CATEGORIES,
@@ -6,6 +6,7 @@ import {
   searchPapers,
   type ResearchPaper,
 } from './data/khelchronicleData'
+import { getChroniclePapers } from '../../integrations/supabase/chronicle-client'
 import './khelchronicle.css'
 
 interface KhelChronicleHomeProps {
@@ -16,6 +17,19 @@ interface KhelChronicleHomeProps {
 export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelChronicleHomeProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState(initialCategory)
+  const [papers, setPapers] = useState<ResearchPaper[]>(() => searchPapers('', initialCategory))
+
+  useEffect(() => {
+    let active = true
+    getChroniclePapers(selectedCategory, searchQuery).then(res => {
+      if (active && res.data) {
+        setPapers(res.data)
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [selectedCategory, searchQuery])
 
   const handleLink = (e: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (onNavigate) {
@@ -23,9 +37,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
     }
   }
 
-  const filteredPapers = useMemo(() => {
-    return searchPapers(searchQuery, selectedCategory)
-  }, [searchQuery, selectedCategory])
+  const filteredPapers = papers
 
   const featuredPaper = useMemo<ResearchPaper | undefined>(() => {
     return filteredPapers[0] || RESEARCH_PAPERS[0]

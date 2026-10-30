@@ -1,4 +1,4 @@
-import { useState, useMemo, type MouseEvent } from 'react'
+import { useState, useMemo, useEffect, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
   getPaperBySlug,
@@ -6,6 +6,7 @@ import {
   RESEARCH_PAPERS,
   type ResearchPaper,
 } from './data/khelchronicleData'
+import { recordPaperView, recordPaperDownload } from '../../integrations/supabase/chronicle-client'
 import './khelchronicle.css'
 
 interface KhelChroniclePaperPageProps {
@@ -17,6 +18,12 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
   const paper: ResearchPaper | undefined = useMemo(() => {
     return getPaperBySlug(slug) || RESEARCH_PAPERS[0]
   }, [slug])
+
+  useEffect(() => {
+    if (paper) {
+      recordPaperView(paper.slug)
+    }
+  }, [paper])
 
   const [citationModalOpen, setCitationModalOpen] = useState(false)
   const [citationFormat, setCitationFormat] = useState<'apa' | 'bibtex' | 'mla' | 'chicago' | 'vancouver'>('apa')
@@ -43,6 +50,9 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
   }
 
   const handlePrintPdf = () => {
+    if (paper) {
+      recordPaperDownload(paper.slug)
+    }
     if (typeof window !== 'undefined') {
       window.print()
     }
