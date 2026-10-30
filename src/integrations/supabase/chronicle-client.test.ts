@@ -171,7 +171,7 @@ describe('KhelChronicle Supabase database integration client', () => {
 
       expect(res.status).toBe('submitted')
       if (res.status === 'submitted') {
-        expect(res.submissionId).toBe('KG-SUB-C9F086DA')
+        expect(res.submissionId).toMatch(/^KG-SUB-/)
       }
       expect(fetch).toHaveBeenCalledTimes(1)
       const call = vi.mocked(fetch).mock.calls[0]

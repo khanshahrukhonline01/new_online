@@ -417,7 +417,7 @@ export async function submitChronicleManuscript(
           Authorization: `Bearer ${anonKey}`,
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          Prefer: 'return=representation',
+          Prefer: 'return=minimal',
         },
         body: JSON.stringify({
           title: input.manuscript_title.trim(),
@@ -435,7 +435,7 @@ export async function submitChronicleManuscript(
       if (res.status === 404) {
         return {
           status: 'unavailable',
-          message: 'The KhelChronicle submission queue table is not installed in this database yet. Please apply migration 20261030180000.',
+          message: 'The KhelChronicle submission queue table is not installed in this database yet. Please apply setup_khelchronicle.sql.',
         }
       }
       return {
@@ -444,12 +444,7 @@ export async function submitChronicleManuscript(
       }
     }
 
-    const responseData = await res.json()
-    const submissionId = Array.isArray(responseData) && responseData[0]?.id
-      ? `KG-SUB-${responseData[0].id.substring(0, 8).toUpperCase()}`
-      : generatedId
-
-    return { status: 'submitted', submissionId }
+    return { status: 'submitted', submissionId: generatedId }
   } catch {
     return {
       status: 'unavailable',
