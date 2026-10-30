@@ -398,20 +398,6 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
     return selected
   }, [counts.academies])
 
-  const countState = (value: CatalogueResult<unknown> | undefined) => {
-    if (!value) return 'Loading catalogue…'
-    if (value.status === 'unconfigured') return 'Not configured'
-    if (value.status === 'unavailable') return 'Temporarily unavailable'
-    return value.data.length === 0 ? 'No published records yet' : `${value.data.length} published`
-  }
-
-  const total = (value: CatalogueResult<unknown> | undefined) =>
-    value?.status === 'ready' ? value.data.length : '—'
-
-  const ready = [counts.sports, counts.opportunities, counts.venues, counts.academies].some(
-    item => item?.status === 'ready',
-  )
-
   return (
     <>
       {/* 0. Hero Panel */}
@@ -546,92 +532,6 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
             </button>
           </div>
         </div>
-      </section>
-
-      {/* Catalogue Status Row */}
-      <section className="home-catalogue-status" aria-labelledby="catalogue-status-title">
-        <div className="section-heading compact-heading">
-          <p className="eyebrow">VERIFIED ATHLETIC DIRECTORY</p>
-          <h2 id="catalogue-status-title">What’s available now</h2>
-          <p>Verified real database records published across Indian sports.</p>
-        </div>
-
-        <div className="stats-row home-stats home-stats-grid-4">
-          <a
-            href="/sports"
-            onClick={e => handleLink(e, '/sports')}
-            className="home-stat-interactive-card"
-            aria-label={`Browse ${total(counts.sports)} published sports`}
-          >
-            <div className="home-stat-card-top">
-              <span className="home-stat-card-label">Sports Disciplines</span>
-              <span className="home-stat-icon-wrap" aria-hidden="true"><SiteIcon name="sports" size={17} /></span>
-            </div>
-            <strong className="home-stat-card-number">{total(counts.sports)}</strong>
-            <div className="home-stat-card-state">
-              <small>{countState(counts.sports)}</small>
-              <SiteIcon name="chevron-right" size={13} className="home-stat-card-arrow" />
-            </div>
-          </a>
-
-          <a
-            href="/opportunities"
-            onClick={e => handleLink(e, '/opportunities')}
-            className="home-stat-interactive-card"
-            aria-label={`Browse ${total(counts.opportunities)} selection trials`}
-          >
-            <div className="home-stat-card-top">
-              <span className="home-stat-card-label">Selection Trials</span>
-              <span className="home-stat-icon-wrap" aria-hidden="true"><SiteIcon name="opportunities" size={17} /></span>
-            </div>
-            <strong className="home-stat-card-number">{total(counts.opportunities)}</strong>
-            <div className="home-stat-card-state">
-              <small>{countState(counts.opportunities)}</small>
-              <SiteIcon name="chevron-right" size={13} className="home-stat-card-arrow" />
-            </div>
-          </a>
-
-          <a
-            href="/academies"
-            onClick={e => handleLink(e, '/academies')}
-            className="home-stat-interactive-card"
-            aria-label={`Browse ${total(counts.academies)} verified academies`}
-          >
-            <div className="home-stat-card-top">
-              <span className="home-stat-card-label">Verified Academies</span>
-              <span className="home-stat-icon-wrap" aria-hidden="true"><SiteIcon name="building" size={17} /></span>
-            </div>
-            <strong className="home-stat-card-number">{total(counts.academies)}</strong>
-            <div className="home-stat-card-state">
-              <small>{countState(counts.academies)}</small>
-              <SiteIcon name="chevron-right" size={13} className="home-stat-card-arrow" />
-            </div>
-          </a>
-
-          <a
-            href="/venues"
-            onClick={e => handleLink(e, '/venues')}
-            className="home-stat-interactive-card"
-            aria-label={`Browse ${total(counts.venues)} play venues and turfs`}
-          >
-            <div className="home-stat-card-top">
-              <span className="home-stat-card-label">Venues &amp; Turfs</span>
-              <span className="home-stat-icon-wrap" aria-hidden="true"><SiteIcon name="venues" size={17} /></span>
-            </div>
-            <strong className="home-stat-card-number">{total(counts.venues)}</strong>
-            <div className="home-stat-card-state">
-              <small>{countState(counts.venues)}</small>
-              <SiteIcon name="chevron-right" size={13} className="home-stat-card-arrow" />
-            </div>
-          </a>
-        </div>
-
-        <p className="home-data-note">
-          <span className={ready ? 'status-dot' : 'status-dot warning'} />
-          {ready
-            ? 'Live Verified Database · Real-time synchronization across SAI, Khelo India & State Associations. Zero fabricated listings.'
-            : 'Connecting to database catalogue…'}
-        </p>
       </section>
 
       {/* 1. LIVE MATCH CENTER */}

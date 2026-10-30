@@ -11,7 +11,7 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('Talent Scanner')
     expect(html).toContain('Discover. Compete.')
     expect(html).toContain('Source-aware listings')
-    expect(html).toContain('What’s available now')
+    expect(html).toContain('Live Match Center')
     expect(html).toContain('Skip to content')
     expect(html).toContain('Search KhelGrid')
     expect(html).toContain('aria-label="Sidebar navigation"')
