@@ -24,6 +24,7 @@ import KhelChronicleCategoryPage from './modules/khelchronicle/KhelChronicleCate
 import KhelChronicleAuthorPage from './modules/khelchronicle/KhelChronicleAuthorPage'
 import KhelChronicleSubmitPage from './modules/khelchronicle/KhelChronicleSubmitPage'
 import KhelChronicleDispatchStrip from './modules/khelchronicle/KhelChronicleDispatchStrip'
+import TalentScannerPage from './modules/talent-scanner/TalentScannerPage'
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
 
@@ -100,6 +101,7 @@ export default function App() {
     case 'khelchronicle-paper': page = <KhelChroniclePaperPage slug={match.slug} onNavigate={navigate} />; break
     case 'feature':
       if (match.canonicalPath === '/sports-cv') page = <SportsCvWizard />
+      else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} />
       else if (match.canonicalPath === '/coaches') page = <FeatureDirectoryPage kind="coaches" />
       else if (match.canonicalPath === '/academies' || match.canonicalPath === '/academy') page = <FeatureDirectoryPage kind="academies" />
       else if (match.canonicalPath === '/events') page = <FeatureDirectoryPage kind="events" />

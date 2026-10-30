@@ -27,9 +27,10 @@ describe('shared navigation registry', () => {
   })
 
   it('does not mark unfinished personal and scouting tools as available', () => {
-    for (const href of ['/dashboard', '/saved', '/for-you', '/stats', '/talent-scanner', '/scout-portal', '/verification']) {
+    for (const href of ['/dashboard', '/saved', '/for-you', '/stats', '/scout-portal', '/verification']) {
       expect(primaryNavigation.find(item => item.href === href)?.available).not.toBe(true)
     }
+    expect(primaryNavigation.find(item => item.href === '/talent-scanner')?.available).toBe(true)
   })
 
   it('keeps destinations unique across the complete sidebar', () => {
