@@ -1936,3 +1936,69 @@ body { color: var(--text); background: var(--page); }
 .mobile-drawer .sidebar-module-heading-icon svg { width: 18px; height: 18px; }
 .mobile-drawer .sidebar-module-label { font-size: 11px; font-weight: 800; letter-spacing: .04em; }
 .mobile-drawer .sidebar-link { min-height: 46px; }
+
+
+/* Desktop sidebar rendering fix:
+   keep the collapsed icon rail in the document flow (never overlay the page on hover),
+   and reserve the full-height navigation area for the feature links. */
+@media (min-width: 1001px) {
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:hover,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:focus-within {
+    width: 90px;
+    min-width: 90px;
+    flex: 0 0 90px;
+    overflow: visible;
+    box-shadow: none;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-link-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-module-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-promo,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-utility-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-bottom-note,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:hover .sidebar-link-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:hover .sidebar-module-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:hover .sidebar-promo,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:hover .sidebar-utility-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:hover .sidebar-bottom-note,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:focus-within .sidebar-link-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:focus-within .sidebar-module-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:focus-within .sidebar-promo,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:focus-within .sidebar-utility-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:focus-within .sidebar-bottom-note {
+    display: none !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-link {
+    justify-content: center;
+    padding-inline: 0;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-rail-links .sidebar-link {
+    width: 56px;
+    min-width: 56px;
+    height: 56px;
+    min-height: 56px;
+    border-radius: 50%;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-navigation {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    overflow-y: auto;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-bottom {
+    flex: 0 0 auto;
+    margin-top: auto;
+  }
+  .foundation-v1 .app-shell.sidebar-is-expanded .app-sidebar {
+    flex: 0 0 258px;
+    width: 258px;
+    min-width: 258px;
+  }
+  .foundation-v1 .app-shell.sidebar-is-expanded .app-sidebar .sidebar-navigation {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    overflow-y: auto;
+  }
+  .foundation-v1 .app-shell.sidebar-is-expanded .app-sidebar .sidebar-promo { display: none; }
+}
