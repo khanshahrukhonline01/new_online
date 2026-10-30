@@ -10,7 +10,7 @@ import { CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPan
 type SearchRecord = { type: 'Sport' | 'Opportunity' | 'Venue'; title: string; detail: string; href: string }
 
 export default function SearchPage({ initialQuery = '' }: { initialQuery?: string }) {
-  const params = new URLSearchParams(window.location.search)
+  const params = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
   const [query, setQuery] = useState(params.get('q') ?? initialQuery)
   const [category, setCategory] = useState(params.get('category') ?? '')
   const [sort, setSort] = useState(params.get('sort') ?? 'relevance')
