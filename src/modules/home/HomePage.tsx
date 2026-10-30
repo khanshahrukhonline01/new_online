@@ -400,94 +400,17 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
 
   return (
     <>
-      {/* 0. Hero Panel */}
-      <section className="home-hero-panel">
-        <div className="home-hero-copy">
-          <p className="eyebrow">YOUR GAME. YOUR NEXT MOVE.</p>
-          <h1>Discover. Compete. <span>Grow.</span></h1>
-          <p className="hero-copy">
-            Explore sports, find opportunities, and discover places to play. Clear information helps you
-            decide your next move.
-          </p>
-
-          {/* Quick Hero Search Input */}
-          <div className="home-hero-search-wrap">
-            <form onSubmit={handleHeroSearchSubmit} className="home-hero-search-form" role="search" aria-label="Hero quick search">
-              <span className="home-hero-search-icon" aria-hidden="true">
-                <SiteIcon name="search" size={18} />
-              </span>
-              <input
-                type="search"
-                className="home-hero-search-input"
-                placeholder="Search sports, trials, academies, or city…"
-                value={heroSearch}
-                onChange={e => setHeroSearch(e.target.value)}
-                aria-label="Search sports, selection trials, academies or venues"
-              />
-              <button
-                type="submit"
-                className="home-hero-search-btn"
-                aria-label="Submit search"
-              >
-                <span>Search</span>
-                <SiteIcon name="arrow-up-right" size={14} />
-              </button>
-            </form>
-          </div>
-
-          {/* 6 High-Intent Action Pills */}
-          <div className="home-hero-quick-pills" aria-label="Quick directory shortcuts">
-            <span className="home-hero-pills-label">Quick access:</span>
-            <a href="/opportunities" onClick={e => handleLink(e, '/opportunities')} className="home-quick-pill">
-              <SiteIcon name="target" size={13} />
-              <span>Selection Trials</span>
-            </a>
-            <a href="/academies" onClick={e => handleLink(e, '/academies')} className="home-quick-pill">
-              <SiteIcon name="building" size={13} />
-              <span>Academies</span>
-            </a>
-            <a href="/talent-scanner" onClick={e => handleLink(e, '/talent-scanner')} className="home-quick-pill">
-              <SiteIcon name="award" size={13} />
-              <span>Talent Scanner</span>
-            </a>
-            <a href="/sports-cv" onClick={e => handleLink(e, '/sports-cv')} className="home-quick-pill">
-              <SiteIcon name="sports-cv" size={13} />
-              <span>Sports CV</span>
-            </a>
-            <a href="/venues" onClick={e => handleLink(e, '/venues')} className="home-quick-pill">
-              <SiteIcon name="venues" size={13} />
-              <span>Venues &amp; Turfs</span>
-            </a>
-            <a href="/play" onClick={e => handleLink(e, '/play')} className="home-quick-pill">
-              <SiteIcon name="sports" size={13} />
-              <span>Pickup Games</span>
-            </a>
-          </div>
-
-          <div className="hero-actions">
-            <a className="primary-link" href="/opportunities" onClick={e => handleLink(e, '/opportunities')}>
-              Explore opportunities <SiteIcon name="arrow-up-right" size={16} />
-            </a>
-            <a className="secondary-link" href="/sports" onClick={e => handleLink(e, '/sports')}>
-              Browse sports
-            </a>
-          </div>
-          <div className="home-trust-points" aria-label="Platform principles">
-            <span><SiteIcon name="shield-check" size={15} /> Source-aware listings</span>
-            <span><SiteIcon name="check-circle" size={15} /> No fabricated records</span>
-            <span><SiteIcon name="smartphone" size={15} /> Built for every screen</span>
-          </div>
-        </div>
-
-        <div className="home-hero-art home-hero-carousel" aria-label="KhelGrid sports image carousel">
-          <div className="home-hero-slides" aria-live="off">
+      {/* 0. Full-Bleed Cinematic Hero Panel */}
+      <section className="home-hero-panel home-hero-cinematic" aria-label="KhelGrid sports universe hero">
+        {/* Ambient Full-Bleed Background Slides Layer */}
+        <div className="home-hero-bg-layer" aria-hidden="true">
+          <div className="home-hero-slides">
             {heroSlides.map((slide, index) => (
               <img
                 key={slide.name}
-                className={`home-hero-slide${index === activeHeroSlide ? ' is-active' : ''}`}
+                className={`home-hero-bg-image${index === activeHeroSlide ? ' is-active' : ''}`}
                 src={slide.image}
-                alt={index === activeHeroSlide ? `${slide.name} at KhelGrid` : ''}
-                aria-hidden={index !== activeHeroSlide}
+                alt=""
                 loading={index === 0 ? 'eager' : 'lazy'}
                 fetchPriority={index === 0 ? 'high' : 'auto'}
                 decoding="async"
@@ -495,12 +418,103 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
               />
             ))}
           </div>
-          <div className="home-hero-carousel-shade" aria-hidden="true" />
-          <div className="home-hero-carousel-caption">
-            <span className="hero-athlete-kicker"><span className="status-dot" /> KHELGRID SPORTS UNIVERSE</span>
-            <strong>{heroSlides[activeHeroSlide].name}</strong>
-            <span className="hero-athlete-tagline">SPORTS · OPPORTUNITIES · VENUES · ACADEMIES</span>
+          {/* Deep Directional Gradient Overlay for Contrast */}
+          <div className="home-hero-bg-overlay" />
+        </div>
+
+        {/* Foreground Content */}
+        <div className="home-hero-foreground">
+          <div className="home-hero-copy">
+            <div className="home-hero-top-badge">
+              <span className="status-dot" />
+              <span className="eyebrow">YOUR GAME. YOUR NEXT MOVE.</span>
+              <span className="hero-athlete-kicker-pill">
+                Spotlight: <strong>{heroSlides[activeHeroSlide].name}</strong>
+              </span>
+            </div>
+
+            <h1 className="home-hero-headline">
+              Discover. Compete. <span>Grow.</span>
+            </h1>
+
+            <p className="hero-copy">
+              Explore sports, find opportunities, and discover places to play. Clear information helps you decide your next move.
+            </p>
+
+            {/* Quick Hero Search Input */}
+            <div className="home-hero-search-wrap">
+              <form onSubmit={handleHeroSearchSubmit} className="home-hero-search-form" role="search" aria-label="Hero quick search">
+                <span className="home-hero-search-icon" aria-hidden="true">
+                  <SiteIcon name="search" size={18} />
+                </span>
+                <input
+                  type="search"
+                  className="home-hero-search-input"
+                  placeholder="Search sports, trials, academies, or city…"
+                  value={heroSearch}
+                  onChange={e => setHeroSearch(e.target.value)}
+                  aria-label="Search sports, selection trials, academies or venues"
+                />
+                <button
+                  type="submit"
+                  className="home-hero-search-btn"
+                  aria-label="Submit search"
+                >
+                  <span>Search</span>
+                  <SiteIcon name="arrow-up-right" size={14} />
+                </button>
+              </form>
+            </div>
+
+            {/* 6 High-Intent Action Pills */}
+            <div className="home-hero-quick-pills" aria-label="Quick directory shortcuts">
+              <span className="home-hero-pills-label">Quick access:</span>
+              <a href="/opportunities" onClick={e => handleLink(e, '/opportunities')} className="home-quick-pill">
+                <SiteIcon name="target" size={13} />
+                <span>Selection Trials</span>
+              </a>
+              <a href="/academies" onClick={e => handleLink(e, '/academies')} className="home-quick-pill">
+                <SiteIcon name="building" size={13} />
+                <span>Academies</span>
+              </a>
+              <a href="/talent-scanner" onClick={e => handleLink(e, '/talent-scanner')} className="home-quick-pill">
+                <SiteIcon name="award" size={13} />
+                <span>Talent Scanner</span>
+              </a>
+              <a href="/sports-cv" onClick={e => handleLink(e, '/sports-cv')} className="home-quick-pill">
+                <SiteIcon name="sports-cv" size={13} />
+                <span>Sports CV</span>
+              </a>
+              <a href="/venues" onClick={e => handleLink(e, '/venues')} className="home-quick-pill">
+                <SiteIcon name="venues" size={13} />
+                <span>Venues &amp; Turfs</span>
+              </a>
+              <a href="/play" onClick={e => handleLink(e, '/play')} className="home-quick-pill">
+                <SiteIcon name="sports" size={13} />
+                <span>Pickup Games</span>
+              </a>
+            </div>
+
+            {/* Actions & Trust points */}
+            <div className="home-hero-bottom-row">
+              <div className="hero-actions">
+                <a className="primary-link" href="/opportunities" onClick={e => handleLink(e, '/opportunities')}>
+                  Explore opportunities <SiteIcon name="arrow-up-right" size={16} />
+                </a>
+                <a className="secondary-link" href="/sports" onClick={e => handleLink(e, '/sports')}>
+                  Browse sports
+                </a>
+              </div>
+
+              <div className="home-trust-points" aria-label="Platform principles">
+                <span><SiteIcon name="shield-check" size={15} /> Source-aware listings</span>
+                <span><SiteIcon name="check-circle" size={15} /> No fabricated records</span>
+                <span><SiteIcon name="smartphone" size={15} /> Built for every screen</span>
+              </div>
+            </div>
           </div>
+
+          {/* Floating Discreet Carousel Controls in Bottom-Right Corner */}
           <div className="home-hero-carousel-controls" aria-label="Hero carousel controls">
             <button
               type="button"

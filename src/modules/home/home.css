@@ -893,107 +893,309 @@
 }
 
 /* ==========================================================================
-   Upgraded 4-Card Verified Directory Status Grid
+   Full-Bleed Cinematic Hero Panel
    ========================================================================== */
-.home-stats.home-stats-grid-4 {
-  display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important;
-  gap: 14px !important;
-  border: none !important;
-  background: transparent !important;
-  overflow: visible !important;
+.foundation-v1 .home-hero-panel.home-hero-cinematic {
+  position: relative;
+  display: block !important;
+  grid-template-columns: none !important;
   padding: 0 !important;
-  margin: 18px 0 12px !important;
+  margin-top: 24px;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 48px rgba(8, 25, 44, 0.18);
+  background: #08192c;
+  min-height: 480px;
 }
 
-@media (max-width: 960px) {
-  .home-stats.home-stats-grid-4 {
-    grid-template-columns: repeat(2, 1fr) !important;
+/* Background Layers */
+.home-hero-bg-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  overflow: hidden;
+  background: #08192c;
+}
+
+.home-hero-bg-layer .home-hero-slides {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.home-hero-bg-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.03);
+  transition: opacity 0.8s ease-in-out, transform 1.2s ease-out;
+}
+
+.home-hero-bg-image.is-active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Gradient overlay to ensure text contrast */
+.home-hero-bg-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(
+    90deg,
+    rgba(8, 25, 44, 0.95) 0%,
+    rgba(8, 25, 44, 0.88) 46%,
+    rgba(8, 25, 44, 0.68) 72%,
+    rgba(8, 25, 44, 0.42) 100%
+  );
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .home-hero-bg-overlay {
+    background: linear-gradient(
+      180deg,
+      rgba(8, 25, 44, 0.95) 0%,
+      rgba(8, 25, 44, 0.9) 65%,
+      rgba(8, 25, 44, 0.8) 100%
+    );
   }
 }
 
-@media (max-width: 540px) {
-  .home-stats.home-stats-grid-4 {
-    grid-template-columns: 1fr !important;
-  }
-}
-
-.home-stat-interactive-card {
+/* Foreground Container */
+.home-hero-foreground {
+  position: relative;
+  z-index: 3;
+  padding: clamp(30px, 4.5vw, 52px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 16px 18px !important;
-  border-radius: 14px;
-  border: 1px solid var(--line, #e2e8f0);
-  background: #ffffff;
-  box-shadow: 0 2px 8px rgba(16, 35, 63, 0.04);
-  text-decoration: none;
-  color: inherit;
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-  min-height: 110px;
+  min-height: 480px;
 }
 
-.home-stat-interactive-card:hover {
-  border-color: var(--accent, #07964f);
-  box-shadow: 0 6px 20px rgba(7, 150, 79, 0.12);
-  transform: translateY(-2px);
-  background: #ffffff;
+.home-hero-cinematic .home-hero-copy {
+  max-width: 680px;
+  padding: 0 !important;
 }
 
-.home-stat-interactive-card:focus-visible {
-  outline: 3px solid rgba(7, 150, 79, 0.42);
-  outline-offset: 3px;
-}
-
-.home-stat-card-top {
-  display: flex;
+.home-hero-top-badge {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
-.home-stat-icon-wrap {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: var(--accent-soft, #f0fdf4);
-  color: var(--accent, #07964f);
-  flex-shrink: 0;
-}
-
-.home-stat-card-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--navy, #0f172a);
-}
-
-.home-stat-card-number {
-  font-size: 28px;
+.home-hero-cinematic .eyebrow {
+  color: #6fe0a0 !important;
+  font-size: 11px;
   font-weight: 800;
-  line-height: 1.1;
-  color: var(--navy, #0f172a);
-  margin: 4px 0 2px;
-  display: block;
+  letter-spacing: 0.12em;
+  margin: 0;
 }
 
-.home-stat-card-state {
+.hero-athlete-kicker-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 11px;
+  color: #e2e8f0;
+}
+
+.hero-athlete-kicker-pill strong {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.home-hero-cinematic h1.home-hero-headline {
+  color: #ffffff !important;
+  font-size: clamp(34px, 4.5vw, 54px);
+  font-weight: 850;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  margin: 0 0 14px;
+}
+
+.home-hero-cinematic h1.home-hero-headline span {
+  color: #6fe0a0;
+}
+
+.home-hero-cinematic .hero-copy {
+  color: #cbd5e1 !important;
+  font-size: clamp(14px, 1.3vw, 16px);
+  line-height: 1.6;
+  margin: 0 0 20px;
+  max-width: 580px;
+}
+
+/* Quick Search Bar over dark cinematic background */
+.home-hero-cinematic .home-hero-search-wrap {
+  margin: 0 0 16px;
+  max-width: 580px;
+}
+
+.home-hero-cinematic .home-hero-search-form {
+  background: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+.home-hero-cinematic .home-hero-search-input {
+  color: #0f172a;
+}
+
+/* Quick Action Pills in Foreground */
+.home-hero-cinematic .home-hero-quick-pills {
+  margin-bottom: 22px;
+}
+
+.home-hero-cinematic .home-hero-pills-label {
+  color: #94a3b8;
+}
+
+.home-hero-cinematic .home-quick-pill {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: #f8fafc;
+  backdrop-filter: blur(8px);
+}
+
+.home-hero-cinematic .home-quick-pill:hover {
+  background: rgba(111, 224, 160, 0.22);
+  border-color: #6fe0a0;
+  color: #ffffff;
+}
+
+/* Bottom CTA & Trust Points */
+.home-hero-bottom-row {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 6px;
+}
+
+.home-hero-cinematic .hero-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-top: 6px;
-  font-size: 11.5px;
-  color: var(--muted, #64748b);
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.home-stat-card-arrow {
-  color: var(--accent, #07964f);
-  transition: transform 0.15s ease;
+.home-hero-cinematic .primary-link {
+  background: #07964f;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(7, 150, 79, 0.4);
 }
 
-.home-stat-interactive-card:hover .home-stat-card-arrow {
-  transform: translateX(4px);
+.home-hero-cinematic .primary-link:hover {
+  background: #06763e;
+}
+
+.home-hero-cinematic .secondary-link {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #ffffff !important;
+  backdrop-filter: blur(8px);
+}
+
+.home-hero-cinematic .secondary-link:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #ffffff;
+}
+
+.home-hero-cinematic .home-trust-points {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.home-hero-cinematic .home-trust-points span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #cbd5e1;
+}
+
+.home-hero-cinematic .home-trust-points svg {
+  color: #6fe0a0;
+}
+
+/* Floating Controls */
+.home-hero-cinematic .home-hero-carousel-controls {
+  position: absolute;
+  right: clamp(20px, 4vw, 40px);
+  bottom: clamp(16px, 3vw, 28px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(8, 25, 44, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  z-index: 4;
+}
+
+.home-hero-cinematic .hero-carousel-toggle,
+.home-hero-cinematic .hero-carousel-next {
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+
+.home-hero-cinematic .hero-carousel-toggle:hover,
+.home-hero-cinematic .hero-carousel-next:hover {
+  color: #ffffff;
+}
+
+.home-hero-cinematic .hero-carousel-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.home-hero-cinematic .hero-carousel-dots button {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.home-hero-cinematic .hero-carousel-dots button.is-active {
+  width: 18px;
+  border-radius: 999px;
+  background: #6fe0a0;
+}
+
+@media (max-width: 640px) {
+  .home-hero-cinematic .home-hero-carousel-controls {
+    position: static;
+    margin-top: 24px;
+    align-self: flex-start;
+  }
 }
 
 
