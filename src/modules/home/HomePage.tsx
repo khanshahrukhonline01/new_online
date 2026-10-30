@@ -297,6 +297,14 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
 
   const heroDiscoveryCards = [
     {
+      title: 'Live Scores',
+      subtitle: 'Match Center & Feeds',
+      icon: 'activity' as const,
+      bgClass: 'hero-icon-rose',
+      liveTag: true,
+      href: '/live-scores',
+    },
+    {
       title: 'Trials',
       subtitle: '350+ SAI & Club',
       icon: 'trophy' as const,
@@ -325,6 +333,22 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
       href: '/academies',
     },
     {
+      title: 'KhelChronicle',
+      subtitle: 'Sports Research Papers',
+      icon: 'book-open' as const,
+      bgClass: 'hero-icon-indigo',
+      tag: 'Research',
+      href: '/khelchronicle',
+    },
+    {
+      title: 'Talent Scanner',
+      subtitle: 'Fitness Benchmarks',
+      icon: 'award' as const,
+      bgClass: 'hero-icon-orange',
+      tag: 'Scout AI',
+      href: '/talent-scanner',
+    },
+    {
       title: 'Sports CV',
       subtitle: 'Scout Passport',
       icon: 'sparkles' as const,
@@ -338,13 +362,22 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
       bgClass: 'hero-icon-cyan',
       href: '/events',
     },
+    {
+      title: 'All Sports',
+      subtitle: '54+ Disciplines',
+      icon: 'sports' as const,
+      bgClass: 'hero-icon-teal',
+      href: '/sports',
+    },
   ]
 
   const quickExploreChips = [
+    { label: 'Live Matches', emoji: '🔴', href: '/live-scores' },
     { label: 'Cricket Trials', emoji: '🏏', href: '/opportunities?sport=Cricket' },
-    { label: 'SAI Wrestling', emoji: '🤼', href: '/opportunities?sport=Wrestling' },
+    { label: 'KhelChronicle', emoji: '🔬', href: '/khelchronicle' },
     { label: 'Book Turf', emoji: '⚽', href: '/venues' },
     { label: 'Pickup Games', emoji: '🏸', href: '/play' },
+    { label: 'Talent Scanner', emoji: '⚡', href: '/talent-scanner' },
     { label: 'Sports CV', emoji: '📄', href: '/sports-cv' },
   ]
 
@@ -603,6 +636,14 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                   onClick={e => handleLink(e, card.href)}
                   className="home-hero-action-card"
                 >
+                  {card.liveTag && (
+                    <span className="home-hero-card-live-pill">
+                      <span className="home-hero-live-dot" /> LIVE
+                    </span>
+                  )}
+                  {card.tag && (
+                    <span className="home-hero-card-tag-pill">{card.tag}</span>
+                  )}
                   <div className={`home-hero-card-icon-badge ${card.bgClass}`} aria-hidden="true">
                     <SiteIcon name={card.icon} size={20} />
                   </div>
