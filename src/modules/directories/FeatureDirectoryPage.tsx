@@ -1,80 +1,399 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { AsyncState } from '../../shared/components/AsyncState'
+import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
+import {
+  getAcademies,
+  getCoaches,
+  getEvents,
+  type CatalogueResult,
+} from '../../integrations/supabase/public-client'
+import type { Academy, Coach, EventItem } from '../../shared/domain'
 import './feature-directory.css'
-import { CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
 
 type Kind = 'coaches' | 'academies' | 'events' | 'calendar'
-type Item = { id: string; slug: string; name?: string; display_name?: string; title?: string; bio?: string; description?: string; city?: string; state?: string; organizer_name?: string; event_type?: string; venue_name?: string; starts_at?: string; ends_at?: string; source_name?: string; source_url?: string }
-type Status = 'loading' | 'ready' | 'unconfigured' | 'unavailable'
-const config: Record<Kind, { title: string; eyebrow: string; intro: string; table: string; select: string; order: string }> = {
- coaches: { title: 'Coaches directory', eyebrow: 'COACHING', intro: 'Explore published coach profiles. Confirm experience, credentials and contact details directly with each coach.', table: 'coaches', select: 'id,slug,display_name,bio,city,state,publication_status', order: 'display_name.asc' },
- academies: { title: 'Sports academies', eyebrow: 'COACHING', intro: 'Browse published academy records. Confirm programme availability, admission, fees and facilities with the academy.', table: 'academies', select: 'id,slug,name,description,city,state,publication_status', order: 'name.asc' },
- events: { title: 'Events & tournaments', eyebrow: 'SPORTS EVENTS', intro: 'Discover published events with dates and source links where available. Verify changes with the organiser.', table: 'events', select: 'id,slug,title,event_type,organizer_name,city,venue_name,starts_at,ends_at,source_name,source_url,publication_status', order: 'starts_at.asc.nullslast' },
- calendar: { title: 'Sports calendar', eyebrow: 'SPORTS CALENDAR', intro: 'Filter published events by date. Dates are displayed in your browser’s local timezone; confirm changes with the organiser.', table: 'events', select: 'id,slug,title,event_type,organizer_name,city,venue_name,starts_at,ends_at,source_name,source_url,publication_status', order: 'starts_at.asc.nullslast' },
+type DirectoryRecord = Academy | Coach | EventItem
+
+interface DirectoryConfig {
+  title: string
+  eyebrow: string
+  intro: string
+  defaultSort: string
+  sortOptions: Array<{ value: string; label: string }>
 }
-function isSafeExternalUrl(value: string) { try { const url = new URL(value); return url.protocol === 'https:' || url.protocol === 'http:' } catch { return false } }
-function formatDate(value?: string) { if (!value) return 'Date not provided'; const date = new Date(value); return Number.isNaN(date.getTime()) ? 'Date not provided' : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date) }
+
+const config: Record<Kind, DirectoryConfig> = {
+  coaches: {
+    title: 'Coaches directory',
+    eyebrow: 'COACHING',
+    intro:
+      'Explore verified coach profiles and Dronacharya mentors. Confirm experience, credentials and contact details directly with each coach.',
+    defaultSort: 'name',
+    sortOptions: [
+      { value: 'name', label: 'Name A to Z' },
+      { value: 'city', label: 'City' },
+    ],
+  },
+  academies: {
+    title: 'Sports academies',
+    eyebrow: 'ACADEMIES',
+    intro:
+      'Browse published sports academy records and high-performance centres. Confirm programme availability, admission, fees and facilities with the academy.',
+    defaultSort: 'name',
+    sortOptions: [
+      { value: 'name', label: 'Name A to Z' },
+      { value: 'city', label: 'City' },
+    ],
+  },
+  events: {
+    title: 'Events & tournaments',
+    eyebrow: 'SPORTS EVENTS',
+    intro:
+      'Discover published tournaments and national championships with official dates and source links. Verify fixture changes with the organiser.',
+    defaultSort: 'date',
+    sortOptions: [
+      { value: 'date', label: 'Date / upcoming' },
+      { value: 'name', label: 'Title A to Z' },
+    ],
+  },
+  calendar: {
+    title: 'Sports calendar',
+    eyebrow: 'SPORTS CALENDAR',
+    intro:
+      'Filter published sports events by date. Dates are displayed in Indian Standard Time (IST); confirm changes with the organiser.',
+    defaultSort: 'date',
+    sortOptions: [
+      { value: 'date', label: 'Date / upcoming' },
+      { value: 'name', label: 'Title A to Z' },
+    ],
+  },
+}
+
+function isSafeExternalUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' || url.protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
+function formatDate(value?: string | null): string {
+  if (!value) return 'Date not provided'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime())
+    ? 'Date not provided'
+    : new Intl.DateTimeFormat('en-IN', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: 'Asia/Kolkata',
+      }).format(date)
+}
+
+const EMPTY_RECORDS: never[] = []
 
 export default function FeatureDirectoryPage({ kind }: { kind: Kind }) {
- const page = config[kind]
- const [records, setRecords] = useState<Item[]>([])
- const [status, setStatus] = useState<Status>('loading')
- const [message, setMessage] = useState('')
- const params = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
- const [city, setCity] = useState(params.get('city') ?? '')
- const [query, setQuery] = useState(params.get('q') ?? '')
- const [eventType, setEventType] = useState(params.get('type') ?? '')
- const [fromDate, setFromDate] = useState(params.get('from') ?? '')
- const [toDate, setToDate] = useState(params.get('to') ?? '')
- const [sort, setSort] = useState(params.get('sort') ?? 'date')
- const load = useCallback(async () => {
-  setStatus('loading')
-  const url = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY
-  if (!url || !key) { setStatus('unconfigured'); return }
-  try {
-   const params = new URLSearchParams({ select: page.select, order: page.order, publication_status: 'eq.published', limit: '200' })
-   const response = await fetch(url + '/rest/v1/' + page.table + '?' + params.toString(), { headers: { apikey: key, Authorization: 'Bearer ' + key } })
-   if (!response.ok) { setMessage(response.status === 404 || response.status === 400 ? 'The required directory table or columns are not available in this database yet.' : 'The directory service is unavailable.'); setStatus('unavailable'); return }
-   const data: unknown = await response.json()
-   if (!Array.isArray(data)) { setMessage('The directory returned an unexpected response.'); setStatus('unavailable'); return }
-   setRecords(data as Item[]); setStatus('ready')
-  } catch { setMessage('Could not connect to the directory. Check your connection and try again.'); setStatus('unavailable') }
- }, [page])
- useEffect(() => { void load() }, [load])
- const cities = useMemo(() => [...new Set(records.map(r => r.city?.trim()).filter((v): v is string => Boolean(v)))].sort((a,b) => a.localeCompare(b)), [records])
- const visible = useMemo(() => records.filter(r => {
-  const name = r.display_name ?? r.name ?? r.title ?? ''
-  const matches = [name,r.bio,r.description,r.city,r.state,r.organizer_name,r.event_type,r.venue_name].some(v => v?.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
-  if (!matches || (city && r.city !== city) || (eventType && r.event_type !== eventType)) return false
-  if (kind !== 'calendar') return true
-  const time = r.starts_at ? new Date(r.starts_at).getTime() : Number.NaN
-  const after = fromDate ? new Date(fromDate + 'T00:00:00').getTime() : Number.NEGATIVE_INFINITY
-  const before = toDate ? new Date(toDate + 'T23:59:59.999').getTime() : Number.POSITIVE_INFINITY
-  return Number.isFinite(time) && time >= after && time <= before
- }).sort((a,b) => sort === 'name' ? (a.display_name ?? a.name ?? a.title ?? '').localeCompare(b.display_name ?? b.name ?? b.title ?? '') : (a.starts_at ?? '').localeCompare(b.starts_at ?? '')), [records,query,city,eventType,fromDate,toDate,kind,sort])
- const eventTypes = [...new Set(records.map(record => record.event_type).filter((value): value is string => Boolean(value)))].sort()
- const fields = [
-  { key: 'city', label: 'City', value: city, onChange: setCity, options: cities.map(value => ({ value, label: value })) },
-  ...((kind === 'events' || kind === 'calendar') ? [{ key: 'type', label: 'Event type', value: eventType, onChange: setEventType, options: eventTypes.map(value => ({ value, label: value })) }] : []),
-  ...(kind === 'calendar' ? [{ key: 'from', label: 'From date', value: fromDate, onChange: setFromDate, options: [], inputType: 'date' as const }, { key: 'to', label: 'To date', value: toDate, onChange: setToDate, options: [], inputType: 'date' as const }] : []),
- ]
- return <section className="content-page feature-directory-page">
-  <p className="eyebrow">KHELGRID · {page.eyebrow}</p><h1>{page.title}</h1><p className="page-intro">{page.intro}</p>
-  <div className="kg-catalogue-layout kg-no-filter-fields"><CatalogueFilterPanel search={query} onSearch={setQuery} searchPlaceholder="Name, description or location…" fields={fields} onClear={() => { setQuery(''); setCity(''); setEventType(''); setFromDate(''); setToDate(''); setSort('date') }} sort={sort} onSort={setSort} defaultSort="date" resultCount={visible.length} totalCount={records.length} /><div className="kg-catalogue-results"><div className="kg-results-toolbar"><span>{visible.length} of {records.length} published records</span><label>Sort by <select value={sort} onChange={e => setSort(e.target.value)}><option value="date">Date / upcoming</option><option value="name">Name A to Z</option></select></label></div>
-  {status === 'loading' && <div className="state-panel state-loading" role="status"><div className="state-symbol">…</div><h3>Loading published records</h3><p>No sample listings are added.</p></div>}
-  {status === 'unconfigured' && <div className="state-panel state-unavailable" role="status"><div className="state-symbol">!</div><h3>Directory not connected</h3><p>Supabase public environment settings are missing. No example records are shown.</p></div>}
-  {status === 'unavailable' && <div className="state-panel state-unavailable" role="alert"><div className="state-symbol">!</div><h3>Records unavailable</h3><p>{message}</p><button className="secondary-link" type="button" onClick={() => void load()}>Try again</button></div>}
-  {status === 'ready' && visible.length === 0 && <div className="state-panel" role="status"><div className="state-symbol"><SiteIcon name="search" size={17} /></div><h3>{records.length ? 'No matching records' : 'No published records yet'}</h3><p>{records.length ? 'Try another search, city or date range.' : 'Records appear here after they are reviewed and published. No listings are fabricated.'}</p>{Boolean(query.trim() || city || eventType || fromDate || toDate || sort !== 'date') && <button className="secondary-link kg-empty-reset-btn" type="button" onClick={() => { setQuery(''); setCity(''); setEventType(''); setFromDate(''); setToDate(''); setSort('date') }}><SiteIcon name="refresh" size={14} /> Clear all filters</button>}</div>}
-  {status === 'ready' && visible.length > 0 && <div className="catalogue-grid">{visible.map(r => {
-   const name = r.display_name ?? r.name ?? r.title ?? 'Untitled record'
-   return <article className="catalogue-card" key={r.id}><span className="card-kicker">{kind === 'events' || kind === 'calendar' ? r.event_type ?? 'EVENT' : r.city ?? 'LOCATION NOT PROVIDED'}</span><h2>{name}</h2>
-    {(r.city || r.state) && <p>{[r.city,r.state].filter(Boolean).join(', ')}</p>}{(r.bio || r.description) && <p>{r.bio ?? r.description}</p>}
-    {(kind === 'events' || kind === 'calendar') && <p><strong>Starts:</strong> {formatDate(r.starts_at)}{r.ends_at ? ' · Ends: ' + formatDate(r.ends_at) : ''}</p>}
-    {r.organizer_name && <p><strong>Organiser:</strong> {r.organizer_name}</p>}{r.venue_name && <p><strong>Venue:</strong> {r.venue_name}</p>}{r.source_name && <p><strong>Source:</strong> {r.source_name}</p>}
-    {r.source_url && isSafeExternalUrl(r.source_url) && <a className="card-action" href={r.source_url} target="_blank" rel="noopener noreferrer">Open organiser source <SiteIcon name="arrow-up-right" size={14} /></a>}
-   </article>
-  })}</div>}
-  </div></div><p className="coming-soon-note">Publication does not mean independent verification. Confirm source, dates, fees, eligibility and availability with the organiser.</p>
- </section>
+  const page = config[kind]
+  const [result, setResult] = useState<CatalogueResult<DirectoryRecord> | { status: 'loading'; data: [] }>({
+    status: 'loading',
+    data: [],
+  })
+
+  const initial = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
+  const [query, setQuery] = useState(initial.get('q') ?? '')
+  const [city, setCity] = useState(initial.get('city') ?? '')
+  const [eventType, setEventType] = useState(initial.get('type') ?? '')
+  const [fromDate, setFromDate] = useState(initial.get('from') ?? '')
+  const [toDate, setToDate] = useState(initial.get('to') ?? '')
+  const [sort, setSort] = useState(initial.get('sort') ?? page.defaultSort)
+
+  useEffect(() => {
+    let active = true
+    const loader =
+      kind === 'academies'
+        ? getAcademies()
+        : kind === 'coaches'
+          ? getCoaches()
+          : getEvents()
+
+    loader.then(res => {
+      if (active) setResult(res as CatalogueResult<DirectoryRecord>)
+    })
+
+    return () => {
+      active = false
+    }
+  }, [kind])
+
+  const records = useMemo(() => (result.status === 'ready' ? result.data : EMPTY_RECORDS), [result])
+
+  const cities = useMemo(
+    () =>
+      [
+        ...new Set(
+          records
+            .map(r => r.city?.trim())
+            .filter((v): v is string => Boolean(v)),
+        ),
+      ].sort((a, b) => a.localeCompare(b)),
+    [records],
+  )
+
+  const eventTypes = useMemo(
+    () =>
+      kind === 'events' || kind === 'calendar'
+        ? [
+            ...new Set(
+              (records as EventItem[])
+                .map(r => r.event_type)
+                .filter((v): v is EventItem['event_type'] => Boolean(v)),
+            ),
+          ].sort()
+        : [],
+    [records, kind],
+  )
+
+  const visible = useMemo(() => {
+    return records
+      .filter(r => {
+        const name =
+          ('display_name' in r ? r.display_name : undefined) ??
+          ('name' in r ? r.name : undefined) ??
+          ('title' in r ? r.title : undefined) ??
+          ''
+        const bioOrDesc = ('bio' in r ? r.bio : undefined) ?? ('description' in r ? r.description : undefined) ?? ''
+        const organizer = 'organizer_name' in r ? r.organizer_name : ''
+        const venue = 'venue_name' in r ? r.venue_name : ''
+        const state = 'state' in r ? r.state : ''
+        const evType = 'event_type' in r ? r.event_type : ''
+
+        const matches = [name, bioOrDesc, r.city, state, organizer, venue, evType].some(v =>
+          v?.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
+        )
+        if (!matches) return false
+        if (city && r.city !== city) return false
+        if (eventType && evType !== eventType) return false
+
+        if (kind === 'calendar' && 'starts_at' in r && r.starts_at) {
+          const time = new Date(r.starts_at).getTime()
+          const after = fromDate ? new Date(fromDate + 'T00:00:00+05:30').getTime() : Number.NEGATIVE_INFINITY
+          const before = toDate ? new Date(toDate + 'T23:59:59.999+05:30').getTime() : Number.POSITIVE_INFINITY
+          if (Number.isFinite(time) && (time < after || time > before)) return false
+        }
+        return true
+      })
+      .sort((a, b) => {
+        const nameA =
+          ('display_name' in a ? a.display_name : undefined) ??
+          ('name' in a ? a.name : undefined) ??
+          ('title' in a ? a.title : undefined) ??
+          ''
+        const nameB =
+          ('display_name' in b ? b.display_name : undefined) ??
+          ('name' in b ? b.name : undefined) ??
+          ('title' in b ? b.title : undefined) ??
+          ''
+        if (sort === 'city') return (a.city ?? '').localeCompare(b.city ?? '')
+        if (sort === 'date' && 'starts_at' in a && 'starts_at' in b) {
+          return (a.starts_at ?? '').localeCompare(b.starts_at ?? '')
+        }
+        return nameA.localeCompare(nameB)
+      })
+  }, [records, query, city, eventType, fromDate, toDate, kind, sort])
+
+  const clearAll = () => {
+    setQuery('')
+    setCity('')
+    setEventType('')
+    setFromDate('')
+    setToDate('')
+    setSort(page.defaultSort)
+  }
+
+  const fields = [
+    {
+      key: 'city',
+      label: 'City',
+      value: city,
+      onChange: setCity,
+      options: cities.map(value => ({ value, label: value })),
+    },
+    ...(kind === 'events' || kind === 'calendar'
+      ? [
+          {
+            key: 'type',
+            label: 'Event type',
+            value: eventType,
+            onChange: setEventType,
+            options: eventTypes.map(value => ({
+              value,
+              label: value[0].toUpperCase() + value.slice(1),
+            })),
+          },
+        ]
+      : []),
+    ...(kind === 'calendar'
+      ? [
+          {
+            key: 'from',
+            label: 'From date',
+            value: fromDate,
+            onChange: setFromDate,
+            options: [],
+            inputType: 'date' as const,
+          },
+          {
+            key: 'to',
+            label: 'To date',
+            value: toDate,
+            onChange: setToDate,
+            options: [],
+            inputType: 'date' as const,
+          },
+        ]
+      : []),
+  ]
+
+  const hasActiveFilters = Boolean(
+    query.trim() || city || eventType || fromDate || toDate || sort !== page.defaultSort,
+  )
+
+  return (
+    <section className="content-page feature-directory-page">
+      <p className="eyebrow">KHELGRID · {page.eyebrow}</p>
+      <h1>{page.title}</h1>
+      <p className="page-intro">{page.intro}</p>
+
+      <div className="kg-catalogue-layout">
+        <CatalogueFilterPanel
+          search={query}
+          onSearch={setQuery}
+          searchPlaceholder="Name, description or city…"
+          fields={fields}
+          onClear={clearAll}
+          sort={sort}
+          onSort={setSort}
+          defaultSort={page.defaultSort}
+          resultCount={visible.length}
+          totalCount={records.length}
+        />
+
+        <div className="kg-catalogue-results">
+          <div className="kg-results-toolbar">
+            <span>
+              {visible.length} of {records.length} published records
+            </span>
+            <label>
+              Sort by{' '}
+              <select value={sort} onChange={e => setSort(e.target.value)}>
+                {page.sortOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <AsyncState state={result.status} message={result.status === 'unavailable' ? result.message : undefined}>
+            {result.status === 'ready' &&
+              (visible.length ? (
+                <div className="catalogue-grid">
+                  {visible.map(r => {
+                    const name =
+                      ('display_name' in r ? r.display_name : undefined) ??
+                      ('name' in r ? r.name : undefined) ??
+                      ('title' in r ? r.title : undefined) ??
+                      'Untitled record'
+                    const bioOrDesc =
+                      ('bio' in r ? r.bio : undefined) ?? ('description' in r ? r.description : undefined)
+                    const state = 'state' in r ? r.state : undefined
+                    const evType = 'event_type' in r ? r.event_type : undefined
+                    const isVerified = r.verification_status === 'verified'
+
+                    const websiteUrl =
+                      'website_url' in r && r.website_url
+                        ? r.website_url
+                        : 'source_url' in r && r.source_url
+                          ? r.source_url
+                          : undefined
+
+                    return (
+                      <article className="catalogue-card" key={r.id}>
+                        <div className="listing-topline">
+                          <span className="card-kicker">
+                            {evType ? evType.toUpperCase() : r.city ? r.city.toUpperCase() : 'PUBLISHED'}
+                          </span>
+                          {isVerified && (
+                            <span className="verification verified">
+                              <SiteIcon name="shield-check" size={13} /> Verified
+                            </span>
+                          )}
+                        </div>
+
+                        <h2>{name}</h2>
+
+                        {(r.city || state) && (
+                          <p>
+                            <SiteIcon name="map-pin" size={14} /> {[r.city, state].filter(Boolean).join(', ')}
+                          </p>
+                        )}
+
+                        {bioOrDesc && <p>{bioOrDesc}</p>}
+
+                        {'starts_at' in r && r.starts_at && (
+                          <p>
+                            <strong>Starts:</strong> {formatDate(r.starts_at)}
+                            {r.ends_at ? ' · Ends: ' + formatDate(r.ends_at) : ''}
+                          </p>
+                        )}
+
+                        {'organizer_name' in r && r.organizer_name && (
+                          <p>
+                            <strong>Organiser:</strong> {r.organizer_name}
+                          </p>
+                        )}
+
+                        {'venue_name' in r && r.venue_name && (
+                          <p>
+                            <strong>Venue:</strong> {r.venue_name}
+                          </p>
+                        )}
+
+                        {websiteUrl && isSafeExternalUrl(websiteUrl) && (
+                          <a
+                            className="card-action"
+                            href={websiteUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Open official source <SiteIcon name="arrow-up-right" size={14} />
+                          </a>
+                        )}
+                      </article>
+                    )
+                  })}
+                </div>
+              ) : (
+                <CatalogueEmptyState
+                  title={records.length ? 'No matching records' : 'No published records yet'}
+                  message={
+                    records.length
+                      ? 'Try another search keyword, city or date range, or clear your filters.'
+                      : 'Records appear here after they are reviewed and published. No listings are fabricated.'
+                  }
+                  hasFilters={hasActiveFilters}
+                  onClear={clearAll}
+                />
+              ))}
+          </AsyncState>
+        </div>
+      </div>
+
+      <p className="coming-soon-note">
+        Publication does not mean commercial endorsement. Confirm dates, eligibility, credentials, and fees directly with
+        the official organisation before taking action.
+      </p>
+    </section>
+  )
 }

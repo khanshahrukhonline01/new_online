@@ -1,4 +1,4 @@
-import type { Opportunity, Sport, Venue } from '../../shared/domain'
+import type { Academy, Coach, EventItem, Opportunity, Sport, Venue } from '../../shared/domain'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -10,7 +10,7 @@ export type CatalogueResult<T> =
   | { status: 'unavailable'; data: []; message: string }
 
 type QueryOptions = {
-  table: 'sports' | 'opportunities' | 'venues'
+  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events'
   select: string
   order: string
   filters: Record<string, string>
@@ -86,6 +86,42 @@ export function getVenues() {
     select: 'id,slug,name,description,city,address,timezone',
     order: 'name.asc',
     filters: { publication_status: 'eq.published' },
+  })
+}
+
+export function getAcademies() {
+  return readCatalogue<Academy>({
+    table: 'academies',
+    select: 'id,slug,name,description,city,state,website_url,public_contact_url,verification_status',
+    order: 'name.asc',
+    filters: {
+      publication_status: 'eq.published',
+      verification_status: 'neq.rejected',
+    },
+  })
+}
+
+export function getCoaches() {
+  return readCatalogue<Coach>({
+    table: 'coaches',
+    select: 'id,slug,display_name,bio,city,state,website_url,public_contact_url,verification_status',
+    order: 'display_name.asc',
+    filters: {
+      publication_status: 'eq.published',
+      verification_status: 'neq.rejected',
+    },
+  })
+}
+
+export function getEvents() {
+  return readCatalogue<EventItem>({
+    table: 'events',
+    select: 'id,slug,title,event_type,organizer_name,city,venue_name,starts_at,ends_at,source_name,source_url,verification_status',
+    order: 'starts_at.asc.nullslast',
+    filters: {
+      publication_status: 'eq.published',
+      verification_status: 'neq.rejected',
+    },
   })
 }
 
