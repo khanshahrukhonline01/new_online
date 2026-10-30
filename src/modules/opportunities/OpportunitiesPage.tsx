@@ -35,7 +35,7 @@ export default function OpportunitiesPage() {
       && (!verification || item.verification_status === verification)
       && (!fromDate || (Number.isFinite(start) && start >= after))
       && (!toDate || (Number.isFinite(start) && start <= before))
-  }).sort((a,b) => sort === 'oldest' ? (a.starts_at ?? '').localeCompare(b.starts_at ?? '') : sort === 'deadline' ? (a.application_deadline ?? '9999').localeCompare(b.application_deadline ?? '9999') : (b.created_at ?? '').localeCompare(a.created_at ?? '')), [records,query,city,type,verification,fromDate,toDate,sort])
+  }).sort((a,b) => sort === 'oldest' ? (a.starts_at ?? '').localeCompare(b.starts_at ?? '') : sort === 'deadline' ? (a.application_deadline ?? '9999').localeCompare(b.application_deadline ?? '9999') : (b.starts_at ?? '').localeCompare(a.starts_at ?? '')), [records,query,city,type,verification,fromDate,toDate,sort])
   const fields = [
     { key: 'city', label: 'City', value: city, onChange: setCity, options: cities.map(value => ({ value, label: value })) },
     { key: 'type', label: 'Opportunity type', value: type, onChange: setType, options: ['trial','combine','scholarship','camp','job','other'].map(value => ({ value, label: value[0].toUpperCase()+value.slice(1) })) },
