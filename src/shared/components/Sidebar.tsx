@@ -43,13 +43,13 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
   const closeRef = useRef<HTMLButtonElement>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => ({
-    core: true, play: true, athlete: false, knowledge: false, network: false,
+    'your-space': true, discover: true, 'play-train': false, 'athlete-tools': false, 'learn-community': false, network: false,
   }))
 
   // Persist section preferences while always revealing the active route's group.
   useEffect(() => {
     try {
-      const saved = window.localStorage.getItem('khelgrid-sidebar-sections-v1')
+      const saved = window.localStorage.getItem('khelgrid-sidebar-sections-v2')
       if (saved) {
         const parsed = JSON.parse(saved) as Record<string, boolean>
         setExpandedSections(previous => ({ ...previous, ...parsed }))
@@ -135,7 +135,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
     <button className={open ? 'sidebar-backdrop is-visible' : 'sidebar-backdrop'} type="button" aria-label="Close navigation menu" aria-hidden={!open} tabIndex={open ? 0 : -1} onClick={() => { onClose(); toggleRef.current?.focus() }} />
     <aside id="app-sidebar" className={collapsed ? 'app-sidebar is-collapsed' : 'app-sidebar'} aria-label="Sidebar navigation">
       <nav className="sidebar-navigation" aria-label="Feature navigation">{renderSections()}</nav>
-      {!collapsed ? <div className="sidebar-promo"><strong>Create your Sports CV</strong><p>Build a profile-ready CV and export it when you're ready.</p><span className="sidebar-coming-soon" aria-disabled="true">Sports CV tools · Coming soon</span></div> : null}
+      {!collapsed ? <div className="sidebar-promo"><strong>Build your athlete profile</strong><p>Create a Sports CV and prepare a profile-ready PDF on your device.</p><a href="/sports-cv" onClick={event => { onNavigate(event, '/sports-cv'); onClose() }}>Open Sports CV <SiteIcon name="arrow-up-right" size={13} /></a></div> : null}
       <div className="sidebar-bottom">
         <a className="sidebar-utility-link" href="/notifications" aria-label="Notifications" title="Notifications"><SiteIcon name="bell" size={18} /><span className="sidebar-utility-label">Notifications</span></a>
         <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback" title="Help and feedback"><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">Help &amp; feedback</span></a>
@@ -146,7 +146,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
     <div ref={drawerRef} id="mobile-sidebar-drawer" className={open ? 'mobile-drawer is-open' : 'mobile-drawer'} aria-hidden={!open} role="dialog" aria-modal={open ? 'true' : undefined} aria-label="Mobile navigation">
       <div className="mobile-drawer-header"><button ref={closeRef} className="sidebar-mobile-close" type="button" onClick={() => { onClose(); toggleRef.current?.focus() }} aria-label="Close navigation"><SiteIcon name="close" size={20} /></button></div>
       <nav className="sidebar-navigation" aria-label="Mobile feature navigation">{renderSections(true)}</nav>
-      <div className="sidebar-promo"><strong>Create your Sports CV</strong><p>Build a profile-ready CV and export it when you're ready.</p><span className="sidebar-coming-soon" aria-disabled="true">Sports CV tools · Coming soon</span></div>
+      <div className="sidebar-promo"><strong>Build your athlete profile</strong><p>Create a Sports CV and prepare a profile-ready PDF on your device.</p><a href="/sports-cv" onClick={event => { onNavigate(event, '/sports-cv'); onClose() }}>Open Sports CV <SiteIcon name="arrow-up-right" size={13} /></a></div>
       <div className="sidebar-bottom">
         <a className="sidebar-utility-link" href="/notifications" aria-label="Notifications"><SiteIcon name="bell" size={18} /><span className="sidebar-utility-label">Notifications</span></a>
         <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback"><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">Help &amp; feedback</span></a>
