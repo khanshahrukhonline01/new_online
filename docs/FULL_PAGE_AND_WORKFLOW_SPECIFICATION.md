@@ -270,3 +270,17 @@ Every new or substantially changed page must document:
 ## 10. Change control
 
 Update this document when a route is added, removed, renamed, aliased, or changes its data source/status. Update the route resolver tests and the page inventory in the same pull request. When a feature becomes verified, record the commit/PR, environment, automated checks and manual test evidence. Do not mark a page complete merely because its component renders.
+
+
+## Sidebar layout contract and regression checks
+
+The desktop sidebar is a permanent 64px layout reservation. It is fixed below the 68px header and its 256px expanded presentation overlays the page on pointer hover or keyboard focus; expansion must not resize or shift the main content, sports bar, homepage hero, catalogue grids or footer. The footer reserves the same 64px column. Pointer leave restores the icon rail. Mobile uses a separate drawer and bottom navigation with no desktop reservation.
+
+Component ownership:
+- `src/shared/components/Sidebar.tsx`: navigation markup, route interactions, section state, drawer and focus behaviour.
+- `src/shared/components/Sidebar.css`: component styling and the minimum application-shell reservation/overlay integration.
+- `src/shared/navigation/navigationRegistry.ts`: route labels, destinations, groups and availability.
+- `src/App.tsx`: route composition and application-level collapsed/mobile menu state only.
+- `src/styles.css`: global styles only; no sidebar-specific selector overrides.
+
+The sidebar regression suite must cover: default collapsed state, compact navigation destinations and utility links, desktop shell/main-content/footer structure, and separation of mobile drawer/bottom navigation. Before merging, run `npm run typecheck`, `npm run lint`, `npm run test` and `npm run build`; manually inspect desktop hover/pointer-leave, keyboard focus expansion, route navigation, independent sidebar scrolling, mobile drawer/focus behaviour, and confirm that the homepage hero, catalogue layout and footer do not shift.
