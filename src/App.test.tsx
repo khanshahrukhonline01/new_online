@@ -43,6 +43,11 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('IPR, AI &amp; Copyright Notice')
     expect(html).toContain('Sports Network Index')
     expect(html).toContain('ipr@khelgrid.com')
+    expect(html).toContain('Top Sports Complexes in Cities')
+    expect(html).toContain('Explore all cities')
+    expect(html).toContain('Jawaharlal Nehru Stadium')
+    expect(html).toContain('Wankhede Stadium')
+    expect(html).toContain('Sree Kanteerava Stadium')
   })
 })
 

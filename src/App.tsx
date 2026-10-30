@@ -15,6 +15,7 @@ import Sidebar from './shared/components/Sidebar'
 import SportsBar from './shared/components/SportsBar'
 import { resolveRoute } from './shared/routing'
 import { SiteIcon } from './shared/components/SiteIcon'
+import TopSportsComplexes from './shared/components/TopSportsComplexes'
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
 
@@ -120,6 +121,7 @@ export default function App() {
     </div>
 
     <footer className="site-footer">
+      <TopSportsComplexes onNavigate={navigate} />
       <div className="footer-main">
         <div className="footer-about">
           <a className="footer-brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="footer-brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /></a>

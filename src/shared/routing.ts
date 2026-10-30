@@ -48,7 +48,11 @@ export function resolveRoute(pathname: string): RouteMatch {
     const slug = path.slice('/opportunities/'.length)
     if (slug && !slug.includes('/')) return { name: 'opportunity-detail', canonicalPath: '/opportunities/:slug', slug: decodeURIComponentSafe(slug) }
   }
-  if (path === '/venues' || path === '/book') return { name: 'venues-index', canonicalPath: '/venues', ...(path === '/venues' ? {} : { alias: path }) }
+  if (path === '/venues' || path === '/book' || path === '/cities') return { name: 'venues-index', canonicalPath: '/venues', ...(path === '/venues' ? {} : { alias: path }) }
+  if (path.startsWith('/city/')) {
+    const slug = path.slice('/city/'.length)
+    if (slug && !slug.includes('/')) return { name: 'venues-index', canonicalPath: '/venues', alias: path }
+  }
   if (path.startsWith('/venues/')) {
     const slug = path.slice('/venues/'.length)
     if (slug && !slug.includes('/')) return { name: 'venue-detail', canonicalPath: '/venues/:slug', slug: decodeURIComponentSafe(slug) }

@@ -42,5 +42,6 @@ describe('HomePage 5 core live-website sections', () => {
     expect(html).toContain('Scroll academies right')
     expect(html).toContain('All Academies')
     expect(html).toContain('/academies')
+    expect(html).toContain('Loading accredited institutions…')
   })
 })
