@@ -1653,3 +1653,7 @@ body { color: var(--text); background: var(--page); }
   .foundation-v1 .app-sidebar,
   .foundation-v1 .app-shell.sidebar-is-expanded .app-sidebar { width: 76px; flex-basis: 76px; }
 }
+
+@media (min-width: 701px) {
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar { width: 76px; flex-basis: 76px; }
+}
