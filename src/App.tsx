@@ -23,7 +23,6 @@ import KhelChroniclePaperPage from './modules/khelchronicle/KhelChroniclePaperPa
 import KhelChronicleCategoryPage from './modules/khelchronicle/KhelChronicleCategoryPage'
 import KhelChronicleAuthorPage from './modules/khelchronicle/KhelChronicleAuthorPage'
 import KhelChronicleSubmitPage from './modules/khelchronicle/KhelChronicleSubmitPage'
-import KhelChronicleDispatchStrip from './modules/khelchronicle/KhelChronicleDispatchStrip'
 import TalentScannerPage from './modules/talent-scanner/TalentScannerPage'
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
@@ -136,7 +135,6 @@ export default function App() {
     </div>
 
     <footer className="site-footer">
-      <KhelChronicleDispatchStrip onNavigate={navigate} />
       <FrequentlyAskedQuestions activePath={path} onNavigate={navigate} />
       <GameSportPlayAcrossIndia onNavigate={navigate} />
       <TopSportsComplexes onNavigate={navigate} />
