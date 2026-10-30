@@ -84,8 +84,8 @@ describe('catalogue search', () => {
 })
 
 describe('shared navigation route coverage', () => {
-  it('keeps Search in Knowledge & Community while including it in combined navigation', () => {
-    expect(navigationModules.find(section => section.id === 'knowledge')?.items.map(item => item.href))
+  it('keeps Search in Discover while including it in combined navigation', () => {
+    expect(navigationModules.find(section => section.id === 'discover')?.items.map(item => item.href))
       .toContain('/search')
     expect(primaryNavigation.map(item => item.href)).toContain('/search')
   })
