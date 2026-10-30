@@ -73,8 +73,10 @@ describe('HomePage 5 core live-website sections', () => {
     expect(html).toContain('KhelChronicle Research')
     expect(html).toContain('/khelchronicle')
 
-    // 8. Hero Quick Search & Discovery Action Cards (Live Website Parity Option A)
-    expect(html).toContain('Sports Across <span class="home-hero-title-green">India</span>')
+    // 8. Hero Quick Search & Discovery Action Cards (Live Website Parity Option A - Tiranga)
+    expect(html).toContain('home-hero-tiranga-saffron">Sports</span>')
+    expect(html).toContain('home-hero-tiranga-white">Across</span>')
+    expect(html).toContain('home-hero-tiranga-green">India</span>')
     expect(html).toContain('Search cricket trials, football turf, badminton...')
     expect(html).toContain('Quick Explore:')
     expect(html).toContain('home-hero-action-card')

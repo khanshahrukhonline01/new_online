@@ -1026,11 +1026,38 @@
 
 .home-hero-main-title {
   margin: 0;
-  font-size: clamp(26px, 3.4vw, 36px);
-  font-weight: 850;
-  letter-spacing: -0.035em;
+  font-size: clamp(26px, 3.4vw, 38px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.14;
+}
+
+/* Indian Flag (Tiranga) Colors for "Sports Across India" */
+.home-hero-tiranga-saffron {
+  color: #ff671f;
+  background: linear-gradient(180deg, #ff9933 0%, #ff5500 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 8px rgba(255, 103, 31, 0.35));
+  display: inline-block;
+}
+
+.home-hero-tiranga-white {
   color: #ffffff;
-  line-height: 1.12;
+  background: linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.3));
+  display: inline-block;
+}
+
+.home-hero-tiranga-green {
+  color: #138808;
+  background: linear-gradient(180deg, #22c55e 0%, #046a38 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 8px rgba(4, 106, 56, 0.35));
+  display: inline-block;
 }
 
 .home-hero-title-green {

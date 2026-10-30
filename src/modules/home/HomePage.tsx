@@ -531,8 +531,10 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                 <span className="home-hero-motto">· Discover. Compete.</span>
                 <span className="sr-only">Source-aware listings</span>
               </div>
-              <h1 className="home-hero-main-title">
-                Sports Across <span className="home-hero-title-green">India</span>
+              <h1 className="home-hero-main-title" aria-label="Sports Across India">
+                <span className="home-hero-tiranga-saffron">Sports</span>{' '}
+                <span className="home-hero-tiranga-white">Across</span>{' '}
+                <span className="home-hero-tiranga-green">India</span>
               </h1>
             </div>
 
