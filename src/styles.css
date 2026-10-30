@@ -2586,3 +2586,116 @@ body { color: var(--text); background: var(--page); }
     box-shadow: none !important;
   }
 }
+
+
+/* Sidebar layout correction: fixed viewport rail, independent of page/footer height.
+   The header stays full width; content and footer reserve the same sidebar column. */
+@media (min-width: 701px) {
+  .foundation-v1 .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .foundation-v1 .app-workspace {
+    display: block !important;
+    min-height: calc(100vh - 78px);
+    margin-left: 260px !important;
+    width: calc(100% - 260px);
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-workspace {
+    margin-left: 76px !important;
+    width: calc(100% - 76px);
+  }
+  .foundation-v1 .app-workspace > .app-sidebar,
+  .foundation-v1 .app-shell.sidebar-is-expanded .app-workspace > .app-sidebar,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-workspace > .app-sidebar {
+    position: fixed !important;
+    top: 78px !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    z-index: 40;
+    display: flex !important;
+    flex-direction: column;
+    width: 260px !important;
+    min-width: 260px !important;
+    max-width: 260px !important;
+    height: calc(100dvh - 78px) !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex: none !important;
+    align-self: auto !important;
+    margin: 0 !important;
+    padding: 12px 10px 14px !important;
+    overflow: hidden !important;
+    background: #f7f7f8 !important;
+    border: 0 !important;
+    border-right: 1px solid #e7e7e9 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    transition: width .18s ease !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-workspace > .app-sidebar {
+    width: 76px !important;
+    min-width: 76px !important;
+    max-width: 76px !important;
+  }
+  .foundation-v1 .app-workspace > .app-sidebar .sidebar-navigation {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    padding: 4px 0 12px !important;
+  }
+  .foundation-v1 .app-workspace > .app-sidebar .sidebar-bottom {
+    flex: 0 0 auto !important;
+    margin-top: auto !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-expanded .app-sidebar .sidebar-module-heading-icon {
+    display: inline-flex !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-expanded .app-sidebar .sidebar-module-label {
+    display: block !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-module-toggle,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-module-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-link-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-coming-soon,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-utility-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-bottom-note {
+    display: none !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-rail-links {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-rail-links .sidebar-link {
+    display: grid !important;
+    place-items: center;
+    width: 56px !important;
+    min-width: 56px !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+  }
+  .foundation-v1 .site-footer,
+  .foundation-v1 .app-shell.sidebar-is-expanded .site-footer {
+    width: calc(100% - 260px) !important;
+    margin-left: 260px !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .site-footer {
+    width: calc(100% - 76px) !important;
+    margin-left: 76px !important;
+  }
+}
+@media (max-width: 700px) {
+  .foundation-v1 .app-workspace { margin-left: 0 !important; width: 100% !important; }
+  .foundation-v1 .site-footer { margin-left: 0 !important; width: 100% !important; }
+  .foundation-v1 .app-workspace > .app-sidebar { display: none !important; }
+}

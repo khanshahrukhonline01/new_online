@@ -42,23 +42,19 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false 
 export default function Sidebar({ activePath, onNavigate, open, onClose, toggleRef, collapsed }: SidebarProps) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => ({
-    'your-space': true, discover: true, 'play-train': false, 'athlete-tools': false, 'learn-community': false, network: false,
-  }))
-
-  // Persist section preferences while always revealing the active route's group.
-  useEffect(() => {
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
+    const defaults = { 'your-space': true, discover: true, 'play-train': false, 'athlete-tools': false, 'learn-community': false, network: false }
     try {
       const saved = window.localStorage.getItem('khelgrid-sidebar-sections-v2')
-      if (saved) {
-        const parsed = JSON.parse(saved) as Record<string, boolean>
-        setExpandedSections(previous => ({ ...previous, ...parsed }))
-      }
-    } catch { /* Storage is optional; navigation remains usable. */ }
-  }, [])
+      return saved ? { ...defaults, ...(JSON.parse(saved) as Record<string, boolean>) } : defaults
+    } catch {
+      return defaults
+    }
+  })
 
+  // Persist section preferences using one consistent versioned key.
   useEffect(() => {
-    try { window.localStorage.setItem('khelgrid-sidebar-sections-v1', JSON.stringify(expandedSections)) }
+    try { window.localStorage.setItem('khelgrid-sidebar-sections-v2', JSON.stringify(expandedSections)) }
     catch { /* Storage is optional; keep in-memory state. */ }
   }, [expandedSections])
 
