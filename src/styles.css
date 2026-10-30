@@ -2316,3 +2316,58 @@ body { color: var(--text); background: var(--page); }
     margin-left: 0 !important;
   }
 }
+
+
+/* ChatGPT-style persistent desktop rail: fixed to the viewport, independent of footer height. */
+@media (min-width: 701px) {
+  .foundation-v1.app-shell {
+    --kg-sidebar-width: 68px;
+  }
+  .foundation-v1.app-shell.sidebar-is-expanded {
+    --kg-sidebar-width: 256px;
+  }
+  .foundation-v1 .app-workspace {
+    display: block !important;
+    min-height: calc(100vh - 68px);
+    margin: 0 0 0 var(--kg-sidebar-width) !important;
+    transition: margin-left .18s ease;
+  }
+  .foundation-v1 .app-workspace > .app-sidebar {
+    position: fixed !important;
+    top: 68px !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    z-index: 60 !important;
+    display: flex !important;
+    width: var(--kg-sidebar-width) !important;
+    min-width: var(--kg-sidebar-width) !important;
+    max-width: var(--kg-sidebar-width) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    transition: width .18s ease, min-width .18s ease, max-width .18s ease !important;
+  }
+  .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) {
+    width: 256px !important;
+    min-width: 256px !important;
+    max-width: 256px !important;
+  }
+  .foundation-v1 .app-workspace > .page-shell {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin: 0 !important;
+  }
+  .foundation-v1 .site-footer {
+    width: calc(100% - var(--kg-sidebar-width));
+    margin: 0 0 0 var(--kg-sidebar-width) !important;
+    transition: width .18s ease, margin-left .18s ease;
+  }
+}
+@media (max-width: 1000px) and (min-width: 701px) {
+  .foundation-v1.app-shell.sidebar-is-expanded {
+    --kg-sidebar-width: 224px;
+  }
+}
