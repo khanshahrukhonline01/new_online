@@ -34,7 +34,7 @@ values
 (
   'prakash-padukone-badminton-academy',
   'Prakash Padukone Badminton Academy (PPBA)',
-  'India’s pioneering private badminton academy founded in 1994 by Prakash Padukone, operating out of the Padukone-Dravid Centre for Sports Excellence in Bengaluru.',
+  'Premier private badminton academy founded in 1994 by Prakash Padukone, operating out of the Padukone-Dravid Centre for Sports Excellence in Bengaluru.',
   'Bengaluru',
   'Karnataka',
   'https://ppba.in',
@@ -45,7 +45,7 @@ values
 (
   'sai-netaji-subhas-national-institute-sports',
   'SAI Netaji Subhas National Institute of Sports (NIS Patiala)',
-  'Asia’s largest sports institute and SAI National Centre of Excellence in Patiala, Punjab. Premier national hub for Olympic discipline coaching, athletic conditioning, and sports science.',
+  'Premier sports institute in Asia and SAI National Centre of Excellence in Patiala, Punjab. National hub for Olympic discipline coaching, athletic conditioning, and sports science.',
   'Patiala',
   'Punjab',
   'https://nsnis.org',
@@ -138,7 +138,7 @@ values
 (
   'balwan-singh',
   'Balwan Singh',
-  'Dronacharya Awardee Kabaddi coach. Head coach for India Men’s National Kabaddi team guiding them to Asian Games Gold and Kabaddi World Cup victories.',
+  'Dronacharya Awardee Kabaddi coach. Head coach for India National Kabaddi team guiding them to Asian Games Gold and Kabaddi World Cup victories.',
   'Sonipat',
   'Haryana',
   null,
