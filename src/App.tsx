@@ -85,7 +85,7 @@ export default function App() {
   const match = resolveRoute(path)
   let page
   switch (match.name) {
-    case 'home': page = <HomePage />; break
+    case 'home': page = <HomePage onNavigate={navigate} />; break
     case 'sports-index': page = <SportsPage />; break
     case 'sport-detail': page = <CatalogueDetailPage kind="sport" slug={match.slug} />; break
     case 'opportunities-index': page = <OpportunitiesPage />; break

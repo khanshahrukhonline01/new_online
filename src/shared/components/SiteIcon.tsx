@@ -7,6 +7,7 @@ import {
   BadgeCheck,
   Bell,
   Bookmark,
+  BookOpen,
   Building2,
   Calendar,
   CalendarCheck,
@@ -81,13 +82,14 @@ export const siteIconNames = [
   'bookmark','heart','star','user','users','user-round','settings','help-circle','mail','phone',
   'globe','link','plus','minus','edit','trash','lock','unlock','eye','eye-off','bell','message',
   'play','pause','volume','image','camera','trophy','medal','target','activity','chart','building',
-  'wallet','credit-card','arrow-left','arrow-right','external','logout','sparkles','award'
+  'wallet','credit-card','arrow-left','arrow-right','external','logout','sparkles','award','book-open'
 ] as const
 
 export type SiteIconName = typeof siteIconNames[number]
 
 const icons: Record<SiteIconName, LucideIcon> = {
   home: Home,
+  'book-open': BookOpen,
   sports: Trophy,
   opportunities: CalendarCheck,
   venues: MapPin,

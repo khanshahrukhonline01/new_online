@@ -6,6 +6,7 @@ import { liveSportsEngine } from '../live/services/liveSportsEngine'
 import type { SportsMatch } from '../live/types'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { createBannerSvg } from './homeSvgBanners'
+import { HomeKhelChronicle } from './HomeKhelChronicle'
 import './home.css'
 
 interface PickupGame {
@@ -265,7 +266,11 @@ function parseHomeAcademy(a: Academy): FormattedHomeAcademy {
   }
 }
 
-export default function HomePage() {
+export interface HomePageProps {
+  onNavigate?: (event: React.MouseEvent<HTMLAnchorElement>, href: string) => void
+}
+
+export default function HomePage({ onNavigate }: HomePageProps = {}) {
   const [counts, setCounts] = useState<{
     sports?: CatalogueResult<Sport>
     opportunities?: CatalogueResult<Opportunity>
@@ -945,6 +950,9 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
+      {/* 6. KhelChronicle Flagship Research Preprints Showcase */}
+      <HomeKhelChronicle onNavigate={onNavigate} />
 
       {/* Focus / Explore Section */}
       <section className="focus-section home-explore-section">
