@@ -58,7 +58,8 @@
     transition: width 180ms ease, min-width 180ms ease, box-shadow 180ms ease;
   }
 
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover {
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within {
     width: var(--kg-sidebar-expanded-width);
     min-width: var(--kg-sidebar-expanded-width);
     padding-inline: 12px;
@@ -178,10 +179,13 @@
 
   /* Hover temporarily reveals the full navigation without pinning it open. */
   .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-rail-links,
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-rail-group {
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-rail-group,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-rail-links,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-rail-group {
     align-items: stretch;
   }
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-link {
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-link,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-link {
     justify-content: flex-start;
     width: 100%;
     min-width: 0;
@@ -189,13 +193,18 @@
     padding: 0 10px;
   }
   .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-link-label,
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-utility-label {
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-utility-label,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-link-label,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-utility-label {
     display: flex;
     white-space: nowrap;
   }
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-coming-soon { display: inline-flex; }
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-bottom { align-items: stretch; }
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-utility-link {
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-coming-soon,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-coming-soon { display: inline-flex; }
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-bottom,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-bottom { align-items: stretch; }
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-utility-link,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-utility-link {
     justify-content: flex-start;
     width: 100%;
     padding-inline: 10px;
@@ -209,7 +218,10 @@
     margin: 0;
     padding: 0 28px;
   }
-  .foundation-v1 .site-footer { width: 100%; margin: 0; }
+  .foundation-v1 .site-footer {
+    width: calc(100% - var(--kg-sidebar-collapsed-width));
+    margin: 0 0 0 var(--kg-sidebar-collapsed-width);
+  }
 }
 
 /* Expanded state selected by the menu button remains a normal full-width sidebar. */
