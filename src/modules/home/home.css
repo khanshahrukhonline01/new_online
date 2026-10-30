@@ -969,167 +969,427 @@
   }
 }
 
-/* Foreground Container */
+/* Foreground Container - Option A Hero Parity */
 .home-hero-foreground {
   position: relative;
   z-index: 3;
-  padding: clamp(20px, 2.8vw, 30px) clamp(22px, 3.6vw, 38px);
+  padding: clamp(16px, 2.4vw, 24px) clamp(18px, 3.2vw, 32px);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 350px;
-}
-
-.home-hero-cinematic .home-hero-copy {
-  max-width: 660px;
-  padding: 0 !important;
-}
-
-.home-hero-top-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.home-hero-cinematic .eyebrow {
-  color: #6fe0a0 !important;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  margin: 0;
-}
-
-.home-hero-cinematic h1.home-hero-headline {
-  color: #ffffff !important;
-  font-size: clamp(24px, 3.2vw, 34px);
-  font-weight: 850;
-  line-height: 1.12;
-  letter-spacing: -0.035em;
-  margin: 0 0 6px;
-}
-
-.home-hero-cinematic h1.home-hero-headline span {
-  color: #6fe0a0;
-}
-
-.home-hero-cinematic .hero-copy {
-  color: #cbd5e1 !important;
-  font-size: 13.5px;
-  line-height: 1.5;
-  margin: 0 0 14px;
-  max-width: 540px;
-}
-
-/* Quick Search Bar over dark cinematic background */
-.home-hero-cinematic .home-hero-search-wrap {
-  margin: 0 0 12px;
-  max-width: 580px;
-}
-
-.home-hero-cinematic .home-hero-search-form {
-  background: #ffffff;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
-}
-
-.home-hero-cinematic .home-hero-search-input {
-  color: #0f172a;
-}
-
-/* Quick Action Pills in Foreground */
-.home-hero-cinematic .home-hero-quick-pills {
-  margin-bottom: 14px;
-}
-
-.home-hero-cinematic .home-hero-pills-label {
-  color: #94a3b8;
-}
-
-.home-hero-cinematic .home-quick-pill {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  color: #f8fafc;
-  backdrop-filter: blur(8px);
-}
-
-.home-hero-cinematic .home-quick-pill:hover {
-  background: rgba(111, 224, 160, 0.22);
-  border-color: #6fe0a0;
-  color: #ffffff;
-}
-
-/* Bottom CTA & Trust Points */
-.home-hero-bottom-row {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 2px;
-}
-
-.home-hero-cinematic .hero-actions {
-  display: flex;
-  align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
+  min-height: 330px;
 }
 
-.home-hero-cinematic .primary-link {
-  background: #07964f;
-  color: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(7, 150, 79, 0.4);
-}
-
-.home-hero-cinematic .primary-link:hover {
-  background: #06763e;
-}
-
-.home-hero-cinematic .secondary-link {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  color: #ffffff !important;
-  backdrop-filter: blur(8px);
-}
-
-.home-hero-cinematic .secondary-link:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: #ffffff;
-}
-
-.home-hero-cinematic .home-trust-points {
+/* 1. Header & Location Row */
+.home-hero-top-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  color: #94a3b8;
+}
+
+.home-hero-heading-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.home-hero-greeting-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.home-hero-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 10px #22c55e;
+  display: inline-block;
+}
+
+.home-hero-greeting-text {
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.home-hero-motto {
+  color: #86efac;
+  font-weight: 500;
   font-size: 12px;
 }
 
-.home-hero-cinematic .home-trust-points span {
+.home-hero-main-title {
+  margin: 0;
+  font-size: clamp(26px, 3.4vw, 36px);
+  font-weight: 850;
+  letter-spacing: -0.035em;
+  color: #ffffff;
+  line-height: 1.12;
+}
+
+.home-hero-title-green {
+  color: #22c55e;
+}
+
+/* Location Selector Pill & Dropdown */
+.home-hero-location-wrap {
+  position: relative;
+  margin-top: 2px;
+}
+
+.home-hero-location-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  color: #cbd5e1;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.15s ease;
 }
 
-.home-hero-cinematic .home-trust-points svg {
-  color: #6fe0a0;
+.home-hero-location-btn:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
 }
 
-/* Floating Controls */
-.home-hero-cinematic .home-hero-carousel-controls {
+.home-hero-city-dropdown {
   position: absolute;
-  right: clamp(20px, 4vw, 40px);
-  bottom: clamp(16px, 3vw, 28px);
+  right: 0;
+  top: calc(100% + 6px);
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+  padding: 6px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  min-width: 155px;
+}
+
+.home-hero-city-option {
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.home-hero-city-option:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.home-hero-city-option.is-active {
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 700;
+}
+
+/* 2. Full-Width Search Pill with Find button */
+.home-hero-search-wrapper {
+  width: 100%;
+  max-width: 980px;
+  margin: 2px 0;
+}
+
+.home-hero-search-pill {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 999px;
+  padding: 4px 5px 4px 18px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.24);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.home-hero-search-pill:focus-within {
+  border-color: #22c55e;
+  box-shadow: 0 10px 32px rgba(34, 197, 94, 0.3);
+}
+
+.home-hero-search-icon {
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.home-hero-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: #0f172a;
+  min-width: 0;
+  padding: 9px 0;
+}
+
+.home-hero-search-input::placeholder {
+  color: #94a3b8;
+}
+
+.home-hero-find-btn {
+  background: #00a859;
+  color: #ffffff;
+  border: none;
+  border-radius: 999px;
+  padding: 9px 26px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 168, 89, 0.35);
+}
+
+.home-hero-find-btn:hover {
+  background: #008f4c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 168, 89, 0.45);
+}
+
+.home-hero-find-btn:active {
+  transform: scale(0.97);
+}
+
+/* 3. Quick Explore Row */
+.home-hero-quick-explore {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 14px;
+  flex-wrap: wrap;
+  margin-top: 1px;
+}
+
+.home-hero-qe-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #4ade80;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.home-hero-qe-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.home-hero-qe-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: all 0.15s ease;
+}
+
+.home-hero-qe-chip:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  color: #00a859;
+}
+
+.home-hero-qe-emoji {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* 4. The 6 Discovery Action Cards */
+.home-hero-cards-section {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.home-hero-rail-arrow {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  flex-shrink: 0;
+  z-index: 5;
+  transition: all 0.15s ease;
+}
+
+.home-hero-rail-arrow:hover {
+  background: #f8fafc;
+  border-color: #00a859;
+  color: #00a859;
+  transform: scale(1.06);
+}
+
+.home-hero-rail-arrow:active {
+  transform: scale(0.95);
+}
+
+.home-hero-cards-rail {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 6px 4px 10px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  margin: 0 6px;
+}
+
+.home-hero-cards-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.home-hero-action-card {
+  flex: 0 0 clamp(140px, 15vw, 175px);
+  min-height: 120px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  padding: 14px 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-decoration: none;
+  color: inherit;
+  scroll-snap-align: start;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  cursor: pointer;
+}
+
+.home-hero-action-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
+  border-color: #00a859;
+}
+
+.home-hero-action-card:focus-visible {
+  outline: 3px solid #22c55e;
+  outline-offset: 2px;
+}
+
+.home-hero-card-icon-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin-bottom: 10px;
+  transition: transform 0.18s ease;
+}
+
+.home-hero-action-card:hover .home-hero-card-icon-badge {
+  transform: scale(1.08);
+}
+
+/* Badge Color Classes */
+.hero-icon-amber {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.hero-icon-emerald {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.hero-icon-blue {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.hero-icon-purple {
+  background: #f3e8ff;
+  color: #9333ea;
+}
+
+.hero-icon-pink {
+  background: #fce7f3;
+  color: #db2777;
+}
+
+.hero-icon-cyan {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.home-hero-card-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.home-hero-card-name {
+  font-size: 14px;
+  font-weight: 750;
+  color: #0f172a;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.home-hero-card-desc {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 5. Floating Background Carousel Controls */
+.home-hero-cinematic .home-hero-carousel-controls {
+  align-self: flex-end;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 12px;
   border-radius: 999px;
   background: rgba(8, 25, 44, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(10px);
   z-index: 4;
+  margin-top: 2px;
 }
 
 .home-hero-cinematic .hero-carousel-toggle,
@@ -1169,13 +1429,17 @@
 .home-hero-cinematic .hero-carousel-dots button.is-active {
   width: 18px;
   border-radius: 999px;
-  background: #6fe0a0;
+  background: #22c55e;
 }
 
 @media (max-width: 640px) {
+  .home-hero-rail-arrow {
+    display: none;
+  }
+  .home-hero-cards-rail {
+    margin: 0;
+  }
   .home-hero-cinematic .home-hero-carousel-controls {
-    position: static;
-    margin-top: 24px;
     align-self: flex-start;
   }
 }

@@ -285,6 +285,70 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   const [activeHeroSlide, setActiveHeroSlide] = useState(0)
   const [heroPaused, setHeroPaused] = useState(false)
   const [heroSearch, setHeroSearch] = useState('')
+  const [selectedCity, setSelectedCity] = useState('All India')
+  const [cityDropdownOpen, setCityDropdownOpen] = useState(false)
+
+  const greetingTime = useMemo(() => {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Good morning, Athlete'
+    if (hour < 17) return 'Good afternoon, Athlete'
+    return 'Good evening, Athlete'
+  }, [])
+
+  const heroDiscoveryCards = [
+    {
+      title: 'Trials',
+      subtitle: '350+ SAI & Club',
+      icon: 'trophy' as const,
+      bgClass: 'hero-icon-amber',
+      href: '/opportunities',
+    },
+    {
+      title: 'Book Turf',
+      subtitle: 'Hourly Slots',
+      icon: 'calendar' as const,
+      bgClass: 'hero-icon-emerald',
+      href: '/venues',
+    },
+    {
+      title: 'Pickup Games',
+      subtitle: 'Join Match',
+      icon: 'activity' as const,
+      bgClass: 'hero-icon-blue',
+      href: '/play',
+    },
+    {
+      title: 'Coaching',
+      subtitle: 'Top Academies',
+      icon: 'building' as const,
+      bgClass: 'hero-icon-purple',
+      href: '/academies',
+    },
+    {
+      title: 'Sports CV',
+      subtitle: 'Scout Passport',
+      icon: 'sparkles' as const,
+      bgClass: 'hero-icon-pink',
+      href: '/sports-cv',
+    },
+    {
+      title: 'Tournaments',
+      subtitle: 'State & City',
+      icon: 'medal' as const,
+      bgClass: 'hero-icon-cyan',
+      href: '/events',
+    },
+  ]
+
+  const quickExploreChips = [
+    { label: 'Cricket Trials', emoji: '🏏', href: '/opportunities?sport=Cricket' },
+    { label: 'SAI Wrestling', emoji: '🤼', href: '/opportunities?sport=Wrestling' },
+    { label: 'Book Turf', emoji: '⚽', href: '/venues' },
+    { label: 'Pickup Games', emoji: '🏸', href: '/play' },
+    { label: 'Sports CV', emoji: '📄', href: '/sports-cv' },
+  ]
+
+  const popularCities = ['All India', 'Delhi NCR', 'Mumbai', 'Bengaluru', 'Hyderabad', 'Chennai', 'Kolkata', 'Pune']
 
   const handleLink = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     onNavigate?.(event, href)
@@ -310,6 +374,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   }
 
   // Rail scroll refs
+  const heroCardsRailRef = useRef<HTMLDivElement>(null)
   const liveMatchesRailRef = useRef<HTMLDivElement>(null)
   const trialsRailRef = useRef<HTMLDivElement>(null)
   const turfsRailRef = useRef<HTMLDivElement>(null)
@@ -422,113 +487,161 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
           <div className="home-hero-bg-overlay" />
         </div>
 
-        {/* Foreground Content */}
+        {/* Foreground Content - Live Site Parity Option A */}
         <div className="home-hero-foreground">
-          <div className="home-hero-copy">
-            <div className="home-hero-top-badge">
-              <span className="status-dot" />
-              <span className="eyebrow">YOUR GAME. YOUR NEXT MOVE.</span>
-            </div>
-
-            <h1 className="home-hero-headline">
-              Discover. Compete. <span>Grow.</span>
-            </h1>
-
-            <p className="hero-copy">
-              Explore sports, verified selection trials, and places to play across India.
-            </p>
-
-            {/* Quick Hero Search Input */}
-            <div className="home-hero-search-wrap">
-              <form onSubmit={handleHeroSearchSubmit} className="home-hero-search-form" role="search" aria-label="Hero quick search">
-                <span className="home-hero-search-icon" aria-hidden="true">
-                  <SiteIcon name="search" size={18} />
-                </span>
-                <input
-                  type="search"
-                  className="home-hero-search-input"
-                  placeholder="Search sports, trials, academies, or city…"
-                  value={heroSearch}
-                  onChange={e => setHeroSearch(e.target.value)}
-                  aria-label="Search sports, selection trials, academies or venues"
-                />
-                <button
-                  type="submit"
-                  className="home-hero-search-btn"
-                  aria-label="Submit search"
-                >
-                  <span>Search</span>
-                  <SiteIcon name="arrow-up-right" size={14} />
-                </button>
-              </form>
-            </div>
-
-            {/* 6 High-Intent Action Pills */}
-            <div className="home-hero-quick-pills" aria-label="Quick directory shortcuts">
-              <span className="home-hero-pills-label">Quick access:</span>
-              <a href="/opportunities" onClick={e => handleLink(e, '/opportunities')} className="home-quick-pill">
-                <SiteIcon name="target" size={13} />
-                <span>Selection Trials</span>
-              </a>
-              <a href="/academies" onClick={e => handleLink(e, '/academies')} className="home-quick-pill">
-                <SiteIcon name="building" size={13} />
-                <span>Academies</span>
-              </a>
-              <a href="/talent-scanner" onClick={e => handleLink(e, '/talent-scanner')} className="home-quick-pill">
-                <SiteIcon name="award" size={13} />
-                <span>Talent Scanner</span>
-              </a>
-              <a href="/sports-cv" onClick={e => handleLink(e, '/sports-cv')} className="home-quick-pill">
-                <SiteIcon name="sports-cv" size={13} />
-                <span>Sports CV</span>
-              </a>
-              <a href="/venues" onClick={e => handleLink(e, '/venues')} className="home-quick-pill">
-                <SiteIcon name="venues" size={13} />
-                <span>Venues &amp; Turfs</span>
-              </a>
-              <a href="/play" onClick={e => handleLink(e, '/play')} className="home-quick-pill">
-                <SiteIcon name="sports" size={13} />
-                <span>Pickup Games</span>
-              </a>
-            </div>
-
-            {/* Actions & Trust points */}
-            <div className="home-hero-bottom-row">
-              <div className="hero-actions">
-                <a className="primary-link" href="/opportunities" onClick={e => handleLink(e, '/opportunities')}>
-                  Explore opportunities <SiteIcon name="arrow-up-right" size={16} />
-                </a>
-                <a className="secondary-link" href="/sports" onClick={e => handleLink(e, '/sports')}>
-                  Browse sports
-                </a>
+          {/* Top Row: Greeting, Heading & Location Pill */}
+          <div className="home-hero-top-row">
+            <div className="home-hero-heading-group">
+              <div className="home-hero-greeting-line">
+                <span className="home-hero-live-dot" />
+                <span className="home-hero-greeting-text">{greetingTime}</span>
+                <span className="home-hero-motto">· Discover. Compete.</span>
+                <span className="sr-only">Source-aware listings</span>
               </div>
+              <h1 className="home-hero-main-title">
+                Sports Across <span className="home-hero-title-green">India</span>
+              </h1>
+            </div>
 
-              <div className="home-trust-points" aria-label="Platform principles">
-                <span><SiteIcon name="shield-check" size={15} /> Source-aware listings</span>
-                <span><SiteIcon name="check-circle" size={15} /> No fabricated records</span>
-                <span><SiteIcon name="smartphone" size={15} /> Built for every screen</span>
-              </div>
+            <div className="home-hero-location-wrap">
+              <button
+                type="button"
+                className="home-hero-location-btn"
+                onClick={() => setCityDropdownOpen(prev => !prev)}
+                aria-expanded={cityDropdownOpen}
+                aria-label={`Current location: ${selectedCity}. Click to change.`}
+              >
+                <SiteIcon name="map-pin" size={14} />
+                <span>{selectedCity}</span>
+                <SiteIcon name="chevron-down" size={13} />
+              </button>
+
+              {cityDropdownOpen && (
+                <div className="home-hero-city-dropdown" role="menu">
+                  {popularCities.map(city => (
+                    <button
+                      key={city}
+                      type="button"
+                      className={`home-hero-city-option${city === selectedCity ? ' is-active' : ''}`}
+                      onClick={() => {
+                        setSelectedCity(city)
+                        setCityDropdownOpen(false)
+                        if (city !== 'All India') {
+                          handleLink({ preventDefault: () => {} } as React.MouseEvent<HTMLAnchorElement>, `/venues?city=${encodeURIComponent(city)}`)
+                        }
+                      }}
+                    >
+                      {city}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Floating Discreet Carousel Controls in Bottom-Right Corner */}
-          <div className="home-hero-carousel-controls" aria-label="Hero carousel controls">
+          {/* Full-Width Search Pill with embedded Find button */}
+          <div className="home-hero-search-wrapper">
+            <form onSubmit={handleHeroSearchSubmit} className="home-hero-search-pill" role="search" aria-label="Hero search">
+              <span className="home-hero-search-icon" aria-hidden="true">
+                <SiteIcon name="search" size={18} />
+              </span>
+              <input
+                type="search"
+                className="home-hero-search-input"
+                placeholder="Search cricket trials, football turf, badminton..."
+                value={heroSearch}
+                onChange={e => setHeroSearch(e.target.value)}
+                aria-label="Search cricket trials, football turf, badminton"
+              />
+              <button
+                type="submit"
+                className="home-hero-find-btn"
+                aria-label="Find search results"
+              >
+                Find
+              </button>
+            </form>
+          </div>
+
+          {/* Quick Explore Chips */}
+          <div className="home-hero-quick-explore" aria-label="Quick Explore">
+            <span className="home-hero-qe-label">
+              <SiteIcon name="sparkles" size={13} />
+              <span>Quick Explore:</span>
+            </span>
+            <div className="home-hero-qe-chips">
+              {quickExploreChips.map(chip => (
+                <a
+                  key={chip.label}
+                  href={chip.href}
+                  onClick={e => handleLink(e, chip.href)}
+                  className="home-hero-qe-chip"
+                >
+                  <span className="home-hero-qe-emoji" aria-hidden="true">{chip.emoji}</span>
+                  <span>{chip.label}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* The 6 Action Discovery Cards Carousel */}
+          <div className="home-hero-cards-section" aria-label="Sports Discovery Engines">
+            <button
+              type="button"
+              className="home-hero-rail-arrow prev"
+              onClick={() => scrollRail(heroCardsRailRef, 'left')}
+              aria-label="Scroll discovery cards left"
+            >
+              <SiteIcon name="arrow-left" size={14} />
+            </button>
+
+            <div className="home-hero-cards-rail" ref={heroCardsRailRef}>
+              {heroDiscoveryCards.map(card => (
+                <a
+                  key={card.title}
+                  href={card.href}
+                  onClick={e => handleLink(e, card.href)}
+                  className="home-hero-action-card"
+                >
+                  <div className={`home-hero-card-icon-badge ${card.bgClass}`} aria-hidden="true">
+                    <SiteIcon name={card.icon} size={20} />
+                  </div>
+                  <div className="home-hero-card-info">
+                    <strong className="home-hero-card-name">{card.title}</strong>
+                    <span className="home-hero-card-desc">{card.subtitle}</span>
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="home-hero-rail-arrow next"
+              onClick={() => scrollRail(heroCardsRailRef, 'right')}
+              aria-label="Scroll discovery cards right"
+            >
+              <SiteIcon name="arrow-right" size={14} />
+            </button>
+          </div>
+
+          {/* Floating Discreet Background Carousel Controls */}
+          <div className="home-hero-carousel-controls" aria-label="Background image controls">
             <button
               type="button"
               className="hero-carousel-toggle"
               onClick={() => setHeroPaused(value => !value)}
-              aria-label={heroPaused ? 'Play image carousel' : 'Pause image carousel'}
+              aria-label={heroPaused ? 'Play background carousel' : 'Pause background carousel'}
             >
               {heroPaused ? 'Play' : 'Pause'}
             </button>
-            <div className="hero-carousel-dots" aria-label="Choose sports image">
+            <div className="hero-carousel-dots" aria-label="Choose background sports image">
               {heroSlides.map((slide, index) => (
                 <button
                   key={slide.name}
                   type="button"
                   className={index === activeHeroSlide ? 'is-active' : ''}
                   onClick={() => setActiveHeroSlide(index)}
-                  aria-label={`Show ${slide.name} image`}
+                  aria-label={`Show ${slide.name} background`}
                   aria-pressed={index === activeHeroSlide}
                 />
               ))}
@@ -537,7 +650,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
               type="button"
               className="hero-carousel-next"
               onClick={() => setActiveHeroSlide(current => (current + 1) % heroSlides.length)}
-              aria-label="Show next sports image"
+              aria-label="Show next background sports image"
             >
               Next →
             </button>
