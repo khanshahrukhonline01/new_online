@@ -1541,3 +1541,22 @@ body { color: var(--text); background: var(--page); }
     align-items: stretch;
   }
 }
+
+@media (min-width: 1001px) and (hover: hover) {
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:hover .sidebar-rail-links .sidebar-link,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:focus-within .sidebar-rail-links .sidebar-link {
+    justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
+    padding: 9px 10px;
+    gap: 12px;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:hover .sidebar-rail-links .sidebar-link-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:focus-within .sidebar-rail-links .sidebar-link-label {
+    display: flex !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:hover .sidebar-rail-links .sidebar-item-wrap,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:focus-within .sidebar-rail-links .sidebar-item-wrap {
+    width: 100%;
+  }
+}
