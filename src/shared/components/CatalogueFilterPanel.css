@@ -1,0 +1,455 @@
+/* KhelGrid shared catalogue discovery layout & filter rail — navy + emerald */
+.foundation-v1 .kg-catalogue-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+  margin: 24px 0 30px;
+}
+
+.foundation-v1 .kg-filter-rail {
+  position: sticky;
+  top: 92px;
+  min-width: 0;
+  max-height: calc(100vh - 112px);
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 8px 28px rgba(5, 22, 38, 0.06);
+}
+
+.foundation-v1 .kg-filter-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.foundation-v1 .kg-filter-heading h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.foundation-v1 .kg-filter-heading button {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0;
+}
+
+.foundation-v1 .kg-filter-drawer-header {
+  display: none;
+}
+
+.foundation-v1 .kg-filter-drawer-footer .kg-filter-apply-btn {
+  display: none;
+}
+
+.foundation-v1 .kg-filter-fields {
+  display: grid;
+  gap: 15px;
+}
+
+.foundation-v1 .kg-filter-scroll-body {
+  display: grid;
+  gap: 15px;
+}
+
+.foundation-v1 .kg-filter-fields > label,
+.foundation-v1 .kg-filter-scroll-body > label {
+  display: grid;
+  gap: 7px;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.foundation-v1 .kg-filter-fields input,
+.foundation-v1 .kg-filter-fields select,
+.foundation-v1 .kg-filter-scroll-body input,
+.foundation-v1 .kg-filter-scroll-body select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--page-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.foundation-v1 .kg-filter-fields input:focus-visible,
+.foundation-v1 .kg-filter-fields select:focus-visible,
+.foundation-v1 .kg-filter-scroll-body input:focus-visible,
+.foundation-v1 .kg-filter-scroll-body select:focus-visible,
+.foundation-v1 .kg-results-toolbar select:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.foundation-v1 .kg-filter-clear {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.foundation-v1 .kg-filter-clear:hover {
+  background: var(--page-elevated);
+  border-color: var(--line-strong);
+}
+
+.foundation-v1 .kg-active-filters {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.foundation-v1 .kg-active-filters-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.foundation-v1 .kg-active-filters-top > span {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.foundation-v1 .kg-clear-text-btn {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0;
+}
+
+.foundation-v1 .kg-active-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.foundation-v1 .kg-active-chips-wrap button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 5px 9px;
+  border: 1px solid rgba(7, 150, 79, 0.28);
+  border-radius: 999px;
+  background: rgba(7, 150, 79, 0.09);
+  color: var(--green-dark);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.foundation-v1 .kg-active-chips-wrap button:hover {
+  background: rgba(7, 150, 79, 0.18);
+  border-color: rgba(7, 150, 79, 0.4);
+}
+
+.foundation-v1 .kg-filter-mobile-toggle {
+  display: none;
+}
+
+.foundation-v1 .kg-filter-drawer-backdrop {
+  display: none;
+}
+
+.foundation-v1 .kg-catalogue-results {
+  min-width: 0;
+}
+
+.foundation-v1 .kg-results-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.foundation-v1 .kg-results-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.foundation-v1 .kg-results-toolbar select {
+  min-height: 38px;
+  max-width: 190px;
+  padding: 7px 28px 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.foundation-v1 .kg-no-filter-fields .kg-filter-rail {
+  padding: 14px;
+}
+
+.foundation-v1 .kg-no-filter-fields .kg-filter-fields {
+  gap: 10px;
+}
+
+.foundation-v1 .kg-catalogue-empty-state {
+  text-align: center;
+  padding: 40px 24px;
+}
+
+.foundation-v1 .kg-empty-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  padding: 9px 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.foundation-v1 .kg-empty-reset-btn:hover {
+  background: var(--page-elevated);
+  border-color: var(--accent);
+}
+
+@keyframes kgDrawerFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes kgDrawerSlideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 800px) {
+  .foundation-v1 .kg-catalogue-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .foundation-v1 .kg-filter-rail {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding: 12px;
+  }
+
+  .foundation-v1 .kg-filter-heading {
+    margin: 0;
+  }
+
+  .foundation-v1 .kg-filter-mobile-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 42px;
+    margin-top: 10px;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--surface-soft);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 750;
+    cursor: pointer;
+  }
+
+  .foundation-v1 .kg-filter-mobile-toggle span {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    margin-left: auto;
+    border-radius: 999px;
+    background: var(--accent);
+    color: white;
+    font-size: 11px;
+  }
+
+  /* Mobile Drawer Overlay */
+  .foundation-v1 .kg-filter-drawer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 22, 38, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: 9998;
+    animation: kgDrawerFadeIn 0.2s ease-out;
+  }
+
+  .foundation-v1 .kg-filter-fields {
+    display: none;
+  }
+
+  .foundation-v1 .kg-filter-fields.is-open {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(350px, 88vw);
+    height: 100vh;
+    max-height: 100vh;
+    background: var(--surface);
+    z-index: 9999;
+    box-shadow: -10px 0 36px rgba(5, 22, 38, 0.28);
+    animation: kgDrawerSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+  }
+
+  .foundation-v1 .kg-filter-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .foundation-v1 .kg-filter-drawer-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .foundation-v1 .kg-filter-drawer-title h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .foundation-v1 .kg-filter-count-badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(7, 150, 79, 0.12);
+    color: var(--green-dark);
+    font-size: 11px;
+    font-weight: 750;
+  }
+
+  .foundation-v1 .kg-filter-count-summary {
+    color: var(--text-soft);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .foundation-v1 .kg-filter-drawer-close {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--surface-soft);
+    color: var(--text);
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .foundation-v1 .kg-filter-scroll-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 20px;
+    align-content: start;
+  }
+
+  .foundation-v1 .kg-filter-drawer-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .foundation-v1 .kg-filter-drawer-footer .kg-filter-clear {
+    min-height: 42px;
+    margin: 0;
+  }
+
+  .foundation-v1 .kg-filter-drawer-footer .kg-filter-apply-btn {
+    display: grid;
+    place-items: center;
+    min-height: 42px;
+    border: 0;
+    border-radius: 9px;
+    background: var(--accent);
+    color: #ffffff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 750;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 520px) {
+  .foundation-v1 .kg-results-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .foundation-v1 .kg-results-toolbar label {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .foundation-v1 .kg-results-toolbar select {
+    max-width: 65%;
+  }
+}

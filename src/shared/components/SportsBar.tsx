@@ -1,6 +1,7 @@
 import { useRef, type MouseEvent } from 'react'
 import { SiteIcon } from './SiteIcon'
 import { SportIcon, sportIconManifest } from '../sports/sportIcons'
+import './SportsBar.css'
 
 type SportsBarProps = {
   activePath: string
