@@ -394,14 +394,14 @@ export function TalentScannerPage({ onNavigate }: TalentScannerPageProps) {
         </div>
         <div className="citation-content">
           <div className="citation-header">
-            <span className="citation-tag">Empirical Science Baseline</span>
+            <span className="citation-tag">Empirical Science Baseline · Test / Demo Data</span>
             <span className="citation-id">KhelChronicle Research Preprint · KG-2026-002</span>
           </div>
           <h3 className="citation-title">
             Normative Physical Fitness Percentiles (Yo-Yo IR1, 30m Sprint, Countermovement Jump) Across 4,800 Grassroots Athletes in 16 Indian Metropolitan and Rural Districts
           </h3>
           <p className="citation-authors">
-            By Dr. Rajeshwari Nair & Dr. Alok Sen · Exercise Physiology Division · KhelChronicle Open Research Archive
+            By Dr. Rajeshwari Nair & Dr. Alok Sen · Exercise Physiology Division · KhelChronicle Open Research Archive (Sample demonstration dataset for platform testing)
           </p>
           <a
             href="/khelchronicle/normative-fitness-percentiles-grassroots-athletes-india"
@@ -416,7 +416,7 @@ export function TalentScannerPage({ onNavigate }: TalentScannerPageProps) {
 
       {/* Fair Play Notice */}
       <div className="fair-play-note">
-        <strong>Transparency & Fair Play Notice:</strong> Objective physical screening provides comparative athletic conditioning percentiles against tested multi-regional Indian grassroots cohorts. It does not replace on-field tactical assessments, sport-specific skill trials, or institutional coach scouting under the National Sports Development Code of India.
+        <strong>Transparency & Fair Play Notice:</strong> Objective physical screening provides comparative athletic conditioning percentiles against sample demonstration test cohorts (KG-2026-002). It does not replace on-field tactical assessments, sport-specific skill trials, or institutional coach scouting under the National Sports Development Code of India.
       </div>
     </div>
   )

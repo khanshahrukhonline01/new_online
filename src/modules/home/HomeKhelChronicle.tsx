@@ -177,6 +177,9 @@ export function HomeKhelChronicle({ onNavigate }: HomeKhelChronicleProps) {
             <SiteIcon name="award" size={14} style={{ color: '#10b981' }} />
             <span>KhelChronicle · Open Sports Research Repository</span>
             <span className="home-chronicle-badge-green">Diamond Open Access</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+              Test Data Only
+            </span>
           </div>
 
           <h2 id="home-chronicle-heading" className="home-chronicle-title">
@@ -184,6 +187,9 @@ export function HomeKhelChronicle({ onNavigate }: HomeKhelChronicleProps) {
           </h2>
           <p className="home-chronicle-subtitle">
             Peer-moderated research preprints, 3D motion capture biomechanics, and normative physical percentiles across 16 Indian sporting corridors.
+          </p>
+          <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', padding: '6px 10px', borderRadius: '6px', display: 'inline-block' }}>
+            Notice: Research preprints and normative benchmarks displayed below are sample demonstration test data for platform evaluation.
           </p>
         </div>
 

@@ -114,6 +114,9 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
           </span>
           <span className="kc-badge-open-access">Diamond Open Access</span>
           <span className="kc-badge-open-access">Zero Article Processing Charges (APC)</span>
+          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+            Test Mode Intake
+          </span>
         </div>
 
         <h1 className="kc-hero-title">Submit Research Manuscript</h1>

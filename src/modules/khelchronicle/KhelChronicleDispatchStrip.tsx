@@ -34,6 +34,9 @@ export function KhelChronicleDispatchStrip({ onNavigate }: KhelChronicleDispatch
             <span className="kc-paper-id-tag">{latestPaper.paperId}</span>
             <span className="kc-paper-category-tag">{latestPaper.categoryName}</span>
             <span className="kc-paper-ver-tag">{latestPaper.version}</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+              Test Data Only
+            </span>
           </div>
 
           <h3 id="kc-dispatch-heading" className="kc-strip-title">

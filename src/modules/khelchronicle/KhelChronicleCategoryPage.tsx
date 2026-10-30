@@ -47,6 +47,9 @@ export function KhelChronicleCategoryPage({ categorySlug, onNavigate }: KhelChro
             <span>Research Discipline</span>
           </span>
           <span className="kc-badge-open-access">Preprints Archive</span>
+          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+            Test Data Only
+          </span>
         </div>
 
         <h1 className="kc-hero-title">{category?.name}</h1>
@@ -93,6 +96,9 @@ export function KhelChronicleCategoryPage({ categorySlug, onNavigate }: KhelChro
                   <span className="kc-paper-id-tag">{paper.paperId}</span>
                   <span className="kc-paper-ver-tag">{paper.version}</span>
                   <span className="kc-paper-category-tag">{paper.categoryName}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+                    Test Data
+                  </span>
                   <span className="kc-paper-date">{paper.datePublished}</span>
                 </div>
 

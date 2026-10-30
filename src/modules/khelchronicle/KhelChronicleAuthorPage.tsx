@@ -48,6 +48,9 @@ export function KhelChronicleAuthorPage({ authorSlug, onNavigate }: KhelChronicl
             <SiteIcon name="award" size={13} />
             <span>KhelChronicle Researcher Profile</span>
           </span>
+          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+            Test Profile / Demo Data
+          </span>
           {author?.orcid && (
             <a
               href={`https://orcid.org/${author.orcid}`}
@@ -99,6 +102,9 @@ export function KhelChronicleAuthorPage({ authorSlug, onNavigate }: KhelChronicl
                 <span className="kc-paper-id-tag">{paper.paperId}</span>
                 <span className="kc-paper-ver-tag">{paper.version}</span>
                 <span className="kc-paper-category-tag">{paper.categoryName}</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+                  Test Data
+                </span>
                 <span className="kc-paper-date">{paper.datePublished}</span>
               </div>
 

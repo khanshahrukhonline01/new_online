@@ -82,6 +82,9 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
           </span>
           <span className="kc-badge-open-access">Diamond Open Access</span>
           <span className="kc-badge-open-access">CC BY-NC-ND 4.0</span>
+          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+            Test Data Only
+          </span>
         </div>
 
         <h1 id="kc-main-heading" className="kc-hero-title">
@@ -90,6 +93,12 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
         <p className="kc-hero-subtitle">
           An open-access preprint and technical research repository dedicated to Indian sports biomechanics, exercise physiology, talent scouting analytics, and grassroots athletic development.
         </p>
+
+        {/* Test Data Disclaimer Banner */}
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderLeft: '4px solid #f59e0b', padding: '10px 14px', borderRadius: '6px', fontSize: '13px', color: '#92400e', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <SiteIcon name="info" size={16} />
+          <span><strong>Demonstration Mode:</strong> The research preprints, normative athlete percentiles, and author affiliations displayed here are <strong>sample test data</strong> created for platform development, demonstration, and staging verification.</span>
+        </div>
 
         {/* Hero Actions / Search */}
         <div className="kc-hero-actions">
@@ -169,6 +178,9 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
             <span className="kc-paper-id-tag">{featuredPaper.paperId}</span>
             <span className="kc-paper-ver-tag">{featuredPaper.version}</span>
             <span className="kc-paper-category-tag">{featuredPaper.categoryName}</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+              Test Data
+            </span>
             <span className="kc-paper-date">Published {featuredPaper.datePublished}</span>
           </div>
 
@@ -265,6 +277,9 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
                   <span className="kc-paper-id-tag">{paper.paperId}</span>
                   <span className="kc-paper-ver-tag">{paper.version}</span>
                   <span className="kc-paper-category-tag">{paper.categoryName}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+                    Test Data
+                  </span>
                   <span className="kc-paper-date">{paper.datePublished}</span>
                 </div>
 

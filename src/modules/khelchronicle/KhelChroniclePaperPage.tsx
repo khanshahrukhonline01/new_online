@@ -127,9 +127,9 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
         <div className="kc-preprint-alert" role="status">
           <SiteIcon name="alert-triangle" size={18} className="kc-alert-icon" />
           <div>
-            <strong>KhelChronicle Open Research Preprint ({paper.version})</strong>
+            <strong>KhelChronicle Open Research Preprint ({paper.version}) · Test / Demonstration Data Only</strong>
             <p style={{ margin: '4px 0 0' }}>
-              This manuscript is an open research preprint undergoing rapid scholarly dissemination. It has passed initial editorial screening for scope and research methodology integrity, but has not yet been certified by formal peer review. It should not be used as definitive medical or clinical guidance.
+              Notice: This manuscript and its findings are <strong>sample demonstration test data</strong> created for platform development, demonstration, and staging verification. It has not yet been certified by formal peer review and should not be used as clinical or medical guidance.
             </p>
           </div>
         </div>
@@ -140,6 +140,9 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
             <span className="kc-paper-id-tag">{paper.paperId}</span>
             <span className="kc-paper-ver-tag">{paper.version}</span>
             <span className="kc-paper-category-tag">{paper.categoryName}</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+              Test Data Only
+            </span>
             <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#dcfce7', color: '#15803d' }}>
               Diamond Open Access
             </span>
