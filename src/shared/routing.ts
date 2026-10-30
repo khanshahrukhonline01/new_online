@@ -12,8 +12,8 @@ export type RouteMatch =
 
 const opportunityAliases = new Set(['/trials', '/combines', '/scholarships', '/camps'])
 const featurePages: Record<string, string> = {
-  '/dashboard': 'My Dashboard', '/live': 'Live Scores', '/play': 'Play · Find Games',
-  '/coaches': 'Coaches Directory', '/academies': 'Sports Academies', '/events': 'Events & Tournaments',
+  '/dashboard': 'My Dashboard', '/live': 'Live Scores', '/live-scores': 'Live Scores', '/play': 'Play · Find Games',
+  '/coaches': 'Coaches Directory', '/academies': 'Sports Academies', '/academy': 'Sports Academies', '/events': 'Events & Tournaments',
   '/stats': 'Athlete Statistics', '/sports-cv': 'Sports CV Wizard', '/talent-scanner': 'Talent Scanner',
   '/scout-portal': 'Scout Portal', '/verification': 'Athlete Verification',
   '/learning': 'Sports & Learning Hub', '/guides': 'Sports Guides', '/ai-guide': 'AI Sports Guide',
