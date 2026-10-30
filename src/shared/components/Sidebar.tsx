@@ -85,6 +85,13 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
   ]
 
   function renderSections(mobile = false) {
+    if (collapsed && !mobile) {
+      return <div className="sidebar-rail-links">
+        {navigationModules.flatMap(section => section.items).map(item =>
+          <SidebarLink key={item.id} item={item} activePath={activePath} onNavigate={onNavigate} onClose={onClose} collapsed />
+        )}
+      </div>
+    }
     return navigationModules.map(section => {
       const expanded = expandedSections[section.id] ?? false
       return <section className="sidebar-module" key={section.id} aria-label={section.label}>
