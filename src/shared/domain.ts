@@ -28,4 +28,5 @@ export interface Venue {
   city: string
   address: string | null
   timezone: string
+  government_facility?: boolean
 }

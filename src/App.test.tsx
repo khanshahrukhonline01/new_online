@@ -74,8 +74,10 @@ describe('catalogue search', () => {
   it('renders an accessible search field without inventing result records', async () => {
     const { default: SearchPage } = await import('./modules/search/SearchPage')
     const html = renderToStaticMarkup(<SearchPage />)
-    expect(html).toContain('Search the catalogue')
-    expect(html).toContain('catalogue-search')
+    expect(html).toContain('<h1>Search KhelGrid.</h1>')
+    expect(html).toContain('aria-label="Catalogue filters"')
+    expect(html).toContain('type="search"')
+    expect(html).toContain('Sport, trial, venue or city…')
     expect(html).toContain('not sample listings')
     expect(html).toContain('Results come from the connected catalogue')
   })
