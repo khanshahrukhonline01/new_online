@@ -220,7 +220,7 @@ describe('KhelChronicle Supabase database integration client', () => {
       expect(fetch).toHaveBeenCalledTimes(1)
       const url = vi.mocked(fetch).mock.calls[0][0] as string
       expect(url).toContain('/rest/v1/chronicle_papers')
-      expect(url).toContain('category_slug=eq.sports-biomechanics')
+      expect(url).toContain('category=eq.sports-biomechanics')
     })
 
     it('records paper views via database RPC', async () => {
