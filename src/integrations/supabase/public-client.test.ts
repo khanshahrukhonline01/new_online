@@ -61,6 +61,9 @@ describe('public catalogue client', () => {
     ['sports', 'is_published', 'eq.true'],
     ['opportunities', 'publication_status', 'eq.published'],
     ['venues', 'publication_status', 'eq.published'],
+    ['academies', 'publication_status', 'eq.published'],
+    ['coaches', 'publication_status', 'eq.published'],
+    ['events', 'publication_status', 'eq.published'],
   ] as const)('queries published %s with bounded results', async (table, filterKey, filterValue) => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([{ id: 'record-1' }]))
     const client = await loadClient()
@@ -68,7 +71,13 @@ describe('public catalogue client', () => {
       ? await client.getSports()
       : table === 'opportunities'
         ? await client.getOpportunities()
-        : await client.getVenues()
+        : table === 'venues'
+          ? await client.getVenues()
+          : table === 'academies'
+            ? await client.getAcademies()
+            : table === 'coaches'
+              ? await client.getCoaches()
+              : await client.getEvents()
 
     expect(result).toEqual({ status: 'ready', data: [{ id: 'record-1' }] })
     const [requestUrl, options] = vi.mocked(fetch).mock.calls[0]

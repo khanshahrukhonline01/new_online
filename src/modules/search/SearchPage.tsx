@@ -1,12 +1,24 @@
 import { useMemo, useState, useEffect } from 'react'
-import { getOpportunities, getSports, getVenues } from '../../integrations/supabase/public-client'
+import {
+  getAcademies,
+  getCoaches,
+  getEvents,
+  getOpportunities,
+  getSports,
+  getVenues,
+} from '../../integrations/supabase/public-client'
 import type { CatalogueResult } from '../../integrations/supabase/public-client'
-import type { Opportunity, Sport, Venue } from '../../shared/domain'
+import type { Academy, Coach, EventItem, Opportunity, Sport, Venue } from '../../shared/domain'
 import { AsyncState } from '../../shared/components/AsyncState'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
 
-type SearchRecord = { type: 'Sport' | 'Opportunity' | 'Venue'; title: string; detail: string; href: string }
+type SearchRecord = {
+  type: 'Sport' | 'Opportunity' | 'Venue' | 'Academy' | 'Coach' | 'Event'
+  title: string
+  detail: string
+  href: string
+}
 
 export default function SearchPage({ initialQuery = '' }: { initialQuery?: string }) {
   const params = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
@@ -32,14 +44,36 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
     status: 'loading',
     data: [],
   })
+  const [academies, setAcademies] = useState<CatalogueResult<Academy> | { status: 'loading'; data: [] }>({
+    status: 'loading',
+    data: [],
+  })
+  const [coaches, setCoaches] = useState<CatalogueResult<Coach> | { status: 'loading'; data: [] }>({
+    status: 'loading',
+    data: [],
+  })
+  const [events, setEvents] = useState<CatalogueResult<EventItem> | { status: 'loading'; data: [] }>({
+    status: 'loading',
+    data: [],
+  })
 
   useEffect(() => {
     let active = true
-    Promise.all([getSports(), getOpportunities(), getVenues()]).then(([s, o, v]) => {
+    Promise.all([
+      getSports(),
+      getOpportunities(),
+      getVenues(),
+      getAcademies(),
+      getCoaches(),
+      getEvents(),
+    ]).then(([s, o, v, a, c, e]) => {
       if (active) {
         setSports(s)
         setOpportunities(o)
         setVenues(v)
+        setAcademies(a)
+        setCoaches(c)
+        setEvents(e)
       }
     })
     return () => {
@@ -73,12 +107,36 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
             href: `/venues/${encodeURIComponent(item.slug)}`,
           }))
         : []),
+      ...(academies.status === 'ready'
+        ? academies.data.map(item => ({
+            type: 'Academy' as const,
+            title: item.name,
+            detail: [item.city, item.state].filter(Boolean).join(', ') || 'Sports academy',
+            href: `/academies?q=${encodeURIComponent(item.name)}`,
+          }))
+        : []),
+      ...(coaches.status === 'ready'
+        ? coaches.data.map(item => ({
+            type: 'Coach' as const,
+            title: item.display_name,
+            detail: [item.city, item.state].filter(Boolean).join(', ') || 'Coach profile',
+            href: `/coaches?q=${encodeURIComponent(item.display_name)}`,
+          }))
+        : []),
+      ...(events.status === 'ready'
+        ? events.data.map(item => ({
+            type: 'Event' as const,
+            title: item.title,
+            detail: [item.organizer_name, item.city].filter(Boolean).join(' · ') || 'Sports event',
+            href: `/events?q=${encodeURIComponent(item.title)}`,
+          }))
+        : []),
     ],
-    [sports, opportunities, venues],
+    [sports, opportunities, venues, academies, coaches, events],
   )
 
-  const ready = [sports, opportunities, venues].some(result => result.status === 'ready')
-  const pending = [sports, opportunities, venues].some(result => result.status === 'loading')
+  const ready = [sports, opportunities, venues, academies, coaches, events].some(result => result.status === 'ready')
+  const pending = [sports, opportunities, venues, academies, coaches, events].some(result => result.status === 'loading')
 
   const q = query.trim().toLocaleLowerCase()
   const results = useMemo(
@@ -105,7 +163,10 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
       label: 'Content type',
       value: category,
       onChange: setCategory,
-      options: ['Sport', 'Opportunity', 'Venue'].map(value => ({ value: value.toLocaleLowerCase(), label: value })),
+      options: ['Sport', 'Opportunity', 'Venue', 'Academy', 'Coach', 'Event'].map(value => ({
+        value: value.toLocaleLowerCase(),
+        label: value,
+      })),
     },
   ]
 
@@ -116,8 +177,8 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
       <p className="eyebrow">DISCOVER</p>
       <h1>Search KhelGrid.</h1>
       <p className="page-intro">
-        Search published sports, opportunities and venue records. Results come from the connected catalogue, not sample
-        listings.
+        Search published sports, opportunities, venues, academies, coaches and events. Results come from the connected
+        catalogue, not sample listings.
       </p>
       <div className="kg-catalogue-layout kg-no-filter-fields">
         <CatalogueFilterPanel

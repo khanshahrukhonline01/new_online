@@ -30,3 +30,42 @@ export interface Venue {
   timezone: string
   government_facility?: boolean
 }
+
+export interface Academy {
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  city: string
+  state: string | null
+  website_url: string | null
+  public_contact_url: string | null
+  verification_status: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+}
+
+export interface Coach {
+  id: string
+  slug: string
+  display_name: string
+  bio: string | null
+  city: string
+  state: string | null
+  website_url: string | null
+  public_contact_url: string | null
+  verification_status: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+}
+
+export interface EventItem {
+  id: string
+  slug: string
+  title: string
+  event_type: 'tournament' | 'camp' | 'league' | 'workshop' | 'meetup' | 'other'
+  organizer_name: string | null
+  city: string | null
+  venue_name: string | null
+  starts_at: string
+  ends_at: string | null
+  source_url: string | null
+  source_name: string | null
+  verification_status: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+}
