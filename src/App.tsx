@@ -90,7 +90,7 @@ export default function App() {
       else if (match.canonicalPath === '/academies') page = <FeatureDirectoryPage kind="academies" />
       else if (match.canonicalPath === '/events') page = <FeatureDirectoryPage kind="events" />
       else if (match.canonicalPath === '/calendar') page = <FeatureDirectoryPage kind="calendar" />
-      else if (match.canonicalPath === '/live') page = <LiveScoresPage />
+      else if (match.canonicalPath === '/live') page = <LiveScoresPage onNavigate={navigate} />
       else if (match.canonicalPath === '/submit-listing') page = <ListingSubmissionPage />
       else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
