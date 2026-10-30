@@ -954,34 +954,46 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
       {/* 6. KhelChronicle Flagship Research Preprints Showcase */}
       <HomeKhelChronicle onNavigate={onNavigate} />
 
-      {/* Focus / Explore Section */}
-      <section className="focus-section home-explore-section">
+      {/* Flagship Digital Tools for Athletes & Scouts */}
+      <section className="focus-section home-explore-section" aria-labelledby="home-tools-heading">
         <div className="section-heading">
-          <p className="eyebrow">EXPLORE KHELGRID</p>
-          <h2>Make your next move.</h2>
-          <p className="page-intro">Start with the part of your sporting journey you want to explore.</p>
+          <p className="eyebrow">ATHLETE &amp; SCOUTING TOOLS</p>
+          <h2 id="home-tools-heading">Powerful tools for your sporting journey.</h2>
+          <p className="page-intro">Interactive digital platforms to benchmark performance, build verified athlete profiles, and access Indian sports science.</p>
         </div>
         <div className="focus-grid home-feature-grid">
-          <a className="focus-card focus-link home-feature-card" href="/sports">
-            <span className="feature-icon" aria-hidden="true"><SiteIcon name="sports" size={22} /></span>
-            <span className="card-number">01 / DISCOVER</span>
-            <h3>Explore sports</h3>
-            <p>Browse the sports catalogue with 22+ active Olympic and national disciplines.</p>
-            <span className="card-action">Explore sports <span aria-hidden="true">↗</span></span>
+          <a
+            className="focus-card focus-link home-feature-card"
+            href="/sports-cv"
+            onClick={event => onNavigate?.(event, '/sports-cv')}
+          >
+            <span className="feature-icon" aria-hidden="true"><SiteIcon name="sports-cv" size={22} /></span>
+            <span className="card-number">01 / ATHLETE CV</span>
+            <h3>Sports CV Wizard</h3>
+            <p>Build an accredited, shareable digital sports resume with verified physical stats, combine cutoffs, and match records for selectors.</p>
+            <span className="card-action">Build your Sports CV <span aria-hidden="true">↗</span></span>
           </a>
-          <a className="focus-card focus-link home-feature-card" href="/opportunities">
-            <span className="feature-icon" aria-hidden="true"><SiteIcon name="calendar-check" size={22} /></span>
-            <span className="card-number">02 / COMPETE</span>
-            <h3>Find opportunities</h3>
-            <p>Explore trials, selections, camps and programmes with source information.</p>
-            <span className="card-action">Browse opportunities <span aria-hidden="true">↗</span></span>
+          <a
+            className="focus-card focus-link home-feature-card"
+            href="/talent-scanner"
+            onClick={event => onNavigate?.(event, '/talent-scanner')}
+          >
+            <span className="feature-icon" aria-hidden="true"><SiteIcon name="target" size={22} /></span>
+            <span className="card-number">02 / BENCHMARK</span>
+            <h3>Talent Scanner</h3>
+            <p>Enter your 30m sprint, vertical jump, and Yo-Yo test distance to calculate your national percentile against 4,820 grassroots peers.</p>
+            <span className="card-action">Calculate your percentile <span aria-hidden="true">↗</span></span>
           </a>
-          <a className="focus-card focus-link home-feature-card" href="/venues">
-            <span className="feature-icon" aria-hidden="true"><SiteIcon name="map-pin" size={22} /></span>
-            <span className="card-number">03 / PLAY</span>
-            <h3>Discover venues</h3>
-            <p>Review published venue information. Booking and live availability are not enabled.</p>
-            <span className="card-action">Browse venues <span aria-hidden="true">↗</span></span>
+          <a
+            className="focus-card focus-link home-feature-card"
+            href="/khelchronicle"
+            onClick={event => onNavigate?.(event, '/khelchronicle')}
+          >
+            <span className="feature-icon" aria-hidden="true"><SiteIcon name="award" size={22} /></span>
+            <span className="card-number">03 / SPORTS SCIENCE</span>
+            <h3>KhelChronicle Research</h3>
+            <p>Access diamond open-access research preprints, 3D motion capture biomechanics, and injury prevention kinematics for Indian sports.</p>
+            <span className="card-action">Explore research preprints <span aria-hidden="true">↗</span></span>
           </a>
         </div>
       </section>

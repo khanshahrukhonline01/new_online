@@ -7,9 +7,8 @@ import { navigationModules, primaryNavigation } from './shared/navigation/naviga
 describe('KhelGrid discovery shell', () => {
   it('renders the current core discovery journeys', () => {
     const html = renderToStaticMarkup(<App />)
-    expect(html).toContain('Explore sports')
-    expect(html).toContain('Explore opportunities')
-    expect(html).toContain('Browse venues')
+    expect(html).toContain('Sports CV Wizard')
+    expect(html).toContain('Talent Scanner')
     expect(html).toContain('Discover. Compete.')
     expect(html).toContain('Source-aware listings')
     expect(html).toContain('What’s available now')
