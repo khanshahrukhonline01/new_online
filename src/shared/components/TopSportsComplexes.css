@@ -1,0 +1,200 @@
+/* Top Sports Complexes in Cities — Global SEO & Discovery Component */
+
+.footer-cities-complexes {
+  max-width: 1440px;
+  margin: 0 auto 32px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid #edf0f3;
+  width: 100%;
+}
+
+.footer-cities-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+@media (min-width: 640px) {
+  .footer-cities-header {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+}
+
+.footer-cities-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: clamp(17px, 2.2vw, 20px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--navy, #0f172a);
+}
+
+.footer-cities-subtitle {
+  margin: 6px 0 0;
+  max-width: 820px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.footer-cities-all-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green-dark, #059669);
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.footer-cities-all-link:hover {
+  text-decoration: underline;
+}
+
+.footer-cities-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+  .footer-cities-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .footer-cities-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .footer-cities-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.footer-city-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #fbfdfc;
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.footer-city-card:hover {
+  border-color: rgba(5, 150, 105, 0.45);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
+}
+
+.footer-city-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.footer-city-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--navy, #0f172a);
+}
+
+.footer-city-state {
+  margin: 2px 0 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.footer-city-trophy-badge {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: rgba(5, 150, 105, 0.1);
+  color: var(--green-dark, #059669);
+  flex-shrink: 0;
+}
+
+.footer-city-venues-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.footer-city-venues-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #475569;
+}
+
+.footer-city-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green-dark, #059669);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.footer-city-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--green-dark, #059669);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.footer-city-link:hover {
+  text-decoration: underline;
+}
+
+.footer-cities-seo-block {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  font-size: 11px;
+  line-height: 1.65;
+  color: #64748b;
+}
+
+.footer-cities-seo-block p {
+  margin: 0 0 8px;
+}
+
+.footer-cities-seo-block p:last-child {
+  margin-bottom: 0;
+}
+
+.footer-cities-disclaimer {
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: #94a3b8;
+}

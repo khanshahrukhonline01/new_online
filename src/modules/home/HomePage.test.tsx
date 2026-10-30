@@ -43,17 +43,5 @@ describe('HomePage 5 core live-website sections', () => {
     expect(html).toContain('All Academies')
     expect(html).toContain('/academies')
     expect(html).toContain('Loading accredited institutions…')
-
-    // 6. Top Sports Complexes in Cities
-    expect(html).toContain('Top Sports Complexes in Cities')
-    expect(html).toContain('Explore major stadiums, sports centres and training hubs across India')
-    expect(html).toContain('Explore all cities')
-    expect(html).toContain('Delhi')
-    expect(html).toContain('Jawaharlal Nehru Stadium')
-    expect(html).toContain('Mumbai')
-    expect(html).toContain('Wankhede Stadium')
-    expect(html).toContain('Bengaluru')
-    expect(html).toContain('Sree Kanteerava Stadium')
-    expect(html).toContain('Venue names are discovery starting points')
   })
 })
