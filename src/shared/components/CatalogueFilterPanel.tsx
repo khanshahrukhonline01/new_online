@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { SiteIcon } from './SiteIcon'
+import './CatalogueFilterPanel.css'
 
 export type CatalogueFilterField = {
   key: string
