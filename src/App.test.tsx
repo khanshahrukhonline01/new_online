@@ -98,7 +98,7 @@ describe('permanent sidebar layout contract', () => {
     expect(html).toContain('class="app-shell foundation-v1 sidebar-is-collapsed"')
     expect(html).toContain('id="app-sidebar" class="app-sidebar is-collapsed"')
     expect(html).toContain('<main id="main-content" class="page-shell">')
-    expect(html).toContain('id="footer')
+    expect(html).toContain('class="site-footer')
     expect(html).toContain('aria-label="Toggle main navigation"')
   })
 
