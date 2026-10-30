@@ -76,7 +76,7 @@ textarea:disabled{ cursor: not-allowed; opacity: .55; }.skip-link{ position: fix
  }/* Modular KhelGrid sidebar foundation */
 :root{--sidebar-width:258px;--sidebar-rail-width:76px;--sidebar-bg:#101927;--sidebar-line:rgba(189,205,229,.13);--sidebar-active:rgba(167,243,107,.11)}.app-workspace{display:flex;align-items:stretch;flex:1;min-width:0}.app-workspace .page-shell{min-width:0;flex:1;width:auto;max-width:var(--content-width);margin:0 auto;padding:0 28px}@media(min-width:701px){.site-header{padding-left:24px;padding-right:24px}
 }@media(max-width:1000px) and (min-width:701px){.app-workspace .page-shell{padding-right:22px;padding-left:22px}
-}@media(max-width:700px){.app-workspace .page-shell{width:100%;padding:0 16px 74px}.site-header .primary-navigation{display:none}.site-header .menu-toggle{display:inline-flex}.mobile-bottom-link{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:47px;border-radius:9px;color:var(--muted);text-decoration:none}.mobile-bottom-link>span{font-size:19px;line-height:1}.mobile-bottom-link small{font-size:9px;font-weight:700}.mobile-bottom-link.is-active{background:var(--sidebar-active);color:var(--accent)}.site-footer{padding-bottom:90px}
+}@media(max-width:700px){.app-workspace .page-shell{width:100%;padding:0 16px 74px}.site-header .primary-navigation{display:none}.site-header .menu-toggle{display:inline-flex}.site-footer{padding-bottom:90px}
 }/* Accessibility foundation: consistent keyboard focus and reduced motion. */
 :where(a,
 button,
@@ -170,7 +170,7 @@ body{ color: var(--text); background: var(--page); }.app-shell.foundation-v1{ ba
 .header-search-link,
 .menu-toggle{ display: inline-flex; align-items: center; gap: 8px; }.nav-link > svg,
 .header-search-link > svg,
-.menu-toggle > svg{ flex: 0 0 auto; }@media (max-width: 720px){.mobile-bottom-link{ display: flex; min-width: 0; min-height: 48px; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: 10px; color: var(--muted); text-decoration: none; font-size: 11px; font-weight: 650; }.mobile-bottom-link.active{ color: var(--green-dark); background: var(--accent-soft); }.mobile-bottom-link svg{ flex: 0 0 auto; }.site-footer{ padding-bottom: calc(76px + env(safe-area-inset-bottom)); }.page-shell{ padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+.menu-toggle > svg{ flex: 0 0 auto; }@media (max-width: 720px){.site-footer{ padding-bottom: calc(76px + env(safe-area-inset-bottom)); }.page-shell{ padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
 
 }/* Gmail-inspired KhelGrid app shell refinement — keep KhelGrid navy/green identity. */
 .foundation-v1 .site-header{
@@ -201,15 +201,7 @@ body{ color: var(--text); background: var(--page); }.app-shell.foundation-v1{ ba
   padding-top: 17px;
   padding-bottom: 18px;
   font-size: 10px;
-}.foundation-v1 .mobile-bottom-link{
-  min-height: 48px;
-  color: #65748a;
-  border-radius: 10px;
-}.foundation-v1 .mobile-bottom-link.is-active,
-.foundation-v1 .mobile-bottom-link[aria-current="page"]{
-  color: #075f35;
-  background: #e7f5ec;
-}.foundation-v1 .mobile-bottom-link small{ font-size: 10px; }@media (max-width: 1000px) and (min-width: 761px){.foundation-v1 .site-header{ gap: 10px; }.foundation-v1 .nav-link{ padding-inline: 8px; }.foundation-v1 .header-search-link{ min-width: 40px; padding-inline: 10px; }
+}@media (max-width: 1000px) and (min-width: 761px){.foundation-v1 .site-header{ gap: 10px; }.foundation-v1 .nav-link{ padding-inline: 8px; }.foundation-v1 .header-search-link{ min-width: 40px; padding-inline: 10px; }
 
 }@media (max-width: 760px){.foundation-v1 .site-header{ gap: 10px; }.foundation-v1 .header-search-link{ margin-left: auto; min-width: 40px; padding-inline: 11px; }.foundation-v1 .app-workspace{ min-height: calc(100vh - 130px); }.foundation-v1 .app-workspace .page-shell{ padding-top: 0; }
 
