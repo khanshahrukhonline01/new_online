@@ -8,6 +8,21 @@ interface CacheStore {
   fetchedAt: number;
 }
 
+interface RawCompetitor {
+  homeAway?: string;
+  score?: string | number;
+  displayName?: string;
+  name?: string;
+  abbreviation?: string;
+  logo?: string;
+  team?: {
+    displayName?: string;
+    name?: string;
+    abbreviation?: string;
+    logo?: string;
+  };
+}
+
 /**
  * Safely fetches with timeout
  */
@@ -177,11 +192,11 @@ export class LiveSportsEngine {
       const json = await res.json();
       for (const ev of json.events || []) {
         const comp = ev.competitions?.[0] || {};
-        const comps = comp.competitors || [];
+        const comps = (comp.competitors || []) as RawCompetitor[];
         if (comps.length < 2) continue;
 
-        const home = comps.find((c: any) => c.homeAway === 'home') || comps[0];
-        const away = comps.find((c: any) => c.homeAway === 'away') || comps[1];
+        const home = comps.find((c) => c.homeAway === 'home') || comps[0];
+        const away = comps.find((c) => c.homeAway === 'away') || comps[1];
 
         const state = ev.status?.type?.state;
         const isLive = state === 'in';
