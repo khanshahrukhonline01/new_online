@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import './feature-directory.css'
+import { CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
 
 type Kind = 'coaches' | 'academies' | 'events' | 'calendar'
 type Item = { id: string; slug: string; name?: string; display_name?: string; title?: string; bio?: string; description?: string; city?: string; state?: string; organizer_name?: string; event_type?: string; venue_name?: string; starts_at?: string; ends_at?: string; source_name?: string; source_url?: string }
@@ -19,10 +20,13 @@ export default function FeatureDirectoryPage({ kind }: { kind: Kind }) {
  const [records, setRecords] = useState<Item[]>([])
  const [status, setStatus] = useState<Status>('loading')
  const [message, setMessage] = useState('')
- const [city, setCity] = useState('')
- const [query, setQuery] = useState('')
- const [fromDate, setFromDate] = useState('')
- const [toDate, setToDate] = useState('')
+ const params = new URLSearchParams(window.location.search)
+ const [city, setCity] = useState(params.get('city') ?? '')
+ const [query, setQuery] = useState(params.get('q') ?? '')
+ const [eventType, setEventType] = useState(params.get('type') ?? '')
+ const [fromDate, setFromDate] = useState(params.get('from') ?? '')
+ const [toDate, setToDate] = useState(params.get('to') ?? '')
+ const [sort, setSort] = useState(params.get('sort') ?? 'date')
  const load = useCallback(async () => {
   setStatus('loading')
   const url = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
@@ -42,21 +46,22 @@ export default function FeatureDirectoryPage({ kind }: { kind: Kind }) {
  const visible = useMemo(() => records.filter(r => {
   const name = r.display_name ?? r.name ?? r.title ?? ''
   const matches = [name,r.bio,r.description,r.city,r.state,r.organizer_name,r.event_type,r.venue_name].some(v => v?.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
-  if (!matches || (city && r.city !== city)) return false
+  if (!matches || (city && r.city !== city) || (eventType && r.event_type !== eventType)) return false
   if (kind !== 'calendar') return true
   const time = r.starts_at ? new Date(r.starts_at).getTime() : Number.NaN
   const after = fromDate ? new Date(fromDate + 'T00:00:00').getTime() : Number.NEGATIVE_INFINITY
   const before = toDate ? new Date(toDate + 'T23:59:59.999').getTime() : Number.POSITIVE_INFINITY
   return Number.isFinite(time) && time >= after && time <= before
- }), [records,query,city,fromDate,toDate,kind])
+ }).sort((a,b) => sort === 'name' ? (a.display_name ?? a.name ?? a.title ?? '').localeCompare(b.display_name ?? b.name ?? b.title ?? '') : (a.starts_at ?? '').localeCompare(b.starts_at ?? '')), [records,query,city,eventType,fromDate,toDate,kind,sort])
+ const eventTypes = [...new Set(records.map(record => record.event_type).filter((value): value is string => Boolean(value)))].sort()
+ const fields = [
+  { key: 'city', label: 'City', value: city, onChange: setCity, options: cities.map(value => ({ value, label: value })) },
+  ...((kind === 'events' || kind === 'calendar') ? [{ key: 'type', label: 'Event type', value: eventType, onChange: setEventType, options: eventTypes.map(value => ({ value, label: value })) }] : []),
+  ...(kind === 'calendar' ? [{ key: 'from', label: 'From date', value: fromDate, onChange: setFromDate, options: [], inputType: 'date' as const }, { key: 'to', label: 'To date', value: toDate, onChange: setToDate, options: [], inputType: 'date' as const }] : []),
+ ]
  return <section className="content-page feature-directory-page">
   <p className="eyebrow">KHELGRID · {page.eyebrow}</p><h1>{page.title}</h1><p className="page-intro">{page.intro}</p>
-  <div className="catalogue-controls" role="search" aria-label={'Filter ' + page.title}>
-   <label>Search<input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Name, description, location…" /></label>
-   <label>City<select value={city} onChange={e => setCity(e.target.value)}><option value="">All cities</option>{cities.map(c => <option key={c} value={c}>{c}</option>)}</select></label>
-   {kind === 'calendar' && <><label>From<input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} /></label><label>To<input type="date" min={fromDate || undefined} value={toDate} onChange={e => setToDate(e.target.value)} /></label></>}
-   <button className="secondary-link" type="button" onClick={() => { setQuery(''); setCity(''); setFromDate(''); setToDate('') }}>Clear filters</button>
-  </div>
+  <div className="kg-catalogue-layout kg-no-filter-fields"><CatalogueFilterPanel search={query} onSearch={setQuery} searchPlaceholder="Name, description or location…" fields={fields} onClear={() => { setQuery(''); setCity(''); setEventType(''); setFromDate(''); setToDate('') }} /><div className="kg-catalogue-results"><div className="kg-results-toolbar"><span>{visible.length} published records</span><label>Sort by <select value={sort} onChange={e => setSort(e.target.value)}><option value="date">Date / upcoming</option><option value="name">Name A to Z</option></select></label></div>
   {status === 'loading' && <div className="state-panel state-loading" role="status"><div className="state-symbol">…</div><h3>Loading published records</h3><p>No sample listings are added.</p></div>}
   {status === 'unconfigured' && <div className="state-panel state-unavailable" role="status"><div className="state-symbol">!</div><h3>Directory not connected</h3><p>Supabase public environment settings are missing. No example records are shown.</p></div>}
   {status === 'unavailable' && <div className="state-panel state-unavailable" role="alert"><div className="state-symbol">!</div><h3>Records unavailable</h3><p>{message}</p><button className="secondary-link" type="button" onClick={() => void load()}>Try again</button></div>}
@@ -70,6 +75,6 @@ export default function FeatureDirectoryPage({ kind }: { kind: Kind }) {
     {r.source_url && isSafeExternalUrl(r.source_url) && <a className="card-action" href={r.source_url} target="_blank" rel="noopener noreferrer">Open organiser source <SiteIcon name="arrow-up-right" size={14} /></a>}
    </article>
   })}</div>}
-  <p className="coming-soon-note">Publication does not mean independent verification. Confirm source, dates, fees, eligibility and availability with the organiser.</p>
+  </div></div><p className="coming-soon-note">Publication does not mean independent verification. Confirm source, dates, fees, eligibility and availability with the organiser.</p>
  </section>
 }
