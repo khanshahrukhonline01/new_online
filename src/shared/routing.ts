@@ -16,7 +16,7 @@ const featurePages: Record<string, string> = {
   '/coaches': 'Coaches Directory', '/academies': 'Sports Academies', '/academy': 'Sports Academies', '/events': 'Events & Tournaments',
   '/stats': 'Athlete Statistics', '/sports-cv': 'Sports CV Wizard', '/talent-scanner': 'Talent Scanner',
   '/scout-portal': 'Scout Portal', '/verification': 'Athlete Verification',
-  '/learning': 'Sports & Learning Hub', '/guides': 'Sports Guides', '/ai-guide': 'AI Sports Guide',
+  '/learning': 'Sports & Learning Hub', '/learning-hub': 'Sports & Learning Hub', '/guides': 'Sports Guides', '/ai-guide': 'AI Sports Guide',
   '/khelchronicle': 'KhelChronicle', '/community': 'Sports Community', '/tools': 'Sports Tools & Calculators',
   '/calendar': 'Sports Calendar', '/for-you': 'For You', '/trust': 'Trust Center',
   '/pricing': 'Pricing & Memberships', '/mobile-app': 'KhelGrid Mobile App', '/careers': 'Careers',
@@ -29,6 +29,7 @@ const featurePages: Record<string, string> = {
   '/signup': 'Create Account', '/forgot-password': 'Password Recovery', '/book': 'Venue Booking',
   '/profile': 'Athlete Profile', '/my-profile': 'My Profile', '/saved': 'Saved Items',
   '/referrals': 'Referrals', '/help': 'Help & Support', '/submit-listing': 'Suggest a Listing',
+  '/start-from-zero': 'Start From Zero — Sports CV',
 }
 
 function normalizePath(pathname: string): string {
@@ -39,8 +40,9 @@ export function resolveRoute(pathname: string): RouteMatch {
   const path = normalizePath(pathname)
   if (path === '/') return { name: 'home', canonicalPath: '/' }
   if (path === '/sports') return { name: 'sports-index', canonicalPath: '/sports' }
-  if (path.startsWith('/sports/')) {
-    const slug = path.slice('/sports/'.length)
+  if (path.startsWith('/sports/') || path.startsWith('/sport/')) {
+    const prefix = path.startsWith('/sports/') ? '/sports/' : '/sport/'
+    const slug = path.slice(prefix.length)
     if (slug && !slug.includes('/')) return { name: 'sport-detail', canonicalPath: '/sports/:slug', slug: decodeURIComponentSafe(slug) }
   }
   if (path === '/opportunities' || opportunityAliases.has(path)) return { name: 'opportunities-index', canonicalPath: '/opportunities', ...(path === '/opportunities' ? {} : { alias: path }) }

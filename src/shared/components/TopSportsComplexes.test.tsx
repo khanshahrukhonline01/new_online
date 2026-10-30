@@ -3,14 +3,20 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { TopSportsComplexes } from './TopSportsComplexes'
 
 describe('TopSportsComplexes component for SEO & Thin-Content mitigation', () => {
-  it('renders all 8 metropolitan sports complexes with rich indexable content and crawl links', () => {
+  it('renders all 16 metropolitan sports complexes with rich indexable content, Schema.org ItemList, and crawl links', () => {
     const html = renderToStaticMarkup(<TopSportsComplexes />)
 
-    // Heading & Contextual subtitle
+    // Heading, Badge & Contextual subtitle
     expect(html).toContain('Top Sports Complexes in Cities')
+    expect(html).toContain('16 Metro Sports Hubs')
     expect(html).toContain('Explore major stadiums, sports centres and training hubs across India')
-    expect(html).toContain('Explore all cities')
+    expect(html).toContain('Explore all 16 cities')
     expect(html).toContain('/cities')
+
+    // Schema.org Structured Data
+    expect(html).toContain('application/ld+json')
+    expect(html).toContain('https://schema.org')
+    expect(html).toContain('"@type":"ItemList"')
 
     // City 1: Delhi
     expect(html).toContain('Delhi')
@@ -66,13 +72,62 @@ describe('TopSportsComplexes component for SEO & Thin-Content mitigation', () =>
     expect(html).toContain('SDAT Tennis Stadium')
     expect(html).toContain('/city/chennai')
 
-    // City 8: Bhubaneswar
+    // City 8: Ahmedabad
+    expect(html).toContain('Ahmedabad')
+    expect(html).toContain('Gujarat')
+    expect(html).toContain('Narendra Modi Stadium')
+    expect(html).toContain('The Arena by TransStadia')
+    expect(html).toContain('/city/ahmedabad')
+
+    // City 9: Chandigarh
+    expect(html).toContain('Chandigarh')
+    expect(html).toContain('Punjab &amp; Haryana')
+    expect(html).toContain('PCA Stadium Mohali')
+    expect(html).toContain('/city/chandigarh')
+
+    // City 10: Bhubaneswar
     expect(html).toContain('Bhubaneswar')
     expect(html).toContain('Odisha')
     expect(html).toContain('Kalinga Stadium')
     expect(html).toContain('Kalinga Hockey Stadium')
     expect(html).toContain('Biju Patnaik Swimming Pool')
     expect(html).toContain('/city/bhubaneswar')
+
+    // City 11: Lucknow
+    expect(html).toContain('Lucknow')
+    expect(html).toContain('Uttar Pradesh')
+    expect(html).toContain('BRSABV Ekana Cricket Stadium')
+    expect(html).toContain('/city/lucknow')
+
+    // City 12: Jaipur
+    expect(html).toContain('Jaipur')
+    expect(html).toContain('Rajasthan')
+    expect(html).toContain('Sawai Mansingh Stadium')
+    expect(html).toContain('/city/jaipur')
+
+    // City 13: Bhopal
+    expect(html).toContain('Bhopal')
+    expect(html).toContain('Madhya Pradesh')
+    expect(html).toContain('TT Nagar Stadium')
+    expect(html).toContain('/city/bhopal')
+
+    // City 14: Kochi
+    expect(html).toContain('Kochi')
+    expect(html).toContain('Kerala')
+    expect(html).toContain('Jawaharlal Nehru International Stadium')
+    expect(html).toContain('/city/kochi')
+
+    // City 15: Ranchi
+    expect(html).toContain('Ranchi')
+    expect(html).toContain('Jharkhand')
+    expect(html).toContain('JSCA International Stadium Complex')
+    expect(html).toContain('/city/ranchi')
+
+    // City 16: Dehradun
+    expect(html).toContain('Dehradun')
+    expect(html).toContain('Uttarakhand')
+    expect(html).toContain('Maharana Pratap Sports College')
+    expect(html).toContain('/city/dehradun')
 
     // AdSense anti-thin-content contextual copy & legal disclaimer
     expect(html).toContain('National Sports Infrastructure &amp; Venue Directory:')

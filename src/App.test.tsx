@@ -48,7 +48,7 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('Akhada, Dangal &amp; Combat')
     expect(html).toContain('Govt Sports Quota Recruitment')
     expect(html).toContain('Top Sports Complexes in Cities')
-    expect(html).toContain('Explore all cities')
+    expect(html).toContain('Explore all 16 cities')
     expect(html).toContain('Jawaharlal Nehru Stadium')
     expect(html).toContain('Wankhede Stadium')
     expect(html).toContain('Sree Kanteerava Stadium')
@@ -60,6 +60,7 @@ describe('route resolution', () => {
     ['/', 'home'],
     ['/sports', 'sports-index'],
     ['/sports/football', 'sport-detail'],
+    ['/sport/football', 'sport-detail'],
     ['/opportunities', 'opportunities-index'],
     ['/trials', 'opportunities-index'],
     ['/opportunities/example-trial', 'opportunity-detail'],
@@ -67,6 +68,8 @@ describe('route resolution', () => {
     ['/book', 'venues-index'],
     ['/venues/example-venue', 'venue-detail'],
     ['/search', 'search'],
+    ['/learning-hub', 'feature'],
+    ['/start-from-zero', 'feature'],
     ['/not-a-route', 'not-found'],
     ['/sports/football/extra', 'not-found'],
   ] as const)('resolves %s as %s', (path, expected) => {

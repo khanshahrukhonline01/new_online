@@ -25,6 +25,10 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
   const [query, setQuery] = useState(params.get('q') ?? initialQuery)
   const [category, setCategory] = useState(params.get('category') ?? '')
   const [sort, setSort] = useState(params.get('sort') ?? 'relevance')
+  const sportParam = params.get('sport')
+  const cityParam = params.get('city')
+  const filterSport = sportParam && !sportParam.toLowerCase().includes('all') ? sportParam.toLowerCase() : ''
+  const filterCity = cityParam && !cityParam.toLowerCase().includes('all') ? cityParam.toLowerCase() : ''
 
   useEffect(() => {
     if (initialQuery) {
@@ -142,13 +146,20 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
   const results = useMemo(
     () =>
       records
-        .filter(
-          item =>
-            (!category || item.type.toLocaleLowerCase() === category) &&
-            (!q || `${item.title} ${item.detail} ${item.type}`.toLocaleLowerCase().includes(q)),
-        )
+        .filter(item => {
+          const text = `${item.title} ${item.detail} ${item.type}`.toLocaleLowerCase()
+          if (q && !text.includes(q)) return false
+          if (filterSport && !text.includes(filterSport)) return false
+          if (filterCity && !text.includes(filterCity)) return false
+          if (category) {
+            const isTypeMatch = item.type.toLocaleLowerCase() === category.toLocaleLowerCase()
+            const isTextMatch = text.includes(category.toLocaleLowerCase())
+            if (!isTypeMatch && !isTextMatch) return false
+          }
+          return true
+        })
         .sort((a, b) => (sort === 'title' ? a.title.localeCompare(b.title) : 0)),
-    [records, category, q, sort],
+    [records, category, q, filterSport, filterCity, sort],
   )
 
   const clearAll = () => {
