@@ -72,5 +72,18 @@ describe('HomePage 5 core live-website sections', () => {
     expect(html).toContain('Talent Scanner')
     expect(html).toContain('KhelChronicle Research')
     expect(html).toContain('/khelchronicle')
+
+    // 8. Hero Quick Search & High-Intent Action Pills
+    expect(html).toContain('Search sports, trials, academies, or city…')
+    expect(html).toContain('Quick access:')
+    expect(html).toContain('home-quick-pill')
+
+    // 9. Verified Athletic Directory 4 Interactive Cards
+    expect(html).toContain('VERIFIED ATHLETIC DIRECTORY')
+    expect(html).toContain('What’s available now')
+    expect(html).toContain('href="/sports"')
+    expect(html).toContain('href="/opportunities"')
+    expect(html).toContain('href="/academies"')
+    expect(html).toContain('href="/venues"')
   })
 })

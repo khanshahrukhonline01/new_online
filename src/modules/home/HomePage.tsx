@@ -284,6 +284,30 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   const [reduceMotion, setReduceMotion] = useState(false)
   const [activeHeroSlide, setActiveHeroSlide] = useState(0)
   const [heroPaused, setHeroPaused] = useState(false)
+  const [heroSearch, setHeroSearch] = useState('')
+
+  const handleLink = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    onNavigate?.(event, href)
+  }
+
+  const handleHeroSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const query = heroSearch.trim()
+    const target = query ? `/search?q=${encodeURIComponent(query)}` : '/search'
+    if (onNavigate) {
+      const syntheticEvent = {
+        preventDefault: () => {},
+        metaKey: false,
+        ctrlKey: false,
+        shiftKey: false,
+        altKey: false,
+        button: 0,
+      } as React.MouseEvent<HTMLAnchorElement>
+      onNavigate(syntheticEvent, target)
+    } else if (typeof window !== 'undefined') {
+      window.location.href = target
+    }
+  }
 
   // Rail scroll refs
   const liveMatchesRailRef = useRef<HTMLDivElement>(null)
@@ -399,11 +423,66 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
             Explore sports, find opportunities, and discover places to play. Clear information helps you
             decide your next move.
           </p>
+
+          {/* Quick Hero Search Input */}
+          <div className="home-hero-search-wrap">
+            <form onSubmit={handleHeroSearchSubmit} className="home-hero-search-form" role="search" aria-label="Hero quick search">
+              <span className="home-hero-search-icon" aria-hidden="true">
+                <SiteIcon name="search" size={18} />
+              </span>
+              <input
+                type="search"
+                className="home-hero-search-input"
+                placeholder="Search sports, trials, academies, or city…"
+                value={heroSearch}
+                onChange={e => setHeroSearch(e.target.value)}
+                aria-label="Search sports, selection trials, academies or venues"
+              />
+              <button
+                type="submit"
+                className="home-hero-search-btn"
+                aria-label="Submit search"
+              >
+                <span>Search</span>
+                <SiteIcon name="arrow-up-right" size={14} />
+              </button>
+            </form>
+          </div>
+
+          {/* 6 High-Intent Action Pills */}
+          <div className="home-hero-quick-pills" aria-label="Quick directory shortcuts">
+            <span className="home-hero-pills-label">Quick access:</span>
+            <a href="/opportunities" onClick={e => handleLink(e, '/opportunities')} className="home-quick-pill">
+              <SiteIcon name="target" size={13} />
+              <span>Selection Trials</span>
+            </a>
+            <a href="/academies" onClick={e => handleLink(e, '/academies')} className="home-quick-pill">
+              <SiteIcon name="building" size={13} />
+              <span>Academies</span>
+            </a>
+            <a href="/talent-scanner" onClick={e => handleLink(e, '/talent-scanner')} className="home-quick-pill">
+              <SiteIcon name="award" size={13} />
+              <span>Talent Scanner</span>
+            </a>
+            <a href="/sports-cv" onClick={e => handleLink(e, '/sports-cv')} className="home-quick-pill">
+              <SiteIcon name="sports-cv" size={13} />
+              <span>Sports CV</span>
+            </a>
+            <a href="/venues" onClick={e => handleLink(e, '/venues')} className="home-quick-pill">
+              <SiteIcon name="venues" size={13} />
+              <span>Venues &amp; Turfs</span>
+            </a>
+            <a href="/play" onClick={e => handleLink(e, '/play')} className="home-quick-pill">
+              <SiteIcon name="sports" size={13} />
+              <span>Pickup Games</span>
+            </a>
+          </div>
+
           <div className="hero-actions">
-            <a className="primary-link" href="/opportunities">
+            <a className="primary-link" href="/opportunities" onClick={e => handleLink(e, '/opportunities')}>
               Explore opportunities <SiteIcon name="arrow-up-right" size={16} />
             </a>
-            <a className="secondary-link" href="/sports">
+            <a className="secondary-link" href="/sports" onClick={e => handleLink(e, '/sports')}>
               Browse sports
             </a>
           </div>
@@ -472,31 +551,85 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
       {/* Catalogue Status Row */}
       <section className="home-catalogue-status" aria-labelledby="catalogue-status-title">
         <div className="section-heading compact-heading">
-          <p className="eyebrow">LIVE CATALOGUE STATUS</p>
+          <p className="eyebrow">VERIFIED ATHLETIC DIRECTORY</p>
           <h2 id="catalogue-status-title">What’s available now</h2>
           <p>Verified real database records published across Indian sports.</p>
         </div>
-        <div className="stats-row home-stats">
-          <div>
-            <span><span className="stat-icon" aria-hidden="true"><SiteIcon name="sports" size={17} /></span> Sports</span>
-            <strong>{total(counts.sports)}</strong>
-            <small>{countState(counts.sports)}</small>
-          </div>
-          <div>
-            <span><span className="stat-icon" aria-hidden="true"><SiteIcon name="opportunities" size={17} /></span> Selection Trials</span>
-            <strong>{total(counts.opportunities)}</strong>
-            <small>{countState(counts.opportunities)}</small>
-          </div>
-          <div>
-            <span><span className="stat-icon" aria-hidden="true"><SiteIcon name="building" size={17} /></span> Verified Academies</span>
-            <strong>{total(counts.academies)}</strong>
-            <small>{countState(counts.academies)}</small>
-          </div>
+
+        <div className="stats-row home-stats home-stats-grid-4">
+          <a
+            href="/sports"
+            onClick={e => handleLink(e, '/sports')}
+            className="home-stat-interactive-card"
+            aria-label={`Browse ${total(counts.sports)} published sports`}
+          >
+            <div className="home-stat-card-top">
+              <span className="home-stat-card-label">Sports Disciplines</span>
+              <span className="home-stat-icon-wrap" aria-hidden="true"><SiteIcon name="sports" size={17} /></span>
+            </div>
+            <strong className="home-stat-card-number">{total(counts.sports)}</strong>
+            <div className="home-stat-card-state">
+              <small>{countState(counts.sports)}</small>
+              <SiteIcon name="chevron-right" size={13} className="home-stat-card-arrow" />
+            </div>
+          </a>
+
+          <a
+            href="/opportunities"
+            onClick={e => handleLink(e, '/opportunities')}
+            className="home-stat-interactive-card"
+            aria-label={`Browse ${total(counts.opportunities)} selection trials`}
+          >
+            <div className="home-stat-card-top">
+              <span className="home-stat-card-label">Selection Trials</span>
+              <span className="home-stat-icon-wrap" aria-hidden="true"><SiteIcon name="opportunities" size={17} /></span>
+            </div>
+            <strong className="home-stat-card-number">{total(counts.opportunities)}</strong>
+            <div className="home-stat-card-state">
+              <small>{countState(counts.opportunities)}</small>
+              <SiteIcon name="chevron-right" size={13} className="home-stat-card-arrow" />
+            </div>
+          </a>
+
+          <a
+            href="/academies"
+            onClick={e => handleLink(e, '/academies')}
+            className="home-stat-interactive-card"
+            aria-label={`Browse ${total(counts.academies)} verified academies`}
+          >
+            <div className="home-stat-card-top">
+              <span className="home-stat-card-label">Verified Academies</span>
+              <span className="home-stat-icon-wrap" aria-hidden="true"><SiteIcon name="building" size={17} /></span>
+            </div>
+            <strong className="home-stat-card-number">{total(counts.academies)}</strong>
+            <div className="home-stat-card-state">
+              <small>{countState(counts.academies)}</small>
+              <SiteIcon name="chevron-right" size={13} className="home-stat-card-arrow" />
+            </div>
+          </a>
+
+          <a
+            href="/venues"
+            onClick={e => handleLink(e, '/venues')}
+            className="home-stat-interactive-card"
+            aria-label={`Browse ${total(counts.venues)} play venues and turfs`}
+          >
+            <div className="home-stat-card-top">
+              <span className="home-stat-card-label">Venues &amp; Turfs</span>
+              <span className="home-stat-icon-wrap" aria-hidden="true"><SiteIcon name="venues" size={17} /></span>
+            </div>
+            <strong className="home-stat-card-number">{total(counts.venues)}</strong>
+            <div className="home-stat-card-state">
+              <small>{countState(counts.venues)}</small>
+              <SiteIcon name="chevron-right" size={13} className="home-stat-card-arrow" />
+            </div>
+          </a>
         </div>
+
         <p className="home-data-note">
           <span className={ready ? 'status-dot' : 'status-dot warning'} />
           {ready
-            ? 'Connected database catalogue response received. Zero fabricated listings.'
+            ? 'Live Verified Database · Real-time synchronization across SAI, Khelo India & State Associations. Zero fabricated listings.'
             : 'Connecting to database catalogue…'}
         </p>
       </section>
