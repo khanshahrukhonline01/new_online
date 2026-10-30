@@ -31,7 +31,7 @@ export function CatalogueFilterPanel({ search, onSearch, searchPlaceholder = 'Se
   const clear = () => { onClear(); setMobileOpen(false) }
   return <aside className="kg-filter-rail" aria-label="Catalogue filters">
     <div className="kg-filter-heading"><h2>Filters</h2><button type="button" onClick={clear}>Reset all</button></div>
-    <button className="kg-filter-mobile-toggle" type="button" aria-expanded={mobileOpen} onClick={() => setMobileOpen(value => !value)}><SiteIcon name="sliders-horizontal" size={17}/>{mobileOpen ? 'Hide filters' : 'Show filters'}{active.length > 0 && <span>{active.length}</span>}</button>
+    <button className="kg-filter-mobile-toggle" type="button" aria-expanded={mobileOpen} onClick={() => setMobileOpen(value => !value)}><SiteIcon name="sliders" size={17}/>{mobileOpen ? 'Hide filters' : 'Show filters'}{active.length > 0 && <span>{active.length}</span>}</button>
     <div className={mobileOpen ? 'kg-filter-fields is-open' : 'kg-filter-fields'}>
       <label className="kg-filter-search">Search<input type="search" value={search} onChange={event => onSearch(event.target.value)} placeholder={searchPlaceholder}/></label>
       {fields.map(field => <label className="kg-filter-field" key={field.key}>{field.label}{field.inputType === 'date' ? <input type="date" value={field.value} onChange={event => field.onChange(event.target.value)} /> : <select value={field.value} onChange={event => field.onChange(event.target.value)}><option value="">All {field.label.toLocaleLowerCase()}</option>{field.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>}</label>)}
