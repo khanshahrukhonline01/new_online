@@ -43,6 +43,8 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('IPR, AI &amp; Copyright Notice')
     expect(html).toContain('Sports Network Index')
     expect(html).toContain('ipr@khelgrid.com')
+    expect(html).toContain('Frequently Asked Questions')
+    expect(html).toContain('Got questions? We have answers.')
     expect(html).toContain('Game, Sport &amp; Play Across India')
     expect(html).toContain('54+ Verified Directories')
     expect(html).toContain('Akhada, Dangal &amp; Combat')

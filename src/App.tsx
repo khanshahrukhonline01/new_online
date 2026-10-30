@@ -17,6 +17,7 @@ import { resolveRoute } from './shared/routing'
 import { SiteIcon } from './shared/components/SiteIcon'
 import TopSportsComplexes from './shared/components/TopSportsComplexes'
 import GameSportPlayAcrossIndia from './shared/components/GameSportPlayAcrossIndia'
+import FrequentlyAskedQuestions from './shared/components/FrequentlyAskedQuestions'
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
 
@@ -122,6 +123,7 @@ export default function App() {
     </div>
 
     <footer className="site-footer">
+      <FrequentlyAskedQuestions activePath={path} onNavigate={navigate} />
       <GameSportPlayAcrossIndia onNavigate={navigate} />
       <TopSportsComplexes onNavigate={navigate} />
       <div className="footer-main">
