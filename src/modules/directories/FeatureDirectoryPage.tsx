@@ -20,7 +20,7 @@ export default function FeatureDirectoryPage({ kind }: { kind: Kind }) {
  const [records, setRecords] = useState<Item[]>([])
  const [status, setStatus] = useState<Status>('loading')
  const [message, setMessage] = useState('')
- const params = new URLSearchParams(window.location.search)
+ const params = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
  const [city, setCity] = useState(params.get('city') ?? '')
  const [query, setQuery] = useState(params.get('q') ?? '')
  const [eventType, setEventType] = useState(params.get('type') ?? '')
