@@ -43,6 +43,7 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('IPR, AI &amp; Copyright Notice')
     expect(html).toContain('Sports Network Index')
     expect(html).toContain('ipr@khelgrid.com')
+    expect(html).toContain('KhelChronicle Research Wire')
     expect(html).toContain('Frequently Asked Questions')
     expect(html).toContain('Got questions? We have answers.')
     expect(html).toContain('Game, Sport &amp; Play Across India')
@@ -70,6 +71,9 @@ describe('route resolution', () => {
     ['/book', 'venues-index'],
     ['/venues/example-venue', 'venue-detail'],
     ['/search', 'search'],
+    ['/khelchronicle', 'khelchronicle-index'],
+    ['/chronicle', 'khelchronicle-index'],
+    ['/khelchronicle/submit', 'khelchronicle-submit'],
     ['/learning-hub', 'feature'],
     ['/start-from-zero', 'feature'],
     ['/not-a-route', 'not-found'],

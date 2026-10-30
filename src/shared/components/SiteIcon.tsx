@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
+  Award,
   BadgeCheck,
   Bell,
   Bookmark,
@@ -80,7 +81,7 @@ export const siteIconNames = [
   'bookmark','heart','star','user','users','user-round','settings','help-circle','mail','phone',
   'globe','link','plus','minus','edit','trash','lock','unlock','eye','eye-off','bell','message',
   'play','pause','volume','image','camera','trophy','medal','target','activity','chart','building',
-  'wallet','credit-card','arrow-left','arrow-right','external','logout','sparkles'
+  'wallet','credit-card','arrow-left','arrow-right','external','logout','sparkles','award'
 ] as const
 
 export type SiteIconName = typeof siteIconNames[number]
@@ -161,6 +162,7 @@ const icons: Record<SiteIconName, LucideIcon> = {
   external: ExternalLink,
   logout: LogOut,
   sparkles: Sparkles,
+  award: Award,
 }
 
 type SiteIconProps = SVGProps<SVGSVGElement> & {
@@ -171,7 +173,7 @@ type SiteIconProps = SVGProps<SVGSVGElement> & {
 
 /** Consistent, accessible Lucide icons matching the existing KhelGrid live-site design system. */
 export function SiteIcon({ name, size = 20, strokeWidth = 1.8, ...props }: SiteIconProps) {
-  const Icon = icons[name]
+  const Icon = icons[name] || Trophy
   return (
     <Icon
       width={size}

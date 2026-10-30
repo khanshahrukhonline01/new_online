@@ -18,6 +18,12 @@ import { SiteIcon } from './shared/components/SiteIcon'
 import TopSportsComplexes from './shared/components/TopSportsComplexes'
 import GameSportPlayAcrossIndia from './shared/components/GameSportPlayAcrossIndia'
 import FrequentlyAskedQuestions from './shared/components/FrequentlyAskedQuestions'
+import KhelChronicleHome from './modules/khelchronicle/KhelChronicleHome'
+import KhelChroniclePaperPage from './modules/khelchronicle/KhelChroniclePaperPage'
+import KhelChronicleCategoryPage from './modules/khelchronicle/KhelChronicleCategoryPage'
+import KhelChronicleAuthorPage from './modules/khelchronicle/KhelChronicleAuthorPage'
+import KhelChronicleSubmitPage from './modules/khelchronicle/KhelChronicleSubmitPage'
+import KhelChronicleDispatchStrip from './modules/khelchronicle/KhelChronicleDispatchStrip'
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
 
@@ -87,6 +93,11 @@ export default function App() {
     case 'venues-index': page = <VenuesPage />; break
     case 'venue-detail': page = <CatalogueDetailPage kind="venue" slug={match.slug} />; break
     case 'search': page = <SearchPage initialQuery={searchQuery} />; break
+    case 'khelchronicle-index': page = <KhelChronicleHome onNavigate={navigate} />; break
+    case 'khelchronicle-submit': page = <KhelChronicleSubmitPage onNavigate={navigate} />; break
+    case 'khelchronicle-category': page = <KhelChronicleCategoryPage categorySlug={match.category} onNavigate={navigate} />; break
+    case 'khelchronicle-author': page = <KhelChronicleAuthorPage authorSlug={match.author} onNavigate={navigate} />; break
+    case 'khelchronicle-paper': page = <KhelChroniclePaperPage slug={match.slug} onNavigate={navigate} />; break
     case 'feature':
       if (match.canonicalPath === '/sports-cv') page = <SportsCvWizard />
       else if (match.canonicalPath === '/coaches') page = <FeatureDirectoryPage kind="coaches" />
@@ -123,6 +134,7 @@ export default function App() {
     </div>
 
     <footer className="site-footer">
+      <KhelChronicleDispatchStrip onNavigate={navigate} />
       <FrequentlyAskedQuestions activePath={path} onNavigate={navigate} />
       <GameSportPlayAcrossIndia onNavigate={navigate} />
       <TopSportsComplexes onNavigate={navigate} />

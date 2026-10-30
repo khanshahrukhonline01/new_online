@@ -21,7 +21,7 @@ describe('platform route coverage', () => {
   it.each([
     '/sports-cv', '/submit-listing', '/stats', '/talent-scanner', '/scout-portal', '/verification',
     '/live', '/play', '/coaches', '/academies', '/events', '/calendar',
-    '/learning', '/guides', '/ai-guide', '/khelchronicle', '/community', '/tools',
+    '/learning', '/guides', '/ai-guide', '/community', '/tools',
     '/dashboard', '/profile', '/my-profile', '/saved', '/settings', '/notifications',
     '/login', '/signup', '/forgot-password', '/about', '/contact', '/partners', '/careers', '/trust',
     '/pricing', '/mobile-app', '/help', '/privacy', '/terms', '/cookies', '/for-you', '/referrals',
@@ -34,6 +34,24 @@ describe('platform route coverage', () => {
       expect(match.canonicalPath).toBe(path)
       expect(match.slug.trim()).not.toBe('')
     }
+  })
+
+  it('routes KhelChronicle repository pages correctly', () => {
+    expect(resolveRoute('/khelchronicle').name).toBe('khelchronicle-index')
+    expect(resolveRoute('/chronicle').name).toBe('khelchronicle-index')
+    expect(resolveRoute('/khelchronicle/submit').name).toBe('khelchronicle-submit')
+    expect(resolveRoute('/khelchronicle/sports-biomechanics')).toMatchObject({
+      name: 'khelchronicle-category',
+      category: 'sports-biomechanics',
+    })
+    expect(resolveRoute('/khelchronicle/author/dr-vikramaditya-rathore')).toMatchObject({
+      name: 'khelchronicle-author',
+      author: 'dr-vikramaditya-rathore',
+    })
+    expect(resolveRoute('/khelchronicle/kinematic-correlates-lumbar-spine-stress-fast-bowlers')).toMatchObject({
+      name: 'khelchronicle-paper',
+      slug: 'kinematic-correlates-lumbar-spine-stress-fast-bowlers',
+    })
   })
 
   it('normalizes trailing slashes and preserves unknown-route handling', () => {
