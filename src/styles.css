@@ -1867,3 +1867,72 @@ body { color: var(--text); background: var(--page); }
 @media (min-width: 701px) {
   .foundation-v1 .app-sidebar.is-collapsed .sidebar-module-heading-icon { display: none; }
 }
+
+
+/* Sidebar interaction polish: section icons, persistent utility dock, and mobile hierarchy. */
+.foundation-v1 .app-sidebar .sidebar-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+.foundation-v1 .app-sidebar .sidebar-bottom .sidebar-utility-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 42px;
+  padding: 8px 11px;
+  border-radius: 11px;
+  color: #64748b;
+  text-decoration: none;
+}
+.foundation-v1 .app-sidebar .sidebar-bottom .sidebar-utility-link:hover,
+.foundation-v1 .app-sidebar .sidebar-bottom .sidebar-utility-link:focus-visible {
+  background: #f0f6f3;
+  color: #087b45;
+}
+.foundation-v1 .app-sidebar .sidebar-bottom .sidebar-utility-link svg { flex: 0 0 20px; }
+.foundation-v1 .app-sidebar .sidebar-bottom .sidebar-utility-label { font-size: 12px; font-weight: 650; }
+.foundation-v1 .app-sidebar .sidebar-bottom .sidebar-profile-link { border-top: 1px solid #e8edf2; border-radius: 0; margin-top: 4px; padding-top: 12px; }
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-bottom { align-items: center; gap: 8px; }
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-bottom .sidebar-utility-link {
+  justify-content: center;
+  width: 56px;
+  min-width: 56px;
+  height: 56px;
+  min-height: 56px;
+  padding: 0;
+  border-radius: 50%;
+  background: #fff;
+}
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-bottom .sidebar-profile-link { border: 0; margin: 0; padding: 0; }
+.foundation-v1 .app-sidebar.is-collapsed .sidebar-bottom .sidebar-utility-label { display: none; }
+.foundation-v1 .app-sidebar .sidebar-module-heading-icon { flex-shrink: 0; }
+.foundation-v1 .app-sidebar .sidebar-module-toggle[aria-expanded="true"] .sidebar-module-heading-icon {
+  background: #d9f0e2;
+  color: #066b3b;
+}
+.foundation-v1 .app-sidebar .sidebar-link[title]:focus-visible,
+.foundation-v1 .app-sidebar .sidebar-link[title]:hover { position: relative; }
+.mobile-drawer .sidebar-navigation { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.mobile-drawer .sidebar-module-toggle {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mobile-drawer .sidebar-module-heading-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: #e1f3e8;
+  color: #087b45;
+}
+.mobile-drawer .sidebar-module-heading-icon svg { width: 18px; height: 18px; }
+.mobile-drawer .sidebar-module-label { font-size: 11px; font-weight: 800; letter-spacing: .04em; }
+.mobile-drawer .sidebar-link { min-height: 46px; }
