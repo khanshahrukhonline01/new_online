@@ -2699,3 +2699,124 @@ body { color: var(--text); background: var(--page); }
   .foundation-v1 .site-footer { margin-left: 0 !important; width: 100% !important; }
   .foundation-v1 .app-workspace > .app-sidebar { display: none !important; }
 }
+
+
+/* Final desktop icon-rail sizing: compact controls, fixed rail, no oversized bubbles. */
+@media (min-width: 701px) {
+  .foundation-v1.app-shell {
+    --kg-header-height: 78px;
+    --kg-sidebar-rail-width: 64px;
+  }
+  .foundation-v1.app-shell.sidebar-is-expanded {
+    --kg-sidebar-rail-width: 256px;
+  }
+  .foundation-v1 .app-workspace {
+    display: block !important;
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 0 0 var(--kg-sidebar-rail-width) !important;
+  }
+  .foundation-v1 .app-workspace > .app-sidebar {
+    position: fixed !important;
+    inset: var(--kg-header-height) auto 0 0 !important;
+    z-index: 60 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+    width: var(--kg-sidebar-rail-width) !important;
+    min-width: var(--kg-sidebar-rail-width) !important;
+    max-width: var(--kg-sidebar-rail-width) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 10px 6px !important;
+    overflow: hidden !important;
+  }
+  .foundation-v1 .app-workspace > .app-sidebar .sidebar-navigation {
+    min-width: 0 !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin;
+  }
+  .foundation-v1 .app-workspace > .app-sidebar .sidebar-rail-links {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 3px !important;
+    width: 100% !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-rail-group {
+    display: grid !important;
+    justify-items: center !important;
+    gap: 3px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 5px 0 !important;
+    border: 0 !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-link,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-utility-link {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    width: 38px !important;
+    min-width: 38px !important;
+    max-width: 38px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    margin: 1px auto !important;
+    padding: 0 !important;
+    border-radius: 11px !important;
+    background: transparent !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-link:hover,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-utility-link:hover {
+    background: #e8f3ec !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-icon,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-utility-link > svg {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 18px !important;
+    min-width: 18px !important;
+    height: 18px !important;
+    min-height: 18px !important;
+    flex: 0 0 18px !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-icon svg {
+    width: 18px !important;
+    height: 18px !important;
+    max-width: 18px !important;
+    max-height: 18px !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-link-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-module-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-coming-soon,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-utility-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-bottom-note,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-promo,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-module-toggle {
+    display: none !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-bottom {
+    display: grid !important;
+    justify-items: center !important;
+    gap: 3px !important;
+    padding-top: 8px !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-expanded .app-sidebar {
+    padding: 12px 10px !important;
+  }
+  .foundation-v1 .site-footer {
+    width: auto !important;
+    margin-left: var(--kg-sidebar-rail-width) !important;
+  }
+}
+@media (max-width: 700px) {
+  .foundation-v1 .app-workspace { width: 100% !important; margin-left: 0 !important; }
+  .foundation-v1 .site-footer { width: 100% !important; margin-left: 0 !important; }
+}
