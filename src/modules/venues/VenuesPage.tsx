@@ -14,8 +14,10 @@ export default function VenuesPage() {
     data: [],
   })
   const initial = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
+  const pathCityMatch = typeof window !== 'undefined' ? window.location.pathname.match(/^\/city\/([^/]+)/) : null
+  const defaultCity = initial.get('city') ?? (pathCityMatch ? decodeURIComponent(pathCityMatch[1]) : '')
   const [query, setQuery] = useState(initial.get('q') ?? '')
-  const [city, setCity] = useState(initial.get('city') ?? '')
+  const [city, setCity] = useState(defaultCity)
   const [facility, setFacility] = useState(initial.get('facility') ?? '')
   const [sort, setSort] = useState(initial.get('sort') ?? 'name')
 
@@ -41,7 +43,7 @@ export default function VenuesPage() {
       records
         .filter(
           item =>
-            (!city || item.city === city) &&
+            (!city || item.city.toLowerCase().includes(city.toLowerCase())) &&
             (!facility || String(Boolean(item.government_facility)) === facility) &&
             (!query.trim() ||
               [item.name, item.description, item.city, item.address].some(value =>

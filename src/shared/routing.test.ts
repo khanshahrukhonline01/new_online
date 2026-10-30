@@ -13,7 +13,7 @@ describe('platform route coverage', () => {
     path => expect(resolveRoute(path).name).toBe('opportunities-index'),
   )
 
-  it.each(['/venues', '/book'])(
+  it.each(['/venues', '/book', '/cities', '/city/delhi'])(
     '%s opens the venue directory without claiming bookings are live',
     path => expect(resolveRoute(path).name).toBe('venues-index'),
   )
