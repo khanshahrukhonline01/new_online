@@ -10,26 +10,30 @@ describe('shared navigation registry', () => {
     )
   })
 
-  it('organizes destinations into the streamlined navigation groups', () => {
+  it('groups features by the journeys users expect to complete', () => {
     expect(navigationModules.map(section => section.id)).toEqual([
-      'core', 'play', 'athlete', 'knowledge', 'network',
+      'your-space', 'discover', 'play-train', 'athlete-tools', 'learn-community', 'network',
     ])
-    expect(navigationModules.find(section => section.id === 'core')?.items.map(item => item.href))
-      .toEqual(['/', '/dashboard'])
-    expect(navigationModules.find(section => section.id === 'play')?.items.map(item => item.href))
-      .toContain('/sports')
+    expect(navigationModules.find(section => section.id === 'discover')?.items.map(item => item.href))
+      .toEqual(['/sports', '/opportunities', '/venues', '/search', '/for-you'])
+    expect(navigationModules.find(section => section.id === 'play-train')?.items.map(item => item.href))
+      .toContain('/live')
+    expect(navigationModules.find(section => section.id === 'athlete-tools')?.items.map(item => item.href))
+      .toContain('/sports-cv')
   })
 
   it('keeps header destinations separate from the full sidebar registry', () => {
-    expect(headerNavigation.map(item => item.href)).toEqual(['/', '/dashboard'])
-    expect(headerNavigation.some(item => item.href === '/sports-cv')).toBe(false)
+    expect(headerNavigation.map(item => item.href)).toEqual(['/', '/dashboard', '/saved'])
   })
 
-  it('keeps Search in Knowledge & Community and avoids duplicate Blog/KhelChronicle and Pricing/Memberships links', () => {
-    const knowledge = navigationModules.find(section => section.id === 'knowledge')
-    const network = navigationModules.find(section => section.id === 'network')
-    expect(knowledge?.items.map(item => item.href)).toContain('/search')
-    expect(knowledge?.items.filter(item => item.href === '/khelchronicle')).toHaveLength(1)
-    expect(network?.items.filter(item => item.href === '/pricing')).toHaveLength(1)
+  it('does not mark unfinished personal and scouting tools as available', () => {
+    for (const href of ['/dashboard', '/saved', '/for-you', '/stats', '/talent-scanner', '/scout-portal', '/verification']) {
+      expect(primaryNavigation.find(item => item.href === href)?.available).not.toBe(true)
+    }
+  })
+
+  it('keeps destinations unique across the complete sidebar', () => {
+    const hrefs = primaryNavigation.map(item => item.href)
+    expect(new Set(hrefs).size).toBe(hrefs.length)
   })
 })
