@@ -10,9 +10,9 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  width: calc(100% + 48px);
-  margin: 0 0 18px -24px;
-  padding: 7px 14px;
+  width: calc(100% + 40px);
+  margin: 0 -20px 18px -20px;
+  padding: 7px 20px;
   min-height: 48px;
   box-sizing: border-box;
   border-bottom: 1px solid var(--line);
@@ -108,13 +108,6 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 1000px) {
-  .foundation-v1 .app-workspace .page-shell > .sports-strip {
-    width: calc(100% + 32px);
-    margin-left: -16px;
-    padding-inline: 10px;
-  }
-}
 
 @media (max-width: 700px) {
   .foundation-v1 .app-workspace .page-shell > .sports-strip {

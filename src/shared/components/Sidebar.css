@@ -18,18 +18,15 @@
 
 /* Desktop shell integration: the rail is a permanent part of the app layout. */
 @media (min-width: 701px) {
-  /* Reserve the compact rail once. The sidebar is fixed and overlays content
+  /* Reserve the compact rail once via margin-left. The sidebar is fixed and overlays content
      when expanded; it never participates in the page's flex sizing. */
   .foundation-v1 .app-workspace {
     position: relative;
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: row;
-    align-items: stretch;
+    display: block;
     min-width: 0;
     min-height: calc(100vh - var(--kg-sidebar-header-offset));
-    margin: 0;
-    padding-left: var(--kg-sidebar-collapsed-width);
+    margin: 0 0 0 var(--kg-sidebar-collapsed-width);
+    padding-left: 0;
   }
 
   .foundation-v1 .app-workspace > .app-sidebar {
@@ -211,16 +208,17 @@
   }
 
   .foundation-v1 .app-workspace > .page-shell {
-    flex: 1 1 0%;
-    width: auto;
+    width: 100%;
     min-width: 0;
     max-width: none;
     margin: 0;
-    padding: 0 28px;
+    padding: 0 20px;
+    box-sizing: border-box;
   }
   .foundation-v1 .site-footer {
-    width: calc(100% - var(--kg-sidebar-collapsed-width));
+    width: auto;
     margin: 0 0 0 var(--kg-sidebar-collapsed-width);
+    box-sizing: border-box;
   }
 }
 

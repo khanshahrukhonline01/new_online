@@ -538,62 +538,49 @@ independent of footer height. */
     margin: 0 0 0 var(--kg-sidebar-width) !important;
     transition: width .18s ease, margin-left .18s ease;
   }
-}/* Sidebar v2 — rebuilt as a viewport-level navigation rail.
-   The desktop rail is independent of document content/footer height.
-   Mobile continues to use the existing drawer and bottom navigation. */
-@media (min-width: 701px){.foundation-v1.app-shell{
-    --kg-nav-width: 76px;
+}/* Sidebar v2 — desktop compact navigation rail.
+   The header is sticky at the top; the sidebar rail is 64px fixed on the left.
+   Content and footer offset cleanly by 64px without duplicate padding gaps. */
+@media (min-width: 701px) {
+  .foundation-v1.app-shell {
+    --kg-header-height: 68px;
+    --kg-sidebar-rail-width: 64px;
     min-height: 100vh;
-  }.foundation-v1 .app-workspace{
-    display: block !important;
-    min-height: calc(100vh - 78px);
-    margin: 0 0 0 var(--kg-nav-width) !important;
-    transition: margin-left 180ms ease;
-  }.foundation-v1 .app-workspace > .page-shell{
-    width: 100% !important;
-    min-width: 0 !important;
-    margin: 0 !important;
-  }.foundation-v1 .site-footer{
-    width: auto !important;
-    margin: 0 0 0 var(--kg-nav-width) !important;
-    transition: margin-left 180ms ease;
-  }}/* Sidebar layout correction: fixed viewport rail,
-independent of page/footer height.
-   The header stays full width; content and footer reserve the same sidebar column. */
-@media (min-width: 701px){.foundation-v1 .site-header{
+  }
+  .foundation-v1 .site-header {
     position: sticky;
     top: 0;
     z-index: 50;
-  }.foundation-v1 .app-workspace{
-    display: block !important;
-    min-height: calc(100vh - 78px);
-    margin-left: 260px !important;
-    width: calc(100% - 260px);
-  }.foundation-v1 .site-footer{
-    width: calc(100% - 260px) !important;
-    margin-left: 260px !important;
   }
-}@media (max-width: 700px){.foundation-v1 .app-workspace{ margin-left: 0 !important; width: 100% !important; }.foundation-v1 .site-footer{ margin-left: 0 !important; width: 100% !important; }
-
-}/* Final desktop icon-rail sizing: compact controls,
-fixed rail,
-no oversized bubbles. */
-@media (min-width: 701px){.foundation-v1.app-shell{
-    --kg-header-height: 78px;
-    --kg-sidebar-rail-width: 64px;
-  }.foundation-v1 .app-workspace{
+  .foundation-v1 .app-workspace {
     display: block !important;
     width: auto !important;
     min-width: 0 !important;
     margin: 0 0 0 var(--kg-sidebar-rail-width) !important;
-  }.foundation-v1 .site-footer{
-    width: auto !important;
-    margin-left: var(--kg-sidebar-rail-width) !important;
+    padding-left: 0 !important;
   }
-}@media (max-width: 700px){.foundation-v1 .app-workspace{ width: 100% !important; margin-left: 0 !important; }.foundation-v1 .site-footer{ width: 100% !important; margin-left: 0 !important; }
-
-}/* Hover-expand behavior for the compact desktop icon rail.
-   Pointer leave collapses it again; keyboard focus does not pin it open. */
-@media (min-width: 701px){
+  .foundation-v1 .app-workspace > .page-shell {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 20px !important;
+    box-sizing: border-box !important;
+  }
+  .foundation-v1 .site-footer {
+    width: auto !important;
+    margin: 0 0 0 var(--kg-sidebar-rail-width) !important;
+  }
 }
 
+@media (max-width: 700px) {
+  .foundation-v1 .app-workspace {
+    width: 100% !important;
+    margin: 0 !important;
+    padding-left: 0 !important;
+  }
+  .foundation-v1 .site-footer {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+}
