@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build:sitemap": "node --experimental-strip-types scripts/generate-sitemap.mjs",
+    "build": "node --experimental-strip-types scripts/generate-sitemap.mjs && tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty",
     "lint": "eslint .",
