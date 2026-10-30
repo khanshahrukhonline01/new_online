@@ -73,7 +73,7 @@ export const navigationModules: NavigationModule[] = [
   {
     id: 'learn-community',
     label: 'Learn & Community',
-    icon: 'book-open',
+    icon: 'file-text',
     items: [
       { id: 'learning-hub', label: 'Sports Learning Hub', href: '/learning', icon: 'sports', module: 'learn-community' },
       { id: 'guides', label: 'Sports Guides', href: '/guides', icon: 'file-text', module: 'learn-community' },
