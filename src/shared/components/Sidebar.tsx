@@ -100,7 +100,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
       const expanded = expandedSections[section.id] ?? false
       return <section className="sidebar-module" key={section.id} aria-label={section.label}>
         <button className="sidebar-module-toggle" type="button" aria-expanded={expanded} aria-controls={`${mobile ? 'mobile-' : ''}nav-section-${section.id}`} onClick={() => setExpandedSections(previous => ({ ...previous, [section.id]: !expanded }))}>
-          <span className="sidebar-module-label">{section.label}</span>
+          <span className="sidebar-module-heading-icon" aria-hidden="true"><SiteIcon name={section.icon} size={17} /></span><span className="sidebar-module-label">{section.label}</span>
           {!collapsed || mobile ? <SiteIcon name={expanded ? 'chevron-down' : 'chevron-right'} size={14} /> : null}
         </button>
         {expanded ? <div id={`${mobile ? 'mobile-' : ''}nav-section-${section.id}`}>
