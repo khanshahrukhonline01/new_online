@@ -428,9 +428,6 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
             <div className="home-hero-top-badge">
               <span className="status-dot" />
               <span className="eyebrow">YOUR GAME. YOUR NEXT MOVE.</span>
-              <span className="hero-athlete-kicker-pill">
-                Spotlight: <strong>{heroSlides[activeHeroSlide].name}</strong>
-              </span>
             </div>
 
             <h1 className="home-hero-headline">
@@ -438,7 +435,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
             </h1>
 
             <p className="hero-copy">
-              Explore sports, find opportunities, and discover places to play. Clear information helps you decide your next move.
+              Explore sports, verified selection trials, and places to play across India.
             </p>
 
             {/* Quick Hero Search Input */}
