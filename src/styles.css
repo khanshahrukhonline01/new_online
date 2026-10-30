@@ -2002,3 +2002,192 @@ body { color: var(--text); background: var(--page); }
   }
   .foundation-v1 .app-shell.sidebar-is-expanded .app-sidebar .sidebar-promo { display: none; }
 }
+
+
+/* KhelGrid ChatGPT-style navigation shell.
+   Expanded = quiet, full navigation panel; collapsed = slim persistent rail.
+   The rail never expands on hover and never overlays the page. */
+@media (min-width: 1001px) {
+  .foundation-v1 .app-shell {
+    display: flex;
+    align-items: stretch;
+    min-height: 100vh;
+  }
+  .foundation-v1 .app-sidebar,
+  .foundation-v1 .app-shell.sidebar-is-expanded .app-sidebar,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar {
+    position: sticky;
+    top: 78px;
+    z-index: 20;
+    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 78px);
+    min-height: 420px;
+    max-height: calc(100vh - 78px);
+    margin: 0;
+    padding: 12px 10px 14px;
+    overflow: hidden;
+    background: #f7f7f8;
+    border: 0;
+    border-right: 1px solid #e7e7e9;
+    border-radius: 0;
+    box-shadow: none;
+    transition: width .18s ease, flex-basis .18s ease;
+  }
+  .foundation-v1 .app-shell.sidebar-is-expanded .app-sidebar {
+    width: 260px;
+    min-width: 260px;
+    flex: 0 0 260px;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar {
+    width: 68px;
+    min-width: 68px;
+    flex: 0 0 68px;
+  }
+  .foundation-v1 .app-sidebar:hover,
+  .foundation-v1 .app-sidebar:focus-within,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:hover,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar:focus-within {
+    width: inherit;
+    min-width: inherit;
+    flex-basis: inherit;
+    box-shadow: none;
+  }
+  .foundation-v1 .app-sidebar .sidebar-navigation {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 4px 0 12px;
+    scrollbar-width: thin;
+    scrollbar-color: #c7c7cc transparent;
+  }
+  .foundation-v1 .app-sidebar .sidebar-module {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .foundation-v1 .app-sidebar .sidebar-module + .sidebar-module {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e7e7e9;
+  }
+  .foundation-v1 .app-sidebar .sidebar-module-toggle {
+    min-height: 36px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    color: #77777f;
+    font-size: 10px;
+    letter-spacing: .065em;
+    font-weight: 750;
+    text-transform: uppercase;
+  }
+  .foundation-v1 .app-sidebar .sidebar-module-heading-icon {
+    display: none;
+  }
+  .foundation-v1 .app-sidebar .sidebar-module-toggle:hover {
+    background: #ececef;
+    color: #34343a;
+  }
+  .foundation-v1 .app-sidebar .sidebar-module > div {
+    display: grid;
+    gap: 2px;
+    padding-top: 3px;
+  }
+  .foundation-v1 .app-sidebar .sidebar-link {
+    min-height: 38px;
+    padding: 8px 10px;
+    gap: 10px;
+    border-radius: 8px;
+    color: #34343a;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .foundation-v1 .app-sidebar .sidebar-link:hover {
+    background: #ececef;
+    color: #171717;
+  }
+  .foundation-v1 .app-sidebar .sidebar-link.is-active {
+    background: #e7e7eb;
+    color: #171717;
+    font-weight: 650;
+  }
+  .foundation-v1 .app-sidebar .sidebar-icon {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    color: #686870;
+  }
+  .foundation-v1 .app-sidebar .sidebar-promo {
+    display: none;
+  }
+  .foundation-v1 .app-sidebar .sidebar-bottom {
+    flex: 0 0 auto;
+    display: grid;
+    gap: 3px;
+    margin-top: auto;
+    padding: 10px 0 0;
+    border-top: 1px solid #e7e7e9;
+  }
+  .foundation-v1 .app-sidebar .sidebar-utility-link {
+    min-height: 38px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: #45454d;
+    font-size: 13px;
+  }
+  .foundation-v1 .app-sidebar .sidebar-utility-link:hover {
+    background: #ececef;
+    color: #171717;
+  }
+  .foundation-v1 .app-sidebar .sidebar-bottom-note {
+    padding: 8px 10px 0;
+    color: #8a8a92;
+    font-size: 10px;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-module-toggle,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-module-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-chevron,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-link-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-coming-soon,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-utility-label,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-bottom-note {
+    display: none !important;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-module + .sidebar-module {
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-module > div {
+    padding-top: 0;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-link {
+    width: 44px;
+    min-height: 44px;
+    justify-content: center;
+    margin: 2px auto;
+    padding: 0;
+    border-radius: 9px;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-icon {
+    width: 20px;
+    height: 20px;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-bottom {
+    align-items: center;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-sidebar .sidebar-utility-link {
+    width: 44px;
+    min-height: 44px;
+    justify-content: center;
+    padding: 0;
+  }
+  .foundation-v1 .app-shell.sidebar-is-collapsed .app-workspace,
+  .foundation-v1 .app-shell.sidebar-is-collapsed .site-footer,
+  .foundation-v1 .app-shell.sidebar-is-expanded .app-workspace,
+  .foundation-v1 .app-shell.sidebar-is-expanded .site-footer {
+    margin-left: 0 !important;
+  }
+}
