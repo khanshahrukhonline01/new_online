@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AsyncState } from '../../shared/components/AsyncState'
 import type { CatalogueResult } from '../../integrations/supabase/public-client'
 import { getSports } from '../../integrations/supabase/public-client'
@@ -6,7 +6,6 @@ import type { Sport } from '../../shared/domain'
 import { SportIcon } from '../../shared/sports/sportIcons'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
-import { useMemo } from 'react'
 
 export default function SportsPage() {
   const [result, setResult] = useState<CatalogueResult<Sport> | { status: 'loading'; data: [] }>({ status: 'loading', data: [] })
