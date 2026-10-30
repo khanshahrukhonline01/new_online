@@ -2,7 +2,7 @@ import type { Academy, Coach, EventItem, Opportunity, Sport, Venue } from '../..
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-const CATALOGUE_PAGE_SIZE = 100
+const CATALOGUE_PAGE_SIZE = 1000
 
 export type CatalogueResult<T> =
   | { status: 'ready'; data: T[] }
