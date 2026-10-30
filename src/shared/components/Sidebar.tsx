@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react'
 import { navigationModules, type NavigationItem } from '../navigation/navigationRegistry'
 import { SiteIcon, type SiteIconName } from './SiteIcon'
+import './Sidebar.css'
 
 type SidebarProps = {
   activePath: string
