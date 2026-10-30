@@ -8,7 +8,7 @@ import { CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPan
 
 export default function VenuesPage() {
   const [result, setResult] = useState<CatalogueResult<Venue> | { status: 'loading'; data: [] }>({ status: 'loading', data: [] })
-  const initial = new URLSearchParams(window.location.search)
+  const initial = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
   const [query, setQuery] = useState(initial.get('q') ?? '')
   const [city, setCity] = useState(initial.get('city') ?? '')
   const [facility, setFacility] = useState(initial.get('facility') ?? '')
