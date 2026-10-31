@@ -2,6 +2,8 @@
   position: relative;
   display: inline-flex;
   align-items: center;
+  order: 5;
+  flex: 0 0 auto;
 }
 
 .header-settings-trigger {

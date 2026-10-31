@@ -580,9 +580,20 @@ account utilities. */
 .foundation-v1 .site-header > .brand { order: 1; flex: 0 0 auto; }
 .foundation-v1 .site-header > .header-actions { order: 2; margin-left: auto; }
 .foundation-v1 .site-header > .header-search-trigger { order: 3; }
-.foundation-v1 .site-header > .header-icon-button { order: 4; }
-.foundation-v1 .site-header > .header-login-link { order: 5; }
-.foundation-v1 .site-header > .header-go-pro { order: 6; }
+.foundation-v1 .site-header > .header-notif-trigger { order: 4; }
+.foundation-v1 .site-header > .navbar-settings-wrapper { order: 5; flex: 0 0 auto; display: inline-flex; align-items: center; }
+.foundation-v1 .site-header > .header-login-link { order: 6; }
+.foundation-v1 .site-header > .header-go-pro { order: 7; }
+
+.foundation-v1 .site-header .navbar-settings-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+}
 
 @media (max-width: 1024px) {
   .foundation-v1 .site-header .header-action-coach,
@@ -620,7 +631,8 @@ account utilities. */
     font-size: 11px;
     min-height: 32px;
   }
-  .foundation-v1 .site-header .header-icon-button {
+  .foundation-v1 .site-header .header-icon-button,
+  .foundation-v1 .site-header .navbar-settings-wrapper {
     display: inline-flex !important;
   }
 }
