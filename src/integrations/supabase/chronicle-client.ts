@@ -75,9 +75,11 @@ interface DbPaperRow {
 }
 
 function resolveSupabaseBaseUrl(): URL | null {
-  if (!supabaseUrl || !anonKey) return null
+  const currentUrl = (import.meta.env.VITE_SUPABASE_URL || supabaseUrl)?.replace(/\/$/, '')
+  const currentKey = import.meta.env.VITE_SUPABASE_ANON_KEY || anonKey
+  if (!currentUrl || !currentKey) return null
   try {
-    const url = new URL(supabaseUrl)
+    const url = new URL(currentUrl)
     if (url.protocol !== 'https:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
       return null
     }
@@ -85,6 +87,10 @@ function resolveSupabaseBaseUrl(): URL | null {
   } catch {
     return null
   }
+}
+
+function resolveSupabaseAnonKey(): string {
+  return (import.meta.env.VITE_SUPABASE_ANON_KEY || anonKey || '') as string
 }
 
 function mapDbRowToResearchPaper(
@@ -170,8 +176,8 @@ export async function getChronicleCategories(): Promise<ChronicleCatalogueResult
     const url = `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/chronicle_categories?select=*&order=sort_order.asc&is_active=eq.true`
     const res = await fetch(url, {
       headers: {
-        apikey: anonKey!,
-        Authorization: `Bearer ${anonKey}`,
+        apikey: resolveSupabaseAnonKey(),
+        Authorization: `Bearer ${resolveSupabaseAnonKey()}`,
         Accept: 'application/json',
       },
     })
@@ -228,8 +234,8 @@ export async function getChroniclePapers(
     const url = `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/chronicle_papers?${params.toString()}`
     const res = await fetch(url, {
       headers: {
-        apikey: anonKey!,
-        Authorization: `Bearer ${anonKey}`,
+        apikey: resolveSupabaseAnonKey(),
+        Authorization: `Bearer ${resolveSupabaseAnonKey()}`,
         Accept: 'application/json',
       },
     })
@@ -286,8 +292,8 @@ export async function getChroniclePaperBySlug(slug: string): Promise<ChronicleCa
     const url = `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/chronicle_papers?${query.toString()}`
     const res = await fetch(url, {
       headers: {
-        apikey: anonKey!,
-        Authorization: `Bearer ${anonKey}`,
+        apikey: resolveSupabaseAnonKey(),
+        Authorization: `Bearer ${resolveSupabaseAnonKey()}`,
         Accept: 'application/json',
       },
     })
@@ -328,8 +334,8 @@ export async function getChronicleAuthorBySlug(
     const url = `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/chronicle_authors?slug=eq.${authorSlug}&limit=1`
     const res = await fetch(url, {
       headers: {
-        apikey: anonKey!,
-        Authorization: `Bearer ${anonKey}`,
+        apikey: resolveSupabaseAnonKey(),
+        Authorization: `Bearer ${resolveSupabaseAnonKey()}`,
         Accept: 'application/json',
       },
     })
@@ -413,8 +419,8 @@ export async function submitChronicleManuscript(
       {
         method: 'POST',
         headers: {
-          apikey: anonKey!,
-          Authorization: `Bearer ${anonKey}`,
+          apikey: resolveSupabaseAnonKey(),
+          Authorization: `Bearer ${resolveSupabaseAnonKey()}`,
           'Content-Type': 'application/json',
           Accept: 'application/json',
           Prefer: 'return=minimal',
@@ -464,8 +470,8 @@ export async function recordPaperView(paperSlug: string): Promise<void> {
     await fetch(`${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/increment_chronicle_paper_views`, {
       method: 'POST',
       headers: {
-        apikey: anonKey!,
-        Authorization: `Bearer ${anonKey}`,
+        apikey: resolveSupabaseAnonKey(),
+        Authorization: `Bearer ${resolveSupabaseAnonKey()}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ p_paper_slug: paperSlug }),
@@ -486,8 +492,8 @@ export async function recordPaperDownload(paperSlug: string): Promise<void> {
     await fetch(`${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/increment_chronicle_paper_downloads`, {
       method: 'POST',
       headers: {
-        apikey: anonKey!,
-        Authorization: `Bearer ${anonKey}`,
+        apikey: resolveSupabaseAnonKey(),
+        Authorization: `Bearer ${resolveSupabaseAnonKey()}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ p_paper_slug: paperSlug }),

@@ -6,10 +6,13 @@ import { submitChronicleManuscript } from '../../integrations/supabase/chronicle
 describe('End-to-End Manuscript Intake Verification (KhelChronicle / Supabase)', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn())
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-anon-key')
   })
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
     vi.resetModules()
   })
 

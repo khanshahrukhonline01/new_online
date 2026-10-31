@@ -9,6 +9,9 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://hznsbxvovjxvmnchzzqt.supabase.co
+      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bnNieHZvdmp4dm1uY2h6enF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MDU2NzIsImV4cCI6MjEwODQ4MTY3Mn0.CGMlJ8sM5yDPE1gd9Eydhmwf-bBCoxDJIaSTh133OpQ
     steps:
       - uses: actions/checkout@v4
         with:
