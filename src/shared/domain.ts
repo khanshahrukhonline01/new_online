@@ -25,6 +25,7 @@ export interface Opportunity {
   eligibility_criteria?: string | null
   required_documents?: string[]
   metadata?: Record<string, unknown>
+  is_featured?: boolean
   sport?: Sport
 }
 
@@ -37,6 +38,7 @@ export interface Venue {
   address: string | null
   timezone: string
   government_facility?: boolean
+  is_featured?: boolean
   sports?: Sport[]
 }
 
@@ -50,6 +52,7 @@ export interface Academy {
   website_url: string | null
   public_contact_url: string | null
   verification_status: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+  is_featured?: boolean
 }
 
 export interface Coach {

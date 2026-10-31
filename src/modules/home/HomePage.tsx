@@ -170,6 +170,7 @@ const FEATURED_PROMINENCE_KEYWORDS = [
 ]
 
 function getAcademyPriority(a: Academy): number {
+  if (a.is_featured) return 500
   const n = a.name.toLowerCase()
   for (let i = 0; i < FEATURED_PROMINENCE_KEYWORDS.length; i++) {
     if (n.includes(FEATURED_PROMINENCE_KEYWORDS[i])) return 100 - i
@@ -242,7 +243,11 @@ function parseHomeAcademy(a: Academy): FormattedHomeAcademy {
   const est = yearMatch ? `Est. ${yearMatch[1]}` : 'Accredited'
 
   const accredMatch = desc.match(/Accreditation:\s*([^.;\n]+)/i)
-  const scoutBadge = accredMatch ? accredMatch[1].trim().slice(0, 32) : 'Verified Academy'
+  const scoutBadge = a.is_featured
+    ? 'Featured Center'
+    : accredMatch
+      ? accredMatch[1].trim().slice(0, 32)
+      : 'Verified Academy'
 
   let category = 'Sports Academy'
   if (text.includes('ncoe') || text.includes('excellence')) category = 'Center of Excellence'
@@ -504,6 +509,47 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
     }
     return selected
   }, [counts.academies])
+
+  // Selection trials: sorted by featured first, then upcoming dates / deadlines, then verified
+  const displayOpportunities = useMemo(() => {
+    if (counts.opportunities?.status !== 'ready') return []
+    const now = Date.now()
+    return [...counts.opportunities.data].sort((a, b) => {
+      const aFeatured = Boolean(a.is_featured || a.metadata?.featured || a.metadata?.is_featured)
+      const bFeatured = Boolean(b.is_featured || b.metadata?.featured || b.metadata?.is_featured)
+      if (aFeatured !== bFeatured) return aFeatured ? -1 : 1
+
+      const aVerified = a.verification_status === 'verified'
+      const bVerified = b.verification_status === 'verified'
+      if (aVerified !== bVerified) return aVerified ? -1 : 1
+
+      const aStart = a.starts_at ? new Date(a.starts_at).getTime() : Number.POSITIVE_INFINITY
+      const bStart = b.starts_at ? new Date(b.starts_at).getTime() : Number.POSITIVE_INFINITY
+      const aUpcoming = aStart >= now
+      const bUpcoming = bStart >= now
+      if (aUpcoming && !bUpcoming) return -1
+      if (!aUpcoming && bUpcoming) return 1
+      if (aUpcoming && bUpcoming && aStart !== bStart) return aStart - bStart
+
+      return (b.starts_at ?? '').localeCompare(a.starts_at ?? '')
+    })
+  }, [counts.opportunities])
+
+  // Display venues: sorted by featured first, then government facility status, then alphabetical
+  const displayVenues = useMemo(() => {
+    if (counts.venues?.status !== 'ready') return []
+    return [...counts.venues.data].sort((a, b) => {
+      const aFeatured = Boolean(a.is_featured)
+      const bFeatured = Boolean(b.is_featured)
+      if (aFeatured !== bFeatured) return aFeatured ? -1 : 1
+
+      const aGov = Boolean(a.government_facility)
+      const bGov = Boolean(b.government_facility)
+      if (aGov !== bGov) return aGov ? -1 : 1
+
+      return a.name.localeCompare(b.name)
+    })
+  }, [counts.venues])
 
   return (
     <>
@@ -823,14 +869,20 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
         <div ref={trialsRailRef} className="home-touch-rail" tabIndex={0} aria-label="Selection trials list">
           {!counts.opportunities ? (
             <div className="home-rail-status-box">Loading selection trials…</div>
-          ) : counts.opportunities.status !== 'ready' || counts.opportunities.data.length === 0 ? (
+          ) : counts.opportunities.status !== 'ready' || displayOpportunities.length === 0 ? (
             <div className="home-rail-status-box">No published selection trials currently available.</div>
           ) : (
-            counts.opportunities.data.map(opp => (
+            displayOpportunities.map(opp => (
               <a key={opp.id} href={`/opportunities/${opp.slug}`} className="home-rail-card">
                 <div>
                   <div className="home-trial-header">
                     <span className="home-trial-type-badge">{opp.opportunity_type}</span>
+                    {Boolean(opp.is_featured || opp.metadata?.featured || opp.metadata?.is_featured) && (
+                      <span className="home-featured-star-pill">
+                        <SiteIcon name="sparkles" size={11} />
+                        Featured
+                      </span>
+                    )}
                     <span className="home-verified-pill">
                       <SiteIcon name="shield-check" size={12} />
                       Verified
@@ -1017,10 +1069,10 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
         <div ref={turfsRailRef} className="home-touch-rail" tabIndex={0} aria-label="Sports turfs and courts list">
           {!counts.venues ? (
             <div className="home-rail-status-box">Loading venue listings…</div>
-          ) : counts.venues.status !== 'ready' || counts.venues.data.length === 0 ? (
+          ) : counts.venues.status !== 'ready' || displayVenues.length === 0 ? (
             <div className="home-rail-status-box">No published venues currently available.</div>
           ) : (
-            counts.venues.data.map(v => (
+            displayVenues.map(v => (
               <a key={v.id} href={`/venues/${v.slug}`} className="home-rail-card">
                 <div>
                   <div className="home-card-media">
@@ -1035,6 +1087,12 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                       <span className="home-media-badge-dark">{v.city}</span>
                     </div>
                     <div className="home-card-overlay-top-right">
+                      {v.is_featured && (
+                        <span className="home-featured-star-pill" style={{ marginRight: 4 }}>
+                          <SiteIcon name="sparkles" size={11} />
+                          Featured
+                        </span>
+                      )}
                       <span className="home-verified-pill">
                         <SiteIcon name="shield-check" size={11} />
                         {v.government_facility ? 'Govt Facility' : 'Verified Venue'}

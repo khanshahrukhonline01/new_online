@@ -141,4 +141,24 @@ describe('public catalogue client', () => {
     expect(result.status).toBe('unavailable')
     expect(result.data).toEqual([])
   })
+
+  it('falls back to secondary query when is_featured column is not yet present on remote DB', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ message: 'column is_featured does not exist' }, 400))
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([{ id: 'opp-1', title: 'SAI Trial' }]))
+    const client = await loadClient()
+    const result = await client.getOpportunities()
+    expect(result).toEqual({ status: 'ready', data: [{ id: 'opp-1', title: 'SAI Trial' }] })
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('queries venues and academies with is_featured in select and order', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([{ id: 'v-1', name: 'Kanteerava', is_featured: true }]))
+    const client = await loadClient()
+    const result = await client.getVenues()
+    expect(result).toEqual({ status: 'ready', data: [{ id: 'v-1', name: 'Kanteerava', is_featured: true }] })
+    const [requestUrl] = vi.mocked(fetch).mock.calls[0]
+    const url = new URL(String(requestUrl))
+    expect(url.searchParams.get('select')).toContain('is_featured')
+    expect(url.searchParams.get('order')).toContain('is_featured.desc')
+  })
 })

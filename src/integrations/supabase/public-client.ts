@@ -68,6 +68,9 @@ export function getSports() {
   })
 }
 
+const OPPORTUNITY_FEATURED_SELECT =
+  'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status,registration_fee,available_spots,age_category,gender,eligibility_criteria,required_documents,metadata,is_featured'
+
 const OPPORTUNITY_RICH_SELECT =
   'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status,registration_fee,available_spots,age_category,gender,eligibility_criteria,required_documents,metadata'
 
@@ -75,6 +78,17 @@ const OPPORTUNITY_CORE_SELECT =
   'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status'
 
 export async function getOpportunities(): Promise<CatalogueResult<Opportunity>> {
+  const featured = await readCatalogue<Opportunity>({
+    table: 'opportunities',
+    select: OPPORTUNITY_FEATURED_SELECT,
+    order: 'is_featured.desc.nullslast,starts_at.asc.nullslast',
+    filters: {
+      publication_status: 'eq.published',
+      verification_status: 'neq.rejected',
+    },
+  })
+  if (featured.status === 'ready') return featured
+
   const rich = await readCatalogue<Opportunity>({
     table: 'opportunities',
     select: OPPORTUNITY_RICH_SELECT,
@@ -97,7 +111,15 @@ export async function getOpportunities(): Promise<CatalogueResult<Opportunity>> 
   })
 }
 
-export function getVenues() {
+export async function getVenues(): Promise<CatalogueResult<Venue>> {
+  const featured = await readCatalogue<Venue>({
+    table: 'venues',
+    select: 'id,slug,name,description,city,address,timezone,government_facility,is_featured',
+    order: 'is_featured.desc.nullslast,name.asc',
+    filters: { publication_status: 'eq.published' },
+  })
+  if (featured.status === 'ready') return featured
+
   return readCatalogue<Venue>({
     table: 'venues',
     select: 'id,slug,name,description,city,address,timezone,government_facility',
@@ -122,7 +144,18 @@ export async function getVenuesBySport(sportSlug: string, sportName?: string): P
   return { status: 'ready', data: matches }
 }
 
-export function getAcademies() {
+export async function getAcademies(): Promise<CatalogueResult<Academy>> {
+  const featured = await readCatalogue<Academy>({
+    table: 'academies',
+    select: 'id,slug,name,description,city,state,website_url,public_contact_url,verification_status,is_featured',
+    order: 'is_featured.desc.nullslast,name.asc',
+    filters: {
+      publication_status: 'eq.published',
+      verification_status: 'neq.rejected',
+    },
+  })
+  if (featured.status === 'ready') return featured
+
   return readCatalogue<Academy>({
     table: 'academies',
     select: 'id,slug,name,description,city,state,website_url,public_contact_url,verification_status',
