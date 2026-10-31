@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import HomePage from './modules/home/HomePage'
 import SportsPage from './modules/sports/SportsPage'
+import SportDetailPage from './modules/sports/SportDetailPage'
 import OpportunitiesPage from './modules/opportunities/OpportunitiesPage'
 import VenuesPage from './modules/venues/VenuesPage'
 import SearchPage from './modules/search/SearchPage'
@@ -87,7 +88,7 @@ export default function App() {
   switch (match.name) {
     case 'home': page = <HomePage onNavigate={navigate} />; break
     case 'sports-index': page = <SportsPage />; break
-    case 'sport-detail': page = <CatalogueDetailPage kind="sport" slug={match.slug} />; break
+    case 'sport-detail': page = <SportDetailPage slug={match.slug} onNavigate={navigate} />; break
     case 'opportunities-index': page = <OpportunitiesPage />; break
     case 'opportunity-detail': page = <CatalogueDetailPage kind="opportunity" slug={match.slug} />; break
     case 'venues-index': page = <VenuesPage />; break
