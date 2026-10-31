@@ -107,6 +107,7 @@ export default function CommunityListingModal({
     name: string
     city: string
     directoryPath: string
+    detailPath?: string
     mode: 'instant_live' | 'moderation_queue'
     requiresReview: boolean
     message: string
@@ -256,6 +257,7 @@ export default function CommunityListingModal({
           name: createdName,
           city,
           directoryPath,
+          detailPath: result.detailPath,
           mode: result.mode,
           requiresReview: result.requiresReview,
           message: result.message,
@@ -352,17 +354,28 @@ export default function CommunityListingModal({
 
               <div className="community-intake-success-actions">
                 <a
-                  href={successResult.directoryPath}
+                  href={successResult.detailPath || successResult.directoryPath}
                   className="community-intake-btn-primary"
                   onClick={e => {
                     if (onNavigate) {
-                      onNavigate(e, successResult.directoryPath)
+                      onNavigate(e, successResult.detailPath || successResult.directoryPath)
                     }
                     onClose()
                   }}
                 >
-                  <span>View in Directory</span>
+                  <span>🚀 View Your New Page Now</span>
                   <SiteIcon name="arrow-up-right" size={16} />
+                </a>
+
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(`Check out our new listing ${successResult.name} on KhelGrid: https://khelgrid.com${successResult.detailPath || successResult.directoryPath}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="community-intake-btn-secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <SiteIcon name="message" size={16} />
+                  <span>Share on WhatsApp</span>
                 </a>
 
                 <button

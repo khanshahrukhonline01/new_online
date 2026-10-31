@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { AsyncState } from '../../shared/components/AsyncState'
 import { getVenues } from '../../integrations/supabase/public-client'
 import type { CatalogueResult } from '../../integrations/supabase/public-client'
@@ -11,9 +11,10 @@ const EMPTY_VENUES: Venue[] = []
 
 export interface VenuesPageProps {
   onOpenIntake?: () => void
+  onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
-export default function VenuesPage({ onOpenIntake }: VenuesPageProps = {}) {
+export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps = {}) {
   const [result, setResult] = useState<CatalogueResult<Venue> | { status: 'loading'; data: [] }>({
     status: 'loading',
     data: [],
@@ -149,15 +150,33 @@ export default function VenuesPage({ onOpenIntake }: VenuesPageProps = {}) {
                         <span className="card-kicker">
                           <SiteIcon name="building" size={14} /> VENUE
                         </span>
-                        <h2>{venue.name}</h2>
+                        <h2>
+                          <a
+                            href={`/venues/${venue.slug}`}
+                            onClick={e => onNavigate?.(e, `/venues/${venue.slug}`)}
+                            style={{ color: 'inherit', textDecoration: 'none' }}
+                          >
+                            {venue.name}
+                          </a>
+                        </h2>
                         <p>
                           <SiteIcon name="map-pin" size={15} /> {venue.city}
                         </p>
                         {venue.address && <p className="muted">{venue.address}</p>}
                         {venue.description && <p>{venue.description}</p>}
-                        <span className="availability-note">
-                          <SiteIcon name="info" size={14} /> Availability not connected
-                        </span>
+                        <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span className="availability-note">
+                            <SiteIcon name="shield-check" size={14} /> Verified Ground
+                          </span>
+                          <a
+                            href={`/venues/${venue.slug}`}
+                            onClick={e => onNavigate?.(e, `/venues/${venue.slug}`)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700, color: '#087b45', textDecoration: 'none' }}
+                          >
+                            <span>View Facility</span>
+                            <SiteIcon name="arrow-right" size={13} />
+                          </a>
+                        </div>
                       </article>
                     ))}
                   </div>

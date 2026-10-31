@@ -403,6 +403,48 @@
     <priority>0.80</priority>
   </url>
   <url>
+    <loc>https://khelgrid.com/academies/bengaluru-fc-academy</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/academies/pullela-gopichand-badminton-academy</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/academies/mary-kom-regional-boxing-foundation</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/academies/tata-football-academy</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/venues/sree-kanteerava-stadium</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/venues/jawaharlal-nehru-stadium</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/venues/cooperage-football-ground</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
     <loc>https://khelgrid.com/khelchronicle</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>daily</changefreq>

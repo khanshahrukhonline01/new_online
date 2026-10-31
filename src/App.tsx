@@ -36,6 +36,9 @@ import SpotlightSearchModal from './shared/components/SpotlightSearchModal'
 import NavbarSettingsMenu from './shared/components/NavbarSettingsMenu'
 import FeedbackSupportModal from './shared/components/FeedbackSupportModal'
 import SettingsPage from './modules/settings/SettingsPage'
+import AcademiesPage from './modules/academies/AcademiesPage'
+import AcademyDetailPage from './modules/academies/AcademyDetailPage'
+import VenueDetailPage from './modules/venues/VenueDetailPage'
 import type { CommunityListingCategory } from './integrations/supabase/public-client'
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
@@ -126,10 +129,12 @@ export default function App() {
     case 'athlete-profile': page = <AthleteProfilePage username={match.username} onNavigate={navigate} />; break
     case 'opportunities-index': page = <OpportunitiesPage onOpenIntake={() => openIntake('opportunity')} />; break
     case 'opportunity-detail': page = <CatalogueDetailPage kind="opportunity" slug={match.slug} />; break
-    case 'venues-index': page = <VenuesPage onOpenIntake={() => openIntake('venue')} />; break
+    case 'academies-index': page = <AcademiesPage onOpenIntake={() => openIntake('academy')} onNavigate={navigate} />; break
+    case 'academy-detail': page = <AcademyDetailPage slug={match.slug} onNavigate={navigate} onOpenIntake={() => openIntake('academy')} />; break
+    case 'venues-index': page = <VenuesPage onOpenIntake={() => openIntake('venue')} onNavigate={navigate} />; break
     case 'cities-index': page = <CitiesPage onNavigate={navigate} />; break
     case 'city-detail': page = <CityDetailPage citySlug={match.slug} onNavigate={navigate} onOpenIntake={openIntake} />; break
-    case 'venue-detail': page = <CatalogueDetailPage kind="venue" slug={match.slug} />; break
+    case 'venue-detail': page = <VenueDetailPage slug={match.slug} onNavigate={navigate} onOpenIntake={openIntake} />; break
     case 'search': page = <SearchPage initialQuery={searchQuery} />; break
     case 'khelchronicle-index': page = <KhelChronicleHome onNavigate={navigate} />; break
     case 'khelchronicle-submit': page = <KhelChronicleSubmitPage onNavigate={navigate} />; break
@@ -141,7 +146,6 @@ export default function App() {
       else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} />
       else if (match.canonicalPath === '/play') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openIntake('pickup_game')} />
       else if (match.canonicalPath === '/coaches') page = <FeatureDirectoryPage kind="coaches" />
-      else if (match.canonicalPath === '/academies' || match.canonicalPath === '/academy') page = <FeatureDirectoryPage kind="academies" />
       else if (match.canonicalPath === '/events') page = <FeatureDirectoryPage kind="events" />
       else if (match.canonicalPath === '/calendar') page = <FeatureDirectoryPage kind="calendar" />
       else if (match.canonicalPath === '/live' || match.canonicalPath === '/live-scores') page = <LiveScoresPage onNavigate={navigate} />

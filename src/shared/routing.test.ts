@@ -39,9 +39,38 @@ describe('platform route coverage', () => {
     }
   })
 
+  it.each(['/academies', '/academy'])(
+    '%s opens the academies catalogue',
+    path => expect(resolveRoute(path).name).toBe('academies-index'),
+  )
+
+  it.each([
+    ['/academies/bengaluru-fc-academy', 'bengaluru-fc-academy'],
+    ['/academy/mary-kom-boxing-academy', 'mary-kom-boxing-academy'],
+  ])('%s opens the academy detail page for %s', (path, expectedSlug) => {
+    const match = resolveRoute(path)
+    expect(match.name).toBe('academy-detail')
+    expect(match.canonicalPath).toBe('/academies/:slug')
+    if (match.name === 'academy-detail') {
+      expect(match.slug).toBe(expectedSlug)
+    }
+  })
+
+  it.each([
+    ['/venues/kanteerava-stadium', 'kanteerava-stadium'],
+    ['/book/cooperage-ground', 'cooperage-ground'],
+  ])('%s opens the venue detail page for %s', (path, expectedSlug) => {
+    const match = resolveRoute(path)
+    expect(match.name).toBe('venue-detail')
+    expect(match.canonicalPath).toBe('/venues/:slug')
+    if (match.name === 'venue-detail') {
+      expect(match.slug).toBe(expectedSlug)
+    }
+  })
+
   it.each([
     '/sports-cv', '/submit-listing', '/stats', '/talent-scanner', '/scout-portal', '/verification',
-    '/live', '/play', '/coaches', '/academies', '/events', '/calendar',
+    '/live', '/play', '/coaches', '/events', '/calendar',
     '/learning', '/guides', '/ai-guide', '/community', '/tools',
     '/dashboard', '/profile', '/my-profile', '/saved', '/settings', '/notifications',
     '/login', '/signup', '/forgot-password', '/about', '/contact', '/partners', '/careers', '/trust',

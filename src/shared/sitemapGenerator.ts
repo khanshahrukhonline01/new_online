@@ -4,6 +4,7 @@ import {
   RESEARCH_PAPERS,
 } from '../modules/khelchronicle/data/khelchronicleData.ts'
 import { TOP_CITY_SPORTS_COMPLEXES } from './components/cityComplexesData.ts'
+import { CURATED_ACADEMIES, CURATED_VENUES } from './data/curatedEntitiesData.ts'
 
 export const BASE_URL = 'https://khelgrid.com'
 export const SITEMAP_LASTMOD = '2026-10-30'
@@ -96,7 +97,30 @@ export function buildSitemapEntries(): SitemapEntry[] {
     })
   }
 
-  // 4. KhelChronicle Open Sports Research Repository
+  // 4. Curated Academies & Venues Detail Pages
+  for (const academy of CURATED_ACADEMIES) {
+    if (academy.slug) {
+      entries.push({
+        loc: `${BASE_URL}/academies/${academy.slug}`,
+        lastmod: SITEMAP_LASTMOD,
+        changefreq: 'weekly',
+        priority: 0.85,
+      })
+    }
+  }
+
+  for (const venue of CURATED_VENUES) {
+    if (venue.slug) {
+      entries.push({
+        loc: `${BASE_URL}/venues/${venue.slug}`,
+        lastmod: SITEMAP_LASTMOD,
+        changefreq: 'weekly',
+        priority: 0.85,
+      })
+    }
+  }
+
+  // 5. KhelChronicle Open Sports Research Repository
   entries.push(
     { loc: `${BASE_URL}/khelchronicle`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.95 },
     { loc: `${BASE_URL}/khelchronicle/submit`, lastmod: SITEMAP_LASTMOD, changefreq: 'monthly', priority: 0.85 },
