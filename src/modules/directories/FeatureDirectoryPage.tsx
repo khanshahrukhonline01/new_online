@@ -9,6 +9,7 @@ import {
   type CatalogueResult,
 } from '../../integrations/supabase/public-client'
 import type { Academy, Coach, EventItem } from '../../shared/domain'
+import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 import './feature-directory.css'
 
 type Kind = 'coaches' | 'academies' | 'events' | 'calendar'
@@ -263,6 +264,17 @@ export default function FeatureDirectoryPage({ kind }: { kind: Kind }) {
       <p className="eyebrow">KHELGRID · {page.eyebrow}</p>
       <h1>{page.title}</h1>
       <p className="page-intro">{page.intro}</p>
+
+      {kind === 'coaches' && (
+        <DirectoryCallout
+          variant="coach"
+          tag="Free Listing"
+          title="Coaching in India? Get Listed Free"
+          description="Create your verified coach profile & connect with athletes across India."
+          buttonLabel="Join as Coach"
+          buttonHref="mailto:khelgrid@gmail.com?subject=Register%20as%20a%20coach%20on%20KhelGrid"
+        />
+      )}
 
       <div className="kg-catalogue-layout">
         <CatalogueFilterPanel

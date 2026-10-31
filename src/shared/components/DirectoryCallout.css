@@ -1,0 +1,175 @@
+.directory-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 18px 0 24px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.directory-callout:hover {
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+}
+
+.directory-callout-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.directory-callout-tag {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.directory-callout-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.directory-callout-title {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.directory-callout-desc {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.directory-callout-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+
+.directory-callout-cta:hover {
+  transform: translateY(-1px);
+}
+
+/* Variant styles */
+/* 1. Coach: Warm Gold / Amber */
+.directory-callout-coach {
+  border-color: #fde68a;
+  background: linear-gradient(135deg, #fffdf7 0%, #fffbf0 100%);
+}
+.directory-callout-coach .directory-callout-tag {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+.directory-callout-coach .directory-callout-cta {
+  background: #b45309;
+  border: 1px solid #b45309;
+  color: #ffffff;
+}
+.directory-callout-coach .directory-callout-cta:hover {
+  background: #92400e;
+  border-color: #92400e;
+}
+
+/* 2. Venue: Emerald Green */
+.directory-callout-venue {
+  border-color: #a7f3d0;
+  background: linear-gradient(135deg, #f8fdfa 0%, #f0fdf4 100%);
+}
+.directory-callout-venue .directory-callout-tag {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+.directory-callout-venue .directory-callout-cta {
+  background: #176b43;
+  border: 1px solid #176b43;
+  color: #ffffff;
+}
+.directory-callout-venue .directory-callout-cta:hover {
+  background: #105735;
+  border-color: #105735;
+}
+
+/* 3. Opportunity / Trial: Sport Sky Blue */
+.directory-callout-opportunity {
+  border-color: #bae6fd;
+  background: linear-gradient(135deg, #f8fbff 0%, #f0f9ff 100%);
+}
+.directory-callout-opportunity .directory-callout-tag {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+.directory-callout-opportunity .directory-callout-cta {
+  background: #0284c7;
+  border: 1px solid #0284c7;
+  color: #ffffff;
+}
+.directory-callout-opportunity .directory-callout-cta:hover {
+  background: #0369a1;
+  border-color: #0369a1;
+}
+
+/* 4. KhelChronicle: Indigo Research */
+.directory-callout-chronicle {
+  border-color: #c7d2fe;
+  background: linear-gradient(135deg, #fafaff 0%, #eef2ff 100%);
+}
+.directory-callout-chronicle .directory-callout-tag {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+}
+.directory-callout-chronicle .directory-callout-cta {
+  background: #4338ca;
+  border: 1px solid #4338ca;
+  color: #ffffff;
+}
+.directory-callout-chronicle .directory-callout-cta:hover {
+  background: #3730a3;
+  border-color: #3730a3;
+}
+
+/* Responsive mobile layout */
+@media (max-width: 768px) {
+  .directory-callout {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px 16px;
+    gap: 12px;
+  }
+  .directory-callout-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .directory-callout-cta {
+    width: 100%;
+  }
+}

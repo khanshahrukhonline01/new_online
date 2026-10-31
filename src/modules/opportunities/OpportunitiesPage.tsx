@@ -5,6 +5,7 @@ import type { CatalogueResult } from '../../integrations/supabase/public-client'
 import type { Opportunity } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
+import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 
 function formatDate(value: string | null) {
   if (!value) return 'Date not provided'
@@ -124,6 +125,15 @@ export default function OpportunitiesPage() {
       <p className="page-intro">
         Published opportunities only. Check the source and organizer details before applying.
       </p>
+
+      <DirectoryCallout
+        variant="opportunity"
+        tag="Free Post"
+        title="Organising a sports trial? Post for Free"
+        description="Broadcast trial dates, age criteria, and circulars across 16+ cities."
+        buttonLabel="Submit a trial"
+        buttonHref="mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial%20or%20opportunity"
+      />
       <div className="kg-catalogue-layout">
         <CatalogueFilterPanel
           search={query}

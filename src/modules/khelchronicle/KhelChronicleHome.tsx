@@ -7,6 +7,7 @@ import {
   type ResearchPaper,
 } from './data/khelchronicleData'
 import { getChroniclePapers } from '../../integrations/supabase/chronicle-client'
+import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 import './khelchronicle.css'
 
 interface KhelChronicleHomeProps {
@@ -123,6 +124,16 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
           </a>
         </div>
       </section>
+
+      <DirectoryCallout
+        variant="chronicle"
+        tag="Diamond Open Access"
+        title="Sports Science Research · Zero APC"
+        description="Publish preprints with zero submission fees, CC BY licensing, and permanent citation indexing."
+        buttonLabel="Submit Paper"
+        buttonHref="/khelchronicle/submit"
+        onNavigate={onNavigate}
+      />
 
       {/* Stats Row */}
       <div className="kc-stats-row" aria-label="Repository statistics">

@@ -5,6 +5,7 @@ import type { CatalogueResult } from '../../integrations/supabase/public-client'
 import type { Venue } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
+import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 
 const EMPTY_VENUES: Venue[] = []
 
@@ -87,6 +88,15 @@ export default function VenuesPage() {
         Browse venues that have been published to the development catalogue. Booking and live availability are not
         enabled.
       </p>
+
+      <DirectoryCallout
+        variant="venue"
+        tag="0% Commission"
+        title="Manage a sports facility? List with 0% Fee"
+        description="Showcase your courts, turfs, and grounds to athletes across India."
+        buttonLabel="List your venue"
+        buttonHref="mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue%20on%20KhelGrid"
+      />
       <div className="kg-catalogue-layout">
         <CatalogueFilterPanel
           search={query}
