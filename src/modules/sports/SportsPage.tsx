@@ -6,6 +6,7 @@ import type { Sport } from '../../shared/domain'
 import { SportIcon } from '../../shared/sports/sportIcons'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
+import { ALL_SPORTS_DATA } from './data/sportsData'
 
 const EMPTY_SPORTS: Sport[] = []
 
@@ -25,7 +26,17 @@ export default function SportsPage() {
     }
   }, [])
 
-  const records = useMemo(() => (result.status === 'ready' ? result.data : EMPTY_SPORTS), [result])
+  const records = useMemo(() => {
+    if (result.status !== 'ready') return EMPTY_SPORTS
+    const map = new Map<string, Sport>()
+    for (const sport of Object.values(ALL_SPORTS_DATA)) {
+      map.set(sport.slug, { id: sport.id, slug: sport.slug, name: sport.name })
+    }
+    for (const remote of result.data) {
+      map.set(remote.slug, remote)
+    }
+    return Array.from(map.values())
+  }, [result])
 
   const visible = useMemo(
     () =>

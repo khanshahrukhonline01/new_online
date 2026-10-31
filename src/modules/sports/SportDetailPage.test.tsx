@@ -47,6 +47,42 @@ describe('SportDetailPage', () => {
     expect(html).toContain('P.V. Sindhu')
   })
 
+  it('renders equestrian with EFI governing body, Fouaad Mirza, and Asian Games Dressage details', () => {
+    const html = renderToStaticMarkup(<SportDetailPage slug="equestrian" />)
+    expect(html).toContain('Equestrian')
+    expect(html).toContain('घुड़सवारी')
+    expect(html).toContain('Equestrian Federation of India')
+    expect(html).toContain('EFI')
+    expect(html).toContain('Fouaad Mirza')
+    expect(html).toContain('National Equestrian Championship (NEC)')
+  })
+
+  it('renders handball with HAI and Premier Handball League details', () => {
+    const html = renderToStaticMarkup(<SportDetailPage slug="handball" />)
+    expect(html).toContain('Handball')
+    expect(html).toContain('हैंडबॉल')
+    expect(html).toContain('Handball Association of India')
+    expect(html).toContain('HAI')
+    expect(html).toContain('Premier Handball League (PHL)')
+  })
+
+  it('renders martial-arts with WAI / KFI, Sanda, and Kalaripayattu details', () => {
+    const html = renderToStaticMarkup(<SportDetailPage slug="martial-arts" />)
+    expect(html).toContain('Martial Arts')
+    expect(html).toContain('मार्शल आर्ट्स')
+    expect(html).toContain('Wushu Association of India')
+    expect(html).toContain('Roshibina Devi Naorem')
+  })
+
+  it('renders rugby with IRFU and Rugby 7s details', () => {
+    const html = renderToStaticMarkup(<SportDetailPage slug="rugby" />)
+    expect(html).toContain('Rugby')
+    expect(html).toContain('रग्बी')
+    expect(html).toContain('Rugby India (Indian Rugby Football Union)')
+    expect(html).toContain('IRFU')
+    expect(html).toContain('Senior National Rugby 7s Championship')
+  })
+
   it('gracefully handles unknown sports slug with structured fallback', () => {
     const html = renderToStaticMarkup(<SportDetailPage slug="ultimate-frisbee" />)
     expect(html).toContain('Ultimate Frisbee')

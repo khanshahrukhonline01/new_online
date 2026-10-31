@@ -32,6 +32,10 @@ export const sportIconManifest = [
   { id: 'shooting', label: 'Shooting' },
   { id: 'yoga', label: 'Yoga' },
   { id: 'martial-arts', label: 'Martial arts' },
+  { id: 'archery', label: 'Archery' },
+  { id: 'fencing', label: 'Fencing' },
+  { id: 'equestrian', label: 'Equestrian' },
+  { id: 'judo', label: 'Judo' },
 ] as const
 
 export type SportIconId = typeof sportIconManifest[number]['id']
@@ -46,6 +50,9 @@ const aliases: Record<string, SportIconId> = {
   'martial arts': 'martial-arts',
   'combat sports': 'martial-arts',
   'weight lifting': 'weightlifting',
+  horseback: 'equestrian',
+  'horse riding': 'equestrian',
+  bow: 'archery',
 }
 
 export function getSportIconId(name?: string | null): SportIconId | undefined {

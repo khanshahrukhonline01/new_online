@@ -133,7 +133,19 @@
     <priority>0.80</priority>
   </url>
   <url>
+    <loc>https://khelgrid.com/sports/chess</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
     <loc>https://khelgrid.com/sports/cricket</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/sports/cycling</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
@@ -157,7 +169,25 @@
     <priority>0.80</priority>
   </url>
   <url>
+    <loc>https://khelgrid.com/sports/futsal</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/sports/golf</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
     <loc>https://khelgrid.com/sports/gymnastics</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/sports/handball</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
@@ -181,6 +211,18 @@
     <priority>0.80</priority>
   </url>
   <url>
+    <loc>https://khelgrid.com/sports/karate</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/sports/martial-arts</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
     <loc>https://khelgrid.com/sports/pickleball</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -193,7 +235,25 @@
     <priority>0.80</priority>
   </url>
   <url>
+    <loc>https://khelgrid.com/sports/rugby</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
     <loc>https://khelgrid.com/sports/shooting</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/sports/skating</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/sports/squash</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
@@ -206,6 +266,12 @@
   </url>
   <url>
     <loc>https://khelgrid.com/sports/table-tennis</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/sports/taekwondo</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
@@ -230,6 +296,12 @@
   </url>
   <url>
     <loc>https://khelgrid.com/sports/wrestling</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/sports/yoga</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.80</priority>
