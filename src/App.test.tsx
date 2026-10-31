@@ -24,6 +24,12 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('aria-expanded="false"')
     expect(html).toContain('aria-label="Toggle main navigation"')
     expect(html).toContain('aria-current="page"')
+    expect(html).toContain('List your venue')
+    expect(html).toContain('Submit a trial')
+    expect(html).toContain('Join as Coach')
+    expect(html).toContain('Submit Paper')
+    expect(html).toContain('header-action-coach')
+    expect(html).toContain('header-action-chronicle')
   })
 
   it('clearly states that live feeds and account services are not connected yet', () => {

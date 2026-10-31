@@ -121,8 +121,10 @@ export default function App() {
       <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /><span>KHELGRID</span></a>
       <form className="header-search-form" role="search" onSubmit={event => { event.preventDefault(); const value = headerQuery.trim(); const target = '/search' + (value ? '?q=' + encodeURIComponent(value) : ''); if (typeof window !== 'undefined') { window.history.pushState({}, '', target); window.scrollTo({ top: 0, behavior: 'auto' }) } setPath('/search'); setSearchQuery(value); setMenuOpen(false) }}><SiteIcon name="search" size={18} /><input aria-label="Search KhelGrid catalogue" type="search" placeholder="Search sports, trials, venues, athletes…" value={headerQuery} onChange={event => setHeaderQuery(event.target.value)} autoComplete="off" /><button type="submit" aria-label="Submit search"><SiteIcon name="arrow-up-right" size={16} /></button></form>
       <nav className="header-actions" aria-label="KhelGrid actions">
-        <a className="header-action-link" href="mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue%20on%20KhelGrid"><SiteIcon name="plus" size={16} /><span>List your venue</span></a>
-        <a className="header-action-link header-action-secondary" href="mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial%20or%20opportunity"><SiteIcon name="calendar-check" size={16} /><span>Submit a trial</span></a>
+        <a className="header-action-link" href="mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue%20on%20KhelGrid" title="List a sports venue on KhelGrid" aria-label="List your venue"><SiteIcon name="plus" size={16} /><span>List your venue</span></a>
+        <a className="header-action-link header-action-secondary" href="mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial%20or%20opportunity" title="Submit a sports trial or opportunity" aria-label="Submit a trial"><SiteIcon name="calendar-check" size={16} /><span>Submit a trial</span></a>
+        <a className="header-action-link header-action-coach" href="mailto:khelgrid@gmail.com?subject=Register%20as%20a%20coach%20on%20KhelGrid" title="Register as a coach on KhelGrid" aria-label="Join as Coach"><SiteIcon name="award" size={16} /><span>Join as Coach</span></a>
+        <a className="header-action-link header-action-chronicle" href="/khelchronicle/submit" onClick={event => navigate(event, '/khelchronicle/submit')} title="Submit research manuscript to KhelChronicle" aria-label="Submit Paper"><SiteIcon name="file-text" size={16} /><span>Submit Paper</span></a>
       </nav>
       <button className="header-icon-button" type="button" disabled aria-label="Notifications coming soon" title="Notifications coming soon"><SiteIcon name="bell" size={19} /></button>
       <a className="header-icon-button" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20settings%20help" aria-label="Settings help" title="Settings help"><SiteIcon name="settings" size={19} /></a>
@@ -172,6 +174,8 @@ export default function App() {
           <h2>Grow with KhelGrid</h2>
           <a href="mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue">List your venue</a>
           <a href="mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial">Submit a trial</a>
+          <a href="mailto:khelgrid@gmail.com?subject=Register%20as%20a%20coach%20on%20KhelGrid">Join as Coach</a>
+          <a href="/khelchronicle/submit" onClick={event => navigate(event, '/khelchronicle/submit')}>Submit Paper</a>
           <a href="mailto:khelgrid@gmail.com">Contact KhelGrid</a>
           <a href="/about" onClick={event => navigate(event, '/about')}>About KhelGrid</a>
           <p className="footer-trust-copy">Check each organiser’s source, dates, eligibility, fees and venue before applying or travelling.</p>
