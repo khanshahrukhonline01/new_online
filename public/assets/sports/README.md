@@ -1,26 +1,66 @@
-# KhelGrid sport icon assets
+# KhelGrid Sport Icon Assets & Pictograms
 
-The local SVG sprite for the development frontend lives at `public/assets/sports/sport-icons.svg`.
+This directory contains the complete visual asset collection for all **34 verified sports** on KhelGrid.
 
-A typed React component and lookup manifest live at `src/shared/sports/sportIcons.tsx`.
+## Architecture & Storage Structure
 
-## Use
+1. **Sprite Sheet (`sport-icons.svg`)**:
+   - A single, optimized SVG sprite containing `<symbol id="...">` elements for each of the 34 sports.
+   - Referenced client-side by `<use href="/assets/sports/sport-icons.svg#<slug>" />` via the React component `src/shared/sports/sportIcons.tsx` (`<SportIcon name="..." />`).
+   - Ensures ultra-low latency, zero layout shift, and instant rendering with no additional network waterfalls.
 
-```tsx
-import { SportIcon } from '../../shared/sports/sportIcons'
+2. **Standalone Sport SVGs (`<slug>.svg`)**:
+   - Dedicated standalone 64×64 SVG files for all 34 sports.
+   - Useful for external consumers, Open Graph preview metadata, native web manifests, and direct image references (`<img src="/assets/sports/<slug>.svg" />`).
 
-<SportIcon name="Cricket" size={40} />
-<SportIcon name="table-tennis" size={32} title="Table tennis" />
-```
+## Directory Manifest (All 34 Sports)
 
-## Current coverage
+| # | Sport Name | SVG Slug | Standalone File | Sprite Symbol ID |
+|---|---|---|---|---|
+| 1 | Archery | `archery` | `archery.svg` | `#archery` |
+| 2 | Athletics | `athletics` | `athletics.svg` | `#athletics` |
+| 3 | Badminton | `badminton` | `badminton.svg` | `#badminton` |
+| 4 | Basketball | `basketball` | `basketball.svg` | `#basketball` |
+| 5 | Boxing | `boxing` | `boxing.svg` | `#boxing` |
+| 6 | Chess | `chess` | `chess.svg` | `#chess` |
+| 7 | Cricket | `cricket` | `cricket.svg` | `#cricket` |
+| 8 | Cycling | `cycling` | `cycling.svg` | `#cycling` |
+| 9 | Equestrian | `equestrian` | `equestrian.svg` | `#equestrian` |
+| 10 | Fencing | `fencing` | `fencing.svg` | `#fencing` |
+| 11 | Football | `football` | `football.svg` | `#football` |
+| 12 | Futsal | `futsal` | `futsal.svg` | `#futsal` |
+| 13 | Golf | `golf` | `golf.svg` | `#golf` |
+| 14 | Gymnastics | `gymnastics` | `gymnastics.svg` | `#gymnastics` |
+| 15 | Handball | `handball` | `handball.svg` | `#handball` |
+| 16 | Hockey | `hockey` | `hockey.svg` | `#hockey` |
+| 17 | Judo | `judo` | `judo.svg` | `#judo` |
+| 18 | Kabaddi | `kabaddi` | `kabaddi.svg` | `#kabaddi` |
+| 19 | Karate | `karate` | `karate.svg` | `#karate` |
+| 20 | Martial Arts | `martial-arts` | `martial-arts.svg` | `#martial-arts` |
+| 21 | Pickleball | `pickleball` | `pickleball.svg` | `#pickleball` |
+| 22 | Rowing | `rowing` | `rowing.svg` | `#rowing` |
+| 23 | Rugby | `rugby` | `rugby.svg` | `#rugby` |
+| 24 | Shooting | `shooting` | `shooting.svg` | `#shooting` |
+| 25 | Skating | `skating` | `skating.svg` | `#skating` |
+| 26 | Squash | `squash` | `squash.svg` | `#squash` |
+| 27 | Swimming | `swimming` | `swimming.svg` | `#swimming` |
+| 28 | Table Tennis | `table-tennis` | `table-tennis.svg` | `#table-tennis` |
+| 29 | Taekwondo | `taekwondo` | `taekwondo.svg` | `#taekwondo` |
+| 30 | Tennis | `tennis` | `tennis.svg` | `#tennis` |
+| 31 | Volleyball | `volleyball` | `volleyball.svg` | `#volleyball` |
+| 32 | Weightlifting | `weightlifting` | `weightlifting.svg` | `#weightlifting` |
+| 33 | Wrestling | `wrestling` | `wrestling.svg` | `#wrestling` |
+| 34 | Yoga | `yoga` | `yoga.svg` | `#yoga` |
 
-Football, cricket, basketball, tennis, badminton, volleyball, hockey, athletics, swimming, boxing, cycling, chess, table tennis, golf, rugby, gymnastics, handball, rowing, weightlifting, wrestling, karate, taekwondo, skating, kabaddi, futsal, pickleball, squash, shooting, yoga and martial arts.
+## Usage Guidelines
 
-## Maintenance
+- **In React components**: Always import `SportIcon` from `src/shared/sports/sportIcons.tsx`:
+  ```tsx
+  import { SportIcon } from '../../shared/sports/sportIcons'
 
-- Add a new `symbol` to the sprite and a matching ID/label to `sportIconManifest`.
-- Keep names lowercase kebab-case and add common aliases only when useful.
-- These are local SVG assets; no remote image service or runtime request to an icon vendor is required.
-- Pictograms currently use Unicode emoji glyphs inside consistent SVG tiles, so the glyph artwork may vary by operating system. Replace with custom vector paths if exact cross-platform pictogram rendering becomes a requirement.
-- The list is a practical starter catalogue, not a claim of exhaustive worldwide sport coverage.
+  <SportIcon name="badminton" size={40} />
+  ```
+- **In HTML / Markdown / Static contexts**: Reference either the sprite `#symbol` or the direct file path:
+  ```html
+  <img src="/assets/sports/archery.svg" alt="Archery" width="48" height="48" />
+  ```

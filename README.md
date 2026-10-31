@@ -30,6 +30,13 @@ npm run build
 
 Copy `.env.example` to `.env.local`. Never commit credentials.
 
+## Architecture & Development Record
+
+For a full historical record of all phases, fixes, database migrations, and repository parity syncs, see:
+- [Complete Changelog & Architecture Record](docs/KHELGRID_PLATFORM_COMPLETE_CHANGELOG_AND_ARCHITECTURE_RECORD.md)
+- [Sport Icon Asset Guide & Directory Manifest](public/assets/sports/README.md)
+- [Functional SVG Icon Asset Catalog](public/assets/icons/README.md)
+
 ## Delivery stages
 1. Frontend foundation and design system.
 2. Supabase migrations, RLS policies, and typed data access.
@@ -37,6 +44,8 @@ Copy `.env.example` to `.env.local`. Never commit credentials.
 4. Booking and payment safeguards.
 5. Authorized live sports provider integrations.
 6. SEO, privacy, analytics, advertising, accessibility, and release checks.
+7. KhelChronicle Diamond Open Access research preprint repository and intake queue.
+8. 34-Sport comprehensive hub directory with Olympic pathways and SAI quotas.
 
 The existing production site remains separate and unchanged until explicitly approved.
 

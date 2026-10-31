@@ -6,6 +6,7 @@
 - Important: documentation records intended controls and audit findings; it is not proof of runtime correctness or production approval.
 
 ## Product and parity
+- [Complete Changelog & Architecture Record](KHELGRID_PLATFORM_COMPLETE_CHANGELOG_AND_ARCHITECTURE_RECORD.md) — comprehensive historical record of all phases, fixes, database migrations, 34-sport system, and repository parity syncs.
 - [Full Website Development Plan](FULL_WEBSITE_DEVELOPMENT_PLAN.md) — complete phased roadmap, MVP scope, dependencies, acceptance gates, risk register and owner decisions.
 - [Production Repository Parity Audit](PRODUCTION_REPOSITORY_PARITY_AUDIT.md) — source-based gap tracker; reconcile findings against tests and runtime evidence.
 - [Requirements and Acceptance Criteria](REQUIREMENTS_AND_ACCEPTANCE_CRITERIA.md) — feature-level definition of done, priorities and open product decisions.
