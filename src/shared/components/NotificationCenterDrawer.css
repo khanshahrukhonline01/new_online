@@ -429,12 +429,12 @@
 
 .header-notif-badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  min-width: 16px;
-  height: 16px;
+  top: -2px;
+  right: -2px;
+  min-width: 17px;
+  height: 17px;
   padding: 0 4px;
-  border-radius: 8px;
+  border-radius: 999px;
   background: #ef4444;
   color: #ffffff;
   font-size: 0.625rem;
@@ -443,7 +443,10 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
-  box-shadow: 0 0 0 2px var(--color-surface, #ffffff);
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 2;
 }
 
 /* Dark Theme Adjustments */

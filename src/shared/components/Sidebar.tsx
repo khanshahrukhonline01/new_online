@@ -12,7 +12,6 @@ type SidebarProps = {
   collapsed: boolean
   onOpenIntake?: () => void
   onOpenNotifications?: () => void
-  unreadCount?: number
 }
 
 function isActive(item: NavigationItem, activePath: string) {
@@ -44,7 +43,7 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false 
   </div>
 }
 
-export default function Sidebar({ activePath, onNavigate, open, onClose, toggleRef, collapsed, onOpenIntake, onOpenNotifications, unreadCount }: SidebarProps) {
+export default function Sidebar({ activePath, onNavigate, open, onClose, toggleRef, collapsed, onOpenIntake, onOpenNotifications }: SidebarProps) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
@@ -163,9 +162,6 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
           }}
         >
           <SiteIcon name="bell" size={18} />
-          {Boolean(unreadCount && unreadCount > 0) && (
-            <span className="sidebar-notif-badge">{unreadCount && unreadCount > 9 ? '9+' : unreadCount}</span>
-          )}
           <span className="sidebar-utility-label">Notifications</span>
         </a>
         <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback" title="Help and feedback"><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">Help &amp; feedback</span></a>
@@ -204,9 +200,6 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
           }}
         >
           <SiteIcon name="bell" size={18} />
-          {Boolean(unreadCount && unreadCount > 0) && (
-            <span className="sidebar-notif-badge">{unreadCount && unreadCount > 9 ? '9+' : unreadCount}</span>
-          )}
           <span className="sidebar-utility-label">Notifications</span>
         </a>
         <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback"><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">Help &amp; feedback</span></a>

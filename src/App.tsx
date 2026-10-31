@@ -220,10 +220,9 @@ export default function App() {
       >
         <SiteIcon name="search" size={19} />
         <span className="sr-only">Search KhelGrid</span>
-        <span className="header-search-shortcut" aria-hidden="true">⌘K</span>
       </button>
       <button
-        className="header-icon-button"
+        className="header-icon-button header-notif-trigger"
         type="button"
         onClick={() => setNotificationsOpen(true)}
         aria-label="Notifications"
@@ -248,7 +247,6 @@ export default function App() {
         collapsed={sidebarCollapsed}
         onOpenIntake={() => openIntake('pickup_game')}
         onOpenNotifications={() => setNotificationsOpen(true)}
-        unreadCount={unreadNotifCount}
       />
       <main id="main-content" className="page-shell">
         <SiteAnnouncementBanner onNavigate={navigate} />

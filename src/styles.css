@@ -142,8 +142,22 @@ body{ color: var(--text); background: var(--page); }.app-shell.foundation-v1{ ba
 }@media (prefers-reduced-motion: reduce){.foundation-v1 *,
 .foundation-v1 *::before,
 .foundation-v1 *::after{ scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
 
-}/* Consistent alignment for integrated functional and sport icons */
+/* Accessible screen-reader only utility */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Consistent alignment for integrated functional and sport icons */
 .foundation-v1 .home-trust-points > span,
 .foundation-v1 .stat-icon,
 .foundation-v1 .feature-icon,
@@ -355,6 +369,7 @@ account utilities. */
   order: 3;
   margin-left: auto;
 }.foundation-v1 .site-header .header-utility-link{ display: none; }.foundation-v1 .site-header .header-icon-button{
+  position: relative;
   display: inline-flex;
   flex: 0 0 36px;
   width: 36px;
@@ -404,12 +419,14 @@ account utilities. */
 
 /* Responsive header adjustments across all devices */
 .foundation-v1 .site-header .header-search-trigger {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
   width: 36px;
   height: 36px;
+  min-width: 36px;
+  min-height: 36px;
   padding: 0;
   border: 1px solid #e2e8f0;
   border-radius: 50%;
@@ -424,35 +441,12 @@ account utilities. */
   background: #edf7f1;
   color: #075f35;
   border-color: #b9e2ca;
-  box-shadow: 0 2px 6px rgba(7, 95, 53, 0.1);
+  box-shadow: 0 2px 6px rgba(7, 95, 53, 0.12);
 }
 
 .foundation-v1 .site-header .header-search-trigger:focus-visible {
   outline: 2px solid var(--green, #059669);
   outline-offset: 2px;
-}
-
-.foundation-v1 .site-header .header-search-shortcut {
-  display: none;
-}
-
-@media (min-width: 1200px) {
-  .foundation-v1 .site-header .header-search-trigger {
-    width: auto;
-    padding: 0 10px 0 8px;
-    border-radius: 999px;
-  }
-  .foundation-v1 .site-header .header-search-shortcut {
-    display: inline-flex;
-    align-items: center;
-    font-size: 10px;
-    font-weight: 700;
-    color: #64748b;
-    background: #e2e8f0;
-    padding: 1px 5px;
-    border-radius: 4px;
-    margin-left: 2px;
-  }
 }
 
 .foundation-v1 .site-header {
