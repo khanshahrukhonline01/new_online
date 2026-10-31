@@ -32,6 +32,7 @@ import PlayPage from './modules/play/PlayPage'
 import CommunityListingModal from './shared/components/CommunityListingModal'
 import NotificationCenterDrawer from './shared/components/NotificationCenterDrawer'
 import SiteAnnouncementBanner from './shared/components/SiteAnnouncementBanner'
+import SpotlightSearchModal from './shared/components/SpotlightSearchModal'
 import type { CommunityListingCategory } from './integrations/supabase/public-client'
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
@@ -50,6 +51,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [intakeModalOpen, setIntakeModalOpen] = useState(false)
   const [intakeCategory, setIntakeCategory] = useState<CommunityListingCategory>('pickup_game')
+  const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [unreadNotifCount, setUnreadNotifCount] = useState(3)
   const menuToggleRef = useRef<HTMLButtonElement>(null)
@@ -58,6 +60,17 @@ export default function App() {
     setIntakeCategory(category)
     setIntakeModalOpen(true)
   }
+
+  useEffect(() => {
+    function handleGlobalKeyDown(event: globalThis.KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && (event.key === 'k' || event.key === 'K')) {
+        event.preventDefault()
+        setSearchModalOpen(open => !open)
+      }
+    }
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [])
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 700px)')
@@ -164,7 +177,6 @@ export default function App() {
     <header className="site-header">
       <button ref={menuToggleRef} className="menu-toggle" type="button" aria-expanded={isMobile ? menuOpen : !sidebarCollapsed} aria-controls={isMobile ? 'mobile-sidebar-drawer' : 'app-sidebar'} onClick={toggleMainMenu} aria-label="Toggle main navigation"><SiteIcon name={isMobile && menuOpen ? 'close' : 'menu'} size={20} /></button>
       <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /><span>KHELGRID</span></a>
-      <form className="header-search-form" role="search" onSubmit={event => { event.preventDefault(); const value = headerQuery.trim(); const target = '/search' + (value ? '?q=' + encodeURIComponent(value) : ''); if (typeof window !== 'undefined') { window.history.pushState({}, '', target); window.scrollTo({ top: 0, behavior: 'auto' }) } setPath('/search'); setSearchQuery(value); setMenuOpen(false) }}><SiteIcon name="search" size={18} /><input aria-label="Search KhelGrid catalogue" type="search" placeholder="Search sports, trials, venues, athletes…" value={headerQuery} onChange={event => setHeaderQuery(event.target.value)} autoComplete="off" /><button type="submit" aria-label="Submit search"><SiteIcon name="arrow-up-right" size={16} /></button></form>
       <nav className="header-actions" aria-label="KhelGrid actions">
         <button
           className="header-action-link header-action-add"
@@ -199,6 +211,17 @@ export default function App() {
         <a className="header-action-link header-action-coach" href="mailto:khelgrid@gmail.com?subject=Register%20as%20a%20coach%20on%20KhelGrid" title="Register as a coach on KhelGrid" aria-label="Join as Coach"><SiteIcon name="award" size={16} /><span>Join as Coach</span></a>
         <a className="header-action-link header-action-chronicle" href="/khelchronicle/submit" onClick={event => navigate(event, '/khelchronicle/submit')} title="Submit research manuscript to KhelChronicle" aria-label="Submit Paper"><SiteIcon name="file-text" size={16} /><span>Submit Paper</span></a>
       </nav>
+      <button
+        className="header-icon-button header-search-trigger"
+        type="button"
+        onClick={() => setSearchModalOpen(true)}
+        aria-label="Search KhelGrid catalogue"
+        title="Search KhelGrid (Ctrl+K)"
+      >
+        <SiteIcon name="search" size={19} />
+        <span className="sr-only">Search KhelGrid</span>
+        <span className="header-search-shortcut" aria-hidden="true">⌘K</span>
+      </button>
       <button
         className="header-icon-button"
         type="button"
@@ -374,6 +397,12 @@ export default function App() {
       onClose={() => setNotificationsOpen(false)}
       onNavigate={navigate}
       onUnreadCountChange={setUnreadNotifCount}
+    />
+    <SpotlightSearchModal
+      isOpen={searchModalOpen}
+      onClose={() => setSearchModalOpen(false)}
+      onNavigate={navigate}
+      initialQuery={headerQuery}
     />
   </div>
 }
