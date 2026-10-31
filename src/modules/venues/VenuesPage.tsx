@@ -24,11 +24,16 @@ export default function VenuesPage() {
 
   useEffect(() => {
     let active = true
-    getVenues().then(value => {
-      if (active) setResult(value)
-    })
+    const loadVenues = () => {
+      getVenues().then(value => {
+        if (active) setResult(value)
+      })
+    }
+    loadVenues()
+    window.addEventListener('khelgrid:listing-added', loadVenues)
     return () => {
       active = false
+      window.removeEventListener('khelgrid:listing-added', loadVenues)
     }
   }, [])
 

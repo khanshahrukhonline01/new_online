@@ -448,13 +448,18 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   // Load database catalogues
   useEffect(() => {
     let active = true
-    Promise.all([getSports(), getOpportunities(), getVenues(), getAcademies(), getCities(), getPickupGames()]).then(
-      ([sports, opportunities, venues, academies, cities, pickupGames]) => {
-        if (active) setCounts({ sports, opportunities, venues, academies, cities, pickupGames })
-      },
-    )
+    const loadCatalogues = () => {
+      Promise.all([getSports(), getOpportunities(), getVenues(), getAcademies(), getCities(), getPickupGames()]).then(
+        ([sports, opportunities, venues, academies, cities, pickupGames]) => {
+          if (active) setCounts({ sports, opportunities, venues, academies, cities, pickupGames })
+        },
+      )
+    }
+    loadCatalogues()
+    window.addEventListener('khelgrid:listing-added', loadCatalogues)
     return () => {
       active = false
+      window.removeEventListener('khelgrid:listing-added', loadCatalogues)
     }
   }, [])
 

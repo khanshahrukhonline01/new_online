@@ -6,7 +6,7 @@ const listingTypes: ListingSubmissionInput['listing_type'][] = [
   'opportunity', 'venue', 'coach', 'academy', 'event',
 ]
 
-export default function ListingSubmissionPage() {
+export default function ListingSubmissionPage({ onOpenIntake }: { onOpenIntake?: () => void }) {
   const [kind, setKind] = useState<ListingSubmissionInput['listing_type']>('opportunity')
   const [title, setTitle] = useState('')
   const [city, setCity] = useState('')
@@ -69,6 +69,24 @@ export default function ListingSubmissionPage() {
     <p className="eyebrow">KHELGRID · LISTING INTAKE</p>
     <h1>Suggest a sports listing.</h1>
     <p className="page-intro">Share an official source for a sports opportunity, venue, coach, academy or event. Every suggestion enters a private review queue and remains unpublished unless approved.</p>
+    
+    {onOpenIntake && (
+      <div className="state-panel state-available" style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+        <div>
+          <strong style={{ display: 'block', fontSize: 15, marginBottom: 4 }}>Want to add a verified Turf, Academy, Trial or Pickup Game directly?</strong>
+          <span style={{ fontSize: 13, color: 'var(--muted-strong)' }}>Use the dynamic community intake form to publish your listing live across KhelGrid immediately.</span>
+        </div>
+        <button
+          type="button"
+          className="primary-link"
+          style={{ minHeight: 38, padding: '8px 16px', fontSize: 12 }}
+          onClick={onOpenIntake}
+        >
+          <SiteIcon name="plus" size={15} /> + List on KhelGrid
+        </button>
+      </div>
+    )}
+
     <div className="cv-privacy-note" role="note"><SiteIcon name="shield-check" size={18} /><span><strong>Review first.</strong> We collect only the listing details below. Do not include passwords, identity documents or sensitive personal information. A successful submission is not an endorsement or publication.</span></div>
     <form className="sports-cv-form" onSubmit={submit}>
       <fieldset disabled={submitting}><legend>Listing details</legend>

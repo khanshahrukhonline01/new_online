@@ -110,19 +110,25 @@ export default function FeatureDirectoryPage({ kind }: { kind: Kind }) {
 
   useEffect(() => {
     let active = true
-    const loader =
-      kind === 'academies'
-        ? getAcademies()
-        : kind === 'coaches'
-          ? getCoaches()
-          : getEvents()
+    const loadDirectory = () => {
+      const loader =
+        kind === 'academies'
+          ? getAcademies()
+          : kind === 'coaches'
+            ? getCoaches()
+            : getEvents()
 
-    loader.then(res => {
-      if (active) setResult(res as CatalogueResult<DirectoryRecord>)
-    })
+      loader.then(res => {
+        if (active) setResult(res as CatalogueResult<DirectoryRecord>)
+      })
+    }
+
+    loadDirectory()
+    window.addEventListener('khelgrid:listing-added', loadDirectory)
 
     return () => {
       active = false
+      window.removeEventListener('khelgrid:listing-added', loadDirectory)
     }
   }, [kind])
 

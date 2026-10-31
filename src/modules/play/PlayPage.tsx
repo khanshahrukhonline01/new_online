@@ -28,11 +28,16 @@ export default function PlayPage({ onNavigate: _onNavigate }: PlayPageProps = {}
 
   useEffect(() => {
     let active = true
-    getPickupGames().then(res => {
-      if (active) setResult(res)
-    })
+    const loadGames = () => {
+      getPickupGames().then(res => {
+        if (active) setResult(res)
+      })
+    }
+    loadGames()
+    window.addEventListener('khelgrid:listing-added', loadGames)
     return () => {
       active = false
+      window.removeEventListener('khelgrid:listing-added', loadGames)
     }
   }, [])
 

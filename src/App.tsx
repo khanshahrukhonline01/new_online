@@ -28,6 +28,8 @@ import KhelChronicleSubmitPage from './modules/khelchronicle/KhelChronicleSubmit
 import TalentScannerPage from './modules/talent-scanner/TalentScannerPage'
 import CitiesPage from './modules/directories/CitiesPage'
 import PlayPage from './modules/play/PlayPage'
+import CommunityListingModal from './shared/components/CommunityListingModal'
+import type { CommunityListingCategory } from './integrations/supabase/public-client'
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
 
@@ -43,7 +45,14 @@ export default function App() {
   const [isMobile, setIsMobile] = useState(false)
   const [headerQuery, setHeaderQuery] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [intakeModalOpen, setIntakeModalOpen] = useState(false)
+  const [intakeCategory, setIntakeCategory] = useState<CommunityListingCategory>('pickup_game')
   const menuToggleRef = useRef<HTMLButtonElement>(null)
+
+  function openIntake(category: CommunityListingCategory = 'pickup_game') {
+    setIntakeCategory(category)
+    setIntakeModalOpen(true)
+  }
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 700px)')
@@ -113,7 +122,7 @@ export default function App() {
       else if (match.canonicalPath === '/events') page = <FeatureDirectoryPage kind="events" />
       else if (match.canonicalPath === '/calendar') page = <FeatureDirectoryPage kind="calendar" />
       else if (match.canonicalPath === '/live' || match.canonicalPath === '/live-scores') page = <LiveScoresPage onNavigate={navigate} />
-      else if (match.canonicalPath === '/submit-listing') page = <ListingSubmissionPage />
+      else if (match.canonicalPath === '/submit-listing' || match.canonicalPath === '/list') page = <ListingSubmissionPage onOpenIntake={() => openIntake('pickup_game')} />
       else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
       break
@@ -128,8 +137,36 @@ export default function App() {
       <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /><span>KHELGRID</span></a>
       <form className="header-search-form" role="search" onSubmit={event => { event.preventDefault(); const value = headerQuery.trim(); const target = '/search' + (value ? '?q=' + encodeURIComponent(value) : ''); if (typeof window !== 'undefined') { window.history.pushState({}, '', target); window.scrollTo({ top: 0, behavior: 'auto' }) } setPath('/search'); setSearchQuery(value); setMenuOpen(false) }}><SiteIcon name="search" size={18} /><input aria-label="Search KhelGrid catalogue" type="search" placeholder="Search sports, trials, venues, athletes…" value={headerQuery} onChange={event => setHeaderQuery(event.target.value)} autoComplete="off" /><button type="submit" aria-label="Submit search"><SiteIcon name="arrow-up-right" size={16} /></button></form>
       <nav className="header-actions" aria-label="KhelGrid actions">
-        <a className="header-action-link" href="mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue%20on%20KhelGrid" title="List a sports venue on KhelGrid" aria-label="List your venue"><SiteIcon name="plus" size={16} /><span>List your venue</span></a>
-        <a className="header-action-link header-action-secondary" href="mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial%20or%20opportunity" title="Submit a sports trial or opportunity" aria-label="Submit a trial"><SiteIcon name="calendar-check" size={16} /><span>Submit a trial</span></a>
+        <button
+          className="header-action-link header-action-add"
+          type="button"
+          onClick={() => openIntake('pickup_game')}
+          title="List an Academy, Turf, Trial or Pickup Game on KhelGrid"
+          aria-label="+ List on KhelGrid"
+        >
+          <SiteIcon name="plus" size={16} />
+          <span>+ List on KhelGrid</span>
+        </button>
+        <button
+          className="header-action-link"
+          type="button"
+          onClick={() => openIntake('venue')}
+          title="List a sports venue on KhelGrid"
+          aria-label="List your venue"
+        >
+          <SiteIcon name="building" size={16} />
+          <span>List your venue</span>
+        </button>
+        <button
+          className="header-action-link header-action-secondary"
+          type="button"
+          onClick={() => openIntake('opportunity')}
+          title="Submit a sports trial or opportunity"
+          aria-label="Submit a trial"
+        >
+          <SiteIcon name="calendar-check" size={16} />
+          <span>Submit a trial</span>
+        </button>
         <a className="header-action-link header-action-coach" href="mailto:khelgrid@gmail.com?subject=Register%20as%20a%20coach%20on%20KhelGrid" title="Register as a coach on KhelGrid" aria-label="Join as Coach"><SiteIcon name="award" size={16} /><span>Join as Coach</span></a>
         <a className="header-action-link header-action-chronicle" href="/khelchronicle/submit" onClick={event => navigate(event, '/khelchronicle/submit')} title="Submit research manuscript to KhelChronicle" aria-label="Submit Paper"><SiteIcon name="file-text" size={16} /><span>Submit Paper</span></a>
       </nav>
@@ -139,7 +176,7 @@ export default function App() {
       <a className="header-go-pro" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20Pro%20enquiry"><SiteIcon name="star" size={16} /><span>Go Pro</span></a>
     </header>
     <div className="app-workspace">
-      <Sidebar activePath={path} onNavigate={navigate} open={menuOpen} onClose={() => setMenuOpen(false)} toggleRef={menuToggleRef} collapsed={sidebarCollapsed} />
+      <Sidebar activePath={path} onNavigate={navigate} open={menuOpen} onClose={() => setMenuOpen(false)} toggleRef={menuToggleRef} collapsed={sidebarCollapsed} onOpenIntake={() => openIntake('pickup_game')} />
       <main id="main-content" className="page-shell"><SportsBar activePath={path} onNavigate={navigate} /><div className="page-content">{page}</div></main>
     </div>
 
@@ -272,5 +309,11 @@ export default function App() {
         <p><span>{IPR_NOTICE_HEADING}</span><span>AI use</span><span>Copyright notice</span><span>© KhelGrid</span></p>
       </div>
     </footer>
+    <CommunityListingModal
+      isOpen={intakeModalOpen}
+      onClose={() => setIntakeModalOpen(false)}
+      onNavigate={navigate}
+      defaultCategory={intakeCategory}
+    />
   </div>
 }

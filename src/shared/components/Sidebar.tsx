@@ -10,6 +10,7 @@ type SidebarProps = {
   onClose: () => void
   toggleRef: RefObject<HTMLButtonElement | null>
   collapsed: boolean
+  onOpenIntake?: () => void
 }
 
 function isActive(item: NavigationItem, activePath: string) {
@@ -41,7 +42,7 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false 
   </div>
 }
 
-export default function Sidebar({ activePath, onNavigate, open, onClose, toggleRef, collapsed }: SidebarProps) {
+export default function Sidebar({ activePath, onNavigate, open, onClose, toggleRef, collapsed, onOpenIntake }: SidebarProps) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
@@ -135,6 +136,18 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
       <nav className="sidebar-navigation" aria-label="Feature navigation">{renderSections()}</nav>
       {!collapsed ? <div className="sidebar-promo"><strong>Build your athlete profile</strong><p>Create a Sports CV and prepare a profile-ready PDF on your device.</p><a href="/sports-cv" onClick={event => { onNavigate(event, '/sports-cv'); onClose() }}>Open Sports CV <SiteIcon name="arrow-up-right" size={13} /></a></div> : null}
       <div className="sidebar-bottom">
+        {onOpenIntake && (
+          <button
+            type="button"
+            className="sidebar-utility-link sidebar-intake-btn"
+            onClick={onOpenIntake}
+            title="+ List on KhelGrid"
+            aria-label="+ List on KhelGrid"
+          >
+            <SiteIcon name="plus" size={18} />
+            <span className="sidebar-utility-label">+ List on KhelGrid</span>
+          </button>
+        )}
         <a className="sidebar-utility-link" href="/notifications" aria-label="Notifications" title="Notifications"><SiteIcon name="bell" size={18} /><span className="sidebar-utility-label">Notifications</span></a>
         <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback" title="Help and feedback"><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">Help &amp; feedback</span></a>
         <a className="sidebar-utility-link sidebar-profile-link" href="/profile" aria-label="Your profile" title="Your profile"><SiteIcon name="user-round" size={18} /><span className="sidebar-utility-label">Profile</span></a>
@@ -142,7 +155,19 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
       </div>
     </aside>
     <div ref={drawerRef} id="mobile-sidebar-drawer" className={open ? 'mobile-drawer is-open' : 'mobile-drawer'} aria-hidden={!open} role="dialog" aria-modal={open ? 'true' : undefined} aria-label="Mobile navigation">
-      <div className="mobile-drawer-header"><button ref={closeRef} className="sidebar-mobile-close" type="button" onClick={() => { onClose(); toggleRef.current?.focus() }} aria-label="Close navigation"><SiteIcon name="close" size={20} /></button></div>
+      <div className="mobile-drawer-header">
+        {onOpenIntake && (
+          <button
+            type="button"
+            className="sidebar-mobile-add-btn"
+            onClick={() => { onClose(); onOpenIntake() }}
+          >
+            <SiteIcon name="plus" size={15} />
+            <span>+ List on KhelGrid</span>
+          </button>
+        )}
+        <button ref={closeRef} className="sidebar-mobile-close" type="button" onClick={() => { onClose(); toggleRef.current?.focus() }} aria-label="Close navigation"><SiteIcon name="close" size={20} /></button>
+      </div>
       <nav className="sidebar-navigation" aria-label="Mobile feature navigation">{renderSections(true)}</nav>
       <div className="sidebar-promo"><strong>Build your athlete profile</strong><p>Create a Sports CV and prepare a profile-ready PDF on your device.</p><a href="/sports-cv" onClick={event => { onNavigate(event, '/sports-cv'); onClose() }}>Open Sports CV <SiteIcon name="arrow-up-right" size={13} /></a></div>
       <div className="sidebar-bottom">

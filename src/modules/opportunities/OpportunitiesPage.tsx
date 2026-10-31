@@ -35,11 +35,16 @@ export default function OpportunitiesPage() {
 
   useEffect(() => {
     let active = true
-    getOpportunities().then(value => {
-      if (active) setResult(value)
-    })
+    const loadOpportunities = () => {
+      getOpportunities().then(value => {
+        if (active) setResult(value)
+      })
+    }
+    loadOpportunities()
+    window.addEventListener('khelgrid:listing-added', loadOpportunities)
     return () => {
       active = false
+      window.removeEventListener('khelgrid:listing-added', loadOpportunities)
     }
   }, [])
 

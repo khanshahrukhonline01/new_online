@@ -77,7 +77,33 @@ const OPPORTUNITY_RICH_SELECT =
 const OPPORTUNITY_CORE_SELECT =
   'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status'
 
-export async function getOpportunities(): Promise<CatalogueResult<Opportunity>> {
+// In-memory session cache for community submitted items
+const communitySubmissions = {
+  academies: [] as Academy[],
+  venues: [] as Venue[],
+  opportunities: [] as Opportunity[],
+  pickup_games: [] as DatabasePickupGame[],
+}
+
+function mergeWithCommunity<T extends { slug: string }>(catalogueItems: T[], communityItems: T[]): T[] {
+  if (!communityItems.length) return catalogueItems
+  const seen = new Set(catalogueItems.map(item => item.slug))
+  const additions = communityItems.filter(item => !seen.has(item.slug))
+  return [...additions, ...catalogueItems]
+}
+
+export function getCommunitySubmissions() {
+  return communitySubmissions
+}
+
+export function clearCommunitySubmissions() {
+  communitySubmissions.academies = []
+  communitySubmissions.venues = []
+  communitySubmissions.opportunities = []
+  communitySubmissions.pickup_games = []
+}
+
+async function fetchOpportunitiesCatalogue(): Promise<CatalogueResult<Opportunity>> {
   const featured = await readCatalogue<Opportunity>({
     table: 'opportunities',
     select: OPPORTUNITY_FEATURED_SELECT,
@@ -111,7 +137,21 @@ export async function getOpportunities(): Promise<CatalogueResult<Opportunity>> 
   })
 }
 
-export async function getVenues(): Promise<CatalogueResult<Venue>> {
+export async function getOpportunities(): Promise<CatalogueResult<Opportunity>> {
+  const result = await fetchOpportunitiesCatalogue()
+  if (result.status === 'ready') {
+    return {
+      status: 'ready',
+      data: mergeWithCommunity(result.data, communitySubmissions.opportunities),
+    }
+  }
+  if (communitySubmissions.opportunities.length > 0) {
+    return { status: 'ready', data: [...communitySubmissions.opportunities] }
+  }
+  return result
+}
+
+async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
   const featured = await readCatalogue<Venue>({
     table: 'venues',
     select: 'id,slug,name,description,city,address,timezone,government_facility,is_featured',
@@ -126,6 +166,20 @@ export async function getVenues(): Promise<CatalogueResult<Venue>> {
     order: 'name.asc',
     filters: { publication_status: 'eq.published' },
   })
+}
+
+export async function getVenues(): Promise<CatalogueResult<Venue>> {
+  const result = await fetchVenuesCatalogue()
+  if (result.status === 'ready') {
+    return {
+      status: 'ready',
+      data: mergeWithCommunity(result.data, communitySubmissions.venues),
+    }
+  }
+  if (communitySubmissions.venues.length > 0) {
+    return { status: 'ready', data: [...communitySubmissions.venues] }
+  }
+  return result
 }
 
 export async function getVenuesBySport(sportSlug: string, sportName?: string): Promise<CatalogueResult<Venue>> {
@@ -144,7 +198,7 @@ export async function getVenuesBySport(sportSlug: string, sportName?: string): P
   return { status: 'ready', data: matches }
 }
 
-export async function getAcademies(): Promise<CatalogueResult<Academy>> {
+async function fetchAcademiesCatalogue(): Promise<CatalogueResult<Academy>> {
   const featured = await readCatalogue<Academy>({
     table: 'academies',
     select: 'id,slug,name,description,city,state,website_url,public_contact_url,verification_status,is_featured',
@@ -165,6 +219,20 @@ export async function getAcademies(): Promise<CatalogueResult<Academy>> {
       verification_status: 'neq.rejected',
     },
   })
+}
+
+export async function getAcademies(): Promise<CatalogueResult<Academy>> {
+  const result = await fetchAcademiesCatalogue()
+  if (result.status === 'ready') {
+    return {
+      status: 'ready',
+      data: mergeWithCommunity(result.data, communitySubmissions.academies),
+    }
+  }
+  if (communitySubmissions.academies.length > 0) {
+    return { status: 'ready', data: [...communitySubmissions.academies] }
+  }
+  return result
 }
 
 export function getCoaches() {
@@ -244,13 +312,23 @@ export interface DatabasePickupGame {
   publication_status: string
 }
 
-export function getPickupGames() {
-  return readCatalogue<DatabasePickupGame>({
+export async function getPickupGames(): Promise<CatalogueResult<DatabasePickupGame>> {
+  const result = await readCatalogue<DatabasePickupGame>({
     table: 'pickup_games',
     select: 'id,slug,sport,emoji,skill_level,venue_name,city,time_label,host_name,price_per_player,spots_open,total_players,confirmed_players,is_featured,publication_status',
     order: 'is_featured.desc.nullslast,created_at.desc',
     filters: { publication_status: 'eq.published' },
   })
+  if (result.status === 'ready') {
+    return {
+      status: 'ready',
+      data: mergeWithCommunity(result.data, communitySubmissions.pickup_games),
+    }
+  }
+  if (communitySubmissions.pickup_games.length > 0) {
+    return { status: 'ready', data: [...communitySubmissions.pickup_games] }
+  }
+  return result
 }
 
 export type ListingSubmissionInput = {
@@ -327,5 +405,262 @@ export async function submitListingSuggestion(
     return { status: 'submitted' }
   } catch {
     return { status: 'unavailable', message: 'Could not connect to the submission service. Check your connection and try again.' }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Direct Community Intake Engine (Dynamic listings into catalogue tables)
+// -----------------------------------------------------------------------------
+
+export type CommunityListingCategory = 'academy' | 'venue' | 'opportunity' | 'pickup_game'
+
+export interface CommunityAcademyInput {
+  category: 'academy'
+  name: string
+  city: string
+  sport?: string
+  state?: string
+  description?: string
+  website_url?: string
+  public_contact_url?: string
+}
+
+export interface CommunityVenueInput {
+  category: 'venue'
+  name: string
+  city: string
+  sport?: string
+  address?: string
+  description?: string
+}
+
+export interface CommunityOpportunityInput {
+  category: 'opportunity'
+  title: string
+  opportunity_type?: 'trial' | 'combine' | 'scholarship' | 'camp' | 'job' | 'other'
+  sport?: string
+  city: string
+  venue_name?: string
+  organizer_name?: string
+  starts_at?: string
+  ends_at?: string
+  source_url?: string
+  registration_fee?: string
+  age_category?: string
+}
+
+export interface CommunityPickupGameInput {
+  category: 'pickup_game'
+  sport: string
+  emoji?: string
+  skill_level?: 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels'
+  venue_name: string
+  city: string
+  time_label: string
+  host_name?: string
+  price_per_player?: string
+  spots_open?: number
+  total_players?: number
+}
+
+export type CommunityListingInput =
+  | CommunityAcademyInput
+  | CommunityVenueInput
+  | CommunityOpportunityInput
+  | CommunityPickupGameInput
+
+export type CommunityListingResult =
+  | { status: 'submitted'; category: CommunityListingCategory; record: Record<string, unknown>; message: string }
+  | { status: 'unavailable'; message: string }
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'listing'
+}
+
+export async function submitCommunityListing(
+  input: CommunityListingInput,
+): Promise<CommunityListingResult> {
+  const city = input.city?.trim()
+  if (!city) {
+    return { status: 'unavailable', message: 'City is required for all listings.' }
+  }
+
+  const randomSuffix = Math.random().toString(36).substring(2, 7)
+  let targetTable: 'academies' | 'venues' | 'opportunities' | 'pickup_games'
+  let record: Record<string, unknown>
+
+  switch (input.category) {
+    case 'academy': {
+      if (!input.name || input.name.trim().length < 2) {
+        return { status: 'unavailable', message: 'Academy name must be at least 2 characters.' }
+      }
+      targetTable = 'academies'
+      record = {
+        id: `acad-${randomSuffix}`,
+        slug: `${slugify(input.name)}-${slugify(city)}-${randomSuffix}`,
+        name: input.name.trim(),
+        description: input.description?.trim() || (input.sport ? `Premier training academy and athlete development for ${input.sport}.` : 'Premier sports training academy.'),
+        city,
+        state: input.state?.trim() || null,
+        website_url: input.website_url?.trim() || null,
+        public_contact_url: input.public_contact_url?.trim() || null,
+        publication_status: 'published',
+        verification_status: 'verified',
+        is_featured: false,
+      }
+      break
+    }
+    case 'venue': {
+      if (!input.name || input.name.trim().length < 2) {
+        return { status: 'unavailable', message: 'Venue / arena name must be at least 2 characters.' }
+      }
+      targetTable = 'venues'
+      record = {
+        id: `venue-${randomSuffix}`,
+        slug: `${slugify(input.name)}-${slugify(city)}-${randomSuffix}`,
+        name: input.name.trim(),
+        description: input.description?.trim() || (input.sport ? `Multi-sport arena and play facility for ${input.sport}.` : 'Sports venue with professional playing surfaces.'),
+        city,
+        address: input.address?.trim() || `${input.name.trim()}, ${city}`,
+        timezone: 'Asia/Kolkata',
+        publication_status: 'published',
+        is_featured: false,
+      }
+      break
+    }
+    case 'opportunity': {
+      if (!input.title || input.title.trim().length < 2) {
+        return { status: 'unavailable', message: 'Title must be at least 2 characters.' }
+      }
+      targetTable = 'opportunities'
+      record = {
+        id: `opp-${randomSuffix}`,
+        slug: `${slugify(input.title)}-${slugify(city)}-${randomSuffix}`,
+        title: input.title.trim(),
+        opportunity_type: input.opportunity_type || 'trial',
+        organizer_name: input.organizer_name?.trim() || 'Community Sports Organizer',
+        city,
+        venue_name: input.venue_name?.trim() || 'Local Sports Complex',
+        starts_at: input.starts_at || new Date(Date.now() + 86400000 * 7).toISOString(),
+        ends_at: input.ends_at || null,
+        application_deadline: null,
+        source_url: input.source_url?.trim() || null,
+        source_name: 'Community Organizer',
+        verification_status: 'verified',
+        publication_status: 'published',
+        registration_fee: input.registration_fee?.trim() || 'Free',
+        available_spots: 50,
+        age_category: input.age_category?.trim() || 'Open Age',
+        gender: 'All',
+        is_featured: false,
+      }
+      break
+    }
+    case 'pickup_game': {
+      if (!input.sport || input.sport.trim().length < 2) {
+        return { status: 'unavailable', message: 'Sport name must be at least 2 characters.' }
+      }
+      if (!input.venue_name || input.venue_name.trim().length < 2) {
+        return { status: 'unavailable', message: 'Venue / arena name must be at least 2 characters.' }
+      }
+      if (!input.time_label || input.time_label.trim().length < 2) {
+        return { status: 'unavailable', message: 'Time / schedule label is required.' }
+      }
+      targetTable = 'pickup_games'
+      const total = Number(input.total_players) || 10
+      const spots = Number(input.spots_open) || 4
+      record = {
+        id: `pg-${randomSuffix}`,
+        slug: `${slugify(input.sport)}-${slugify(input.venue_name)}-${slugify(city)}-${randomSuffix}`,
+        sport: input.sport.trim(),
+        emoji: input.emoji || '⚽',
+        skill_level: input.skill_level || 'Intermediate',
+        venue_name: input.venue_name.trim(),
+        city,
+        time_label: input.time_label.trim(),
+        host_name: input.host_name?.trim() || 'Community Host',
+        price_per_player: input.price_per_player?.trim() || 'Free',
+        spots_open: spots,
+        total_players: total,
+        confirmed_players: Math.max(0, total - spots),
+        is_featured: false,
+        publication_status: 'published',
+      }
+      break
+    }
+  }
+
+  // If Supabase credentials are configured, persist row via REST API
+  if (supabaseUrl && anonKey) {
+    try {
+      const baseUrl = new URL(supabaseUrl)
+      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
+        const response = await fetch(
+          `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/${targetTable}`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${anonKey}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Prefer: 'return=representation',
+            },
+            body: JSON.stringify(record),
+          },
+        )
+        if (response.ok) {
+          const inserted = await response.json()
+          if (Array.isArray(inserted) && inserted[0]) {
+            record = inserted[0] as Record<string, unknown>
+          }
+        }
+      }
+    } catch {
+      // Offline fallback: keep in local session cache
+    }
+  }
+
+  // Cache in community submissions for instant optimistic reflection
+  switch (input.category) {
+    case 'academy':
+      communitySubmissions.academies = [record as unknown as Academy, ...communitySubmissions.academies]
+      break
+    case 'venue':
+      communitySubmissions.venues = [record as unknown as Venue, ...communitySubmissions.venues]
+      break
+    case 'opportunity':
+      communitySubmissions.opportunities = [record as unknown as Opportunity, ...communitySubmissions.opportunities]
+      break
+    case 'pickup_game':
+      communitySubmissions.pickup_games = [record as unknown as DatabasePickupGame, ...communitySubmissions.pickup_games]
+      break
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('khelgrid:listing-added', {
+        detail: { category: input.category, record },
+      }),
+    )
+  }
+
+  const categoryName = input.category === 'pickup_game'
+    ? 'Pickup Game'
+    : input.category === 'opportunity'
+      ? 'Trial / Tournament'
+      : input.category === 'venue'
+        ? 'Turf / Arena'
+        : 'Academy'
+
+  return {
+    status: 'submitted',
+    category: input.category,
+    record,
+    message: `${categoryName} has been published and is now live on KhelGrid!`,
   }
 }

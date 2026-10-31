@@ -173,4 +173,53 @@ describe('public catalogue client', () => {
     expect(url.searchParams.get('publication_status')).toBe('eq.published')
     expect(url.searchParams.get('order')).toContain('is_featured.desc')
   })
+
+  it('validates required fields on submitCommunityListing', async () => {
+    const client = await loadClient()
+    const noCity = await client.submitCommunityListing({
+      category: 'academy',
+      name: 'Delhi Football Academy',
+      city: '',
+    })
+    expect(noCity.status).toBe('unavailable')
+    expect(noCity.message).toContain('City is required')
+
+    const shortName = await client.submitCommunityListing({
+      category: 'venue',
+      name: 'A',
+      city: 'Mumbai',
+    })
+    expect(shortName.status).toBe('unavailable')
+    expect(shortName.message).toContain('at least 2 characters')
+  })
+
+  it('submits a community listing and optimistically prepends to catalogue queries', async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse([]))
+    const client = await loadClient()
+
+    const submitResult = await client.submitCommunityListing({
+      category: 'pickup_game',
+      sport: 'Basketball',
+      venue_name: 'Cubbon Park Court',
+      city: 'Bengaluru',
+      time_label: 'Tonight · 8:00 PM',
+      skill_level: 'Intermediate',
+      spots_open: 2,
+      total_players: 10,
+    })
+
+    expect(submitResult.status).toBe('submitted')
+    if (submitResult.status === 'submitted') {
+      expect(submitResult.record.sport).toBe('Basketball')
+      expect(submitResult.record.city).toBe('Bengaluru')
+      expect(submitResult.record.spots_open).toBe(2)
+    }
+
+    // Verify it is prepended in getPickupGames
+    const games = await client.getPickupGames()
+    expect(games.status).toBe('ready')
+    expect(games.data.length).toBeGreaterThan(0)
+    expect(games.data[0].sport).toBe('Basketball')
+    expect(games.data[0].venue_name).toBe('Cubbon Park Court')
+  })
 })
