@@ -6,6 +6,7 @@ import type { Opportunity } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
 import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
+import { TrialAlertActions } from './TrialAlertActions'
 
 function formatDate(value: string | null) {
   if (!value) return 'Date not provided'
@@ -209,6 +210,15 @@ export default function OpportunitiesPage() {
                             {item.source_name ? `· ${item.source_name}` : ''}
                           </a>
                         )}
+                        <TrialAlertActions
+                          title={item.title}
+                          slug={item.slug}
+                          startsAt={item.starts_at}
+                          deadlineDate={item.application_deadline}
+                          city={item.city}
+                          venueName={item.venue_name}
+                          compact
+                        />
                       </article>
                     ))}
                   </div>

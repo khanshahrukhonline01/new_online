@@ -1,0 +1,294 @@
+.player-card-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+/* FIFA Shield Card Body */
+.player-shield-card {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  min-height: 520px;
+  background: linear-gradient(175deg, #0b1c2d 0%, #06121e 45%, #030a12 100%);
+  border: 3px solid #d4af37;
+  border-image: linear-gradient(135deg, #e5c07b 0%, #a7f36b 50%, #d4af37 100%) 1;
+  clip-path: polygon(
+    8% 0%, 92% 0%,
+    100% 6%, 100% 82%,
+    50% 100%,
+    0% 82%, 0% 6%
+  );
+  padding: 24px 20px 36px;
+  color: #fff;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 24px rgba(167, 243, 107, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.player-shield-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.8), 0 0 32px rgba(167, 243, 107, 0.25);
+}
+
+.card-glare {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(125deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 60%);
+  pointer-events: none;
+}
+
+/* Topline with Rating and Sport */
+.card-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  z-index: 2;
+}
+
+.card-rating-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.card-ovr {
+  font-size: 40px;
+  font-weight: 900;
+  color: #a7f36b;
+  letter-spacing: -0.05em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.card-pos {
+  font-size: 13px;
+  font-weight: 800;
+  color: #e5c07b;
+  letter-spacing: 0.08em;
+  margin-top: 3px;
+}
+
+.card-flag {
+  font-size: 20px;
+  margin-top: 6px;
+}
+
+.card-sport-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: rgba(13, 35, 56, 0.8);
+  border: 1px solid rgba(167, 243, 107, 0.35);
+  border-radius: 12px;
+  padding: 6px 10px;
+}
+
+.card-sport-name {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #d8fbe7;
+  letter-spacing: 0.05em;
+}
+
+/* Athlete Visual Silhouette */
+.card-athlete-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 10px 0 12px;
+  position: relative;
+  z-index: 2;
+}
+
+.athlete-avatar-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(167, 243, 107, 0.15) 0%, rgba(9, 24, 39, 0.9) 80%);
+  border: 2px solid rgba(229, 192, 123, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cbe9d7;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+}
+
+.card-verified-chip {
+  position: absolute;
+  bottom: -6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #0d283f;
+  color: #a7f36b;
+  border: 1px solid #a7f36b;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* Nameplate */
+.card-nameplate {
+  text-align: center;
+  border-bottom: 1px solid rgba(229, 192, 123, 0.35);
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 2;
+}
+
+.card-full-name {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 900;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.card-subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #a7f36b;
+}
+
+.card-club {
+  margin: 3px 0 0;
+  font-size: 11px;
+  color: #8fa5be;
+  max-width: 90%;
+  margin-inline: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 6 Card Attributes Grid */
+.card-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px 12px;
+  padding: 0 10px;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 2;
+}
+
+.card-stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+
+.stat-val {
+  font-size: 19px;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.stat-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8fa5be;
+  letter-spacing: 0.05em;
+}
+
+/* Footer Branding */
+.card-footer-branding {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 9px;
+  font-weight: 800;
+  color: rgba(167, 243, 107, 0.75);
+  letter-spacing: 0.12em;
+  margin-top: auto;
+  position: relative;
+  z-index: 2;
+}
+
+.card-handle {
+  font-size: 10px;
+  color: #e5c07b;
+  font-weight: 600;
+}
+
+/* Sharing & Action Tray */
+.card-action-tray {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.card-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.btn-download-card {
+  background: #a7f36b;
+  color: #030e18;
+  border-color: #a7f36b;
+}
+
+.btn-download-card:hover {
+  background: #c3f798;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(167, 243, 107, 0.35);
+}
+
+.btn-whatsapp-share {
+  background: #25d366;
+  color: #051c0e;
+  border-color: #25d366;
+}
+
+.btn-whatsapp-share:hover {
+  background: #39e67a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);
+}
+
+.btn-copy-profile {
+  background: #091c2e;
+  color: #e6f1ff;
+}
+
+.btn-copy-profile:hover {
+  background: #112d48;
+  border-color: rgba(167, 243, 107, 0.4);
+  color: #fff;
+}

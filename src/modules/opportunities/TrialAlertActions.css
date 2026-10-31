@@ -1,0 +1,87 @@
+.trial-alert-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(167, 243, 107, 0.05);
+  border: 1px solid rgba(167, 243, 107, 0.18);
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+.trial-alert-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #a7f36b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.trial-alert-buttons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.trial-alert-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #091726;
+  color: #e6f1ff;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.trial-alert-btn:hover {
+  background: #10243b;
+  border-color: rgba(167, 243, 107, 0.4);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.trial-alert-btn.btn-whatsapp {
+  background: rgba(37, 211, 102, 0.12);
+  border-color: rgba(37, 211, 102, 0.35);
+  color: #25d366;
+}
+
+.trial-alert-btn.btn-whatsapp:hover {
+  background: rgba(37, 211, 102, 0.24);
+  border-color: #25d366;
+  color: #fff;
+}
+
+.trial-alert-btn.btn-google-cal {
+  background: rgba(66, 133, 244, 0.12);
+  border-color: rgba(66, 133, 244, 0.35);
+  color: #70a7ff;
+}
+
+.trial-alert-btn.btn-google-cal:hover {
+  background: rgba(66, 133, 244, 0.22);
+  border-color: #70a7ff;
+  color: #fff;
+}
+
+.trial-alert-feedback {
+  font-size: 11px;
+  color: #a7f36b;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.trial-alert-toolbar.is-compact {
+  padding: 6px 10px;
+}

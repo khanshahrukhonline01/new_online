@@ -2,6 +2,7 @@ export type RouteMatch =
   | { name: 'home'; canonicalPath: '/' }
   | { name: 'sports-index'; canonicalPath: '/sports' }
   | { name: 'sport-detail'; canonicalPath: '/sports/:slug'; slug: string }
+  | { name: 'athlete-profile'; canonicalPath: '/u/:username'; username: string }
   | { name: 'opportunities-index'; canonicalPath: '/opportunities'; alias?: string }
   | { name: 'opportunity-detail'; canonicalPath: '/opportunities/:slug'; slug: string }
   | { name: 'venues-index'; canonicalPath: '/venues'; alias?: string }
@@ -58,6 +59,14 @@ export function resolveRoute(pathname: string): RouteMatch {
     const prefix = path.startsWith('/sports/') ? '/sports/' : '/sport/'
     const slug = path.slice(prefix.length)
     if (slug && !slug.includes('/')) return { name: 'sport-detail', canonicalPath: '/sports/:slug', slug: decodeURIComponentSafe(slug) }
+  }
+  if (path.startsWith('/u/') || path.startsWith('/athlete/')) {
+    const prefix = path.startsWith('/u/') ? '/u/' : '/athlete/'
+    const handle = path.slice(prefix.length)
+    if (handle && !handle.includes('/')) {
+      const clean = handle.replace(/^@+/, '')
+      return { name: 'athlete-profile', canonicalPath: '/u/:username', username: decodeURIComponentSafe(clean) }
+    }
   }
   if (path === '/opportunities' || opportunityAliases.has(path)) return { name: 'opportunities-index', canonicalPath: '/opportunities', ...(path === '/opportunities' ? {} : { alias: path }) }
   if (path.startsWith('/opportunities/')) {

@@ -59,4 +59,22 @@ describe('platform route coverage', () => {
     expect(resolveRoute('/privacy/').name).toBe('feature')
     expect(resolveRoute('/not-a-real-page').name).toBe('not-found')
   })
+
+  it('routes public athlete profiles with and without @ symbol correctly', () => {
+    expect(resolveRoute('/u/@rohit-verma')).toEqual({
+      name: 'athlete-profile',
+      canonicalPath: '/u/:username',
+      username: 'rohit-verma',
+    })
+    expect(resolveRoute('/u/priya-nair')).toEqual({
+      name: 'athlete-profile',
+      canonicalPath: '/u/:username',
+      username: 'priya-nair',
+    })
+    expect(resolveRoute('/athlete/@arjun-singh')).toEqual({
+      name: 'athlete-profile',
+      canonicalPath: '/u/:username',
+      username: 'arjun-singh',
+    })
+  })
 })

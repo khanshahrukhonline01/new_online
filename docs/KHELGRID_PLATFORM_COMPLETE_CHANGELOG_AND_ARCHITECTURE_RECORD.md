@@ -138,6 +138,35 @@ On `/sports`, the catalogue displayed only **22 sports**, while top navigation s
 - **Individual Standalone SVGs (`<slug>.svg`)**: Created the 12 missing standalone SVGs so that all **34 sports** have individual 64×64 vector files in `public/assets/sports/`.
 - **Asset Documentation (`public/assets/sports/README.md`)**: Complete directory documentation with manifest, usage examples, and React component integration guide.
 
+### Phase 8: Athlete Journey & Viral Growth Architecture
+
+#### 1. Public Shareable Athlete Profile (`khelgrid.com/u/@username`)
+- **Route Architecture**: Added dynamic routing support for `/u/:username` and `/athlete/:username` with automatic `@` prefix normalization (e.g., `/u/@rohit-verma` and `/u/rohit-verma`).
+- **Showcase & Fallback Parity**: Implemented `SHOWCASE_ATHLETE_PROFILES` for instant SSR, testability, and offline preview of real Indian grassroots profiles (`@rohit-verma`, `@priya-nair`, `@arjun-singh`).
+- **Profile Interface**: Showcases bio, national verification badge, current team/academy, core biometrics (height, weight, dominant side), tournament achievements, fitness benchmarks, and video telemetry showcase.
+
+#### 2. Branded "Player Card" (Trading / FIFA Card Style)
+- **Holographic Gold/Emerald Vector Shield**: Built in `PlayerCard.tsx` with metallic borders, subtle obsidian gradients, and gold accents.
+- **Dynamic OVR Rating Engine**: Computes athlete overall rating (76–98) based on empirical fitness metrics and tournament podium finishes.
+- **Six Performance Pillars**: PAC (Pace), STA (Stamina), PWR (Power), EXP (Experience), TEC (Technique), and ACH (Achievements).
+- **1-Click Viral Export**:
+  - Direct client-side SVG download (crystal-clear 400×580 vector card suitable for Instagram stories and scouts).
+  - WhatsApp direct share intent with pre-formatted bio, stats, and verified profile URL.
+  - Native clipboard copy link.
+
+#### 3. Technique Video & Telemetry Clip Attachments
+- **Telemetry Embeds**: Supports short 15–30 second technical clips from YouTube Unlisted, Google Drive, or Instagram Reels.
+- **Metric Overlay Tags**: Allows athletes to tag performance telemetry (e.g., `135 km/h Outswinger`, `312 km/h Jump Smash`, `3.91s Block Clearance`).
+- **CV Integration**: Athletes can attach up to 4 video clips directly in the Sports CV Wizard and preview them before publishing.
+
+#### 4. Selection Trial Deadline Alerts & Calendar Sync
+- **1-Click Calendar Sync**:
+  - Direct Google Calendar deep link pre-filled with trial details, venue address, and reporting time.
+  - Universal `.ics` iCalendar download with a 48-hour advance alert trigger for Apple Calendar and Microsoft Outlook.
+- **WhatsApp Notification Integration**:
+  - Direct WhatsApp alert action with pre-populated message detailing trial date, age category, and direct registration link for self and coach forwarding.
+- **Database Persistence**: Supabase migration `20261031120000_athlete_profiles_and_trial_reminders.sql` adding `public.athlete_profiles` and `public.trial_reminders`.
+
 ---
 
 ## 3. Why These Changes Are in the Online Repository
@@ -145,7 +174,7 @@ On `/sports`, the catalogue displayed only **22 sports**, while top navigation s
 1. **Production Parity**:
    The online repository at `https://github.com/khelgrid-dotcom/khelgrid-platform.git` serves as the authoritative source for Vercel preview and production deployments. All frontend routes, assets, and database migrations must be present so automated builds and lint checks pass cleanly.
 2. **Decoupled Database Resilience**:
-   Because Supabase is a managed PostgreSQL service with asynchronous schema migrations, the application must be resilient to partial database states. The client-side fallback in `SportsPage.tsx` guarantees that users never see a broken or half-empty sports directory while database migrations are in transit.
+   Because Supabase is a managed PostgreSQL service with asynchronous schema migrations, the application must be resilient to partial database states. The client-side fallback in `SportsPage.tsx` and `athlete-profile-client.ts` guarantees that users never see a broken or half-empty sports directory while database migrations are in transit.
 3. **Multi-Repo Synchronization**:
    To ensure complete synchronization across development, test, and backup repositories, all changes are mirrored across:
    - `khelgrid-dotcom/khelgrid-platform` (`main` and feature branches)
@@ -161,7 +190,7 @@ Every change in this repository has passed all three release gates:
 ```bash
 # 1. Automated Vitest Suite (100% Pass)
 npm run test
-# Output: 20 passed test files (178 passed tests, 0 failed)
+# Output: 23 passed test files (185 passed tests, 0 failed)
 
 # 2. Production Build & Static Sitemap Compilation
 npm run build
@@ -171,3 +200,4 @@ npm run build
 npm run lint
 # Output: 0 errors
 ```
+

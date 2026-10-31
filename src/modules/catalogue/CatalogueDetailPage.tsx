@@ -4,6 +4,7 @@ import type { CatalogueResult } from '../../integrations/supabase/public-client'
 import type { Opportunity, Sport, Venue } from '../../shared/domain'
 import { AsyncState } from '../../shared/components/AsyncState'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { TrialAlertActions } from '../opportunities/TrialAlertActions'
 import './catalogue-detail.css'
 
 type Kind = 'sport' | 'opportunity' | 'venue'
@@ -43,6 +44,14 @@ function OpportunityDetail({ item }: { item: Opportunity }) {
     <dl className="detail-facts"><div><dt>Start date</dt><dd>{date(item.starts_at)}</dd></div><div><dt>End date</dt><dd>{date(item.ends_at)}</dd></div><div><dt>Application deadline</dt><dd>{date(item.application_deadline)}</dd></div><div><dt>Source status</dt><dd>{item.verification_status === 'verified' ? 'Source reviewed' : item.verification_status === 'pending_review' ? 'Pending review' : item.verification_status === 'rejected' ? 'Rejected' : 'Not verified'}</dd></div></dl>
     <p className="detail-disclaimer">Confirm eligibility, dates, fees and registration status with the organiser before applying. KhelGrid does not guarantee that this opportunity is still open.</p>
     {item.source_url ? <a className="primary-link" href={item.source_url} target="_blank" rel="noopener noreferrer">Open organiser source <SiteIcon name="external-link" size={15}/></a> : <p>Original source link has not been provided.</p>}
+    <TrialAlertActions
+      title={item.title}
+      slug={item.slug}
+      startsAt={item.starts_at}
+      deadlineDate={item.application_deadline}
+      city={item.city}
+      venueName={item.venue_name}
+    />
   </article>
 }
 

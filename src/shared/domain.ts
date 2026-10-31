@@ -69,3 +69,70 @@ export interface EventItem {
   source_name: string | null
   verification_status: 'unverified' | 'pending_review' | 'verified' | 'rejected'
 }
+
+export interface VideoClip {
+  id: string
+  title: string
+  clipType:
+    | 'bowling-action'
+    | 'sprint-mechanics'
+    | 'jump-power'
+    | 'match-highlight'
+    | 'skill-footwork'
+    | 'batting-stroke'
+    | 'technique-drill'
+    | 'other'
+  videoUrl: string
+  durationSeconds?: number
+  description?: string
+  telemetry?: {
+    metricName: string
+    metricValue: string
+  }[]
+}
+
+export interface AthleteProfile {
+  id: string
+  username: string
+  fullName: string
+  sport: string
+  playingPosition: string
+  city: string
+  state?: string
+  dateOfBirth?: string
+  age?: number
+  email?: string
+  phone?: string
+  teamOrAcademy?: string
+  coach?: string
+  experienceYears?: string
+  primaryFootOrHand?: string
+  heightCm?: number
+  weightKg?: number
+  summary?: string
+  achievements: { year: string; event: string; result: string }[]
+  videoClips: VideoClip[]
+  fitnessBenchmarks?: {
+    yoyoIr1Meters?: number
+    sprint30mSeconds?: number
+    cmjHeightCm?: number
+    tier?: string
+    percentileAvg?: number
+  }
+  verificationStatus: 'community' | 'verified' | 'pro'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TrialReminder {
+  id: string
+  trialSlug: string
+  trialTitle: string
+  startsAt?: string | null
+  deadlineDate?: string | null
+  city?: string | null
+  venueName?: string | null
+  notificationType: 'whatsapp' | 'google-calendar' | 'ical'
+  createdAt: string
+}
+
