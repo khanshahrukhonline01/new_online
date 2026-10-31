@@ -13,7 +13,7 @@ export interface PlayPageProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
-export default function PlayPage({ onNavigate: _onNavigate }: PlayPageProps = {}) {
+export default function PlayPage({ onNavigate }: PlayPageProps = {}) {
   const [result, setResult] = useState<CatalogueResult<DatabasePickupGame> | { status: 'loading'; data: [] }>({
     status: 'loading',
     data: [],
@@ -219,7 +219,17 @@ export default function PlayPage({ onNavigate: _onNavigate }: PlayPageProps = {}
                         <h2 className="play-card-title">{game.venueName}</h2>
                         <div className="play-card-meta">
                           <SiteIcon name="map-pin" size={13} />
-                          <span>{game.venueName}, {game.city}</span>
+                          {onNavigate ? (
+                            <a
+                              href={`/venues?city=${encodeURIComponent(game.city)}`}
+                              onClick={e => onNavigate(e, `/venues?city=${encodeURIComponent(game.city)}`)}
+                              style={{ textDecoration: 'none', color: 'inherit' }}
+                            >
+                              {game.venueName}, {game.city}
+                            </a>
+                          ) : (
+                            <span>{game.venueName}, {game.city}</span>
+                          )}
                         </div>
                         <div className="play-card-meta">
                           <SiteIcon name="clock" size={13} />

@@ -423,7 +423,11 @@ export default function CommunityListingModal({
                       <span>Skill Level</span>
                       <select
                         value={skillLevel}
-                        onChange={e => setSkillLevel(e.target.value as any)}
+                        onChange={e =>
+                          setSkillLevel(
+                            e.target.value as 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels',
+                          )
+                        }
                       >
                         <option value="All Levels">All Levels</option>
                         <option value="Beginner">Beginner</option>
@@ -508,7 +512,11 @@ export default function CommunityListingModal({
                       <span>Opportunity Type</span>
                       <select
                         value={oppType}
-                        onChange={e => setOppType(e.target.value as any)}
+                        onChange={e =>
+                          setOppType(
+                            e.target.value as 'trial' | 'combine' | 'scholarship' | 'camp' | 'other',
+                          )
+                        }
                       >
                         <option value="trial">Selection Trial</option>
                         <option value="other">Tournament / Championship</option>
