@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
   RESEARCH_PAPERS,
@@ -15,6 +15,8 @@ const FEATURED_PAPER_SLUGS = [
   'KG-2026-001',
   'KG-2026-002',
   'KG-2026-004',
+  'KG-2026-003',
+  'KG-2026-005',
 ]
 
 const ACTIONABLE_COACH_TAKEAWAYS: Record<string, { label: string; takeaway: string; badge: string }> = {
@@ -33,9 +35,20 @@ const ACTIONABLE_COACH_TAKEAWAYS: Record<string, { label: string; takeaway: stri
     label: 'Talent Identification Models',
     takeaway: 'XGBoost ensemble model achieves 0.88 ROC-AUC for U-16 state selection prediction by tracking ball release consistency and control percentage against back-of-a-length deliveries.',
   },
+  'KG-2026-003': {
+    badge: 'Nutrition & Hydration',
+    label: 'Endurance Physiology Protocol',
+    takeaway: 'Targeting 60g/hr multi-source carbohydrate intake with personalized sodium replenishment prevents hyponatremia and preserves endurance speed by 14% in humid climates.',
+  },
+  'KG-2026-005': {
+    badge: 'Infrastructure & Access',
+    label: 'Grassroots Sports Policy',
+    takeaway: 'Expanding subsidized community multi-sport hubs within a 5km radius increases youth athlete retention by 42% in district and tier-2 corridors.',
+  },
 }
 
 export function HomeKhelChronicle({ onNavigate }: HomeKhelChronicleProps) {
+  const chronicleRailRef = useRef<HTMLDivElement>(null)
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('all')
   const [expandedAbstractSlug, setExpandedAbstractSlug] = useState<string | null>(null)
   const [activeCitePaper, setActiveCitePaper] = useState<ResearchPaper | null>(null)
@@ -43,6 +56,13 @@ export function HomeKhelChronicle({ onNavigate }: HomeKhelChronicleProps) {
   const [copiedCitation, setCopiedCitation] = useState<boolean>(false)
   const [copiedLinkSlug, setCopiedLinkSlug] = useState<string | null>(null)
   const [bookmarkedSlugs, setBookmarkedSlugs] = useState<string[]>([])
+
+  const scrollRail = (direction: 'left' | 'right') => {
+    if (chronicleRailRef.current) {
+      const scrollAmount = direction === 'left' ? -380 : 380
+      chronicleRailRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' })
+    }
+  }
   const [showBookmarksOnly, setShowBookmarksOnly] = useState<boolean>(false)
 
   // Load saved bookmarks from localStorage for user retention
@@ -186,7 +206,7 @@ export function HomeKhelChronicle({ onNavigate }: HomeKhelChronicleProps) {
             Empirical Sports Science &amp; National Athlete Benchmarks
           </h2>
           <p className="home-chronicle-subtitle">
-            Peer-moderated research preprints, 3D motion capture biomechanics, and normative physical percentiles across 16 Indian sporting corridors.
+            Peer-moderated research preprints, 3D motion capture biomechanics, and normative physical percentiles across 16 Indian sporting corridors · Swipe to explore
           </p>
           <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', padding: '6px 10px', borderRadius: '6px', display: 'inline-block' }}>
             Notice: Research preprints and normative benchmarks displayed below are sample demonstration test data for platform evaluation.
@@ -194,6 +214,25 @@ export function HomeKhelChronicle({ onNavigate }: HomeKhelChronicleProps) {
         </div>
 
         <div className="home-chronicle-header-actions">
+          <div className="home-scroll-arrows">
+            <button
+              type="button"
+              aria-label="Scroll preprints left"
+              className="home-arrow-btn"
+              onClick={() => scrollRail('left')}
+            >
+              <SiteIcon name="arrow-left" size={15} />
+            </button>
+            <button
+              type="button"
+              aria-label="Scroll preprints right"
+              className="home-arrow-btn"
+              onClick={() => scrollRail('right')}
+            >
+              <SiteIcon name="arrow-right" size={15} />
+            </button>
+          </div>
+
           {bookmarkedSlugs.length > 0 && (
             <button
               type="button"
@@ -213,7 +252,7 @@ export function HomeKhelChronicle({ onNavigate }: HomeKhelChronicleProps) {
             onClick={e => onNavigate?.(e, '/khelchronicle')}
             aria-label="View all preprints in KhelChronicle repository"
           >
-            <span>Explore All Preprints (5)</span>
+            <span>All ({displayPapers.length})</span>
             <SiteIcon name="chevron-right" size={13} />
           </a>
         </div>
@@ -229,9 +268,10 @@ export function HomeKhelChronicle({ onNavigate }: HomeKhelChronicleProps) {
           onClick={() => {
             setSelectedDiscipline('all')
             setShowBookmarksOnly(false)
+            chronicleRailRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
           }}
         >
-          <span>All 3 Flagships</span>
+          <span>All Preprints</span>
         </button>
         <button
           type="button"
@@ -241,6 +281,7 @@ export function HomeKhelChronicle({ onNavigate }: HomeKhelChronicleProps) {
           onClick={() => {
             setSelectedDiscipline('sports-biomechanics')
             setShowBookmarksOnly(false)
+            chronicleRailRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
           }}
         >
           <span>Biomechanics &amp; Spine Stress</span>
@@ -253,6 +294,7 @@ export function HomeKhelChronicle({ onNavigate }: HomeKhelChronicleProps) {
           onClick={() => {
             setSelectedDiscipline('exercise-physiology')
             setShowBookmarksOnly(false)
+            chronicleRailRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
           }}
         >
           <span>Youth Fitness Norms</span>
@@ -265,14 +307,20 @@ export function HomeKhelChronicle({ onNavigate }: HomeKhelChronicleProps) {
           onClick={() => {
             setSelectedDiscipline('sports-analytics')
             setShowBookmarksOnly(false)
+            chronicleRailRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
           }}
         >
           <span>Talent &amp; Match Analytics</span>
         </button>
       </div>
 
-      {/* Three Research Cards Grid */}
-      <div className="home-chronicle-grid">
+      {/* Horizontally movable research cards rail */}
+      <div
+        ref={chronicleRailRef}
+        className="home-touch-rail home-chronicle-touch-rail home-chronicle-grid"
+        tabIndex={0}
+        aria-label="Research preprints list"
+      >
         {displayPapers.map(paper => {
           const takeaway = ACTIONABLE_COACH_TAKEAWAYS[paper.paperId]
           const isExpanded = expandedAbstractSlug === paper.slug

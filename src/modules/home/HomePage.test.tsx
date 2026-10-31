@@ -44,9 +44,11 @@ describe('HomePage 5 core live-website sections', () => {
     expect(html).toContain('/academies')
     expect(html).toContain('Loading accredited institutions…')
 
-    // 6. KhelChronicle Flagship Research Preprints Showcase
+    // KhelChronicle Flagship Research Preprints Showcase (horizontally movable rail)
     expect(html).toContain('KhelChronicle · Open Sports Research Repository')
     expect(html).toContain('Empirical Sports Science &amp; National Athlete Benchmarks')
+    expect(html).toContain('Scroll preprints left')
+    expect(html).toContain('Scroll preprints right')
     expect(html).toContain('Diamond Open Access')
     expect(html).toContain('Kinematic Correlates of Lumbar Spine Stress')
     expect(html).toContain('KG-2026-001')
