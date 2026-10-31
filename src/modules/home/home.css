@@ -973,11 +973,10 @@
 .home-hero-foreground {
   position: relative;
   z-index: 3;
-  padding: clamp(16px, 2.4vw, 24px) clamp(18px, 3.2vw, 32px);
+  padding: clamp(16px, 2.4vw, 24px) clamp(18px, 3.2vw, 32px) clamp(22px, 3vw, 30px);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 330px;
 }
 
 /* 1. Header & Location Row */
@@ -1465,70 +1464,12 @@
   text-overflow: ellipsis;
 }
 
-/* 5. Floating Background Carousel Controls */
-.home-hero-cinematic .home-hero-carousel-controls {
-  align-self: flex-end;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: rgba(8, 25, 44, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(10px);
-  z-index: 4;
-  margin-top: 2px;
-}
-
-.home-hero-cinematic .hero-carousel-toggle,
-.home-hero-cinematic .hero-carousel-next {
-  background: transparent;
-  border: none;
-  color: #cbd5e1;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  padding: 3px 6px;
-  border-radius: 4px;
-}
-
-.home-hero-cinematic .hero-carousel-toggle:hover,
-.home-hero-cinematic .hero-carousel-next:hover {
-  color: #ffffff;
-}
-
-.home-hero-cinematic .hero-carousel-dots {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.home-hero-cinematic .hero-carousel-dots button {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, 0.35);
-  cursor: pointer;
-  padding: 0;
-  transition: all 0.2s ease;
-}
-
-.home-hero-cinematic .hero-carousel-dots button.is-active {
-  width: 18px;
-  border-radius: 999px;
-  background: #22c55e;
-}
-
 @media (max-width: 640px) {
   .home-hero-rail-arrow {
     display: none;
   }
   .home-hero-cards-rail {
     margin: 0;
-  }
-  .home-hero-cinematic .home-hero-carousel-controls {
-    align-self: flex-start;
   }
 }
 

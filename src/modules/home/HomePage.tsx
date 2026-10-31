@@ -283,7 +283,6 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
 
   const [reduceMotion, setReduceMotion] = useState(false)
   const [activeHeroSlide, setActiveHeroSlide] = useState(0)
-  const [heroPaused, setHeroPaused] = useState(false)
   const [heroSearch, setHeroSearch] = useState('')
   const [selectedCity, setSelectedCity] = useState('All India')
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false)
@@ -471,13 +470,13 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   }, [])
 
   useEffect(() => {
-    if (reduceMotion || heroPaused) return
+    if (reduceMotion) return
     const timer = window.setInterval(
       () => setActiveHeroSlide(current => (current + 1) % heroSlides.length),
-      3000,
+      3500,
     )
     return () => window.clearInterval(timer)
-  }, [reduceMotion, heroPaused, heroSlides.length])
+  }, [reduceMotion, heroSlides.length])
 
   // Display academies: 12 dynamic institutions from Supabase database (zero hardcoding, remaining on /academies)
   const displayAcademies = useMemo(() => {
@@ -664,38 +663,6 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
               aria-label="Scroll discovery cards right"
             >
               <SiteIcon name="arrow-right" size={14} />
-            </button>
-          </div>
-
-          {/* Floating Discreet Background Carousel Controls */}
-          <div className="home-hero-carousel-controls" aria-label="Background image controls">
-            <button
-              type="button"
-              className="hero-carousel-toggle"
-              onClick={() => setHeroPaused(value => !value)}
-              aria-label={heroPaused ? 'Play background carousel' : 'Pause background carousel'}
-            >
-              {heroPaused ? 'Play' : 'Pause'}
-            </button>
-            <div className="hero-carousel-dots" aria-label="Choose background sports image">
-              {heroSlides.map((slide, index) => (
-                <button
-                  key={slide.name}
-                  type="button"
-                  className={index === activeHeroSlide ? 'is-active' : ''}
-                  onClick={() => setActiveHeroSlide(index)}
-                  aria-label={`Show ${slide.name} background`}
-                  aria-pressed={index === activeHeroSlide}
-                />
-              ))}
-            </div>
-            <button
-              type="button"
-              className="hero-carousel-next"
-              onClick={() => setActiveHeroSlide(current => (current + 1) % heroSlides.length)}
-              aria-label="Show next background sports image"
-            >
-              Next →
             </button>
           </div>
         </div>
