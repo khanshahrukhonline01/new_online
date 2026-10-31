@@ -10,7 +10,7 @@ export type CatalogueResult<T> =
   | { status: 'unavailable'; data: []; message: string }
 
 type QueryOptions = {
-  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events'
+  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities'
   select: string
   order: string
   filters: Record<string, string>
@@ -171,6 +171,25 @@ export function getEvents() {
       publication_status: 'eq.published',
       verification_status: 'neq.rejected',
     },
+  })
+}
+
+export interface DatabaseCity {
+  id?: string
+  slug: string
+  name: string
+  state: string
+  zone: 'North' | 'South' | 'East' | 'West' | 'Central' | 'North-East' | 'Islands'
+  is_metro: boolean
+  venues: string[]
+}
+
+export function getCities() {
+  return readCatalogue<DatabaseCity>({
+    table: 'cities',
+    select: 'id,slug,name,state,zone,is_metro,venues',
+    order: 'name.asc',
+    filters: {},
   })
 }
 

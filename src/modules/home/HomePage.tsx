@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { getAcademies, getOpportunities, getSports, getVenues } from '../../integrations/supabase/public-client'
-import type { CatalogueResult } from '../../integrations/supabase/public-client'
+import { getAcademies, getCities, getOpportunities, getSports, getVenues } from '../../integrations/supabase/public-client'
+import type { CatalogueResult, DatabaseCity } from '../../integrations/supabase/public-client'
 import type { Academy, Opportunity, Sport, Venue } from '../../shared/domain'
 import { liveSportsEngine } from '../live/services/liveSportsEngine'
 import type { SportsMatch } from '../live/types'
@@ -277,6 +277,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
     opportunities?: CatalogueResult<Opportunity>
     venues?: CatalogueResult<Venue>
     academies?: CatalogueResult<Academy>
+    cities?: CatalogueResult<DatabaseCity>
   }>({})
 
   const [liveMatches, setLiveMatches] = useState<SportsMatch[]>([])
@@ -382,7 +383,14 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   ]
 
   // Home page strictly features no more than 16 cities; remaining are browsable on /cities
-  const homeCities = useMemo(() => METRO_16_CITIES.slice(0, 16), [])
+  const homeCities = useMemo(() => {
+    if (counts.cities?.status === 'ready' && counts.cities.data.length > 0) {
+      const metros = counts.cities.data.filter(c => c.is_metro)
+      const pool = metros.length > 0 ? metros : counts.cities.data
+      return pool.slice(0, 16)
+    }
+    return METRO_16_CITIES.slice(0, 16)
+  }, [counts.cities])
 
   const handleLink = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     onNavigate?.(event, href)
@@ -433,9 +441,9 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   // Load database catalogues
   useEffect(() => {
     let active = true
-    Promise.all([getSports(), getOpportunities(), getVenues(), getAcademies()]).then(
-      ([sports, opportunities, venues, academies]) => {
-        if (active) setCounts({ sports, opportunities, venues, academies })
+    Promise.all([getSports(), getOpportunities(), getVenues(), getAcademies(), getCities()]).then(
+      ([sports, opportunities, venues, academies, cities]) => {
+        if (active) setCounts({ sports, opportunities, venues, academies, cities })
       },
     )
     return () => {
@@ -588,7 +596,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                       handleLink(e, '/cities')
                     }}
                   >
-                    <span>View all 50+ cities</span>
+                    <span>View all {counts.cities?.status === 'ready' && counts.cities.data.length > 0 ? `${counts.cities.data.length}+` : '50+'} cities</span>
                     <span aria-hidden="true">→</span>
                   </a>
                 </div>

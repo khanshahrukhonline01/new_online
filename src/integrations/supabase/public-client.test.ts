@@ -106,6 +106,17 @@ describe('public catalogue client', () => {
     expect(await client.getVenues()).toEqual({ status: 'ready', data: [] })
   })
 
+  it('queries dynamic public.cities catalogue', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([{ slug: 'delhi', name: 'Delhi', is_metro: true }]))
+    const client = await loadClient()
+    const result = await client.getCities()
+    expect(result).toEqual({ status: 'ready', data: [{ slug: 'delhi', name: 'Delhi', is_metro: true }] })
+    const [requestUrl] = vi.mocked(fetch).mock.calls[0]
+    const url = new URL(String(requestUrl))
+    expect(url.pathname).toBe('/rest/v1/cities')
+    expect(url.searchParams.get('limit')).toBe('1000')
+  })
+
   it('returns unavailable when Supabase rejects the request', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ message: 'permission denied' }, 403))
     const client = await loadClient()

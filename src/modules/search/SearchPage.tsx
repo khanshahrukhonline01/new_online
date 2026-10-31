@@ -1,13 +1,14 @@
 import { useMemo, useState, useEffect } from 'react'
 import {
   getAcademies,
+  getCities,
   getCoaches,
   getEvents,
   getOpportunities,
   getSports,
   getVenues,
 } from '../../integrations/supabase/public-client'
-import type { CatalogueResult } from '../../integrations/supabase/public-client'
+import type { CatalogueResult, DatabaseCity } from '../../integrations/supabase/public-client'
 import { getChroniclePapers } from '../../integrations/supabase/chronicle-client'
 import type { ChronicleCatalogueResult } from '../../integrations/supabase/chronicle-client'
 import type { ResearchPaper } from '../khelchronicle/data/khelchronicleData'
@@ -17,7 +18,7 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
 
 type SearchRecord = {
-  type: 'Sport' | 'Opportunity' | 'Venue' | 'Academy' | 'Coach' | 'Event' | 'Research'
+  type: 'Sport' | 'Opportunity' | 'Venue' | 'Academy' | 'Coach' | 'Event' | 'Research' | 'City'
   title: string
   detail: string
   href: string
@@ -70,6 +71,10 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
     status: 'loading',
     data: [],
   })
+  const [cities, setCities] = useState<CatalogueResult<DatabaseCity> | { status: 'loading'; data: [] }>({
+    status: 'loading',
+    data: [],
+  })
 
   useEffect(() => {
     let active = true
@@ -81,7 +86,8 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
       getCoaches(),
       getEvents(),
       getChroniclePapers(),
-    ]).then(([s, o, v, a, c, e, cp]) => {
+      getCities(),
+    ]).then(([s, o, v, a, c, e, cp, ci]) => {
       if (active) {
         setSports(s)
         setOpportunities(o)
@@ -90,6 +96,7 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
         setCoaches(c)
         setEvents(e)
         setChroniclePapers(cp)
+        setCities(ci)
       }
     })
     return () => {
@@ -171,12 +178,21 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
             ],
           }))
         : []),
+      ...(cities.status === 'ready'
+        ? cities.data.map(item => ({
+            type: 'City' as const,
+            title: `${item.name}, ${item.state}`,
+            detail: `${item.zone} India · ${item.venues?.length || 0} sports venues & grounds`,
+            href: `/venues?city=${encodeURIComponent(item.name)}`,
+            keywords: [item.name, item.state, item.zone, ...(item.venues || [])],
+          }))
+        : []),
     ],
-    [sports, opportunities, venues, academies, coaches, events, chroniclePapers],
+    [sports, opportunities, venues, academies, coaches, events, chroniclePapers, cities],
   )
 
-  const ready = [sports, opportunities, venues, academies, coaches, events, chroniclePapers].some(result => result.status === 'ready')
-  const pending = [sports, opportunities, venues, academies, coaches, events, chroniclePapers].some(result => result.status === 'loading')
+  const ready = [sports, opportunities, venues, academies, coaches, events, chroniclePapers, cities].some(result => result.status === 'ready')
+  const pending = [sports, opportunities, venues, academies, coaches, events, chroniclePapers, cities].some(result => result.status === 'loading')
 
   const q = query.trim().toLocaleLowerCase()
   const results = useMemo(
@@ -210,7 +226,7 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
       label: 'Content type',
       value: category,
       onChange: setCategory,
-      options: ['Sport', 'Opportunity', 'Venue', 'Academy', 'Coach', 'Event', 'Research'].map(value => ({
+      options: ['Sport', 'Opportunity', 'Venue', 'Academy', 'Coach', 'Event', 'Research', 'City'].map(value => ({
         value: value.toLocaleLowerCase(),
         label: value === 'Research' ? 'Research (KhelChronicle)' : value,
       })),

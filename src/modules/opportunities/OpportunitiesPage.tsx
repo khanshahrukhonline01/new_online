@@ -63,7 +63,7 @@ export default function OpportunitiesPage() {
               [item.title, item.organizer_name, item.city, item.venue_name, item.opportunity_type].some(value =>
                 value?.toLocaleLowerCase().includes(q),
               )) &&
-            (!city || item.city === city) &&
+            (!city || (item.city ? (item.city.toLowerCase() === city.toLowerCase() || item.city.toLowerCase().includes(city.toLowerCase()) || city.toLowerCase().includes(item.city.toLowerCase())) : false)) &&
             (!type || item.opportunity_type === type) &&
             (!verification || item.verification_status === verification) &&
             (!feeFilter || (feeFilter === 'free' ? (item.registration_fee === 0 || item.registration_fee === undefined) : true)) &&

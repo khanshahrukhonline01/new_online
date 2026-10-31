@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { MouseEvent } from 'react'
 import { ALL_INDIAN_CITIES } from '../../shared/components/citiesData'
 import type { CityInfo } from '../../shared/components/citiesData'
+import { getCities } from '../../integrations/supabase/public-client'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 import './CitiesPage.css'
@@ -11,8 +12,30 @@ interface CitiesPageProps {
 }
 
 export default function CitiesPage({ onNavigate }: CitiesPageProps) {
+  const [cities, setCities] = useState<CityInfo[]>(ALL_INDIAN_CITIES)
   const [search, setSearch] = useState('')
   const [selectedZone, setSelectedZone] = useState<string>('All')
+
+  useEffect(() => {
+    let active = true
+    getCities().then(res => {
+      if (active && res.status === 'ready' && res.data.length > 0) {
+        setCities(
+          res.data.map(c => ({
+            name: c.name,
+            state: c.state,
+            zone: c.zone,
+            isMetro: Boolean(c.is_metro),
+            venues: c.venues || [],
+            slug: c.slug,
+          })),
+        )
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const handleLink = (e: MouseEvent<HTMLAnchorElement>, target: string) => {
     if (onNavigate) {
@@ -24,13 +47,13 @@ export default function CitiesPage({ onNavigate }: CitiesPageProps) {
     const list = ['All', 'North', 'South', 'West', 'East', 'Central', 'North-East', 'Islands']
     return list.map(z => ({
       name: z,
-      count: z === 'All' ? ALL_INDIAN_CITIES.length : ALL_INDIAN_CITIES.filter(c => c.zone === z).length,
+      count: z === 'All' ? cities.length : cities.filter(c => c.zone === z).length,
     }))
-  }, [])
+  }, [cities])
 
   const filteredCities = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return ALL_INDIAN_CITIES.filter(city => {
+    return cities.filter(city => {
       const matchZone = selectedZone === 'All' || city.zone === selectedZone
       const matchSearch =
         !q ||
@@ -39,7 +62,7 @@ export default function CitiesPage({ onNavigate }: CitiesPageProps) {
         city.venues.some(v => v.toLowerCase().includes(q))
       return matchZone && matchSearch
     })
-  }, [search, selectedZone])
+  }, [cities, search, selectedZone])
 
   const visibleMetro = useMemo(() => filteredCities.filter(c => c.isMetro), [filteredCities])
   const visibleRemaining = useMemo(() => filteredCities.filter(c => !c.isMetro), [filteredCities])
@@ -49,8 +72,8 @@ export default function CitiesPage({ onNavigate }: CitiesPageProps) {
       <p className="eyebrow">NATIONAL SPORTS GEOGRAPHY</p>
       <h1>Sports Cities Across India.</h1>
       <p className="page-intro">
-        Explore {ALL_INDIAN_CITIES.length}+ active sports cities across India. Discover the 16 premier metropolitan hubs with iconic
-        stadiums, alongside all remaining regional training centres, selection trial grounds, and sports academies.
+        Explore {cities.length}+ active sports cities across India. Discover premier metropolitan hubs with iconic
+        stadiums, alongside regional training centres, selection trial grounds, and sports academies.
       </p>
 
       <DirectoryCallout
@@ -105,7 +128,7 @@ export default function CitiesPage({ onNavigate }: CitiesPageProps) {
       {/* Results Count Banner */}
       <div className="cities-summary-bar">
         <span>
-          Showing {filteredCities.length} of {ALL_INDIAN_CITIES.length} cities
+          Showing {filteredCities.length} of {cities.length} cities
           {selectedZone !== 'All' ? ` in ${selectedZone} Zone` : ''}
           {search.trim() ? ` matching “${search.trim()}”` : ''}
         </span>

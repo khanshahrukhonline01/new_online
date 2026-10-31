@@ -81,9 +81,17 @@ export function SportIcon({ name, size = 40, title, ...props }: SportIconProps) 
       focusable="false"
       {...props}
     >
-      {id
-        ? <use href={`/assets/sports/sport-icons.svg#${id}`} />
-        : <><rect x="1" y="1" width="62" height="62" rx="16" fill="#F1F5F9" /><text x="32" y="41" textAnchor="middle" fontSize="24" fill="#64748B">•</text></>}
+      {id ? (
+        <use href={`/assets/sports/sport-icons.svg#${id}`} />
+      ) : (
+        <g>
+          <rect x="2" y="2" width="60" height="60" rx="16" fill="#F0FDF4" stroke="#86EFAC" strokeWidth="2" />
+          <path
+            d="M20 18h24v7c0 6.6-5.4 12-12 12s-12-5.4-12-12v-7zm-4 4h4v7c0 2.8-1 5.3-2.6 7.2V22zm28 0h4v14.2c-1.6-1.9-2.6-4.4-2.6-7.2v-7zM28 39h8v7h-8v-7zm-6 7h20v4H22v-4z"
+            fill="#0F766E"
+          />
+        </g>
+      )}
     </svg>
   )
 }
