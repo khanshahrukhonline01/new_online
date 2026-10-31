@@ -68,10 +68,27 @@ export function getSports() {
   })
 }
 
-export function getOpportunities() {
+const OPPORTUNITY_RICH_SELECT =
+  'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status,registration_fee,available_spots,age_category,gender,eligibility_criteria,required_documents,metadata'
+
+const OPPORTUNITY_CORE_SELECT =
+  'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status'
+
+export async function getOpportunities(): Promise<CatalogueResult<Opportunity>> {
+  const rich = await readCatalogue<Opportunity>({
+    table: 'opportunities',
+    select: OPPORTUNITY_RICH_SELECT,
+    order: 'starts_at.asc.nullslast',
+    filters: {
+      publication_status: 'eq.published',
+      verification_status: 'neq.rejected',
+    },
+  })
+  if (rich.status === 'ready') return rich
+
   return readCatalogue<Opportunity>({
     table: 'opportunities',
-    select: 'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status',
+    select: OPPORTUNITY_CORE_SELECT,
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',

@@ -28,6 +28,7 @@ export default function OpportunitiesPage() {
   const [city, setCity] = useState(initial.get('city') ?? '')
   const [type, setType] = useState(initial.get('type') ?? '')
   const [verification, setVerification] = useState(initial.get('status') ?? '')
+  const [feeFilter, setFeeFilter] = useState(initial.get('free') === 'true' ? 'free' : (initial.get('fee') ?? ''))
   const [sort, setSort] = useState(initial.get('sort') ?? 'newest')
   const [fromDate, setFromDate] = useState(initial.get('from') ?? '')
   const [toDate, setToDate] = useState(initial.get('to') ?? '')
@@ -65,18 +66,21 @@ export default function OpportunitiesPage() {
             (!city || item.city === city) &&
             (!type || item.opportunity_type === type) &&
             (!verification || item.verification_status === verification) &&
+            (!feeFilter || (feeFilter === 'free' ? (item.registration_fee === 0 || item.registration_fee === undefined) : true)) &&
             (!fromDate || (Number.isFinite(start) && start >= after)) &&
             (!toDate || (Number.isFinite(start) && start <= before))
           )
         })
         .sort((a, b) =>
-          sort === 'oldest'
+          sort === 'spots'
+            ? (b.available_spots ?? 0) - (a.available_spots ?? 0)
+            : sort === 'oldest'
             ? (a.starts_at ?? '').localeCompare(b.starts_at ?? '')
             : sort === 'deadline'
               ? (a.application_deadline ?? '9999').localeCompare(b.application_deadline ?? '9999')
               : (b.starts_at ?? '').localeCompare(a.starts_at ?? ''),
         ),
-    [records, query, city, type, verification, fromDate, toDate, sort],
+    [records, query, city, type, verification, feeFilter, fromDate, toDate, sort],
   )
 
   const clearAll = () => {
@@ -84,6 +88,7 @@ export default function OpportunitiesPage() {
     setCity('')
     setType('')
     setVerification('')
+    setFeeFilter('')
     setFromDate('')
     setToDate('')
     setSort('newest')
@@ -102,6 +107,15 @@ export default function OpportunitiesPage() {
       })),
     },
     {
+      key: 'fee',
+      label: 'Fee entry',
+      value: feeFilter,
+      onChange: setFeeFilter,
+      options: [
+        { value: 'free', label: 'Free Entry Only (₹0)' },
+      ],
+    },
+    {
       key: 'status',
       label: 'Source status',
       value: verification,
@@ -116,7 +130,7 @@ export default function OpportunitiesPage() {
   ]
 
   const hasActiveFilters = Boolean(
-    query.trim() || city || type || verification || fromDate || toDate || sort !== 'newest',
+    query.trim() || city || type || verification || feeFilter || fromDate || toDate || sort !== 'newest',
   )
 
   return (
@@ -159,6 +173,7 @@ export default function OpportunitiesPage() {
                 <option value="newest">Newest first</option>
                 <option value="oldest">Date: oldest first</option>
                 <option value="deadline">Deadline soonest</option>
+                <option value="spots">Most spots available</option>
               </select>
             </label>
           </div>
@@ -179,6 +194,21 @@ export default function OpportunitiesPage() {
                           <span className="tag">
                             <SiteIcon name="calendar" size={14} /> {item.opportunity_type.replace('_', ' ')}
                           </span>
+                          {(item.registration_fee === 0 || item.registration_fee === undefined) && (
+                            <span className="tag" style={{ color: '#16a34a', borderColor: 'rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)' }}>
+                              ₹0 Free Entry
+                            </span>
+                          )}
+                          {Boolean(item.available_spots) && (
+                            <span className="tag" style={{ color: '#2563eb', borderColor: 'rgba(37,99,235,0.3)', background: 'rgba(37,99,235,0.08)' }}>
+                              {item.available_spots} Spots
+                            </span>
+                          )}
+                          {item.age_category && (
+                            <span className="tag" style={{ opacity: 0.85 }}>
+                              {item.age_category}
+                            </span>
+                          )}
                           <span
                             className={item.verification_status === 'verified' ? 'verification verified' : 'verification'}
                           >

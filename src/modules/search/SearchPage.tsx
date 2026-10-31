@@ -113,6 +113,15 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
             title: item.title,
             detail: [item.organizer_name, item.city].filter(Boolean).join(' · ') || 'Opportunity details',
             href: `/opportunities/${encodeURIComponent(item.slug)}`,
+            keywords: [
+              item.opportunity_type,
+              item.city || '',
+              item.venue_name || '',
+              item.organizer_name || '',
+              item.age_category || '',
+              item.registration_fee === 0 ? 'free' : '',
+              item.available_spots ? `${item.available_spots} spots` : '',
+            ].filter(Boolean),
           }))
         : []),
       ...(venues.status === 'ready'

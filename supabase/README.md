@@ -20,7 +20,8 @@ supabase/
 │   ├── 20261031140000_create_venue_sports.sql
 │   ├── 20261031150000_seed_metro_venues_and_venue_sports.sql
 │   ├── 20261031160000_seed_verified_coaches_and_coach_sports.sql
-│   └── 20261031170000_add_user_id_to_athlete_profiles.sql
+│   ├── 20261031170000_add_user_id_to_athlete_profiles.sql
+│   └── 20261031193000_add_opportunity_metadata_and_rich_fields.sql
 │
 ├── seeds/                             # Numbered, domain-specific runners for Supabase SQL Editor
 │   ├── 01_setup_academies.sql
@@ -32,7 +33,8 @@ supabase/
 │   ├── 07_seed_trial_reminders.sql
 │   ├── 08_setup_venue_sports.sql
 │   ├── 09_seed_metro_venues.sql
-│   └── 10_seed_verified_coaches.sql
+│   ├── 10_seed_verified_coaches.sql
+│   └── 11_seed_all_opportunities.sql
 │
 ├── tests/                             # pgTAP database tests
 │
@@ -45,6 +47,7 @@ supabase/
 ├── setup_venue_sports.sql             # Standalone: public.venue_sports junction table & SAI mappings
 ├── setup_metro_venues.sql             # Standalone: 16 Metro Cities Premier Stadiums & sports mappings
 ├── setup_coaches_expansion.sql        # Standalone: 25 Verified coaches & coach-sports mapping
+├── setup_all_opportunities.sql        # Standalone: 88 National & State Trials & Selections (all 65 active)
 └── seed_live_khelgrid_academies.sql   # Standalone: All 276 verified academies from live website
 ```
 
@@ -75,6 +78,7 @@ If you are setting up a new Supabase environment or executing queries manually i
 | **08** | `seeds/08_setup_venue_sports.sql` | Creates `public.venue_sports` junction table, RLS policies, and maps SAI NCOE venues to sports. |
 | **09** | `seeds/09_seed_metro_venues.sql` | Inserts 48 premier sports complexes across 16 metro cities (Wankhede, JLN, Kanteerava, Balewadi) and maps to `venue_sports`. |
 | **10** | `seeds/10_seed_verified_coaches.sql` | Inserts 25 verified NIS / Dronacharya coaches and links all coaches to `coach_sports`. |
+| **11** | `seeds/11_seed_all_opportunities.sql` | Adds rich columns, cleans test rows, registers indigenous sports, and inserts all 88 verified national & state selection trials (covering all 65 active trials). |
 
 ---
 
@@ -82,6 +86,10 @@ If you are setting up a new Supabase environment or executing queries manually i
 
 For single-module updates, use the standalone SQL files in the root of `supabase/`:
 
+- **All 88 National & State Selection Opportunities**: [`setup_all_opportunities.sql`](./setup_all_opportunities.sql)
+  - Adds `registration_fee`, `available_spots`, `age_category`, `gender`, `required_documents`, and `metadata` to `public.opportunities`.
+  - Cleans legacy `TEST ONLY` rows and registers missing national sports (Kho-Kho, Softball, Wushu, etc.).
+  - Upserts all 88 verified trials & opportunities (CRPF Quota, BCCI Ranji trials, Assam Khel Maharan, DDCA, 45+ SGFI School Games selections).
 - **Venue-Sport Taxonomy (P1)**: [`setup_venue_sports.sql`](./setup_venue_sports.sql)
   - Creates `public.venue_sports` junction table and maps all venues to their sports.
 - **Coach Directory Expansion (P2)**: [`setup_coaches_expansion.sql`](./setup_coaches_expansion.sql)

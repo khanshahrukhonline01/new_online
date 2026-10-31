@@ -18,6 +18,14 @@ export interface Opportunity {
   source_url: string | null
   source_name: string | null
   verification_status: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+  registration_fee?: number
+  available_spots?: number | null
+  age_category?: string | null
+  gender?: string | null
+  eligibility_criteria?: string | null
+  required_documents?: string[]
+  metadata?: Record<string, unknown>
+  sport?: Sport
 }
 
 export interface Venue {
