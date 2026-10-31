@@ -455,11 +455,46 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   const academiesRailRef = useRef<HTMLDivElement>(null)
 
   const heroSlides = [
-    { name: 'Football', image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=75', position: 'center 54%' },
-    { name: 'Cricket', image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=1200&q=75', position: 'center 48%' },
-    { name: 'Athletics', image: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=1200&q=75', position: 'center 42%' },
-    { name: 'Basketball', image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1200&q=75', position: 'center 48%' },
-    { name: 'Badminton', image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1200&q=75', position: 'center 45%' },
+    {
+      name: 'Football',
+      sport: 'Football',
+      image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1920&q=80',
+      position: 'center 54%',
+      alt: 'Competitive football match on floodlit stadium turf with players contesting possession',
+      title: 'Indian Grassroots Football & Selection Trials on KhelGrid',
+    },
+    {
+      name: 'Cricket',
+      sport: 'Cricket',
+      image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=1920&q=80',
+      position: 'center 48%',
+      alt: 'Fast bowler delivering ball at championship cricket tournament stadium pitch',
+      title: 'State & Zonal Cricket Combines and Selection Trials',
+    },
+    {
+      name: 'Athletics',
+      sport: 'Athletics',
+      image: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=1920&q=80',
+      position: 'center 42%',
+      alt: 'Junior track athletes launching from starting blocks on professional synthetic running track at national sports complex',
+      title: 'National Athletics Meets & SAI High Performance Centers',
+    },
+    {
+      name: 'Basketball',
+      sport: 'Basketball',
+      image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1920&q=80',
+      position: 'center 48%',
+      alt: 'Basketball player executing mid-air shot on indoor championship hardwood arena court',
+      title: 'State & National Basketball Championships',
+    },
+    {
+      name: 'Badminton',
+      sport: 'Badminton',
+      image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1920&q=80',
+      position: 'center 45%',
+      alt: 'Badminton athlete executing powerful jump smash on indoor BWF-grade synthetic court mat',
+      title: 'Accredited Badminton Academies and State Ranking Tournaments',
+    },
   ]
 
   const scrollRail = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
@@ -848,7 +883,10 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                 key={slide.name}
                 className={`home-hero-bg-image${index === activeHeroSlide ? ' is-active' : ''}`}
                 src={slide.image}
-                alt=""
+                alt={slide.alt}
+                title={slide.title}
+                width={1920}
+                height={1080}
                 loading={index === 0 ? 'eager' : 'lazy'}
                 fetchPriority={index === 0 ? 'high' : 'auto'}
                 decoding="async"
@@ -1288,8 +1326,10 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                   <div className="home-card-media">
                     <img
                       src={acad.svgBanner}
-                      alt={`${acad.name} - Sports Academy in ${acad.location}`}
+                      alt={`${acad.name} — Accredited ${acad.category} in ${acad.location}`}
+                      title={`${acad.name} · ${acad.sports}`}
                       loading="lazy"
+                      decoding="async"
                       width={400}
                       height={240}
                     />
@@ -1399,8 +1439,10 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                   <div className="home-card-media">
                     <img
                       src={createBannerSvg(v.name, v.city, '🏟️', 'emerald')}
-                      alt={v.name}
+                      alt={`${v.name} — Sports complex and turf facility in ${v.city}`}
+                      title={`${v.name} (${v.city})`}
                       loading="lazy"
+                      decoding="async"
                       width={400}
                       height={240}
                     />
@@ -1497,8 +1539,10 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                 <div className="home-card-media">
                   <img
                     src={createBannerSvg(`${g.sport} Pickup`, `${g.venueName} · ${g.city}`, g.emoji, 'cyan')}
-                    alt={`${g.sport} pickup match at ${g.venueName}`}
+                    alt={`${g.sport} pickup match at ${g.venueName} in ${g.city}`}
+                    title={`${g.sport} Pickup — ${g.venueName}, ${g.city}`}
                     loading="lazy"
+                    decoding="async"
                     width={400}
                     height={240}
                   />

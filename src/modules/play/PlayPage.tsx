@@ -294,8 +294,10 @@ export default function PlayPage({ onNavigate }: PlayPageProps = {}) {
                       <div className="play-card-media">
                         <img
                           src={createBannerSvg(`${game.sport} Pickup`, `${game.venueName} · ${game.city}`, game.emoji, 'cyan')}
-                          alt={`${game.sport} pickup game at ${game.venueName}`}
+                          alt={`${game.sport} pickup game at ${game.venueName} in ${game.city}`}
+                          title={`${game.sport} Community Match · ${game.venueName}, ${game.city}`}
                           loading="lazy"
+                          decoding="async"
                           width={400}
                           height={200}
                         />
