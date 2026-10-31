@@ -30,6 +30,7 @@ import CitiesPage from './modules/directories/CitiesPage'
 import CityDetailPage from './modules/directories/CityDetailPage'
 import PlayPage from './modules/play/PlayPage'
 import CommunityListingModal from './shared/components/CommunityListingModal'
+import NotificationCenterDrawer from './shared/components/NotificationCenterDrawer'
 import SiteAnnouncementBanner from './shared/components/SiteAnnouncementBanner'
 import type { CommunityListingCategory } from './integrations/supabase/public-client'
 
@@ -49,6 +50,8 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [intakeModalOpen, setIntakeModalOpen] = useState(false)
   const [intakeCategory, setIntakeCategory] = useState<CommunityListingCategory>('pickup_game')
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [unreadNotifCount, setUnreadNotifCount] = useState(3)
   const menuToggleRef = useRef<HTMLButtonElement>(null)
 
   function openIntake(category: CommunityListingCategory = 'pickup_game') {
@@ -126,6 +129,29 @@ export default function App() {
       else if (match.canonicalPath === '/calendar') page = <FeatureDirectoryPage kind="calendar" />
       else if (match.canonicalPath === '/live' || match.canonicalPath === '/live-scores') page = <LiveScoresPage onNavigate={navigate} />
       else if (match.canonicalPath === '/submit-listing' || match.canonicalPath === '/list') page = <ListingSubmissionPage onOpenIntake={() => openIntake('pickup_game')} />
+      else if (match.canonicalPath === '/notifications') page = (
+        <section className="content-page">
+          <p className="eyebrow">YOUR UPDATES &amp; ALERTS</p>
+          <h1>Notifications Center.</h1>
+          <p className="page-intro">
+            Track upcoming selection trial deadlines, newly verified sports complexes, live match scores, and community games.
+          </p>
+          <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="primary-link"
+              onClick={() => setNotificationsOpen(true)}
+              style={{ border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <SiteIcon name="bell" size={16} />
+              <span>Open Notifications Flyout ({unreadNotifCount} unread)</span>
+            </button>
+            <a href="/opportunities" onClick={e => navigate(e, '/opportunities')} className="primary-link">
+              Explore Trials <SiteIcon name="arrow-up-right" size={15} />
+            </a>
+          </div>
+        </section>
+      )
       else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
       break
@@ -173,13 +199,34 @@ export default function App() {
         <a className="header-action-link header-action-coach" href="mailto:khelgrid@gmail.com?subject=Register%20as%20a%20coach%20on%20KhelGrid" title="Register as a coach on KhelGrid" aria-label="Join as Coach"><SiteIcon name="award" size={16} /><span>Join as Coach</span></a>
         <a className="header-action-link header-action-chronicle" href="/khelchronicle/submit" onClick={event => navigate(event, '/khelchronicle/submit')} title="Submit research manuscript to KhelChronicle" aria-label="Submit Paper"><SiteIcon name="file-text" size={16} /><span>Submit Paper</span></a>
       </nav>
-      <button className="header-icon-button" type="button" disabled aria-label="Notifications coming soon" title="Notifications coming soon"><SiteIcon name="bell" size={19} /></button>
+      <button
+        className="header-icon-button"
+        type="button"
+        onClick={() => setNotificationsOpen(true)}
+        aria-label="Notifications"
+        title="Notifications"
+      >
+        <SiteIcon name="bell" size={19} />
+        {unreadNotifCount > 0 && (
+          <span className="header-notif-badge">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>
+        )}
+      </button>
       <a className="header-icon-button" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20settings%20help" aria-label="Settings help" title="Settings help"><SiteIcon name="settings" size={19} /></a>
       <span className="header-login-link is-unavailable" aria-disabled="true" title="Login coming soon"><SiteIcon name="user-round" size={17} /><span>Login <small>Coming Soon</small></span></span>
       <a className="header-go-pro" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20Pro%20enquiry"><SiteIcon name="star" size={16} /><span>Go Pro</span></a>
     </header>
     <div className="app-workspace">
-      <Sidebar activePath={path} onNavigate={navigate} open={menuOpen} onClose={() => setMenuOpen(false)} toggleRef={menuToggleRef} collapsed={sidebarCollapsed} onOpenIntake={() => openIntake('pickup_game')} />
+      <Sidebar
+        activePath={path}
+        onNavigate={navigate}
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        toggleRef={menuToggleRef}
+        collapsed={sidebarCollapsed}
+        onOpenIntake={() => openIntake('pickup_game')}
+        onOpenNotifications={() => setNotificationsOpen(true)}
+        unreadCount={unreadNotifCount}
+      />
       <main id="main-content" className="page-shell">
         <SiteAnnouncementBanner onNavigate={navigate} />
         <SportsBar activePath={path} onNavigate={navigate} />
@@ -321,6 +368,12 @@ export default function App() {
       onClose={() => setIntakeModalOpen(false)}
       onNavigate={navigate}
       defaultCategory={intakeCategory}
+    />
+    <NotificationCenterDrawer
+      isOpen={notificationsOpen}
+      onClose={() => setNotificationsOpen(false)}
+      onNavigate={navigate}
+      onUnreadCountChange={setUnreadNotifCount}
     />
   </div>
 }
