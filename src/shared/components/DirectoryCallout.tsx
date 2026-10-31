@@ -10,6 +10,7 @@ export interface DirectoryCalloutProps {
   buttonLabel: string
   buttonHref: string
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, href: string) => void
+  onButtonClick?: () => void
   icon?: SiteIconName
 }
 
@@ -21,11 +22,17 @@ export function DirectoryCallout({
   buttonLabel,
   buttonHref,
   onNavigate,
+  onButtonClick,
   icon = 'arrow-up-right',
 }: DirectoryCalloutProps) {
   const isMailto = buttonHref.startsWith('mailto:')
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (onButtonClick) {
+      event.preventDefault()
+      onButtonClick()
+      return
+    }
     if (!isMailto && onNavigate) {
       onNavigate(event, buttonHref)
     }

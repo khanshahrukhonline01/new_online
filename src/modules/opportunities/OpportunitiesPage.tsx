@@ -18,7 +18,11 @@ function formatDate(value: string | null) {
 
 const EMPTY_OPPORTUNITIES: Opportunity[] = []
 
-export default function OpportunitiesPage() {
+export interface OpportunitiesPageProps {
+  onOpenIntake?: () => void
+}
+
+export default function OpportunitiesPage({ onOpenIntake }: OpportunitiesPageProps = {}) {
   const [result, setResult] = useState<CatalogueResult<Opportunity> | { status: 'loading'; data: [] }>({
     status: 'loading',
     data: [],
@@ -152,7 +156,8 @@ export default function OpportunitiesPage() {
         title="Organising a sports trial? Post for Free"
         description="Broadcast trial dates, age criteria, and circulars across 50+ cities."
         buttonLabel="Submit a trial"
-        buttonHref="mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial%20or%20opportunity"
+        buttonHref={onOpenIntake ? '#' : 'mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial%20or%20opportunity'}
+        onButtonClick={onOpenIntake}
       />
       <div className="kg-catalogue-layout">
         <CatalogueFilterPanel

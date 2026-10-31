@@ -9,7 +9,11 @@ import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 
 const EMPTY_VENUES: Venue[] = []
 
-export default function VenuesPage() {
+export interface VenuesPageProps {
+  onOpenIntake?: () => void
+}
+
+export default function VenuesPage({ onOpenIntake }: VenuesPageProps = {}) {
   const [result, setResult] = useState<CatalogueResult<Venue> | { status: 'loading'; data: [] }>({
     status: 'loading',
     data: [],
@@ -100,7 +104,8 @@ export default function VenuesPage() {
         title="Manage a sports facility? List with 0% Fee"
         description="Showcase your courts, turfs, and grounds to athletes across India."
         buttonLabel="List your venue"
-        buttonHref="mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue%20on%20KhelGrid"
+        buttonHref={onOpenIntake ? '#' : 'mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue%20on%20KhelGrid'}
+        onButtonClick={onOpenIntake}
       />
       <div className="kg-catalogue-layout">
         <CatalogueFilterPanel

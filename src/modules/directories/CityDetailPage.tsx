@@ -87,41 +87,47 @@ export default function CityDetailPage({
   // Fetch all dynamic catalogues for this city
   useEffect(() => {
     let active = true
-    setLoading(true)
 
-    Promise.all([
-      getVenues(),
-      getOpportunities(),
-      getPickupGames(),
-      getAcademies(),
-    ]).then(([vRes, oRes, pRes, aRes]) => {
-      if (!active) return
+    function loadCityCatalogues() {
+      setLoading(true)
+      Promise.all([
+        getVenues(),
+        getOpportunities(),
+        getPickupGames(),
+        getAcademies(),
+      ]).then(([vRes, oRes, pRes, aRes]) => {
+        if (!active) return
 
-      const cityNameLower = city.name.toLowerCase()
-      const matchCity = (val?: string | null) => {
-        if (!val) return false
-        const lower = val.toLowerCase()
-        return lower.includes(cityNameLower) || cityNameLower.includes(lower)
-      }
+        const cityNameLower = city.name.toLowerCase()
+        const matchCity = (val?: string | null) => {
+          if (!val) return false
+          const lower = val.toLowerCase()
+          return lower.includes(cityNameLower) || cityNameLower.includes(lower)
+        }
 
-      if (vRes.status === 'ready') {
-        setVenues(vRes.data.filter(v => matchCity(v.city) || (v.address && matchCity(v.address))))
-      }
-      if (oRes.status === 'ready') {
-        setOpportunities(oRes.data.filter(o => matchCity(o.city) || matchCity(o.title)))
-      }
-      if (pRes.status === 'ready') {
-        setPickupGames(pRes.data.filter(g => matchCity(g.city)))
-      }
-      if (aRes.status === 'ready') {
-        setAcademies(aRes.data.filter(a => matchCity(a.city) || (a.description && matchCity(a.description))))
-      }
+        if (vRes.status === 'ready') {
+          setVenues(vRes.data.filter(v => matchCity(v.city) || (v.address && matchCity(v.address))))
+        }
+        if (oRes.status === 'ready') {
+          setOpportunities(oRes.data.filter(o => matchCity(o.city) || matchCity(o.title)))
+        }
+        if (pRes.status === 'ready') {
+          setPickupGames(pRes.data.filter(g => matchCity(g.city)))
+        }
+        if (aRes.status === 'ready') {
+          setAcademies(aRes.data.filter(a => matchCity(a.city) || (a.description && matchCity(a.description))))
+        }
 
-      setLoading(false)
-    })
+        setLoading(false)
+      })
+    }
+
+    loadCityCatalogues()
+    window.addEventListener('khelgrid:listing-added', loadCityCatalogues)
 
     return () => {
       active = false
+      window.removeEventListener('khelgrid:listing-added', loadCityCatalogues)
     }
   }, [city.name])
 

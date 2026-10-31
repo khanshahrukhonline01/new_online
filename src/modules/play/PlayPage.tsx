@@ -12,9 +12,10 @@ import './PlayPage.css'
 
 export interface PlayPageProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
+  onOpenIntake?: () => void
 }
 
-export default function PlayPage({ onNavigate }: PlayPageProps = {}) {
+export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {}) {
   const [result, setResult] = useState<CatalogueResult<DatabasePickupGame> | { status: 'loading'; data: [] }>({
     status: 'loading',
     data: [],
@@ -248,7 +249,8 @@ export default function PlayPage({ onNavigate }: PlayPageProps = {}) {
         title="Hosting a match and need players? Post a Game"
         description="Fill missing spots on your court or turf. Set sport, venue, skill level, and split costs with local players."
         buttonLabel="Host a match"
-        buttonHref="mailto:khelgrid@gmail.com?subject=Host%20a%20pickup%20match%20on%20KhelGrid"
+        buttonHref={onOpenIntake ? '#' : 'mailto:khelgrid@gmail.com?subject=Host%20a%20pickup%20match%20on%20KhelGrid'}
+        onButtonClick={onOpenIntake}
       />
 
       <AsyncState state={result.status === 'loading' ? 'ready' : result.status}>

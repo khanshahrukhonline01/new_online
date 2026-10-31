@@ -120,9 +120,9 @@ export default function App() {
     case 'sports-index': page = <SportsPage />; break
     case 'sport-detail': page = <SportDetailPage slug={match.slug} onNavigate={navigate} />; break
     case 'athlete-profile': page = <AthleteProfilePage username={match.username} onNavigate={navigate} />; break
-    case 'opportunities-index': page = <OpportunitiesPage />; break
+    case 'opportunities-index': page = <OpportunitiesPage onOpenIntake={() => openIntake('opportunity')} />; break
     case 'opportunity-detail': page = <CatalogueDetailPage kind="opportunity" slug={match.slug} />; break
-    case 'venues-index': page = <VenuesPage />; break
+    case 'venues-index': page = <VenuesPage onOpenIntake={() => openIntake('venue')} />; break
     case 'cities-index': page = <CitiesPage onNavigate={navigate} />; break
     case 'city-detail': page = <CityDetailPage citySlug={match.slug} onNavigate={navigate} onOpenIntake={openIntake} />; break
     case 'venue-detail': page = <CatalogueDetailPage kind="venue" slug={match.slug} />; break
@@ -135,7 +135,7 @@ export default function App() {
     case 'feature':
       if (match.canonicalPath === '/sports-cv') page = <SportsCvWizard />
       else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} />
-      else if (match.canonicalPath === '/play') page = <PlayPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/play') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openIntake('pickup_game')} />
       else if (match.canonicalPath === '/coaches') page = <FeatureDirectoryPage kind="coaches" />
       else if (match.canonicalPath === '/academies' || match.canonicalPath === '/academy') page = <FeatureDirectoryPage kind="academies" />
       else if (match.canonicalPath === '/events') page = <FeatureDirectoryPage kind="events" />
@@ -292,8 +292,8 @@ export default function App() {
         </nav>
         <nav className="footer-column" aria-label="About and support">
           <h2>Grow with KhelGrid</h2>
-          <a href="mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue">List your venue</a>
-          <a href="mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial">Submit a trial</a>
+          <a href="mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue" onClick={e => { e.preventDefault(); openIntake('venue') }}>List your venue</a>
+          <a href="mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial" onClick={e => { e.preventDefault(); openIntake('opportunity') }}>Submit a trial</a>
           <a href="mailto:khelgrid@gmail.com?subject=Register%20as%20a%20coach%20on%20KhelGrid">Join as Coach</a>
           <a href="/khelchronicle/submit" onClick={event => navigate(event, '/khelchronicle/submit')}>Submit Paper</a>
           <a href="mailto:khelgrid@gmail.com">Contact KhelGrid</a>
