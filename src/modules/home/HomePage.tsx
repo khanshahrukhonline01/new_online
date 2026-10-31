@@ -312,6 +312,21 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
       href: '/opportunities',
     },
     {
+      title: 'KhelChronicle',
+      subtitle: 'Sports Research Papers',
+      icon: 'book-open' as const,
+      bgClass: 'hero-icon-indigo',
+      tag: 'Research',
+      href: '/khelchronicle',
+    },
+    {
+      title: 'Coaching',
+      subtitle: 'Top Academies',
+      icon: 'building' as const,
+      bgClass: 'hero-icon-purple',
+      href: '/academies',
+    },
+    {
       title: 'Book Turf',
       subtitle: 'Hourly Slots',
       icon: 'calendar' as const,
@@ -324,21 +339,6 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
       icon: 'activity' as const,
       bgClass: 'hero-icon-blue',
       href: '/play',
-    },
-    {
-      title: 'Coaching',
-      subtitle: 'Top Academies',
-      icon: 'building' as const,
-      bgClass: 'hero-icon-purple',
-      href: '/academies',
-    },
-    {
-      title: 'KhelChronicle',
-      subtitle: 'Sports Research Papers',
-      icon: 'book-open' as const,
-      bgClass: 'hero-icon-indigo',
-      tag: 'Research',
-      href: '/khelchronicle',
     },
     {
       title: 'Talent Scanner',
@@ -858,181 +858,10 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
         </div>
       </section>
 
-      {/* 3. BOOK TURFS & COURTS */}
-      <section className="home-section-container" aria-label="Book sports turf venues">
-        <div className="home-section-header">
-          <div className="home-section-heading-group">
-            <h2 className="home-section-title">
-              <SiteIcon name="calendar-check" size={18} style={{ color: '#059669' }} />
-              <span>Book Turfs &amp; Courts</span>
-            </h2>
-            <p className="home-section-subtitle">Browse venue listings and published facilities · Swipe to explore</p>
-          </div>
-          <div className="home-section-actions">
-            <div className="home-scroll-arrows">
-              <button
-                type="button"
-                aria-label="Scroll venues left"
-                className="home-arrow-btn"
-                onClick={() => scrollRail(turfsRailRef, 'left')}
-              >
-                <SiteIcon name="arrow-left" size={15} />
-              </button>
-              <button
-                type="button"
-                aria-label="Scroll venues right"
-                className="home-arrow-btn"
-                onClick={() => scrollRail(turfsRailRef, 'right')}
-              >
-                <SiteIcon name="arrow-right" size={15} />
-              </button>
-            </div>
-            <a className="home-view-all-link" href="/venues">
-              <span>Find Venues</span>
-              <SiteIcon name="chevron-right" size={13} />
-            </a>
-          </div>
-        </div>
+      {/* 3. KhelChronicle Flagship Research Preprints Showcase */}
+      <HomeKhelChronicle onNavigate={onNavigate} />
 
-        <div ref={turfsRailRef} className="home-touch-rail" tabIndex={0} aria-label="Sports turfs and courts list">
-          {!counts.venues ? (
-            <div className="home-rail-status-box">Loading venue listings…</div>
-          ) : counts.venues.status !== 'ready' || counts.venues.data.length === 0 ? (
-            <div className="home-rail-status-box">No published venues currently available.</div>
-          ) : (
-            counts.venues.data.map(v => (
-              <a key={v.id} href={`/venues/${v.slug}`} className="home-rail-card">
-                <div>
-                  <div className="home-card-media">
-                    <img
-                      src={createBannerSvg(v.name, v.city, '🏟️', 'emerald')}
-                      alt={v.name}
-                      loading="lazy"
-                      width={400}
-                      height={240}
-                    />
-                    <div className="home-card-overlay-top-left">
-                      <span className="home-media-badge-dark">{v.city}</span>
-                    </div>
-                    <div className="home-card-overlay-top-right">
-                      <span className="home-verified-pill">
-                        <SiteIcon name="shield-check" size={11} />
-                        {v.government_facility ? 'Govt Facility' : 'Verified Venue'}
-                      </span>
-                    </div>
-                  </div>
-                  <h3 className="home-card-title">{v.name}</h3>
-                  <div className="home-card-meta">
-                    <SiteIcon name="map-pin" size={12} />
-                    <span>{v.city}{v.address ? ` · ${v.address}` : ''}</span>
-                  </div>
-                </div>
-                <div className="home-card-bottom">
-                  <span className="home-card-deadline">Informational Listing</span>
-                  <span className="home-card-cta">
-                    View <SiteIcon name="chevron-right" size={11} />
-                  </span>
-                </div>
-              </a>
-            ))
-          )}
-        </div>
-      </section>
-
-      {/* 4. JOIN PICKUP GAMES */}
-      <section className="home-section-container" aria-label="Join or host pickup sports games">
-        <div className="home-section-header">
-          <div className="home-section-heading-group">
-            <h2 className="home-section-title">
-              <SiteIcon name="activity" size={18} style={{ color: '#2563eb' }} />
-              <span>Join Pickup Games</span>
-            </h2>
-            <p className="home-section-subtitle">Connect with local players and fill missing court spots · Swipe to explore</p>
-          </div>
-          <div className="home-section-actions">
-            <div className="home-scroll-arrows">
-              <button
-                type="button"
-                aria-label="Scroll pickup games left"
-                className="home-arrow-btn"
-                onClick={() => scrollRail(pickupRailRef, 'left')}
-              >
-                <SiteIcon name="arrow-left" size={15} />
-              </button>
-              <button
-                type="button"
-                aria-label="Scroll pickup games right"
-                className="home-arrow-btn"
-                onClick={() => scrollRail(pickupRailRef, 'right')}
-              >
-                <SiteIcon name="arrow-right" size={15} />
-              </button>
-            </div>
-            <a className="home-view-all-link" href="/play">
-              <span>Explore Games</span>
-              <SiteIcon name="chevron-right" size={13} />
-            </a>
-          </div>
-        </div>
-
-        <div ref={pickupRailRef} className="home-touch-rail" tabIndex={0} aria-label="Pickup sports games list">
-          {COMMUNITY_PICKUP_GAMES.map(g => (
-            <a key={g.id} href="/play" className="home-rail-card">
-              <div>
-                <div className="home-card-media">
-                  <img
-                    src={createBannerSvg(`${g.sport} Pickup`, `${g.venueName} · ${g.city}`, g.emoji, 'cyan')}
-                    alt={`${g.sport} pickup match at ${g.venueName}`}
-                    loading="lazy"
-                    width={400}
-                    height={240}
-                  />
-                  <div className="home-card-overlay-top-left">
-                    <span className="home-media-badge-dark">{g.sport}</span>
-                    <span
-                      className="home-media-badge-dark"
-                      style={{ background: 'rgba(255,255,255,0.9)', color: '#0f172a' }}
-                    >
-                      {g.skillLevel}
-                    </span>
-                  </div>
-                  <div className="home-card-overlay-bottom">
-                    <span className="home-media-badge-green">
-                      {g.spotsOpen} {g.spotsOpen === 1 ? 'spot' : 'spots'} open
-                    </span>
-                    <span className="home-media-badge-blue">{g.pricePerPlayer}</span>
-                  </div>
-                </div>
-                <h3 className="home-card-title" style={{ minHeight: '1.4em' }}>
-                  {g.venueName}
-                </h3>
-                <div className="home-card-meta">
-                  <SiteIcon name="map-pin" size={12} />
-                  <span>{g.venueName}, {g.city}</span>
-                </div>
-                <div className="home-card-meta">
-                  <SiteIcon name="clock" size={12} />
-                  <span>{g.timeLabel} · Host: {g.hostName}</span>
-                </div>
-              </div>
-              <div className="home-pickup-bar-wrap">
-                <div className="home-pickup-meta-row">
-                  <span>{g.confirmedPlayers}/{g.totalPlayers} Players</span>
-                  <span style={{ color: '#059669' }}>{g.spotsOpen} {g.spotsOpen === 1 ? 'spot' : 'spots'} left</span>
-                </div>
-                <div className="home-pickup-progress">
-                  <div
-                    className="home-pickup-progress-fill"
-                    style={{ width: `${Math.round((g.confirmedPlayers / g.totalPlayers) * 100)}%` }}
-                  />
-                </div>
-              </div>
-            </a>
-          ))}
-        </div>
-      </section>
-
-      {/* 5. FEATURED TRAINING INSTITUTIONS / ACADEMIES */}
+      {/* 4. FEATURED TRAINING INSTITUTIONS / ACADEMIES */}
       <section
         id="featured-academies"
         className="home-section-container"
@@ -1141,8 +970,179 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
         )}
       </section>
 
-      {/* 6. KhelChronicle Flagship Research Preprints Showcase */}
-      <HomeKhelChronicle onNavigate={onNavigate} />
+      {/* 5. BOOK TURFS & COURTS */}
+      <section className="home-section-container" aria-label="Book sports turf venues">
+        <div className="home-section-header">
+          <div className="home-section-heading-group">
+            <h2 className="home-section-title">
+              <SiteIcon name="calendar-check" size={18} style={{ color: '#059669' }} />
+              <span>Book Turfs &amp; Courts</span>
+            </h2>
+            <p className="home-section-subtitle">Browse venue listings and published facilities · Swipe to explore</p>
+          </div>
+          <div className="home-section-actions">
+            <div className="home-scroll-arrows">
+              <button
+                type="button"
+                aria-label="Scroll venues left"
+                className="home-arrow-btn"
+                onClick={() => scrollRail(turfsRailRef, 'left')}
+              >
+                <SiteIcon name="arrow-left" size={15} />
+              </button>
+              <button
+                type="button"
+                aria-label="Scroll venues right"
+                className="home-arrow-btn"
+                onClick={() => scrollRail(turfsRailRef, 'right')}
+              >
+                <SiteIcon name="arrow-right" size={15} />
+              </button>
+            </div>
+            <a className="home-view-all-link" href="/venues">
+              <span>Find Venues</span>
+              <SiteIcon name="chevron-right" size={13} />
+            </a>
+          </div>
+        </div>
+
+        <div ref={turfsRailRef} className="home-touch-rail" tabIndex={0} aria-label="Sports turfs and courts list">
+          {!counts.venues ? (
+            <div className="home-rail-status-box">Loading venue listings…</div>
+          ) : counts.venues.status !== 'ready' || counts.venues.data.length === 0 ? (
+            <div className="home-rail-status-box">No published venues currently available.</div>
+          ) : (
+            counts.venues.data.map(v => (
+              <a key={v.id} href={`/venues/${v.slug}`} className="home-rail-card">
+                <div>
+                  <div className="home-card-media">
+                    <img
+                      src={createBannerSvg(v.name, v.city, '🏟️', 'emerald')}
+                      alt={v.name}
+                      loading="lazy"
+                      width={400}
+                      height={240}
+                    />
+                    <div className="home-card-overlay-top-left">
+                      <span className="home-media-badge-dark">{v.city}</span>
+                    </div>
+                    <div className="home-card-overlay-top-right">
+                      <span className="home-verified-pill">
+                        <SiteIcon name="shield-check" size={11} />
+                        {v.government_facility ? 'Govt Facility' : 'Verified Venue'}
+                      </span>
+                    </div>
+                  </div>
+                  <h3 className="home-card-title">{v.name}</h3>
+                  <div className="home-card-meta">
+                    <SiteIcon name="map-pin" size={12} />
+                    <span>{v.city}{v.address ? ` · ${v.address}` : ''}</span>
+                  </div>
+                </div>
+                <div className="home-card-bottom">
+                  <span className="home-card-deadline">Informational Listing</span>
+                  <span className="home-card-cta">
+                    View <SiteIcon name="chevron-right" size={11} />
+                  </span>
+                </div>
+              </a>
+            ))
+          )}
+        </div>
+      </section>
+
+      {/* 6. JOIN PICKUP GAMES */}
+      <section className="home-section-container" aria-label="Join or host pickup sports games">
+        <div className="home-section-header">
+          <div className="home-section-heading-group">
+            <h2 className="home-section-title">
+              <SiteIcon name="activity" size={18} style={{ color: '#2563eb' }} />
+              <span>Join Pickup Games</span>
+            </h2>
+            <p className="home-section-subtitle">Connect with local players and fill missing court spots · Swipe to explore</p>
+          </div>
+          <div className="home-section-actions">
+            <div className="home-scroll-arrows">
+              <button
+                type="button"
+                aria-label="Scroll pickup games left"
+                className="home-arrow-btn"
+                onClick={() => scrollRail(pickupRailRef, 'left')}
+              >
+                <SiteIcon name="arrow-left" size={15} />
+              </button>
+              <button
+                type="button"
+                aria-label="Scroll pickup games right"
+                className="home-arrow-btn"
+                onClick={() => scrollRail(pickupRailRef, 'right')}
+              >
+                <SiteIcon name="arrow-right" size={15} />
+              </button>
+            </div>
+            <a className="home-view-all-link" href="/play">
+              <span>Explore Games</span>
+              <SiteIcon name="chevron-right" size={13} />
+            </a>
+          </div>
+        </div>
+
+        <div ref={pickupRailRef} className="home-touch-rail" tabIndex={0} aria-label="Pickup sports games list">
+          {COMMUNITY_PICKUP_GAMES.map(g => (
+            <a key={g.id} href="/play" className="home-rail-card">
+              <div>
+                <div className="home-card-media">
+                  <img
+                    src={createBannerSvg(`${g.sport} Pickup`, `${g.venueName} · ${g.city}`, g.emoji, 'cyan')}
+                    alt={`${g.sport} pickup match at ${g.venueName}`}
+                    loading="lazy"
+                    width={400}
+                    height={240}
+                  />
+                  <div className="home-card-overlay-top-left">
+                    <span className="home-media-badge-dark">{g.sport}</span>
+                    <span
+                      className="home-media-badge-dark"
+                      style={{ background: 'rgba(255,255,255,0.9)', color: '#0f172a' }}
+                    >
+                      {g.skillLevel}
+                    </span>
+                  </div>
+                  <div className="home-card-overlay-bottom">
+                    <span className="home-media-badge-green">
+                      {g.spotsOpen} {g.spotsOpen === 1 ? 'spot' : 'spots'} open
+                    </span>
+                    <span className="home-media-badge-blue">{g.pricePerPlayer}</span>
+                  </div>
+                </div>
+                <h3 className="home-card-title" style={{ minHeight: '1.4em' }}>
+                  {g.venueName}
+                </h3>
+                <div className="home-card-meta">
+                  <SiteIcon name="map-pin" size={12} />
+                  <span>{g.venueName}, {g.city}</span>
+                </div>
+                <div className="home-card-meta">
+                  <SiteIcon name="clock" size={12} />
+                  <span>{g.timeLabel} · Host: {g.hostName}</span>
+                </div>
+              </div>
+              <div className="home-pickup-bar-wrap">
+                <div className="home-pickup-meta-row">
+                  <span>{g.confirmedPlayers}/{g.totalPlayers} Players</span>
+                  <span style={{ color: '#059669' }}>{g.spotsOpen} {g.spotsOpen === 1 ? 'spot' : 'spots'} left</span>
+                </div>
+                <div className="home-pickup-progress">
+                  <div
+                    className="home-pickup-progress-fill"
+                    style={{ width: `${Math.round((g.confirmedPlayers / g.totalPlayers) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
 
       {/* Flagship Digital Tools for Athletes & Scouts */}
       <section className="focus-section home-explore-section" aria-labelledby="home-tools-heading">
