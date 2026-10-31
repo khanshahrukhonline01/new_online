@@ -250,4 +250,42 @@ describe('public catalogue client', () => {
     expect(games.data[0].sport).toBe('Basketball')
     expect(games.data[0].venue_name).toBe('Cubbon Park Court')
   })
+
+  it('routes guest trials to moderation queue while verified users publish live instantly', async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse([]))
+    const client = await loadClient()
+
+    // 1. Guest trial submission -> moderation queue
+    const guestResult = await client.submitCommunityListing({
+      category: 'opportunity',
+      title: 'Delhi State U-17 Open Football Trials',
+      city: 'Delhi',
+      contact_name: 'Coach Rakesh',
+      contact_phone: '+91 98765 43210',
+      is_verified_user: false,
+    })
+
+    expect(guestResult.status).toBe('submitted')
+    if (guestResult.status === 'submitted') {
+      expect(guestResult.mode).toBe('moderation_queue')
+      expect(guestResult.requiresReview).toBe(true)
+      expect(guestResult.record.publication_status).toBe('pending_review')
+    }
+
+    // 2. Verified user trial submission -> instant live
+    const verifiedResult = await client.submitCommunityListing({
+      category: 'opportunity',
+      title: 'Karnataka State Badminton Ranking Tourney',
+      city: 'Bengaluru',
+      is_verified_user: true,
+    })
+
+    expect(verifiedResult.status).toBe('submitted')
+    if (verifiedResult.status === 'submitted') {
+      expect(verifiedResult.mode).toBe('instant_live')
+      expect(verifiedResult.requiresReview).toBe(false)
+      expect(verifiedResult.record.publication_status).toBe('published')
+      expect(verifiedResult.record.verification_status).toBe('verified')
+    }
+  })
 })

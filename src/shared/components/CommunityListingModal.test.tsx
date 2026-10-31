@@ -55,7 +55,7 @@ describe('CommunityListingModal', () => {
     expect(html).toContain('Facilities / Description')
   })
 
-  it('renders Opportunity specific fields when defaultCategory is opportunity', () => {
+  it('renders Opportunity specific fields and verification button when defaultCategory is opportunity', () => {
     const html = renderToStaticMarkup(
       <CommunityListingModal isOpen={true} onClose={vi.fn()} defaultCategory="opportunity" />
     )
@@ -64,5 +64,18 @@ describe('CommunityListingModal', () => {
     expect(html).toContain('Opportunity Type')
     expect(html).toContain('Selection Trial')
     expect(html).toContain('Tournament')
+    expect(html).toContain('Submit for Verification (2-4 hrs)')
+  })
+
+  it('renders Guest Mode bar and contact fields for unauthenticated visitors', () => {
+    const html = renderToStaticMarkup(
+      <CommunityListingModal isOpen={true} onClose={vi.fn()} defaultCategory="pickup_game" />
+    )
+
+    expect(html).toContain('Guest Mode:')
+    expect(html).toContain('Sign In for Instant Publishing')
+    expect(html).toContain('Organizer / Host Contact')
+    expect(html).toContain('Your Name / Organizer *')
+    expect(html).toContain('Contact WhatsApp / Phone *')
   })
 })

@@ -491,8 +491,69 @@ export async function submitListingSuggestion(
 }
 
 // -----------------------------------------------------------------------------
-// Direct Community Intake Engine (Dynamic listings into catalogue tables)
+// Direct Community Intake Engine & Hybrid Verification System
 // -----------------------------------------------------------------------------
+
+export interface KhelGridUser {
+  id: string
+  name: string
+  email?: string
+  phone?: string
+  role: 'host' | 'athlete' | 'scout' | 'academy'
+  isVerified: boolean
+  createdAt: string
+}
+
+export const KHELGRID_AUTH_STORAGE_KEY = 'khelgrid_auth_user'
+
+export function getStoredUser(): KhelGridUser | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(KHELGRID_AUTH_STORAGE_KEY)
+    if (!raw) return null
+    return JSON.parse(raw) as KhelGridUser
+  } catch {
+    return null
+  }
+}
+
+export function setStoredUser(user: KhelGridUser | null): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (user) {
+      localStorage.setItem(KHELGRID_AUTH_STORAGE_KEY, JSON.stringify(user))
+    } else {
+      localStorage.removeItem(KHELGRID_AUTH_STORAGE_KEY)
+    }
+    window.dispatchEvent(new CustomEvent('khelgrid:auth-changed', { detail: { user } }))
+  } catch {
+    // Ignore storage errors in restrictive environments
+  }
+}
+
+export function quickSignInUser(
+  name: string,
+  phoneOrEmail: string,
+  role: 'host' | 'athlete' | 'scout' | 'academy' = 'host',
+): KhelGridUser {
+  const cleanName = name.trim() || 'Verified Host'
+  const isEmail = phoneOrEmail.includes('@')
+  const user: KhelGridUser = {
+    id: `user-${Math.random().toString(36).substring(2, 9)}`,
+    name: cleanName,
+    email: isEmail ? phoneOrEmail.trim() : undefined,
+    phone: !isEmail ? phoneOrEmail.trim() : undefined,
+    role,
+    isVerified: true,
+    createdAt: new Date().toISOString(),
+  }
+  setStoredUser(user)
+  return user
+}
+
+export function signOutUser(): void {
+  setStoredUser(null)
+}
 
 export type CommunityListingCategory = 'academy' | 'venue' | 'opportunity' | 'pickup_game'
 
@@ -505,6 +566,9 @@ export interface CommunityAcademyInput {
   description?: string
   website_url?: string
   public_contact_url?: string
+  contact_name?: string
+  contact_phone?: string
+  is_verified_user?: boolean
 }
 
 export interface CommunityVenueInput {
@@ -514,6 +578,9 @@ export interface CommunityVenueInput {
   sport?: string
   address?: string
   description?: string
+  contact_name?: string
+  contact_phone?: string
+  is_verified_user?: boolean
 }
 
 export interface CommunityOpportunityInput {
@@ -529,6 +596,9 @@ export interface CommunityOpportunityInput {
   source_url?: string
   registration_fee?: string
   age_category?: string
+  contact_name?: string
+  contact_phone?: string
+  is_verified_user?: boolean
 }
 
 export interface CommunityPickupGameInput {
@@ -543,6 +613,9 @@ export interface CommunityPickupGameInput {
   price_per_player?: string
   spots_open?: number
   total_players?: number
+  contact_name?: string
+  contact_phone?: string
+  is_verified_user?: boolean
 }
 
 export type CommunityListingInput =
@@ -552,7 +625,14 @@ export type CommunityListingInput =
   | CommunityPickupGameInput
 
 export type CommunityListingResult =
-  | { status: 'submitted'; category: CommunityListingCategory; record: Record<string, unknown>; message: string }
+  | {
+      status: 'submitted'
+      mode: 'instant_live' | 'moderation_queue'
+      category: CommunityListingCategory
+      record: Record<string, unknown>
+      message: string
+      requiresReview: boolean
+    }
   | { status: 'unavailable'; message: string }
 
 function slugify(text: string): string {
@@ -570,6 +650,16 @@ export async function submitCommunityListing(
   if (!city) {
     return { status: 'unavailable', message: 'City is required for all listings.' }
   }
+
+  const currentUser = getStoredUser()
+  const isVerified = Boolean(input.is_verified_user || currentUser?.isVerified)
+
+  // Hybrid Verification Rules:
+  // - Selection trials and academies submitted by unverified guests require moderation
+  //   to protect athletes and parents from fake trial notices and unauthorized cash fees.
+  // - Pickup games and venues submit live with contact details so local players can coordinate immediately.
+  const requiresReview = !isVerified && (input.category === 'opportunity' || input.category === 'academy')
+  const mode: 'instant_live' | 'moderation_queue' = requiresReview ? 'moderation_queue' : 'instant_live'
 
   const randomSuffix = Math.random().toString(36).substring(2, 7)
   let targetTable: 'academies' | 'venues' | 'opportunities' | 'pickup_games'
@@ -589,9 +679,9 @@ export async function submitCommunityListing(
         city,
         state: input.state?.trim() || null,
         website_url: input.website_url?.trim() || null,
-        public_contact_url: input.public_contact_url?.trim() || null,
-        publication_status: 'published',
-        verification_status: 'verified',
+        public_contact_url: input.public_contact_url?.trim() || input.contact_phone?.trim() || null,
+        publication_status: requiresReview ? 'pending_review' : 'published',
+        verification_status: isVerified ? 'verified' : 'pending_review',
         is_featured: false,
       }
       break
@@ -624,16 +714,16 @@ export async function submitCommunityListing(
         slug: `${slugify(input.title)}-${slugify(city)}-${randomSuffix}`,
         title: input.title.trim(),
         opportunity_type: input.opportunity_type || 'trial',
-        organizer_name: input.organizer_name?.trim() || 'Community Sports Organizer',
+        organizer_name: input.organizer_name?.trim() || (isVerified && currentUser ? currentUser.name : 'Community Sports Organizer'),
         city,
         venue_name: input.venue_name?.trim() || 'Local Sports Complex',
         starts_at: input.starts_at || new Date(Date.now() + 86400000 * 7).toISOString(),
         ends_at: input.ends_at || null,
         application_deadline: null,
         source_url: input.source_url?.trim() || null,
-        source_name: 'Community Organizer',
-        verification_status: 'verified',
-        publication_status: 'published',
+        source_name: isVerified ? 'Verified Organizer' : 'Community Submission',
+        verification_status: isVerified ? 'verified' : 'pending_review',
+        publication_status: requiresReview ? 'pending_review' : 'published',
         registration_fee: input.registration_fee?.trim() || 'Free',
         available_spots: 50,
         age_category: input.age_category?.trim() || 'Open Age',
@@ -664,7 +754,7 @@ export async function submitCommunityListing(
         venue_name: input.venue_name.trim(),
         city,
         time_label: input.time_label.trim(),
-        host_name: input.host_name?.trim() || 'Community Host',
+        host_name: input.host_name?.trim() || (isVerified && currentUser ? currentUser.name : (input.contact_name?.trim() || 'Community Host')),
         price_per_player: input.price_per_player?.trim() || 'Free',
         spots_open: spots,
         total_players: total,
@@ -707,51 +797,61 @@ export async function submitCommunityListing(
     }
   }
 
-  // Cache in community submissions for instant optimistic reflection
-  switch (input.category) {
-    case 'academy':
-      communitySubmissions.academies = [record as unknown as Academy, ...communitySubmissions.academies]
-      break
-    case 'venue':
-      communitySubmissions.venues = [record as unknown as Venue, ...communitySubmissions.venues]
-      break
-    case 'opportunity':
-      communitySubmissions.opportunities = [record as unknown as Opportunity, ...communitySubmissions.opportunities]
-      break
-    case 'pickup_game':
-      communitySubmissions.pickup_games = [record as unknown as DatabasePickupGame, ...communitySubmissions.pickup_games]
-      break
-  }
+  // If instant live (verified or live pickup game / venue), cache and broadcast immediately
+  if (!requiresReview) {
+    switch (input.category) {
+      case 'academy':
+        communitySubmissions.academies = [record as unknown as Academy, ...communitySubmissions.academies]
+        break
+      case 'venue':
+        communitySubmissions.venues = [record as unknown as Venue, ...communitySubmissions.venues]
+        break
+      case 'opportunity':
+        communitySubmissions.opportunities = [record as unknown as Opportunity, ...communitySubmissions.opportunities]
+        break
+      case 'pickup_game':
+        communitySubmissions.pickup_games = [record as unknown as DatabasePickupGame, ...communitySubmissions.pickup_games]
+        break
+    }
 
-  const tableMap: Record<CommunityListingCategory, RealtimeTable> = {
-    pickup_game: 'pickup_games',
-    opportunity: 'opportunities',
-    venue: 'venues',
-    academy: 'academies',
-  }
-  broadcastRealtimeEvent(tableMap[input.category], 'INSERT', record)
+    const tableMap: Record<CommunityListingCategory, RealtimeTable> = {
+      pickup_game: 'pickup_games',
+      opportunity: 'opportunities',
+      venue: 'venues',
+      academy: 'academies',
+    }
+    broadcastRealtimeEvent(tableMap[input.category], 'INSERT', record)
 
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent('khelgrid:listing-added', {
-        detail: { category: input.category, record },
-      }),
-    )
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('khelgrid:listing-added', {
+          detail: { category: input.category, record },
+        }),
+      )
+    }
   }
 
   const categoryName = input.category === 'pickup_game'
     ? 'Pickup Game'
     : input.category === 'opportunity'
-      ? 'Trial / Tournament'
+      ? 'Selection Trial / Tournament'
       : input.category === 'venue'
         ? 'Turf / Arena'
-        : 'Academy'
+        : 'Sports Academy'
+
+  const message = requiresReview
+    ? `${categoryName} submitted for verification! Our sports desk reviews notices within 2–4 hours to protect Indian athletes from unauthorized combines and scams.`
+    : isVerified
+      ? `${categoryName} has been published instantly with your Verified Host credentials!`
+      : `${categoryName} has been published and is now live on KhelGrid!`
 
   return {
     status: 'submitted',
+    mode,
     category: input.category,
     record,
-    message: `${categoryName} has been published and is now live on KhelGrid!`,
+    message,
+    requiresReview,
   }
 }
 

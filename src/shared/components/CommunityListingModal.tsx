@@ -2,6 +2,10 @@ import { useState, useEffect, useRef, type FormEvent, type MouseEvent } from 're
 import { SiteIcon } from './SiteIcon'
 import {
   submitCommunityListing,
+  getStoredUser,
+  quickSignInUser,
+  signOutUser,
+  type KhelGridUser,
   type CommunityListingCategory,
   type CommunityListingInput,
 } from '../../integrations/supabase/public-client'
@@ -87,6 +91,14 @@ export default function CommunityListingModal({
   const [totalPlayers, setTotalPlayers] = useState(10)
   const [emoji, setEmoji] = useState('⚽')
 
+  // Hybrid Auth & Contact State
+  const [currentUser, setCurrentUser] = useState<KhelGridUser | null>(getStoredUser())
+  const [showAuthBox, setShowAuthBox] = useState(false)
+  const [authName, setAuthName] = useState('')
+  const [authContact, setAuthContact] = useState('')
+  const [contactName, setContactName] = useState('')
+  const [contactPhone, setContactPhone] = useState('')
+
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -95,9 +107,22 @@ export default function CommunityListingModal({
     name: string
     city: string
     directoryPath: string
+    mode: 'instant_live' | 'moderation_queue'
+    requiresReview: boolean
+    message: string
   } | null>(null)
 
   const modalRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setCurrentUser(getStoredUser())
+    const handleAuth = (e: Event) => {
+      const user = (e as CustomEvent<{ user: KhelGridUser | null }>).detail?.user
+      setCurrentUser(user ?? getStoredUser())
+    }
+    window.addEventListener('khelgrid:auth-changed', handleAuth)
+    return () => window.removeEventListener('khelgrid:auth-changed', handleAuth)
+  }, [])
 
   useEffect(() => {
     if (defaultCategory) setCategory(defaultCategory)
@@ -138,6 +163,9 @@ export default function CommunityListingModal({
     setPricePerPlayer('₹200/player')
     setSpotsOpen(4)
     setTotalPlayers(10)
+    setContactName('')
+    setContactPhone('')
+    setShowAuthBox(false)
     setError('')
     setSuccessResult(null)
   }
@@ -161,6 +189,9 @@ export default function CommunityListingModal({
           state: state || undefined,
           description: description || undefined,
           website_url: websiteUrl || undefined,
+          contact_name: currentUser?.name || contactName || undefined,
+          contact_phone: currentUser?.phone || currentUser?.email || contactPhone || undefined,
+          is_verified_user: Boolean(currentUser?.isVerified),
         }
         directoryPath = '/academies'
         createdName = academyName
@@ -172,6 +203,9 @@ export default function CommunityListingModal({
           sport: sport || undefined,
           address: address || undefined,
           description: description || undefined,
+          contact_name: currentUser?.name || contactName || undefined,
+          contact_phone: currentUser?.phone || currentUser?.email || contactPhone || undefined,
+          is_verified_user: Boolean(currentUser?.isVerified),
         }
         directoryPath = '/venues'
         createdName = venueName
@@ -183,10 +217,13 @@ export default function CommunityListingModal({
           sport: sport || undefined,
           city,
           venue_name: oppVenue || undefined,
-          organizer_name: organizer || undefined,
+          organizer_name: organizer || currentUser?.name || contactName || undefined,
           registration_fee: regFee || undefined,
           age_category: ageCategory || undefined,
           source_url: sourceUrl || undefined,
+          contact_name: currentUser?.name || contactName || undefined,
+          contact_phone: currentUser?.phone || currentUser?.email || contactPhone || undefined,
+          is_verified_user: Boolean(currentUser?.isVerified),
         }
         directoryPath = '/opportunities'
         createdName = oppTitle
@@ -199,10 +236,13 @@ export default function CommunityListingModal({
           city,
           time_label: timeLabel,
           skill_level: skillLevel,
-          host_name: hostName || undefined,
+          host_name: hostName || currentUser?.name || contactName || undefined,
+          contact_name: currentUser?.name || contactName || undefined,
+          contact_phone: currentUser?.phone || currentUser?.email || contactPhone || undefined,
           price_per_player: pricePerPlayer || 'Free',
           spots_open: spotsOpen,
           total_players: totalPlayers,
+          is_verified_user: Boolean(currentUser?.isVerified),
         }
         directoryPath = '/play'
         createdName = `${input.sport} at ${pickupVenue}`
@@ -216,6 +256,9 @@ export default function CommunityListingModal({
           name: createdName,
           city,
           directoryPath,
+          mode: result.mode,
+          requiresReview: result.requiresReview,
+          message: result.message,
         })
       } else {
         setError(result.message)
@@ -252,40 +295,86 @@ export default function CommunityListingModal({
         </button>
 
         {successResult ? (
-          <div className="community-intake-success">
-            <div className="community-intake-success-icon">
-              <SiteIcon name="check-circle" size={48} />
-            </div>
-            <h2 id="community-intake-title">Your listing is live on KhelGrid!</h2>
-            <p className="community-intake-success-desc">
-              <strong>{successResult.name}</strong> has been published in <strong>{successResult.city}</strong>.
-              It is now immediately discoverable on the homepage rail, city directories, and sports catalogue.
-            </p>
+          successResult.requiresReview ? (
+            <div className="community-intake-success is-review">
+              <div className="community-intake-success-icon review-badge-icon">
+                <SiteIcon name="shield-check" size={48} />
+              </div>
+              <h2 id="community-intake-title">Submitted for Verification!</h2>
+              <p className="community-intake-success-desc">
+                <strong>{successResult.name}</strong> in <strong>{successResult.city}</strong> has been received by the KhelGrid sports desk.
+                To protect Indian athletes and parents from fake trial notices and unauthorized cash combines, community circulars are verified against official gazettes within <strong>2–4 hours</strong> before public broadcasting.
+              </p>
 
-            <div className="community-intake-success-actions">
-              <a
-                href={successResult.directoryPath}
-                className="community-intake-btn-primary"
-                onClick={e => {
-                  if (onNavigate) {
-                    onNavigate(e, successResult.directoryPath)
-                  }
-                  onClose()
-                }}
-              >
-                <span>View in Directory</span>
-                <SiteIcon name="arrow-up-right" size={16} />
-              </a>
+              <div className="community-intake-review-note">
+                <span>💡 <strong>Want instant 1-click publishing for future trials?</strong> Sign in as a Verified Host to bypass moderation.</span>
+                {!currentUser && (
+                  <button
+                    type="button"
+                    className="community-auth-mini-btn"
+                    onClick={() => {
+                      setSuccessResult(null)
+                      setShowAuthBox(true)
+                    }}
+                  >
+                    ⚡ Register as Verified Host
+                  </button>
+                )}
+              </div>
 
-              <button
-                type="button"
-                className="community-intake-btn-secondary"
-                onClick={resetForm}
-              >
-                + Add Another Listing
-              </button>
+              <div className="community-intake-success-actions">
+                <button
+                  type="button"
+                  className="community-intake-btn-primary"
+                  onClick={onClose}
+                >
+                  Done
+                </button>
+                <button
+                  type="button"
+                  className="community-intake-btn-secondary"
+                  onClick={resetForm}
+                >
+                  + Submit Another Listing
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="community-intake-success">
+              <div className="community-intake-success-icon">
+                <SiteIcon name="check-circle" size={48} />
+              </div>
+              <h2 id="community-intake-title">Your listing is live on KhelGrid!</h2>
+              <p className="community-intake-success-desc">
+                <strong>{successResult.name}</strong> has been published in <strong>{successResult.city}</strong>.
+                It is now immediately discoverable on the homepage rail, city directories, and sports catalogue.
+              </p>
+
+              <div className="community-intake-success-actions">
+                <a
+                  href={successResult.directoryPath}
+                  className="community-intake-btn-primary"
+                  onClick={e => {
+                    if (onNavigate) {
+                      onNavigate(e, successResult.directoryPath)
+                    }
+                    onClose()
+                  }}
+                >
+                  <span>View in Directory</span>
+                  <SiteIcon name="arrow-up-right" size={16} />
+                </a>
+
+                <button
+                  type="button"
+                  className="community-intake-btn-secondary"
+                  onClick={resetForm}
+                >
+                  + Add Another Listing
+                </button>
+              </div>
+            </div>
+          )
         ) : (
           <>
             <div className="community-intake-header">
@@ -294,9 +383,96 @@ export default function CommunityListingModal({
               </span>
               <h2 id="community-intake-title">+ List on KhelGrid</h2>
               <p className="community-intake-subtitle">
-                Publish a new sports academy, turf arena, selection trial, or pickup match. Automatically live across the entire grid without code changes.
+                Publish a new sports academy, turf arena, selection trial, or pickup match across India.
               </p>
             </div>
+
+            {/* Top Auth / Verified Host Bar */}
+            <div className={`community-auth-bar ${currentUser ? 'is-verified' : 'is-guest'}`}>
+              {currentUser ? (
+                <div className="community-auth-bar-inner">
+                  <div className="community-auth-info">
+                    <SiteIcon name="check-circle" size={15} />
+                    <span>
+                      Signed in as <strong>{currentUser.name}</strong> · <span className="community-verified-pill">Verified Host</span>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="community-auth-signout-btn"
+                    onClick={() => signOutUser()}
+                    title="Sign out"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              ) : (
+                <div className="community-auth-bar-inner">
+                  <div className="community-auth-info">
+                    <SiteIcon name="shield-check" size={15} />
+                    <span>
+                      <strong>Guest Mode:</strong> Pickup games publish live with contact phone. Trials &amp; academies undergo 2-4hr verification.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="community-auth-toggle-btn"
+                    onClick={() => setShowAuthBox(prev => !prev)}
+                  >
+                    ⚡ {showAuthBox ? 'Close' : 'Sign In for Instant Publishing'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Inline Quick Auth Drawer */}
+            {showAuthBox && !currentUser && (
+              <div className="community-inline-auth-box">
+                <div className="community-inline-auth-header">
+                  <strong>⚡ Quick Sign In / Host Registration</strong>
+                  <p>Get instant live publishing on all selection trials, turfs, and academies with a Verified Host badge.</p>
+                </div>
+                <div className="community-inline-auth-fields">
+                  <input
+                    type="text"
+                    placeholder="Your Full Name / Academy (e.g. Coach Rajesh Sharma)"
+                    value={authName}
+                    onChange={e => setAuthName(e.target.value)}
+                    className="community-inline-auth-input"
+                  />
+                  <input
+                    type="text"
+                    placeholder="WhatsApp / Mobile Number or Email (e.g. +91 98765 43210)"
+                    value={authContact}
+                    onChange={e => setAuthContact(e.target.value)}
+                    className="community-inline-auth-input"
+                  />
+                  <div className="community-inline-auth-actions">
+                    <button
+                      type="button"
+                      className="community-inline-auth-submit"
+                      onClick={() => {
+                        if (authName.trim().length >= 2 && authContact.trim().length >= 6) {
+                          quickSignInUser(authName, authContact, 'host')
+                          setShowAuthBox(false)
+                        } else {
+                          setError('Please enter your name (min 2 chars) and contact phone or email.')
+                        }
+                      }}
+                    >
+                      Verify &amp; Continue as Host
+                    </button>
+                    <button
+                      type="button"
+                      className="community-inline-auth-cancel"
+                      onClick={() => setShowAuthBox(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Category Switcher Tabs */}
             <div className="community-intake-tabs" role="tablist" aria-label="Listing categories">
@@ -727,6 +903,37 @@ export default function CommunityListingModal({
                 </div>
               )}
 
+              {/* Contact Information (for guest verification and player coordination) */}
+              {!currentUser && (
+                <div className="community-form-section community-contact-section">
+                  <div className="community-section-label">
+                    <span>Organizer / Host Contact (For player coordination &amp; verification)</span>
+                  </div>
+                  <div className="community-field-row">
+                    <label className="community-field-group">
+                      <span>Your Name / Organizer *</span>
+                      <input
+                        required
+                        type="text"
+                        placeholder="e.g. Coach Rajesh or Rahul Sharma"
+                        value={contactName}
+                        onChange={e => setContactName(e.target.value)}
+                      />
+                    </label>
+                    <label className="community-field-group">
+                      <span>Contact WhatsApp / Phone *</span>
+                      <input
+                        required
+                        type="tel"
+                        placeholder="e.g. +91 98765 43210"
+                        value={contactPhone}
+                        onChange={e => setContactPhone(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+
               <div className="community-intake-actions">
                 <button
                   type="button"
@@ -744,12 +951,17 @@ export default function CommunityListingModal({
                   {isSubmitting ? (
                     <>
                       <SiteIcon name="loader" size={16} />
-                      <span>Publishing to KhelGrid…</span>
+                      <span>{(!currentUser && (category === 'opportunity' || category === 'academy')) ? 'Submitting for Verification…' : 'Publishing to KhelGrid…'}</span>
+                    </>
+                  ) : (!currentUser && (category === 'opportunity' || category === 'academy')) ? (
+                    <>
+                      <SiteIcon name="shield-check" size={16} />
+                      <span>Submit for Verification (2-4 hrs)</span>
                     </>
                   ) : (
                     <>
                       <SiteIcon name="plus" size={16} />
-                      <span>Publish Listing Now</span>
+                      <span>{currentUser ? 'Publish Live as Verified Host' : 'Publish Listing Now'}</span>
                     </>
                   )}
                 </button>
