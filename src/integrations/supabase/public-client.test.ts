@@ -161,4 +161,16 @@ describe('public catalogue client', () => {
     expect(url.searchParams.get('select')).toContain('is_featured')
     expect(url.searchParams.get('order')).toContain('is_featured.desc')
   })
+
+  it('queries dynamic public.pickup_games catalogue', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([{ id: 'pg-1', sport: 'Pickleball', city: 'Bengaluru', is_featured: true }]))
+    const client = await loadClient()
+    const result = await client.getPickupGames()
+    expect(result).toEqual({ status: 'ready', data: [{ id: 'pg-1', sport: 'Pickleball', city: 'Bengaluru', is_featured: true }] })
+    const [requestUrl] = vi.mocked(fetch).mock.calls[0]
+    const url = new URL(String(requestUrl))
+    expect(url.pathname).toBe('/rest/v1/pickup_games')
+    expect(url.searchParams.get('publication_status')).toBe('eq.published')
+    expect(url.searchParams.get('order')).toContain('is_featured.desc')
+  })
 })

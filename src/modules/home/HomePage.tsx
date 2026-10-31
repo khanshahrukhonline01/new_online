@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { getAcademies, getCities, getOpportunities, getSports, getVenues } from '../../integrations/supabase/public-client'
-import type { CatalogueResult, DatabaseCity } from '../../integrations/supabase/public-client'
+import { getAcademies, getCities, getOpportunities, getPickupGames, getSports, getVenues } from '../../integrations/supabase/public-client'
+import type { CatalogueResult, DatabaseCity, DatabasePickupGame } from '../../integrations/supabase/public-client'
 import type { Academy, Opportunity, Sport, Venue } from '../../shared/domain'
 import { liveSportsEngine } from '../live/services/liveSportsEngine'
 import type { SportsMatch } from '../live/types'
@@ -23,6 +23,7 @@ interface PickupGame {
   spotsOpen: number
   totalPlayers: number
   confirmedPlayers: number
+  is_featured?: boolean
 }
 
 const COMMUNITY_PICKUP_GAMES: PickupGame[] = [
@@ -283,6 +284,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
     venues?: CatalogueResult<Venue>
     academies?: CatalogueResult<Academy>
     cities?: CatalogueResult<DatabaseCity>
+    pickupGames?: CatalogueResult<DatabasePickupGame>
   }>({})
 
   const [liveMatches, setLiveMatches] = useState<SportsMatch[]>([])
@@ -446,9 +448,9 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   // Load database catalogues
   useEffect(() => {
     let active = true
-    Promise.all([getSports(), getOpportunities(), getVenues(), getAcademies(), getCities()]).then(
-      ([sports, opportunities, venues, academies, cities]) => {
-        if (active) setCounts({ sports, opportunities, venues, academies, cities })
+    Promise.all([getSports(), getOpportunities(), getVenues(), getAcademies(), getCities(), getPickupGames()]).then(
+      ([sports, opportunities, venues, academies, cities, pickupGames]) => {
+        if (active) setCounts({ sports, opportunities, venues, academies, cities, pickupGames })
       },
     )
     return () => {
@@ -550,6 +552,33 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
       return a.name.localeCompare(b.name)
     })
   }, [counts.venues])
+
+  // Pickup games: dynamic database community matches with fallback to COMMUNITY_PICKUP_GAMES
+  const displayPickupGames = useMemo(() => {
+    if (counts.pickupGames?.status === 'ready' && counts.pickupGames.data.length > 0) {
+      return [...counts.pickupGames.data]
+        .sort((a, b) => {
+          if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1
+          return b.confirmed_players - a.confirmed_players
+        })
+        .map(g => ({
+          id: g.id,
+          sport: g.sport,
+          emoji: g.emoji || '⚽',
+          skillLevel: (g.skill_level as 'Beginner' | 'Intermediate' | 'Advanced') || 'Intermediate',
+          venueName: g.venue_name,
+          city: g.city,
+          timeLabel: g.time_label,
+          hostName: g.host_name,
+          pricePerPlayer: g.price_per_player,
+          spotsOpen: g.spots_open,
+          totalPlayers: g.total_players,
+          confirmedPlayers: g.confirmed_players,
+          is_featured: g.is_featured,
+        }))
+    }
+    return COMMUNITY_PICKUP_GAMES
+  }, [counts.pickupGames])
 
   return (
     <>
@@ -1147,14 +1176,14 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
               </button>
             </div>
             <a className="home-view-all-link" href="/play">
-              <span>Explore Games</span>
+              <span>Explore Games ({displayPickupGames.length})</span>
               <SiteIcon name="chevron-right" size={13} />
             </a>
           </div>
         </div>
 
         <div ref={pickupRailRef} className="home-touch-rail" tabIndex={0} aria-label="Pickup sports games list">
-          {COMMUNITY_PICKUP_GAMES.map(g => (
+          {displayPickupGames.map(g => (
             <a key={g.id} href="/play" className="home-rail-card">
               <div>
                 <div className="home-card-media">
@@ -1167,6 +1196,12 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                   />
                   <div className="home-card-overlay-top-left">
                     <span className="home-media-badge-dark">{g.sport}</span>
+                    {g.is_featured && (
+                      <span className="home-featured-star-pill">
+                        <SiteIcon name="sparkles" size={11} />
+                        Featured
+                      </span>
+                    )}
                     <span
                       className="home-media-badge-dark"
                       style={{ background: 'rgba(255,255,255,0.9)', color: '#0f172a' }}

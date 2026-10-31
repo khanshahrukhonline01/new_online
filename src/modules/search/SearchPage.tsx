@@ -5,10 +5,11 @@ import {
   getCoaches,
   getEvents,
   getOpportunities,
+  getPickupGames,
   getSports,
   getVenues,
 } from '../../integrations/supabase/public-client'
-import type { CatalogueResult, DatabaseCity } from '../../integrations/supabase/public-client'
+import type { CatalogueResult, DatabaseCity, DatabasePickupGame } from '../../integrations/supabase/public-client'
 import { getChroniclePapers } from '../../integrations/supabase/chronicle-client'
 import type { ChronicleCatalogueResult } from '../../integrations/supabase/chronicle-client'
 import type { ResearchPaper } from '../khelchronicle/data/khelchronicleData'
@@ -18,7 +19,7 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
 
 type SearchRecord = {
-  type: 'Sport' | 'Opportunity' | 'Venue' | 'Academy' | 'Coach' | 'Event' | 'Research' | 'City'
+  type: 'Sport' | 'Opportunity' | 'Venue' | 'Academy' | 'Coach' | 'Event' | 'Research' | 'City' | 'Pickup'
   title: string
   detail: string
   href: string
@@ -75,6 +76,12 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
     status: 'loading',
     data: [],
   })
+  const [pickupGames, setPickupGames] = useState<
+    CatalogueResult<DatabasePickupGame> | { status: 'loading'; data: [] }
+  >({
+    status: 'loading',
+    data: [],
+  })
 
   useEffect(() => {
     let active = true
@@ -87,7 +94,8 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
       getEvents(),
       getChroniclePapers(),
       getCities(),
-    ]).then(([s, o, v, a, c, e, cp, ci]) => {
+      getPickupGames(),
+    ]).then(([s, o, v, a, c, e, cp, ci, pg]) => {
       if (active) {
         setSports(s)
         setOpportunities(o)
@@ -97,6 +105,7 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
         setEvents(e)
         setChroniclePapers(cp)
         setCities(ci)
+        setPickupGames(pg)
       }
     })
     return () => {
@@ -187,12 +196,21 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
             keywords: [item.name, item.state, item.zone, ...(item.venues || [])],
           }))
         : []),
+      ...(pickupGames.status === 'ready'
+        ? pickupGames.data.map(item => ({
+            type: 'Pickup' as const,
+            title: `${item.sport} Pickup Match · ${item.venue_name}`,
+            detail: `${item.city} · ${item.time_label} · ${item.spots_open} spots open · ${item.price_per_player}`,
+            href: '/play',
+            keywords: [item.sport, item.venue_name, item.city, item.skill_level, item.host_name, 'pickup', 'game', 'play'],
+          }))
+        : []),
     ],
-    [sports, opportunities, venues, academies, coaches, events, chroniclePapers, cities],
+    [sports, opportunities, venues, academies, coaches, events, chroniclePapers, cities, pickupGames],
   )
 
-  const ready = [sports, opportunities, venues, academies, coaches, events, chroniclePapers, cities].some(result => result.status === 'ready')
-  const pending = [sports, opportunities, venues, academies, coaches, events, chroniclePapers, cities].some(result => result.status === 'loading')
+  const ready = [sports, opportunities, venues, academies, coaches, events, chroniclePapers, cities, pickupGames].some(result => result.status === 'ready')
+  const pending = [sports, opportunities, venues, academies, coaches, events, chroniclePapers, cities, pickupGames].some(result => result.status === 'loading')
 
   const q = query.trim().toLocaleLowerCase()
   const results = useMemo(
@@ -226,9 +244,9 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
       label: 'Content type',
       value: category,
       onChange: setCategory,
-      options: ['Sport', 'Opportunity', 'Venue', 'Academy', 'Coach', 'Event', 'Research', 'City'].map(value => ({
+      options: ['Sport', 'Opportunity', 'Venue', 'Academy', 'Coach', 'Event', 'Research', 'City', 'Pickup'].map(value => ({
         value: value.toLocaleLowerCase(),
-        label: value === 'Research' ? 'Research (KhelChronicle)' : value,
+        label: value === 'Research' ? 'Research (KhelChronicle)' : value === 'Pickup' ? 'Pickup Games' : value,
       })),
     },
   ]

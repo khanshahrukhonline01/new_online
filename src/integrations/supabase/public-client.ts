@@ -10,7 +10,7 @@ export type CatalogueResult<T> =
   | { status: 'unavailable'; data: []; message: string }
 
 type QueryOptions = {
-  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities'
+  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities' | 'pickup_games'
   select: string
   order: string
   filters: Record<string, string>
@@ -223,6 +223,33 @@ export function getCities() {
     select: 'id,slug,name,state,zone,is_metro,venues',
     order: 'name.asc',
     filters: {},
+  })
+}
+
+export interface DatabasePickupGame {
+  id: string
+  slug: string
+  sport: string
+  emoji: string
+  skill_level: 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels'
+  venue_name: string
+  city: string
+  time_label: string
+  host_name: string
+  price_per_player: string
+  spots_open: number
+  total_players: number
+  confirmed_players: number
+  is_featured: boolean
+  publication_status: string
+}
+
+export function getPickupGames() {
+  return readCatalogue<DatabasePickupGame>({
+    table: 'pickup_games',
+    select: 'id,slug,sport,emoji,skill_level,venue_name,city,time_label,host_name,price_per_player,spots_open,total_players,confirmed_players,is_featured,publication_status',
+    order: 'is_featured.desc.nullslast,created_at.desc',
+    filters: { publication_status: 'eq.published' },
   })
 }
 

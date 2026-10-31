@@ -104,6 +104,32 @@ export interface VideoClip {
   }[]
 }
 
+export interface PickupGame {
+  id: string
+  slug?: string
+  sport: string
+  emoji?: string
+  skill_level?: 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels'
+  skillLevel?: 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels'
+  venue_name?: string
+  venueName?: string
+  city: string
+  time_label?: string
+  timeLabel?: string
+  host_name?: string
+  hostName?: string
+  price_per_player?: string
+  pricePerPlayer?: string
+  spots_open?: number
+  spotsOpen?: number
+  total_players?: number
+  totalPlayers?: number
+  confirmed_players?: number
+  confirmedPlayers?: number
+  is_featured?: boolean
+  publication_status?: string
+}
+
 export interface AthleteProfile {
   id: string
   userId?: string

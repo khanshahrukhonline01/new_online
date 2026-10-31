@@ -27,6 +27,7 @@ import KhelChronicleAuthorPage from './modules/khelchronicle/KhelChronicleAuthor
 import KhelChronicleSubmitPage from './modules/khelchronicle/KhelChronicleSubmitPage'
 import TalentScannerPage from './modules/talent-scanner/TalentScannerPage'
 import CitiesPage from './modules/directories/CitiesPage'
+import PlayPage from './modules/play/PlayPage'
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
 
@@ -106,6 +107,7 @@ export default function App() {
     case 'feature':
       if (match.canonicalPath === '/sports-cv') page = <SportsCvWizard />
       else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/play') page = <PlayPage onNavigate={navigate} />
       else if (match.canonicalPath === '/coaches') page = <FeatureDirectoryPage kind="coaches" />
       else if (match.canonicalPath === '/academies' || match.canonicalPath === '/academy') page = <FeatureDirectoryPage kind="academies" />
       else if (match.canonicalPath === '/events') page = <FeatureDirectoryPage kind="events" />
