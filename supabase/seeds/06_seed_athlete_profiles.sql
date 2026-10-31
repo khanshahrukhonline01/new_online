@@ -1,14 +1,23 @@
--- KhelGrid: Setup & Seed Athlete Profiles, Video Telemetry, and Trial Reminders
--- Run in Supabase SQL Editor: https://supabase.com/dashboard/project/hznsbxvovjxvmnchzzqt/sql
+-- ============================================================================
+-- KhelGrid Seeds: Step 06 - Athlete Profiles & Player Cards
+-- Runner: Run in Supabase SQL Editor
+-- ============================================================================
 
 begin;
 
 -- 1. Athlete Profiles Table
 create table if not exists public.athlete_profiles (
   id uuid primary key default gen_random_uuid(),
-  username text not null unique check (username ~ '^[a-z0-9]+(-[a-z0-9]+)*$' and char_length(username) between 3 and 50),
-  full_name text not null check (char_length(trim(full_name)) between 2 and 120),
-  sport text not null check (char_length(trim(sport)) between 2 and 80),
+  username text not null unique check (
+    username ~ '^[a-z0-9]+(-[a-z0-9]+)*$' 
+    and char_length(username) between 3 and 50
+  ),
+  full_name text not null check (
+    char_length(trim(full_name)) between 2 and 120
+  ),
+  sport text not null check (
+    char_length(trim(sport)) between 2 and 80
+  ),
   playing_position text not null default 'Athlete',
   city text not null default 'India',
   state text,
@@ -17,69 +26,63 @@ create table if not exists public.athlete_profiles (
   coach text,
   experience_years text,
   primary_foot_or_hand text,
-  height_cm integer check (height_cm is null or (height_cm between 100 and 250)),
-  weight_kg integer check (weight_kg is null or (weight_kg between 25 and 200)),
-  summary text check (summary is null or char_length(summary) <= 2000),
+  height_cm integer check (
+    height_cm is null or (height_cm between 100 and 250)
+  ),
+  weight_kg integer check (
+    weight_kg is null or (weight_kg between 25 and 200)
+  ),
+  summary text check (
+    summary is null or char_length(summary) <= 2000
+  ),
   achievements jsonb not null default '[]'::jsonb,
   video_clips jsonb not null default '[]'::jsonb,
   fitness_benchmarks jsonb not null default '{}'::jsonb,
-  verification_status text not null default 'community'
-    check (verification_status in ('community', 'verified', 'pro')),
-  publication_status text not null default 'published'
-    check (publication_status in ('draft', 'published', 'archived')),
+  player_card_stats jsonb not null default '{}'::jsonb,
+  verification_status text not null default 'community' check (
+    verification_status in ('community', 'verified', 'pro')
+  ),
+  publication_status text not null default 'published' check (
+    publication_status in ('draft', 'published', 'archived')
+  ),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
--- 2. Selection Trial Reminders Table
-create table if not exists public.trial_reminders (
-  id uuid primary key default gen_random_uuid(),
-  trial_slug text not null,
-  trial_title text not null,
-  starts_at timestamptz,
-  deadline_date timestamptz,
-  city text,
-  venue_name text,
-  notification_type text not null default 'whatsapp'
-    check (notification_type in ('whatsapp', 'google-calendar', 'ical')),
-  athlete_phone text,
-  athlete_email text,
-  created_at timestamptz not null default now()
-);
-
--- 3. Indexes
+-- 2. Indexes
 create index if not exists athlete_profiles_username_idx on public.athlete_profiles (username);
-create index if not exists athlete_profiles_sport_city_idx on public.athlete_profiles (sport, city);
-create index if not exists trial_reminders_trial_slug_idx on public.trial_reminders (trial_slug);
+create index if not exists athlete_profiles_sport_idx on public.athlete_profiles (sport);
+create index if not exists athlete_profiles_city_state_idx on public.athlete_profiles (city, state);
+create index if not exists athlete_profiles_verification_idx on public.athlete_profiles (verification_status);
 
--- 4. Row Level Security & Policies
+-- 3. Row Level Security
 alter table public.athlete_profiles enable row level security;
-alter table public.trial_reminders enable row level security;
 
--- Public read access to published profiles
 drop policy if exists "athlete_profiles_public_read" on public.athlete_profiles;
 create policy "athlete_profiles_public_read" on public.athlete_profiles
-  for select to anon, authenticated using (publication_status = 'published');
+  for select to anon, authenticated 
+  using (publication_status = 'published');
 
--- Public insert access for new/published profiles
 drop policy if exists "athlete_profiles_public_insert" on public.athlete_profiles;
 create policy "athlete_profiles_public_insert" on public.athlete_profiles
-  for insert to anon, authenticated with check (true);
+  for insert to anon, authenticated 
+  with check (true);
 
--- Public insert access for trial alerts
-drop policy if exists "trial_reminders_public_insert" on public.trial_reminders;
-create policy "trial_reminders_public_insert" on public.trial_reminders
-  for insert to anon, authenticated with check (true);
+drop policy if exists "athlete_profiles_self_update" on public.athlete_profiles;
+create policy "athlete_profiles_self_update" on public.athlete_profiles
+  for update to authenticated 
+  using (true)
+  with check (true);
 
--- 5. Permissions
 grant select, insert on public.athlete_profiles to anon, authenticated;
-grant select, insert on public.trial_reminders to anon, authenticated;
+grant update on public.athlete_profiles to authenticated;
 
--- 6. Initial Seed: 3 Flagship Verified Grassroots Athlete Showcase Profiles
+-- 4. Showcase Athletes Seed
 insert into public.athlete_profiles (
   username, full_name, sport, playing_position, city, state, date_of_birth,
   team_or_academy, coach, experience_years, primary_foot_or_hand, height_cm, weight_kg,
-  summary, verification_status, publication_status, achievements, video_clips, fitness_benchmarks
+  summary, verification_status, publication_status, achievements, video_clips, 
+  fitness_benchmarks, player_card_stats
 )
 values
   (
@@ -137,7 +140,8 @@ values
       "cmjHeightCm": 54,
       "tier": "Tier 1 — Elite National Candidate",
       "percentileAvg": 88
-    }'::jsonb
+    }'::jsonb,
+    '{"ovr": 88, "pac": 89, "sta": 86, "pwr": 91, "exp": 82, "tec": 87, "ach": 88}'::jsonb
   ),
   (
     'priya-nair',
@@ -194,7 +198,8 @@ values
       "cmjHeightCm": 48,
       "tier": "Tier 1 — Elite National Candidate",
       "percentileAvg": 91
-    }'::jsonb
+    }'::jsonb,
+    '{"ovr": 91, "pac": 92, "sta": 90, "pwr": 93, "exp": 85, "tec": 94, "ach": 92}'::jsonb
   ),
   (
     'arjun-singh',
@@ -251,7 +256,8 @@ values
       "cmjHeightCm": 59,
       "tier": "Tier 1 — Elite National Candidate",
       "percentileAvg": 94
-    }'::jsonb
+    }'::jsonb,
+    '{"ovr": 93, "pac": 96, "sta": 88, "pwr": 95, "exp": 84, "tec": 91, "ach": 92}'::jsonb
   )
 on conflict (username) do update set
   full_name = excluded.full_name,
@@ -272,6 +278,7 @@ on conflict (username) do update set
   achievements = excluded.achievements,
   video_clips = excluded.video_clips,
   fitness_benchmarks = excluded.fitness_benchmarks,
+  player_card_stats = excluded.player_card_stats,
   updated_at = now();
 
 commit;

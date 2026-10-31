@@ -165,7 +165,10 @@ On `/sports`, the catalogue displayed only **22 sports**, while top navigation s
   - Universal `.ics` iCalendar download with a 48-hour advance alert trigger for Apple Calendar and Microsoft Outlook.
 - **WhatsApp Notification Integration**:
   - Direct WhatsApp alert action with pre-populated message detailing trial date, age category, and direct registration link for self and coach forwarding.
-- **Database Persistence**: Supabase migration `20261031120000_athlete_profiles_and_trial_reminders.sql` adding `public.athlete_profiles` and `public.trial_reminders`.
+- **Database Persistence**: Decoupled domain migrations:
+  - `20261031120000_create_athlete_profiles.sql` (Athlete Identity, Player Cards, Biometrics, Video Telemetry)
+  - `20261031130000_create_trial_reminders.sql` (Selection Trial Deadlines, WhatsApp / Calendar Alert queues)
+  - Standalone runners: `setup_athlete_profiles.sql` and `setup_trial_reminders.sql` (and `seeds/06_seed_athlete_profiles.sql` & `seeds/07_seed_trial_reminders.sql`).
 
 ---
 
