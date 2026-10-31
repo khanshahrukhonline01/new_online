@@ -174,6 +174,34 @@ describe('public catalogue client', () => {
     expect(url.searchParams.get('order')).toContain('is_featured.desc')
   })
 
+  it('queries dynamic public.site_announcements catalogue', async () => {
+    const mockAnnouncement = {
+      id: 'ann-test',
+      slug: 'test-announcement',
+      badge: 'Special Event',
+      title: 'National Badminton Cup',
+      subtitle: 'Registrations open',
+      cta_label: 'Explore',
+      cta_url: '/tournaments',
+      tone: 'emerald',
+      starts_at: '2026-01-01T00:00:00Z',
+      ends_at: null,
+      priority: 100,
+      is_active: true,
+    }
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([mockAnnouncement]))
+    const client = await loadClient()
+    const result = await client.getAnnouncements()
+    expect(result.status).toBe('ready')
+    expect(result.data).toEqual([mockAnnouncement])
+    const [requestUrl] = vi.mocked(fetch).mock.calls[0]
+    const url = new URL(String(requestUrl))
+    expect(url.pathname).toBe('/rest/v1/site_announcements')
+    expect(url.searchParams.get('is_active')).toBe('eq.true')
+    expect(url.searchParams.get('order')).toContain('priority.desc')
+  })
+
+
   it('validates required fields on submitCommunityListing', async () => {
     const client = await loadClient()
     const noCity = await client.submitCommunityListing({

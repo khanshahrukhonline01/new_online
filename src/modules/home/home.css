@@ -1514,5 +1514,82 @@
   }
 }
 
+/* Hero Seasonal Announcement Pill */
+.home-hero-announcement-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 3px 12px 3px 4px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 11.5px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  width: fit-content;
+  max-width: 100%;
+  animation: heroPillFade 0.3s ease-out;
+}
+
+@keyframes heroPillFade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.home-hero-pill-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.home-hero-pill-badge.tone-emerald {
+  background: rgba(16, 185, 129, 0.28);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+}
+.home-hero-pill-badge.tone-indigo {
+  background: rgba(99, 102, 241, 0.28);
+  color: #a5b4fc;
+  border: 1px solid rgba(129, 140, 248, 0.45);
+}
+.home-hero-pill-badge.tone-amber {
+  background: rgba(245, 158, 11, 0.28);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+}
+.home-hero-pill-badge.tone-rose {
+  background: rgba(244, 63, 94, 0.28);
+  color: #fda4af;
+  border: 1px solid rgba(244, 63, 94, 0.45);
+}
+.home-hero-pill-badge.tone-cyan {
+  background: rgba(6, 182, 212, 0.28);
+  color: #67e8f9;
+  border: 1px solid rgba(6, 182, 212, 0.45);
+}
+
+.home-hero-pill-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #f8fafc;
+  text-decoration: none;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.16s ease;
+}
+
+.home-hero-pill-link:hover {
+  color: #34d399;
+}
+
+
 
 

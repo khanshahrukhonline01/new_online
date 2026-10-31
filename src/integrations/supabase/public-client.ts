@@ -10,7 +10,7 @@ export type CatalogueResult<T> =
   | { status: 'unavailable'; data: []; message: string }
 
 type QueryOptions = {
-  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities' | 'pickup_games'
+  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities' | 'pickup_games' | 'site_announcements'
   select: string
   order: string
   filters: Record<string, string>
@@ -328,6 +328,87 @@ export async function getPickupGames(): Promise<CatalogueResult<DatabasePickupGa
   if (communitySubmissions.pickup_games.length > 0) {
     return { status: 'ready', data: [...communitySubmissions.pickup_games] }
   }
+  return result
+}
+
+export interface DatabaseAnnouncement {
+  id: string
+  slug: string
+  badge: string
+  title: string
+  subtitle?: string | null
+  cta_label: string
+  cta_url: string
+  tone: 'emerald' | 'amber' | 'indigo' | 'rose' | 'cyan'
+  starts_at: string
+  ends_at?: string | null
+  priority: number
+  is_active: boolean
+}
+
+export const BASELINE_ANNOUNCEMENTS: DatabaseAnnouncement[] = [
+  {
+    id: 'ann-1',
+    slug: 'delhi-state-trials-open-2026',
+    badge: 'State Trials Open',
+    title: 'Delhi State U-17 Football Trials Registration Open',
+    subtitle: 'Official AIFF & DSA affiliated state trials commencing across Delhi NCR hubs.',
+    cta_label: 'View Trials',
+    cta_url: '/opportunities?city=Delhi',
+    tone: 'emerald',
+    starts_at: '2026-10-01T00:00:00Z',
+    ends_at: null,
+    priority: 100,
+    is_active: true,
+  },
+  {
+    id: 'ann-2',
+    slug: 'isl-matchday-live-screenings',
+    badge: 'Live Matchday',
+    title: 'ISL 2026 Live Match Center & Screening Lounges',
+    subtitle: 'Real-time scores, verified match stats, and fan-zones across 16 metro cities.',
+    cta_label: 'Go to Match Center',
+    cta_url: '/live',
+    tone: 'indigo',
+    starts_at: '2026-10-01T00:00:00Z',
+    ends_at: null,
+    priority: 90,
+    is_active: true,
+  },
+  {
+    id: 'ann-3',
+    slug: 'bengaluru-monsoon-pickleball-cup',
+    badge: 'Championship Alert',
+    title: 'Bengaluru Community Pickleball & Box Cricket Open',
+    subtitle: 'Join open doubles brackets and mixed pickup games at FerroHub and Kicks on Grass.',
+    cta_label: 'Join a Game',
+    cta_url: '/play',
+    tone: 'amber',
+    starts_at: '2026-10-01T00:00:00Z',
+    ends_at: null,
+    priority: 80,
+    is_active: true,
+  },
+]
+
+export async function getAnnouncements(): Promise<CatalogueResult<DatabaseAnnouncement>> {
+  const result = await readCatalogue<DatabaseAnnouncement>({
+    table: 'site_announcements',
+    select: 'id,slug,badge,title,subtitle,cta_label,cta_url,tone,starts_at,ends_at,priority,is_active',
+    order: 'priority.desc,starts_at.desc',
+    filters: { is_active: 'eq.true' },
+  })
+
+  if (result.status === 'ready' && result.data.length > 0) {
+    const now = Date.now()
+    const activeNow = result.data.filter(a => {
+      const start = new Date(a.starts_at).getTime()
+      const end = a.ends_at ? new Date(a.ends_at).getTime() : Infinity
+      return start <= now && now <= end
+    })
+    return { status: 'ready', data: activeNow.length > 0 ? activeNow : result.data }
+  }
+
   return result
 }
 

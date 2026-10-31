@@ -29,6 +29,7 @@ import TalentScannerPage from './modules/talent-scanner/TalentScannerPage'
 import CitiesPage from './modules/directories/CitiesPage'
 import PlayPage from './modules/play/PlayPage'
 import CommunityListingModal from './shared/components/CommunityListingModal'
+import SiteAnnouncementBanner from './shared/components/SiteAnnouncementBanner'
 import type { CommunityListingCategory } from './integrations/supabase/public-client'
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
@@ -177,7 +178,11 @@ export default function App() {
     </header>
     <div className="app-workspace">
       <Sidebar activePath={path} onNavigate={navigate} open={menuOpen} onClose={() => setMenuOpen(false)} toggleRef={menuToggleRef} collapsed={sidebarCollapsed} onOpenIntake={() => openIntake('pickup_game')} />
-      <main id="main-content" className="page-shell"><SportsBar activePath={path} onNavigate={navigate} /><div className="page-content">{page}</div></main>
+      <main id="main-content" className="page-shell">
+        <SiteAnnouncementBanner onNavigate={navigate} />
+        <SportsBar activePath={path} onNavigate={navigate} />
+        <div className="page-content">{page}</div>
+      </main>
     </div>
 
     <footer className="site-footer">

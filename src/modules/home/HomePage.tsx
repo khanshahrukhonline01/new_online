@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { getAcademies, getCities, getOpportunities, getPickupGames, getSports, getVenues } from '../../integrations/supabase/public-client'
-import type { CatalogueResult, DatabaseCity, DatabasePickupGame } from '../../integrations/supabase/public-client'
+import { getAcademies, getAnnouncements, getCities, getOpportunities, getPickupGames, getSports, getVenues } from '../../integrations/supabase/public-client'
+import type { CatalogueResult, DatabaseAnnouncement, DatabaseCity, DatabasePickupGame } from '../../integrations/supabase/public-client'
 import type { Academy, Opportunity, Sport, Venue } from '../../shared/domain'
 import { liveSportsEngine } from '../live/services/liveSportsEngine'
 import type { SportsMatch } from '../live/types'
@@ -295,6 +295,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   const [heroSearch, setHeroSearch] = useState('')
   const [selectedCity, setSelectedCity] = useState('All India')
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false)
+  const [seasonalAnnouncement, setSeasonalAnnouncement] = useState<DatabaseAnnouncement | null>(null)
 
   const greetingTime = useMemo(() => {
     const hour = new Date().getHours()
@@ -449,9 +450,22 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   useEffect(() => {
     let active = true
     const loadCatalogues = () => {
-      Promise.all([getSports(), getOpportunities(), getVenues(), getAcademies(), getCities(), getPickupGames()]).then(
-        ([sports, opportunities, venues, academies, cities, pickupGames]) => {
-          if (active) setCounts({ sports, opportunities, venues, academies, cities, pickupGames })
+      Promise.all([
+        getSports(),
+        getOpportunities(),
+        getVenues(),
+        getAcademies(),
+        getCities(),
+        getPickupGames(),
+        getAnnouncements(),
+      ]).then(
+        ([sports, opportunities, venues, academies, cities, pickupGames, announcements]) => {
+          if (active) {
+            setCounts({ sports, opportunities, venues, academies, cities, pickupGames })
+            if (announcements.status === 'ready' && announcements.data.length > 0) {
+              setSeasonalAnnouncement(announcements.data[0])
+            }
+          }
         },
       )
     }
@@ -614,6 +628,21 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
           {/* Top Row: Greeting, Heading & Location Pill */}
           <div className="home-hero-top-row">
             <div className="home-hero-heading-group">
+              {seasonalAnnouncement && (
+                <div className="home-hero-announcement-pill" role="status" aria-label="Featured announcement">
+                  <span className={`home-hero-pill-badge tone-${seasonalAnnouncement.tone}`}>
+                    {seasonalAnnouncement.badge}
+                  </span>
+                  <a
+                    href={seasonalAnnouncement.cta_url}
+                    className="home-hero-pill-link"
+                    onClick={e => onNavigate?.(e, seasonalAnnouncement.cta_url)}
+                  >
+                    <span>{seasonalAnnouncement.title}</span>
+                    <SiteIcon name="arrow-up-right" size={12} />
+                  </a>
+                </div>
+              )}
               <div className="home-hero-greeting-line">
                 <span className="home-hero-live-dot" />
                 <span className="home-hero-greeting-text">{greetingTime}</span>
