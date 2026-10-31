@@ -35,11 +35,23 @@ export interface Venue {
   name: string
   description: string | null
   city: string
+  state?: string | null
   address: string | null
   timezone: string
   government_facility?: boolean
   is_featured?: boolean
   sports?: Sport[]
+  sport?: string
+  phone?: string | null
+  email?: string | null
+  timings?: string | null
+  surface_type?: string | null
+  court_count?: string | null
+  pricing?: string | null
+  facilities?: string[]
+  rules?: string[]
+  rating?: number
+  review_count?: number
 }
 
 export interface Academy {
@@ -53,6 +65,19 @@ export interface Academy {
   public_contact_url: string | null
   verification_status: 'unverified' | 'pending_review' | 'verified' | 'rejected'
   is_featured?: boolean
+  sport?: string
+  sports?: Sport[] | string[]
+  address?: string | null
+  phone?: string | null
+  email?: string | null
+  head_coach?: string | null
+  facilities?: string[]
+  age_groups?: string[]
+  timings?: string | null
+  fee_structure?: string | null
+  admission_open?: boolean
+  rating?: number
+  review_count?: number
 }
 
 export interface Coach {

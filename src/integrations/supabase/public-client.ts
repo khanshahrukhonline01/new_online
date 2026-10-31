@@ -1,5 +1,9 @@
 import type { Academy, Coach, EventItem, Opportunity, Sport, Venue } from '../../shared/domain'
 import { broadcastRealtimeEvent, type RealtimeTable } from './realtime-client'
+import {
+  getCuratedAcademyBySlug,
+  getCuratedVenueBySlug,
+} from '../../shared/data/curatedEntitiesData'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -234,6 +238,32 @@ export async function getAcademies(): Promise<CatalogueResult<Academy>> {
     return { status: 'ready', data: [...communitySubmissions.academies] }
   }
   return result
+}
+
+export async function getAcademyBySlug(slug: string): Promise<Academy | undefined> {
+  const clean = slug.toLowerCase().trim()
+  const result = await getAcademies()
+  if (result.status === 'ready') {
+    const found = result.data.find(a => a.slug.toLowerCase() === clean)
+    if (found) return found
+  }
+  const communityFound = communitySubmissions.academies.find(a => a.slug.toLowerCase() === clean)
+  if (communityFound) return communityFound
+
+  return getCuratedAcademyBySlug(clean)
+}
+
+export async function getVenueBySlug(slug: string): Promise<Venue | undefined> {
+  const clean = slug.toLowerCase().trim()
+  const result = await getVenues()
+  if (result.status === 'ready') {
+    const found = result.data.find(v => v.slug.toLowerCase() === clean)
+    if (found) return found
+  }
+  const communityFound = communitySubmissions.venues.find(v => v.slug.toLowerCase() === clean)
+  if (communityFound) return communityFound
+
+  return getCuratedVenueBySlug(clean)
 }
 
 export function getCoaches() {
@@ -632,6 +662,7 @@ export type CommunityListingResult =
       record: Record<string, unknown>
       message: string
       requiresReview: boolean
+      detailPath?: string
     }
   | { status: 'unavailable'; message: string }
 
@@ -675,11 +706,19 @@ export async function submitCommunityListing(
         id: `acad-${randomSuffix}`,
         slug: `${slugify(input.name)}-${slugify(city)}-${randomSuffix}`,
         name: input.name.trim(),
-        description: input.description?.trim() || (input.sport ? `Premier training academy and athlete development for ${input.sport}.` : 'Premier sports training academy.'),
+        sport: input.sport?.trim() || 'Multi-Sport',
+        description: input.description?.trim() || (input.sport ? `Premier training academy and athlete development for ${input.sport} in ${city}.` : 'Premier sports training academy.'),
         city,
         state: input.state?.trim() || null,
+        address: input.state?.trim() ? `${input.name.trim()}, ${city}, ${input.state.trim()}` : `${input.name.trim()}, ${city}`,
         website_url: input.website_url?.trim() || null,
         public_contact_url: input.public_contact_url?.trim() || input.contact_phone?.trim() || null,
+        phone: input.contact_phone?.trim() || null,
+        facilities: ['Professional Training Ground', 'Floodlights', 'Certified Coaching Staff', 'First Aid Support', 'Changing Rooms'],
+        age_groups: ['Under-12', 'Under-16', 'Open Senior'],
+        timings: 'Morning: 6:00 AM – 9:00 AM | Evening: 4:30 PM – 7:30 PM',
+        fee_structure: 'Contact academy for current fee & trial batch details',
+        admission_open: true,
         publication_status: requiresReview ? 'pending_review' : 'published',
         verification_status: isVerified ? 'verified' : 'pending_review',
         is_featured: false,
@@ -695,10 +734,18 @@ export async function submitCommunityListing(
         id: `venue-${randomSuffix}`,
         slug: `${slugify(input.name)}-${slugify(city)}-${randomSuffix}`,
         name: input.name.trim(),
-        description: input.description?.trim() || (input.sport ? `Multi-sport arena and play facility for ${input.sport}.` : 'Sports venue with professional playing surfaces.'),
+        sport: input.sport?.trim() || 'Multi-Sport',
+        description: input.description?.trim() || (input.sport ? `Multi-sport arena and play facility for ${input.sport} in ${city}.` : 'Sports venue with professional playing surfaces.'),
         city,
         address: input.address?.trim() || `${input.name.trim()}, ${city}`,
+        phone: input.contact_phone?.trim() || null,
         timezone: 'Asia/Kolkata',
+        timings: '6:00 AM – 11:00 PM (Daily)',
+        surface_type: input.sport === 'Football' ? '50mm FIFA Standard Artificial Turf' : input.sport === 'Badminton' ? 'BWF Approved Wooden Courts' : 'Standard Playing Surface',
+        court_count: 'Multiple Playing Courts & Turfs',
+        pricing: 'Hourly rates starting from ₹800/hr',
+        facilities: ['Floodlights / LED Lighting', 'Drinking Water', 'Washrooms & Changing Rooms', 'Free Parking', 'Equipment Available'],
+        rules: ['Proper athletic / turf shoes required', 'Arrive 10 minutes prior to booked slot', 'Follow facility safety guidelines'],
         publication_status: 'published',
         is_featured: false,
       }
@@ -845,6 +892,14 @@ export async function submitCommunityListing(
       ? `${categoryName} has been published instantly with your Verified Host credentials!`
       : `${categoryName} has been published and is now live on KhelGrid!`
 
+  const detailPath = input.category === 'academy'
+    ? `/academies/${record.slug}`
+    : input.category === 'venue'
+      ? `/venues/${record.slug}`
+      : input.category === 'opportunity'
+        ? `/opportunities/${record.slug}`
+        : '/play'
+
   return {
     status: 'submitted',
     mode,
@@ -852,6 +907,7 @@ export async function submitCommunityListing(
     record,
     message,
     requiresReview,
+    detailPath,
   }
 }
 

@@ -3,6 +3,8 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 import { SportIcon } from '../../shared/sports/sportIcons'
 import { getSportDataBySlug, type SportDetailData } from './data/sportsData'
 import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
+import { ShareBar } from '../../shared/components/ShareBar'
+import { updatePageSeoMetadata } from '../../shared/utils/seoAndShare'
 import {
   getOpportunities,
   getVenues,
@@ -124,6 +126,38 @@ export default function SportDetailPage({ slug, onNavigate }: SportDetailPagePro
     }
   }, [sport.name])
 
+  // SEO & Schema.org JSON-LD
+  useEffect(() => {
+    const pageTitle = `${sport.name} in India — Selection Trials, Academies, Venues & Rules | KhelGrid`
+    const pageDesc = `${sport.tagline} Discover official national championships, age-group selection pathways, and coaching academies for ${sport.name} on KhelGrid.`
+    const pageUrl = `https://khelgrid.com/sports/${sport.slug}`
+
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'SportsEvent',
+      name: sport.name,
+      description: sport.description,
+      url: pageUrl,
+    }
+
+    const cleanup = updatePageSeoMetadata({
+      title: pageTitle,
+      description: pageDesc,
+      canonicalUrl: pageUrl,
+      keywords: [
+        sport.name,
+        `${sport.name} India`,
+        `${sport.name} selection trials`,
+        `${sport.name} academies`,
+        `${sport.name} venues`,
+        'KhelGrid sports directory',
+      ],
+      jsonLd,
+    })
+
+    return cleanup
+  }, [sport])
+
   const handleLink = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (onNavigate) {
       onNavigate(event, href)
@@ -199,6 +233,15 @@ export default function SportDetailPage({ slug, onNavigate }: SportDetailPagePro
               <SiteIcon name="users" size={14} />
               <span>Find Coaches</span>
             </a>
+          </div>
+
+          <div style={{ marginTop: '16px' }}>
+            <ShareBar
+              title={`${sport.name} in India`}
+              text={`Explore ${sport.name} selection trials, academies, and venues across India on KhelGrid:`}
+              url={`https://khelgrid.com/sports/${sport.slug}`}
+              compact
+            />
           </div>
         </div>
       </header>
@@ -454,10 +497,17 @@ export default function SportDetailPage({ slug, onNavigate }: SportDetailPagePro
                 </h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
                   {academies.map(acad => (
-                    <div key={acad.id} style={{ padding: '14px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#ffffff' }}>
-                      <strong style={{ display: 'block', fontSize: '13px', color: '#0f172a' }}>{acad.name}</strong>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>📍 {acad.city || 'India'}</span>
-                    </div>
+                    <a
+                      key={acad.id}
+                      href={`/academies/${acad.slug}`}
+                      onClick={e => handleLink(e, `/academies/${acad.slug}`)}
+                      style={{ padding: '14px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', background: '#ffffff', textDecoration: 'none', display: 'block' }}
+                    >
+                      <strong style={{ display: 'block', fontSize: '13.5px', color: '#0f172a', marginBottom: '4px' }}>{acad.name}</strong>
+                      <span style={{ fontSize: '12px', color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <SiteIcon name="map-pin" size={12} /> {acad.city || 'India'}
+                      </span>
+                    </a>
                   ))}
                 </div>
               </div>
