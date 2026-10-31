@@ -57,7 +57,7 @@ export function TopSportsComplexes({ onNavigate }: TopSportsComplexesProps) {
           href="/cities"
           onClick={e => handleClick(e, '/cities')}
         >
-          <span>Explore all 16 cities</span>
+          <span>Explore all 50+ cities across India</span>
           <span aria-hidden="true">→</span>
         </a>
       </div>
@@ -99,7 +99,7 @@ export function TopSportsComplexes({ onNavigate }: TopSportsComplexesProps) {
 
       <div className="footer-cities-seo-block">
         <p>
-          <strong>National Sports Infrastructure &amp; Venue Directory:</strong> KhelGrid connects athletes across 28 sports disciplines with authentic stadiums, Sports Authority of India (SAI) National Centres of Excellence, and Khelo India state training facilities. From synthetic athletic tracks and Olympic-size aquatic arenas to multi-purpose indoor courts and box-cricket venues, explore verified grassroots facilities across 16 metropolitan sports hubs including Delhi NCR, Mumbai, Bengaluru, Hyderabad, Pune, Kolkata, Chennai, Ahmedabad, Chandigarh, Bhubaneswar, Lucknow, Jaipur, Bhopal, Kochi, Ranchi, and Dehradun.
+          <strong>National Sports Infrastructure &amp; Venue Directory:</strong> KhelGrid connects athletes across 28 sports disciplines with authentic stadiums, Sports Authority of India (SAI) National Centres of Excellence, and Khelo India state training facilities. From synthetic athletic tracks and Olympic-size aquatic arenas to multi-purpose indoor courts and box-cricket venues, explore verified grassroots facilities across 50+ sports cities in India, featuring 16 premier metropolitan sports hubs (Delhi NCR, Mumbai, Bengaluru, Hyderabad, Pune, Kolkata, Chennai, Ahmedabad, Chandigarh, Bhubaneswar, Lucknow, Jaipur, Bhopal, Kochi, Ranchi, and Dehradun) along with 37+ regional sports centres.
         </p>
         <p className="footer-cities-disclaimer">
           Venue names are discovery starting points, not a confirmation of current availability, public entry, or booking status. Please verify details with the venue or official organiser.

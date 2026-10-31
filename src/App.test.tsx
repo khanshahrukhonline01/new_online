@@ -56,7 +56,7 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('Akhada, Dangal &amp; Combat')
     expect(html).toContain('Govt Sports Quota Recruitment')
     expect(html).toContain('Top Sports Complexes in Cities')
-    expect(html).toContain('Explore all 16 cities')
+    expect(html).toContain('Explore all 50+ cities across India')
     expect(html).toContain('Jawaharlal Nehru Stadium')
     expect(html).toContain('Wankhede Stadium')
     expect(html).toContain('Sree Kanteerava Stadium')
@@ -74,6 +74,7 @@ describe('route resolution', () => {
     ['/opportunities/example-trial', 'opportunity-detail'],
     ['/venues', 'venues-index'],
     ['/book', 'venues-index'],
+    ['/cities', 'cities-index'],
     ['/venues/example-venue', 'venue-detail'],
     ['/search', 'search'],
     ['/khelchronicle', 'khelchronicle-index'],

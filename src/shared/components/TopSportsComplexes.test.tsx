@@ -10,7 +10,7 @@ describe('TopSportsComplexes component for SEO & Thin-Content mitigation', () =>
     expect(html).toContain('Top Sports Complexes in Cities')
     expect(html).toContain('16 Metro Sports Hubs')
     expect(html).toContain('Explore major stadiums, sports centres and training hubs across India')
-    expect(html).toContain('Explore all 16 cities')
+    expect(html).toContain('Explore all 50+ cities across India')
     expect(html).toContain('/cities')
 
     // Schema.org Structured Data

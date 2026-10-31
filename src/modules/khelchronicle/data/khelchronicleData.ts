@@ -616,7 +616,7 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
       { id: 2, text: 'Spaaij, R. (2009). The social impact of sport: Diversities, complexities and contexts. Sport in Society, 12(9), 1109-1117.' },
     ],
     connectedKhelGridLinks: [
-      { label: 'Explore 16 Metro Sports Complexes Directory', href: '/cities', badge: '16 Cities', description: 'Explore stadium access, coaching centres and public facilities in your city.' },
+      { label: 'Explore 50+ Sports Cities & Metro Stadiums Directory', href: '/cities', badge: '50+ Cities', description: 'Explore stadium access, coaching centres and public facilities in your city.' },
       { label: 'Find a Game & Community Turf Match', href: '/play', badge: 'Pickup Games', description: 'Find accessible local venues and community matches in your neighborhood.' },
     ],
   },

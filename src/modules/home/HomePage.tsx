@@ -7,6 +7,7 @@ import type { SportsMatch } from '../live/types'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { createBannerSvg } from './homeSvgBanners'
 import { HomeKhelChronicle } from './HomeKhelChronicle'
+import { METRO_16_CITIES } from '../../shared/components/citiesData'
 import './home.css'
 
 interface PickupGame {
@@ -380,7 +381,8 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
     { label: 'Sports CV', emoji: '📄', href: '/sports-cv' },
   ]
 
-  const popularCities = ['All India', 'Delhi NCR', 'Mumbai', 'Bengaluru', 'Hyderabad', 'Chennai', 'Kolkata', 'Pune']
+  // Home page strictly features no more than 16 cities; remaining are browsable on /cities
+  const homeCities = useMemo(() => METRO_16_CITIES.slice(0, 16), [])
 
   const handleLink = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     onNavigate?.(event, href)
@@ -552,22 +554,43 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
 
               {cityDropdownOpen && (
                 <div className="home-hero-city-dropdown" role="menu">
-                  {popularCities.map(city => (
+                  <button
+                    type="button"
+                    className={`home-hero-city-option${selectedCity === 'All India' ? ' is-active' : ''}`}
+                    onClick={() => {
+                      setSelectedCity('All India')
+                      setCityDropdownOpen(false)
+                    }}
+                  >
+                    All India
+                  </button>
+                  <div className="home-hero-city-divider" />
+                  {homeCities.map(city => (
                     <button
-                      key={city}
+                      key={city.name}
                       type="button"
-                      className={`home-hero-city-option${city === selectedCity ? ' is-active' : ''}`}
+                      className={`home-hero-city-option${city.name === selectedCity ? ' is-active' : ''}`}
                       onClick={() => {
-                        setSelectedCity(city)
+                        setSelectedCity(city.name)
                         setCityDropdownOpen(false)
-                        if (city !== 'All India') {
-                          handleLink({ preventDefault: () => {} } as React.MouseEvent<HTMLAnchorElement>, `/venues?city=${encodeURIComponent(city)}`)
-                        }
+                        handleLink({ preventDefault: () => {} } as React.MouseEvent<HTMLAnchorElement>, `/venues?city=${encodeURIComponent(city.name)}`)
                       }}
                     >
-                      {city}
+                      {city.name}
                     </button>
                   ))}
+                  <div className="home-hero-city-divider" />
+                  <a
+                    href="/cities"
+                    className="home-hero-city-all-link"
+                    onClick={e => {
+                      setCityDropdownOpen(false)
+                      handleLink(e, '/cities')
+                    }}
+                  >
+                    <span>View all 50+ cities</span>
+                    <span aria-hidden="true">→</span>
+                  </a>
                 </div>
               )}
             </div>

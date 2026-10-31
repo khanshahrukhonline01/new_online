@@ -13,10 +13,17 @@ describe('platform route coverage', () => {
     path => expect(resolveRoute(path).name).toBe('opportunities-index'),
   )
 
-  it.each(['/venues', '/book', '/cities', '/city/delhi'])(
+  it.each(['/venues', '/book', '/city/delhi'])(
     '%s opens the venue directory without claiming bookings are live',
     path => expect(resolveRoute(path).name).toBe('venues-index'),
   )
+
+  it('/cities opens the dedicated cities directory', () => {
+    expect(resolveRoute('/cities')).toEqual({
+      name: 'cities-index',
+      canonicalPath: '/cities',
+    })
+  })
 
   it.each([
     '/sports-cv', '/submit-listing', '/stats', '/talent-scanner', '/scout-portal', '/verification',

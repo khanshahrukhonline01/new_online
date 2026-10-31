@@ -20,7 +20,7 @@ export const HOME_FAQS: FAQItem[] = [
     category: 'Athlete Access',
     badge: '100% Free Access',
     question: 'Is KhelGrid free for athletes, and how do selection trial applications work?',
-    answer: 'Yes! Creating a profile, browsing sports trials, exploring certified academies, and locating venues on KhelGrid is 100% free for all athletes, parents, and coaches. Every registered athlete receives complimentary trial applications upon joining. Athletes can submit additional verified applications via transparent micropayments (₹49 per application) or unlock unlimited applications with KhelGrid Pro (₹499/month), which includes an official Verified Sports CV and priority scouting alerts across 16 major Indian sporting hubs.',
+    answer: 'Yes! Creating a profile, browsing sports trials, exploring certified academies, and locating venues on KhelGrid is 100% free for all athletes, parents, and coaches. Every registered athlete receives complimentary trial applications upon joining. Athletes can submit additional verified applications via transparent micropayments (₹49 per application) or unlock unlimited applications with KhelGrid Pro (₹499/month), which includes an official Verified Sports CV and priority scouting alerts across 50+ Indian sporting hubs (16 premier metro centres).',
   },
   {
     id: 'home-2',
@@ -46,9 +46,9 @@ export const HOME_FAQS: FAQItem[] = [
   {
     id: 'home-5',
     category: 'Venues & Turfs',
-    badge: '16 Metro Hubs',
+    badge: '50+ Sports Cities',
     question: 'How do sports turf reservations and venue discoveries work on KhelGrid?',
-    answer: 'KhelGrid indexes premier stadiums, SAI high-performance centres, and private multisport arenas across 16 major Indian cities including Delhi NCR, Mumbai, Bengaluru, Hyderabad, Pune, Kolkata, and Chennai. Athletes, teams, and tournament organizers can review field dimensions (such as FIFA-standard 5v5 turf and BWF wooden badminton courts), floodlight specs, and venue facilities to find legitimate practice facilities.',
+    answer: 'KhelGrid indexes premier stadiums, SAI high-performance centres, and private multisport arenas across 50+ Indian cities, featuring 16 premier metropolitan hubs including Delhi NCR, Mumbai, Bengaluru, Hyderabad, Pune, Kolkata, and Chennai, along with 37+ regional sports centres. Athletes, teams, and tournament organizers can review field dimensions (such as FIFA-standard 5v5 turf and BWF wooden badminton courts), floodlight specs, and venue facilities to find legitimate practice facilities.',
   },
   {
     id: 'home-6',
@@ -155,7 +155,7 @@ export const VENUES_FAQS: FAQItem[] = [
     category: 'Turf Booking',
     badge: 'Hourly Slot Discovery',
     question: 'How do sports venue bookings and hourly turf reservations work on KhelGrid?',
-    answer: 'KhelGrid indexes verified sports arenas, box cricket turfs, FIFA-standard futsal pitches, wooden badminton courts, and Olympic-length swimming facilities across 16 major Indian metro hubs. Players and teams can examine verified field dimensions, surface material, floodlight ratings, hourly rates, and venue contact numbers to schedule practice sessions.',
+    answer: 'KhelGrid indexes verified sports arenas, box cricket turfs, FIFA-standard futsal pitches, wooden badminton courts, and Olympic-length swimming facilities across 50+ Indian sports cities (including 16 premier metro hubs). Players and teams can examine verified field dimensions, surface material, floodlight ratings, hourly rates, and venue contact numbers to schedule practice sessions.',
   },
   {
     id: 'venues-2',
@@ -190,7 +190,7 @@ export const VENUES_FAQS: FAQItem[] = [
     category: 'Public Stadiums',
     badge: 'SAI & DDA Complexes',
     question: 'Are premier public stadiums like JLN Stadium, Kanteerava, or Gachibowli open to the public?',
-    answer: 'Many iconic public and SAI-operated stadiums (such as Jawaharlal Nehru Stadium in Delhi, Sree Kanteerava in Bengaluru, and Shree Shiv Chhatrapati Complex in Pune) operate Come & Play schemes and offer subsidized monthly pay-and-play memberships for athletics, swimming, and badminton. KhelGrid details gate reporting procedures, facility timings, and membership options across all 16 supported cities.',
+    answer: 'Many iconic public and SAI-operated stadiums (such as Jawaharlal Nehru Stadium in Delhi, Sree Kanteerava in Bengaluru, and Shree Shiv Chhatrapati Complex in Pune) operate Come & Play schemes and offer subsidized monthly pay-and-play memberships for athletics, swimming, and badminton. KhelGrid details gate reporting procedures, facility timings, and membership options across all 50+ supported cities.',
   },
 ]
 
@@ -200,7 +200,7 @@ export const SEARCH_FAQS: FAQItem[] = [
     category: 'Catalogue Search',
     badge: 'Multi-Filter Navigation',
     question: 'How do I search and filter trials, academies, and venues by sport, city, and age category?',
-    answer: 'KhelGrid’s unified catalogue search allows you to drill down into our national sports database using multi-dimensional filters: select your sport (from 28+ disciplines), city (from 16 metro hubs), age category (U-14, U-16, U-19, U-23, or Senior Open), and sorting preferences (soonest upcoming dates, free trials, or relevance) to instantly find opportunities matching your profile.',
+    answer: 'KhelGrid’s unified catalogue search allows you to drill down into our national sports database using multi-dimensional filters: select your sport (from 28+ disciplines), city (from 50+ sports cities and 16 metro hubs), age category (U-14, U-16, U-19, U-23, or Senior Open), and sorting preferences (soonest upcoming dates, free trials, or relevance) to instantly find opportunities matching your profile.',
   },
   {
     id: 'search-2',
@@ -267,7 +267,7 @@ export function getFaqsForPath(path: string): RouteFAQContext {
       contextName: 'Sports Venues & Turf Bookings FAQ',
       heading: 'Frequently Asked Questions',
       tagline: 'Got questions? We have answers.',
-      description: 'Detailed answers on booking sports turfs, checking court surface specifications, discovering floodlit stadiums, and listing venues across 16 Indian cities.',
+      description: 'Detailed answers on booking sports turfs, checking court surface specifications, discovering floodlit stadiums, and listing venues across 50+ Indian cities.',
       faqs: VENUES_FAQS,
     }
   }

@@ -472,7 +472,7 @@ export default function SportDetailPage({ slug, onNavigate }: SportDetailPagePro
                 href="/venues"
                 onClick={e => handleLink(e, '/venues')}
               >
-                Browse Venues Directory across 16 Cities
+                Browse Venues Directory across 50+ Cities
               </a>
             </div>
           </div>

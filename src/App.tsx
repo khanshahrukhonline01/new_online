@@ -26,6 +26,7 @@ import KhelChronicleCategoryPage from './modules/khelchronicle/KhelChronicleCate
 import KhelChronicleAuthorPage from './modules/khelchronicle/KhelChronicleAuthorPage'
 import KhelChronicleSubmitPage from './modules/khelchronicle/KhelChronicleSubmitPage'
 import TalentScannerPage from './modules/talent-scanner/TalentScannerPage'
+import CitiesPage from './modules/directories/CitiesPage'
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
 
@@ -94,6 +95,7 @@ export default function App() {
     case 'opportunities-index': page = <OpportunitiesPage />; break
     case 'opportunity-detail': page = <CatalogueDetailPage kind="opportunity" slug={match.slug} />; break
     case 'venues-index': page = <VenuesPage />; break
+    case 'cities-index': page = <CitiesPage onNavigate={navigate} />; break
     case 'venue-detail': page = <CatalogueDetailPage kind="venue" slug={match.slug} />; break
     case 'search': page = <SearchPage initialQuery={searchQuery} />; break
     case 'khelchronicle-index': page = <KhelChronicleHome onNavigate={navigate} />; break
@@ -147,7 +149,7 @@ export default function App() {
         <div className="footer-about">
           <a className="footer-brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="footer-brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /></a>
           <p className="footer-tagline">India’s grid for sports trials, venues, coaching and athlete profiles.</p>
-          <p className="footer-region">India · 16 cities in the current grid</p>
+          <p className="footer-region">India · 50+ sports cities in the grid (16 metro hubs)</p>
           <a className="footer-pro-link" href="/pricing" onClick={event => navigate(event, '/pricing')}>★ Go Pro · ₹499/month</a>
         </div>
         <nav className="footer-column" aria-label="Explore KhelGrid">
@@ -155,6 +157,7 @@ export default function App() {
           <a href="/sports" onClick={event => navigate(event, '/sports')}>All sports</a>
           <a href="/opportunities" onClick={event => navigate(event, '/opportunities')}>Trials & opportunities</a>
           <a href="/venues" onClick={event => navigate(event, '/venues')}>Sports venues</a>
+          <a href="/cities" onClick={event => navigate(event, '/cities')}>Sports cities (50+)</a>
           <a href="/search" onClick={event => navigate(event, '/search')}>Search catalogue</a>
           <a href="/calendar" onClick={event => navigate(event, '/calendar')}>Sports calendar</a>
         </nav>

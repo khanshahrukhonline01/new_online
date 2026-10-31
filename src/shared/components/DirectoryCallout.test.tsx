@@ -44,7 +44,7 @@ describe('DirectoryCallout component', () => {
         variant="opportunity"
         tag="Free Post"
         title="Organising a sports trial? Post for Free"
-        description="Broadcast trial dates, age criteria, and circulars across 16+ cities."
+        description="Broadcast trial dates, age criteria, and circulars across 50+ cities."
         buttonLabel="Submit a trial"
         buttonHref="mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial%20or%20opportunity"
       />
