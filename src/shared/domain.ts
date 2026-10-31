@@ -29,6 +29,7 @@ export interface Venue {
   address: string | null
   timezone: string
   government_facility?: boolean
+  sports?: Sport[]
 }
 
 export interface Academy {
@@ -53,6 +54,7 @@ export interface Coach {
   website_url: string | null
   public_contact_url: string | null
   verification_status: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+  sports?: Sport[]
 }
 
 export interface EventItem {
@@ -93,6 +95,7 @@ export interface VideoClip {
 
 export interface AthleteProfile {
   id: string
+  userId?: string
   username: string
   fullName: string
   sport: string

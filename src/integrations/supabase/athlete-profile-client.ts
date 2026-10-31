@@ -247,6 +247,7 @@ export async function getAthleteProfile(username: string): Promise<AthleteProfil
           const row = rows[0] as Record<string, unknown>
           return {
             id: String(row.id ?? clean),
+            userId: row.user_id ? String(row.user_id) : undefined,
             username: String(row.username ?? clean),
             fullName: String(row.full_name ?? 'Athlete'),
             sport: String(row.sport ?? 'All-Rounder'),
@@ -318,6 +319,7 @@ export async function publishAthleteProfile(
   if (supabaseUrl && anonKey) {
     try {
       const payload = {
+        user_id: input.userId || null,
         username: profile.username,
         full_name: profile.fullName,
         sport: profile.sport,

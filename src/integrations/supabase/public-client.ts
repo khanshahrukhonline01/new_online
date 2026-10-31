@@ -83,10 +83,26 @@ export function getOpportunities() {
 export function getVenues() {
   return readCatalogue<Venue>({
     table: 'venues',
-    select: 'id,slug,name,description,city,address,timezone',
+    select: 'id,slug,name,description,city,address,timezone,government_facility',
     order: 'name.asc',
     filters: { publication_status: 'eq.published' },
   })
+}
+
+export async function getVenuesBySport(sportSlug: string, sportName?: string): Promise<CatalogueResult<Venue>> {
+  const result = await getVenues()
+  if (result.status !== 'ready') return result
+
+  const targetName = (sportName || sportSlug).toLowerCase()
+  const targetSlug = sportSlug.toLowerCase()
+
+  const matches = result.data.filter(venue => {
+    const desc = (venue.description || '').toLowerCase()
+    const name = venue.name.toLowerCase()
+    return desc.includes(targetName) || desc.includes(targetSlug) || name.includes(targetName)
+  })
+
+  return { status: 'ready', data: matches }
 }
 
 export function getAcademies() {
@@ -111,6 +127,22 @@ export function getCoaches() {
       verification_status: 'neq.rejected',
     },
   })
+}
+
+export async function getCoachesBySport(sportSlug: string, sportName?: string): Promise<CatalogueResult<Coach>> {
+  const result = await getCoaches()
+  if (result.status !== 'ready') return result
+
+  const targetName = (sportName || sportSlug).toLowerCase()
+  const targetSlug = sportSlug.toLowerCase()
+
+  const matches = result.data.filter(coach => {
+    const bio = (coach.bio || '').toLowerCase()
+    const name = coach.display_name.toLowerCase()
+    return bio.includes(targetName) || bio.includes(targetSlug) || name.includes(targetName)
+  })
+
+  return { status: 'ready', data: matches }
 }
 
 export function getEvents() {

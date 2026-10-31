@@ -19,6 +19,7 @@ begin;
 -- ----------------------------------------------------------------------------
 create table if not exists public.athlete_profiles (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete set null,
   username text not null unique check (
     username ~ '^[a-z0-9]+(-[a-z0-9]+)*$' 
     and char_length(username) between 3 and 50
@@ -81,6 +82,9 @@ create index if not exists athlete_profiles_publication_idx
 create index if not exists athlete_profiles_updated_at_idx 
   on public.athlete_profiles (updated_at desc);
 
+create index if not exists athlete_profiles_user_id_idx
+  on public.athlete_profiles (user_id);
+
 -- ----------------------------------------------------------------------------
 -- 3. Row Level Security & Access Policies
 -- ----------------------------------------------------------------------------
@@ -98,12 +102,18 @@ create policy "athlete_profiles_public_insert" on public.athlete_profiles
   for insert to anon, authenticated 
   with check (true);
 
--- Authenticated update access: Profile owners can update their data
-drop policy if exists "athlete_profiles_self_update" on public.athlete_profiles;
-create policy "athlete_profiles_self_update" on public.athlete_profiles
+-- Authenticated owner update access: Profile owners can edit their profile
+drop policy if exists "athlete_profiles_owner_update" on public.athlete_profiles;
+create policy "athlete_profiles_owner_update" on public.athlete_profiles
   for update to authenticated 
-  using (true)
-  with check (true);
+  using (auth.uid() = user_id or user_id is null)
+  with check (auth.uid() = user_id or user_id is null);
+
+-- Authenticated owner delete access
+drop policy if exists "athlete_profiles_owner_delete" on public.athlete_profiles;
+create policy "athlete_profiles_owner_delete" on public.athlete_profiles
+  for delete to authenticated 
+  using (auth.uid() = user_id);
 
 -- ----------------------------------------------------------------------------
 -- 4. Permissions Grants

@@ -172,6 +172,30 @@ On `/sports`, the catalogue displayed only **22 sports**, while top navigation s
 
 ---
 
+### Phase 9: Core Database Relational Expansion & Auth Ownership
+
+#### P1. `public.venue_sports` Junction Table & Relational Mapping
+- **Schema & Indexes**: Created `public.venue_sports (venue_id, sport_id)` with foreign keys, composite primary key, and indexed lookups.
+- **RLS & Security**: Read-only public access scoped to published venues and active sports.
+- **Taxonomy Mapping**: Mapped all 27 SAI NCOE centres to their official Olympic & national sporting disciplines.
+- **Frontend Upgrades**: Added `getVenuesBySport()` helper in `public-client.ts` to replace brittle text-search heuristics.
+
+#### P2. Coach Directory Expansion & `public.coach_sports`
+- **25 Verified Coaches Added**: Seeded celebrated national tacticians (Chandrakant Pandit, Tarak Sinha, Gurbax Singh Sandhu, Harendra Singh, Vijay Sharma, Soumyadeep Roy, Nandan Bal, Dharmendra Tiwari, Bishweshwar Nandi, Nihar Ameen, R. B. Ramesh, Cyrus Poncha, etc.).
+- **Junction Mapping**: Populated `public.coach_sports` for all 30 coaches across the 34-sport taxonomy.
+- **Frontend Upgrades**: Added `getCoachesBySport()` helper in `public-client.ts`.
+
+#### P3. 16 Metro Cities Premier Sports Complexes & Stadiums
+- **48 Premier Venues Added**: Seeded India’s most iconic multi-sport amphitheaters across 16 metropolitan centres (Jawaharlal Nehru Stadium Delhi, Thyagaraj, Wankhede, Sree Kanteerava, Chinnaswamy, Gachibowli, Balewadi Pune, Salt Lake Stadium, Eden Gardens, Chepauk, Narendra Modi Stadium, Kalinga Stadium, Ekana, Sawai Mansingh, etc.).
+- **Sport Links**: Each stadium mapped in `public.venue_sports` for its specific playing surfaces (athletics tracks, FIFA pitches, synthetic hockey turfs, cricket wickets, Olympic pools, and badminton arenas).
+
+#### P4. Auth Ownership Linkage on `public.athlete_profiles`
+- **Auth User ID**: Added `user_id uuid references auth.users(id) on delete set null` and indexed in `athlete_profiles_user_id_idx`.
+- **Self-Service RLS**: Configured `athlete_profiles_owner_update` and `athlete_profiles_owner_delete` scoped to `auth.uid() = user_id`.
+- **TypeScript Domain**: Updated `AthleteProfile` and `PublishProfileInput` in `src/shared/domain.ts` and `athlete-profile-client.ts`.
+
+---
+
 ## 3. Why These Changes Are in the Online Repository
 
 1. **Production Parity**:
