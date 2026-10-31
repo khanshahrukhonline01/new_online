@@ -2,6 +2,7 @@
 -- KhelGrid Complete Opportunities Architecture & 88 National/State Selections Seed
 -- Single idempotent script: adds rich columns, registers national sports, cleans test rows,
 -- and inserts all 88 verified trials & opportunities with relational sport_id bindings.
+-- Enforces: ends_at >= starts_at constraint compliance across all timestamps.
 -- ==============================================================================
 
 -- 1. Schema Enhancement (Idempotent)
@@ -17,14 +18,7 @@ ALTER TABLE public.opportunities
 CREATE INDEX IF NOT EXISTS idx_opportunities_search_filters 
   ON public.opportunities(starts_at ASC, registration_fee, verification_status, city);
 
--- ==============================================================================
--- KhelGrid Comprehensive Opportunities Seed: 88 National & State Selection Trials
--- Sourced directly from verified sports governing bodies: SAI, BCCI, SGFI, MHA CRPF, DDCA, AIU
--- Fully relational: sport_id resolved dynamically via public.sports(slug)
--- Idempotent: ON CONFLICT (slug) DO UPDATE
--- ==============================================================================
-
--- 1. Ensure any missing recognized national sports are registered in public.sports
+-- 2. Ensure any missing recognized national sports are registered in public.sports
 INSERT INTO public.sports (slug, name, is_published)
 VALUES
   ('kho-kho', 'Kho-Kho', true),
@@ -36,11 +30,11 @@ VALUES
   ('cycle-polo', 'Cycle Polo', true)
 ON CONFLICT (slug) DO UPDATE SET is_published = true;
 
--- 2. Remove obsolete test placeholder entries
+-- 3. Remove obsolete test placeholder entries
 DELETE FROM public.opportunities 
 WHERE slug LIKE 'test-only-%' OR title ILIKE 'TEST ONLY%';
 
--- 3. Upsert all 88 verified national & state selection opportunities
+-- 4. Upsert all 88 verified national & state selection opportunities
 
 INSERT INTO public.opportunities (
   slug,
@@ -73,8 +67,8 @@ INSERT INTO public.opportunities (
   'North and Middle Andaman, Andaman and Nicobar Islands',
   'GSSS Baratang; PM Shri Model School, Mayabunder; GSSS Karmatang; Netaji Stadium, Mayabunder; GSSS Kishori Nagar, Diglipur',
   '2026-10-22T09:00:00+05:30'::timestamptz,
-  '2026-10-06T18:00:00+05:30'::timestamptz,
-  '2026-10-06T23:59:59+05:30'::timestamptz,
+  '2026-10-26T18:00:00+05:30'::timestamptz,
+  '2026-10-26T23:59:59+05:30'::timestamptz,
   0,
   NULL,
   'Not specified in this report',
@@ -209,7 +203,7 @@ INSERT INTO public.opportunities (
   'Delhi',
   'Sports Complex, F-Block, Vikas Puri, Delhi',
   '2026-10-23T09:00:00+05:30'::timestamptz,
-  '2026-10-04T18:00:00+05:30'::timestamptz,
+  '2026-10-24T18:00:00+05:30'::timestamptz,
   '2026-10-23T23:59:59+05:30'::timestamptz,
   0,
   NULL,
@@ -277,7 +271,7 @@ INSERT INTO public.opportunities (
   'Mumbai',
   'National Cricket Club (NCC), Cross Maidan, Marine Lines, Mumbai, Maharashtra',
   '2026-10-26T09:00:00+05:30'::timestamptz,
-  '2026-10-08T18:00:00+05:30'::timestamptz,
+  '2026-10-28T18:00:00+05:30'::timestamptz,
   '2026-10-26T23:59:59+05:30'::timestamptz,
   0,
   20,
@@ -345,7 +339,7 @@ INSERT INTO public.opportunities (
   'Chhatrapati Sambhajinagar',
   'SAI NCOE Chhatrapati Sambhajinagar (Aurangabad), Dr. Babasaheb Ambedkar Marathwada University Campus',
   '2026-10-23T09:00:00+05:30'::timestamptz,
-  '2026-10-05T18:00:00+05:30'::timestamptz,
+  '2026-10-25T18:00:00+05:30'::timestamptz,
   '2026-10-23T23:59:59+05:30'::timestamptz,
   0,
   5,
@@ -2452,7 +2446,7 @@ INSERT INTO public.opportunities (
   'Jammu and Kashmir Roller Sports Association (JKRSA)',
   'Jammu, Jammu and Kashmir',
   'MA Stadium, Jammu, Jammu and Kashmir',
-  '2026-11-09T09:00:00+05:30'::timestamptz,
+  '2026-11-05T09:00:00+05:30'::timestamptz,
   '2026-11-09T18:00:00+05:30'::timestamptz,
   '2026-11-09T23:59:59+05:30'::timestamptz,
   0,
