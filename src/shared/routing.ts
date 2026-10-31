@@ -37,7 +37,7 @@ const featurePages: Record<string, string> = {
   '/community': 'Sports Community', '/tools': 'Sports Tools & Calculators',
   '/calendar': 'Sports Calendar', '/for-you': 'For You', '/trust': 'Trust Center',
   '/pricing': 'Pricing & Memberships', '/mobile-app': 'KhelGrid Mobile App', '/careers': 'Careers',
-  '/partners': 'Partner with KhelGrid', '/about': 'About KhelGrid', '/contact': 'Contact KhelGrid',
+  '/partners': 'Partner with KhelGrid', '/partner': 'Partner with KhelGrid', '/about': 'About KhelGrid', '/contact': 'Contact KhelGrid',
   '/privacy': 'Privacy Policy', '/terms': 'Terms of Use', '/cookies': 'Cookie Policy',
   '/ipr-policy': 'IPR & Copyright Policy', '/cancellation-policy': 'Cancellation Policy',
   '/posh-policy': 'POSH Policy', '/editorial-policy': 'Editorial Policy',

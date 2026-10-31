@@ -1,0 +1,401 @@
+.navbar-settings-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.header-settings-trigger {
+  position: relative;
+  transition: all 0.18s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.header-settings-trigger.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+/* Dropdown popover */
+.navbar-settings-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 290px;
+  max-width: calc(100vw - 20px);
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: var(--radius-lg, 16px);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18);
+  padding: 12px;
+  z-index: 100;
+  color: var(--text, #142033);
+  animation: navbarSettingsFade 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes navbarSettingsFade {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Toast message inside popover */
+.navbar-settings-toast {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--accent-soft, #e8f7ef);
+  color: var(--accent, #07964f);
+  font-size: 11px;
+  font-weight: 650;
+  animation: toastSlide 0.15s ease-out;
+}
+
+@keyframes toastSlide {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.settings-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted, #65748a);
+}
+
+.flex-center-gap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-badge-subtle {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--surface-soft, #f0f5f8);
+  color: var(--muted-strong, #46566d);
+  text-transform: capitalize;
+}
+
+.settings-badge-primary {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft, #e8f7ef);
+  color: var(--accent, #07964f);
+}
+
+.settings-badge-emerald {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+/* Segmented Theme Switcher */
+.theme-switcher-segmented {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  background: var(--surface-soft, #f0f5f8);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 10px;
+}
+
+.theme-segment-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--muted-strong, #46566d);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+}
+
+.theme-segment-btn:hover {
+  color: var(--text, #142033);
+}
+
+.theme-segment-btn.active {
+  background: var(--surface, #ffffff);
+  color: var(--accent, #07964f);
+  font-weight: 750;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+/* Language Selection Grid */
+.language-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+
+.language-option-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-soft, #24344d);
+  font-size: 11px;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.14s;
+}
+
+.language-option-btn:hover {
+  background: var(--surface-soft, #f0f5f8);
+  color: var(--text, #142033);
+}
+
+.language-option-btn.selected {
+  background: var(--accent-soft, #e8f7ef);
+  border-color: var(--accent, #07964f);
+  color: var(--accent, #07964f);
+  font-weight: 700;
+}
+
+.lang-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lang-flag {
+  font-size: 12px;
+}
+
+.lang-check {
+  color: var(--accent, #07964f);
+  flex-shrink: 0;
+}
+
+/* Quick Preferences (Sound & City) */
+.quick-pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: var(--surface-soft, #f0f5f8);
+}
+
+.pref-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pref-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--text, #142033);
+}
+
+.pref-hint {
+  font-size: 10px;
+  color: var(--muted, #65748a);
+}
+
+.pref-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.test-chime-btn {
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line, #e2e8f0);
+  background: var(--surface, #ffffff);
+  color: var(--muted-strong, #46566d);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.test-chime-btn:hover {
+  border-color: var(--accent, #07964f);
+  color: var(--accent, #07964f);
+}
+
+.pref-toggle-btn {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  border: none;
+  background: var(--line-strong, #cbd5e1);
+  cursor: pointer;
+  transition: background 0.18s;
+  padding: 2px;
+}
+
+.pref-toggle-btn.enabled {
+  background: var(--accent, #07964f);
+}
+
+.toggle-handle {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.18s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transform: translateX(0);
+}
+
+.pref-toggle-btn.enabled .toggle-handle {
+  transform: translateX(14px);
+}
+
+.quick-city-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 6px;
+}
+
+.navbar-city-dropdown {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line, #e2e8f0);
+  background: var(--surface-soft, #f0f5f8);
+  color: var(--text, #142033);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.navbar-city-dropdown:focus {
+  outline: none;
+  border-color: var(--accent, #07964f);
+}
+
+/* Links & Footer */
+.settings-menu-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 8px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text-soft, #24344d);
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.14s;
+}
+
+.settings-menu-link:hover {
+  background: var(--surface-soft, #f0f5f8);
+  color: var(--text, #142033);
+}
+
+.link-title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.link-icon {
+  color: var(--accent, #07964f);
+}
+
+.settings-menu-divider {
+  height: 1px;
+  margin: 6px -4px;
+  background: var(--line, #e2e8f0);
+}
+
+.settings-menu-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.settings-footer-action {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line, #e2e8f0);
+  background: var(--surface-raised, #f8fafc);
+  color: var(--muted-strong, #46566d);
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.14s;
+}
+
+.settings-footer-action:hover {
+  background: var(--surface-soft, #f0f5f8);
+  color: var(--text, #142033);
+}
+
+.settings-footer-action.primary {
+  background: var(--accent-soft, #e8f7ef);
+  border-color: var(--accent, #07964f);
+  color: var(--accent, #07964f);
+  font-weight: 750;
+}
+
+.settings-footer-action.primary:hover {
+  background: var(--accent, #07964f);
+  color: #ffffff;
+}
+
+@media (max-width: 480px) {
+  .navbar-settings-popover {
+    width: 275px;
+    right: -4px;
+  }
+}

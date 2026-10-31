@@ -33,6 +33,9 @@ import CommunityListingModal from './shared/components/CommunityListingModal'
 import NotificationCenterDrawer from './shared/components/NotificationCenterDrawer'
 import SiteAnnouncementBanner from './shared/components/SiteAnnouncementBanner'
 import SpotlightSearchModal from './shared/components/SpotlightSearchModal'
+import NavbarSettingsMenu from './shared/components/NavbarSettingsMenu'
+import FeedbackSupportModal from './shared/components/FeedbackSupportModal'
+import SettingsPage from './modules/settings/SettingsPage'
 import type { CommunityListingCategory } from './integrations/supabase/public-client'
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
@@ -54,6 +57,7 @@ export default function App() {
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [unreadNotifCount, setUnreadNotifCount] = useState(3)
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const menuToggleRef = useRef<HTMLButtonElement>(null)
 
   function openIntake(category: CommunityListingCategory = 'pickup_game') {
@@ -165,6 +169,7 @@ export default function App() {
           </div>
         </section>
       )
+      else if (match.canonicalPath === '/settings') page = <SettingsPage onNavigate={navigate} />
       else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
       break
@@ -233,7 +238,10 @@ export default function App() {
           <span className="header-notif-badge">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>
         )}
       </button>
-      <a className="header-icon-button" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20settings%20help" aria-label="Settings help" title="Settings help"><SiteIcon name="settings" size={19} /></a>
+      <NavbarSettingsMenu
+        onNavigate={navigate}
+        onOpenFeedback={() => setFeedbackModalOpen(true)}
+      />
       <span className="header-login-link is-unavailable" aria-disabled="true" title="Login coming soon"><SiteIcon name="user-round" size={17} /><span>Login <small>Coming Soon</small></span></span>
       <a className="header-go-pro" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20Pro%20enquiry"><SiteIcon name="star" size={16} /><span>Go Pro</span></a>
     </header>
@@ -401,6 +409,10 @@ export default function App() {
       onClose={() => setSearchModalOpen(false)}
       onNavigate={navigate}
       initialQuery={headerQuery}
+    />
+    <FeedbackSupportModal
+      isOpen={feedbackModalOpen}
+      onClose={() => setFeedbackModalOpen(false)}
     />
   </div>
 }

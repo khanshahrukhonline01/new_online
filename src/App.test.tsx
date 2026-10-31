@@ -30,6 +30,9 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('Submit Paper')
     expect(html).toContain('header-action-coach')
     expect(html).toContain('header-action-chronicle')
+    expect(html).toContain('id="navbar-settings-btn"')
+    expect(html).toContain('title="Settings &amp; Appearance"')
+    expect(html).toContain('aria-label="Settings and Appearance"')
   })
 
   it('clearly states that live feeds and account services are not connected yet', () => {

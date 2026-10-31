@@ -68,8 +68,15 @@ import {
   UserRound,
   UsersRound,
   Volume2,
+  VolumeX,
   Wallet,
   X,
+  Sun,
+  Moon,
+  Monitor,
+  Briefcase,
+  Handshake,
+  Languages,
   type LucideIcon,
 } from 'lucide-react'
 import type { SVGProps } from 'react'
@@ -81,7 +88,7 @@ export const siteIconNames = [
   'refresh','loader','shield-check','badge-check','file-text','download','upload','share','copy',
   'bookmark','heart','star','user','users','user-round','settings','help-circle','mail','phone',
   'globe','link','plus','minus','edit','trash','lock','unlock','eye','eye-off','bell','message',
-  'play','pause','volume','image','camera','trophy','medal','target','activity','chart','building',
+  'play','pause','volume','volume-x','sun','moon','monitor','briefcase','handshake','languages','image','camera','trophy','medal','target','activity','chart','building',
   'wallet','credit-card','arrow-left','arrow-right','external','logout','sparkles','award','book-open'
 ] as const
 
@@ -149,6 +156,13 @@ const icons: Record<SiteIconName, LucideIcon> = {
   play: Play,
   pause: Pause,
   volume: Volume2,
+  'volume-x': VolumeX,
+  sun: Sun,
+  moon: Moon,
+  monitor: Monitor,
+  briefcase: Briefcase,
+  handshake: Handshake,
+  languages: Languages,
   image: Image,
   camera: Camera,
   trophy: Trophy,
