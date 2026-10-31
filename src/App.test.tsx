@@ -75,6 +75,8 @@ describe('route resolution', () => {
     ['/venues', 'venues-index'],
     ['/book', 'venues-index'],
     ['/cities', 'cities-index'],
+    ['/cities/delhi', 'city-detail'],
+    ['/city/delhi', 'city-detail'],
     ['/venues/example-venue', 'venue-detail'],
     ['/search', 'search'],
     ['/khelchronicle', 'khelchronicle-index'],

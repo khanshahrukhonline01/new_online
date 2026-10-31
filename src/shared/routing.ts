@@ -7,6 +7,7 @@ export type RouteMatch =
   | { name: 'opportunity-detail'; canonicalPath: '/opportunities/:slug'; slug: string }
   | { name: 'venues-index'; canonicalPath: '/venues'; alias?: string }
   | { name: 'cities-index'; canonicalPath: '/cities' }
+  | { name: 'city-detail'; canonicalPath: '/cities/:slug'; slug: string; alias?: string }
   | { name: 'venue-detail'; canonicalPath: '/venues/:slug'; slug: string }
   | { name: 'search'; canonicalPath: '/search' }
   | { name: 'khelchronicle-index'; canonicalPath: '/khelchronicle'; alias?: string }
@@ -75,10 +76,14 @@ export function resolveRoute(pathname: string): RouteMatch {
     if (slug && !slug.includes('/')) return { name: 'opportunity-detail', canonicalPath: '/opportunities/:slug', slug: decodeURIComponentSafe(slug) }
   }
   if (path === '/cities') return { name: 'cities-index', canonicalPath: '/cities' }
+  if (path.startsWith('/cities/')) {
+    const slug = path.slice('/cities/'.length)
+    if (slug && !slug.includes('/')) return { name: 'city-detail', canonicalPath: '/cities/:slug', slug: decodeURIComponentSafe(slug) }
+  }
   if (path === '/venues' || path === '/book') return { name: 'venues-index', canonicalPath: '/venues', ...(path === '/venues' ? {} : { alias: path }) }
   if (path.startsWith('/city/')) {
     const slug = path.slice('/city/'.length)
-    if (slug && !slug.includes('/')) return { name: 'venues-index', canonicalPath: '/venues', alias: path }
+    if (slug && !slug.includes('/')) return { name: 'city-detail', canonicalPath: '/cities/:slug', slug: decodeURIComponentSafe(slug), alias: path }
   }
   if (path.startsWith('/venues/')) {
     const slug = path.slice('/venues/'.length)

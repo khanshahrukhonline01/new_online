@@ -230,7 +230,16 @@ function CityCard({
     <article className={`city-card${city.isMetro ? ' is-metro-card' : ''}`}>
       <div className="city-card-header">
         <div>
-          <h3 className="city-card-name">{city.name}</h3>
+          <h3 className="city-card-name">
+            <a
+              href={`/cities/${city.slug}`}
+              onClick={e => onNavigate(e, `/cities/${city.slug}`)}
+              style={{ color: 'inherit', textDecoration: 'none' }}
+              title={`Open ${city.name} Sports Hub`}
+            >
+              {city.name}
+            </a>
+          </h3>
           <p className="city-card-state">{city.state}</p>
         </div>
         <span className={`city-zone-tag zone-${city.zone.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}>
@@ -253,6 +262,16 @@ function CityCard({
       )}
 
       <div className="city-card-actions">
+        <a
+          href={`/cities/${city.slug}`}
+          onClick={e => onNavigate(e, `/cities/${city.slug}`)}
+          className="city-action-link"
+          style={{ fontWeight: 600, color: 'var(--color-primary, #059669)' }}
+          title={`Open ${city.name} Sports Hub`}
+        >
+          <span>Hub</span>
+          <SiteIcon name="arrow-up-right" size={13} />
+        </a>
         <a
           href={`/venues?city=${encodeURIComponent(city.name)}`}
           onClick={e => onNavigate(e, `/venues?city=${encodeURIComponent(city.name)}`)}

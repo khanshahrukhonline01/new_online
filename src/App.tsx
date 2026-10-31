@@ -27,6 +27,7 @@ import KhelChronicleAuthorPage from './modules/khelchronicle/KhelChronicleAuthor
 import KhelChronicleSubmitPage from './modules/khelchronicle/KhelChronicleSubmitPage'
 import TalentScannerPage from './modules/talent-scanner/TalentScannerPage'
 import CitiesPage from './modules/directories/CitiesPage'
+import CityDetailPage from './modules/directories/CityDetailPage'
 import PlayPage from './modules/play/PlayPage'
 import CommunityListingModal from './shared/components/CommunityListingModal'
 import SiteAnnouncementBanner from './shared/components/SiteAnnouncementBanner'
@@ -107,6 +108,7 @@ export default function App() {
     case 'opportunity-detail': page = <CatalogueDetailPage kind="opportunity" slug={match.slug} />; break
     case 'venues-index': page = <VenuesPage />; break
     case 'cities-index': page = <CitiesPage onNavigate={navigate} />; break
+    case 'city-detail': page = <CityDetailPage citySlug={match.slug} onNavigate={navigate} onOpenIntake={openIntake} />; break
     case 'venue-detail': page = <CatalogueDetailPage kind="venue" slug={match.slug} />; break
     case 'search': page = <SearchPage initialQuery={searchQuery} />; break
     case 'khelchronicle-index': page = <KhelChronicleHome onNavigate={navigate} />; break

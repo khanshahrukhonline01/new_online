@@ -13,7 +13,7 @@ describe('platform route coverage', () => {
     path => expect(resolveRoute(path).name).toBe('opportunities-index'),
   )
 
-  it.each(['/venues', '/book', '/city/delhi'])(
+  it.each(['/venues', '/book'])(
     '%s opens the venue directory without claiming bookings are live',
     path => expect(resolveRoute(path).name).toBe('venues-index'),
   )
@@ -23,6 +23,20 @@ describe('platform route coverage', () => {
       name: 'cities-index',
       canonicalPath: '/cities',
     })
+  })
+
+  it.each([
+    ['/cities/delhi', 'delhi'],
+    ['/cities/bengaluru', 'bengaluru'],
+    ['/city/delhi', 'delhi'],
+    ['/city/mumbai', 'mumbai'],
+  ])('%s opens the dedicated city sports hub for %s', (path, expectedSlug) => {
+    const match = resolveRoute(path)
+    expect(match.name).toBe('city-detail')
+    expect(match.canonicalPath).toBe('/cities/:slug')
+    if (match.name === 'city-detail') {
+      expect(match.slug).toBe(expectedSlug)
+    }
   })
 
   it.each([
