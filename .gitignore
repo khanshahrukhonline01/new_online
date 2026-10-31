@@ -11,3 +11,4 @@ coverage/
 Thumbs.db
 *.log
 npm-debug.log*
+supabase/.temp/

@@ -49,6 +49,8 @@ If you are setting up a new Supabase environment or running queries manually in 
 | **02** | `seeds/02_setup_coaches.sql` | Creates `public.coaches`, `public.coach_sports`, and `public.coach_academies` tables, RLS policies, and Dronacharya coaches. |
 | **03** | `seeds/03_setup_events.sql` | Creates `public.events` table, RLS policies, and national tournaments (Khelo India, Santosh Trophy, Senior Nationals). |
 | **04** | `seeds/04_seed_all_276_academies.sql` | Inserts all 276 verified academies across 90+ Indian cities and maps them to sports across the 34-sport taxonomy. |
+| **05** | `seeds/05_seed_khelchronicle_research.sql` | Creates `public.chronicle_papers` & `public.chronicle_submissions`, RLS policies, and seeds flagship preprints. |
+| **06** | `seeds/06_setup_athlete_profiles.sql` | Creates `public.athlete_profiles` & `public.trial_reminders`, RLS policies, and seeds flagship grassroots athlete profiles with video telemetry. |
 
 ---
 
