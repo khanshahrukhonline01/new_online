@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { getAcademies, getAnnouncements, getCities, getOpportunities, getPickupGames, getSports, getVenues } from '../../integrations/supabase/public-client'
+import {
+  getAcademies,
+  getAnnouncements,
+  getCities,
+  getOpportunities,
+  getPickupGames,
+  getSports,
+  getVenues,
+  updatePickupGameSpots,
+} from '../../integrations/supabase/public-client'
 import type { CatalogueResult, DatabaseAnnouncement, DatabaseCity, DatabasePickupGame } from '../../integrations/supabase/public-client'
+import { subscribeToRealtimeCatalogue } from '../../integrations/supabase/realtime-client'
 import type { Academy, Opportunity, Sport, Venue } from '../../shared/domain'
 import { liveSportsEngine } from '../live/services/liveSportsEngine'
 import type { SportsMatch } from '../live/types'
@@ -296,6 +306,19 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   const [selectedCity, setSelectedCity] = useState('All India')
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false)
   const [seasonalAnnouncement, setSeasonalAnnouncement] = useState<DatabaseAnnouncement | null>(null)
+  const [liveUpdatedIds, setLiveUpdatedIds] = useState<Set<string>>(new Set())
+  const [joiningGameId, setJoiningGameId] = useState<string | null>(null)
+
+  const markLiveUpdated = (id: string) => {
+    setLiveUpdatedIds(prev => new Set(prev).add(id))
+    window.setTimeout(() => {
+      setLiveUpdatedIds(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }, 3500)
+  }
 
   const greetingTime = useMemo(() => {
     const hour = new Date().getHours()
@@ -476,6 +499,220 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
       window.removeEventListener('khelgrid:listing-added', loadCatalogues)
     }
   }, [])
+
+  // Realtime live subscriptions for dynamic catalogue updates
+  useEffect(() => {
+    const unsubscribe = subscribeToRealtimeCatalogue(
+      ['pickup_games', 'opportunities', 'venues', 'academies', 'site_announcements'],
+      event => {
+        if (event.table === 'pickup_games') {
+          if (event.eventType === 'DELETE') {
+            const deletedId = (event.oldRecord as { id?: string })?.id
+            if (deletedId) {
+              setCounts(prev => {
+                if (!prev.pickupGames || prev.pickupGames.status !== 'ready') return prev
+                return {
+                  ...prev,
+                  pickupGames: {
+                    status: 'ready',
+                    data: prev.pickupGames.data.filter(g => g.id !== deletedId),
+                  },
+                }
+              })
+            }
+          } else if (event.newRecord) {
+            const updated = event.newRecord as unknown as DatabasePickupGame
+            setCounts(prev => {
+              const base =
+                prev.pickupGames?.status === 'ready' && prev.pickupGames.data.length > 0
+                  ? prev.pickupGames.data
+                  : COMMUNITY_PICKUP_GAMES.map(c => ({
+                      id: c.id,
+                      slug: c.id,
+                      sport: c.sport,
+                      emoji: c.emoji,
+                      skill_level: c.skillLevel,
+                      venue_name: c.venueName,
+                      city: c.city,
+                      time_label: c.timeLabel,
+                      host_name: c.hostName,
+                      price_per_player: c.pricePerPlayer,
+                      spots_open: c.spotsOpen,
+                      total_players: c.totalPlayers,
+                      confirmed_players: c.confirmedPlayers,
+                      is_featured: c.is_featured ?? false,
+                      publication_status: 'published',
+                    }))
+              const exists = base.some(g => g.id === updated.id)
+              const nextData = exists
+                ? base.map(g => (g.id === updated.id ? { ...g, ...updated } : g))
+                : [updated, ...base]
+              return {
+                ...prev,
+                pickupGames: { status: 'ready', data: nextData },
+              }
+            })
+            if (updated.id) markLiveUpdated(updated.id)
+          }
+        } else if (event.table === 'opportunities') {
+          if (event.eventType === 'DELETE') {
+            const deletedId = (event.oldRecord as { id?: string })?.id
+            if (deletedId) {
+              setCounts(prev => {
+                if (!prev.opportunities || prev.opportunities.status !== 'ready') return prev
+                return {
+                  ...prev,
+                  opportunities: {
+                    status: 'ready',
+                    data: prev.opportunities.data.filter(o => o.id !== deletedId),
+                  },
+                }
+              })
+            }
+          } else if (event.newRecord) {
+            const record = event.newRecord as unknown as Opportunity
+            setCounts(prev => {
+              const base = prev.opportunities?.status === 'ready' ? prev.opportunities.data : []
+              const exists = base.some(o => o.id === record.id)
+              return {
+                ...prev,
+                opportunities: {
+                  status: 'ready',
+                  data: exists
+                    ? base.map(o => (o.id === record.id ? { ...o, ...record } : o))
+                    : [record, ...base],
+                },
+              }
+            })
+            if (record.id) markLiveUpdated(record.id)
+          }
+        } else if (event.table === 'venues') {
+          if (event.eventType === 'DELETE') {
+            const deletedId = (event.oldRecord as { id?: string })?.id
+            if (deletedId) {
+              setCounts(prev => {
+                if (!prev.venues || prev.venues.status !== 'ready') return prev
+                return {
+                  ...prev,
+                  venues: {
+                    status: 'ready',
+                    data: prev.venues.data.filter(v => v.id !== deletedId),
+                  },
+                }
+              })
+            }
+          } else if (event.newRecord) {
+            const record = event.newRecord as unknown as Venue
+            setCounts(prev => {
+              const base = prev.venues?.status === 'ready' ? prev.venues.data : []
+              const exists = base.some(v => v.id === record.id)
+              return {
+                ...prev,
+                venues: {
+                  status: 'ready',
+                  data: exists
+                    ? base.map(v => (v.id === record.id ? { ...v, ...record } : v))
+                    : [record, ...base],
+                },
+              }
+            })
+            if (record.id) markLiveUpdated(record.id)
+          }
+        } else if (event.table === 'academies') {
+          if (event.eventType === 'DELETE') {
+            const deletedId = (event.oldRecord as { id?: string })?.id
+            if (deletedId) {
+              setCounts(prev => {
+                if (!prev.academies || prev.academies.status !== 'ready') return prev
+                return {
+                  ...prev,
+                  academies: {
+                    status: 'ready',
+                    data: prev.academies.data.filter(a => a.id !== deletedId),
+                  },
+                }
+              })
+            }
+          } else if (event.newRecord) {
+            const record = event.newRecord as unknown as Academy
+            setCounts(prev => {
+              const base = prev.academies?.status === 'ready' ? prev.academies.data : []
+              const exists = base.some(a => a.id === record.id)
+              return {
+                ...prev,
+                academies: {
+                  status: 'ready',
+                  data: exists
+                    ? base.map(a => (a.id === record.id ? { ...a, ...record } : a))
+                    : [record, ...base],
+                },
+              }
+            })
+            if (record.id) markLiveUpdated(record.id)
+          }
+        } else if (event.table === 'site_announcements') {
+          if (event.eventType === 'DELETE') {
+            setSeasonalAnnouncement(null)
+          } else if (event.newRecord) {
+            setSeasonalAnnouncement(event.newRecord as unknown as DatabaseAnnouncement)
+          }
+        }
+      },
+    )
+
+    return () => {
+      unsubscribe()
+    }
+  }, [])
+
+  const handleReserveSpot = async (
+    e: React.MouseEvent,
+    game: {
+      id: string
+      sport: string
+      emoji?: string
+      skillLevel: string
+      venueName: string
+      city: string
+      timeLabel: string
+      hostName: string
+      pricePerPlayer: string
+      spotsOpen: number
+      totalPlayers: number
+      confirmedPlayers: number
+      is_featured?: boolean
+    },
+  ) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (game.spotsOpen <= 0 || joiningGameId === game.id) return
+    setJoiningGameId(game.id)
+    try {
+      await updatePickupGameSpots(
+        game.id,
+        Math.max(0, game.spotsOpen - 1),
+        game.confirmedPlayers + 1,
+        {
+          id: game.id,
+          slug: game.id,
+          sport: game.sport,
+          emoji: game.emoji,
+          skill_level: game.skillLevel as DatabasePickupGame['skill_level'],
+          venue_name: game.venueName,
+          city: game.city,
+          time_label: game.timeLabel,
+          host_name: game.hostName,
+          price_per_player: game.pricePerPlayer,
+          spots_open: Math.max(0, game.spotsOpen - 1),
+          total_players: game.totalPlayers,
+          confirmed_players: game.confirmedPlayers + 1,
+          is_featured: game.is_featured,
+        },
+      )
+    } finally {
+      setJoiningGameId(null)
+    }
+  }
 
   // Load live matches from liveSportsEngine
   useEffect(() => {
@@ -936,10 +1173,19 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
             <div className="home-rail-status-box">No published selection trials currently available.</div>
           ) : (
             displayOpportunities.map(opp => (
-              <a key={opp.id} href={`/opportunities/${opp.slug}`} className="home-rail-card">
+              <a
+                key={opp.id}
+                href={`/opportunities/${opp.slug}`}
+                className={`home-rail-card${liveUpdatedIds.has(opp.id) ? ' is-live-updated' : ''}`}
+              >
                 <div>
                   <div className="home-trial-header">
                     <span className="home-trial-type-badge">{opp.opportunity_type}</span>
+                    {liveUpdatedIds.has(opp.id) && (
+                      <span className="home-media-badge-live-pulse">
+                        ⚡ Live Updated
+                      </span>
+                    )}
                     {Boolean(opp.is_featured || opp.metadata?.featured || opp.metadata?.is_featured) && (
                       <span className="home-featured-star-pill">
                         <SiteIcon name="sparkles" size={11} />
@@ -1034,7 +1280,10 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
             aria-label="Featured training institutions list"
           >
             {displayAcademies.map(acad => (
-              <div key={acad.id} className="home-academy-card">
+              <div
+                key={acad.id}
+                className={`home-academy-card${liveUpdatedIds.has(acad.id) ? ' is-live-updated' : ''}`}
+              >
                 <div>
                   <div className="home-card-media">
                     <img
@@ -1046,6 +1295,11 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                     />
                     <div className="home-card-overlay-top-left">
                       <span className="home-media-badge-dark">{acad.est}</span>
+                      {liveUpdatedIds.has(acad.id) && (
+                        <span className="home-media-badge-live-pulse">
+                          ⚡ Live Updated
+                        </span>
+                      )}
                     </div>
                     <div className="home-card-overlay-top-right">
                       <span className="home-academy-verified-badge">
@@ -1136,7 +1390,11 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
             <div className="home-rail-status-box">No published venues currently available.</div>
           ) : (
             displayVenues.map(v => (
-              <a key={v.id} href={`/venues/${v.slug}`} className="home-rail-card">
+              <a
+                key={v.id}
+                href={`/venues/${v.slug}`}
+                className={`home-rail-card${liveUpdatedIds.has(v.id) ? ' is-live-updated' : ''}`}
+              >
                 <div>
                   <div className="home-card-media">
                     <img
@@ -1148,6 +1406,11 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                     />
                     <div className="home-card-overlay-top-left">
                       <span className="home-media-badge-dark">{v.city}</span>
+                      {liveUpdatedIds.has(v.id) && (
+                        <span className="home-media-badge-live-pulse">
+                          ⚡ Live Updated
+                        </span>
+                      )}
                     </div>
                     <div className="home-card-overlay-top-right">
                       {v.is_featured && (
@@ -1218,7 +1481,18 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
 
         <div ref={pickupRailRef} className="home-touch-rail" tabIndex={0} aria-label="Pickup sports games list">
           {displayPickupGames.map(g => (
-            <a key={g.id} href="/play" className="home-rail-card">
+            <a
+              key={g.id}
+              href="/play"
+              onClick={e => {
+                if ((e.target as HTMLElement).closest('.home-pickup-join-btn')) {
+                  e.preventDefault()
+                  return
+                }
+                onNavigate?.(e, '/play')
+              }}
+              className={`home-rail-card${liveUpdatedIds.has(g.id) ? ' is-live-updated' : ''}`}
+            >
               <div>
                 <div className="home-card-media">
                   <img
@@ -1230,6 +1504,11 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                   />
                   <div className="home-card-overlay-top-left">
                     <span className="home-media-badge-dark">{g.sport}</span>
+                    {liveUpdatedIds.has(g.id) && (
+                      <span className="home-media-badge-live-pulse">
+                        ⚡ Live Updated
+                      </span>
+                    )}
                     {g.is_featured && (
                       <span className="home-featured-star-pill">
                         <SiteIcon name="sparkles" size={11} />
@@ -1272,6 +1551,16 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                     className="home-pickup-progress-fill"
                     style={{ width: `${Math.round((g.confirmedPlayers / g.totalPlayers) * 100)}%` }}
                   />
+                </div>
+                <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    className="home-pickup-join-btn"
+                    disabled={g.spotsOpen <= 0 || joiningGameId === g.id}
+                    onClick={e => handleReserveSpot(e, g)}
+                  >
+                    {joiningGameId === g.id ? 'Reserving…' : g.spotsOpen <= 0 ? 'Full' : 'Reserve Spot'}
+                  </button>
                 </div>
               </div>
             </a>

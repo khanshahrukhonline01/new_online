@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { AsyncState } from '../../shared/components/AsyncState'
-import { getPickupGames } from '../../integrations/supabase/public-client'
+import { getPickupGames, updatePickupGameSpots } from '../../integrations/supabase/public-client'
 import type { CatalogueResult, DatabasePickupGame } from '../../integrations/supabase/public-client'
+import { subscribeToRealtimeCatalogue } from '../../integrations/supabase/realtime-client'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
 import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
@@ -18,6 +19,20 @@ export default function PlayPage({ onNavigate }: PlayPageProps = {}) {
     status: 'loading',
     data: [],
   })
+
+  const [liveUpdatedIds, setLiveUpdatedIds] = useState<Set<string>>(new Set())
+  const [joiningId, setJoiningId] = useState<string | null>(null)
+
+  const markLiveUpdated = (id: string) => {
+    setLiveUpdatedIds(prev => new Set(prev).add(id))
+    window.setTimeout(() => {
+      setLiveUpdatedIds(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }, 3500)
+  }
 
   const initial = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
   const [query, setQuery] = useState(initial.get('q') ?? '')
@@ -40,6 +55,89 @@ export default function PlayPage({ onNavigate }: PlayPageProps = {}) {
       window.removeEventListener('khelgrid:listing-added', loadGames)
     }
   }, [])
+
+  // Realtime subscription for instant auto-refresh without page reloads
+  useEffect(() => {
+    const unsubscribe = subscribeToRealtimeCatalogue(['pickup_games'], event => {
+      if (event.eventType === 'DELETE') {
+        const deletedId = (event.oldRecord as { id?: string })?.id
+        if (deletedId) {
+          setResult(prev => {
+            if (prev.status !== 'ready') return prev
+            return {
+              status: 'ready',
+              data: prev.data.filter(g => g.id !== deletedId),
+            }
+          })
+        }
+      } else if (event.newRecord) {
+        const updated = event.newRecord as unknown as DatabasePickupGame
+        setResult(prev => {
+          const current =
+            prev.status === 'ready' && prev.data.length > 0
+              ? prev.data
+              : COMMUNITY_PICKUP_GAMES.map(c => ({
+                  id: c.id,
+                  slug: c.id,
+                  sport: c.sport,
+                  emoji: c.emoji,
+                  skill_level: c.skillLevel,
+                  venue_name: c.venueName,
+                  city: c.city,
+                  time_label: c.timeLabel,
+                  host_name: c.hostName,
+                  price_per_player: c.pricePerPlayer,
+                  spots_open: c.spotsOpen,
+                  total_players: c.totalPlayers,
+                  confirmed_players: c.confirmedPlayers,
+                  is_featured: c.is_featured ?? false,
+                  publication_status: 'published',
+                }))
+          const exists = current.some(g => g.id === updated.id)
+          const nextData = exists
+            ? current.map(g => (g.id === updated.id ? { ...g, ...updated } : g))
+            : [updated, ...current]
+          return { status: 'ready', data: nextData }
+        })
+        if (updated.id) {
+          markLiveUpdated(updated.id)
+        }
+      }
+    })
+    return () => {
+      unsubscribe()
+    }
+  }, [])
+
+  const handleReserve = async (game: PickupGame) => {
+    if (game.spotsOpen <= 0 || joiningId === game.id) return
+    setJoiningId(game.id)
+    try {
+      await updatePickupGameSpots(
+        game.id,
+        Math.max(0, game.spotsOpen - 1),
+        game.confirmedPlayers + 1,
+        {
+          id: game.id,
+          slug: game.id,
+          sport: game.sport,
+          emoji: game.emoji,
+          skill_level: game.skillLevel,
+          venue_name: game.venueName,
+          city: game.city,
+          time_label: game.timeLabel,
+          host_name: game.hostName,
+          price_per_player: game.pricePerPlayer,
+          spots_open: Math.max(0, game.spotsOpen - 1),
+          total_players: game.totalPlayers,
+          confirmed_players: game.confirmedPlayers + 1,
+          is_featured: game.is_featured,
+        },
+      )
+    } finally {
+      setJoiningId(null)
+    }
+  }
 
   const records = useMemo<PickupGame[]>(() => {
     if (result.status === 'ready' && result.data.length > 0) {
@@ -187,7 +285,11 @@ export default function PlayPage({ onNavigate }: PlayPageProps = {}) {
             {visible.length ? (
               <div className="play-grid" role="list" aria-label="Pickup sports games">
                 {visible.map(game => (
-                  <article key={game.id} className="play-card" role="listitem">
+                  <article
+                    key={game.id}
+                    className={`play-card${liveUpdatedIds.has(game.id) ? ' is-live-updated' : ''}`}
+                    role="listitem"
+                  >
                     <div>
                       <div className="play-card-media">
                         <img
@@ -199,6 +301,11 @@ export default function PlayPage({ onNavigate }: PlayPageProps = {}) {
                         />
                         <div className="play-card-overlay-top-left">
                           <span className="home-media-badge-dark">{game.sport}</span>
+                          {liveUpdatedIds.has(game.id) && (
+                            <span className="play-badge-live-pulse">
+                              ⚡ Live Updated
+                            </span>
+                          )}
                           {game.is_featured && (
                             <span className="home-featured-star-pill">
                               <SiteIcon name="sparkles" size={11} />
@@ -254,6 +361,19 @@ export default function PlayPage({ onNavigate }: PlayPageProps = {}) {
                             }}
                           />
                         </div>
+                      </div>
+                      <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                          {game.spotsOpen <= 0 ? 'All spots filled' : `${game.spotsOpen} spots available`}
+                        </span>
+                        <button
+                          type="button"
+                          className="play-join-btn"
+                          disabled={game.spotsOpen <= 0 || joiningId === game.id}
+                          onClick={() => handleReserve(game)}
+                        >
+                          {joiningId === game.id ? 'Reserving…' : game.spotsOpen <= 0 ? 'Full' : 'Reserve Spot'}
+                        </button>
                       </div>
                     </div>
                   </article>

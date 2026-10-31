@@ -1,4 +1,5 @@
 import type { Academy, Coach, EventItem, Opportunity, Sport, Venue } from '../../shared/domain'
+import { broadcastRealtimeEvent, type RealtimeTable } from './realtime-client'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -722,6 +723,14 @@ export async function submitCommunityListing(
       break
   }
 
+  const tableMap: Record<CommunityListingCategory, RealtimeTable> = {
+    pickup_game: 'pickup_games',
+    opportunity: 'opportunities',
+    venue: 'venues',
+    academy: 'academies',
+  }
+  broadcastRealtimeEvent(tableMap[input.category], 'INSERT', record)
+
   if (typeof window !== 'undefined') {
     window.dispatchEvent(
       new CustomEvent('khelgrid:listing-added', {
@@ -745,3 +754,92 @@ export async function submitCommunityListing(
     message: `${categoryName} has been published and is now live on KhelGrid!`,
   }
 }
+
+/**
+ * Updates spot availability for a pickup game and broadcasts the change in realtime.
+ */
+export async function updatePickupGameSpots(
+  gameId: string,
+  newSpotsOpen: number,
+  newConfirmedPlayers: number,
+  fallbackDetails?: Partial<DatabasePickupGame>,
+): Promise<{ status: 'updated' | 'error'; message: string; game?: DatabasePickupGame }> {
+  let updatedGame: DatabasePickupGame | undefined
+
+  // 1. Update in local session cache if present
+  const idx = communitySubmissions.pickup_games.findIndex(g => g.id === gameId)
+  if (idx !== -1) {
+    communitySubmissions.pickup_games[idx] = {
+      ...communitySubmissions.pickup_games[idx],
+      spots_open: newSpotsOpen,
+      confirmed_players: newConfirmedPlayers,
+    }
+    updatedGame = communitySubmissions.pickup_games[idx]
+  }
+
+  // 2. If Supabase credentials configured, send PATCH to Supabase REST
+  if (supabaseUrl && anonKey) {
+    try {
+      const baseUrl = new URL(supabaseUrl)
+      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
+        const response = await fetch(
+          `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/pickup_games?id=eq.${encodeURIComponent(gameId)}`,
+          {
+            method: 'PATCH',
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${anonKey}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Prefer: 'return=representation',
+            },
+            body: JSON.stringify({
+              spots_open: newSpotsOpen,
+              confirmed_players: newConfirmedPlayers,
+            }),
+          },
+        )
+        if (response.ok) {
+          const res = await response.json()
+          if (Array.isArray(res) && res[0]) {
+            updatedGame = res[0] as DatabasePickupGame
+          }
+        }
+      }
+    } catch {
+      // Offline fallback
+    }
+  }
+
+  if (!updatedGame) {
+    updatedGame = {
+      id: gameId,
+      slug: fallbackDetails?.slug || gameId,
+      sport: fallbackDetails?.sport || 'Sports',
+      emoji: fallbackDetails?.emoji || '⚽',
+      skill_level: fallbackDetails?.skill_level || 'All Levels',
+      venue_name: fallbackDetails?.venue_name || 'Community Arena',
+      city: fallbackDetails?.city || 'India',
+      time_label: fallbackDetails?.time_label || 'Today',
+      host_name: fallbackDetails?.host_name || 'Community Host',
+      price_per_player: fallbackDetails?.price_per_player || '₹200/player',
+      spots_open: newSpotsOpen,
+      total_players: fallbackDetails?.total_players || (newSpotsOpen + newConfirmedPlayers),
+      confirmed_players: newConfirmedPlayers,
+      is_featured: fallbackDetails?.is_featured ?? false,
+      publication_status: 'published',
+    }
+    if (idx === -1) {
+      communitySubmissions.pickup_games.push(updatedGame)
+    }
+  }
+
+  broadcastRealtimeEvent('pickup_games', 'UPDATE', updatedGame)
+
+  return {
+    status: 'updated',
+    message: `Spots updated in real-time! ${newSpotsOpen} spot${newSpotsOpen === 1 ? '' : 's'} remaining.`,
+    game: updatedGame,
+  }
+}
+
