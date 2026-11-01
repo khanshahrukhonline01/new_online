@@ -79,6 +79,11 @@ If you are setting up a new Supabase environment or executing queries manually i
 | **09** | `seeds/09_seed_metro_venues.sql` | Inserts 48 premier sports complexes across 16 metro cities (Wankhede, JLN, Kanteerava, Balewadi) and maps to `venue_sports`. |
 | **10** | `seeds/10_seed_verified_coaches.sql` | Inserts 25 verified NIS / Dronacharya coaches and links all coaches to `coach_sports`. |
 | **11** | `seeds/11_seed_all_opportunities.sql` | Adds rich columns, cleans test rows, registers indigenous sports, and inserts all 88 verified national & state selection trials (covering all 65 active trials). |
+| **12** | `seeds/12_seed_all_cities.sql` | Creates `public.cities` table with RLS and seeds all 53 sports cities (16 metro hubs + 37 regional centres). |
+| **13** | `seeds/13_seed_pickup_games.sql` | Creates `public.pickup_games` table, RLS spot-booking policies, and initial community pickup games. |
+| **14** | `seeds/14_seed_site_announcements.sql` | Creates `public.site_announcements` table with date constraints and seeds high-priority seasonal banners. |
+| **15** | `seeds/15_seed_chronicle_categories.sql` | Creates `public.chronicle_categories` table with RLS and seeds the 6 sports science disciplines. |
+| **16** | `seeds/16_setup_trust_and_safety.sql` | Creates `public.listing_reports` (anti-scam reporting) and `public.verification_claims` with RLS policies and verification status columns. |
 
 ---
 
@@ -86,6 +91,19 @@ If you are setting up a new Supabase environment or executing queries manually i
 
 For single-module updates, use the standalone SQL files in the root of `supabase/`:
 
+- **Trust & Safety, Scam Reporting & Verification**: [`setup_trust_and_safety.sql`](./setup_trust_and_safety.sql)
+  - Creates `public.listing_reports` and `public.verification_claims` tables with RLS and anonymous insert policies.
+  - Adds `affiliation_proof`, `reported_count`, and `verification_status` columns.
+- **Opportunities Enrichment & Featured Ranking**: [`setup_opportunities_enrichment.sql`](./setup_opportunities_enrichment.sql)
+  - Adds `is_featured`, `available_spots`, `age_category`, `gender`, `eligibility_criteria`, `required_documents`, and `metadata` to `public.opportunities`.
+- **Indian Sports Cities Geography**: [`setup_cities_directory.sql`](./setup_cities_directory.sql)
+  - Creates `public.cities` table, enables public read access, and seeds all 53 Indian sports cities.
+- **Community Pickup Games & Live Matches**: [`setup_pickup_games.sql`](./setup_pickup_games.sql)
+  - Creates `public.pickup_games` table with realtime spot availability and self-service booking.
+- **Seasonal Announcements & Banners**: [`setup_site_announcements.sql`](./setup_site_announcements.sql)
+  - Creates `public.site_announcements` table with date range scheduling.
+- **KhelChronicle Research Taxonomy**: [`setup_chronicle_categories.sql`](./setup_chronicle_categories.sql)
+  - Creates `public.chronicle_categories` table for sports science research disciplines.
 - **All 88 National & State Selection Opportunities**: [`setup_all_opportunities.sql`](./setup_all_opportunities.sql)
   - Adds `registration_fee`, `available_spots`, `age_category`, `gender`, `required_documents`, and `metadata` to `public.opportunities`.
   - Cleans legacy `TEST ONLY` rows and registers missing national sports (Kho-Kho, Softball, Wushu, etc.).
