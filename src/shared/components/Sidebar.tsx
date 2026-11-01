@@ -102,10 +102,10 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
 
   const mobileItems: { label: string; href: string; icon: SiteIconName }[] = [
     { label: 'Home', href: '/', icon: 'home' },
-    { label: 'Play', href: '/play', icon: 'sports' },
-    { label: 'Book', href: '/venues', icon: 'calendar-check' },
-    { label: 'Train', href: '/academies', icon: 'building' },
-    { label: 'Live', href: '/live', icon: 'activity' },
+    { label: 'Sports', href: '/sports', icon: 'sports' },
+    { label: 'Trials', href: '/opportunities', icon: 'opportunities' },
+    { label: 'Venues', href: '/venues', icon: 'venues' },
+    { label: 'Search', href: '/search', icon: 'search' },
   ]
 
   function renderSections(mobile = false) {
