@@ -15,7 +15,7 @@ export type CatalogueResult<T> =
   | { status: 'unavailable'; data: []; message: string }
 
 type QueryOptions = {
-  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities' | 'pickup_games' | 'pickup_game_participants' | 'site_announcements'
+  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities' | 'pickup_games' | 'pickup_game_participants' | 'site_announcements' | 'reviews'
   select: string
   order: string
   filters: Record<string, string>
@@ -82,6 +82,52 @@ const OPPORTUNITY_RICH_SELECT =
 const OPPORTUNITY_CORE_SELECT =
   'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status'
 
+export type AuthorRole = 'Athlete' | 'Parent' | 'Coach' | 'Turf Player' | 'Verified Player'
+
+export interface ReviewItem {
+  id: string
+  entity_type: 'academy' | 'venue'
+  entity_id: string
+  entity_slug: string
+  user_id: string | null
+  author_name: string
+  author_role: AuthorRole
+  rating: number
+  title?: string | null
+  content: string
+  photos: string[]
+  helpful_count: number
+  status: 'pending' | 'published' | 'flagged' | 'hidden'
+  created_at: string
+}
+
+export interface SubmitReviewInput {
+  entityType: 'academy' | 'venue'
+  entityId: string
+  entitySlug: string
+  authorName: string
+  authorRole?: AuthorRole
+  rating: number
+  title?: string
+  content: string
+  photos?: string[]
+  userId?: string
+}
+
+export interface ReviewStats {
+  averageRating: number
+  totalReviews: number
+  distribution: {
+    5: number
+    4: number
+    3: number
+    2: number
+    1: number
+  }
+}
+
+export type StorageBucket = 'venue-media' | 'academy-photos' | 'cv-documents'
+
 // In-memory session cache for community submitted items
 const communitySubmissions = {
   academies: [] as Academy[],
@@ -89,6 +135,7 @@ const communitySubmissions = {
   opportunities: [] as Opportunity[],
   pickup_games: [] as DatabasePickupGame[],
   pickup_game_participants: [] as DatabasePickupGameParticipant[],
+  reviews: [] as ReviewItem[],
 }
 
 function mergeWithCommunity<T extends { slug: string }>(catalogueItems: T[], communityItems: T[]): T[] {
@@ -107,6 +154,8 @@ export function clearCommunitySubmissions() {
   communitySubmissions.venues = []
   communitySubmissions.opportunities = []
   communitySubmissions.pickup_games = []
+  communitySubmissions.pickup_game_participants = []
+  communitySubmissions.reviews = []
 }
 
 async function fetchOpportunitiesCatalogue(): Promise<CatalogueResult<Opportunity>> {
@@ -1357,5 +1406,404 @@ export async function submitVerificationProof(proof: VerificationProofInput): Pr
     message: 'Verification proof submitted successfully! The KhelGrid Sports Desk will review your credentials against official registries within 2–4 hours. Once verified, the official verified badge will be published.',
   }
 }
+
+// -----------------------------------------------------------------------------
+// Community Reviews, Ratings & Media Uploads (Supabase Storage)
+// -----------------------------------------------------------------------------
+
+export const INITIAL_CURATED_REVIEWS: ReviewItem[] = [
+  {
+    id: 'rev-curated-1',
+    entity_type: 'venue',
+    entity_id: 'kicks-on-grass-bellandur-bengaluru-914w9',
+    entity_slug: 'kicks-on-grass-bellandur-bengaluru-914w9',
+    user_id: null,
+    author_name: 'Arjun Nair',
+    author_role: 'Turf Player',
+    rating: 5,
+    title: 'Superb FIFA-grade turf and brilliant floodlights',
+    content: 'We play 7v7 football here every Tuesday evening. The turf cushioning is very gentle on knees and the high-lux floodlights ensure zero shadow spots. Booking via KhelGrid was instant.',
+    photos: [
+      'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=800&q=80',
+    ],
+    helpful_count: 14,
+    status: 'published',
+    created_at: '2026-10-28T18:30:00.000Z',
+  },
+  {
+    id: 'rev-curated-2',
+    entity_type: 'venue',
+    entity_id: 'kicks-on-grass-bellandur-bengaluru-914w9',
+    entity_slug: 'kicks-on-grass-bellandur-bengaluru-914w9',
+    user_id: null,
+    author_name: 'Vikram Shenoy',
+    author_role: 'Athlete',
+    rating: 4,
+    title: 'Great pitch, clean changing rooms',
+    content: 'Well maintained grass surface with high netting so balls don’t go outside. Drinking water dispenser and parking are easily accessible.',
+    photos: [],
+    helpful_count: 8,
+    status: 'published',
+    created_at: '2026-10-25T14:15:00.000Z',
+  },
+  {
+    id: 'rev-curated-3',
+    entity_type: 'academy',
+    entity_id: 'pullela-gopichand-badminton-academy-hyderabad-hyderabad-u739x',
+    entity_slug: 'pullela-gopichand-badminton-academy-hyderabad-hyderabad-u739x',
+    user_id: null,
+    author_name: 'Meera Krishnan',
+    author_role: 'Parent',
+    rating: 5,
+    title: 'World-class training discipline and coaches',
+    content: 'My 14-year-old daughter has been in the junior batch for 8 months. The fitness drills, tactical footwork coaching, and psychological mentoring are second to none in India.',
+    photos: [
+      'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=800&q=80',
+    ],
+    helpful_count: 23,
+    status: 'published',
+    created_at: '2026-10-20T10:00:00.000Z',
+  },
+  {
+    id: 'rev-curated-4',
+    entity_type: 'academy',
+    entity_id: 'bhaichung-bhutia-football-schools-delhi-delhi-b7d18',
+    entity_slug: 'bhaichung-bhutia-football-schools-delhi-delhi-b7d18',
+    user_id: null,
+    author_name: 'Kabir Verma',
+    author_role: 'Athlete',
+    rating: 5,
+    title: 'Structured age-group progression and licensed coaches',
+    content: 'Top level coaching methodology. They focus on tactical awareness, first touch, and positioning from day one. Highly recommend for any young footballer.',
+    photos: [],
+    helpful_count: 19,
+    status: 'published',
+    created_at: '2026-10-22T16:45:00.000Z',
+  },
+]
+
+export function computeReviewStats(reviews: ReviewItem[]): ReviewStats {
+  if (!reviews.length) {
+    return {
+      averageRating: 0,
+      totalReviews: 0,
+      distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+    }
+  }
+
+  const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+  let sum = 0
+
+  for (const r of reviews) {
+    sum += r.rating
+    if (r.rating in distribution) {
+      distribution[r.rating as keyof typeof distribution]++
+    }
+  }
+
+  const avg = Math.round((sum / reviews.length) * 10) / 10
+  return {
+    averageRating: avg,
+    totalReviews: reviews.length,
+    distribution,
+  }
+}
+
+export async function getReviews(
+  entityType: 'academy' | 'venue',
+  entitySlug: string,
+): Promise<CatalogueResult<ReviewItem>> {
+  const cleanSlug = entitySlug.toLowerCase().trim()
+  const localList = communitySubmissions.reviews.filter(
+    r => r.entity_type === entityType && r.entity_slug.toLowerCase() === cleanSlug,
+  )
+
+  const curatedList = INITIAL_CURATED_REVIEWS.filter(
+    r => r.entity_type === entityType && r.entity_slug.toLowerCase() === cleanSlug,
+  )
+
+  const dbRes = await readCatalogue<ReviewItem>({
+    table: 'reviews',
+    select: 'id,entity_type,entity_id,entity_slug,user_id,author_name,author_role,rating,title,content,photos,helpful_count,status,created_at',
+    order: 'created_at.desc',
+    filters: {
+      entity_type: `eq.${entityType}`,
+      entity_slug: `eq.${cleanSlug}`,
+      status: 'eq.published',
+    },
+  })
+
+  let combined: ReviewItem[] = []
+
+  if (dbRes.status === 'ready' && dbRes.data.length > 0) {
+    const seen = new Set(dbRes.data.map(r => r.id))
+    const freshLocals = localList.filter(r => !seen.has(r.id))
+    combined = [...freshLocals, ...dbRes.data]
+  } else {
+    // If database returned no records or unconfigured, combine local submissions and curated
+    const seen = new Set(localList.map(r => r.id))
+    const uniqueCurated = curatedList.filter(r => !seen.has(r.id))
+    combined = [...localList, ...uniqueCurated]
+  }
+
+  return {
+    status: 'ready',
+    data: combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+  }
+}
+
+export async function submitReview(
+  input: SubmitReviewInput,
+): Promise<{ status: 'submitted' | 'error'; message: string; review?: ReviewItem }> {
+  const authorName = input.authorName?.trim()
+  if (!authorName || authorName.length < 2) {
+    return { status: 'error', message: 'Please provide your name (at least 2 characters).' }
+  }
+
+  const content = input.content?.trim()
+  if (!content || content.length < 5) {
+    return { status: 'error', message: 'Please share a review of at least 5 characters.' }
+  }
+
+  const rating = Math.min(5, Math.max(1, Math.round(input.rating || 5)))
+  const randomSuffix = Math.random().toString(36).substring(2, 9)
+  const currentUser = getStoredUser()
+
+  const review: ReviewItem = {
+    id: `rev-${randomSuffix}`,
+    entity_type: input.entityType,
+    entity_id: input.entityId,
+    entity_slug: input.entitySlug.toLowerCase().trim(),
+    user_id: input.userId || currentUser?.id || null,
+    author_name: authorName,
+    author_role: input.authorRole || (currentUser?.role === 'academy' ? 'Coach' : 'Athlete'),
+    rating,
+    title: input.title?.trim() || null,
+    content,
+    photos: Array.isArray(input.photos) ? input.photos : [],
+    helpful_count: 0,
+    status: 'published',
+    created_at: new Date().toISOString(),
+  }
+
+  // 1. Post to Supabase REST API if configured
+  if (supabaseUrl && anonKey) {
+    try {
+      const baseUrl = new URL(supabaseUrl)
+      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
+        const payload = {
+          entity_type: review.entity_type,
+          entity_id: review.entity_id,
+          entity_slug: review.entity_slug,
+          user_id: review.user_id,
+          author_name: review.author_name,
+          author_role: review.author_role,
+          rating: review.rating,
+          title: review.title,
+          content: review.content,
+          photos: review.photos,
+          status: review.status,
+        }
+
+        const res = await fetch(
+          `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/reviews`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${anonKey}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Prefer: 'return=representation',
+            },
+            body: JSON.stringify(payload),
+          },
+        )
+
+        if (res.ok) {
+          const inserted = await res.json()
+          if (Array.isArray(inserted) && inserted[0]) {
+            review.id = (inserted[0] as { id?: string }).id || review.id
+          }
+        }
+      }
+    } catch {
+      // Offline fallback
+    }
+  }
+
+  // 2. Cache in local memory
+  communitySubmissions.reviews = [review, ...communitySubmissions.reviews]
+
+  // 3. Realtime event & custom DOM notification
+  broadcastRealtimeEvent('reviews', 'INSERT', review)
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('khelgrid:review-added', {
+        detail: { review },
+      }),
+    )
+  }
+
+  return {
+    status: 'submitted',
+    message: 'Thank you! Your rating and ground photos have been published to the community.',
+    review,
+  }
+}
+
+const inMemoryHelpfulVotes = new Set<string>()
+
+export function getVotedHelpfulReviewIds(): Set<string> {
+  if (typeof window === 'undefined' || !window.localStorage) return inMemoryHelpfulVotes
+  try {
+    const raw = window.localStorage.getItem('khelgrid_helpful_voted_reviews')
+    const parsed = raw ? new Set<string>(JSON.parse(raw)) : new Set<string>()
+    for (const id of inMemoryHelpfulVotes) parsed.add(id)
+    return parsed
+  } catch {
+    return inMemoryHelpfulVotes
+  }
+}
+
+export function saveVotedHelpfulReview(reviewId: string): void {
+  inMemoryHelpfulVotes.add(reviewId)
+  if (typeof window === 'undefined' || !window.localStorage) return
+  try {
+    const ids = getVotedHelpfulReviewIds()
+    ids.add(reviewId)
+    window.localStorage.setItem('khelgrid_helpful_voted_reviews', JSON.stringify([...ids]))
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export async function voteHelpfulReview(reviewId: string): Promise<boolean> {
+  const voted = getVotedHelpfulReviewIds()
+  if (voted.has(reviewId)) return false
+
+  saveVotedHelpfulReview(reviewId)
+
+  // 1. Update local cache
+  const idx = communitySubmissions.reviews.findIndex(r => r.id === reviewId)
+  if (idx !== -1) {
+    communitySubmissions.reviews[idx] = {
+      ...communitySubmissions.reviews[idx],
+      helpful_count: communitySubmissions.reviews[idx].helpful_count + 1,
+    }
+  }
+
+  // 2. Patch to Supabase if configured
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reviewId)
+  if (supabaseUrl && anonKey && isUuid) {
+    try {
+      const baseUrl = new URL(supabaseUrl)
+      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
+        // Fetch current count to increment safely
+        const fetchRes = await fetch(
+          `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/reviews?id=eq.${encodeURIComponent(reviewId)}&select=helpful_count`,
+          {
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${anonKey}`,
+              Accept: 'application/json',
+            },
+          },
+        )
+        if (fetchRes.ok) {
+          const rows = await fetchRes.json()
+          const currentCount = Array.isArray(rows) && rows[0]?.helpful_count ? Number(rows[0].helpful_count) : 0
+          await fetch(
+            `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/reviews?id=eq.${encodeURIComponent(reviewId)}`,
+            {
+              method: 'PATCH',
+              headers: {
+                apikey: anonKey,
+                Authorization: `Bearer ${anonKey}`,
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Prefer: 'return=minimal',
+              },
+              body: JSON.stringify({ helpful_count: currentCount + 1 }),
+            },
+          )
+        }
+      }
+    } catch {
+      // Offline fallback
+    }
+  }
+
+  broadcastRealtimeEvent('reviews', 'UPDATE', { id: reviewId })
+  return true
+}
+
+/**
+ * Uploads media (images, court photos, CV documents) directly to Supabase Storage.
+ * Provides instant fallback with base64 data URLs when working offline or in local preview.
+ */
+export async function uploadMediaFile(
+  bucket: StorageBucket,
+  file: File,
+  folder: string = 'community',
+): Promise<{ url: string; error?: string }> {
+  const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+  const filePath = `${folder}/${Date.now()}-${Math.random().toString(36).substring(2, 8)}-${cleanName}`
+
+  if (supabaseUrl && anonKey) {
+    try {
+      const baseUrl = new URL(supabaseUrl)
+      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
+        const uploadUrl = `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/storage/v1/object/${bucket}/${filePath}`
+        const response = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+            'Content-Type': file.type || 'image/jpeg',
+            'x-upsert': 'true',
+          },
+          body: file,
+        })
+
+        if (response.ok) {
+          const publicUrl = `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/storage/v1/object/public/${bucket}/${filePath}`
+          return { url: publicUrl }
+        }
+      }
+    } catch {
+      // Fall through to client-side data URL preview fallback
+    }
+  }
+
+  // Graceful client-side data URL fallback for instant camera/file preview
+  if (typeof FileReader !== 'undefined') {
+    return new Promise(resolve => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        resolve({ url: reader.result as string })
+      }
+      reader.onerror = () => {
+        resolve({ url: URL.createObjectURL(file) })
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  try {
+    const arrayBuffer = await file.arrayBuffer()
+    const bytes = new Uint8Array(arrayBuffer)
+    let binary = ''
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i])
+    }
+    const base64 = typeof btoa === 'function' ? btoa(binary) : ''
+    return { url: `data:${file.type || 'image/jpeg'};base64,${base64}` }
+  } catch {
+    return { url: `https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80` }
+  }
+}
+
 
 

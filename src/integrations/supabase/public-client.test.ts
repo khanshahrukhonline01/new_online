@@ -343,4 +343,84 @@ describe('public catalogue client', () => {
     expect(participants.length).toBeGreaterThanOrEqual(1)
     expect(participants[0].player_name).toBe('Karan Sharma')
   })
+
+  it('manages community reviews, computes stats, helpful votes, and uploads media', async () => {
+    const client = await loadClient()
+
+    // 1. Compute stats on sample reviews
+    const stats = client.computeReviewStats([
+      {
+        id: 'r1',
+        entity_type: 'venue',
+        entity_id: 'v1',
+        entity_slug: 'v1-slug',
+        user_id: null,
+        author_name: 'Player 1',
+        author_role: 'Athlete',
+        rating: 5,
+        content: 'Great turf',
+        photos: [],
+        helpful_count: 3,
+        status: 'published',
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'r2',
+        entity_type: 'venue',
+        entity_id: 'v1',
+        entity_slug: 'v1-slug',
+        user_id: null,
+        author_name: 'Player 2',
+        author_role: 'Turf Player',
+        rating: 4,
+        content: 'Good lights',
+        photos: ['https://example.com/court.jpg'],
+        helpful_count: 1,
+        status: 'published',
+        created_at: new Date().toISOString(),
+      },
+    ])
+
+    expect(stats.averageRating).toBe(4.5)
+    expect(stats.totalReviews).toBe(2)
+    expect(stats.distribution[5]).toBe(1)
+    expect(stats.distribution[4]).toBe(1)
+
+    // 2. Submit new review
+    const submitRes = await client.submitReview({
+      entityType: 'venue',
+      entityId: 'v-test',
+      entitySlug: 'v-test-slug',
+      authorName: 'Rohan Mehra',
+      authorRole: 'Turf Player',
+      rating: 5,
+      title: 'Flawless pitch condition',
+      content: 'FIFA quality turf with ample free parking and clean washrooms.',
+      photos: ['https://example.com/turf1.jpg'],
+    })
+
+    expect(submitRes.status).toBe('submitted')
+    expect(submitRes.review?.author_name).toBe('Rohan Mehra')
+    expect(submitRes.review?.rating).toBe(5)
+    expect(submitRes.review?.photos).toContain('https://example.com/turf1.jpg')
+
+    // 3. Query reviews for entity
+    const reviewsRes = await client.getReviews('venue', 'v-test-slug')
+    expect(reviewsRes.status).toBe('ready')
+    expect(reviewsRes.data.some(r => r.author_name === 'Rohan Mehra')).toBe(true)
+
+    // 4. Helpful vote
+    if (submitRes.review?.id) {
+      const voted = await client.voteHelpfulReview(submitRes.review.id)
+      expect(voted).toBe(true)
+      // Second vote from same session should be prevented
+      const doubleVote = await client.voteHelpfulReview(submitRes.review.id)
+      expect(doubleVote).toBe(false)
+    }
+
+    // 5. Media upload fallback
+    const mockFile = new File(['dummy photo bytes'], 'court.jpg', { type: 'image/jpeg' })
+    const uploadRes = await client.uploadMediaFile('venue-media', mockFile)
+    expect(uploadRes.url).toBeDefined()
+  })
 })

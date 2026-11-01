@@ -7,6 +7,7 @@ import { updatePageSeoMetadata } from '../../shared/utils/seoAndShare'
 import { getCuratedAcademyBySlug, type CuratedAcademy } from '../../shared/data/curatedEntitiesData'
 import ReportListingModal from '../../shared/components/ReportListingModal'
 import VerificationClaimModal from '../../shared/components/VerificationClaimModal'
+import { CommunityReviewsSection } from '../../shared/components/CommunityReviewsSection'
 import './AcademyDetailPage.css'
 
 export interface AcademyDetailPageProps {
@@ -425,6 +426,16 @@ export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPag
               })}
             </div>
           </section>
+
+          {/* Community Reviews, Ratings & Media Uploads */}
+          <CommunityReviewsSection
+            entityType="academy"
+            entityId={academy.id}
+            entitySlug={academy.slug}
+            entityName={academy.name}
+            sport={sportName}
+            city={academy.city}
+          />
         </div>
 
         {/* Sidebar / Quick Inquiry Box */}

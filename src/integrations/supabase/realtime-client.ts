@@ -9,6 +9,7 @@ export type RealtimeTable =
   | 'venues'
   | 'academies'
   | 'site_announcements'
+  | 'reviews'
 
 export interface RealtimeChangeEvent<T = Record<string, unknown>> {
   table: RealtimeTable

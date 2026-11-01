@@ -7,6 +7,7 @@ import { updatePageSeoMetadata } from '../../shared/utils/seoAndShare'
 import { getCuratedVenueBySlug, type CuratedVenue } from '../../shared/data/curatedEntitiesData'
 import ReportListingModal from '../../shared/components/ReportListingModal'
 import VerificationClaimModal from '../../shared/components/VerificationClaimModal'
+import { CommunityReviewsSection } from '../../shared/components/CommunityReviewsSection'
 import './VenueDetailPage.css'
 
 export interface VenueDetailPageProps {
@@ -420,6 +421,16 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: Venu
               })}
             </div>
           </section>
+
+          {/* Community Reviews, Ratings & Media Uploads */}
+          <CommunityReviewsSection
+            entityType="venue"
+            entityId={venue.id}
+            entitySlug={venue.slug}
+            entityName={venue.name}
+            sport={sportName}
+            city={venue.city}
+          />
         </div>
 
         {/* Sidebar / Quick Inquiry Box */}
