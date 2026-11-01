@@ -78,6 +78,7 @@ import {
   Briefcase,
   Handshake,
   Languages,
+  ThumbsUp,
   type LucideIcon,
 } from 'lucide-react'
 import type { SVGProps } from 'react'
@@ -90,7 +91,7 @@ export const siteIconNames = [
   'bookmark','heart','star','user','users','user-round','settings','help-circle','mail','phone',
   'globe','link','plus','minus','edit','trash','lock','unlock','eye','eye-off','bell','message','message-circle',
   'play','pause','volume','volume-x','sun','moon','monitor','briefcase','handshake','languages','image','camera','trophy','medal','target','activity','chart','building',
-  'wallet','credit-card','arrow-left','arrow-right','external','logout','sparkles','award','book-open','flag'
+  'wallet','credit-card','arrow-left','arrow-right','external','logout','sparkles','award','book-open','flag','thumbs-up'
 ] as const
 
 export type SiteIconName = typeof siteIconNames[number]
@@ -182,6 +183,7 @@ const icons: Record<SiteIconName, LucideIcon> = {
   sparkles: Sparkles,
   award: Award,
   flag: Flag,
+  'thumbs-up': ThumbsUp,
 }
 
 type SiteIconProps = SVGProps<SVGSVGElement> & {
