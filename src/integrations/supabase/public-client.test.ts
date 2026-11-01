@@ -288,4 +288,59 @@ describe('public catalogue client', () => {
       expect(verifiedResult.record.verification_status).toBe('verified')
     }
   })
+
+  it('handles pickup game RSVP spot reservations, WhatsApp group link retrieval, and match locking', async () => {
+    const mockGame = {
+      id: 'pg-test-1',
+      slug: 'pickleball-indiranagar',
+      sport: 'Pickleball',
+      emoji: '🎾',
+      skill_level: 'Intermediate',
+      venue_name: 'Indiranagar Club',
+      city: 'Bengaluru',
+      time_label: 'Today · 7:00 PM',
+      host_name: 'Host Arjun',
+      price_per_player: '₹200',
+      spots_open: 1,
+      total_players: 4,
+      confirmed_players: 3,
+      is_featured: false,
+      publication_status: 'published',
+      whatsapp_group_url: 'https://chat.whatsapp.com/test-pickleball-group',
+      status: 'open',
+    }
+    vi.mocked(fetch).mockResolvedValue(jsonResponse([mockGame]))
+    const client = await loadClient()
+
+    // 1. Validation failure: name < 2 chars
+    const shortNameRes = await client.joinPickupGame({
+      gameId: 'pg-test-1',
+      playerName: 'A',
+    })
+    expect(shortNameRes.status).toBe('error')
+
+    // 2. Successful reservation: spots_open becomes 0, status becomes full
+    const joinRes = await client.joinPickupGame({
+      gameId: 'pg-test-1',
+      playerName: 'Karan Sharma',
+      playerPhone: '9876543210',
+    })
+    expect(joinRes.status).toBe('confirmed')
+    expect(joinRes.whatsappGroupUrl).toBe('https://chat.whatsapp.com/test-pickleball-group')
+    expect(joinRes.participant?.player_name).toBe('Karan Sharma')
+    expect(joinRes.game?.spots_open).toBe(0)
+    expect(joinRes.game?.status).toBe('full')
+
+    // 3. Match full prevention
+    const fullRes = await client.joinPickupGame({
+      gameId: 'pg-test-1',
+      playerName: 'Second Player',
+    })
+    expect(fullRes.status).toBe('full')
+
+    // 4. Participant roster retrieval
+    const participants = await client.getPickupGameParticipants('pg-test-1')
+    expect(participants.length).toBeGreaterThanOrEqual(1)
+    expect(participants[0].player_name).toBe('Karan Sharma')
+  })
 })

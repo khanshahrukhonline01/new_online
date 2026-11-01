@@ -90,6 +90,7 @@ export default function CommunityListingModal({
   const [spotsOpen, setSpotsOpen] = useState(4)
   const [totalPlayers, setTotalPlayers] = useState(10)
   const [emoji, setEmoji] = useState('⚽')
+  const [whatsappGroupUrl, setWhatsappGroupUrl] = useState('')
 
   // Hybrid Auth & Contact State
   const [currentUser, setCurrentUser] = useState<KhelGridUser | null>(getStoredUser())
@@ -243,6 +244,7 @@ export default function CommunityListingModal({
           price_per_player: pricePerPlayer || 'Free',
           spots_open: spotsOpen,
           total_players: totalPlayers,
+          whatsapp_group_url: whatsappGroupUrl.trim() || undefined,
           is_verified_user: Boolean(currentUser?.isVerified),
         }
         directoryPath = '/play'
@@ -681,6 +683,19 @@ export default function CommunityListingModal({
                       value={hostName}
                       onChange={e => setHostName(e.target.value)}
                     />
+                  </label>
+
+                  <label className="community-field-group">
+                    <span>WhatsApp Group Link (Optional · Unlocks for confirmed players)</span>
+                    <input
+                      type="url"
+                      placeholder="e.g. https://chat.whatsapp.com/..."
+                      value={whatsappGroupUrl}
+                      onChange={e => setWhatsappGroupUrl(e.target.value)}
+                    />
+                    <small style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>
+                      Players who reserve a spot will receive an instant link to join your match WhatsApp group.
+                    </small>
                   </label>
                 </div>
               )}

@@ -4,6 +4,7 @@ let cachedClient: SupabaseClient | null = null
 
 export type RealtimeTable =
   | 'pickup_games'
+  | 'pickup_game_participants'
   | 'opportunities'
   | 'venues'
   | 'academies'

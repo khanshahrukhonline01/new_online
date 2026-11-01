@@ -15,7 +15,7 @@ export type CatalogueResult<T> =
   | { status: 'unavailable'; data: []; message: string }
 
 type QueryOptions = {
-  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities' | 'pickup_games' | 'site_announcements'
+  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities' | 'pickup_games' | 'pickup_game_participants' | 'site_announcements'
   select: string
   order: string
   filters: Record<string, string>
@@ -88,6 +88,7 @@ const communitySubmissions = {
   venues: [] as Venue[],
   opportunities: [] as Opportunity[],
   pickup_games: [] as DatabasePickupGame[],
+  pickup_game_participants: [] as DatabasePickupGameParticipant[],
 }
 
 function mergeWithCommunity<T extends { slug: string }>(catalogueItems: T[], communityItems: T[]): T[] {
@@ -351,12 +352,24 @@ export interface DatabasePickupGame {
   confirmed_players: number
   is_featured: boolean
   publication_status: string
+  whatsapp_group_url?: string | null
+  status?: 'open' | 'full' | 'completed' | 'cancelled'
+}
+
+export interface DatabasePickupGameParticipant {
+  id: string
+  game_id: string
+  user_id?: string | null
+  player_name: string
+  player_phone?: string | null
+  status: 'confirmed' | 'waitlist' | 'cancelled'
+  joined_at: string
 }
 
 export async function getPickupGames(): Promise<CatalogueResult<DatabasePickupGame>> {
   const result = await readCatalogue<DatabasePickupGame>({
     table: 'pickup_games',
-    select: 'id,slug,sport,emoji,skill_level,venue_name,city,time_label,host_name,price_per_player,spots_open,total_players,confirmed_players,is_featured,publication_status',
+    select: 'id,slug,sport,emoji,skill_level,venue_name,city,time_label,host_name,price_per_player,spots_open,total_players,confirmed_players,is_featured,publication_status,whatsapp_group_url,status',
     order: 'is_featured.desc.nullslast,created_at.desc',
     filters: { publication_status: 'eq.published' },
   })
@@ -655,6 +668,7 @@ export interface CommunityPickupGameInput {
   total_players?: number
   contact_name?: string
   contact_phone?: string
+  whatsapp_group_url?: string
   is_verified_user?: boolean
 }
 
@@ -817,6 +831,8 @@ export async function submitCommunityListing(
         spots_open: spots,
         total_players: total,
         confirmed_players: Math.max(0, total - spots),
+        whatsapp_group_url: input.whatsapp_group_url?.trim() || null,
+        status: spots > 0 ? 'open' : 'full',
         is_featured: false,
         publication_status: 'published',
       }
@@ -942,6 +958,7 @@ export async function updatePickupGameSpots(
   fallbackDetails?: Partial<DatabasePickupGame>,
 ): Promise<{ status: 'updated' | 'error'; message: string; game?: DatabasePickupGame }> {
   let updatedGame: DatabasePickupGame | undefined
+  const nextStatus: 'open' | 'full' | 'completed' | 'cancelled' = newSpotsOpen <= 0 ? 'full' : (fallbackDetails?.status || 'open')
 
   // 1. Update in local session cache if present
   const idx = communitySubmissions.pickup_games.findIndex(g => g.id === gameId)
@@ -950,6 +967,7 @@ export async function updatePickupGameSpots(
       ...communitySubmissions.pickup_games[idx],
       spots_open: newSpotsOpen,
       confirmed_players: newConfirmedPlayers,
+      status: nextStatus,
     }
     updatedGame = communitySubmissions.pickup_games[idx]
   }
@@ -974,6 +992,7 @@ export async function updatePickupGameSpots(
             body: JSON.stringify({
               spots_open: newSpotsOpen,
               confirmed_players: newConfirmedPlayers,
+              status: nextStatus,
             }),
           },
         )
@@ -1004,6 +1023,8 @@ export async function updatePickupGameSpots(
       spots_open: newSpotsOpen,
       total_players: fallbackDetails?.total_players || (newSpotsOpen + newConfirmedPlayers),
       confirmed_players: newConfirmedPlayers,
+      whatsapp_group_url: fallbackDetails?.whatsapp_group_url || null,
+      status: nextStatus,
       is_featured: fallbackDetails?.is_featured ?? false,
       publication_status: 'published',
     }
@@ -1016,9 +1037,177 @@ export async function updatePickupGameSpots(
 
   return {
     status: 'updated',
-    message: `Spots updated in real-time! ${newSpotsOpen} spot${newSpotsOpen === 1 ? '' : 's'} remaining.`,
+    message: newSpotsOpen <= 0
+      ? 'Match is now fully booked!'
+      : `Spots updated in real-time! ${newSpotsOpen} spot${newSpotsOpen === 1 ? '' : 's'} remaining.`,
     game: updatedGame,
   }
+}
+
+export interface JoinPickupGameInput {
+  gameId: string
+  playerName: string
+  playerPhone?: string
+  userId?: string
+}
+
+export interface JoinPickupGameResult {
+  status: 'confirmed' | 'full' | 'error'
+  message: string
+  participant?: DatabasePickupGameParticipant
+  game?: DatabasePickupGame
+  whatsappGroupUrl?: string | null
+}
+
+export function getUserRsvpGameIds(): Set<string> {
+  if (typeof window === 'undefined' || !window.localStorage) return new Set()
+  try {
+    const raw = window.localStorage.getItem('khelgrid_user_rsvp_games')
+    return raw ? new Set(JSON.parse(raw)) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+export function saveUserRsvpGame(gameId: string): void {
+  if (typeof window === 'undefined' || !window.localStorage) return
+  try {
+    const ids = getUserRsvpGameIds()
+    ids.add(gameId)
+    window.localStorage.setItem('khelgrid_user_rsvp_games', JSON.stringify([...ids]))
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPickupGameResult> {
+  const name = input.playerName?.trim()
+  if (!name || name.length < 2) {
+    return { status: 'error', message: 'Player name must be at least 2 characters.' }
+  }
+
+  // Find game in catalog
+  const gamesRes = await getPickupGames()
+  let game = gamesRes.data.find(g => g.id === input.gameId)
+  if (!game) {
+    game = communitySubmissions.pickup_games.find(g => g.id === input.gameId)
+  }
+
+  if (game && (game.spots_open <= 0 || game.status === 'full')) {
+    return { status: 'full', message: 'This pickup match is already full! No spots left.' }
+  }
+
+  const currentSpots = game ? game.spots_open : 1
+  const currentConfirmed = game ? game.confirmed_players : 0
+  const newSpotsOpen = Math.max(0, currentSpots - 1)
+  const newConfirmed = currentConfirmed + 1
+  const newStatus: 'open' | 'full' = newSpotsOpen === 0 ? 'full' : 'open'
+
+  const participant: DatabasePickupGameParticipant = {
+    id: `part-${Math.random().toString(36).substring(2, 9)}`,
+    game_id: input.gameId,
+    user_id: input.userId || getStoredUser()?.id || null,
+    player_name: name,
+    player_phone: input.playerPhone?.trim() || null,
+    status: 'confirmed',
+    joined_at: new Date().toISOString(),
+  }
+
+  // 1. Persist participant to Supabase if credentials available
+  if (supabaseUrl && anonKey) {
+    try {
+      const baseUrl = new URL(supabaseUrl)
+      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
+        await fetch(
+          `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/pickup_game_participants`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${anonKey}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Prefer: 'return=minimal',
+            },
+            body: JSON.stringify({
+              game_id: input.gameId,
+              user_id: participant.user_id,
+              player_name: participant.player_name,
+              player_phone: participant.player_phone,
+              status: participant.status,
+            }),
+          },
+        )
+      }
+    } catch {
+      // Offline fallback
+    }
+  }
+
+  // 2. Add to in-memory participants list
+  communitySubmissions.pickup_game_participants = [
+    participant,
+    ...(communitySubmissions.pickup_game_participants || []),
+  ]
+
+  // 3. Update spots and status
+  const spotUpdate = await updatePickupGameSpots(
+    input.gameId,
+    newSpotsOpen,
+    newConfirmed,
+    game ? { ...game, status: newStatus } : undefined,
+  )
+
+  // 4. Save to user's RSVP'd games locally
+  saveUserRsvpGame(input.gameId)
+
+  // 5. Broadcast participant event
+  broadcastRealtimeEvent('pickup_game_participants', 'INSERT', participant)
+
+  return {
+    status: 'confirmed',
+    message: `Spot confirmed! Welcome to the match, ${name}.`,
+    participant,
+    game: spotUpdate.game,
+    whatsappGroupUrl: (spotUpdate.game?.whatsapp_group_url || game?.whatsapp_group_url) || null,
+  }
+}
+
+export async function getPickupGameParticipants(gameId: string): Promise<DatabasePickupGameParticipant[]> {
+  const local = (communitySubmissions.pickup_game_participants || []).filter(p => p.game_id === gameId)
+
+  if (supabaseUrl && anonKey) {
+    try {
+      const baseUrl = new URL(supabaseUrl)
+      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
+        const response = await fetch(
+          `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/pickup_game_participants?game_id=eq.${encodeURIComponent(gameId)}&order=joined_at.desc`,
+          {
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${anonKey}`,
+              Accept: 'application/json',
+            },
+          },
+        )
+        if (response.ok) {
+          const remote = await response.json()
+          if (Array.isArray(remote)) {
+            const seen = new Set(remote.map((p: DatabasePickupGameParticipant) => p.id))
+            const merged = [...remote]
+            for (const loc of local) {
+              if (!seen.has(loc.id)) merged.push(loc)
+            }
+            return merged
+          }
+        }
+      }
+    } catch {
+      // Offline fallback
+    }
+  }
+
+  return local
 }
 
 // -----------------------------------------------------------------------------

@@ -12,6 +12,8 @@ export interface PickupGame {
   totalPlayers: number
   confirmedPlayers: number
   is_featured?: boolean
+  whatsappGroupUrl?: string
+  status?: 'open' | 'full' | 'completed' | 'cancelled'
 }
 
 export const COMMUNITY_PICKUP_GAMES: PickupGame[] = [
@@ -29,6 +31,8 @@ export const COMMUNITY_PICKUP_GAMES: PickupGame[] = [
     totalPlayers: 4,
     confirmedPlayers: 3,
     is_featured: true,
+    whatsappGroupUrl: 'https://chat.whatsapp.com/sample-ferrohub-pickleball',
+    status: 'open',
   },
   {
     id: 'pg-2',
@@ -44,6 +48,8 @@ export const COMMUNITY_PICKUP_GAMES: PickupGame[] = [
     totalPlayers: 12,
     confirmedPlayers: 8,
     is_featured: true,
+    whatsappGroupUrl: 'https://chat.whatsapp.com/sample-kicks-football',
+    status: 'open',
   },
   {
     id: 'pg-3',
@@ -58,6 +64,8 @@ export const COMMUNITY_PICKUP_GAMES: PickupGame[] = [
     spotsOpen: 1,
     totalPlayers: 4,
     confirmedPlayers: 3,
+    whatsappGroupUrl: 'https://chat.whatsapp.com/sample-whitefield-badminton',
+    status: 'open',
   },
   {
     id: 'pg-4',
@@ -73,6 +81,8 @@ export const COMMUNITY_PICKUP_GAMES: PickupGame[] = [
     totalPlayers: 22,
     confirmedPlayers: 14,
     is_featured: true,
+    whatsappGroupUrl: 'https://chat.whatsapp.com/sample-dda-cricket',
+    status: 'open',
   },
   {
     id: 'pg-5',
@@ -87,6 +97,8 @@ export const COMMUNITY_PICKUP_GAMES: PickupGame[] = [
     spotsOpen: 3,
     totalPlayers: 4,
     confirmedPlayers: 1,
+    whatsappGroupUrl: 'https://chat.whatsapp.com/sample-dlta-tennis',
+    status: 'open',
   },
   {
     id: 'pg-6',
@@ -101,6 +113,8 @@ export const COMMUNITY_PICKUP_GAMES: PickupGame[] = [
     spotsOpen: 4,
     totalPlayers: 10,
     confirmedPlayers: 6,
+    whatsappGroupUrl: 'https://chat.whatsapp.com/sample-turfside-cricket',
+    status: 'open',
   },
   {
     id: 'pg-7',
@@ -115,6 +129,8 @@ export const COMMUNITY_PICKUP_GAMES: PickupGame[] = [
     spotsOpen: 5,
     totalPlayers: 10,
     confirmedPlayers: 5,
+    whatsappGroupUrl: 'https://chat.whatsapp.com/sample-kochi-basketball',
+    status: 'open',
   },
   {
     id: 'pg-8',
@@ -129,5 +145,7 @@ export const COMMUNITY_PICKUP_GAMES: PickupGame[] = [
     spotsOpen: 2,
     totalPlayers: 4,
     confirmedPlayers: 2,
+    whatsappGroupUrl: 'https://chat.whatsapp.com/sample-pune-table-tennis',
+    status: 'open',
   },
 ]

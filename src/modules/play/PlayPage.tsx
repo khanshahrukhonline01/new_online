@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type MouseEvent } from 'react'
 import { AsyncState } from '../../shared/components/AsyncState'
-import { getPickupGames, updatePickupGameSpots } from '../../integrations/supabase/public-client'
+import {
+  getPickupGames,
+  joinPickupGame,
+  getUserRsvpGameIds,
+  getStoredUser,
+} from '../../integrations/supabase/public-client'
 import type { CatalogueResult, DatabasePickupGame } from '../../integrations/supabase/public-client'
 import { subscribeToRealtimeCatalogue } from '../../integrations/supabase/realtime-client'
 import { SiteIcon } from '../../shared/components/SiteIcon'
@@ -22,7 +27,19 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
   })
 
   const [liveUpdatedIds, setLiveUpdatedIds] = useState<Set<string>>(new Set())
-  const [joiningId, setJoiningId] = useState<string | null>(null)
+  const [joinedGameIds, setJoinedGameIds] = useState<Set<string>>(() => getUserRsvpGameIds())
+
+  // RSVP Modal State
+  const [rsvpModalGame, setRsvpModalGame] = useState<PickupGame | null>(null)
+  const [rsvpName, setRsvpName] = useState(() => getStoredUser()?.name || '')
+  const [rsvpPhone, setRsvpPhone] = useState(() => getStoredUser()?.phone || '')
+  const [rsvpSubmitting, setRsvpSubmitting] = useState(false)
+  const [rsvpError, setRsvpError] = useState('')
+  const [rsvpSuccess, setRsvpSuccess] = useState<{
+    game: PickupGame
+    whatsappGroupUrl?: string | null
+    participantName: string
+  } | null>(null)
 
   const markLiveUpdated = (id: string) => {
     setLiveUpdatedIds(prev => new Set(prev).add(id))
@@ -57,7 +74,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
     }
   }, [])
 
-  // Realtime subscription for instant auto-refresh without page reloads
+  // Realtime subscription for instant auto-refresh across clients
   useEffect(() => {
     const unsubscribe = subscribeToRealtimeCatalogue(['pickup_games'], event => {
       if (event.eventType === 'DELETE') {
@@ -93,6 +110,8 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
                   confirmed_players: c.confirmedPlayers,
                   is_featured: c.is_featured ?? false,
                   publication_status: 'published',
+                  whatsapp_group_url: c.whatsappGroupUrl || null,
+                  status: c.status || (c.spotsOpen <= 0 ? 'full' : 'open'),
                 }))
           const exists = current.some(g => g.id === updated.id)
           const nextData = exists
@@ -110,33 +129,77 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
     }
   }, [])
 
-  const handleReserve = async (game: PickupGame) => {
-    if (game.spotsOpen <= 0 || joiningId === game.id) return
-    setJoiningId(game.id)
+  const handleOpenRsvp = (game: PickupGame) => {
+    if (game.spotsOpen <= 0 || game.status === 'full') return
+    setRsvpModalGame(game)
+    setRsvpError('')
+    setRsvpSuccess(null)
+    const stored = getStoredUser()
+    if (stored?.name && !rsvpName) setRsvpName(stored.name)
+    if (stored?.phone && !rsvpPhone) setRsvpPhone(stored.phone)
+  }
+
+  const handleCloseRsvp = () => {
+    setRsvpModalGame(null)
+    setRsvpSuccess(null)
+    setRsvpError('')
+  }
+
+  const handleConfirmRsvp = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!rsvpModalGame) return
+
+    const name = rsvpName.trim()
+    if (name.length < 2) {
+      setRsvpError('Please enter your full name (at least 2 characters).')
+      return
+    }
+
+    setRsvpSubmitting(true)
+    setRsvpError('')
+
     try {
-      await updatePickupGameSpots(
-        game.id,
-        Math.max(0, game.spotsOpen - 1),
-        game.confirmedPlayers + 1,
-        {
-          id: game.id,
-          slug: game.id,
-          sport: game.sport,
-          emoji: game.emoji,
-          skill_level: game.skillLevel,
-          venue_name: game.venueName,
-          city: game.city,
-          time_label: game.timeLabel,
-          host_name: game.hostName,
-          price_per_player: game.pricePerPlayer,
-          spots_open: Math.max(0, game.spotsOpen - 1),
-          total_players: game.totalPlayers,
-          confirmed_players: game.confirmedPlayers + 1,
-          is_featured: game.is_featured,
-        },
-      )
+      const res = await joinPickupGame({
+        gameId: rsvpModalGame.id,
+        playerName: name,
+        playerPhone: rsvpPhone.trim() || undefined,
+      })
+
+      if (res.status === 'confirmed') {
+        setJoinedGameIds(prev => new Set(prev).add(rsvpModalGame.id))
+        setRsvpSuccess({
+          game: rsvpModalGame,
+          whatsappGroupUrl: res.whatsappGroupUrl || rsvpModalGame.whatsappGroupUrl || null,
+          participantName: name,
+        })
+        markLiveUpdated(rsvpModalGame.id)
+
+        // Optimistically update local results
+        setResult(prev => {
+          if (prev.status !== 'ready') return prev
+          return {
+            status: 'ready',
+            data: prev.data.map(g =>
+              g.id === rsvpModalGame.id
+                ? {
+                    ...g,
+                    spots_open: Math.max(0, g.spots_open - 1),
+                    confirmed_players: g.confirmed_players + 1,
+                    status: g.spots_open - 1 <= 0 ? 'full' : 'open',
+                  }
+                : g,
+            ),
+          }
+        })
+      } else if (res.status === 'full') {
+        setRsvpError('Sorry, this match just filled up! All spots are taken.')
+      } else {
+        setRsvpError(res.message || 'Could not complete reservation. Please try again.')
+      }
+    } catch {
+      setRsvpError('Failed to reserve spot. Please check your network connection.')
     } finally {
-      setJoiningId(null)
+      setRsvpSubmitting(false)
     }
   }
 
@@ -156,6 +219,8 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
         totalPlayers: g.total_players,
         confirmedPlayers: g.confirmed_players,
         is_featured: g.is_featured,
+        whatsappGroupUrl: g.whatsapp_group_url || undefined,
+        status: (g.status as 'open' | 'full' | 'completed' | 'cancelled') || (g.spots_open <= 0 ? 'full' : 'open'),
       }))
     }
     return COMMUNITY_PICKUP_GAMES
@@ -257,14 +322,14 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
       <p className="eyebrow">COMMUNITY MATCHES · PICKUP GAMES</p>
       <h1>Join local pickup games.</h1>
       <p className="page-intro">
-        Connect with local athletes, fill missing court spots, and play your favourite sports across India.
+        Connect with local athletes, fill missing court spots, coordinate matches via WhatsApp, and play your favourite sports across India.
       </p>
 
       <DirectoryCallout
         variant="opportunity"
         tag="Host Match"
         title="Hosting a match and need players? Post a Game"
-        description="Fill missing spots on your court or turf. Set sport, venue, skill level, and split costs with local players."
+        description="Fill missing spots on your court or turf. Set sport, venue, skill level, and share an instant WhatsApp group link with players."
         buttonLabel="Host a match"
         buttonHref={onOpenIntake ? '#' : 'mailto:khelgrid@gmail.com?subject=Host%20a%20pickup%20match%20on%20KhelGrid'}
         onButtonClick={onOpenIntake}
@@ -303,102 +368,143 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
 
             {visible.length ? (
               <div className="play-grid" role="list" aria-label="Pickup sports games">
-                {visible.map(game => (
-                  <article
-                    key={game.id}
-                    className={`play-card${liveUpdatedIds.has(game.id) ? ' is-live-updated' : ''}`}
-                    role="listitem"
-                  >
-                    <div>
-                      <div className="play-card-media">
-                        <img
-                          src={createBannerSvg(`${game.sport} Pickup`, `${game.venueName} · ${game.city}`, game.emoji, 'cyan')}
-                          alt={`${game.sport} pickup game at ${game.venueName} in ${game.city}`}
-                          title={`${game.sport} Community Match · ${game.venueName}, ${game.city}`}
-                          loading="lazy"
-                          decoding="async"
-                          width={400}
-                          height={200}
-                        />
-                        <div className="play-card-overlay-top-left">
-                          <span className="home-media-badge-dark">{game.sport}</span>
-                          {liveUpdatedIds.has(game.id) && (
-                            <span className="play-badge-live-pulse">
-                              ⚡ Live Updated
-                            </span>
-                          )}
-                          {game.is_featured && (
-                            <span className="home-featured-star-pill">
-                              <SiteIcon name="sparkles" size={11} />
-                              Featured
-                            </span>
-                          )}
-                          <span className="play-badge-skill">{game.skillLevel}</span>
-                        </div>
-                        <div className="play-card-overlay-bottom">
-                          <span className="play-badge-spots">
-                            {game.spotsOpen} {game.spotsOpen === 1 ? 'spot' : 'spots'} open
-                          </span>
-                          <span className="play-badge-price">{game.pricePerPlayer}</span>
-                        </div>
-                      </div>
+                {visible.map(game => {
+                  const isConfirmed = joinedGameIds.has(game.id)
+                  const isFull = game.spotsOpen <= 0 || game.status === 'full'
 
-                      <div className="play-card-body">
-                        <h2 className="play-card-title">{game.venueName}</h2>
-                        <div className="play-card-meta">
-                          <SiteIcon name="map-pin" size={13} />
-                          {onNavigate ? (
-                            <a
-                              href={`/venues?city=${encodeURIComponent(game.city)}`}
-                              onClick={e => onNavigate(e, `/venues?city=${encodeURIComponent(game.city)}`)}
-                              style={{ textDecoration: 'none', color: 'inherit' }}
-                            >
-                              {game.venueName}, {game.city}
-                            </a>
-                          ) : (
-                            <span>{game.venueName}, {game.city}</span>
-                          )}
-                        </div>
-                        <div className="play-card-meta">
-                          <SiteIcon name="clock" size={13} />
-                          <span>{game.timeLabel} · Host: {game.hostName}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="play-card-footer">
-                      <div className="play-progress-wrap">
-                        <div className="play-meta-row">
-                          <span>{game.confirmedPlayers}/{game.totalPlayers} Players Confirmed</span>
-                          <span style={{ color: '#059669' }}>
-                            {game.spotsOpen} {game.spotsOpen === 1 ? 'spot' : 'spots'} left
-                          </span>
-                        </div>
-                        <div className="play-progress-track">
-                          <div
-                            className="play-progress-bar"
-                            style={{
-                              width: `${Math.min(100, Math.round((game.confirmedPlayers / game.totalPlayers) * 100))}%`,
-                            }}
+                  return (
+                    <article
+                      key={game.id}
+                      className={`play-card${liveUpdatedIds.has(game.id) ? ' is-live-updated' : ''}${isFull ? ' is-full' : ''}`}
+                      role="listitem"
+                    >
+                      <div>
+                        <div className="play-card-media">
+                          <img
+                            src={createBannerSvg(`${game.sport} Pickup`, `${game.venueName} · ${game.city}`, game.emoji, 'cyan')}
+                            alt={`${game.sport} pickup game at ${game.venueName} in ${game.city}`}
+                            title={`${game.sport} Community Match · ${game.venueName}, ${game.city}`}
+                            loading="lazy"
+                            decoding="async"
+                            width={400}
+                            height={200}
                           />
+                          <div className="play-card-overlay-top-left">
+                            <span className="home-media-badge-dark">{game.sport}</span>
+                            {liveUpdatedIds.has(game.id) && (
+                              <span className="play-badge-live-pulse">
+                                ⚡ Live Updated
+                              </span>
+                            )}
+                            {game.is_featured && (
+                              <span className="home-featured-star-pill">
+                                <SiteIcon name="sparkles" size={11} />
+                                Featured
+                              </span>
+                            )}
+                            <span className="play-badge-skill">{game.skillLevel}</span>
+                          </div>
+                          <div className="play-card-overlay-bottom">
+                            {isFull ? (
+                              <span className="play-badge-full">Match Full</span>
+                            ) : (
+                              <span className="play-badge-spots">
+                                {game.spotsOpen} {game.spotsOpen === 1 ? 'spot' : 'spots'} open
+                              </span>
+                            )}
+                            <span className="play-badge-price">{game.pricePerPlayer}</span>
+                          </div>
+                        </div>
+
+                        <div className="play-card-body">
+                          <h2 className="play-card-title">{game.venueName}</h2>
+                          <div className="play-card-meta">
+                            <SiteIcon name="map-pin" size={13} />
+                            {onNavigate ? (
+                              <a
+                                href={`/venues?city=${encodeURIComponent(game.city)}`}
+                                onClick={e => onNavigate(e, `/venues?city=${encodeURIComponent(game.city)}`)}
+                                style={{ textDecoration: 'none', color: 'inherit' }}
+                              >
+                                {game.venueName}, {game.city}
+                              </a>
+                            ) : (
+                              <span>{game.venueName}, {game.city}</span>
+                            )}
+                          </div>
+                          <div className="play-card-meta">
+                            <SiteIcon name="clock" size={13} />
+                            <span>{game.timeLabel} · Host: {game.hostName}</span>
+                          </div>
                         </div>
                       </div>
-                      <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                          {game.spotsOpen <= 0 ? 'All spots filled' : `${game.spotsOpen} spots available`}
-                        </span>
-                        <button
-                          type="button"
-                          className="play-join-btn"
-                          disabled={game.spotsOpen <= 0 || joiningId === game.id}
-                          onClick={() => handleReserve(game)}
-                        >
-                          {joiningId === game.id ? 'Reserving…' : game.spotsOpen <= 0 ? 'Full' : 'Reserve Spot'}
-                        </button>
+
+                      <div className="play-card-footer">
+                        <div className="play-progress-wrap">
+                          <div className="play-meta-row">
+                            <span>{game.confirmedPlayers}/{game.totalPlayers} Players Confirmed</span>
+                            <span style={{ color: isFull ? '#ef4444' : '#059669' }}>
+                              {isFull ? '0 spots left' : `${game.spotsOpen} ${game.spotsOpen === 1 ? 'spot' : 'spots'} left`}
+                            </span>
+                          </div>
+                          <div className="play-progress-track">
+                            <div
+                              className="play-progress-bar"
+                              style={{
+                                width: `${Math.min(100, Math.round((game.confirmedPlayers / game.totalPlayers) * 100))}%`,
+                                background: isFull ? '#ef4444' : undefined,
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                            {isFull ? 'All spots filled' : `${game.spotsOpen} spots available`}
+                          </span>
+
+                          {isConfirmed ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span className="play-badge-confirmed">
+                                <SiteIcon name="check" size={12} /> Confirmed
+                              </span>
+                              {game.whatsappGroupUrl && (
+                                <a
+                                  href={game.whatsappGroupUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="play-whatsapp-btn"
+                                  title="Open match coordination WhatsApp group"
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <SiteIcon name="message-circle" size={13} />
+                                  <span>WhatsApp Group</span>
+                                </a>
+                              )}
+                            </div>
+                          ) : isFull ? (
+                            <button
+                              type="button"
+                              className="play-join-btn is-full"
+                              disabled
+                              title="All spots in this match are filled"
+                            >
+                              Full
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="play-join-btn"
+                              onClick={() => handleOpenRsvp(game)}
+                            >
+                              Reserve Spot
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  )
+                })}
               </div>
             ) : (
               <CatalogueEmptyState
@@ -409,6 +515,144 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
           </div>
         </div>
       </AsyncState>
+
+      {/* Interactive RSVP & Player Coordination Modal */}
+      {rsvpModalGame && (
+        <div className="play-rsvp-overlay" onClick={handleCloseRsvp}>
+          <div
+            className="play-rsvp-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rsvp-modal-title"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="play-rsvp-header">
+              <h3 id="rsvp-modal-title">
+                <span>{rsvpModalGame.emoji}</span>
+                <span>{rsvpSuccess ? 'Spot Confirmed!' : `Reserve Spot · ${rsvpModalGame.sport}`}</span>
+              </h3>
+              <button
+                type="button"
+                className="play-rsvp-close-btn"
+                onClick={handleCloseRsvp}
+                aria-label="Close dialog"
+              >
+                <SiteIcon name="close" size={18} />
+              </button>
+            </div>
+
+            {rsvpSuccess ? (
+              <div className="play-rsvp-success">
+                <div style={{ textAlign: 'center', padding: '10px 0 16px' }}>
+                  <div style={{ fontSize: '42px', marginBottom: '8px' }}>🎉</div>
+                  <h4 style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: 800 }}>
+                    You're Playing with {rsvpSuccess.game.hostName}!
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '14px', color: 'var(--muted)' }}>
+                    Your spot is locked at <strong>{rsvpSuccess.game.venueName}</strong>, {rsvpSuccess.game.city}.
+                  </p>
+                </div>
+
+                {rsvpSuccess.whatsappGroupUrl && (
+                  <div className="play-whatsapp-unlock-card">
+                    <h4>
+                      <SiteIcon name="message-circle" size={18} />
+                      <span>Instant Match WhatsApp Group</span>
+                    </h4>
+                    <p>
+                      Join the match group to coordinate pitch directions, bib colors, team formations, and live arrival updates with {rsvpSuccess.game.hostName}.
+                    </p>
+                    <a
+                      href={rsvpSuccess.whatsappGroupUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="play-whatsapp-link-btn"
+                    >
+                      <SiteIcon name="message-circle" size={17} />
+                      <span>Open WhatsApp Group Link →</span>
+                    </a>
+                  </div>
+                )}
+
+                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    className="play-rsvp-submit-btn"
+                    onClick={handleCloseRsvp}
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleConfirmRsvp} className="play-rsvp-form">
+                <div className="play-rsvp-summary-box">
+                  <div className="play-rsvp-summary-row">
+                    <span>Venue:</span>
+                    <strong>{rsvpModalGame.venueName}, {rsvpModalGame.city}</strong>
+                  </div>
+                  <div className="play-rsvp-summary-row">
+                    <span>Time:</span>
+                    <strong>{rsvpModalGame.timeLabel}</strong>
+                  </div>
+                  <div className="play-rsvp-summary-row">
+                    <span>Price &amp; Spots:</span>
+                    <strong>{rsvpModalGame.pricePerPlayer} · {rsvpModalGame.spotsOpen} spots remaining</strong>
+                  </div>
+                </div>
+
+                {rsvpError && (
+                  <div style={{ padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#b91c1c', fontSize: '13px' }}>
+                    {rsvpError}
+                  </div>
+                )}
+
+                <label className="play-rsvp-field">
+                  <span>Your Full Name *</span>
+                  <input
+                    required
+                    type="text"
+                    placeholder="e.g. Arjun Rao"
+                    value={rsvpName}
+                    onChange={e => setRsvpName(e.target.value)}
+                    autoFocus
+                  />
+                </label>
+
+                <label className="play-rsvp-field">
+                  <span>Phone Number / WhatsApp (Optional)</span>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 9876543210"
+                    value={rsvpPhone}
+                    onChange={e => setRsvpPhone(e.target.value)}
+                  />
+                  <small style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 400 }}>
+                    Used by the host solely for match coordination &amp; venue gate entry.
+                  </small>
+                </label>
+
+                <div className="play-rsvp-actions">
+                  <button
+                    type="button"
+                    className="play-rsvp-cancel-btn"
+                    onClick={handleCloseRsvp}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="play-rsvp-submit-btn"
+                    disabled={rsvpSubmitting}
+                  >
+                    {rsvpSubmitting ? 'Reserving…' : 'Confirm Spot'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   )
 }

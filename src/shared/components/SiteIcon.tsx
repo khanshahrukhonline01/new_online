@@ -88,7 +88,7 @@ export const siteIconNames = [
   'map','filter','sliders','sort','check','check-circle','info','alert-circle','alert-triangle',
   'refresh','loader','shield-check','badge-check','file-text','download','upload','share','copy',
   'bookmark','heart','star','user','users','user-round','settings','help-circle','mail','phone',
-  'globe','link','plus','minus','edit','trash','lock','unlock','eye','eye-off','bell','message',
+  'globe','link','plus','minus','edit','trash','lock','unlock','eye','eye-off','bell','message','message-circle',
   'play','pause','volume','volume-x','sun','moon','monitor','briefcase','handshake','languages','image','camera','trophy','medal','target','activity','chart','building',
   'wallet','credit-card','arrow-left','arrow-right','external','logout','sparkles','award','book-open','flag'
 ] as const
@@ -154,6 +154,7 @@ const icons: Record<SiteIconName, LucideIcon> = {
   'eye-off': EyeOff,
   bell: Bell,
   message: MessageCircle,
+  'message-circle': MessageCircle,
   play: Play,
   pause: Pause,
   volume: Volume2,

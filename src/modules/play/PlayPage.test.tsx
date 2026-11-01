@@ -36,5 +36,10 @@ describe('PlayPage community matches and pickup games directory', () => {
     expect(html).toContain('DDA Sports Ground')
     expect(html).toContain('Delhi')
     expect(html).toContain('₹180/player')
+
+    // Reserve spot action buttons & live progress
+    expect(html).toContain('Reserve Spot')
+    expect(html).toContain('Players Confirmed')
+    expect(html).toContain('spots available')
   })
 })
