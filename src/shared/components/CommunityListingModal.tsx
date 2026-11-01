@@ -325,9 +325,24 @@ export default function CommunityListingModal({
               </div>
 
               <div className="community-intake-success-actions">
+                {successResult.detailPath && (
+                  <a
+                    href={successResult.detailPath}
+                    className="community-intake-btn-primary"
+                    onClick={e => {
+                      if (onNavigate) {
+                        onNavigate(e, successResult.detailPath!)
+                      }
+                      onClose()
+                    }}
+                  >
+                    <span>🚀 Preview Your New Page</span>
+                    <SiteIcon name="arrow-up-right" size={16} />
+                  </a>
+                )}
                 <button
                   type="button"
-                  className="community-intake-btn-primary"
+                  className="community-intake-btn-secondary"
                   onClick={onClose}
                 >
                   Done

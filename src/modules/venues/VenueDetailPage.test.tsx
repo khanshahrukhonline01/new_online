@@ -80,4 +80,28 @@ describe('VenueDetailPage — Dedicated Venue Hub & Court Specifications', () =>
     expect(html).toContain('Venue Record Not Found')
     expect(html).toContain('Browse All Venues')
   })
+
+  it('renders anti-scam safety advisory banner and pending verification badge on unverified community venue', async () => {
+    const { submitCommunityListing } = await import('../../integrations/supabase/public-client')
+    const subResult = await submitCommunityListing({
+      category: 'venue',
+      name: 'Ranchi Sector 4 Community Box Turf',
+      city: 'Ranchi',
+      sport: 'Football',
+      is_verified_user: false,
+    })
+
+    expect(subResult.status).toBe('submitted')
+    const slug = (subResult as unknown as { record: { slug: string } }).record.slug
+
+    const html = renderToStaticMarkup(
+      <VenueDetailPage slug={slug} onNavigate={vi.fn()} />
+    )
+
+    expect(html).toContain('Pending Verification')
+    expect(html).toContain('Player &amp; Team Safety Advisory — Unverified Sports Facility')
+    expect(html).toContain('Do not transfer UPI slot advance fees')
+    expect(html).toContain('Turf Manager / Owner? Verify this Facility')
+    expect(html).toContain('Report Suspicious Venue')
+  })
 })

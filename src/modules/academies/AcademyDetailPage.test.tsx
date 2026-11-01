@@ -76,4 +76,28 @@ describe('AcademyDetailPage — Dedicated Academy Hub & Rich Content', () => {
     expect(html).toContain('Academy Record Not Found')
     expect(html).toContain('Browse All Academies')
   })
+
+  it('renders anti-scam safety advisory banner and pending verification badge on unverified community academy', async () => {
+    const { submitCommunityListing } = await import('../../integrations/supabase/public-client')
+    const subResult = await submitCommunityListing({
+      category: 'academy',
+      name: 'Shimla High Altitude Football Club',
+      city: 'Shimla',
+      sport: 'Football',
+      is_verified_user: false,
+    })
+
+    expect(subResult.status).toBe('submitted')
+    const slug = (subResult as unknown as { record: { slug: string } }).record.slug
+
+    const html = renderToStaticMarkup(
+      <AcademyDetailPage slug={slug} onNavigate={vi.fn()} />
+    )
+
+    expect(html).toContain('Pending Verification')
+    expect(html).toContain('Athlete &amp; Parent Safety Advisory — Unverified Community Listing')
+    expect(html).toContain('Do not transfer advance admission fees')
+    expect(html).toContain('Official Academy Staff? Verify this Listing')
+    expect(html).toContain('Report Suspicious Listing')
+  })
 })

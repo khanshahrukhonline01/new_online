@@ -165,9 +165,15 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
                         {venue.address && <p className="muted">{venue.address}</p>}
                         {venue.description && <p>{venue.description}</p>}
                         <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span className="availability-note">
-                            <SiteIcon name="shield-check" size={14} /> Verified Ground
-                          </span>
+                          {venue.verification_status === 'pending_review' || venue.verification_status === 'unverified' ? (
+                            <span className="availability-note" style={{ color: '#b45309' }}>
+                              <SiteIcon name="alert-triangle" size={14} /> Under Review
+                            </span>
+                          ) : (
+                            <span className="availability-note">
+                              <SiteIcon name="shield-check" size={14} /> Verified Ground
+                            </span>
+                          )}
                           <a
                             href={`/venues/${venue.slug}`}
                             onClick={e => onNavigate?.(e, `/venues/${venue.slug}`)}

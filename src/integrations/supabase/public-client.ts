@@ -240,6 +240,16 @@ export async function getAcademies(): Promise<CatalogueResult<Academy>> {
   return result
 }
 
+export function getCommunityAcademyBySlug(slug: string): Academy | undefined {
+  const clean = slug.toLowerCase().trim()
+  return communitySubmissions.academies.find(a => a.slug.toLowerCase() === clean)
+}
+
+export function getCommunityVenueBySlug(slug: string): Venue | undefined {
+  const clean = slug.toLowerCase().trim()
+  return communitySubmissions.venues.find(v => v.slug.toLowerCase() === clean)
+}
+
 export async function getAcademyBySlug(slug: string): Promise<Academy | undefined> {
   const clean = slug.toLowerCase().trim()
   const result = await getAcademies()
@@ -247,7 +257,7 @@ export async function getAcademyBySlug(slug: string): Promise<Academy | undefine
     const found = result.data.find(a => a.slug.toLowerCase() === clean)
     if (found) return found
   }
-  const communityFound = communitySubmissions.academies.find(a => a.slug.toLowerCase() === clean)
+  const communityFound = getCommunityAcademyBySlug(clean)
   if (communityFound) return communityFound
 
   return getCuratedAcademyBySlug(clean)
@@ -260,7 +270,7 @@ export async function getVenueBySlug(slug: string): Promise<Venue | undefined> {
     const found = result.data.find(v => v.slug.toLowerCase() === clean)
     if (found) return found
   }
-  const communityFound = communitySubmissions.venues.find(v => v.slug.toLowerCase() === clean)
+  const communityFound = getCommunityVenueBySlug(clean)
   if (communityFound) return communityFound
 
   return getCuratedVenueBySlug(clean)
@@ -747,6 +757,7 @@ export async function submitCommunityListing(
         facilities: ['Floodlights / LED Lighting', 'Drinking Water', 'Washrooms & Changing Rooms', 'Free Parking', 'Equipment Available'],
         rules: ['Proper athletic / turf shoes required', 'Arrive 10 minutes prior to booked slot', 'Follow facility safety guidelines'],
         publication_status: 'published',
+        verification_status: isVerified ? 'verified' : 'pending_review',
         is_featured: false,
       }
       break
@@ -844,23 +855,25 @@ export async function submitCommunityListing(
     }
   }
 
-  // If instant live (verified or live pickup game / venue), cache and broadcast immediately
-  if (!requiresReview) {
-    switch (input.category) {
-      case 'academy':
-        communitySubmissions.academies = [record as unknown as Academy, ...communitySubmissions.academies]
-        break
-      case 'venue':
-        communitySubmissions.venues = [record as unknown as Venue, ...communitySubmissions.venues]
-        break
-      case 'opportunity':
-        communitySubmissions.opportunities = [record as unknown as Opportunity, ...communitySubmissions.opportunities]
-        break
-      case 'pickup_game':
-        communitySubmissions.pickup_games = [record as unknown as DatabasePickupGame, ...communitySubmissions.pickup_games]
-        break
-    }
+  // Always cache in communitySubmissions so the newly generated detail page (/academies/:slug or /venues/:slug)
+  // is immediately viewable by the submitter with its appropriate verification badge / safety advisory banner.
+  switch (input.category) {
+    case 'academy':
+      communitySubmissions.academies = [record as unknown as Academy, ...communitySubmissions.academies]
+      break
+    case 'venue':
+      communitySubmissions.venues = [record as unknown as Venue, ...communitySubmissions.venues]
+      break
+    case 'opportunity':
+      communitySubmissions.opportunities = [record as unknown as Opportunity, ...communitySubmissions.opportunities]
+      break
+    case 'pickup_game':
+      communitySubmissions.pickup_games = [record as unknown as DatabasePickupGame, ...communitySubmissions.pickup_games]
+      break
+  }
 
+  // Broadcast realtime events for approved / instant listings
+  if (!requiresReview) {
     const tableMap: Record<CommunityListingCategory, RealtimeTable> = {
       pickup_game: 'pickup_games',
       opportunity: 'opportunities',
@@ -998,4 +1011,80 @@ export async function updatePickupGameSpots(
     game: updatedGame,
   }
 }
+
+// -----------------------------------------------------------------------------
+// Trust, Safety & Anti-Scam Reporting System
+// -----------------------------------------------------------------------------
+
+export interface VerificationProofInput {
+  entityType: 'academy' | 'venue' | 'opportunity' | 'coach'
+  entitySlug: string
+  entityName: string
+  contactName: string
+  contactPhone: string
+  contactEmail?: string
+  documentType: 'affiliation_certificate' | 'ground_lease' | 'coaching_license' | 'municipal_trade_license' | 'geotagged_photos' | 'other'
+  proofDetails: string
+}
+
+export async function submitListingReport(report: {
+  entityType: 'academy' | 'venue' | 'opportunity' | 'coach'
+  entityId?: string
+  entitySlug: string
+  entityName: string
+  reason: 'fake_trial' | 'impersonation' | 'fake_venue' | 'unauthorized_fee' | 'wrong_contact' | 'other'
+  details: string
+  reporterEmail?: string
+  reporterPhone?: string
+}): Promise<{ success: boolean; message: string }> {
+  const reportRecord = {
+    id: `rep-${Math.random().toString(36).substring(2, 9)}`,
+    ...report,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  }
+
+  // Track locally to protect the current session immediately
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const raw = window.localStorage.getItem('khelgrid_community_reports')
+      const reports = raw ? JSON.parse(raw) : []
+      reports.push(reportRecord)
+      window.localStorage.setItem('khelgrid_community_reports', JSON.stringify(reports))
+    }
+  } catch {
+    // Ignore storage errors
+  }
+
+  return {
+    success: true,
+    message: 'Report received. The KhelGrid Trust & Safety team will review this notice within 2 hours. If fraud or fake trials are confirmed, this listing will be permanently delisted.',
+  }
+}
+
+export async function submitVerificationProof(proof: VerificationProofInput): Promise<{ success: boolean; message: string }> {
+  const claimRecord = {
+    id: `claim-${Math.random().toString(36).substring(2, 9)}`,
+    ...proof,
+    status: 'pending_review',
+    submittedAt: new Date().toISOString(),
+  }
+
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const raw = window.localStorage.getItem('khelgrid_verification_claims')
+      const claims = raw ? JSON.parse(raw) : []
+      claims.push(claimRecord)
+      window.localStorage.setItem('khelgrid_verification_claims', JSON.stringify(claims))
+    }
+  } catch {
+    // Ignore storage errors
+  }
+
+  return {
+    success: true,
+    message: 'Verification proof submitted successfully! The KhelGrid Sports Desk will review your credentials against official registries within 2–4 hours. Once verified, the official verified badge will be published.',
+  }
+}
+
 

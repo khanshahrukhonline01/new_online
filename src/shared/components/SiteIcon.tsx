@@ -28,6 +28,7 @@ import {
   EyeOff,
   FileText,
   Filter,
+  Flag,
   Globe,
   Heart,
   Home,
@@ -89,7 +90,7 @@ export const siteIconNames = [
   'bookmark','heart','star','user','users','user-round','settings','help-circle','mail','phone',
   'globe','link','plus','minus','edit','trash','lock','unlock','eye','eye-off','bell','message',
   'play','pause','volume','volume-x','sun','moon','monitor','briefcase','handshake','languages','image','camera','trophy','medal','target','activity','chart','building',
-  'wallet','credit-card','arrow-left','arrow-right','external','logout','sparkles','award','book-open'
+  'wallet','credit-card','arrow-left','arrow-right','external','logout','sparkles','award','book-open','flag'
 ] as const
 
 export type SiteIconName = typeof siteIconNames[number]
@@ -179,6 +180,7 @@ const icons: Record<SiteIconName, LucideIcon> = {
   logout: LogOut,
   sparkles: Sparkles,
   award: Award,
+  flag: Flag,
 }
 
 type SiteIconProps = SVGProps<SVGSVGElement> & {
