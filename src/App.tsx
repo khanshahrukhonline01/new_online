@@ -1,19 +1,6 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, lazy, Suspense, type MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import HomePage from './modules/home/HomePage'
-import SportsPage from './modules/sports/SportsPage'
-import SportDetailPage from './modules/sports/SportDetailPage'
-import OpportunitiesPage from './modules/opportunities/OpportunitiesPage'
-import VenuesPage from './modules/venues/VenuesPage'
-import SearchPage from './modules/search/SearchPage'
-import FeatureComingSoonPage from './modules/coming-soon/FeatureComingSoonPage'
-import SportsCvWizard from './modules/sports-cv/SportsCvWizard'
-import AthleteProfilePage from './modules/athlete-profile/AthleteProfilePage'
-import CatalogueDetailPage from './modules/catalogue/CatalogueDetailPage'
-import FeatureDirectoryPage from './modules/directories/FeatureDirectoryPage'
-import LiveScoresPage from './modules/live/LiveScoresPage'
-import ListingSubmissionPage from './modules/listings/ListingSubmissionPage'
-import PolicyPage from './modules/policies/PolicyPage'
 import Sidebar from './shared/components/Sidebar'
 import SportsBar from './shared/components/SportsBar'
 import { resolveRoute } from './shared/routing'
@@ -21,27 +8,56 @@ import { SiteIcon } from './shared/components/SiteIcon'
 import TopSportsComplexes from './shared/components/TopSportsComplexes'
 import GameSportPlayAcrossIndia from './shared/components/GameSportPlayAcrossIndia'
 import FrequentlyAskedQuestions from './shared/components/FrequentlyAskedQuestions'
-import KhelChronicleHome from './modules/khelchronicle/KhelChronicleHome'
-import KhelChroniclePaperPage from './modules/khelchronicle/KhelChroniclePaperPage'
-import KhelChronicleCategoryPage from './modules/khelchronicle/KhelChronicleCategoryPage'
-import KhelChronicleAuthorPage from './modules/khelchronicle/KhelChronicleAuthorPage'
-import KhelChronicleSubmitPage from './modules/khelchronicle/KhelChronicleSubmitPage'
-import TalentScannerPage from './modules/talent-scanner/TalentScannerPage'
-import CitiesPage from './modules/directories/CitiesPage'
-import CityDetailPage from './modules/directories/CityDetailPage'
-import PlayPage from './modules/play/PlayPage'
-import CommunityListingModal from './shared/components/CommunityListingModal'
-import NotificationCenterDrawer from './shared/components/NotificationCenterDrawer'
 import SiteAnnouncementBanner from './shared/components/SiteAnnouncementBanner'
-import SpotlightSearchModal from './shared/components/SpotlightSearchModal'
 import NavbarSettingsMenu from './shared/components/NavbarSettingsMenu'
-import FeedbackSupportModal from './shared/components/FeedbackSupportModal'
-import SettingsPage from './modules/settings/SettingsPage'
-import AcademiesPage from './modules/academies/AcademiesPage'
-import AcademyDetailPage from './modules/academies/AcademyDetailPage'
-import VenueDetailPage from './modules/venues/VenueDetailPage'
 import type { CommunityListingCategory } from './integrations/supabase/public-client'
 import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAndShare'
+
+// Code-split route components via React.lazy()
+const PlayPage = lazy(() => import('./modules/play/PlayPage'))
+const SportsCvWizard = lazy(() => import('./modules/sports-cv/SportsCvWizard'))
+const OpportunitiesPage = lazy(() => import('./modules/opportunities/OpportunitiesPage'))
+const VenuesPage = lazy(() => import('./modules/venues/VenuesPage'))
+const VenueDetailPage = lazy(() => import('./modules/venues/VenueDetailPage'))
+const AcademiesPage = lazy(() => import('./modules/academies/AcademiesPage'))
+const AcademyDetailPage = lazy(() => import('./modules/academies/AcademyDetailPage'))
+const SportsPage = lazy(() => import('./modules/sports/SportsPage'))
+const SportDetailPage = lazy(() => import('./modules/sports/SportDetailPage'))
+const SearchPage = lazy(() => import('./modules/search/SearchPage'))
+const FeatureComingSoonPage = lazy(() => import('./modules/coming-soon/FeatureComingSoonPage'))
+const AthleteProfilePage = lazy(() => import('./modules/athlete-profile/AthleteProfilePage'))
+const CatalogueDetailPage = lazy(() => import('./modules/catalogue/CatalogueDetailPage'))
+const FeatureDirectoryPage = lazy(() => import('./modules/directories/FeatureDirectoryPage'))
+const LiveScoresPage = lazy(() => import('./modules/live/LiveScoresPage'))
+const ListingSubmissionPage = lazy(() => import('./modules/listings/ListingSubmissionPage'))
+const PolicyPage = lazy(() => import('./modules/policies/PolicyPage'))
+const SettingsPage = lazy(() => import('./modules/settings/SettingsPage'))
+const CitiesPage = lazy(() => import('./modules/directories/CitiesPage'))
+const CityDetailPage = lazy(() => import('./modules/directories/CityDetailPage'))
+const TalentScannerPage = lazy(() => import('./modules/talent-scanner/TalentScannerPage'))
+const KhelChronicleHome = lazy(() => import('./modules/khelchronicle/KhelChronicleHome'))
+const KhelChroniclePaperPage = lazy(() => import('./modules/khelchronicle/KhelChroniclePaperPage'))
+const KhelChronicleCategoryPage = lazy(() => import('./modules/khelchronicle/KhelChronicleCategoryPage'))
+const KhelChronicleAuthorPage = lazy(() => import('./modules/khelchronicle/KhelChronicleAuthorPage'))
+const KhelChronicleSubmitPage = lazy(() => import('./modules/khelchronicle/KhelChronicleSubmitPage'))
+
+// Code-split heavyweight modal dialogs
+const CommunityListingModal = lazy(() => import('./shared/components/CommunityListingModal'))
+const NotificationCenterDrawer = lazy(() => import('./shared/components/NotificationCenterDrawer'))
+const SpotlightSearchModal = lazy(() => import('./shared/components/SpotlightSearchModal'))
+const FeedbackSupportModal = lazy(() => import('./shared/components/FeedbackSupportModal'))
+
+function PageFallbackLoader() {
+  return (
+    <div className="page-route-loader" role="status" aria-live="polite" aria-label="Loading page content...">
+      <div className="page-route-loader-spinner">
+        <SiteIcon name="loader" size={28} className="spinning" />
+      </div>
+      <p className="page-route-loader-text">Loading KhelGrid...</p>
+    </div>
+  )
+}
+
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
 
@@ -281,7 +297,11 @@ export default function App() {
       <main id="main-content" className="page-shell">
         <SiteAnnouncementBanner onNavigate={navigate} />
         <SportsBar activePath={path} onNavigate={navigate} />
-        <div className="page-content">{page}</div>
+        <div className="page-content">
+          <Suspense fallback={<PageFallbackLoader />}>
+            {page}
+          </Suspense>
+        </div>
       </main>
     </div>
 
@@ -414,27 +434,37 @@ export default function App() {
         <p><span>{IPR_NOTICE_HEADING}</span><span>AI use</span><span>Copyright notice</span><span>© KhelGrid</span></p>
       </div>
     </footer>
-    <CommunityListingModal
-      isOpen={intakeModalOpen}
-      onClose={() => setIntakeModalOpen(false)}
-      onNavigate={navigate}
-      defaultCategory={intakeCategory}
-    />
-    <NotificationCenterDrawer
-      isOpen={notificationsOpen}
-      onClose={() => setNotificationsOpen(false)}
-      onNavigate={navigate}
-      onUnreadCountChange={setUnreadNotifCount}
-    />
-    <SpotlightSearchModal
-      isOpen={searchModalOpen}
-      onClose={() => setSearchModalOpen(false)}
-      onNavigate={navigate}
-      initialQuery={headerQuery}
-    />
-    <FeedbackSupportModal
-      isOpen={feedbackModalOpen}
-      onClose={() => setFeedbackModalOpen(false)}
-    />
+    <Suspense fallback={null}>
+      {intakeModalOpen && (
+        <CommunityListingModal
+          isOpen={intakeModalOpen}
+          onClose={() => setIntakeModalOpen(false)}
+          onNavigate={navigate}
+          defaultCategory={intakeCategory}
+        />
+      )}
+      {notificationsOpen && (
+        <NotificationCenterDrawer
+          isOpen={notificationsOpen}
+          onClose={() => setNotificationsOpen(false)}
+          onNavigate={navigate}
+          onUnreadCountChange={setUnreadNotifCount}
+        />
+      )}
+      {searchModalOpen && (
+        <SpotlightSearchModal
+          isOpen={searchModalOpen}
+          onClose={() => setSearchModalOpen(false)}
+          onNavigate={navigate}
+          initialQuery={headerQuery}
+        />
+      )}
+      {feedbackModalOpen && (
+        <FeedbackSupportModal
+          isOpen={feedbackModalOpen}
+          onClose={() => setFeedbackModalOpen(false)}
+        />
+      )}
+    </Suspense>
   </div>
 }
