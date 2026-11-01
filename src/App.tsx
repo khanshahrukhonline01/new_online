@@ -256,7 +256,7 @@ export default function App() {
         onNavigate={navigate}
         onOpenFeedback={() => setFeedbackModalOpen(true)}
       />
-      <span className="header-login-link is-unavailable" aria-disabled="true" title="Login coming soon"><SiteIcon name="user-round" size={17} /><span>Login <small>Coming Soon</small></span></span>
+      <span className="header-login-link is-unavailable" aria-disabled="true" aria-label="Your profile" title="Your profile / Login coming soon"><SiteIcon name="user-round" size={17} /><span>Login <small>Coming Soon</small></span></span>
       <a className="header-go-pro" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20Pro%20enquiry"><SiteIcon name="star" size={16} /><span>Go Pro</span></a>
     </header>
     <div className="app-workspace">
@@ -268,7 +268,6 @@ export default function App() {
         toggleRef={menuToggleRef}
         collapsed={sidebarCollapsed}
         onOpenIntake={() => openIntake('pickup_game')}
-        onOpenNotifications={() => setNotificationsOpen(true)}
       />
       <main id="main-content" className="page-shell">
         <SiteAnnouncementBanner onNavigate={navigate} />
