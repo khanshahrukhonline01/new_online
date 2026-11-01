@@ -52,6 +52,9 @@ export interface Venue {
   rules?: string[]
   rating?: number
   review_count?: number
+  verification_status?: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+  affiliation_proof?: string | null
+  reported_count?: number
 }
 
 export interface Academy {
@@ -78,6 +81,22 @@ export interface Academy {
   admission_open?: boolean
   rating?: number
   review_count?: number
+  affiliation_proof?: string | null
+  reported_count?: number
+}
+
+export interface ListingReport {
+  id: string
+  entityType: 'academy' | 'venue' | 'opportunity' | 'coach'
+  entityId: string
+  entitySlug: string
+  entityName: string
+  reason: 'fake_trial' | 'impersonation' | 'fake_venue' | 'unauthorized_fee' | 'wrong_contact' | 'other'
+  details: string
+  reporterEmail?: string
+  reporterPhone?: string
+  createdAt: string
+  status: 'pending' | 'investigated' | 'resolved' | 'dismissed'
 }
 
 export interface Coach {

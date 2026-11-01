@@ -1,10 +1,12 @@
 import { useState, useEffect, type MouseEvent } from 'react'
-import { getVenueBySlug, getVenues } from '../../integrations/supabase/public-client'
+import { getVenueBySlug, getVenues, getCommunityVenueBySlug } from '../../integrations/supabase/public-client'
 import type { Venue } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { ShareBar } from '../../shared/components/ShareBar'
 import { updatePageSeoMetadata } from '../../shared/utils/seoAndShare'
 import { getCuratedVenueBySlug, type CuratedVenue } from '../../shared/data/curatedEntitiesData'
+import ReportListingModal from '../../shared/components/ReportListingModal'
+import VerificationClaimModal from '../../shared/components/VerificationClaimModal'
 import './VenueDetailPage.css'
 
 export interface VenueDetailPageProps {
@@ -15,11 +17,13 @@ export interface VenueDetailPageProps {
 
 export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: VenueDetailPageProps) {
   const isServer = typeof window === 'undefined'
-  const initialCurated = getCuratedVenueBySlug(slug)
+  const initialCurated = getCuratedVenueBySlug(slug) || getCommunityVenueBySlug(slug)
   const [venue, setVenue] = useState<Venue | CuratedVenue | null>(initialCurated || null)
   const [related, setRelated] = useState<Venue[]>([])
   const [loading, setLoading] = useState(!initialCurated && !isServer)
   const [openFaq, setOpenFaq] = useState<number | null>(0)
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+  const [isClaimModalOpen, setIsClaimModalOpen] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -191,9 +195,13 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: Venu
             <span className="venue-verified-badge is-govt">
               <SiteIcon name="shield-check" size={14} /> Government Sports Facility
             </span>
-          ) : (
+          ) : (venue as Partial<Venue>).verification_status === 'verified' || getCuratedVenueBySlug(slug) ? (
             <span className="venue-verified-badge">
               <SiteIcon name="shield-check" size={14} /> KhelGrid Verified Venue
+            </span>
+          ) : (
+            <span className="venue-unverified-badge">
+              <SiteIcon name="alert-triangle" size={14} /> Pending Verification
             </span>
           )}
           <span className="venue-status-open">⚡ Active Sports Facility</span>
@@ -267,6 +275,38 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: Venu
           />
         </div>
       </header>
+
+      {/* Anti-Scam Athlete & Parent Safety Advisory Banner */}
+      {!(venue.government_facility || (venue as Partial<Venue>).verification_status === 'verified' || getCuratedVenueBySlug(slug)) && (
+        <section className="entity-scam-advisory-banner" role="alert">
+          <div className="scam-advisory-badge">
+            <SiteIcon name="alert-triangle" size={24} />
+          </div>
+          <div className="scam-advisory-body">
+            <h3>⚠️ Player &amp; Team Safety Advisory — Unverified Sports Facility</h3>
+            <p>
+              This playing arena was submitted by a community member and is currently undergoing physical address, ground lease, and manager verification by the KhelGrid Sports Desk.
+              <strong> Do not transfer UPI slot advance fees or deposit money online</strong> before confirming ground access and playing conditions with facility staff in person.
+            </p>
+            <div className="scam-advisory-actions">
+              <button
+                type="button"
+                className="scam-btn-claim"
+                onClick={() => setIsClaimModalOpen(true)}
+              >
+                <SiteIcon name="shield-check" size={14} /> Turf Manager / Owner? Verify this Facility
+              </button>
+              <button
+                type="button"
+                className="scam-btn-report"
+                onClick={() => setIsReportModalOpen(true)}
+              >
+                <SiteIcon name="flag" size={14} /> Report Suspicious Venue
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Highlights Bar */}
       <section className="venue-highlights-grid" aria-label="Key Venue Specifications">
@@ -410,6 +450,15 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: Venu
               <SiteIcon name="shield-check" size={14} />
               <span>Direct venue contact · KhelGrid verified arena · 0% commission fees.</span>
             </div>
+
+            <button
+              type="button"
+              className="entity-report-flag-btn"
+              onClick={() => setIsReportModalOpen(true)}
+            >
+              <SiteIcon name="flag" size={13} />
+              <span>Report suspicious or inaccurate details</span>
+            </button>
           </div>
 
           {/* Related Venues */}
@@ -435,6 +484,22 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: Venu
           )}
         </aside>
       </div>
+
+      <ReportListingModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        entityType="venue"
+        entitySlug={venue.slug}
+        entityName={venue.name}
+      />
+
+      <VerificationClaimModal
+        isOpen={isClaimModalOpen}
+        onClose={() => setIsClaimModalOpen(false)}
+        entityType="venue"
+        entitySlug={venue.slug}
+        entityName={venue.name}
+      />
     </article>
   )
 }

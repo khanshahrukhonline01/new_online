@@ -176,9 +176,15 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
                   {item.description && <p className="academy-card-desc">{item.description}</p>}
 
                   <div className="academy-card-footer">
-                    <span className="academy-card-verified">
-                      <SiteIcon name="shield-check" size={14} /> Source Verified
-                    </span>
+                    {item.verification_status === 'pending_review' || item.verification_status === 'unverified' ? (
+                      <span className="academy-card-unverified">
+                        <SiteIcon name="alert-triangle" size={14} /> Under Review
+                      </span>
+                    ) : (
+                      <span className="academy-card-verified">
+                        <SiteIcon name="shield-check" size={14} /> Source Verified
+                      </span>
+                    )}
                     <a
                       href={`/academies/${item.slug}`}
                       onClick={e => onNavigate?.(e, `/academies/${item.slug}`)}

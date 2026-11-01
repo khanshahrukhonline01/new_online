@@ -1,10 +1,12 @@
 import { useState, useEffect, type MouseEvent } from 'react'
-import { getAcademyBySlug, getAcademies } from '../../integrations/supabase/public-client'
+import { getAcademyBySlug, getAcademies, getCommunityAcademyBySlug } from '../../integrations/supabase/public-client'
 import type { Academy } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { ShareBar } from '../../shared/components/ShareBar'
 import { updatePageSeoMetadata } from '../../shared/utils/seoAndShare'
 import { getCuratedAcademyBySlug, type CuratedAcademy } from '../../shared/data/curatedEntitiesData'
+import ReportListingModal from '../../shared/components/ReportListingModal'
+import VerificationClaimModal from '../../shared/components/VerificationClaimModal'
 import './AcademyDetailPage.css'
 
 export interface AcademyDetailPageProps {
@@ -15,11 +17,13 @@ export interface AcademyDetailPageProps {
 
 export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPageProps) {
   const isServer = typeof window === 'undefined'
-  const initialCurated = getCuratedAcademyBySlug(slug)
+  const initialCurated = getCuratedAcademyBySlug(slug) || getCommunityAcademyBySlug(slug)
   const [academy, setAcademy] = useState<Academy | CuratedAcademy | null>(initialCurated || null)
   const [related, setRelated] = useState<Academy[]>([])
   const [loading, setLoading] = useState(!initialCurated && !isServer)
   const [openFaq, setOpenFaq] = useState<number | null>(0)
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+  const [isClaimModalOpen, setIsClaimModalOpen] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -188,9 +192,15 @@ export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPag
       <header className="academy-hero-header">
         <div className="academy-badge-strip">
           <span className="academy-sport-pill">{sportName}</span>
-          <span className="academy-verified-badge">
-            <SiteIcon name="shield-check" size={14} /> KhelGrid Verified Academy
-          </span>
+          {(academy as Partial<Academy>).verification_status === 'verified' ? (
+            <span className="academy-verified-badge">
+              <SiteIcon name="shield-check" size={14} /> KhelGrid Verified Academy
+            </span>
+          ) : (
+            <span className="academy-unverified-badge">
+              <SiteIcon name="alert-triangle" size={14} /> Pending Verification
+            </span>
+          )}
           {curated.admission_open !== false && (
             <span className="academy-status-open">🟢 Admissions Open</span>
           )}
@@ -267,6 +277,38 @@ export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPag
           />
         </div>
       </header>
+
+      {/* Anti-Scam Athlete & Parent Safety Advisory Banner */}
+      {(academy as Partial<Academy>).verification_status !== 'verified' && (
+        <section className="entity-scam-advisory-banner" role="alert">
+          <div className="scam-advisory-badge">
+            <SiteIcon name="alert-triangle" size={24} />
+          </div>
+          <div className="scam-advisory-body">
+            <h3>⚠️ Athlete &amp; Parent Safety Advisory — Unverified Community Listing</h3>
+            <p>
+              This sports academy was submitted by a community contributor and is currently undergoing credential, ground lease, and coach license authentication by the KhelGrid Sports Desk.
+              <strong> Do not transfer advance admission fees, pay trial registration money online, or share banking OTPs</strong> without inspecting the training facility and verifying coach qualifications in person.
+            </p>
+            <div className="scam-advisory-actions">
+              <button
+                type="button"
+                className="scam-btn-claim"
+                onClick={() => setIsClaimModalOpen(true)}
+              >
+                <SiteIcon name="shield-check" size={14} /> Official Academy Staff? Verify this Listing
+              </button>
+              <button
+                type="button"
+                className="scam-btn-report"
+                onClick={() => setIsReportModalOpen(true)}
+              >
+                <SiteIcon name="flag" size={14} /> Report Suspicious Listing
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Highlights Bar */}
       <section className="academy-highlights-grid" aria-label="Key Academy Highlights">
@@ -413,6 +455,15 @@ export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPag
               <SiteIcon name="shield-check" size={14} />
               <span>Verified KhelGrid Listing · Direct coach access with 0% platform surcharge.</span>
             </div>
+
+            <button
+              type="button"
+              className="entity-report-flag-btn"
+              onClick={() => setIsReportModalOpen(true)}
+            >
+              <SiteIcon name="flag" size={13} />
+              <span>Report suspicious or inaccurate details</span>
+            </button>
           </div>
 
           {/* Related Academies */}
@@ -438,6 +489,22 @@ export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPag
           )}
         </aside>
       </div>
+
+      <ReportListingModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        entityType="academy"
+        entitySlug={academy.slug}
+        entityName={academy.name}
+      />
+
+      <VerificationClaimModal
+        isOpen={isClaimModalOpen}
+        onClose={() => setIsClaimModalOpen(false)}
+        entityType="academy"
+        entitySlug={academy.slug}
+        entityName={academy.name}
+      />
     </article>
   )
 }
