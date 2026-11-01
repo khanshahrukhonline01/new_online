@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
+import '../../i18n'
 import VenueDetailPage from './VenueDetailPage'
 
 describe('VenueDetailPage — Dedicated Venue Hub & Court Specifications', () => {

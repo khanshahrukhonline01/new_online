@@ -1,0 +1,23 @@
+{
+  "title": "Player Reviews & Court Photos",
+  "subtitle": "Authentic feedback from verified players, athletes, and coaches who play at {{entityName}}.",
+  "writeReview": "Write a Review",
+  "addPhotos": "Add Photos",
+  "cancelReview": "Cancel Review",
+  "overallRating": "Your Overall Rating",
+  "yourName": "Your Name",
+  "yourRole": "Your Role",
+  "headline": "Review Headline (Optional)",
+  "detailedFeedback": "Detailed Feedback",
+  "uploadPhotos": "Court Photos & Ground Condition (Optional)",
+  "uploadHint": "Upload real court snapshots, turf grass condition, or lighting from your phone camera or gallery.",
+  "takePhoto": "Take Photo or Choose Files",
+  "postReview": "Post Community Review",
+  "allReviews": "All Reviews",
+  "withPhotos": "With Photos",
+  "fiveStarsOnly": "5 Stars Only",
+  "sortBy": "Sort by:",
+  "mostRecent": "Most Recent",
+  "highestRating": "Highest Rating",
+  "mostHelpful": "Most Helpful"
+}
