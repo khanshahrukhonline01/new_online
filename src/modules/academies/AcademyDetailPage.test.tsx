@@ -1,8 +1,15 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import AcademyDetailPage from './AcademyDetailPage'
 
 describe('AcademyDetailPage — Dedicated Academy Hub & Rich Content', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 })))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
   it('renders Bengaluru FC Youth Academy with complete rich content, credentials, and curriculum', () => {
     const html = renderToStaticMarkup(
       <AcademyDetailPage slug="bengaluru-fc-academy" onNavigate={vi.fn()} />

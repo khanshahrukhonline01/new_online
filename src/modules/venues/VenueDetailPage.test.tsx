@@ -1,8 +1,15 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import VenueDetailPage from './VenueDetailPage'
 
 describe('VenueDetailPage — Dedicated Venue Hub & Court Specifications', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 })))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
   it('renders Sree Kanteerava Stadium with surface specs, amenities, directions, and pickup action', () => {
     const onOpenIntakeMock = vi.fn()
     const html = renderToStaticMarkup(
