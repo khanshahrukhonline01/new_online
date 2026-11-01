@@ -66,49 +66,16 @@ create policy "verification_claims_insert_community" on public.verification_clai
 grant insert (entity_type, entity_slug, entity_name, contact_name, contact_phone, contact_email, claimant_role, document_type, proof_details, status)
   on public.verification_claims to anon, authenticated;
 
--- 3. Enhance Academies with all facility, contact, verification, and safety columns
+-- 3. Trust & Verification Columns on Academies
 alter table public.academies
-  add column if not exists sport text default 'Multi-Sport',
-  add column if not exists address text,
-  add column if not exists phone text,
-  add column if not exists facilities text[],
-  add column if not exists age_groups text[],
-  add column if not exists timings text,
-  add column if not exists fee_structure text,
-  add column if not exists admission_open boolean default true,
-  add column if not exists is_featured boolean not null default false,
   add column if not exists affiliation_proof text,
   add column if not exists reported_count int not null default 0;
 
--- 4. Enhance Venues with all facility, contact, verification, and safety columns
+-- 4. Trust & Verification Columns on Venues
 alter table public.venues
   add column if not exists verification_status text not null default 'unverified'
     check (verification_status in ('unverified', 'pending_review', 'verified', 'rejected')),
-  add column if not exists sport text default 'Multi-Sport',
   add column if not exists affiliation_proof text,
-  add column if not exists reported_count int not null default 0,
-  add column if not exists surface_type text,
-  add column if not exists court_count text,
-  add column if not exists pricing text,
-  add column if not exists facilities text[],
-  add column if not exists rules text[],
-  add column if not exists timings text,
-  add column if not exists phone text,
-  add column if not exists is_featured boolean not null default false;
-
--- 5. Expand insert grants for community intake (columns now guaranteed to exist)
-grant insert (
-  slug, name, sport, description, city, state, address, phone, website_url,
-  public_contact_url, facilities, age_groups, timings, fee_structure,
-  admission_open, is_featured, publication_status, verification_status, affiliation_proof
-) on public.academies to anon, authenticated;
-
-grant insert (
-  slug, name, sport, description, city, address, phone, timezone,
-  surface_type, court_count, pricing, facilities, rules, timings,
-  is_featured, publication_status, verification_status, affiliation_proof
-) on public.venues to anon, authenticated;
-
-grant select on public.academies, public.venues to anon, authenticated;
+  add column if not exists reported_count int not null default 0;
 
 commit;
