@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, type FormEvent, type MouseEvent } from 'react'
 import { SiteIcon } from './SiteIcon'
+import { SmartSchedulePicker } from './SmartSchedulePicker'
 import {
   submitCommunityListing,
   getStoredUser,
@@ -80,6 +81,8 @@ export default function CommunityListingModal({
   const [regFee, setRegFee] = useState('')
   const [ageCategory, setAgeCategory] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
+  const [oppSchedule, setOppSchedule] = useState('')
+  const [oppStartsAt, setOppStartsAt] = useState('')
 
   // Pickup game fields
   const [pickupVenue, setPickupVenue] = useState('')
@@ -220,6 +223,7 @@ export default function CommunityListingModal({
           city,
           venue_name: oppVenue || undefined,
           organizer_name: organizer || currentUser?.name || contactName || undefined,
+          starts_at: oppStartsAt || undefined,
           registration_fee: regFee || undefined,
           age_category: ageCategory || undefined,
           source_url: sourceUrl || undefined,
@@ -614,17 +618,16 @@ export default function CommunityListingModal({
                     </label>
                   </div>
 
+                  {/* Smart 2-Tap Date & Time Picker */}
+                  <SmartSchedulePicker
+                    value={timeLabel}
+                    onChange={label => setTimeLabel(label)}
+                    mode="pickup"
+                    label="Date & Time"
+                    required
+                  />
+
                   <div className="community-field-row">
-                    <label className="community-field-group">
-                      <span>Date & Time *</span>
-                      <input
-                        required
-                        type="text"
-                        placeholder="e.g. Today · 8:00 PM or Saturday · 7:00 AM"
-                        value={timeLabel}
-                        onChange={e => setTimeLabel(e.target.value)}
-                      />
-                    </label>
                     <label className="community-field-group">
                       <span>Skill Level</span>
                       <select
@@ -768,6 +771,18 @@ export default function CommunityListingModal({
                       />
                     </label>
                   </div>
+
+                  {/* Smart 2-Tap Date & Reporting Time Picker */}
+                  <SmartSchedulePicker
+                    value={oppSchedule}
+                    onChange={(label, iso) => {
+                      setOppSchedule(label)
+                      if (iso) setOppStartsAt(iso)
+                    }}
+                    mode="opportunity"
+                    label="Trial / Combine Schedule & Reporting Time"
+                    required
+                  />
 
                   <div className="community-field-row">
                     <label className="community-field-group">
