@@ -1023,6 +1023,7 @@ export interface VerificationProofInput {
   contactName: string
   contactPhone: string
   contactEmail?: string
+  claimantRole?: string
   documentType: 'affiliation_certificate' | 'ground_lease' | 'coaching_license' | 'municipal_trade_license' | 'geotagged_photos' | 'other'
   proofDetails: string
 }
@@ -1037,19 +1038,54 @@ export async function submitListingReport(report: {
   reporterEmail?: string
   reporterPhone?: string
 }): Promise<{ success: boolean; message: string }> {
-  const reportRecord = {
-    id: `rep-${Math.random().toString(36).substring(2, 9)}`,
-    ...report,
+  const reportPayload = {
+    entity_type: report.entityType,
+    entity_id: report.entityId || null,
+    entity_slug: report.entitySlug,
+    entity_name: report.entityName,
+    reason: report.reason,
+    details: report.details,
+    reporter_email: report.reporterEmail || null,
+    reporter_phone: report.reporterPhone || null,
     status: 'pending',
-    createdAt: new Date().toISOString(),
   }
 
-  // Track locally to protect the current session immediately
+  // 1. If Supabase credentials are configured, post directly to Supabase table
+  if (supabaseUrl && anonKey) {
+    try {
+      const baseUrl = new URL(supabaseUrl)
+      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
+        await fetch(
+          `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/listing_reports`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${anonKey}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Prefer: 'return=minimal',
+            },
+            body: JSON.stringify(reportPayload),
+          },
+        )
+      }
+    } catch {
+      // Offline fallback
+    }
+  }
+
+  // 2. Track locally to protect the current session immediately
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       const raw = window.localStorage.getItem('khelgrid_community_reports')
       const reports = raw ? JSON.parse(raw) : []
-      reports.push(reportRecord)
+      reports.push({
+        id: `rep-${Math.random().toString(36).substring(2, 9)}`,
+        ...report,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      })
       window.localStorage.setItem('khelgrid_community_reports', JSON.stringify(reports))
     }
   } catch {
@@ -1063,18 +1099,55 @@ export async function submitListingReport(report: {
 }
 
 export async function submitVerificationProof(proof: VerificationProofInput): Promise<{ success: boolean; message: string }> {
-  const claimRecord = {
-    id: `claim-${Math.random().toString(36).substring(2, 9)}`,
-    ...proof,
+  const claimPayload = {
+    entity_type: proof.entityType,
+    entity_slug: proof.entitySlug,
+    entity_name: proof.entityName,
+    contact_name: proof.contactName,
+    contact_phone: proof.contactPhone,
+    contact_email: proof.contactEmail || null,
+    claimant_role: proof.claimantRole || null,
+    document_type: proof.documentType,
+    proof_details: proof.proofDetails,
     status: 'pending_review',
-    submittedAt: new Date().toISOString(),
   }
 
+  // 1. If Supabase credentials are configured, post directly to Supabase table
+  if (supabaseUrl && anonKey) {
+    try {
+      const baseUrl = new URL(supabaseUrl)
+      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
+        await fetch(
+          `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/verification_claims`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${anonKey}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Prefer: 'return=minimal',
+            },
+            body: JSON.stringify(claimPayload),
+          },
+        )
+      }
+    } catch {
+      // Offline fallback
+    }
+  }
+
+  // 2. Store locally as session fallback
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       const raw = window.localStorage.getItem('khelgrid_verification_claims')
       const claims = raw ? JSON.parse(raw) : []
-      claims.push(claimRecord)
+      claims.push({
+        id: `claim-${Math.random().toString(36).substring(2, 9)}`,
+        ...proof,
+        status: 'pending_review',
+        submittedAt: new Date().toISOString(),
+      })
       window.localStorage.setItem('khelgrid_verification_claims', JSON.stringify(claims))
     }
   } catch {
