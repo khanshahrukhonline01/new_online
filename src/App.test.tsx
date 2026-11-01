@@ -23,7 +23,7 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('aria-controls="app-sidebar"')
     expect(html).toContain('aria-expanded="false"')
     expect(html).toContain('aria-label="Toggle main navigation"')
-    expect(html).toContain('header-nav-pills')
+    expect(html).toContain('header-play-pill')
     expect(html).toContain('href="/play"')
     expect(html).toContain('List your venue')
     expect(html).toContain('Submit a trial')

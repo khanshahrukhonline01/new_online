@@ -186,53 +186,16 @@ export default function App() {
     <header className="site-header">
       <button ref={menuToggleRef} className="menu-toggle" type="button" aria-expanded={isMobile ? menuOpen : !sidebarCollapsed} aria-controls={isMobile ? 'mobile-sidebar-drawer' : 'app-sidebar'} onClick={toggleMainMenu} aria-label="Toggle main navigation"><SiteIcon name={isMobile && menuOpen ? 'close' : 'menu'} size={20} /></button>
       <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /><span>KHELGRID</span></a>
-      <nav className="header-nav-pills" aria-label="Main navigation">
-        <a
-          href="/"
-          className={`header-nav-pill ${path === '/' ? 'is-active' : ''}`}
-          aria-current={path === '/' ? 'page' : undefined}
-          onClick={event => navigate(event, '/')}
-        >
-          <SiteIcon name="home" size={15} />
-          <span>Home</span>
-        </a>
-        <a
-          href="/play"
-          className={`header-nav-pill ${path === '/play' ? 'is-active' : ''}`}
-          aria-current={path === '/play' ? 'page' : undefined}
-          onClick={event => navigate(event, '/play')}
-        >
-          <SiteIcon name="users" size={15} />
-          <span>Play</span>
-        </a>
-        <a
-          href="/venues"
-          className={`header-nav-pill ${path === '/venues' || path === '/book' ? 'is-active' : ''}`}
-          aria-current={path === '/venues' || path === '/book' ? 'page' : undefined}
-          onClick={event => navigate(event, '/venues')}
-        >
-          <SiteIcon name="calendar-check" size={15} />
-          <span>Book</span>
-        </a>
-        <a
-          href="/academies"
-          className={`header-nav-pill ${path === '/academies' || path === '/train' ? 'is-active' : ''}`}
-          aria-current={path === '/academies' || path === '/train' ? 'page' : undefined}
-          onClick={event => navigate(event, '/academies')}
-        >
-          <SiteIcon name="building" size={15} />
-          <span>Train</span>
-        </a>
-        <a
-          href="/events"
-          className={`header-nav-pill ${path === '/events' ? 'is-active' : ''}`}
-          aria-current={path === '/events' ? 'page' : undefined}
-          onClick={event => navigate(event, '/events')}
-        >
-          <SiteIcon name="calendar" size={15} />
-          <span>Events</span>
-        </a>
-      </nav>
+      <a
+        href="/play"
+        className={`header-play-pill ${path === '/play' ? 'is-active' : ''}`}
+        aria-current={path === '/play' ? 'page' : undefined}
+        onClick={event => navigate(event, '/play')}
+        title="Play pickup games & community matches"
+      >
+        <SiteIcon name="users" size={15} />
+        <span>Play</span>
+      </a>
       <nav className="header-actions" aria-label="KhelGrid actions">
         <button
           className="header-action-link header-action-add"
