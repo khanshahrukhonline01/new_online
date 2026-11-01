@@ -6,6 +6,10 @@ describe('PlayPage community matches and pickup games directory', () => {
   it('renders directory heading, host callout, and community pickup cards', () => {
     const html = renderToStaticMarkup(<PlayPage />)
 
+    // Breadcrumb navigation matching live site
+    expect(html).toContain('aria-label="breadcrumb"')
+    expect(html).toContain('Play · Find games')
+
     // Heading & introduction
     expect(html).toContain('COMMUNITY MATCHES · PICKUP GAMES')
     expect(html).toContain('Join local pickup games.')

@@ -77,7 +77,7 @@ export function resolveRoute(pathname: string): RouteMatch {
     const slug = path.slice('/opportunities/'.length)
     if (slug && !slug.includes('/')) return { name: 'opportunity-detail', canonicalPath: '/opportunities/:slug', slug: decodeURIComponentSafe(slug) }
   }
-  if (path === '/academies' || path === '/academy') return { name: 'academies-index', canonicalPath: '/academies', ...(path === '/academy' ? { alias: '/academy' } : {}) }
+  if (path === '/academies' || path === '/academy' || path === '/train') return { name: 'academies-index', canonicalPath: '/academies', ...(path === '/academies' ? {} : { alias: path }) }
   if (path.startsWith('/academies/') || path.startsWith('/academy/')) {
     const prefix = path.startsWith('/academies/') ? '/academies/' : '/academy/'
     const slug = path.slice(prefix.length)

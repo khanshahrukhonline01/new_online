@@ -23,7 +23,8 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('aria-controls="app-sidebar"')
     expect(html).toContain('aria-expanded="false"')
     expect(html).toContain('aria-label="Toggle main navigation"')
-    expect(html).toContain('aria-current="page"')
+    expect(html).toContain('header-nav-pills')
+    expect(html).toContain('href="/play"')
     expect(html).toContain('List your venue')
     expect(html).toContain('Submit a trial')
     expect(html).toContain('Join as Coach')
@@ -77,6 +78,7 @@ describe('route resolution', () => {
     ['/opportunities/example-trial', 'opportunity-detail'],
     ['/venues', 'venues-index'],
     ['/book', 'venues-index'],
+    ['/train', 'academies-index'],
     ['/cities', 'cities-index'],
     ['/cities/delhi', 'city-detail'],
     ['/city/delhi', 'city-detail'],
