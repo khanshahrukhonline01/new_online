@@ -18,7 +18,10 @@ function isActive(item: NavigationItem, activePath: string) {
   if (item.href === '/') return activePath === '/'
   if (item.href === '/opportunities') return ['/opportunities', '/trials', '/combines', '/scholarships', '/camps'].includes(activePath) || activePath.startsWith('/opportunities/')
   if (item.href === '/venues') return activePath === '/venues' || activePath === '/book' || activePath.startsWith('/venues/')
+  if (item.href === '/academies') return activePath === '/academies' || activePath === '/academy' || activePath === '/train' || activePath.startsWith('/academies/')
   if (item.href === '/khelchronicle') return activePath.startsWith('/khelchronicle') || activePath.startsWith('/chronicle')
+  if (item.href === '/play') return activePath === '/play' || activePath.startsWith('/play/')
+  if (item.href === '/live') return activePath === '/live' || activePath === '/live-scores' || activePath.startsWith('/live/')
   return activePath === item.href || activePath.startsWith(item.href + '/')
 }
 
@@ -99,10 +102,10 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
 
   const mobileItems: { label: string; href: string; icon: SiteIconName }[] = [
     { label: 'Home', href: '/', icon: 'home' },
-    { label: 'Sports', href: '/sports', icon: 'sports' },
-    { label: 'Trials', href: '/opportunities', icon: 'opportunities' },
-    { label: 'Venues', href: '/venues', icon: 'venues' },
-    { label: 'Search', href: '/search', icon: 'search' },
+    { label: 'Play', href: '/play', icon: 'sports' },
+    { label: 'Book', href: '/venues', icon: 'calendar-check' },
+    { label: 'Train', href: '/academies', icon: 'building' },
+    { label: 'Live', href: '/live', icon: 'activity' },
   ]
 
   function renderSections(mobile = false) {

@@ -237,6 +237,23 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
 
   return (
     <section className="content-page play-page">
+      <nav aria-label="breadcrumb" className="play-breadcrumb">
+        <ol>
+          <li>
+            <a href="/" onClick={e => onNavigate?.(e, '/')}>
+              <SiteIcon name="home" size={14} />
+              <span>Home</span>
+            </a>
+          </li>
+          <li aria-hidden="true">
+            <SiteIcon name="chevron-right" size={12} />
+          </li>
+          <li aria-current="page">
+            <span>Play · Find games</span>
+          </li>
+        </ol>
+      </nav>
+
       <p className="eyebrow">COMMUNITY MATCHES · PICKUP GAMES</p>
       <h1>Join local pickup games.</h1>
       <p className="page-intro">

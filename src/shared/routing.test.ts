@@ -39,7 +39,7 @@ describe('platform route coverage', () => {
     }
   })
 
-  it.each(['/academies', '/academy'])(
+  it.each(['/academies', '/academy', '/train'])(
     '%s opens the academies catalogue',
     path => expect(resolveRoute(path).name).toBe('academies-index'),
   )
