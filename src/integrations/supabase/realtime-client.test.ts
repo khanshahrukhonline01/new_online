@@ -1,8 +1,12 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { broadcastRealtimeEvent, getSupabaseClient, subscribeToRealtimeCatalogue } from './realtime-client'
 import { updatePickupGameSpots } from './public-client'
 
 describe('realtime client', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 })))
+  })
+
   afterEach(() => {
     vi.unstubAllGlobals()
     vi.unstubAllEnvs()

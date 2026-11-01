@@ -954,8 +954,9 @@ export async function updatePickupGameSpots(
     updatedGame = communitySubmissions.pickup_games[idx]
   }
 
-  // 2. If Supabase credentials configured, send PATCH to Supabase REST
-  if (supabaseUrl && anonKey) {
+  // 2. If Supabase credentials configured and gameId is a valid UUID, send PATCH to Supabase REST
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(gameId)
+  if (supabaseUrl && anonKey && isUuid) {
     try {
       const baseUrl = new URL(supabaseUrl)
       if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
