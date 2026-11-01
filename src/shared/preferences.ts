@@ -4,6 +4,8 @@
  * Preferred Sports Hub, Motion Accessibility, and User Profile Configurations.
  */
 
+import { changeAppLanguage } from '../i18n'
+
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type EmailFrequency = 'daily' | 'weekly' | 'monthly' | 'never'
 export type ProfileVisibility = 'public' | 'scouts_only' | 'private'
@@ -19,14 +21,14 @@ export interface SupportedLanguage {
 export const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
   { code: 'en', name: 'English', nativeName: 'English', flag: '🇮🇳', region: 'Pan-India & Global' },
   { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', flag: '🇮🇳', region: 'North & Central India' },
-  { code: 'pa', name: 'Punjabi', nativeName: 'ਪੰਜਾਬੀ', flag: '🇮🇳', region: 'Punjab, Haryana, Delhi' },
   { code: 'bn', name: 'Bengali', nativeName: 'বাংলা', flag: '🇮🇳', region: 'West Bengal & East India' },
   { code: 'mr', name: 'Marathi', nativeName: 'मराठी', flag: '🇮🇳', region: 'Maharashtra & Western India' },
-  { code: 'te', name: 'Telugu', nativeName: 'తెలుగు', flag: '🇮🇳', region: 'Andhra Pradesh & Telangana' },
   { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்', flag: '🇮🇳', region: 'Tamil Nadu & South India' },
+  { code: 'te', name: 'Telugu', nativeName: 'తెలుగు', flag: '🇮🇳', region: 'Andhra Pradesh & Telangana' },
   { code: 'gu', name: 'Gujarati', nativeName: 'ગુજરાતી', flag: '🇮🇳', region: 'Gujarat' },
   { code: 'kn', name: 'Kannada', nativeName: 'ಕನ್ನಡ', flag: '🇮🇳', region: 'Karnataka' },
   { code: 'ml', name: 'Malayalam', nativeName: 'മലയാളം', flag: '🇮🇳', region: 'Kerala' },
+  { code: 'pa', name: 'Punjabi', nativeName: 'ਪੰਜਾਬੀ', flag: '🇮🇳', region: 'Punjab, Haryana, Delhi' },
   { code: 'or', name: 'Odia', nativeName: 'ଓଡ଼ିଆ', flag: '🇮🇳', region: 'Odisha' },
   { code: 'as', name: 'Assamese', nativeName: 'অসমীয়া', flag: '🇮🇳', region: 'Assam & North East' },
 ]
@@ -130,6 +132,7 @@ export function savePreferences(updates: Partial<UserPreferences>): UserPreferen
       }
       if (updates.language) {
         localStorage.setItem(LANG_STORAGE_KEY, updates.language)
+        changeAppLanguage(updates.language)
       }
       applyThemeToDOM(next.theme)
       applyAccessibilityToDOM(next.reducedMotion)

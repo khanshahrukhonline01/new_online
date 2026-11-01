@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react'
+import { useTranslation } from 'react-i18next'
 import { navigationModules, type NavigationItem } from '../navigation/navigationRegistry'
 import { SiteIcon, type SiteIconName } from './SiteIcon'
 import './Sidebar.css'
@@ -31,21 +32,24 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false 
   onClose?: () => void
   collapsed?: boolean
 }) {
+  const { t } = useTranslation(['navigation', 'common'])
   const active = isActive(item, activePath)
-  const label = <><span className="sidebar-icon" aria-hidden="true"><SiteIcon name={item.icon} size={18} /></span><span className="sidebar-link-label">{item.label}</span>{!item.available && !collapsed ? <span className="sidebar-coming-soon">Coming soon</span> : null}</>
+  const itemLabel = t(item.id, item.label)
+  const label = <><span className="sidebar-icon" aria-hidden="true"><SiteIcon name={item.icon} size={18} /></span><span className="sidebar-link-label">{itemLabel}</span>{!item.available && !collapsed ? <span className="sidebar-coming-soon">{t('comingSoon', { ns: 'common', defaultValue: 'Coming soon' })}</span> : null}</>
   if (!item.available) {
     return <div className="sidebar-item-wrap">
-      <span className="sidebar-link is-disabled" aria-disabled="true" title={collapsed ? item.label + ' — coming soon' : 'Coming soon'}>{label}</span>
+      <span className="sidebar-link is-disabled" aria-disabled="true" title={collapsed ? itemLabel + ' — ' + t('comingSoon', { ns: 'common', defaultValue: 'Coming soon' }) : t('comingSoon', { ns: 'common', defaultValue: 'Coming soon' })}>{label}</span>
     </div>
   }
   return <div className="sidebar-item-wrap">
-    <a href={item.href} className={active ? 'sidebar-link is-active' : 'sidebar-link'} aria-current={active ? 'page' : undefined} aria-label={collapsed ? item.label : undefined} title={collapsed ? item.label : undefined} onClick={event => { onNavigate(event, item.href); onClose?.() }}>
+    <a href={item.href} className={active ? 'sidebar-link is-active' : 'sidebar-link'} aria-current={active ? 'page' : undefined} aria-label={collapsed ? itemLabel : undefined} title={collapsed ? itemLabel : undefined} onClick={event => { onNavigate(event, item.href); onClose?.() }}>
       {label}
     </a>
   </div>
 }
 
 export default function Sidebar({ activePath, onNavigate, open, onClose, toggleRef, collapsed, onOpenIntake }: SidebarProps) {
+  const { t } = useTranslation(['navigation', 'common'])
   const closeRef = useRef<HTMLButtonElement>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
@@ -121,9 +125,10 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
     }
     return navigationModules.map(section => {
       const expanded = expandedSections[section.id] ?? false
-      return <section className={expanded ? 'sidebar-module is-expanded' : 'sidebar-module'} key={section.id} aria-label={section.label}>
+      const sectionLabel = t(section.id, section.label)
+      return <section className={expanded ? 'sidebar-module is-expanded' : 'sidebar-module'} key={section.id} aria-label={sectionLabel}>
         <button className="sidebar-module-toggle" type="button" aria-expanded={expanded} aria-controls={`${mobile ? 'mobile-' : ''}nav-section-${section.id}`} onClick={() => setExpandedSections(previous => ({ ...previous, [section.id]: !expanded }))}>
-          <span className="sidebar-module-heading-icon" aria-hidden="true"><SiteIcon name={section.icon} size={17} /></span><span className="sidebar-module-label">{section.label}</span>
+          <span className="sidebar-module-heading-icon" aria-hidden="true"><SiteIcon name={section.icon} size={17} /></span><span className="sidebar-module-label">{sectionLabel}</span>
           {!collapsed || mobile ? <SiteIcon name={expanded ? 'chevron-down' : 'chevron-right'} size={14} /> : null}
         </button>
         {expanded ? <div id={`${mobile ? 'mobile-' : ''}nav-section-${section.id}`}>
@@ -137,21 +142,21 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
     <button className={open ? 'sidebar-backdrop is-visible' : 'sidebar-backdrop'} type="button" aria-label="Close navigation menu" aria-hidden={!open} tabIndex={open ? 0 : -1} onClick={() => { onClose(); toggleRef.current?.focus() }} />
     <aside id="app-sidebar" className={collapsed ? 'app-sidebar is-collapsed' : 'app-sidebar'} aria-label="Sidebar navigation">
       <nav className="sidebar-navigation" aria-label="Feature navigation">{renderSections()}</nav>
-      {!collapsed ? <div className="sidebar-promo"><strong>Build your athlete profile</strong><p>Create a Sports CV and prepare a profile-ready PDF on your device.</p><a href="/sports-cv" onClick={event => { onNavigate(event, '/sports-cv'); onClose() }}>Open Sports CV <SiteIcon name="arrow-up-right" size={13} /></a></div> : null}
+      {!collapsed ? <div className="sidebar-promo"><strong>{t('promoTitle', 'Build your athlete profile')}</strong><p>{t('promoText', 'Create a Sports CV and prepare a profile-ready PDF on your device.')}</p><a href="/sports-cv" onClick={event => { onNavigate(event, '/sports-cv'); onClose() }}>{t('openSportsCv', 'Open Sports CV')} <SiteIcon name="arrow-up-right" size={13} /></a></div> : null}
       <div className="sidebar-bottom">
         {onOpenIntake && (
           <button
             type="button"
             className="sidebar-utility-link sidebar-intake-btn"
             onClick={onOpenIntake}
-            title="+ List on KhelGrid"
-            aria-label="+ List on KhelGrid"
+            title={t('listOnKhelgrid', { ns: 'common', defaultValue: '+ List on KhelGrid' })}
+            aria-label={t('listOnKhelgrid', { ns: 'common', defaultValue: '+ List on KhelGrid' })}
           >
             <SiteIcon name="plus" size={18} />
-            <span className="sidebar-utility-label">+ List on KhelGrid</span>
+            <span className="sidebar-utility-label">{t('listOnKhelgrid', { ns: 'common', defaultValue: '+ List on KhelGrid' })}</span>
           </button>
         )}
-        <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback" title="Help and feedback"><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">Help &amp; feedback</span></a>
+        <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback" title="Help and feedback"><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">{t('helpAndFeedback', 'Help & feedback')}</span></a>
         {!collapsed ? <span className="sidebar-bottom-note">KhelGrid · India</span> : null}
       </div>
     </aside>
@@ -164,21 +169,23 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
             onClick={() => { onClose(); onOpenIntake() }}
           >
             <SiteIcon name="plus" size={15} />
-            <span>+ List on KhelGrid</span>
+            <span>{t('listOnKhelgrid', { ns: 'common', defaultValue: '+ List on KhelGrid' })}</span>
           </button>
         )}
         <button ref={closeRef} className="sidebar-mobile-close" type="button" onClick={() => { onClose(); toggleRef.current?.focus() }} aria-label="Close navigation"><SiteIcon name="close" size={20} /></button>
       </div>
       <nav className="sidebar-navigation" aria-label="Mobile feature navigation">{renderSections(true)}</nav>
-      <div className="sidebar-promo"><strong>Build your athlete profile</strong><p>Create a Sports CV and prepare a profile-ready PDF on your device.</p><a href="/sports-cv" onClick={event => { onNavigate(event, '/sports-cv'); onClose() }}>Open Sports CV <SiteIcon name="arrow-up-right" size={13} /></a></div>
+      <div className="sidebar-promo"><strong>{t('promoTitle', 'Build your athlete profile')}</strong><p>{t('promoText', 'Create a Sports CV and prepare a profile-ready PDF on your device.')}</p><a href="/sports-cv" onClick={event => { onNavigate(event, '/sports-cv'); onClose() }}>{t('openSportsCv', 'Open Sports CV')} <SiteIcon name="arrow-up-right" size={13} /></a></div>
       <div className="sidebar-bottom">
-        <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback"><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">Help &amp; feedback</span></a>
+        <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback"><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">{t('helpAndFeedback', 'Help & feedback')}</span></a>
       </div>
     </div>
     <nav className="mobile-bottom-nav" aria-label="Quick navigation">
       {mobileItems.map(item => {
+        const itemKey = item.href === '/' ? 'home' : item.href.replace('/', '')
+        const itemLabel = t(itemKey, item.label)
         const active = isActive({ ...item, id: item.label, module: 'quick', available: true }, activePath)
-        return <a key={item.href} href={item.href} className={active ? 'mobile-bottom-link is-active' : 'mobile-bottom-link'} aria-current={active ? 'page' : undefined} aria-label={item.label} onClick={event => onNavigate(event, item.href)}><SiteIcon name={item.icon} size={20} /><small>{item.label}</small></a>
+        return <a key={item.href} href={item.href} className={active ? 'mobile-bottom-link is-active' : 'mobile-bottom-link'} aria-current={active ? 'page' : undefined} aria-label={itemLabel} onClick={event => onNavigate(event, item.href)}><SiteIcon name={item.icon} size={20} /><small>{itemLabel}</small></a>
       })}
     </nav>
   </>

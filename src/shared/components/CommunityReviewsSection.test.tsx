@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
+import '../../i18n'
 import { CommunityReviewsSection } from './CommunityReviewsSection'
 
 describe('CommunityReviewsSection Component', () => {

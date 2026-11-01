@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, type MouseEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { SiteIcon } from './SiteIcon'
 import {
   usePreferences,
@@ -8,6 +9,7 @@ import {
   playTestAlertChime,
   type ThemeMode,
 } from '../preferences'
+import { changeAppLanguage } from '../../i18n'
 import './NavbarSettingsMenu.css'
 
 interface NavbarSettingsMenuProps {
@@ -16,6 +18,7 @@ interface NavbarSettingsMenuProps {
 }
 
 export default function NavbarSettingsMenu({ onNavigate, onOpenFeedback }: NavbarSettingsMenuProps) {
+  const { t } = useTranslation('common')
   const [isOpen, setIsOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -66,12 +69,19 @@ export default function NavbarSettingsMenu({ onNavigate, onOpenFeedback }: Navba
     }, 2400)
   }
 
+  useEffect(() => {
+    if (preferences.language) {
+      changeAppLanguage(preferences.language)
+    }
+  }, [preferences.language])
+
   function handleThemeChange(theme: ThemeMode) {
     updatePreferences({ theme })
     showToast(`Theme set to ${theme.charAt(0).toUpperCase() + theme.slice(1)}`)
   }
 
   function handleLanguageChange(code: string, name: string, nativeName: string) {
+    changeAppLanguage(code)
     updatePreferences({ language: code })
     showToast(`Language set to ${name} (${nativeName})`)
   }
@@ -130,7 +140,7 @@ export default function NavbarSettingsMenu({ onNavigate, onOpenFeedback }: Navba
           {/* Section 1: Appearance & Theme Switcher */}
           <div className="settings-menu-section">
             <div className="settings-section-heading">
-              <span>Appearance</span>
+              <span>{t('appearance', 'Appearance')}</span>
               <span className="settings-badge-subtle">
                 {preferences.theme.charAt(0).toUpperCase() + preferences.theme.slice(1)}
               </span>
@@ -149,7 +159,7 @@ export default function NavbarSettingsMenu({ onNavigate, onOpenFeedback }: Navba
                 title="Light Mode"
               >
                 <SiteIcon name="sun" size={15} />
-                <span>Light</span>
+                <span>{t('light', 'Light')}</span>
               </button>
               <button
                 type="button"
@@ -159,7 +169,7 @@ export default function NavbarSettingsMenu({ onNavigate, onOpenFeedback }: Navba
                 title="Dark Mode"
               >
                 <SiteIcon name="moon" size={15} />
-                <span>Dark</span>
+                <span>{t('dark', 'Dark')}</span>
               </button>
               <button
                 type="button"
@@ -169,7 +179,7 @@ export default function NavbarSettingsMenu({ onNavigate, onOpenFeedback }: Navba
                 title="System Default"
               >
                 <SiteIcon name="monitor" size={15} />
-                <span>System</span>
+                <span>{t('system', 'System')}</span>
               </button>
             </div>
           </div>
@@ -181,7 +191,7 @@ export default function NavbarSettingsMenu({ onNavigate, onOpenFeedback }: Navba
             <div className="settings-section-heading">
               <span className="flex-center-gap">
                 <SiteIcon name="languages" size={14} />
-                <span>Language / भाषा</span>
+                <span>{t('languageHeader', 'Language / भाषा')}</span>
               </span>
               <span className="settings-badge-primary">
                 {currentLanguage.flag} {currentLanguage.nativeName}
@@ -192,7 +202,7 @@ export default function NavbarSettingsMenu({ onNavigate, onOpenFeedback }: Navba
               role="group"
               aria-label="Language selection"
             >
-              {supportedLanguages.slice(0, 8).map(lang => {
+              {supportedLanguages.slice(0, 10).map(lang => {
                 const isSelected = preferences.language === lang.code
                 return (
                   <button
@@ -218,7 +228,7 @@ export default function NavbarSettingsMenu({ onNavigate, onOpenFeedback }: Navba
           {/* Section 3: Quick Preferences (Sound & Preferred City) */}
           <div className="settings-menu-section">
             <div className="settings-section-heading">
-              <span>Quick Preferences</span>
+              <span>{t('quickPreferences', 'Quick Preferences')}</span>
             </div>
 
             {/* Sound alerts toggle */}
@@ -226,7 +236,7 @@ export default function NavbarSettingsMenu({ onNavigate, onOpenFeedback }: Navba
               <div className="pref-info">
                 <span className="pref-title">
                   <SiteIcon name={preferences.soundAlerts ? 'volume' : 'volume-x'} size={15} />
-                  <span>Live Match Audio</span>
+                  <span>{t('liveMatchAudio', 'Live Match Audio')}</span>
                 </span>
                 <span className="pref-hint">Score chimes &amp; alerts</span>
               </div>

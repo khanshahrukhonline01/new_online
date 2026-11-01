@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   computeReviewStats,
   getReviews,
@@ -31,6 +32,7 @@ export function CommunityReviewsSection({
   sport,
   city,
 }: CommunityReviewsSectionProps) {
+  const { t } = useTranslation(['reviews', 'common'])
   const [reviews, setReviews] = useState<ReviewItem[]>([])
   const [loading, setLoading] = useState(true)
   const [filterMode, setFilterMode] = useState<'all' | 'photos' | '5stars'>('all')
@@ -220,9 +222,9 @@ export function CommunityReviewsSection({
     <section className="community-reviews-container" aria-label="Community Reviews and Player Ratings">
       <div className="community-reviews-header">
         <div>
-          <h2>Player Reviews &amp; Court Photos</h2>
+          <h2>{t('title', 'Player Reviews & Court Photos')}</h2>
           <p className="community-reviews-subtitle">
-            Authentic feedback from verified players, athletes, and coaches who play at {entityName}.
+            {t('subtitle', { entityName, defaultValue: `Authentic feedback from verified players, athletes, and coaches who play at ${entityName}.` })}
           </p>
         </div>
 
@@ -237,7 +239,7 @@ export function CommunityReviewsSection({
             }}
           >
             <SiteIcon name="star" size={16} />
-            <span>{isFormOpen ? 'Cancel Review' : 'Write a Review'}</span>
+            <span>{isFormOpen ? t('cancelReview', 'Cancel Review') : t('writeReview', 'Write a Review')}</span>
           </button>
 
           <button
@@ -249,7 +251,7 @@ export function CommunityReviewsSection({
             }}
           >
             <SiteIcon name="camera" size={16} />
-            <span>Add Photos</span>
+            <span>{t('addPhotos', 'Add Photos')}</span>
           </button>
         </div>
       </div>

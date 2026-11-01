@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent, type MouseEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AsyncState } from '../../shared/components/AsyncState'
 import {
   getPickupGames,
@@ -21,6 +22,7 @@ export interface PlayPageProps {
 }
 
 export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {}) {
+  const { t } = useTranslation(['play', 'common', 'navigation'])
   const [result, setResult] = useState<CatalogueResult<DatabasePickupGame> | { status: 'loading'; data: [] }>({
     status: 'loading',
     data: [],
@@ -307,30 +309,30 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
           <li>
             <a href="/" onClick={e => onNavigate?.(e, '/')}>
               <SiteIcon name="home" size={14} />
-              <span>Home</span>
+              <span>{t('home', { ns: 'navigation', defaultValue: 'Home' })}</span>
             </a>
           </li>
           <li aria-hidden="true">
             <SiteIcon name="chevron-right" size={12} />
           </li>
           <li aria-current="page">
-            <span>Play · Find games</span>
+            <span>{t('findGames', { ns: 'navigation', defaultValue: 'Play · Find games' })}</span>
           </li>
         </ol>
       </nav>
 
-      <p className="eyebrow">COMMUNITY MATCHES · PICKUP GAMES</p>
-      <h1>Join local pickup games.</h1>
+      <p className="eyebrow">{t('heading', 'COMMUNITY MATCHES · PICKUP GAMES')}</p>
+      <h1>{t('title', 'Join local pickup games.')}</h1>
       <p className="page-intro">
-        Connect with local athletes, fill missing court spots, coordinate matches via WhatsApp, and play your favourite sports across India.
+        {t('subtitle', 'Connect with local athletes, fill missing court spots, coordinate matches via WhatsApp, and play your favourite sports across India.')}
       </p>
 
       <DirectoryCallout
         variant="opportunity"
         tag="Host Match"
-        title="Hosting a match and need players? Post a Game"
+        title={t('postGameCallout', 'Hosting a match and need players? Post a Game')}
         description="Fill missing spots on your court or turf. Set sport, venue, skill level, and share an instant WhatsApp group link with players."
-        buttonLabel="Host a match"
+        buttonLabel={t('hostMatch', { ns: 'play', defaultValue: 'Host a match' })}
         buttonHref={onOpenIntake ? '#' : 'mailto:khelgrid@gmail.com?subject=Host%20a%20pickup%20match%20on%20KhelGrid'}
         onButtonClick={onOpenIntake}
       />
@@ -444,7 +446,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
                           <div className="play-meta-row">
                             <span>{game.confirmedPlayers}/{game.totalPlayers} Players Confirmed</span>
                             <span style={{ color: isFull ? '#ef4444' : '#059669' }}>
-                              {isFull ? '0 spots left' : `${game.spotsOpen} ${game.spotsOpen === 1 ? 'spot' : 'spots'} left`}
+                              {isFull ? t('matchFull', '0 spots left') : `${game.spotsOpen} ${t('spotsLeft', 'spots left')}`}
                             </span>
                           </div>
                           <div className="play-progress-track">
@@ -460,13 +462,13 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
 
                         <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                            {isFull ? 'All spots filled' : `${game.spotsOpen} spots available`}
+                            {isFull ? t('matchFull', 'All spots filled') : `${game.spotsOpen} ${t('spotsOpen', 'spots available')}`}
                           </span>
 
                           {isConfirmed ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <span className="play-badge-confirmed">
-                                <SiteIcon name="check" size={12} /> Confirmed
+                                <SiteIcon name="check" size={12} /> {t('confirmed', 'Confirmed')}
                               </span>
                               {game.whatsappGroupUrl && (
                                 <a
@@ -478,7 +480,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
                                   onClick={e => e.stopPropagation()}
                                 >
                                   <SiteIcon name="message-circle" size={13} />
-                                  <span>WhatsApp Group</span>
+                                  <span>{t('whatsAppGroup', 'WhatsApp Group')}</span>
                                 </a>
                               )}
                             </div>
@@ -489,7 +491,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
                               disabled
                               title="All spots in this match are filled"
                             >
-                              Full
+                              {t('matchFull', 'Full')}
                             </button>
                           ) : (
                             <button
@@ -497,7 +499,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
                               className="play-join-btn"
                               onClick={() => handleOpenRsvp(game)}
                             >
-                              Reserve Spot
+                              {t('reserveSpot', 'Reserve Spot')}
                             </button>
                           )}
                         </div>
@@ -608,7 +610,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
                 )}
 
                 <label className="play-rsvp-field">
-                  <span>Your Full Name *</span>
+                  <span>{t('yourFullName', 'Your Full Name')} *</span>
                   <input
                     required
                     type="text"
@@ -620,7 +622,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
                 </label>
 
                 <label className="play-rsvp-field">
-                  <span>Phone Number / WhatsApp (Optional)</span>
+                  <span>{t('phoneNumber', 'Phone Number / WhatsApp (Optional)')}</span>
                   <input
                     type="tel"
                     placeholder="e.g. 9876543210"
@@ -638,14 +640,14 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
                     className="play-rsvp-cancel-btn"
                     onClick={handleCloseRsvp}
                   >
-                    Cancel
+                    {t('cancel', { ns: 'common', defaultValue: 'Cancel' })}
                   </button>
                   <button
                     type="submit"
                     className="play-rsvp-submit-btn"
                     disabled={rsvpSubmitting}
                   >
-                    {rsvpSubmitting ? 'Reserving…' : 'Confirm Spot'}
+                    {rsvpSubmitting ? t('loading', { ns: 'common', defaultValue: 'Reserving…' }) : t('confirmRsvp', 'Confirm Spot')}
                   </button>
                 </div>
               </form>

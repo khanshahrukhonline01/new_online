@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import HomePage from './modules/home/HomePage'
 import SportsPage from './modules/sports/SportsPage'
 import SportDetailPage from './modules/sports/SportDetailPage'
@@ -50,6 +51,7 @@ function currentPath() {
 }
 
 export default function App() {
+  const { t } = useTranslation(['common', 'navigation'])
   const [path, setPath] = useState('/')
   const [menuOpen, setMenuOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
@@ -198,10 +200,10 @@ export default function App() {
         className={`header-play-pill ${path === '/play' ? 'is-active' : ''}`}
         aria-current={path === '/play' ? 'page' : undefined}
         onClick={event => navigate(event, '/play')}
-        title="Play pickup games & community matches"
+        title={t('findGames', { ns: 'navigation', defaultValue: 'Play pickup games & community matches' })}
       >
         <SiteIcon name="users" size={15} />
-        <span>Play</span>
+        <span>{t('play', 'Play')}</span>
       </a>
       <nav className="header-actions" aria-label="KhelGrid actions">
         <button
@@ -209,50 +211,50 @@ export default function App() {
           type="button"
           onClick={() => openIntake('pickup_game')}
           title="List an Academy, Turf, Trial or Pickup Game on KhelGrid"
-          aria-label="+ List on KhelGrid"
+          aria-label={t('listOnKhelgrid', '+ List on KhelGrid')}
         >
           <SiteIcon name="plus" size={16} />
-          <span>+ List on KhelGrid</span>
+          <span>{t('listOnKhelgrid', '+ List on KhelGrid')}</span>
         </button>
         <button
           className="header-action-link"
           type="button"
           onClick={() => openIntake('venue')}
           title="List a sports venue on KhelGrid"
-          aria-label="List your venue"
+          aria-label={t('listVenue', 'List your venue')}
         >
           <SiteIcon name="building" size={16} />
-          <span>List your venue</span>
+          <span>{t('listVenue', 'List your venue')}</span>
         </button>
         <button
           className="header-action-link header-action-secondary"
           type="button"
           onClick={() => openIntake('opportunity')}
           title="Submit a sports trial or opportunity"
-          aria-label="Submit a trial"
+          aria-label={t('submitTrial', 'Submit a trial')}
         >
           <SiteIcon name="calendar-check" size={16} />
-          <span>Submit a trial</span>
+          <span>{t('submitTrial', 'Submit a trial')}</span>
         </button>
-        <a className="header-action-link header-action-coach" href="mailto:khelgrid@gmail.com?subject=Register%20as%20a%20coach%20on%20KhelGrid" title="Register as a coach on KhelGrid" aria-label="Join as Coach"><SiteIcon name="award" size={16} /><span>Join as Coach</span></a>
-        <a className="header-action-link header-action-chronicle" href="/khelchronicle/submit" onClick={event => navigate(event, '/khelchronicle/submit')} title="Submit research manuscript to KhelChronicle" aria-label="Submit Paper"><SiteIcon name="file-text" size={16} /><span>Submit Paper</span></a>
+        <a className="header-action-link header-action-coach" href="mailto:khelgrid@gmail.com?subject=Register%20as%20a%20coach%20on%20KhelGrid" title="Register as a coach on KhelGrid" aria-label={t('joinAsCoach', 'Join as Coach')}><SiteIcon name="award" size={16} /><span>{t('joinAsCoach', 'Join as Coach')}</span></a>
+        <a className="header-action-link header-action-chronicle" href="/khelchronicle/submit" onClick={event => navigate(event, '/khelchronicle/submit')} title="Submit research manuscript to KhelChronicle" aria-label={t('submitPaper', 'Submit Paper')}><SiteIcon name="file-text" size={16} /><span>{t('submitPaper', 'Submit Paper')}</span></a>
       </nav>
       <button
         className="header-icon-button header-search-trigger"
         type="button"
         onClick={() => setSearchModalOpen(true)}
-        aria-label="Search KhelGrid catalogue"
+        aria-label={t('searchCatalogueAria', 'Search KhelGrid catalogue')}
         title="Search KhelGrid (Ctrl+K)"
       >
         <SiteIcon name="search" size={19} />
-        <span className="sr-only">Search KhelGrid</span>
+        <span className="sr-only">{t('searchKhelgrid', 'Search KhelGrid')}</span>
       </button>
       <button
         className="header-icon-button header-notif-trigger"
         type="button"
         onClick={() => setNotificationsOpen(true)}
-        aria-label="Notifications"
-        title="Notifications"
+        aria-label={t('notifications', 'Notifications')}
+        title={t('notifications', 'Notifications')}
       >
         <SiteIcon name="bell" size={19} />
         {unreadNotifCount > 0 && (
@@ -263,8 +265,8 @@ export default function App() {
         onNavigate={navigate}
         onOpenFeedback={() => setFeedbackModalOpen(true)}
       />
-      <span className="header-login-link is-unavailable" aria-disabled="true" aria-label="Your profile" title="Your profile / Login coming soon"><SiteIcon name="user-round" size={17} /><span>Login <small>Coming Soon</small></span></span>
-      <a className="header-go-pro" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20Pro%20enquiry"><SiteIcon name="star" size={16} /><span>Go Pro</span></a>
+      <span className="header-login-link is-unavailable" aria-disabled="true" aria-label="Your profile" title="Your profile / Login coming soon"><SiteIcon name="user-round" size={17} /><span>{t('login', 'Login')} <small>{t('comingSoon', 'Coming Soon')}</small></span></span>
+      <a className="header-go-pro" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20Pro%20enquiry"><SiteIcon name="star" size={16} /><span>{t('goPro', 'Go Pro')}</span></a>
     </header>
     <div className="app-workspace">
       <Sidebar
