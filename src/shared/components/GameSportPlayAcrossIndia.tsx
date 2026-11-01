@@ -18,7 +18,7 @@ const GSP_SCHEMA_DATA = {
       '@type': 'ListItem',
       position: catIdx * 9 + linkIdx + 1,
       name: link.label,
-      url: `https://www.khelgrid.com${link.href}`,
+      url: `https://khelgrid.com${link.href}`,
     })),
   ),
 }

@@ -59,12 +59,17 @@ export function buildSitemapEntries(): SitemapEntry[] {
   // 1. Core Primary Hubs
   entries.push(
     { loc: `${BASE_URL}/`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 1.0 },
+    { loc: `${BASE_URL}/play`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.95 },
     { loc: `${BASE_URL}/sports`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
     { loc: `${BASE_URL}/opportunities`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
+    { loc: `${BASE_URL}/trials`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
     { loc: `${BASE_URL}/venues`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
+    { loc: `${BASE_URL}/book`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
     { loc: `${BASE_URL}/academies`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
+    { loc: `${BASE_URL}/train`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
     { loc: `${BASE_URL}/coaches`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
     { loc: `${BASE_URL}/events`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
+    { loc: `${BASE_URL}/tournaments`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
     { loc: `${BASE_URL}/search`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
     { loc: `${BASE_URL}/cities`, lastmod: SITEMAP_LASTMOD, changefreq: 'weekly', priority: 0.8 },
     { loc: `${BASE_URL}/talent-scanner`, lastmod: SITEMAP_LASTMOD, changefreq: 'weekly', priority: 0.85 },
