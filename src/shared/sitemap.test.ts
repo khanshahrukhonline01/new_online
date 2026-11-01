@@ -29,9 +29,17 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     expect(search).toBeDefined()
     expect(search?.priority).toBe(0.9)
 
+    const play = entries.find(e => e.loc === `${BASE_URL}/play`)
+    expect(play).toBeDefined()
+    expect(play?.priority).toBe(0.95)
+
     const opportunities = entries.find(e => e.loc === `${BASE_URL}/opportunities`)
     expect(opportunities).toBeDefined()
     expect(opportunities?.priority).toBe(0.9)
+
+    const trials = entries.find(e => e.loc === `${BASE_URL}/trials`)
+    expect(trials).toBeDefined()
+    expect(trials?.priority).toBe(0.9)
 
     const talentScanner = entries.find(e => e.loc === `${BASE_URL}/talent-scanner`)
     expect(talentScanner).toBeDefined()

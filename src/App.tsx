@@ -40,6 +40,7 @@ import AcademiesPage from './modules/academies/AcademiesPage'
 import AcademyDetailPage from './modules/academies/AcademyDetailPage'
 import VenueDetailPage from './modules/venues/VenueDetailPage'
 import type { CommunityListingCategory } from './integrations/supabase/public-client'
+import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAndShare'
 
 const IPR_NOTICE_HEADING = 'IPR, AI & Copyright Notice'
 
@@ -97,6 +98,12 @@ export default function App() {
   }, [])
 
   useEffect(() => { setMenuOpen(false) }, [path])
+
+  useEffect(() => {
+    const seo = getRouteSeoMetadata(path)
+    const cleanup = updatePageSeoMetadata(seo)
+    return cleanup
+  }, [path])
 
   function toggleMainMenu() {
     if (isMobile) {
