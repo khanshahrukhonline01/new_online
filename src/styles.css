@@ -918,3 +918,49 @@ independent of footer height. */
     margin: 0 !important;
   }
 }
+
+/* Route Suspense fallback loader */
+.page-route-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 48vh;
+  gap: 1rem;
+  padding: 3.5rem 1.5rem;
+  color: var(--text-secondary, #6b7280);
+}
+
+.page-route-loader-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--surface-secondary, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  color: var(--accent, #10b981);
+}
+
+.page-route-loader-text {
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  margin: 0;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.spinning {
+  animation: kg-spin 1s linear infinite;
+}
+
+@keyframes kg-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
