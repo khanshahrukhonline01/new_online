@@ -829,6 +829,14 @@ export async function submitCommunityListing(
     try {
       const baseUrl = new URL(supabaseUrl)
       if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
+        const postPayload = { ...record }
+        if (
+          typeof postPayload.id === 'string' &&
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postPayload.id as string)
+        ) {
+          delete postPayload.id
+        }
+
         const response = await fetch(
           `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/${targetTable}`,
           {
@@ -840,7 +848,7 @@ export async function submitCommunityListing(
               Accept: 'application/json',
               Prefer: 'return=representation',
             },
-            body: JSON.stringify(record),
+            body: JSON.stringify(postPayload),
           },
         )
         if (response.ok) {
