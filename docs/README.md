@@ -19,9 +19,10 @@ Start with [Master Project Plan](MASTER_PROJECT_PLAN.md). It records the full 54
 - [Two-Stage Database Roadmap](TWO_STAGE_DATABASE_ROADMAP.md)
 - [Stage A Schema Change Matrix](STAGE_A_SCHEMA_CHANGE_MATRIX.md)
 - [Footer, Legal Pages, and Privacy Settings](FOOTER_LEGAL_PAGES_AND_PRIVACY_SETTINGS.md)
+- [Image Asset Requirements and Production Plan](product/IMAGE_ASSET_REQUIREMENTS_AND_PLAN.md) — complete visual asset inventory, image specifications, source/licensing governance, folder conventions, priorities and acceptance checklist.
 
 ## Directory map
-- `product/`: requirements, priorities, UX, accessibility.
+- `product/`: requirements, priorities, UX, accessibility and asset planning.
 - `architecture/`: frontend/backend design, integrations, environments/secrets, multi-LLM integration and public/private asset governance.
 - `data/`: schema governance, migrations, recovery, data quality and provenance.
 - `features/`: individual user-facing capability specifications.
