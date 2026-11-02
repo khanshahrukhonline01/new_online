@@ -55,3 +55,12 @@ Recommended metadata fields for future entries: `creator`, `created_at`, `source
 ## Release gate
 
 No unverified asset may be described as exclusively owned by KhelGrid or approved for production. Replace unverified external imagery with documented original/commissioned assets or properly licensed alternatives after the manifest review.
+
+
+## User-supplied Gemini hero images (2026-11-02)
+
+Two PNG source images were supplied by the user and converted to WebP delivery files for the homepage hero:
+- `public/assets/hero/cricket-stadium.webp` — 1365 × 768, 146,666 bytes.
+- `public/assets/hero/football-stadium.webp` — 1365 × 768, 208,986 bytes.
+
+The manifest records Gemini AI as the user-reported source and the conversion date. The generation prompt, exact model/version, account terms applicable on generation date, and any legal ownership evidence were not supplied or independently verified. Keep both entries pending rights review; do not describe them as exclusively owned or production-approved until those checks are complete. Preserve the original PNGs as source masters.
