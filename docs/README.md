@@ -23,7 +23,7 @@ Start with [Master Project Plan](MASTER_PROJECT_PLAN.md). It records the full 54
 
 
 - [Master AI Image Generation Prompt](product/MASTER_AI_IMAGE_GENERATION_PROMPT.md) — reusable KhelGrid visual standard.
-- [Image Generation Prompt Library](product/image-generation-prompts/README.md) — sport-specific, website asset, marketing and editorial prompt templates.\n- [Master AI Video Generation and Production Framework](product/MASTER_AI_VIDEO_GENERATION_AND_SCRIPTING.md) — channel-neutral video scripting, generation, editing, rights and approval standard.\n- [Video Generation Prompt Library](product/video-generation-prompts/README.md) — reusable templates for YouTube long-form, Shorts, documentaries, explainers, athlete stories, KhelGrid promotions and KhelChronicle.
+- [Image Generation Prompt Library](product/image-generation-prompts/README.md) — sport-specific, website asset, marketing and editorial prompt templates.\n- [KhelGrid YouTube Channel Strategy v1.0](product/KHELGRID_YOUTUBE_CHANNEL_STRATEGY_V1.md) — channel positioning, content pillars, 30 video ideas, first-month calendar, title / thumbnail standards, production workflow and measurement.\n- [Master AI Video Generation and Production Framework](product/MASTER_AI_VIDEO_GENERATION_AND_SCRIPTING.md) — channel-neutral video scripting, generation, editing, rights and approval standard.\n- [Video Generation Prompt Library](product/video-generation-prompts/README.md) — reusable templates for YouTube long-form, Shorts, documentaries, explainers, athlete stories, KhelGrid promotions and KhelChronicle.
 
 ## Directory map
 - `product/`: requirements, priorities, UX, accessibility and asset planning.
