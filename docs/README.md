@@ -21,6 +21,10 @@ Start with [Master Project Plan](MASTER_PROJECT_PLAN.md). It records the full 54
 - [Footer, Legal Pages, and Privacy Settings](FOOTER_LEGAL_PAGES_AND_PRIVACY_SETTINGS.md)
 - [Image Asset Requirements and Production Plan](product/IMAGE_ASSET_REQUIREMENTS_AND_PLAN.md) — complete visual asset inventory, image specifications, source/licensing governance, folder conventions, priorities and acceptance checklist.
 
+
+- [Master AI Image Generation Prompt](product/MASTER_AI_IMAGE_GENERATION_PROMPT.md) — reusable KhelGrid visual standard.
+- [Image Generation Prompt Library](product/image-generation-prompts/README.md) — sport-specific, website asset, marketing and editorial prompt templates.
+
 ## Directory map
 - `product/`: requirements, priorities, UX, accessibility and asset planning.
 - `architecture/`: frontend/backend design, integrations, environments/secrets, multi-LLM integration and public/private asset governance.
