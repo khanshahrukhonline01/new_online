@@ -57,6 +57,23 @@ CREATE TABLE IF NOT EXISTS public.pickup_game_rsvp_rate_limits (
   last_attempt_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Schema upgrades for existing tables (idempotent)
+ALTER TABLE public.pickup_games
+  ADD COLUMN IF NOT EXISTS host_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS cancellation_reason text,
+  ADD COLUMN IF NOT EXISTS cancelled_at timestamptz,
+  ADD COLUMN IF NOT EXISTS completed_at timestamptz;
+
+ALTER TABLE public.pickup_games
+  DROP CONSTRAINT IF EXISTS pickup_games_status_check;
+
+ALTER TABLE public.pickup_games
+  ADD CONSTRAINT pickup_games_status_check
+  CHECK (status IN ('draft', 'open', 'full', 'completed', 'cancelled'));
+
+ALTER TABLE public.pickup_game_participants
+  ADD COLUMN IF NOT EXISTS cancellation_token text DEFAULT gen_random_uuid()::text;
+
 ALTER TABLE public.pickup_games ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pickup_game_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pickup_game_rsvp_rate_limits ENABLE ROW LEVEL SECURITY;
