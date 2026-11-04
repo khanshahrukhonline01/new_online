@@ -384,6 +384,8 @@ END;
 $$;
 
 -- 5. Cancellation Function: cancel_pickup_game_reservation
+-- Drop first to allow parameter rename from Phase 2 (p_player_phone -> p_cancellation_token)
+DROP FUNCTION IF EXISTS public.cancel_pickup_game_reservation(uuid, text);
 CREATE OR REPLACE FUNCTION public.cancel_pickup_game_reservation(
   p_reservation_id uuid,
   p_cancellation_token text DEFAULT NULL

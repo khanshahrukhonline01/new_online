@@ -92,6 +92,8 @@ CREATE POLICY "pickup_games_read_published" ON public.pickup_games
 -- - Authenticated game host or administrator
 -- - Cryptographic bearer cancellation_token returned at booking time
 -- Uses SET search_path = '' and fully qualified objects.
+-- Drop Phase 2 version first: PostgreSQL cannot rename parameters via CREATE OR REPLACE.
+DROP FUNCTION IF EXISTS public.cancel_pickup_game_reservation(uuid, text);
 CREATE OR REPLACE FUNCTION public.cancel_pickup_game_reservation(
   p_reservation_id uuid,
   p_cancellation_token text DEFAULT NULL
