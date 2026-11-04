@@ -30,6 +30,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
 
   const [liveUpdatedIds, setLiveUpdatedIds] = useState<Set<string>>(new Set())
   const [joinedGameIds, setJoinedGameIds] = useState<Set<string>>(() => getUserRsvpGameIds())
+  const [confirmedWhatsappUrls, setConfirmedWhatsappUrls] = useState<Record<string, string>>({})
 
   // RSVP Modal State
   const [rsvpModalGame, setRsvpModalGame] = useState<PickupGame | null>(null)
@@ -169,9 +170,15 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
 
       if (res.status === 'confirmed') {
         setJoinedGameIds(prev => new Set(prev).add(rsvpModalGame.id))
+        if (res.whatsappGroupUrl) {
+          setConfirmedWhatsappUrls(prev => ({
+            ...prev,
+            [rsvpModalGame.id]: res.whatsappGroupUrl!,
+          }))
+        }
         setRsvpSuccess({
           game: rsvpModalGame,
-          whatsappGroupUrl: res.whatsappGroupUrl || rsvpModalGame.whatsappGroupUrl || null,
+          whatsappGroupUrl: res.whatsappGroupUrl || null,
           participantName: name,
         })
         markLiveUpdated(rsvpModalGame.id)
@@ -193,8 +200,12 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
             ),
           }
         })
+      } else if (res.status === 'duplicate') {
+        setRsvpError(res.message || 'You already have an active reservation for this match.')
       } else if (res.status === 'full') {
-        setRsvpError('Sorry, this match just filled up! All spots are taken.')
+        setRsvpError(res.message || 'Sorry, this match just filled up! All spots are taken.')
+      } else if (res.status === 'waitlist') {
+        setRsvpError(`Match is full. You were placed on the waitlist (Position #${res.waitlistPosition ?? 1}).`)
       } else {
         setRsvpError(res.message || 'Could not complete reservation. Please try again.')
       }
@@ -470,9 +481,9 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
                               <span className="play-badge-confirmed">
                                 <SiteIcon name="check" size={12} /> {t('confirmed', 'Confirmed')}
                               </span>
-                              {game.whatsappGroupUrl && (
+                              {(confirmedWhatsappUrls[game.id] || game.whatsappGroupUrl) && (
                                 <a
-                                  href={game.whatsappGroupUrl}
+                                  href={confirmedWhatsappUrls[game.id] || game.whatsappGroupUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="play-whatsapp-btn"
