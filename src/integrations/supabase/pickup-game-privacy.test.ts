@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import * as publicClient from './public-client'
 import { type RealtimeTable } from './realtime-client'
-import privacyMigrationSql from '../../../supabase/migrations/20261104100000_secure_pickup_game_participant_privacy.sql?raw'
+import privacyMigrationSql from '../../../supabase/migrations/20261104045129_secure_pickup_game_participant_privacy.sql?raw'
 import integrityMigrationSql from '../../../supabase/migrations/20261104110000_atomic_rsvp_reservation_integrity.sql?raw'
 
 describe('Pickup Game Participant Privacy & Security Architecture (Phase 1 & Phase 2)', () => {
