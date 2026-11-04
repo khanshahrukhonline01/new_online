@@ -402,6 +402,7 @@ export interface DatabasePickupGame {
   city: string
   time_label: string
   host_name: string
+  host_user_id?: string | null
   price_per_player: string
   spots_open: number
   total_players: number
@@ -409,7 +410,12 @@ export interface DatabasePickupGame {
   is_featured: boolean
   publication_status: string
   whatsapp_group_url?: string | null
-  status?: 'open' | 'full' | 'completed' | 'cancelled'
+  status?: 'draft' | 'open' | 'full' | 'completed' | 'cancelled'
+  cancellation_reason?: string | null
+  cancelled_at?: string | null
+  completed_at?: string | null
+  created_at?: string
+  updated_at?: string
 }
 
 export interface DatabasePickupGameParticipant {
@@ -491,13 +497,14 @@ export function resetLocalRsvpSecurityState(): void {
   localRsvpRateLimits.clear()
   localRsvpParticipants.length = 0
   BASELINE_PICKUP_GAMES = JSON.parse(JSON.stringify(INITIAL_BASELINE_PICKUP_GAMES))
+  communitySubmissions.pickup_games = []
 }
 
 export function updateLocalGameSpots(
   gameId: string,
   newSpotsOpen: number,
   newConfirmedPlayers: number,
-  newStatus?: 'open' | 'full' | 'completed' | 'cancelled',
+  newStatus?: 'draft' | 'open' | 'full' | 'completed' | 'cancelled',
 ): DatabasePickupGame | undefined {
   const status = newStatus || (newSpotsOpen <= 0 ? 'full' : 'open')
   const idx = communitySubmissions.pickup_games.findIndex(g => g.id === gameId)
@@ -1122,7 +1129,7 @@ export async function updatePickupGameSpots(
   fallbackDetails?: Partial<DatabasePickupGame>,
 ): Promise<{ status: 'updated' | 'error'; message: string; game?: DatabasePickupGame }> {
   let updatedGame: DatabasePickupGame | undefined
-  const nextStatus: 'open' | 'full' | 'completed' | 'cancelled' = newSpotsOpen <= 0 ? 'full' : (fallbackDetails?.status || 'open')
+  const nextStatus: 'draft' | 'open' | 'full' | 'completed' | 'cancelled' = newSpotsOpen <= 0 ? 'full' : (fallbackDetails?.status || 'open')
 
   // 1. Update in local session cache if present
   const idx = communitySubmissions.pickup_games.findIndex(g => g.id === gameId)
@@ -1197,7 +1204,7 @@ export async function updatePickupGameSpots(
     }
   }
 
-  broadcastRealtimeEvent('pickup_games', 'UPDATE', updatedGame)
+  broadcastRealtimeEvent('pickup_games', 'UPDATE', sanitizePublicGame(updatedGame))
 
   return {
     status: 'updated',
@@ -1342,65 +1349,70 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
         if (response.ok) {
           const data = await response.json()
           if (data && typeof data === 'object' && !Array.isArray(data) && 'status' in data) {
-            rpcHandled = true
-            if (data.status === 'confirmed') {
-              saveUserRsvpGame(input.gameId)
-              const participant: DatabasePickupGameParticipant = {
-                id: data.participant_id || `part-${Math.random().toString(36).substring(2, 9)}`,
-                game_id: input.gameId,
-                user_id: input.userId || null,
-                player_name: name,
-                player_phone: cleanPhone,
-                status: 'confirmed',
-                joined_at: new Date().toISOString(),
-              }
-              localRsvpParticipants.push(participant)
-              const updatedGame = updateLocalGameSpots(input.gameId, data.spots_open, data.confirmed_players, data.game_status)
-              rpcResult = {
-                status: 'confirmed',
-                message: data.message || `Spot confirmed! Welcome to the match, ${name}.`,
-                participant,
-                participantId: data.participant_id,
-                game: updatedGame,
-                whatsappGroupUrl: data.whatsapp_group_url || null,
-              }
-            } else if (data.status === 'waitlist') {
-              const participant: DatabasePickupGameParticipant = {
-                id: data.participant_id || `part-${Math.random().toString(36).substring(2, 9)}`,
-                game_id: input.gameId,
-                user_id: input.userId || null,
-                player_name: name,
-                player_phone: cleanPhone,
-                status: 'waitlist',
-                joined_at: new Date().toISOString(),
-              }
-              localRsvpParticipants.push(participant)
-              rpcResult = {
-                status: 'waitlist',
-                message: data.message || 'Match is full. You were added to the waitlist.',
-                waitlistPosition: data.waitlist_position,
-                participantId: data.participant_id,
-                whatsappGroupUrl: null,
-              }
-            } else if (data.status === 'duplicate') {
-              rpcResult = {
-                status: 'duplicate',
-                errorCode: data.error_code || 'DUPLICATE_REGISTRATION',
-                message: data.message || 'You already have an active reservation for this match.',
-                whatsappGroupUrl: null,
-              }
-            } else if (data.status === 'full') {
-              rpcResult = {
-                status: 'full',
-                errorCode: data.error_code || 'MATCH_FULL',
-                message: data.message || 'This pickup match is already full! No spots left.',
-                whatsappGroupUrl: null,
-              }
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.gameId)
+            if (data.status === 'error' && (data.error_code === 'GAME_NOT_FOUND' || data.error_code === 'PGRST116') && !isUuid) {
+              // Non-UUID IDs (e.g. pg-1, mock games) not present in remote DB fall through to local simulation
             } else {
-              rpcResult = {
-                status: 'error',
-                errorCode: data.error_code || 'ERROR',
-                message: data.message || 'Failed to complete reservation.',
+              rpcHandled = true
+              if (data.status === 'confirmed') {
+                saveUserRsvpGame(input.gameId)
+                const participant: DatabasePickupGameParticipant = {
+                  id: data.participant_id || `part-${Math.random().toString(36).substring(2, 9)}`,
+                  game_id: input.gameId,
+                  user_id: input.userId || null,
+                  player_name: name,
+                  player_phone: cleanPhone,
+                  status: 'confirmed',
+                  joined_at: new Date().toISOString(),
+                }
+                localRsvpParticipants.push(participant)
+                const updatedGame = updateLocalGameSpots(input.gameId, data.spots_open, data.confirmed_players, data.game_status)
+                rpcResult = {
+                  status: 'confirmed',
+                  message: data.message || `Spot confirmed! Welcome to the match, ${name}.`,
+                  participant,
+                  participantId: data.participant_id,
+                  game: updatedGame,
+                  whatsappGroupUrl: data.whatsapp_group_url || null,
+                }
+              } else if (data.status === 'waitlist') {
+                const participant: DatabasePickupGameParticipant = {
+                  id: data.participant_id || `part-${Math.random().toString(36).substring(2, 9)}`,
+                  game_id: input.gameId,
+                  user_id: input.userId || null,
+                  player_name: name,
+                  player_phone: cleanPhone,
+                  status: 'waitlist',
+                  joined_at: new Date().toISOString(),
+                }
+                localRsvpParticipants.push(participant)
+                rpcResult = {
+                  status: 'waitlist',
+                  message: data.message || 'Match is full. You were added to the waitlist.',
+                  waitlistPosition: data.waitlist_position,
+                  participantId: data.participant_id,
+                  whatsappGroupUrl: null,
+                }
+              } else if (data.status === 'duplicate') {
+                rpcResult = {
+                  status: 'duplicate',
+                  errorCode: data.error_code || 'DUPLICATE_REGISTRATION',
+                  message: data.message || 'You already have an active reservation for this match.',
+                  whatsappGroupUrl: null,
+                }
+              } else if (data.status === 'full') {
+                rpcResult = {
+                  status: 'full',
+                  errorCode: data.error_code || 'MATCH_FULL',
+                  message: data.message || 'This pickup match is already full! No spots left.',
+                  whatsappGroupUrl: null,
+                }
+              } else {
+                rpcResult = {
+                  status: 'error',
+                  errorCode: data.error_code || 'ERROR',
+                  message: data.message || 'Failed to complete reservation.',
+                }
               }
             }
           } else if (Array.isArray(data) && data[0] && typeof data[0] === 'object' && 'id' in data[0]) {
@@ -1522,11 +1534,13 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
 export interface CancelReservationInput {
   reservationId: string
   playerPhone?: string
+  accessToken?: string
 }
 
 export interface CancelReservationResult {
   status: 'cancelled' | 'already_cancelled' | 'error'
   message: string
+  errorCode?: string
   promotedParticipantId?: string
 }
 
@@ -1537,13 +1551,14 @@ export async function cancelPickupGameReservation(
     try {
       const baseUrl = new URL(supabaseUrl)
       if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
+        const token = input.accessToken || anonKey
         const response = await fetch(
           `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/cancel_pickup_game_reservation`,
           {
             method: 'POST',
             headers: {
               apikey: anonKey,
-              Authorization: `Bearer ${anonKey}`,
+              Authorization: `Bearer ${token}`,
               'Content-Type': 'application/json',
               Accept: 'application/json',
             },
@@ -1558,6 +1573,7 @@ export async function cancelPickupGameReservation(
           return {
             status: res.status || 'cancelled',
             message: res.message || 'Reservation cancelled.',
+            errorCode: res.error_code,
             promotedParticipantId: res.promoted_participant_id,
           }
         }
@@ -1569,7 +1585,18 @@ export async function cancelPickupGameReservation(
 
   const idx = localRsvpParticipants.findIndex(p => p.id === input.reservationId)
   if (idx !== -1) {
-    localRsvpParticipants[idx].status = 'cancelled'
+    const p = localRsvpParticipants[idx]
+    if (input.playerPhone) {
+      const cleanPhone = input.playerPhone.replace(/[^0-9]/g, '').slice(-10)
+      if (p.player_phone && p.player_phone !== cleanPhone) {
+        return {
+          status: 'error',
+          errorCode: 'FORBIDDEN',
+          message: 'Phone number does not match reservation.',
+        }
+      }
+    }
+    p.status = 'cancelled'
     return {
       status: 'cancelled',
       message: 'Reservation cancelled successfully.',
@@ -1578,7 +1605,747 @@ export async function cancelPickupGameReservation(
 
   return {
     status: 'error',
+    errorCode: 'RESERVATION_NOT_FOUND',
     message: 'Reservation not found.',
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Phase 3: Host Authorization, Game Ownership & Game Management Security
+// -----------------------------------------------------------------------------
+
+export interface CreatePickupGameInput {
+  sport: string
+  venueName: string
+  city: string
+  timeLabel: string
+  totalPlayers: number
+  pricePerPlayer?: string
+  skillLevel?: 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels'
+  emoji?: string
+  whatsappGroupUrl?: string
+  publishImmediately?: boolean
+  hostDisplayName?: string
+}
+
+export interface CreatePickupGameOptions {
+  accessToken?: string
+  hostUserId?: string
+}
+
+export interface CreatePickupGameResult {
+  status: 'success' | 'error'
+  message: string
+  errorCode?: string
+  gameId?: string
+  slug?: string
+  game?: DatabasePickupGame
+}
+
+export interface UpdatePickupGameDetailsInput {
+  gameId: string
+  sport?: string
+  skillLevel?: 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels'
+  emoji?: string
+  whatsappGroupUrl?: string
+}
+
+export interface ReschedulePickupGameInput {
+  gameId: string
+  venueName: string
+  city: string
+  timeLabel: string
+}
+
+export interface UpdatePickupGameCapacityInput {
+  gameId: string
+  totalPlayers: number
+  pricePerPlayer?: string
+}
+
+export interface CancelPickupGameAsHostInput {
+  gameId: string
+  cancellationReason?: string
+}
+
+export interface ReopenPickupGameAsHostInput {
+  gameId: string
+}
+
+export interface CompletePickupGameAsHostInput {
+  gameId: string
+}
+
+export interface AdminModeratePickupGameInput {
+  gameId: string
+  action: 'feature' | 'unfeature' | 'archive' | 'publish' | 'force_cancel'
+  notes?: string
+}
+
+export interface HostActionOptions {
+  accessToken?: string
+  callerUserId?: string
+  isAdmin?: boolean
+}
+
+export interface PickupGameMutationResult {
+  status: 'success' | 'already_cancelled' | 'already_completed' | 'error'
+  message: string
+  errorCode?: string
+  gameId?: string
+  gameStatus?: string
+  action?: string
+  confirmedReservationsCancelled?: number
+  waitlistReservationsCancelled?: number
+}
+
+function findLocalPickupGame(gameId: string): DatabasePickupGame | undefined {
+  return (
+    communitySubmissions.pickup_games.find(g => g.id === gameId) ||
+    BASELINE_PICKUP_GAMES.find(g => g.id === gameId)
+  )
+}
+
+function verifyHostAuthorization(
+  game: DatabasePickupGame,
+  options?: HostActionOptions,
+): { authorized: boolean; errorCode?: string; message?: string } {
+  if (!options?.callerUserId && !options?.accessToken && !options?.isAdmin) {
+    return { authorized: false, errorCode: 'UNAUTHORIZED', message: 'Authentication required. Please sign in.' }
+  }
+  if (options?.isAdmin) {
+    return { authorized: true }
+  }
+  if (options?.callerUserId && game.host_user_id && game.host_user_id !== options.callerUserId) {
+    return { authorized: false, errorCode: 'FORBIDDEN', message: 'You are not authorized to modify this match.' }
+  }
+  return { authorized: true }
+}
+
+async function callHostRpc(
+  rpcName: string,
+  bodyParams: Record<string, unknown>,
+  accessToken?: string,
+): Promise<{ handled: boolean; result?: PickupGameMutationResult }> {
+  if (supabaseUrl && anonKey && accessToken) {
+    try {
+      const baseUrl = new URL(supabaseUrl)
+      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
+        const response = await fetch(
+          `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/${rpcName}`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            body: JSON.stringify(bodyParams),
+          },
+        )
+        if (response.ok) {
+          const res = await response.json()
+          if (res && typeof res === 'object') {
+            return {
+              handled: true,
+              result: {
+                status: res.status || 'success',
+                message: res.message || 'Operation completed.',
+                errorCode: res.error_code,
+                gameId: res.game_id,
+                gameStatus: res.game_status,
+                action: res.action,
+                confirmedReservationsCancelled: res.confirmed_reservations_cancelled,
+                waitlistReservationsCancelled: res.waitlist_reservations_cancelled,
+              },
+            }
+          }
+        }
+      }
+    } catch {
+      // Fall through to local simulation
+    }
+  }
+  return { handled: false }
+}
+
+export async function createPickupGame(
+  input: CreatePickupGameInput,
+  options?: CreatePickupGameOptions,
+): Promise<CreatePickupGameResult> {
+  const sport = input.sport?.trim()
+  const venue = input.venueName?.trim()
+  const city = input.city?.trim()
+  const time = input.timeLabel?.trim()
+  const total = Number(input.totalPlayers)
+
+  if (!sport || sport.length < 2) {
+    return { status: 'error', errorCode: 'INVALID_INPUT', message: 'Sport must be at least 2 characters.' }
+  }
+  if (!venue || venue.length < 2) {
+    return { status: 'error', errorCode: 'INVALID_INPUT', message: 'Venue name must be at least 2 characters.' }
+  }
+  if (!city || city.length < 1) {
+    return { status: 'error', errorCode: 'INVALID_INPUT', message: 'City is required.' }
+  }
+  if (!time || time.length < 2) {
+    return { status: 'error', errorCode: 'INVALID_INPUT', message: 'Time label is required.' }
+  }
+  if (!Number.isFinite(total) || total < 2 || total > 100) {
+    return { status: 'error', errorCode: 'INVALID_INPUT', message: 'Total players must be between 2 and 100.' }
+  }
+
+  // Supabase RPC
+  if (supabaseUrl && anonKey && options?.accessToken) {
+    try {
+      const baseUrl = new URL(supabaseUrl)
+      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
+        const response = await fetch(
+          `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/create_pickup_game`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${options.accessToken}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            body: JSON.stringify({
+              p_sport: sport,
+              p_venue_name: venue,
+              p_city: city,
+              p_time_label: time,
+              p_total_players: total,
+              p_price_per_player: input.pricePerPlayer?.trim() || 'Free',
+              p_skill_level: input.skillLevel || 'Intermediate',
+              p_emoji: input.emoji?.trim() || '⚽',
+              p_whatsapp_group_url: input.whatsappGroupUrl?.trim() || null,
+              p_publish_immediately: input.publishImmediately !== false,
+              p_host_display_name: input.hostDisplayName?.trim() || null,
+            }),
+          },
+        )
+        if (response.ok) {
+          const res = await response.json()
+          if (res && typeof res === 'object') {
+            if (res.status === 'success') {
+              const newGame: DatabasePickupGame = {
+                id: res.game_id,
+                slug: res.slug,
+                sport,
+                emoji: input.emoji?.trim() || '⚽',
+                skill_level: input.skillLevel || 'Intermediate',
+                venue_name: venue,
+                city,
+                time_label: time,
+                host_name: input.hostDisplayName?.trim() || 'Community Host',
+                host_user_id: options.hostUserId || null,
+                price_per_player: input.pricePerPlayer?.trim() || 'Free',
+                spots_open: total,
+                total_players: total,
+                confirmed_players: 0,
+                is_featured: false,
+                publication_status: input.publishImmediately !== false ? 'published' : 'draft',
+                whatsapp_group_url: input.whatsappGroupUrl?.trim() || null,
+                status: input.publishImmediately !== false ? 'open' : 'draft',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              }
+              broadcastRealtimeEvent('pickup_games', 'INSERT', sanitizePublicGame(newGame))
+              return {
+                status: 'success',
+                message: res.message || 'Game hosted successfully.',
+                gameId: res.game_id,
+                slug: res.slug,
+                game: newGame,
+              }
+            } else {
+              return {
+                status: 'error',
+                errorCode: res.error_code || 'RPC_ERROR',
+                message: res.message || 'Failed to create game.',
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      // Fall through to local simulation
+    }
+  }
+
+  // Local / offline simulation requires auth
+  if (!options?.accessToken && !options?.hostUserId) {
+    return {
+      status: 'error',
+      errorCode: 'UNAUTHORIZED',
+      message: 'Authentication required. Please sign in to create and host matches.',
+    }
+  }
+
+  const generatedId = `pg-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`
+  const baseSlug = `${sport.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${city.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+  const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`
+
+  const newGame: DatabasePickupGame = {
+    id: generatedId,
+    slug,
+    sport,
+    emoji: input.emoji?.trim() || '⚽',
+    skill_level: input.skillLevel || 'Intermediate',
+    venue_name: venue,
+    city,
+    time_label: time,
+    host_name: input.hostDisplayName?.trim() || 'Community Host',
+    host_user_id: options?.hostUserId || 'mock-host-user-id',
+    price_per_player: input.pricePerPlayer?.trim() || 'Free',
+    spots_open: total,
+    total_players: total,
+    confirmed_players: 0,
+    is_featured: false,
+    publication_status: input.publishImmediately !== false ? 'published' : 'draft',
+    whatsapp_group_url: input.whatsappGroupUrl?.trim() || null,
+    status: input.publishImmediately !== false ? 'open' : 'draft',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+
+  communitySubmissions.pickup_games.unshift(newGame)
+  broadcastRealtimeEvent('pickup_games', 'INSERT', sanitizePublicGame(newGame))
+
+  return {
+    status: 'success',
+    message: 'Pickup game hosted successfully.',
+    gameId: newGame.id,
+    slug: newGame.slug,
+    game: newGame,
+  }
+}
+
+export async function updatePickupGameDetails(
+  input: UpdatePickupGameDetailsInput,
+  options?: HostActionOptions,
+): Promise<PickupGameMutationResult> {
+  const rpc = await callHostRpc('update_pickup_game_details', {
+    p_game_id: input.gameId,
+    p_sport: input.sport || null,
+    p_skill_level: input.skillLevel || null,
+    p_emoji: input.emoji || null,
+    p_whatsapp_group_url: input.whatsappGroupUrl || null,
+  }, options?.accessToken)
+
+  if (rpc.handled && rpc.result) {
+    return rpc.result
+  }
+
+  const game = findLocalPickupGame(input.gameId)
+  if (!game) {
+    return { status: 'error', errorCode: 'GAME_NOT_FOUND', message: 'Game not found.' }
+  }
+
+  const auth = verifyHostAuthorization(game, options)
+  if (!auth.authorized) {
+    return { status: 'error', errorCode: auth.errorCode, message: auth.message || 'Unauthorized.' }
+  }
+
+  if (game.status === 'completed' || game.status === 'cancelled') {
+    return { status: 'error', errorCode: 'INVALID_STATE', message: 'Cannot edit a completed or cancelled match.' }
+  }
+
+  if (input.sport) game.sport = input.sport.trim()
+  if (input.skillLevel) game.skill_level = input.skillLevel
+  if (input.emoji) game.emoji = input.emoji.trim()
+  if (input.whatsappGroupUrl !== undefined) game.whatsapp_group_url = input.whatsappGroupUrl?.trim() || null
+  game.updated_at = new Date().toISOString()
+
+  broadcastRealtimeEvent('pickup_games', 'UPDATE', sanitizePublicGame(game))
+
+  return {
+    status: 'success',
+    message: 'Game details updated successfully.',
+    gameId: game.id,
+  }
+}
+
+export async function reschedulePickupGame(
+  input: ReschedulePickupGameInput,
+  options?: HostActionOptions,
+): Promise<PickupGameMutationResult> {
+  const rpc = await callHostRpc('reschedule_pickup_game', {
+    p_game_id: input.gameId,
+    p_venue_name: input.venueName,
+    p_city: input.city,
+    p_time_label: input.timeLabel,
+  }, options?.accessToken)
+
+  if (rpc.handled && rpc.result) {
+    return rpc.result
+  }
+
+  const game = findLocalPickupGame(input.gameId)
+  if (!game) {
+    return { status: 'error', errorCode: 'GAME_NOT_FOUND', message: 'Game not found.' }
+  }
+
+  const auth = verifyHostAuthorization(game, options)
+  if (!auth.authorized) {
+    return { status: 'error', errorCode: auth.errorCode, message: auth.message || 'Unauthorized.' }
+  }
+
+  if (game.status === 'completed' || game.status === 'cancelled') {
+    return { status: 'error', errorCode: 'INVALID_STATE', message: 'Cannot reschedule a completed or cancelled match.' }
+  }
+
+  const venue = input.venueName?.trim()
+  const city = input.city?.trim()
+  const time = input.timeLabel?.trim()
+  if (!venue || venue.length < 2 || !city || !time || time.length < 2) {
+    return { status: 'error', errorCode: 'INVALID_INPUT', message: 'Venue, city, and time label must be provided.' }
+  }
+
+  game.venue_name = venue
+  game.city = city
+  game.time_label = time
+  game.updated_at = new Date().toISOString()
+
+  broadcastRealtimeEvent('pickup_games', 'UPDATE', sanitizePublicGame(game))
+
+  return {
+    status: 'success',
+    message: 'Match rescheduled successfully.',
+    gameId: game.id,
+  }
+}
+
+export async function updatePickupGameCapacity(
+  input: UpdatePickupGameCapacityInput,
+  options?: HostActionOptions,
+): Promise<PickupGameMutationResult> {
+  const rpc = await callHostRpc('update_pickup_game_capacity', {
+    p_game_id: input.gameId,
+    p_total_players: input.totalPlayers,
+    p_price_per_player: input.pricePerPlayer || null,
+  }, options?.accessToken)
+
+  if (rpc.handled && rpc.result) {
+    return rpc.result
+  }
+
+  const game = findLocalPickupGame(input.gameId)
+  if (!game) {
+    return { status: 'error', errorCode: 'GAME_NOT_FOUND', message: 'Game not found.' }
+  }
+
+  const auth = verifyHostAuthorization(game, options)
+  if (!auth.authorized) {
+    return { status: 'error', errorCode: auth.errorCode, message: auth.message || 'Unauthorized.' }
+  }
+
+  if (game.status === 'completed' || game.status === 'cancelled') {
+    return { status: 'error', errorCode: 'INVALID_STATE', message: 'Cannot alter capacity of a completed or cancelled match.' }
+  }
+
+  const total = Number(input.totalPlayers)
+  if (!Number.isFinite(total) || total < 2 || total > 100) {
+    return { status: 'error', errorCode: 'INVALID_INPUT', message: 'Total players must be between 2 and 100.' }
+  }
+
+  if (total < game.confirmed_players) {
+    return {
+      status: 'error',
+      errorCode: 'CAPACITY_TOO_LOW',
+      message: `Capacity cannot be reduced below the count of confirmed players (${game.confirmed_players}).`,
+    }
+  }
+
+  const spots = Math.max(0, total - game.confirmed_players)
+  game.total_players = total
+  game.spots_open = spots
+  game.status = spots === 0 ? 'full' : 'open'
+  if (input.pricePerPlayer) game.price_per_player = input.pricePerPlayer.trim()
+  game.updated_at = new Date().toISOString()
+
+  broadcastRealtimeEvent('pickup_games', 'UPDATE', sanitizePublicGame(game))
+
+  return {
+    status: 'success',
+    message: 'Match capacity updated successfully.',
+    gameId: game.id,
+    gameStatus: game.status,
+  }
+}
+
+export async function cancelPickupGameAsHost(
+  input: CancelPickupGameAsHostInput,
+  options?: HostActionOptions,
+): Promise<PickupGameMutationResult> {
+  const rpc = await callHostRpc('cancel_pickup_game_as_host', {
+    p_game_id: input.gameId,
+    p_cancellation_reason: input.cancellationReason || 'Match cancelled by host',
+  }, options?.accessToken)
+
+  if (rpc.handled && rpc.result) {
+    return rpc.result
+  }
+
+  const game = findLocalPickupGame(input.gameId)
+  if (!game) {
+    return { status: 'error', errorCode: 'GAME_NOT_FOUND', message: 'Game not found.' }
+  }
+
+  const auth = verifyHostAuthorization(game, options)
+  if (!auth.authorized) {
+    return { status: 'error', errorCode: auth.errorCode, message: auth.message || 'Unauthorized.' }
+  }
+
+  if (game.status === 'cancelled') {
+    return { status: 'already_cancelled', message: 'This match is already cancelled.' }
+  }
+
+  if (game.status === 'completed') {
+    return { status: 'error', errorCode: 'INVALID_STATE', message: 'Completed matches cannot be cancelled.' }
+  }
+
+  // Count affected active reservations and mark cancelled (preserving records)
+  let cancelledConfirmed = 0
+  let cancelledWaitlist = 0
+  for (const p of localRsvpParticipants) {
+    if (p.game_id === game.id) {
+      if (p.status === 'confirmed') {
+        p.status = 'cancelled'
+        cancelledConfirmed += 1
+      } else if (p.status === 'waitlist') {
+        p.status = 'cancelled'
+        cancelledWaitlist += 1
+      }
+    }
+  }
+
+  game.status = 'cancelled'
+  game.cancellation_reason = input.cancellationReason?.trim() || 'Match cancelled by host'
+  game.cancelled_at = new Date().toISOString()
+  game.updated_at = new Date().toISOString()
+
+  broadcastRealtimeEvent('pickup_games', 'UPDATE', sanitizePublicGame(game))
+
+  return {
+    status: 'success',
+    message: 'Match cancelled successfully.',
+    gameId: game.id,
+    gameStatus: 'cancelled',
+    confirmedReservationsCancelled: cancelledConfirmed,
+    waitlistReservationsCancelled: cancelledWaitlist,
+  }
+}
+
+export async function reopenPickupGameAsHost(
+  input: ReopenPickupGameAsHostInput,
+  options?: HostActionOptions,
+): Promise<PickupGameMutationResult> {
+  const rpc = await callHostRpc('reopen_pickup_game_as_host', {
+    p_game_id: input.gameId,
+  }, options?.accessToken)
+
+  if (rpc.handled && rpc.result) {
+    return rpc.result
+  }
+
+  const game = findLocalPickupGame(input.gameId)
+  if (!game) {
+    return { status: 'error', errorCode: 'GAME_NOT_FOUND', message: 'Game not found.' }
+  }
+
+  const auth = verifyHostAuthorization(game, options)
+  if (!auth.authorized) {
+    return { status: 'error', errorCode: auth.errorCode, message: auth.message || 'Unauthorized.' }
+  }
+
+  if (game.status === 'completed' && !options?.isAdmin) {
+    return {
+      status: 'error',
+      errorCode: 'FORBIDDEN',
+      message: 'Completed matches cannot be reopened without administrator authorization.',
+    }
+  }
+
+  if (game.status !== 'cancelled') {
+    return { status: 'error', errorCode: 'INVALID_STATE', message: 'Only cancelled matches can be reopened.' }
+  }
+
+  const newStatus = game.spots_open === 0 ? 'full' : 'open'
+  game.status = newStatus
+  game.cancellation_reason = null
+  game.cancelled_at = null
+  game.updated_at = new Date().toISOString()
+
+  broadcastRealtimeEvent('pickup_games', 'UPDATE', sanitizePublicGame(game))
+
+  return {
+    status: 'success',
+    message: 'Match reopened successfully.',
+    gameId: game.id,
+    gameStatus: newStatus,
+  }
+}
+
+export async function completePickupGameAsHost(
+  input: CompletePickupGameAsHostInput,
+  options?: HostActionOptions,
+): Promise<PickupGameMutationResult> {
+  const rpc = await callHostRpc('complete_pickup_game_as_host', {
+    p_game_id: input.gameId,
+  }, options?.accessToken)
+
+  if (rpc.handled && rpc.result) {
+    return rpc.result
+  }
+
+  const game = findLocalPickupGame(input.gameId)
+  if (!game) {
+    return { status: 'error', errorCode: 'GAME_NOT_FOUND', message: 'Game not found.' }
+  }
+
+  const auth = verifyHostAuthorization(game, options)
+  if (!auth.authorized) {
+    return { status: 'error', errorCode: auth.errorCode, message: auth.message || 'Unauthorized.' }
+  }
+
+  if (game.status === 'completed') {
+    return { status: 'already_completed', message: 'Match is already completed.' }
+  }
+
+  if (game.status === 'cancelled') {
+    return { status: 'error', errorCode: 'INVALID_STATE', message: 'Cancelled matches cannot be marked completed. Reopen first.' }
+  }
+
+  game.status = 'completed'
+  game.completed_at = new Date().toISOString()
+  game.updated_at = new Date().toISOString()
+
+  broadcastRealtimeEvent('pickup_games', 'UPDATE', sanitizePublicGame(game))
+
+  return {
+    status: 'success',
+    message: 'Match marked as completed.',
+    gameId: game.id,
+    gameStatus: 'completed',
+  }
+}
+
+export async function adminModeratePickupGame(
+  input: AdminModeratePickupGameInput,
+  options?: { accessToken?: string; isAdmin?: boolean },
+): Promise<PickupGameMutationResult> {
+  const rpc = await callHostRpc('admin_moderate_pickup_game', {
+    p_game_id: input.gameId,
+    p_action: input.action,
+    p_notes: input.notes || null,
+  }, options?.accessToken)
+
+  if (rpc.handled && rpc.result) {
+    return rpc.result
+  }
+
+  if (!options?.isAdmin) {
+    return {
+      status: 'error',
+      errorCode: 'UNAUTHORIZED',
+      message: 'Administrator or moderator privileges required.',
+    }
+  }
+
+  const game = findLocalPickupGame(input.gameId)
+  if (!game) {
+    return { status: 'error', errorCode: 'GAME_NOT_FOUND', message: 'Game not found.' }
+  }
+
+  if (input.action === 'feature') {
+    game.is_featured = true
+  } else if (input.action === 'unfeature') {
+    game.is_featured = false
+  } else if (input.action === 'archive') {
+    game.publication_status = 'archived'
+  } else if (input.action === 'publish') {
+    game.publication_status = 'published'
+  } else if (input.action === 'force_cancel') {
+    game.status = 'cancelled'
+    game.cancellation_reason = input.notes || 'Cancelled by administrator moderation'
+    game.cancelled_at = new Date().toISOString()
+    for (const p of localRsvpParticipants) {
+      if (p.game_id === game.id && (p.status === 'confirmed' || p.status === 'waitlist')) {
+        p.status = 'cancelled'
+      }
+    }
+  } else {
+    return { status: 'error', errorCode: 'INVALID_ACTION', message: 'Unrecognized moderation action.' }
+  }
+
+  game.updated_at = new Date().toISOString()
+  broadcastRealtimeEvent('pickup_games', 'UPDATE', sanitizePublicGame(game))
+
+  return {
+    status: 'success',
+    message: `Moderation action ${input.action} executed successfully.`,
+    gameId: game.id,
+    action: input.action,
+  }
+}
+
+export async function getHostPickupGames(options?: {
+  accessToken?: string
+  hostUserId?: string
+  isAdmin?: boolean
+}): Promise<{ status: 'success' | 'error'; data: DatabasePickupGame[]; message?: string; errorCode?: string }> {
+  if (supabaseUrl && anonKey && options?.accessToken) {
+    try {
+      const baseUrl = new URL(supabaseUrl)
+      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
+        const response = await fetch(
+          `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/get_host_pickup_games`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${options.accessToken}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            body: JSON.stringify({}),
+          },
+        )
+        if (response.ok) {
+          const res = await response.json()
+          if (res && res.status === 'success' && Array.isArray(res.data)) {
+            return {
+              status: 'success',
+              data: res.data as DatabasePickupGame[],
+            }
+          }
+        }
+      }
+    } catch {
+      // Fall through to local simulation
+    }
+  }
+
+  if (!options?.hostUserId && !options?.accessToken && !options?.isAdmin) {
+    return {
+      status: 'error',
+      errorCode: 'UNAUTHORIZED',
+      message: 'Authentication required. Please sign in.',
+      data: [],
+    }
+  }
+
+  const all = [...communitySubmissions.pickup_games, ...BASELINE_PICKUP_GAMES]
+  const matched = options?.isAdmin
+    ? all
+    : all.filter(g => g.host_user_id === options?.hostUserId)
+
+  return {
+    status: 'success',
+    data: matched,
   }
 }
 
