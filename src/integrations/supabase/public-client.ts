@@ -426,6 +426,7 @@ export interface DatabasePickupGameParticipant {
   player_phone?: string | null
   status: 'confirmed' | 'waitlist' | 'cancelled'
   joined_at: string
+  cancellation_token?: string | null
 }
 
 export const INITIAL_BASELINE_PICKUP_GAMES: DatabasePickupGame[] = [
@@ -1229,6 +1230,7 @@ export interface JoinPickupGameResult {
   errorCode?: string
   participant?: DatabasePickupGameParticipant
   participantId?: string
+  cancellationToken?: string | null
   game?: DatabasePickupGame
   whatsappGroupUrl?: string | null
   waitlistPosition?: number
@@ -1364,6 +1366,7 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
                   player_phone: cleanPhone,
                   status: 'confirmed',
                   joined_at: new Date().toISOString(),
+                  cancellation_token: data.cancellation_token || null,
                 }
                 localRsvpParticipants.push(participant)
                 const updatedGame = updateLocalGameSpots(input.gameId, data.spots_open, data.confirmed_players, data.game_status)
@@ -1372,6 +1375,7 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
                   message: data.message || `Spot confirmed! Welcome to the match, ${name}.`,
                   participant,
                   participantId: data.participant_id,
+                  cancellationToken: data.cancellation_token || null,
                   game: updatedGame,
                   whatsappGroupUrl: data.whatsapp_group_url || null,
                 }
@@ -1384,6 +1388,7 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
                   player_phone: cleanPhone,
                   status: 'waitlist',
                   joined_at: new Date().toISOString(),
+                  cancellation_token: data.cancellation_token || null,
                 }
                 localRsvpParticipants.push(participant)
                 rpcResult = {
@@ -1391,6 +1396,7 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
                   message: data.message || 'Match is full. You were added to the waitlist.',
                   waitlistPosition: data.waitlist_position,
                   participantId: data.participant_id,
+                  cancellationToken: data.cancellation_token || null,
                   whatsappGroupUrl: null,
                 }
               } else if (data.status === 'duplicate') {
@@ -1465,6 +1471,7 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
     if (input.allowWaitlist) {
       const waitlistCount = localRsvpParticipants.filter(p => p.game_id === input.gameId && p.status === 'waitlist').length
       const waitlistPos = waitlistCount + 1
+      const cancellationToken = `token-${Math.random().toString(36).substring(2, 10)}`
       const participant: DatabasePickupGameParticipant = {
         id: `part-${Math.random().toString(36).substring(2, 9)}`,
         game_id: input.gameId,
@@ -1473,12 +1480,14 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
         player_phone: cleanPhone,
         status: 'waitlist',
         joined_at: new Date().toISOString(),
+        cancellation_token: cancellationToken,
       }
       localRsvpParticipants.push(participant)
       return {
         status: 'waitlist',
         message: `Match is full. You have been added to the waitlist (Position #${waitlistPos}).`,
         participantId: participant.id,
+        cancellationToken,
         waitlistPosition: waitlistPos,
         whatsappGroupUrl: null,
       }
@@ -1507,6 +1516,7 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
     communitySubmissions.pickup_games.push(game)
   }
 
+  const cancellationToken = `token-${Math.random().toString(36).substring(2, 10)}`
   const participant: DatabasePickupGameParticipant = {
     id: `part-${Math.random().toString(36).substring(2, 9)}`,
     game_id: input.gameId,
@@ -1515,6 +1525,7 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
     player_phone: cleanPhone,
     status: 'confirmed',
     joined_at: new Date().toISOString(),
+    cancellation_token: cancellationToken,
   }
   localRsvpParticipants.push(participant)
   saveUserRsvpGame(input.gameId)
@@ -1526,6 +1537,7 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
     message: `Spot confirmed! Welcome to the match, ${name}.`,
     participant,
     participantId: participant.id,
+    cancellationToken,
     game,
     whatsappGroupUrl: whatsappUrl,
   }
@@ -1533,8 +1545,10 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
 
 export interface CancelReservationInput {
   reservationId: string
+  cancellationToken?: string
   playerPhone?: string
   accessToken?: string
+  callerUserId?: string
 }
 
 export interface CancelReservationResult {
@@ -1564,7 +1578,7 @@ export async function cancelPickupGameReservation(
             },
             body: JSON.stringify({
               p_reservation_id: input.reservationId,
-              p_player_phone: input.playerPhone?.trim() || null,
+              p_cancellation_token: input.cancellationToken?.trim() || null,
             }),
           },
         )
@@ -1586,16 +1600,32 @@ export async function cancelPickupGameReservation(
   const idx = localRsvpParticipants.findIndex(p => p.id === input.reservationId)
   if (idx !== -1) {
     const p = localRsvpParticipants[idx]
-    if (input.playerPhone) {
-      const cleanPhone = input.playerPhone.replace(/[^0-9]/g, '').slice(-10)
-      if (p.player_phone && p.player_phone !== cleanPhone) {
-        return {
-          status: 'error',
-          errorCode: 'FORBIDDEN',
-          message: 'Phone number does not match reservation.',
-        }
+    let authorized = false
+
+    // 1. Bearer cancellation token check (genuine guest verification)
+    if (input.cancellationToken && p.cancellation_token && input.cancellationToken.trim() === p.cancellation_token) {
+      authorized = true
+    }
+    // 2. Authenticated user who created the reservation
+    else if (input.callerUserId && p.user_id && input.callerUserId === p.user_id) {
+      authorized = true
+    }
+    // 3. Authenticated host of the match
+    else {
+      const g = findLocalPickupGame(p.game_id)
+      if (input.callerUserId && g && g.host_user_id === input.callerUserId) {
+        authorized = true
       }
     }
+
+    if (!authorized) {
+      return {
+        status: 'error',
+        errorCode: 'UNAUTHORIZED',
+        message: 'Unauthorized to cancel this reservation. A valid bearer cancellation token or authenticated account is required.',
+      }
+    }
+
     p.status = 'cancelled'
     return {
       status: 'cancelled',

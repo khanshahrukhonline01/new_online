@@ -345,13 +345,14 @@ describe('Pickup Game Host Authorization & Game Management Security (Phase 3)', 
     expect(phase3MigrationSql).toContain('cancellation_reason text')
     expect(phase3MigrationSql).toContain('cancelled_at timestamptz')
     expect(phase3MigrationSql).toContain('completed_at timestamptz')
+    expect(phase3MigrationSql).toContain('cancellation_token text')
 
     // Table privilege restrictions
     expect(phase3MigrationSql).toContain('REVOKE INSERT, UPDATE, DELETE ON public.pickup_games FROM PUBLIC, anon, authenticated;')
 
-    // Authorization helper
+    // Authorization helper and empty search_path
     expect(phase3MigrationSql).toContain('CREATE OR REPLACE FUNCTION public.is_pickup_game_admin()')
-    expect(phase3MigrationSql).toContain('SET search_path = public, pg_temp')
+    expect(phase3MigrationSql).toContain("SET search_path = ''")
 
     // Atomic management RPCs
     expect(phase3MigrationSql).toContain('CREATE OR REPLACE FUNCTION public.create_pickup_game(')
@@ -363,10 +364,52 @@ describe('Pickup Game Host Authorization & Game Management Security (Phase 3)', 
     expect(phase3MigrationSql).toContain('CREATE OR REPLACE FUNCTION public.complete_pickup_game_as_host(')
     expect(phase3MigrationSql).toContain('CREATE OR REPLACE FUNCTION public.admin_moderate_pickup_game(')
     expect(phase3MigrationSql).toContain('CREATE OR REPLACE FUNCTION public.get_host_pickup_games()')
+    expect(phase3MigrationSql).toContain('CREATE OR REPLACE FUNCTION public.cancel_pickup_game_reservation(')
 
-    // Execute permission restrictions
+    // Execute permission restrictions: revoked from PUBLIC and anon, granted only to authenticated
+    expect(phase3MigrationSql).toContain('REVOKE EXECUTE ON FUNCTION public.is_pickup_game_admin() FROM PUBLIC, anon;')
+    expect(phase3MigrationSql).toContain('REVOKE EXECUTE ON FUNCTION public.create_pickup_game(text, text, text, text, int, text, text, text, text, boolean, text) FROM PUBLIC, anon;')
+    expect(phase3MigrationSql).toContain('REVOKE EXECUTE ON FUNCTION public.admin_moderate_pickup_game(text, text, text) FROM PUBLIC, anon;')
     expect(phase3MigrationSql).toContain('GRANT EXECUTE ON FUNCTION public.create_pickup_game')
     expect(phase3MigrationSql).toContain('TO authenticated;')
     expect(phase3MigrationSql).toContain('GRANT EXECUTE ON FUNCTION public.get_host_pickup_games() TO authenticated;')
+  })
+
+  it('14. Resolves cancellation authorization weakness: requires bearer token or auth, rejects phone-only cancellation', async () => {
+    // Create game
+    const created = await publicClient.createPickupGame({
+      sport: 'Basketball 3v3',
+      venueName: 'Indiranagar Hoops',
+      city: 'Bengaluru',
+      timeLabel: 'Tonight · 7:00 PM',
+      totalPlayers: 6,
+    }, { hostUserId: HOST_USER_A })
+    const gameId = created.gameId!
+
+    // Player joins and receives secret cancellation token
+    const rsvpRes = await publicClient.joinPickupGame({
+      gameId,
+      playerName: 'Suresh Raina',
+      playerPhone: '9845012345',
+    })
+    expect(rsvpRes.status).toBe('confirmed')
+    expect(rsvpRes.cancellationToken).toBeTruthy()
+    const reservationId = rsvpRes.participantId!
+    const token = rsvpRes.cancellationToken!
+
+    // Anonymous attacker attempts to cancel using only the player's phone number without the secret token
+    const spoofCancel = await publicClient.cancelPickupGameReservation({
+      reservationId,
+      playerPhone: '9845012345', // Phone alone is NOT proof of ownership!
+    })
+    expect(spoofCancel.status).toBe('error')
+    expect(spoofCancel.errorCode).toBe('UNAUTHORIZED')
+
+    // Legitimate player cancels using the bearer cancellation token
+    const legitimateCancel = await publicClient.cancelPickupGameReservation({
+      reservationId,
+      cancellationToken: token,
+    })
+    expect(legitimateCancel.status).toBe('cancelled')
   })
 })
