@@ -1,133 +1,136 @@
 -- ==============================================================================
--- KhelGrid Module: Community Pickup Games & Match Coordination (Secured & Managed)
+-- KhelGrid Module: Community Pickup Games & Match Coordination (Secured & Hardened)
 -- Purpose: Creates public.pickup_games table with realtime spot availability,
 -- host ownership, relational player RSVPs, atomic server-side RSVP RPC functions,
--- and secure host game management (rescheduling, capacity, cancellation, reopening).
+-- cryptographic bearer cancellation tokens, and secure host game management.
+-- Best Practice: All SECURITY DEFINER functions use SET search_path = '' and fully qualified names.
 -- Run in Supabase SQL Editor: https://supabase.com/dashboard/project/hznsbxvovjxvmnchzzqt/sql
 -- ==============================================================================
 
-begin;
+BEGIN;
 
-create table if not exists public.pickup_games (
-  id uuid primary key default gen_random_uuid(),
-  slug text not null unique check (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
-  sport text not null check (char_length(trim(sport)) between 2 and 80),
-  emoji text default '⚽',
-  skill_level text not null default 'Intermediate'
-    check (skill_level in ('Beginner', 'Intermediate', 'Advanced', 'All Levels')),
-  venue_name text not null check (char_length(trim(venue_name)) between 2 and 180),
-  city text not null check (char_length(trim(city)) between 1 and 120),
-  time_label text not null check (char_length(trim(time_label)) between 2 and 120),
-  host_name text not null default 'Community Host' check (char_length(trim(host_name)) between 2 and 120),
-  host_user_id uuid references auth.users(id) on delete set null,
-  price_per_player text not null default 'Free',
-  spots_open integer not null default 1 check (spots_open >= 0),
-  total_players integer not null default 10 check (total_players > 0),
-  confirmed_players integer not null default 0 check (confirmed_players >= 0),
+CREATE TABLE IF NOT EXISTS public.pickup_games (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug text NOT NULL UNIQUE CHECK (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
+  sport text NOT NULL CHECK (char_length(trim(sport)) BETWEEN 2 AND 80),
+  emoji text DEFAULT '⚽',
+  skill_level text NOT NULL DEFAULT 'Intermediate'
+    CHECK (skill_level IN ('Beginner', 'Intermediate', 'Advanced', 'All Levels')),
+  venue_name text NOT NULL CHECK (char_length(trim(venue_name)) BETWEEN 2 AND 180),
+  city text NOT NULL CHECK (char_length(trim(city)) BETWEEN 1 AND 120),
+  time_label text NOT NULL CHECK (char_length(trim(time_label)) BETWEEN 2 AND 120),
+  host_name text NOT NULL DEFAULT 'Community Host' CHECK (char_length(trim(host_name)) BETWEEN 2 AND 120),
+  host_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  price_per_player text NOT NULL DEFAULT 'Free',
+  spots_open integer NOT NULL DEFAULT 1 CHECK (spots_open >= 0),
+  total_players integer NOT NULL DEFAULT 10 CHECK (total_players > 0),
+  confirmed_players integer NOT NULL DEFAULT 0 CHECK (confirmed_players >= 0),
   whatsapp_group_url text,
-  status text not null default 'open' check (status in ('draft', 'open', 'full', 'completed', 'cancelled')),
-  is_featured boolean not null default false,
-  publication_status text not null default 'published'
-    check (publication_status in ('draft', 'published', 'archived')),
+  status text NOT NULL DEFAULT 'open' CHECK (status IN ('draft', 'open', 'full', 'completed', 'cancelled')),
+  is_featured boolean NOT NULL DEFAULT false,
+  publication_status text NOT NULL DEFAULT 'published'
+    CHECK (publication_status IN ('draft', 'published', 'archived')),
   cancellation_reason text,
   cancelled_at timestamptz,
   completed_at timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 -- Relational Player RSVPs (Private - Controlled Access)
-create table if not exists public.pickup_game_participants (
-  id uuid primary key default gen_random_uuid(),
-  game_id text not null,
+CREATE TABLE IF NOT EXISTS public.pickup_game_participants (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_id text NOT NULL,
   user_id text,
-  player_name text not null check (char_length(trim(player_name)) between 2 and 120),
+  player_name text NOT NULL CHECK (char_length(trim(player_name)) BETWEEN 2 AND 120),
   player_phone text,
-  status text not null default 'confirmed' check (status in ('confirmed', 'waitlist', 'cancelled')),
-  joined_at timestamptz not null default now()
+  status text NOT NULL DEFAULT 'confirmed' CHECK (status IN ('confirmed', 'waitlist', 'cancelled')),
+  joined_at timestamptz NOT NULL DEFAULT now(),
+  cancellation_token text DEFAULT gen_random_uuid()::text
 );
 
 -- Rate limiting tracker table
-create table if not exists public.pickup_game_rsvp_rate_limits (
-  identifier text primary key,
-  attempt_count integer not null default 1,
-  first_attempt_at timestamptz not null default now(),
-  last_attempt_at timestamptz not null default now()
+CREATE TABLE IF NOT EXISTS public.pickup_game_rsvp_rate_limits (
+  identifier text PRIMARY KEY,
+  attempt_count integer NOT NULL DEFAULT 1,
+  first_attempt_at timestamptz NOT NULL DEFAULT now(),
+  last_attempt_at timestamptz NOT NULL DEFAULT now()
 );
 
-alter table public.pickup_games enable row level security;
-alter table public.pickup_game_participants enable row level security;
-alter table public.pickup_game_rsvp_rate_limits enable row level security;
+ALTER TABLE public.pickup_games ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pickup_game_participants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pickup_game_rsvp_rate_limits ENABLE ROW LEVEL SECURITY;
 
 -- Admin / Moderator Authorization Helper
-create or replace function public.is_pickup_game_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-  select (
-    coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role'
-    or coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb->>'role', '') = 'admin'
-    or (coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb->'app_metadata'->>'is_admin', 'false'))::boolean = true
-    or exists (
-      select 1 from public.listing_moderators m
-      where m.user_id = auth.uid() and m.is_active = true
+-- Uses SET search_path = '' and fully qualified objects according to Supabase best practices.
+CREATE OR REPLACE FUNCTION public.is_pickup_game_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT (
+    pg_catalog.coalesce(pg_catalog.current_setting('request.jwt.claim.role', true), '') = 'service_role'
+    OR pg_catalog.coalesce(pg_catalog.nullif(pg_catalog.current_setting('request.jwt.claims', true), '')::jsonb->>'role', '') = 'admin'
+    OR (pg_catalog.coalesce(pg_catalog.nullif(pg_catalog.current_setting('request.jwt.claims', true), '')::jsonb->'app_metadata'->>'is_admin', 'false'))::boolean = true
+    OR EXISTS (
+      SELECT 1 FROM public.listing_moderators m
+      WHERE m.user_id = auth.uid() AND m.is_active = true
     )
   );
 $$;
 
 -- Pickup Games RLS: Read published games and host own-game access.
 -- Direct INSERT, UPDATE, and DELETE are strictly revoked. All mutations must use secure RPCs.
-drop policy if exists "pickup_games_read_published" on public.pickup_games;
-create policy "pickup_games_read_published" on public.pickup_games
-  for select to anon, authenticated
-  using (
+DROP POLICY IF EXISTS "pickup_games_read_published" ON public.pickup_games;
+CREATE POLICY "pickup_games_read_published" ON public.pickup_games
+  FOR SELECT TO anon, authenticated
+  USING (
     publication_status = 'published'
-    or (auth.uid() is not null and host_user_id = auth.uid())
-    or public.is_pickup_game_admin()
+    OR (auth.uid() IS NOT NULL AND host_user_id = auth.uid())
+    OR public.is_pickup_game_admin()
   );
 
-drop policy if exists "pickup_games_insert_community" on public.pickup_games;
-drop policy if exists "pickup_games_update_spots" on public.pickup_games;
+DROP POLICY IF EXISTS "pickup_games_insert_community" ON public.pickup_games;
+DROP POLICY IF EXISTS "pickup_games_update_spots" ON public.pickup_games;
 
-grant select on public.pickup_games to anon, authenticated;
-revoke insert, update, delete on public.pickup_games from public, anon, authenticated;
+GRANT SELECT ON public.pickup_games TO anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE ON public.pickup_games FROM PUBLIC, anon, authenticated;
 
 -- Pickup Game Participants RLS: Strict Privacy (No public read, no direct insert/update/delete)
-drop policy if exists "pickup_game_participants_read" on public.pickup_game_participants;
-drop policy if exists "pickup_game_participants_insert" on public.pickup_game_participants;
-revoke select, insert, update, delete on public.pickup_game_participants from public, anon, authenticated;
-revoke all on public.pickup_game_rsvp_rate_limits from public, anon, authenticated;
+DROP POLICY IF EXISTS "pickup_game_participants_read" ON public.pickup_game_participants;
+DROP POLICY IF EXISTS "pickup_game_participants_insert" ON public.pickup_game_participants;
+REVOKE SELECT, INSERT, UPDATE, DELETE ON public.pickup_game_participants FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.pickup_game_rsvp_rate_limits FROM PUBLIC, anon, authenticated;
 
-create index if not exists idx_pickup_games_city_sport
-  on public.pickup_games (city, sport);
+CREATE INDEX IF NOT EXISTS idx_pickup_games_city_sport
+  ON public.pickup_games (city, sport);
 
-create index if not exists idx_pickup_games_featured
-  on public.pickup_games (is_featured desc, created_at desc);
+CREATE INDEX IF NOT EXISTS idx_pickup_games_featured
+  ON public.pickup_games (is_featured DESC, created_at DESC);
 
-create index if not exists idx_pickup_games_host_user_id
-  on public.pickup_games (host_user_id);
+CREATE INDEX IF NOT EXISTS idx_pickup_games_host_user_id
+  ON public.pickup_games (host_user_id);
 
-create index if not exists idx_pickup_games_status_pub
-  on public.pickup_games (status, publication_status);
+CREATE INDEX IF NOT EXISTS idx_pickup_games_status_pub
+  ON public.pickup_games (status, publication_status);
 
-create index if not exists idx_pickup_participants_game_id
-  on public.pickup_game_participants (game_id, joined_at desc);
+CREATE INDEX IF NOT EXISTS idx_pickup_participants_game_id
+  ON public.pickup_game_participants (game_id, joined_at DESC);
 
 -- 4. Atomic RSVP Function
-create or replace function public.rsvp_pickup_game(
+CREATE OR REPLACE FUNCTION public.rsvp_pickup_game(
   p_game_id text,
   p_player_name text,
-  p_player_phone text default null,
-  p_allow_waitlist boolean default false
-) returns jsonb
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
+  p_player_phone text DEFAULT NULL,
+  p_allow_waitlist boolean DEFAULT false
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
   v_clean_name text;
   v_clean_phone text;
   v_game_record record;
@@ -142,198 +145,214 @@ declare
   v_participant_id uuid;
   v_waitlist_pos int;
   v_user_id text;
-begin
+  v_cancellation_token text;
+BEGIN
   -- 1. Server-side Input Validation
-  v_clean_name := trim(p_player_name);
-  if v_clean_name is null or char_length(v_clean_name) < 2 or char_length(v_clean_name) > 100 then
-    return jsonb_build_object(
+  v_clean_name := pg_catalog.trim(p_player_name);
+  IF v_clean_name IS NULL OR pg_catalog.char_length(v_clean_name) < 2 OR pg_catalog.char_length(v_clean_name) > 100 THEN
+    RETURN pg_catalog.jsonb_build_object(
       'status', 'error',
       'error_code', 'INVALID_NAME',
       'message', 'Player name must be between 2 and 100 characters.'
     );
-  end if;
+  END IF;
 
   -- Normalize phone
-  if p_player_phone is not null and trim(p_player_phone) <> '' then
-    v_clean_phone := regexp_replace(p_player_phone, '[^0-9]', '', 'g');
-    if char_length(v_clean_phone) = 12 and starts_with(v_clean_phone, '91') then
-      v_clean_phone := substring(v_clean_phone from 3);
-    end if;
+  IF p_player_phone IS NOT NULL AND pg_catalog.trim(p_player_phone) <> '' THEN
+    v_clean_phone := pg_catalog.regexp_replace(p_player_phone, '[^0-9]', '', 'g');
+    IF pg_catalog.char_length(v_clean_phone) = 12 AND pg_catalog.starts_with(v_clean_phone, '91') THEN
+      v_clean_phone := pg_catalog.substring(v_clean_phone FROM 3);
+    END IF;
 
-    if char_length(v_clean_phone) < 10 or char_length(v_clean_phone) > 15 then
-      return jsonb_build_object(
+    IF pg_catalog.char_length(v_clean_phone) < 10 OR pg_catalog.char_length(v_clean_phone) > 15 THEN
+      RETURN pg_catalog.jsonb_build_object(
         'status', 'error',
         'error_code', 'INVALID_PHONE',
         'message', 'Please provide a valid 10-digit mobile number.'
       );
-    end if;
-  else
-    v_clean_phone := null;
-  end if;
+    END IF;
+  ELSE
+    v_clean_phone := NULL;
+  END IF;
 
   -- Derive caller IP or identifier for rate limiting
-  begin
-    v_caller_ip := current_setting('request.headers', true)::jsonb->>'x-forwarded-for';
-    if v_caller_ip is not null and position(',' in v_caller_ip) > 0 then
-      v_caller_ip := trim(split_part(v_caller_ip, ',', 1));
-    end if;
-  exception when others then
-    v_caller_ip := null;
-  end;
+  BEGIN
+    v_caller_ip := pg_catalog.current_setting('request.headers', true)::jsonb->>'x-forwarded-for';
+    IF v_caller_ip IS NOT NULL AND pg_catalog.position(',' IN v_caller_ip) > 0 THEN
+      v_caller_ip := pg_catalog.trim(pg_catalog.split_part(v_caller_ip, ',', 1));
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_caller_ip := NULL;
+  END;
 
-  v_rate_key := coalesce(v_clean_phone, v_caller_ip, 'anon-' || v_clean_name);
+  v_rate_key := pg_catalog.coalesce(v_clean_phone, v_caller_ip, 'anon-' || v_clean_name);
 
   -- 2. Server-side Rate Limiting (max 5 requests per 60 seconds)
-  if v_rate_key is not null then
-    select attempt_count, first_attempt_at into v_rate_count, v_rate_first
-    from public.pickup_game_rsvp_rate_limits
-    where identifier = v_rate_key
-    for update;
+  IF v_rate_key IS NOT NULL THEN
+    SELECT attempt_count, first_attempt_at INTO v_rate_count, v_rate_first
+    FROM public.pickup_game_rsvp_rate_limits
+    WHERE identifier = v_rate_key
+    FOR UPDATE;
 
-    if found then
-      if now() - v_rate_first < interval '60 seconds' then
-        if v_rate_count >= 5 then
-          return jsonb_build_object(
+    IF FOUND THEN
+      IF pg_catalog.now() - v_rate_first < interval '60 seconds' THEN
+        IF v_rate_count >= 5 THEN
+          RETURN pg_catalog.jsonb_build_object(
             'status', 'error',
             'error_code', 'RATE_LIMITED',
             'message', 'Too many reservation attempts. Please wait 60 seconds before trying again.'
           );
-        end if;
-        update public.pickup_game_rsvp_rate_limits
-        set attempt_count = attempt_count + 1, last_attempt_at = now()
-        where identifier = v_rate_key;
-      else
-        update public.pickup_game_rsvp_rate_limits
-        set attempt_count = 1, first_attempt_at = now(), last_attempt_at = now()
-        where identifier = v_rate_key;
-      end if;
-    else
-      insert into public.pickup_game_rsvp_rate_limits (identifier, attempt_count, first_attempt_at, last_attempt_at)
-      values (v_rate_key, 1, now(), now())
-      on conflict (identifier) do nothing;
-    end if;
-  end if;
+        END IF;
+        UPDATE public.pickup_game_rsvp_rate_limits
+        SET attempt_count = attempt_count + 1, last_attempt_at = pg_catalog.now()
+        WHERE identifier = v_rate_key;
+      ELSE
+        UPDATE public.pickup_game_rsvp_rate_limits
+        SET attempt_count = 1, first_attempt_at = pg_catalog.now(), last_attempt_at = pg_catalog.now()
+        WHERE identifier = v_rate_key;
+      END IF;
+    ELSE
+      INSERT INTO public.pickup_game_rsvp_rate_limits (identifier, attempt_count, first_attempt_at, last_attempt_at)
+      VALUES (v_rate_key, 1, pg_catalog.now(), pg_catalog.now())
+      ON CONFLICT (identifier) DO NOTHING;
+    END IF;
+  END IF;
 
-  -- 3. Obtain caller authentication ID if verified via Supabase Auth
-  begin
+  -- 3. Obtain caller auth id if verified
+  BEGIN
     v_user_id := auth.uid()::text;
-  exception when others then
-    v_user_id := null;
-  end;
+  EXCEPTION WHEN OTHERS THEN
+    v_user_id := NULL;
+  END;
 
-  -- 4. Lock game row for update to ensure atomic concurrency
-  select id, spots_open, total_players, confirmed_players, whatsapp_group_url, status
-  into v_game_record
-  from public.pickup_games
-  where id::text = p_game_id
-  for update;
+  -- 4. Lock game row for update
+  SELECT id, spots_open, total_players, confirmed_players, whatsapp_group_url, status
+  INTO v_game_record
+  FROM public.pickup_games
+  WHERE id::text = p_game_id
+  FOR UPDATE;
 
-  if not found then
-    return jsonb_build_object(
+  IF NOT FOUND THEN
+    RETURN pg_catalog.jsonb_build_object(
       'status', 'error',
       'error_code', 'GAME_NOT_FOUND',
       'message', 'The requested pickup game was not found or has expired.'
     );
-  end if;
+  END IF;
+
+  IF v_game_record.status IN ('completed', 'cancelled') THEN
+    RETURN pg_catalog.jsonb_build_object(
+      'status', 'error',
+      'error_code', 'GAME_CLOSED',
+      'message', 'This match has been ' || v_game_record.status || ' and cannot accept reservations.'
+    );
+  END IF;
 
   -- 5. Duplicate Reservation Prevention
-  if v_clean_phone is not null or v_user_id is not null then
-    select id into v_existing_id
-    from public.pickup_game_participants
-    where game_id = p_game_id
-      and status in ('confirmed', 'waitlist')
-      and (
-        (v_clean_phone is not null and player_phone = v_clean_phone) or
-        (v_user_id is not null and user_id = v_user_id)
+  IF v_clean_phone IS NOT NULL OR v_user_id IS NOT NULL THEN
+    SELECT id INTO v_existing_id
+    FROM public.pickup_game_participants
+    WHERE game_id = p_game_id
+      AND status IN ('confirmed', 'waitlist')
+      AND (
+        (v_clean_phone IS NOT NULL AND player_phone = v_clean_phone) OR
+        (v_user_id IS NOT NULL AND user_id = v_user_id)
       )
-    limit 1;
+    LIMIT 1;
 
-    if found then
-      return jsonb_build_object(
+    IF FOUND THEN
+      RETURN pg_catalog.jsonb_build_object(
         'status', 'duplicate',
         'error_code', 'DUPLICATE_REGISTRATION',
         'message', 'You already have an active reservation or waitlist entry for this match.',
         'reservation_id', v_existing_id
       );
-    end if;
-  end if;
+    END IF;
+  END IF;
 
-  -- 6. Check Spot Availability & Concurrency
-  if v_game_record.spots_open > 0 and v_game_record.status <> 'full' then
+  -- 6. Generate cryptographic bearer cancellation token
+  v_cancellation_token := pg_catalog.gen_random_uuid()::text;
+
+  -- 7. Spot Allocation & Concurrency
+  IF v_game_record.spots_open > 0 AND v_game_record.status <> 'full' THEN
     v_new_spots := v_game_record.spots_open - 1;
     v_new_confirmed := v_game_record.confirmed_players + 1;
-    v_new_status := case when v_new_spots = 0 then 'full' else 'open' end;
+    v_new_status := CASE WHEN v_new_spots = 0 THEN 'full' ELSE 'open' END;
 
-    update public.pickup_games
-    set
+    UPDATE public.pickup_games
+    SET
       spots_open = v_new_spots,
       confirmed_players = v_new_confirmed,
       status = v_new_status,
-      updated_at = now()
-    where id = v_game_record.id;
+      updated_at = pg_catalog.now()
+    WHERE id = v_game_record.id;
 
-    insert into public.pickup_game_participants (
+    INSERT INTO public.pickup_game_participants (
       game_id,
       user_id,
       player_name,
       player_phone,
       status,
-      joined_at
-    ) values (
+      joined_at,
+      cancellation_token
+    ) VALUES (
       p_game_id,
       v_user_id,
       v_clean_name,
       v_clean_phone,
       'confirmed',
-      now()
-    ) returning id into v_participant_id;
+      pg_catalog.now(),
+      v_cancellation_token
+    ) RETURNING id INTO v_participant_id;
 
-    -- Return confirmation with WhatsApp link ONLY upon confirmed reservation
-    return jsonb_build_object(
+    RETURN pg_catalog.jsonb_build_object(
       'status', 'confirmed',
       'message', 'Spot confirmed! Welcome to the match, ' || v_clean_name || '.',
       'participant_id', v_participant_id,
+      'cancellation_token', v_cancellation_token,
       'spots_open', v_new_spots,
       'confirmed_players', v_new_confirmed,
       'game_status', v_new_status,
       'whatsapp_group_url', v_game_record.whatsapp_group_url
     );
 
-  else
-    -- Match is full
-    if p_allow_waitlist then
-      select count(*) + 1 into v_waitlist_pos
-      from public.pickup_game_participants
-      where game_id = p_game_id and status = 'waitlist';
+  ELSE
+    IF p_allow_waitlist THEN
+      SELECT pg_catalog.count(*) + 1 INTO v_waitlist_pos
+      FROM public.pickup_game_participants
+      WHERE game_id = p_game_id AND status = 'waitlist';
 
-      insert into public.pickup_game_participants (
+      INSERT INTO public.pickup_game_participants (
         game_id,
         user_id,
         player_name,
         player_phone,
         status,
-        joined_at
-      ) values (
+        joined_at,
+        cancellation_token
+      ) VALUES (
         p_game_id,
         v_user_id,
         v_clean_name,
         v_clean_phone,
         'waitlist',
-        now()
-      ) returning id into v_participant_id;
+        pg_catalog.now(),
+        v_cancellation_token
+      ) RETURNING id INTO v_participant_id;
 
-      return jsonb_build_object(
+      RETURN pg_catalog.jsonb_build_object(
         'status', 'waitlist',
         'message', 'Match is full. You have been added to the waitlist (Position #' || v_waitlist_pos || ').',
         'participant_id', v_participant_id,
+        'cancellation_token', v_cancellation_token,
         'waitlist_position', v_waitlist_pos,
         'spots_open', 0,
         'confirmed_players', v_game_record.confirmed_players,
         'game_status', 'full',
         'whatsapp_group_url', null
       );
-    else
-      return jsonb_build_object(
+    ELSE
+      RETURN pg_catalog.jsonb_build_object(
         'status', 'full',
         'error_code', 'MATCH_FULL',
         'message', 'This pickup match is already full! No spots left.',
@@ -342,153 +361,142 @@ begin
         'game_status', 'full',
         'whatsapp_group_url', null
       );
-    end if;
-  end if;
-end;
+    END IF;
+  END IF;
+END;
 $$;
 
--- 5. Cancellation Function with Strengthened Verification & Waitlist Auto-Promotion
-create or replace function public.cancel_pickup_game_reservation(
+-- 5. Cancellation Function: cancel_pickup_game_reservation
+CREATE OR REPLACE FUNCTION public.cancel_pickup_game_reservation(
   p_reservation_id uuid,
-  p_player_phone text default null
-) returns jsonb
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
+  p_cancellation_token text DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
   v_participant record;
   v_game record;
   v_next_waitlist record;
-  v_clean_phone text;
   v_user_id text;
+  v_clean_token text;
   v_caller_is_authorized boolean := false;
-begin
-  begin
+BEGIN
+  BEGIN
     v_user_id := auth.uid()::text;
-  exception when others then
-    v_user_id := null;
-  end;
+  EXCEPTION WHEN OTHERS THEN
+    v_user_id := NULL;
+  END;
 
-  if p_player_phone is not null and trim(p_player_phone) <> '' then
-    v_clean_phone := regexp_replace(p_player_phone, '[^0-9]', '', 'g');
-    if char_length(v_clean_phone) = 12 and starts_with(v_clean_phone, '91') then
-      v_clean_phone := substring(v_clean_phone from 3);
-    end if;
-  else
-    v_clean_phone := null;
-  end if;
+  v_clean_token := pg_catalog.nullif(pg_catalog.trim(p_cancellation_token), '');
 
-  select * into v_participant
-  from public.pickup_game_participants
-  where id = p_reservation_id
-  for update;
+  SELECT * INTO v_participant
+  FROM public.pickup_game_participants
+  WHERE id = p_reservation_id
+  FOR UPDATE;
 
-  if not found then
-    return jsonb_build_object(
+  IF NOT FOUND THEN
+    RETURN pg_catalog.jsonb_build_object(
       'status', 'error',
       'error_code', 'RESERVATION_NOT_FOUND',
       'message', 'Reservation record not found.'
     );
-  end if;
+  END IF;
 
-  select * into v_game
-  from public.pickup_games
-  where id::text = v_participant.game_id
-  for update;
+  SELECT * INTO v_game
+  FROM public.pickup_games
+  WHERE id::text = v_participant.game_id
+  FOR UPDATE;
 
-  -- Caller verification:
-  if v_user_id is not null and ((v_game.host_user_id is not null and v_user_id = v_game.host_user_id::text) or public.is_pickup_game_admin()) then
+  -- Genuine ownership verification
+  IF v_user_id IS NOT NULL AND ((v_game.host_user_id IS NOT NULL AND v_user_id = v_game.host_user_id::text) OR public.is_pickup_game_admin()) THEN
     v_caller_is_authorized := true;
-  elsif v_participant.user_id is not null then
-    if v_user_id is not null and v_user_id = v_participant.user_id then
-      v_caller_is_authorized := true;
-    else
-      v_caller_is_authorized := false;
-    end if;
-  elsif v_participant.player_phone is not null and v_clean_phone is not null and v_clean_phone = v_participant.player_phone then
+  ELSIF v_user_id IS NOT NULL AND v_participant.user_id IS NOT NULL AND v_user_id = v_participant.user_id THEN
     v_caller_is_authorized := true;
-  else
+  ELSIF v_clean_token IS NOT NULL AND v_participant.cancellation_token IS NOT NULL AND v_participant.cancellation_token = v_clean_token THEN
+    v_caller_is_authorized := true;
+  ELSE
     v_caller_is_authorized := false;
-  end if;
+  END IF;
 
-  if not v_caller_is_authorized then
-    return jsonb_build_object(
+  IF NOT v_caller_is_authorized THEN
+    RETURN pg_catalog.jsonb_build_object(
       'status', 'error',
       'error_code', 'UNAUTHORIZED',
-      'message', 'Unauthorized to cancel this reservation. Verification credentials required.'
+      'message', 'Unauthorized to cancel this reservation. A valid bearer cancellation token or authenticated account is required.'
     );
-  end if;
+  END IF;
 
-  if v_participant.status = 'cancelled' then
-    return jsonb_build_object('status', 'already_cancelled', 'message', 'Reservation was already cancelled.');
-  end if;
+  IF v_participant.status = 'cancelled' THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'already_cancelled', 'message', 'Reservation was already cancelled.');
+  END IF;
 
-  update public.pickup_game_participants
-  set status = 'cancelled'
-  where id = p_reservation_id;
+  UPDATE public.pickup_game_participants
+  SET status = 'cancelled'
+  WHERE id = p_reservation_id;
 
-  if v_participant.status = 'confirmed' and found then
-    select * into v_next_waitlist
-    from public.pickup_game_participants
-    where game_id = v_participant.game_id
-      and status = 'waitlist'
-    order by joined_at asc
-    limit 1
-    for update;
+  IF v_participant.status = 'confirmed' THEN
+    SELECT * INTO v_next_waitlist
+    FROM public.pickup_game_participants
+    WHERE game_id = v_participant.game_id
+      AND status = 'waitlist'
+    ORDER BY joined_at ASC
+    LIMIT 1
+    FOR UPDATE;
 
-    if found then
-      update public.pickup_game_participants
-      set status = 'confirmed'
-      where id = v_next_waitlist.id;
+    IF FOUND THEN
+      UPDATE public.pickup_game_participants
+      SET status = 'confirmed'
+      WHERE id = v_next_waitlist.id;
 
-      return jsonb_build_object(
+      RETURN pg_catalog.jsonb_build_object(
         'status', 'cancelled',
         'message', 'Reservation cancelled. Spot automatically transferred to next player on waitlist.',
         'promoted_participant_id', v_next_waitlist.id
       );
-    else
-      update public.pickup_games
-      set
+    ELSE
+      UPDATE public.pickup_games
+      SET
         spots_open = spots_open + 1,
-        confirmed_players = greatest(0, confirmed_players - 1),
-        status = case when status = 'full' then 'open' else status end,
-        updated_at = now()
-      where id = v_game.id;
+        confirmed_players = pg_catalog.greatest(0, confirmed_players - 1),
+        status = CASE WHEN status = 'full' THEN 'open' ELSE status END,
+        updated_at = pg_catalog.now()
+      WHERE id = v_game.id;
 
-      return jsonb_build_object(
+      RETURN pg_catalog.jsonb_build_object(
         'status', 'cancelled',
         'message', 'Reservation cancelled and spot reopened successfully.'
       );
-    end if;
-  else
-    return jsonb_build_object(
+    END IF;
+  ELSE
+    RETURN pg_catalog.jsonb_build_object(
       'status', 'cancelled',
       'message', 'Waitlist reservation cancelled.'
     );
-  end if;
-end;
+  END IF;
+END;
 $$;
 
 -- 6. RPC: create_pickup_game
-create or replace function public.create_pickup_game(
+CREATE OR REPLACE FUNCTION public.create_pickup_game(
   p_sport text,
   p_venue_name text,
   p_city text,
   p_time_label text,
   p_total_players int,
-  p_price_per_player text default 'Free',
-  p_skill_level text default 'Intermediate',
-  p_emoji text default '⚽',
-  p_whatsapp_group_url text default null,
-  p_publish_immediately boolean default true,
-  p_host_display_name text default null
-) returns jsonb
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
+  p_price_per_player text DEFAULT 'Free',
+  p_skill_level text DEFAULT 'Intermediate',
+  p_emoji text DEFAULT '⚽',
+  p_whatsapp_group_url text DEFAULT NULL,
+  p_publish_immediately boolean DEFAULT true,
+  p_host_display_name text DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
   v_user_id uuid;
   v_clean_sport text;
   v_clean_venue text;
@@ -505,88 +513,118 @@ declare
   v_slug_suffix text;
   v_status text;
   v_pub_status text;
-begin
+BEGIN
   v_user_id := auth.uid();
-  if v_user_id is null and not public.is_pickup_game_admin() then
-    return jsonb_build_object(
+  IF v_user_id IS NULL AND NOT public.is_pickup_game_admin() THEN
+    RETURN pg_catalog.jsonb_build_object(
       'status', 'error',
       'error_code', 'UNAUTHORIZED',
       'message', 'Authentication required. You must be signed in with a verified account to create a pickup match.'
     );
-  end if;
+  END IF;
 
-  v_clean_sport := trim(p_sport);
-  if v_clean_sport is null or char_length(v_clean_sport) < 2 or char_length(v_clean_sport) > 80 then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_SPORT', 'message', 'Sport must be between 2 and 80 characters.');
-  end if;
+  v_clean_sport := pg_catalog.trim(p_sport);
+  IF v_clean_sport IS NULL OR pg_catalog.char_length(v_clean_sport) < 2 OR pg_catalog.char_length(v_clean_sport) > 80 THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_SPORT', 'message', 'Sport must be between 2 and 80 characters.');
+  END IF;
 
-  v_clean_venue := trim(p_venue_name);
-  if v_clean_venue is null or char_length(v_clean_venue) < 2 or char_length(v_clean_venue) > 180 then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_VENUE', 'message', 'Venue name must be between 2 and 180 characters.');
-  end if;
+  v_clean_venue := pg_catalog.trim(p_venue_name);
+  IF v_clean_venue IS NULL OR pg_catalog.char_length(v_clean_venue) < 2 OR pg_catalog.char_length(v_clean_venue) > 180 THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_VENUE', 'message', 'Venue name must be between 2 and 180 characters.');
+  END IF;
 
-  v_clean_city := trim(p_city);
-  if v_clean_city is null or char_length(v_clean_city) < 1 or char_length(v_clean_city) > 120 then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_CITY', 'message', 'City must be between 1 and 120 characters.');
-  end if;
+  v_clean_city := pg_catalog.trim(p_city);
+  IF v_clean_city IS NULL OR pg_catalog.char_length(v_clean_city) < 1 OR pg_catalog.char_length(v_clean_city) > 120 THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_CITY', 'message', 'City must be between 1 and 120 characters.');
+  END IF;
 
-  v_clean_time := trim(p_time_label);
-  if v_clean_time is null or char_length(v_clean_time) < 2 or char_length(v_clean_time) > 120 then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_TIME', 'message', 'Time label must be between 2 and 120 characters.');
-  end if;
+  v_clean_time := pg_catalog.trim(p_time_label);
+  IF v_clean_time IS NULL OR pg_catalog.char_length(v_clean_time) < 2 OR pg_catalog.char_length(v_clean_time) > 120 THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_TIME', 'message', 'Time label must be between 2 and 120 characters.');
+  END IF;
 
-  if p_total_players is null or p_total_players < 2 or p_total_players > 200 then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_CAPACITY', 'message', 'Total players must be between 2 and 200.');
-  end if;
+  IF p_total_players IS NULL OR p_total_players < 2 OR p_total_players > 200 THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_CAPACITY', 'message', 'Total players must be between 2 and 200.');
+  END IF;
 
-  v_clean_skill := coalesce(trim(p_skill_level), 'Intermediate');
-  if v_clean_skill not in ('Beginner', 'Intermediate', 'Advanced', 'All Levels') then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_SKILL_LEVEL', 'message', 'Skill level must be Beginner, Intermediate, Advanced, or All Levels.');
-  end if;
+  v_clean_skill := pg_catalog.coalesce(pg_catalog.trim(p_skill_level), 'Intermediate');
+  IF v_clean_skill NOT IN ('Beginner', 'Intermediate', 'Advanced', 'All Levels') THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_SKILL_LEVEL', 'message', 'Skill level must be Beginner, Intermediate, Advanced, or All Levels.');
+  END IF;
 
-  v_clean_price := coalesce(nullif(trim(p_price_per_player), ''), 'Free');
-  v_clean_emoji := coalesce(nullif(trim(p_emoji), ''), '⚽');
+  v_clean_price := pg_catalog.coalesce(pg_catalog.nullif(pg_catalog.trim(p_price_per_player), ''), 'Free');
+  v_clean_emoji := pg_catalog.coalesce(pg_catalog.nullif(pg_catalog.trim(p_emoji), ''), '⚽');
 
-  if p_whatsapp_group_url is not null and trim(p_whatsapp_group_url) <> '' then
-    v_clean_whatsapp := trim(p_whatsapp_group_url);
-    if not (v_clean_whatsapp ~* '^https:\/\/(chat\.whatsapp\.com\/[A-Za-z0-9_-]+|wa\.me\/[0-9]+)') then
-      return jsonb_build_object('status', 'error', 'error_code', 'INVALID_WHATSAPP_URL', 'message', 'WhatsApp URL must be a valid chat.whatsapp.com invite link or wa.me link.');
-    end if;
-  else
-    v_clean_whatsapp := null;
-  end if;
+  IF p_whatsapp_group_url IS NOT NULL AND pg_catalog.trim(p_whatsapp_group_url) <> '' THEN
+    v_clean_whatsapp := pg_catalog.trim(p_whatsapp_group_url);
+    IF NOT (v_clean_whatsapp ~* '^https:\/\/(chat\.whatsapp\.com\/[A-Za-z0-9_-]+|wa\.me\/[0-9]+)') THEN
+      RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_WHATSAPP_URL', 'message', 'WhatsApp URL must be a valid chat.whatsapp.com invite link or wa.me link.');
+    END IF;
+  ELSE
+    v_clean_whatsapp := NULL;
+  END IF;
 
-  v_clean_host := coalesce(nullif(trim(p_host_display_name), ''), 'Community Host');
+  v_clean_host := pg_catalog.coalesce(pg_catalog.nullif(pg_catalog.trim(p_host_display_name), ''), 'Community Host');
 
-  if p_publish_immediately then
+  IF p_publish_immediately THEN
     v_status := 'open';
     v_pub_status := 'published';
-  else
+  ELSE
     v_status := 'draft';
     v_pub_status := 'draft';
-  end if;
+  END IF;
 
-  v_base_slug := lower(regexp_replace(v_clean_sport || '-' || v_clean_city || '-' || v_clean_venue, '[^a-z0-9]+', '-', 'g'));
-  v_base_slug := trim(both '-' from v_base_slug);
-  if char_length(v_base_slug) > 80 then
-    v_base_slug := substring(v_base_slug from 1 for 80);
-  end if;
-  v_slug_suffix := substring(gen_random_uuid()::text from 1 for 6);
+  v_base_slug := pg_catalog.lower(pg_catalog.regexp_replace(v_clean_sport || '-' || v_clean_city || '-' || v_clean_venue, '[^a-z0-9]+', '-', 'g'));
+  v_base_slug := pg_catalog.trim(both '-' from v_base_slug);
+  IF pg_catalog.char_length(v_base_slug) > 80 THEN
+    v_base_slug := pg_catalog.substring(v_base_slug FROM 1 FOR 80);
+  END IF;
+  v_slug_suffix := pg_catalog.substring(pg_catalog.gen_random_uuid()::text FROM 1 FOR 6);
   v_slug := v_base_slug || '-' || v_slug_suffix;
 
-  insert into public.pickup_games (
-    slug, sport, emoji, skill_level, venue_name, city, time_label,
-    host_name, host_user_id, price_per_player, spots_open, total_players,
-    confirmed_players, whatsapp_group_url, status, is_featured, publication_status,
-    created_at, updated_at
-  ) values (
-    v_slug, v_clean_sport, v_clean_emoji, v_clean_skill, v_clean_venue, v_clean_city, v_clean_time,
-    v_clean_host, v_user_id, v_clean_price, p_total_players, p_total_players,
-    0, v_clean_whatsapp, v_status, false, v_pub_status,
-    now(), now()
-  ) returning id into v_game_id;
+  INSERT INTO public.pickup_games (
+    slug,
+    sport,
+    emoji,
+    skill_level,
+    venue_name,
+    city,
+    time_label,
+    host_name,
+    host_user_id,
+    price_per_player,
+    spots_open,
+    total_players,
+    confirmed_players,
+    whatsapp_group_url,
+    status,
+    is_featured,
+    publication_status,
+    created_at,
+    updated_at
+  ) VALUES (
+    v_slug,
+    v_clean_sport,
+    v_clean_emoji,
+    v_clean_skill,
+    v_clean_venue,
+    v_clean_city,
+    v_clean_time,
+    v_clean_host,
+    v_user_id,
+    v_clean_price,
+    p_total_players,
+    p_total_players,
+    0,
+    v_clean_whatsapp,
+    v_status,
+    false,
+    v_pub_status,
+    pg_catalog.now(),
+    pg_catalog.now()
+  ) RETURNING id INTO v_game_id;
 
-  return jsonb_build_object(
+  RETURN pg_catalog.jsonb_build_object(
     'status', 'success',
     'message', 'Pickup match created successfully.',
     'game_id', v_game_id,
@@ -594,186 +632,186 @@ begin
     'game_status', v_status,
     'publication_status', v_pub_status
   );
-end;
+END;
 $$;
 
 -- 7. RPC: update_pickup_game_details
-create or replace function public.update_pickup_game_details(
+CREATE OR REPLACE FUNCTION public.update_pickup_game_details(
   p_game_id text,
-  p_sport text default null,
-  p_skill_level text default null,
-  p_emoji text default null,
-  p_whatsapp_group_url text default null
-) returns jsonb
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
+  p_sport text DEFAULT NULL,
+  p_skill_level text DEFAULT NULL,
+  p_emoji text DEFAULT NULL,
+  p_whatsapp_group_url text DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
   v_game record;
   v_clean_whatsapp text;
-begin
-  select * into v_game
-  from public.pickup_games
-  where id::text = p_game_id
-  for update;
+BEGIN
+  SELECT * INTO v_game
+  FROM public.pickup_games
+  WHERE id::text = p_game_id
+  FOR UPDATE;
 
-  if not found then
-    return jsonb_build_object('status', 'error', 'error_code', 'GAME_NOT_FOUND', 'message', 'Game not found.');
-  end if;
+  IF NOT FOUND THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'GAME_NOT_FOUND', 'message', 'Game not found.');
+  END IF;
 
-  if auth.uid() is null or (v_game.host_user_id is distinct from auth.uid() and not public.is_pickup_game_admin()) then
-    return jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'You are not authorized to edit this match.');
-  end if;
+  IF auth.uid() IS NULL OR (v_game.host_user_id IS DISTINCT FROM auth.uid() AND NOT public.is_pickup_game_admin()) THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'You are not authorized to edit this match.');
+  END IF;
 
-  if v_game.status = 'completed' then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_STATE', 'message', 'Completed games cannot be edited.');
-  end if;
-  if v_game.status = 'cancelled' then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_STATE', 'message', 'Cancelled games cannot be edited. Reopen the game first.');
-  end if;
+  IF v_game.status = 'completed' THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_STATE', 'message', 'Completed games cannot be edited.');
+  END IF;
+  IF v_game.status = 'cancelled' THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_STATE', 'message', 'Cancelled games cannot be edited. Reopen the game first.');
+  END IF;
 
-  if p_skill_level is not null and p_skill_level not in ('Beginner', 'Intermediate', 'Advanced', 'All Levels') then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_SKILL_LEVEL', 'message', 'Invalid skill level.');
-  end if;
+  IF p_skill_level IS NOT NULL AND p_skill_level NOT IN ('Beginner', 'Intermediate', 'Advanced', 'All Levels') THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_SKILL_LEVEL', 'message', 'Invalid skill level.');
+  END IF;
 
-  if p_whatsapp_group_url is not null and trim(p_whatsapp_group_url) <> '' then
-    v_clean_whatsapp := trim(p_whatsapp_group_url);
-    if not (v_clean_whatsapp ~* '^https:\/\/(chat\.whatsapp\.com\/[A-Za-z0-9_-]+|wa\.me\/[0-9]+)') then
-      return jsonb_build_object('status', 'error', 'error_code', 'INVALID_WHATSAPP_URL', 'message', 'Invalid WhatsApp URL.');
-    end if;
-  else
+  IF p_whatsapp_group_url IS NOT NULL AND pg_catalog.trim(p_whatsapp_group_url) <> '' THEN
+    v_clean_whatsapp := pg_catalog.trim(p_whatsapp_group_url);
+    IF NOT (v_clean_whatsapp ~* '^https:\/\/(chat\.whatsapp\.com\/[A-Za-z0-9_-]+|wa\.me\/[0-9]+)') THEN
+      RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_WHATSAPP_URL', 'message', 'Invalid WhatsApp URL.');
+    END IF;
+  ELSE
     v_clean_whatsapp := v_game.whatsapp_group_url;
-  end if;
+  END IF;
 
-  update public.pickup_games
-  set
-    sport = coalesce(nullif(trim(p_sport), ''), sport),
-    skill_level = coalesce(p_skill_level, skill_level),
-    emoji = coalesce(nullif(trim(p_emoji), ''), emoji),
+  UPDATE public.pickup_games
+  SET
+    sport = pg_catalog.coalesce(pg_catalog.nullif(pg_catalog.trim(p_sport), ''), sport),
+    skill_level = pg_catalog.coalesce(p_skill_level, skill_level),
+    emoji = pg_catalog.coalesce(pg_catalog.nullif(pg_catalog.trim(p_emoji), ''), emoji),
     whatsapp_group_url = v_clean_whatsapp,
-    updated_at = now()
-  where id = v_game.id;
+    updated_at = pg_catalog.now()
+  WHERE id = v_game.id;
 
-  return jsonb_build_object(
+  RETURN pg_catalog.jsonb_build_object(
     'status', 'success',
     'message', 'Match details updated successfully.',
     'game_id', v_game.id
   );
-end;
+END;
 $$;
 
 -- 8. RPC: reschedule_pickup_game
-create or replace function public.reschedule_pickup_game(
+CREATE OR REPLACE FUNCTION public.reschedule_pickup_game(
   p_game_id text,
   p_venue_name text,
   p_city text,
   p_time_label text
-) returns jsonb
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
   v_game record;
-begin
-  select * into v_game
-  from public.pickup_games
-  where id::text = p_game_id
-  for update;
+BEGIN
+  SELECT * INTO v_game
+  FROM public.pickup_games
+  WHERE id::text = p_game_id
+  FOR UPDATE;
 
-  if not found then
-    return jsonb_build_object('status', 'error', 'error_code', 'GAME_NOT_FOUND', 'message', 'Game not found.');
-  end if;
+  IF NOT FOUND THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'GAME_NOT_FOUND', 'message', 'Game not found.');
+  END IF;
 
-  if auth.uid() is null or (v_game.host_user_id is distinct from auth.uid() and not public.is_pickup_game_admin()) then
-    return jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'You are not authorized to reschedule this match.');
-  end if;
+  IF auth.uid() IS NULL OR (v_game.host_user_id IS DISTINCT FROM auth.uid() AND NOT public.is_pickup_game_admin()) THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'You are not authorized to reschedule this match.');
+  END IF;
 
-  if v_game.status in ('completed', 'cancelled') then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_STATE', 'message', 'Cannot reschedule a completed or cancelled match.');
-  end if;
+  IF v_game.status IN ('completed', 'cancelled') THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_STATE', 'message', 'Cannot reschedule a completed or cancelled match.');
+  END IF;
 
-  if char_length(trim(p_venue_name)) < 2 or char_length(trim(p_city)) < 1 or char_length(trim(p_time_label)) < 2 then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_INPUT', 'message', 'Venue, city, and time label must be provided.');
-  end if;
+  IF pg_catalog.char_length(pg_catalog.trim(p_venue_name)) < 2 OR pg_catalog.char_length(pg_catalog.trim(p_city)) < 1 OR pg_catalog.char_length(pg_catalog.trim(p_time_label)) < 2 THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_INPUT', 'message', 'Venue, city, and time label must be provided.');
+  END IF;
 
-  update public.pickup_games
-  set
-    venue_name = trim(p_venue_name),
-    city = trim(p_city),
-    time_label = trim(p_time_label),
-    updated_at = now()
-  where id = v_game.id;
+  UPDATE public.pickup_games
+  SET
+    venue_name = pg_catalog.trim(p_venue_name),
+    city = pg_catalog.trim(p_city),
+    time_label = pg_catalog.trim(p_time_label),
+    updated_at = pg_catalog.now()
+  WHERE id = v_game.id;
 
-  return jsonb_build_object(
+  RETURN pg_catalog.jsonb_build_object(
     'status', 'success',
     'message', 'Match rescheduled successfully.',
     'game_id', v_game.id,
-    'venue_name', trim(p_venue_name),
-    'city', trim(p_city),
-    'time_label', trim(p_time_label)
+    'venue_name', pg_catalog.trim(p_venue_name),
+    'city', pg_catalog.trim(p_city),
+    'time_label', pg_catalog.trim(p_time_label)
   );
-end;
+END;
 $$;
 
 -- 9. RPC: update_pickup_game_capacity
-create or replace function public.update_pickup_game_capacity(
+CREATE OR REPLACE FUNCTION public.update_pickup_game_capacity(
   p_game_id text,
   p_total_players int,
-  p_price_per_player text default null
-) returns jsonb
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
+  p_price_per_player text DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
   v_game record;
   v_new_spots int;
   v_new_status text;
-begin
-  select * into v_game
-  from public.pickup_games
-  where id::text = p_game_id
-  for update;
+BEGIN
+  SELECT * INTO v_game
+  FROM public.pickup_games
+  WHERE id::text = p_game_id
+  FOR UPDATE;
 
-  if not found then
-    return jsonb_build_object('status', 'error', 'error_code', 'GAME_NOT_FOUND', 'message', 'Game not found.');
-  end if;
+  IF NOT FOUND THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'GAME_NOT_FOUND', 'message', 'Game not found.');
+  END IF;
 
-  if auth.uid() is null or (v_game.host_user_id is distinct from auth.uid() and not public.is_pickup_game_admin()) then
-    return jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'You are not authorized to alter capacity for this match.');
-  end if;
+  IF auth.uid() IS NULL OR (v_game.host_user_id IS DISTINCT FROM auth.uid() AND NOT public.is_pickup_game_admin()) THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'You are not authorized to alter capacity for this match.');
+  END IF;
 
-  if v_game.status in ('completed', 'cancelled') then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_STATE', 'message', 'Cannot alter capacity on a completed or cancelled match.');
-  end if;
+  IF v_game.status IN ('completed', 'cancelled') THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_STATE', 'message', 'Cannot alter capacity on a completed or cancelled match.');
+  END IF;
 
-  if p_total_players is null or p_total_players < 2 or p_total_players > 200 then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_CAPACITY', 'message', 'Total capacity must be between 2 and 200.');
-  end if;
+  IF p_total_players IS NULL OR p_total_players < 2 OR p_total_players > 200 THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_CAPACITY', 'message', 'Total capacity must be between 2 and 200.');
+  END IF;
 
-  if p_total_players < v_game.confirmed_players then
-    return jsonb_build_object(
+  IF p_total_players < v_game.confirmed_players THEN
+    RETURN pg_catalog.jsonb_build_object(
       'status', 'error',
       'error_code', 'CAPACITY_BELOW_CONFIRMED',
       'message', 'Total capacity cannot be reduced below the number of confirmed players (' || v_game.confirmed_players || ').'
     );
-  end if;
+  END IF;
 
   v_new_spots := p_total_players - v_game.confirmed_players;
-  v_new_status := case when v_new_spots = 0 then 'full' else 'open' end;
+  v_new_status := CASE WHEN v_new_spots = 0 THEN 'full' ELSE 'open' END;
 
-  update public.pickup_games
-  set
+  UPDATE public.pickup_games
+  SET
     total_players = p_total_players,
     spots_open = v_new_spots,
     status = v_new_status,
-    price_per_player = coalesce(nullif(trim(p_price_per_player), ''), price_per_player),
-    updated_at = now()
-  where id = v_game.id;
+    price_per_player = pg_catalog.coalesce(pg_catalog.nullif(pg_catalog.trim(p_price_per_player), ''), price_per_player),
+    updated_at = pg_catalog.now()
+  WHERE id = v_game.id;
 
-  return jsonb_build_object(
+  RETURN pg_catalog.jsonb_build_object(
     'status', 'success',
     'message', 'Capacity updated successfully.',
     'game_id', v_game.id,
@@ -781,293 +819,328 @@ begin
     'spots_open', v_new_spots,
     'game_status', v_new_status
   );
-end;
+END;
 $$;
 
 -- 10. RPC: cancel_pickup_game_as_host
-create or replace function public.cancel_pickup_game_as_host(
+CREATE OR REPLACE FUNCTION public.cancel_pickup_game_as_host(
   p_game_id text,
-  p_cancellation_reason text default 'Match cancelled by host'
-) returns jsonb
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
+  p_cancellation_reason text DEFAULT 'Match cancelled by host'
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
   v_game record;
   v_affected_confirmed int;
   v_affected_waitlist int;
-begin
-  select * into v_game
-  from public.pickup_games
-  where id::text = p_game_id
-  for update;
+BEGIN
+  SELECT * INTO v_game
+  FROM public.pickup_games
+  WHERE id::text = p_game_id
+  FOR UPDATE;
 
-  if not found then
-    return jsonb_build_object('status', 'error', 'error_code', 'GAME_NOT_FOUND', 'message', 'Game not found.');
-  end if;
+  IF NOT FOUND THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'GAME_NOT_FOUND', 'message', 'Game not found.');
+  END IF;
 
-  if auth.uid() is null or (v_game.host_user_id is distinct from auth.uid() and not public.is_pickup_game_admin()) then
-    return jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'You are not authorized to cancel this match.');
-  end if;
+  IF auth.uid() IS NULL OR (v_game.host_user_id IS DISTINCT FROM auth.uid() AND NOT public.is_pickup_game_admin()) THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'You are not authorized to cancel this match.');
+  END IF;
 
-  if v_game.status = 'cancelled' then
-    return jsonb_build_object('status', 'already_cancelled', 'message', 'This match is already cancelled.');
-  end if;
+  IF v_game.status = 'cancelled' THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'already_cancelled', 'message', 'This match is already cancelled.');
+  END IF;
 
-  if v_game.status = 'completed' then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_STATE', 'message', 'Completed matches cannot be cancelled.');
-  end if;
+  IF v_game.status = 'completed' THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_STATE', 'message', 'Completed matches cannot be cancelled.');
+  END IF;
 
-  select count(*) into v_affected_confirmed
-  from public.pickup_game_participants
-  where game_id = p_game_id and status = 'confirmed';
+  SELECT pg_catalog.count(*) INTO v_affected_confirmed
+  FROM public.pickup_game_participants
+  WHERE game_id = p_game_id AND status = 'confirmed';
 
-  select count(*) into v_affected_waitlist
-  from public.pickup_game_participants
-  where game_id = p_game_id and status = 'waitlist';
+  SELECT pg_catalog.count(*) INTO v_affected_waitlist
+  FROM public.pickup_game_participants
+  WHERE game_id = p_game_id AND status = 'waitlist';
 
-  update public.pickup_games
-  set
+  UPDATE public.pickup_games
+  SET
     status = 'cancelled',
-    cancellation_reason = coalesce(nullif(trim(p_cancellation_reason), ''), 'Match cancelled by host'),
-    cancelled_at = now(),
-    updated_at = now()
-  where id = v_game.id;
+    cancellation_reason = pg_catalog.coalesce(pg_catalog.nullif(pg_catalog.trim(p_cancellation_reason), ''), 'Match cancelled by host'),
+    cancelled_at = pg_catalog.now(),
+    updated_at = pg_catalog.now()
+  WHERE id = v_game.id;
 
-  -- Reservation Integrity: mark active reservations cancelled, preserving history
-  update public.pickup_game_participants
-  set status = 'cancelled'
-  where game_id = p_game_id and status in ('confirmed', 'waitlist');
+  UPDATE public.pickup_game_participants
+  SET status = 'cancelled'
+  WHERE game_id = p_game_id AND status IN ('confirmed', 'waitlist');
 
-  return jsonb_build_object(
+  RETURN pg_catalog.jsonb_build_object(
     'status', 'success',
     'message', 'Match cancelled successfully.',
     'game_id', v_game.id,
     'confirmed_reservations_cancelled', v_affected_confirmed,
     'waitlist_reservations_cancelled', v_affected_waitlist
   );
-end;
+END;
 $$;
 
 -- 11. RPC: reopen_pickup_game_as_host
-create or replace function public.reopen_pickup_game_as_host(
+CREATE OR REPLACE FUNCTION public.reopen_pickup_game_as_host(
   p_game_id text
-) returns jsonb
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
   v_game record;
   v_new_status text;
-begin
-  select * into v_game
-  from public.pickup_games
-  where id::text = p_game_id
-  for update;
+BEGIN
+  SELECT * INTO v_game
+  FROM public.pickup_games
+  WHERE id::text = p_game_id
+  FOR UPDATE;
 
-  if not found then
-    return jsonb_build_object('status', 'error', 'error_code', 'GAME_NOT_FOUND', 'message', 'Game not found.');
-  end if;
+  IF NOT FOUND THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'GAME_NOT_FOUND', 'message', 'Game not found.');
+  END IF;
 
-  if auth.uid() is null or (v_game.host_user_id is distinct from auth.uid() and not public.is_pickup_game_admin()) then
-    return jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'You are not authorized to reopen this match.');
-  end if;
+  IF auth.uid() IS NULL OR (v_game.host_user_id IS DISTINCT FROM auth.uid() AND NOT public.is_pickup_game_admin()) THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'You are not authorized to reopen this match.');
+  END IF;
 
-  if v_game.status = 'completed' and not public.is_pickup_game_admin() then
-    return jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'Completed matches cannot be reopened without administrator authorization.');
-  end if;
+  IF v_game.status = 'completed' AND NOT public.is_pickup_game_admin() THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'Completed matches cannot be reopened without administrator authorization.');
+  END IF;
 
-  if v_game.status <> 'cancelled' then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_STATE', 'message', 'Only cancelled matches can be reopened.');
-  end if;
+  IF v_game.status <> 'cancelled' THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_STATE', 'message', 'Only cancelled matches can be reopened.');
+  END IF;
 
-  v_new_status := case when v_game.spots_open = 0 then 'full' else 'open' end;
+  v_new_status := CASE WHEN v_game.spots_open = 0 THEN 'full' ELSE 'open' END;
 
-  update public.pickup_games
-  set
+  UPDATE public.pickup_games
+  SET
     status = v_new_status,
-    cancellation_reason = null,
-    cancelled_at = null,
-    updated_at = now()
-  where id = v_game.id;
+    cancellation_reason = NULL,
+    cancelled_at = NULL,
+    updated_at = pg_catalog.now()
+  WHERE id = v_game.id;
 
-  return jsonb_build_object(
+  RETURN pg_catalog.jsonb_build_object(
     'status', 'success',
     'message', 'Match reopened successfully.',
     'game_id', v_game.id,
     'game_status', v_new_status
   );
-end;
+END;
 $$;
 
 -- 12. RPC: complete_pickup_game_as_host
-create or replace function public.complete_pickup_game_as_host(
+CREATE OR REPLACE FUNCTION public.complete_pickup_game_as_host(
   p_game_id text
-) returns jsonb
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
   v_game record;
-begin
-  select * into v_game
-  from public.pickup_games
-  where id::text = p_game_id
-  for update;
+BEGIN
+  SELECT * INTO v_game
+  FROM public.pickup_games
+  WHERE id::text = p_game_id
+  FOR UPDATE;
 
-  if not found then
-    return jsonb_build_object('status', 'error', 'error_code', 'GAME_NOT_FOUND', 'message', 'Game not found.');
-  end if;
+  IF NOT FOUND THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'GAME_NOT_FOUND', 'message', 'Game not found.');
+  END IF;
 
-  if auth.uid() is null or (v_game.host_user_id is distinct from auth.uid() and not public.is_pickup_game_admin()) then
-    return jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'You are not authorized to complete this match.');
-  end if;
+  IF auth.uid() IS NULL OR (v_game.host_user_id IS DISTINCT FROM auth.uid() AND NOT public.is_pickup_game_admin()) THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'You are not authorized to complete this match.');
+  END IF;
 
-  if v_game.status = 'completed' then
-    return jsonb_build_object('status', 'already_completed', 'message', 'Match is already completed.');
-  end if;
+  IF v_game.status = 'completed' THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'already_completed', 'message', 'Match is already completed.');
+  END IF;
 
-  if v_game.status = 'cancelled' then
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_STATE', 'message', 'Cancelled matches cannot be marked completed. Reopen first.');
-  end if;
+  IF v_game.status = 'cancelled' THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_STATE', 'message', 'Cancelled matches cannot be marked completed. Reopen first.');
+  END IF;
 
-  update public.pickup_games
-  set
+  UPDATE public.pickup_games
+  SET
     status = 'completed',
-    completed_at = now(),
-    updated_at = now()
-  where id = v_game.id;
+    completed_at = pg_catalog.now(),
+    updated_at = pg_catalog.now()
+  WHERE id = v_game.id;
 
-  return jsonb_build_object(
+  RETURN pg_catalog.jsonb_build_object(
     'status', 'success',
     'message', 'Match marked as completed.',
     'game_id', v_game.id,
     'game_status', 'completed'
   );
-end;
+END;
 $$;
 
 -- 13. RPC: admin_moderate_pickup_game
-create or replace function public.admin_moderate_pickup_game(
+CREATE OR REPLACE FUNCTION public.admin_moderate_pickup_game(
   p_game_id text,
   p_action text,
-  p_notes text default null
-) returns jsonb
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
+  p_notes text DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
   v_game record;
-begin
-  if not public.is_pickup_game_admin() then
-    return jsonb_build_object('status', 'error', 'error_code', 'UNAUTHORIZED', 'message', 'Administrator or moderator privileges required.');
-  end if;
+BEGIN
+  IF NOT public.is_pickup_game_admin() THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'UNAUTHORIZED', 'message', 'Administrator or moderator privileges required.');
+  END IF;
 
-  select * into v_game
-  from public.pickup_games
-  where id::text = p_game_id
-  for update;
+  SELECT * INTO v_game
+  FROM public.pickup_games
+  WHERE id::text = p_game_id
+  FOR UPDATE;
 
-  if not found then
-    return jsonb_build_object('status', 'error', 'error_code', 'GAME_NOT_FOUND', 'message', 'Game not found.');
-  end if;
+  IF NOT FOUND THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'GAME_NOT_FOUND', 'message', 'Game not found.');
+  END IF;
 
-  if p_action = 'feature' then
-    update public.pickup_games set is_featured = true, updated_at = now() where id = v_game.id;
-  elsif p_action = 'unfeature' then
-    update public.pickup_games set is_featured = false, updated_at = now() where id = v_game.id;
-  elsif p_action = 'archive' then
-    update public.pickup_games set publication_status = 'archived', updated_at = now() where id = v_game.id;
-  elsif p_action = 'publish' then
-    update public.pickup_games set publication_status = 'published', updated_at = now() where id = v_game.id;
-  elsif p_action = 'force_cancel' then
-    update public.pickup_games
-    set status = 'cancelled',
-        cancellation_reason = coalesce(p_notes, 'Cancelled by administrator moderation'),
-        cancelled_at = now(),
-        updated_at = now()
-    where id = v_game.id;
-    update public.pickup_game_participants
-    set status = 'cancelled'
-    where game_id = p_game_id and status in ('confirmed', 'waitlist');
-  else
-    return jsonb_build_object('status', 'error', 'error_code', 'INVALID_ACTION', 'message', 'Unrecognized moderation action.');
-  end if;
+  IF p_action = 'feature' THEN
+    UPDATE public.pickup_games SET is_featured = true, updated_at = pg_catalog.now() WHERE id = v_game.id;
+  ELSIF p_action = 'unfeature' THEN
+    UPDATE public.pickup_games SET is_featured = false, updated_at = pg_catalog.now() WHERE id = v_game.id;
+  ELSIF p_action = 'archive' THEN
+    UPDATE public.pickup_games SET publication_status = 'archived', updated_at = pg_catalog.now() WHERE id = v_game.id;
+  ELSIF p_action = 'publish' THEN
+    UPDATE public.pickup_games SET publication_status = 'published', updated_at = pg_catalog.now() WHERE id = v_game.id;
+  ELSIF p_action = 'force_cancel' THEN
+    UPDATE public.pickup_games
+    SET status = 'cancelled',
+        cancellation_reason = pg_catalog.coalesce(p_notes, 'Cancelled by administrator moderation'),
+        cancelled_at = pg_catalog.now(),
+        updated_at = pg_catalog.now()
+    WHERE id = v_game.id;
+    UPDATE public.pickup_game_participants
+    SET status = 'cancelled'
+    WHERE game_id = p_game_id AND status IN ('confirmed', 'waitlist');
+  ELSE
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'INVALID_ACTION', 'message', 'Unrecognized moderation action.');
+  END IF;
 
-  return jsonb_build_object(
+  RETURN pg_catalog.jsonb_build_object(
     'status', 'success',
     'message', 'Moderation action ' || p_action || ' executed successfully.',
     'game_id', v_game.id,
     'action', p_action
   );
-end;
+END;
 $$;
 
 -- 14. RPC: get_host_pickup_games
-create or replace function public.get_host_pickup_games()
-returns jsonb
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
+CREATE OR REPLACE FUNCTION public.get_host_pickup_games()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
   v_user_id uuid;
   v_games jsonb;
-begin
+BEGIN
   v_user_id := auth.uid();
-  if v_user_id is null then
-    return jsonb_build_object('status', 'error', 'error_code', 'UNAUTHORIZED', 'message', 'Authentication required.', 'data', '[]'::jsonb);
-  end if;
+  IF v_user_id IS NULL THEN
+    RETURN pg_catalog.jsonb_build_object('status', 'error', 'error_code', 'UNAUTHORIZED', 'message', 'Authentication required.', 'data', '[]'::jsonb);
+  END IF;
 
-  select jsonb_agg(to_jsonb(g)) into v_games
-  from (
-    select
+  SELECT pg_catalog.jsonb_agg(pg_catalog.to_jsonb(g)) INTO v_games
+  FROM (
+    SELECT
       id, slug, sport, emoji, skill_level, venue_name, city, time_label,
       host_name, host_user_id, price_per_player, spots_open, total_players,
       confirmed_players, whatsapp_group_url, status, is_featured,
       publication_status, cancellation_reason, cancelled_at, completed_at, created_at, updated_at
-    from public.pickup_games
-    where host_user_id = v_user_id
-       or public.is_pickup_game_admin()
-    order by created_at desc
+    FROM public.pickup_games
+    WHERE host_user_id = v_user_id
+       OR public.is_pickup_game_admin()
+    ORDER BY created_at DESC
   ) g;
 
-  return jsonb_build_object(
+  RETURN pg_catalog.jsonb_build_object(
     'status', 'success',
-    'data', coalesce(v_games, '[]'::jsonb)
+    'data', pg_catalog.coalesce(v_games, '[]'::jsonb)
   );
-end;
+END;
 $$;
 
-grant execute on function public.is_pickup_game_admin() to authenticated;
-grant execute on function public.rsvp_pickup_game(text, text, text, boolean) to anon, authenticated;
-grant execute on function public.cancel_pickup_game_reservation(uuid, text) to anon, authenticated;
-grant execute on function public.create_pickup_game(text, text, text, text, int, text, text, text, text, boolean, text) to authenticated;
-grant execute on function public.update_pickup_game_details(text, text, text, text, text) to authenticated;
-grant execute on function public.reschedule_pickup_game(text, text, text, text) to authenticated;
-grant execute on function public.update_pickup_game_capacity(text, int, text) to authenticated;
-grant execute on function public.cancel_pickup_game_as_host(text, text) to authenticated;
-grant execute on function public.reopen_pickup_game_as_host(text) to authenticated;
-grant execute on function public.complete_pickup_game_as_host(text) to authenticated;
-grant execute on function public.admin_moderate_pickup_game(text, text, text) to authenticated;
-grant execute on function public.get_host_pickup_games() to authenticated;
+-- 15. Grants & Permissions
+REVOKE EXECUTE ON FUNCTION public.is_pickup_game_admin() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_pickup_game_admin() TO authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.rsvp_pickup_game(text, text, text, boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.rsvp_pickup_game(text, text, text, boolean) TO anon, authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.cancel_pickup_game_reservation(uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.cancel_pickup_game_reservation(uuid, text) TO anon, authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.create_pickup_game(text, text, text, text, int, text, text, text, text, boolean, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.create_pickup_game(text, text, text, text, int, text, text, text, text, boolean, text) TO authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.update_pickup_game_details(text, text, text, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.update_pickup_game_details(text, text, text, text, text) TO authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.reschedule_pickup_game(text, text, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.reschedule_pickup_game(text, text, text, text) TO authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.update_pickup_game_capacity(text, int, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.update_pickup_game_capacity(text, int, text) TO authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.cancel_pickup_game_as_host(text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.cancel_pickup_game_as_host(text, text) TO authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.reopen_pickup_game_as_host(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.reopen_pickup_game_as_host(text) TO authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.complete_pickup_game_as_host(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.complete_pickup_game_as_host(text) TO authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.admin_moderate_pickup_game(text, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_moderate_pickup_game(text, text, text) TO authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.get_host_pickup_games() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_host_pickup_games() TO authenticated;
 
 -- Seed baseline games
-insert into public.pickup_games (
-  slug, sport, emoji, skill_level, venue_name, city, time_label, host_name,
-  price_per_player, spots_open, total_players, confirmed_players, whatsapp_group_url, status, is_featured, publication_status
-) values
-  ('ferrohub-pickleball-bengaluru', 'Pickleball', '🎾', 'Intermediate', 'FerroHub Sports', 'Bengaluru', 'Today · 7:00 PM', 'Rahul S.', '₹200/player', 1, 4, 3, 'https://chat.whatsapp.com/sample-ferrohub-pickleball', 'open', true, 'published'),
-  ('kicks-on-grass-football-bengaluru', 'Football', '⚽', 'Beginner', 'Kicks on Grass Arena', 'Bengaluru', 'Today · 8:30 PM', 'Aakash M.', '₹250/player', 4, 12, 8, 'https://chat.whatsapp.com/sample-kicks-football', 'open', true, 'published'),
-  ('whitefield-badminton-bengaluru', 'Badminton', '🏸', 'Advanced', 'Whitefield Sports Hub', 'Bengaluru', 'Tomorrow · 6:30 AM', 'Sneha K.', '₹150/player', 1, 4, 3, 'https://chat.whatsapp.com/sample-whitefield-badminton', 'open', false, 'published'),
-  ('dda-cricket-delhi', 'Cricket', '🏏', 'Intermediate', 'DDA Sports Ground', 'Delhi', 'Saturday · 7:00 AM', 'Vikram P.', '₹180/player', 8, 22, 14, 'https://chat.whatsapp.com/sample-dda-cricket', 'open', true, 'published'),
-  ('dlta-tennis-new-delhi', 'Tennis', '🎾', 'Intermediate', 'DLTA Tennis Complex', 'New Delhi', 'Tomorrow · 5:30 PM', 'Neha R.', '₹220/player', 3, 4, 1, 'https://chat.whatsapp.com/sample-dlta-tennis', 'open', false, 'published'),
-  ('turfside-box-cricket-mumbai', 'Box Cricket', '🏏', 'Beginner', 'Turfside Arena', 'Mumbai', 'Sunday · 6:00 PM', 'Karan D.', '₹300/player', 4, 10, 6, 'https://chat.whatsapp.com/sample-turfside-cricket', 'open', false, 'published'),
-  ('regional-sports-centre-basketball-kochi', 'Basketball', '🏀', 'Advanced', 'Regional Sports Centre', 'Kochi', 'Friday · 6:00 PM', 'Fahad A.', '₹120/player', 2, 10, 8, 'https://chat.whatsapp.com/sample-kochi-basketball', 'open', false, 'published')
-on conflict (slug) do nothing;
+INSERT INTO public.pickup_games (
+  slug, sport, emoji, skill_level, venue_name, city, time_label,
+  host_name, price_per_player, spots_open, total_players, confirmed_players,
+  is_featured, publication_status, whatsapp_group_url, status
+) VALUES
+  (
+    'pickleball-ferrohub-evening', 'Pickleball', '🎾', 'Intermediate',
+    'FerroHub Sports Arena', 'Bengaluru', 'Today · 7:00 PM',
+    'Rahul Sharma', '₹200/player', 1, 4, 3,
+    true, 'published', 'https://chat.whatsapp.com/sample-ferrohub-pickleball', 'open'
+  ),
+  (
+    'football-koramangala-turf', 'Football', '⚽', 'Beginner',
+    'Kicks on Grass Arena', 'Bengaluru', 'Today · 8:30 PM',
+    'Aakash Mehta', '₹250/player', 4, 12, 8,
+    true, 'published', 'https://chat.whatsapp.com/sample-kicks-football', 'open'
+  ),
+  (
+    'badminton-whitefield-morning', 'Badminton', '🏸', 'Advanced',
+    'Whitefield Sports Hub', 'Bengaluru', 'Tomorrow · 6:00 AM',
+    'Siddharth Patel', '₹150/player', 2, 4, 2,
+    false, 'published', 'https://chat.whatsapp.com/sample-whitefield-badminton', 'open'
+  )
+ON CONFLICT (slug) DO NOTHING;
 
-commit;
+COMMIT;
