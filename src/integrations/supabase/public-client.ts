@@ -15,7 +15,7 @@ export type CatalogueResult<T> =
   | { status: 'unavailable'; data: []; message: string }
 
 type QueryOptions = {
-  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities' | 'pickup_games' | 'pickup_game_participants' | 'site_announcements' | 'reviews'
+  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities' | 'pickup_games' | 'site_announcements' | 'reviews'
   select: string
   order: string
   filters: Record<string, string>
@@ -134,7 +134,6 @@ const communitySubmissions = {
   venues: [] as Venue[],
   opportunities: [] as Opportunity[],
   pickup_games: [] as DatabasePickupGame[],
-  pickup_game_participants: [] as DatabasePickupGameParticipant[],
   reviews: [] as ReviewItem[],
 }
 
@@ -154,7 +153,6 @@ export function clearCommunitySubmissions() {
   communitySubmissions.venues = []
   communitySubmissions.opportunities = []
   communitySubmissions.pickup_games = []
-  communitySubmissions.pickup_game_participants = []
   communitySubmissions.reviews = []
 }
 
@@ -1193,13 +1191,7 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
     }
   }
 
-  // 2. Add to in-memory participants list
-  communitySubmissions.pickup_game_participants = [
-    participant,
-    ...(communitySubmissions.pickup_game_participants || []),
-  ]
-
-  // 3. Update spots and status
+  // 2. Update spots and status
   const spotUpdate = await updatePickupGameSpots(
     input.gameId,
     newSpotsOpen,
@@ -1207,11 +1199,8 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
     game ? { ...game, status: newStatus } : undefined,
   )
 
-  // 4. Save to user's RSVP'd games locally
+  // 3. Save to user's RSVP'd games locally
   saveUserRsvpGame(input.gameId)
-
-  // 5. Broadcast participant event
-  broadcastRealtimeEvent('pickup_game_participants', 'INSERT', participant)
 
   return {
     status: 'confirmed',
@@ -1222,42 +1211,12 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
   }
 }
 
-export async function getPickupGameParticipants(gameId: string): Promise<DatabasePickupGameParticipant[]> {
-  const local = (communitySubmissions.pickup_game_participants || []).filter(p => p.game_id === gameId)
-
-  if (supabaseUrl && anonKey) {
-    try {
-      const baseUrl = new URL(supabaseUrl)
-      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
-        const response = await fetch(
-          `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/pickup_game_participants?game_id=eq.${encodeURIComponent(gameId)}&order=joined_at.desc`,
-          {
-            headers: {
-              apikey: anonKey,
-              Authorization: `Bearer ${anonKey}`,
-              Accept: 'application/json',
-            },
-          },
-        )
-        if (response.ok) {
-          const remote = await response.json()
-          if (Array.isArray(remote)) {
-            const seen = new Set(remote.map((p: DatabasePickupGameParticipant) => p.id))
-            const merged = [...remote]
-            for (const loc of local) {
-              if (!seen.has(loc.id)) merged.push(loc)
-            }
-            return merged
-          }
-        }
-      }
-    } catch {
-      // Offline fallback
-    }
-  }
-
-  return local
-}
+/**
+ * @deprecated Removed for player privacy and security. Participant personal details
+ * (phone numbers, full names) are strictly restricted at the database level and must
+ * not be accessible via the public client API.
+ */
+// Public participant roster fetching has been revoked for privacy.
 
 // -----------------------------------------------------------------------------
 // Trust, Safety & Anti-Scam Reporting System

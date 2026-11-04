@@ -65,18 +65,15 @@ create policy "pickup_games_update_spots" on public.pickup_games
 
 grant select, insert, update on public.pickup_games to anon, authenticated;
 
--- Pickup Game Participants RLS
+-- Pickup Game Participants RLS (Private / Restricted - No Public Read)
 drop policy if exists "pickup_game_participants_read" on public.pickup_game_participants;
-create policy "pickup_game_participants_read" on public.pickup_game_participants
-  for select to anon, authenticated
-  using (true);
 
 drop policy if exists "pickup_game_participants_insert" on public.pickup_game_participants;
 create policy "pickup_game_participants_insert" on public.pickup_game_participants
   for insert to anon, authenticated
   with check (char_length(trim(player_name)) >= 2);
 
-grant select, insert on public.pickup_game_participants to anon, authenticated;
+grant insert on public.pickup_game_participants to anon, authenticated;
 
 create index if not exists idx_pickup_games_city_sport
   on public.pickup_games (city, sport);

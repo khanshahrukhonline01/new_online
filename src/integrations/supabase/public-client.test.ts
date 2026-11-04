@@ -338,10 +338,12 @@ describe('public catalogue client', () => {
     })
     expect(fullRes.status).toBe('full')
 
-    // 4. Participant roster retrieval
-    const participants = await client.getPickupGameParticipants('pg-test-1')
-    expect(participants.length).toBeGreaterThanOrEqual(1)
-    expect(participants[0].player_name).toBe('Karan Sharma')
+    // 4. Participant roster privacy verification: public roster endpoint is revoked
+    expect((client as Record<string, unknown>).getPickupGameParticipants).toBeUndefined()
+    const gameAfterJoin = (await client.getPickupGames()).data.find(g => g.id === 'pg-test-1')
+    expect(gameAfterJoin?.spots_open).toBe(0)
+    expect(gameAfterJoin?.confirmed_players).toBe(4)
+    expect(gameAfterJoin?.status).toBe('full')
   })
 
   it('manages community reviews, computes stats, helpful votes, and uploads media', async () => {
