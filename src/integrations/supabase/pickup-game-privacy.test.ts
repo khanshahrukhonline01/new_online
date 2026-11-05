@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import * as publicClient from './public-client'
 import { type RealtimeTable } from './realtime-client'
 import privacyMigrationSql from '../../../supabase/migrations/20261104045129_secure_pickup_game_participant_privacy.sql?raw'
-import integrityMigrationSql from '../../../supabase/migrations/20261104110000_atomic_rsvp_reservation_integrity.sql?raw'
-import tokenHashMigrationSql from '../../../supabase/migrations/20261105101000_hash_rsvp_cancellation_tokens.sql?raw'
+import integrityMigrationSql from '../../../supabase/migrations/20261105084018_atomic_rsvp_reservation_integrity.sql?raw'
+import tokenHashMigrationSql from '../../../supabase/migrations/20261105084210_hash_rsvp_cancellation_tokens.sql?raw'
 
 describe('Pickup Game Participant Privacy & Security Architecture (Phase 1 & Phase 2)', () => {
   beforeEach(() => {
