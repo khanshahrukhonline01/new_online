@@ -141,6 +141,8 @@ describe('permanent sidebar layout contract', () => {
     expect(html).toContain('href="/search"')
     expect(html).toContain('aria-label="Notifications"')
     expect(html).toContain('aria-label="Help and feedback"')
+    expect(html).toContain('href="/help-feedback"')
+    expect(html).not.toContain('mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback')
     expect(html).toContain('aria-label="Your profile"')
   })
 
