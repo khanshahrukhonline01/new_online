@@ -290,7 +290,7 @@ describe('public catalogue client', () => {
   })
 
   it('handles pickup game RSVP spot reservations, WhatsApp group link retrieval, and match locking', async () => {
-    const mockGame = {
+    const mockGame: import('./public-client').DatabasePickupGame = {
       id: 'pg-test-1',
       slug: 'pickleball-indiranagar',
       sport: 'Pickleball',
@@ -309,8 +309,8 @@ describe('public catalogue client', () => {
       whatsapp_group_url: 'https://chat.whatsapp.com/test-pickleball-group',
       status: 'open',
     }
-    vi.mocked(fetch).mockResolvedValue(jsonResponse([mockGame]))
-    const client = await loadClient()
+    const client = await loadClient('', '')
+    client.getCommunitySubmissions().pickup_games.unshift(mockGame)
 
     // 1. Validation failure: name < 2 chars
     const shortNameRes = await client.joinPickupGame({

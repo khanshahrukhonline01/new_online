@@ -1436,6 +1436,16 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
     return rpcResult
   }
 
+  // Once Supabase is configured, a failed or rejected RPC must never fall
+  // through to the in-memory demo path and report a reservation as confirmed.
+  if (supabaseUrl && anonKey) {
+    return {
+      status: 'error',
+      errorCode: 'RESERVATION_SERVICE_UNAVAILABLE',
+      message: 'We could not verify your reservation with the server. No spot has been reserved. Please try again.',
+    }
+  }
+
   // Offline / local simulation
   let game = communitySubmissions.pickup_games.find(g => g.id === input.gameId)
   if (!game && mockGameFromFetch && mockGameFromFetch.id === input.gameId) {
@@ -1594,6 +1604,16 @@ export async function cancelPickupGameReservation(
       }
     } catch {
       // Offline fallback
+    }
+  }
+
+  // Never let a failed configured backend request fall through to a local
+  // simulation and claim that a database reservation was cancelled.
+  if (supabaseUrl && anonKey) {
+    return {
+      status: 'error',
+      errorCode: 'CANCELLATION_SERVICE_UNAVAILABLE',
+      message: 'We could not verify the cancellation with the server. No change was made. Please try again.',
     }
   }
 
