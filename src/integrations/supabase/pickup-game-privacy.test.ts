@@ -3,6 +3,7 @@ import * as publicClient from './public-client'
 import { type RealtimeTable } from './realtime-client'
 import privacyMigrationSql from '../../../supabase/migrations/20261104045129_secure_pickup_game_participant_privacy.sql?raw'
 import integrityMigrationSql from '../../../supabase/migrations/20261104110000_atomic_rsvp_reservation_integrity.sql?raw'
+import tokenHashMigrationSql from '../../../supabase/migrations/20261105101000_hash_rsvp_cancellation_tokens.sql?raw'
 
 describe('Pickup Game Participant Privacy & Security Architecture (Phase 1 & Phase 2)', () => {
   beforeEach(() => {
@@ -217,11 +218,19 @@ describe('Pickup Game Participant Privacy & Security Architecture (Phase 1 & Pha
 
     // Phase 2 migration checks
     expect(integrityMigrationSql).toContain('pickup_game_rsvp_rate_limits')
-    expect(integrityMigrationSql).toContain('REVOKE INSERT ON public.pickup_game_participants FROM PUBLIC, anon, authenticated')
-    expect(integrityMigrationSql).toContain('REVOKE UPDATE ON public.pickup_games FROM PUBLIC, anon, authenticated')
+    expect(integrityMigrationSql).toContain('REVOKE ALL ON TABLE public.pickup_game_participants FROM PUBLIC, anon, authenticated')
+    expect(integrityMigrationSql).toContain('REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
+    expect(integrityMigrationSql).toContain('GRANT SELECT (')
+    expect(integrityMigrationSql).toContain('whatsapp_group_url')
     expect(integrityMigrationSql).toContain('CREATE OR REPLACE FUNCTION public.rsvp_pickup_game')
     expect(integrityMigrationSql).toContain('FOR UPDATE')
     expect(integrityMigrationSql).toContain('CREATE OR REPLACE FUNCTION public.cancel_pickup_game_reservation')
     expect(integrityMigrationSql).toContain('GRANT EXECUTE ON FUNCTION public.rsvp_pickup_game')
+    expect(integrityMigrationSql).toContain('ON CONFLICT (identifier) DO UPDATE')
+    expect(integrityMigrationSql).toContain('RATE_LIMITED')
+    expect(integrityMigrationSql).toContain('A valid mobile number is required')
+    expect(tokenHashMigrationSql).toContain('extensions.digest')
+    expect(tokenHashMigrationSql).toContain('SHA-256 digest')
+    expect(tokenHashMigrationSql).toContain('SET search_path = \'\'')
   })
 })
