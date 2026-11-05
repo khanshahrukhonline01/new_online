@@ -109,7 +109,7 @@ BEGIN
   v_clean_phone := pg_catalog.regexp_replace(p_player_phone, '[^0-9]', '', 'g');
   IF pg_catalog.char_length(v_clean_phone) = 12
      AND pg_catalog.starts_with(v_clean_phone, '91') THEN
-    v_clean_phone := pg_catalog.substring(v_clean_phone FROM 3);
+    v_clean_phone := pg_catalog.substr(v_clean_phone, 3);
   END IF;
 
   IF pg_catalog.char_length(v_clean_phone) < 10
