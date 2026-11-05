@@ -1566,6 +1566,104 @@ export interface CancelReservationResult {
   promotedParticipantId?: string
 }
 
+export interface PickupGameInviteResult {
+  status: 'success' | 'pending_approval' | 'error'
+  message: string
+  errorCode?: string
+  whatsappGroupUrl?: string
+}
+
+export async function getPickupGameWhatsAppInvite(input: {
+  reservationId: string
+  cancellationToken?: string
+  accessToken?: string
+}): Promise<PickupGameInviteResult> {
+  if (!supabaseUrl || !anonKey) {
+    return {
+      status: 'error',
+      errorCode: 'INVITE_SERVICE_UNAVAILABLE',
+      message: 'WhatsApp invitations require a verified server reservation.',
+    }
+  }
+  try {
+    const baseUrl = new URL(supabaseUrl)
+    if (baseUrl.protocol !== 'https:' && baseUrl.hostname !== 'localhost' && baseUrl.hostname !== '127.0.0.1') {
+      throw new Error('HTTPS required')
+    }
+    const response = await fetch(
+      `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/get_pickup_game_whatsapp_invite`,
+      {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${input.accessToken || anonKey}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          p_reservation_id: input.reservationId,
+          p_cancellation_token: input.cancellationToken?.trim() || null,
+        }),
+      },
+    )
+    if (!response.ok) throw new Error('Invite lookup rejected')
+    const data = await response.json()
+    return {
+      status: data.status === 'success' || data.status === 'pending_approval' ? data.status : 'error',
+      message: data.message || (data.status === 'success' ? 'Invitation is ready.' : 'Invitation is not available.'),
+      errorCode: data.error_code,
+      whatsappGroupUrl: data.status === 'success' ? data.whatsapp_group_url : undefined,
+    }
+  } catch {
+    return {
+      status: 'error',
+      errorCode: 'INVITE_SERVICE_UNAVAILABLE',
+      message: 'The server could not verify invitation access. No invitation was released.',
+    }
+  }
+}
+
+export async function approvePickupGameWhatsAppInvite(
+  reservationId: string,
+  accessToken: string,
+): Promise<{ status: 'success' | 'error'; message: string; errorCode?: string }> {
+  if (!supabaseUrl || !anonKey || !accessToken) {
+    return { status: 'error', errorCode: 'UNAUTHORIZED', message: 'A signed-in host session is required.' }
+  }
+  try {
+    const baseUrl = new URL(supabaseUrl)
+    if (baseUrl.protocol !== 'https:' && baseUrl.hostname !== 'localhost' && baseUrl.hostname !== '127.0.0.1') {
+      throw new Error('HTTPS required')
+    }
+    const response = await fetch(
+      `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/approve_pickup_game_whatsapp_invite`,
+      {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ p_reservation_id: reservationId }),
+      },
+    )
+    if (!response.ok) throw new Error('Approval rejected')
+    const data = await response.json()
+    return {
+      status: data.status === 'success' ? 'success' : 'error',
+      message: data.message || 'Invitation approval failed.',
+      errorCode: data.error_code,
+    }
+  } catch {
+    return {
+      status: 'error',
+      errorCode: 'INVITE_APPROVAL_UNAVAILABLE',
+      message: 'The server could not verify host approval. No invitation status was changed.',
+    }
+  }
+}
+
 export async function cancelPickupGameReservation(
   input: CancelReservationInput,
 ): Promise<CancelReservationResult> {
