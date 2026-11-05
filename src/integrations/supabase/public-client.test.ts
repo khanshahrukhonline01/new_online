@@ -326,7 +326,18 @@ describe('public catalogue client', () => {
       playerPhone: '9876543210',
     })
     expect(joinRes.status).toBe('confirmed')
-    expect(joinRes.whatsappGroupUrl).toBe('https://chat.whatsapp.com/test-pickleball-group')
+    expect(joinRes.whatsappGroupUrl).toBeNull()
+    const unauthorizedInvite = await client.getPickupGameWhatsAppInvite({
+      reservationId: joinRes.participantId!,
+    })
+    expect(unauthorizedInvite.status).toBe('error')
+    expect(unauthorizedInvite.whatsappGroupUrl).toBeUndefined()
+    const authorizedInvite = await client.getPickupGameWhatsAppInvite({
+      reservationId: joinRes.participantId!,
+      cancellationToken: joinRes.cancellationToken!,
+    })
+    expect(authorizedInvite.status).toBe('success')
+    expect(authorizedInvite.whatsappGroupUrl).toBe('https://chat.whatsapp.com/test-pickleball-group')
     expect(joinRes.participant?.player_name).toBe('Karan Sharma')
     expect(joinRes.game?.spots_open).toBe(0)
     expect(joinRes.game?.status).toBe('full')

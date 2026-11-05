@@ -402,6 +402,7 @@ describe('Pickup Game Host Authorization & Game Management Security (Phase 3)', 
     })
     expect(rsvpRes.status).toBe('confirmed')
     expect(rsvpRes.cancellationToken).toBeTruthy()
+    expect(rsvpRes.whatsappGroupUrl).toBeNull()
     const reservationId = rsvpRes.participantId!
     const token = rsvpRes.cancellationToken!
 
@@ -419,5 +420,56 @@ describe('Pickup Game Host Authorization & Game Management Security (Phase 3)', 
       cancellationToken: token,
     })
     expect(legitimateCancel.status).toBe('cancelled')
+  })
+})
+
+
+describe('Pickup Game configured-backend fail-closed behavior (Phase 3.5)', () => {
+  let configuredClient: typeof import('./public-client')
+
+  beforeAll(async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://phase35-test.supabase.co')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'phase35-test-anon-key')
+    vi.resetModules()
+    configuredClient = await import('./public-client')
+  })
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network unavailable')))
+  })
+
+  it('does not report successful game creation when the configured RPC is unavailable', async () => {
+    const result = await configuredClient.createPickupGame({
+      sport: 'Football',
+      venueName: 'Test Ground',
+      city: 'Delhi',
+      timeLabel: 'Tomorrow 6 PM',
+      totalPlayers: 10,
+    }, { accessToken: 'signed-in-token' })
+
+    expect(result.status).toBe('error')
+    expect(result.errorCode).toBe('HOST_SERVICE_UNAVAILABLE')
+  })
+
+  it('does not simulate successful host edits when the configured RPC is unavailable', async () => {
+    const result = await configuredClient.updatePickupGameDetails({
+      gameId: 'pg-demo',
+      sport: 'Changed sport',
+    }, { accessToken: 'signed-in-token', callerUserId: 'mock-user' })
+
+    expect(result.status).toBe('error')
+    expect(result.errorCode).toBe('HOST_SERVICE_UNAVAILABLE')
+  })
+
+  it('does not return a local host portfolio when the configured RPC is unavailable', async () => {
+    const result = await configuredClient.getHostPickupGames({
+      accessToken: 'signed-in-token',
+      hostUserId: 'mock-user',
+      isAdmin: true,
+    })
+
+    expect(result.status).toBe('error')
+    expect(result.errorCode).toBe('HOST_SERVICE_UNAVAILABLE')
+    expect(result.data).toEqual([])
   })
 })

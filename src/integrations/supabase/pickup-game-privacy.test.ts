@@ -172,7 +172,19 @@ describe('Pickup Game Participant Privacy & Security Architecture (Phase 1 & Pha
       playerPhone: '9123456781',
     })
     expect(p1Res.status).toBe('confirmed')
-    expect(p1Res.whatsappGroupUrl).toBe('https://chat.whatsapp.com/test-badminton-secret')
+    // The reservation response itself must never disclose the group invitation.
+    expect(p1Res.whatsappGroupUrl).toBeNull()
+    const unauthorizedInvite = await publicClient.getPickupGameWhatsAppInvite({
+      reservationId: p1Res.participantId!,
+    })
+    expect(unauthorizedInvite.status).toBe('error')
+    expect(unauthorizedInvite.whatsappGroupUrl).toBeUndefined()
+    const authorizedInvite = await publicClient.getPickupGameWhatsAppInvite({
+      reservationId: p1Res.participantId!,
+      cancellationToken: p1Res.cancellationToken!,
+    })
+    expect(authorizedInvite.status).toBe('success')
+    expect(authorizedInvite.whatsappGroupUrl).toBe('https://chat.whatsapp.com/test-badminton-secret')
     expect(p1Res.game?.spots_open).toBe(0)
     expect(p1Res.game?.status).toBe('full')
 
@@ -206,15 +218,27 @@ describe('Pickup Game Participant Privacy & Security Architecture (Phase 1 & Pha
       expect((g as unknown as Record<string, unknown>).whatsapp_group_url).toBeUndefined()
     }
 
-    // Joining returns the link only to the confirmed player
+    // RSVP confirms the reservation but never returns the invite directly.
     const res = await publicClient.joinPickupGame({
       gameId: 'pg-whatsapp-test',
       playerName: 'Private Attendee',
       playerPhone: '9888877777',
     })
     expect(res.status).toBe('confirmed')
-    expect(res.whatsappGroupUrl).toBeTruthy()
-    expect(res.whatsappGroupUrl).toContain('whatsapp.com')
+    expect(res.whatsappGroupUrl).toBeNull()
+    const unauthorized = await publicClient.getPickupGameWhatsAppInvite({
+      reservationId: res.participantId!,
+    })
+    expect(unauthorized.status).toBe('error')
+    expect(unauthorized.whatsappGroupUrl).toBeUndefined()
+
+    const invite = await publicClient.getPickupGameWhatsAppInvite({
+      reservationId: res.participantId!,
+      cancellationToken: res.cancellationToken!,
+    })
+    expect(invite.status).toBe('success')
+    expect(invite.whatsappGroupUrl).toBeTruthy()
+    expect(invite.whatsappGroupUrl).toContain('whatsapp.com')
   })
 
   it('verifies SQL migrations for Phase 1 privacy and Phase 2 integrity', () => {
