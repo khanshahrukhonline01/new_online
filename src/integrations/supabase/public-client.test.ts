@@ -290,7 +290,7 @@ describe('public catalogue client', () => {
   })
 
   it('handles pickup game RSVP spot reservations, WhatsApp group link retrieval, and match locking', async () => {
-    const mockGame = {
+    const mockGame: import('./public-client').DatabasePickupGame = {
       id: 'pg-test-1',
       slug: 'pickleball-indiranagar',
       sport: 'Pickleball',
