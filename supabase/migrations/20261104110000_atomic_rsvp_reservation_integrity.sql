@@ -228,7 +228,7 @@ BEGIN
     );
   END IF;
 
-  v_available_spots := pg_catalog.least(
+  v_available_spots := LEAST(
     v_game.spots_open,
     pg_catalog.greatest(v_game.total_players - v_game.confirmed_players, 0)
   );
@@ -265,7 +265,7 @@ BEGIN
     );
   END IF;
 
-  IF pg_catalog.coalesce(p_allow_waitlist, false) THEN
+  IF COALESCE(p_allow_waitlist, false) THEN
     SELECT pg_catalog.count(*) + 1 INTO v_waitlist_position
     FROM public.pickup_game_participants
     WHERE game_id = p_game_id AND status = 'waitlist';
