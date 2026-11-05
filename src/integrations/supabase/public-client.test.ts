@@ -309,8 +309,8 @@ describe('public catalogue client', () => {
       whatsapp_group_url: 'https://chat.whatsapp.com/test-pickleball-group',
       status: 'open',
     }
-    vi.mocked(fetch).mockResolvedValue(jsonResponse([mockGame]))
     const client = await loadClient('', '')
+    client.getCommunitySubmissions().pickup_games.unshift(mockGame)
 
     // 1. Validation failure: name < 2 chars
     const shortNameRes = await client.joinPickupGame({
