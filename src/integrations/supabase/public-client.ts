@@ -1910,13 +1910,13 @@ async function callHostRpc(
       return unavailable('The server could not verify this host action. No changes were made.')
     }
     const res = await response.json()
-    if (!res || typeof res !== 'object') {
+    if (!res || typeof res !== 'object' || typeof res.status !== 'string') {
       return unavailable('The server returned an invalid host-management response.')
     }
     return {
       handled: true,
       result: {
-        status: res.status || 'success',
+        status: res.status,
         message: res.message || 'Operation completed.',
         errorCode: res.error_code,
         gameId: res.game_id,
