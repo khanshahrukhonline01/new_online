@@ -156,7 +156,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
             <span className="sidebar-utility-label">{t('listOnKhelgrid', { ns: 'common', defaultValue: '+ List on KhelGrid' })}</span>
           </button>
         )}
-        <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback" title="Help and feedback"><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">{t('helpAndFeedback', 'Help & feedback')}</span></a>
+        <a className="sidebar-utility-link" href="/help-feedback" aria-label="Help and feedback" title="Help and feedback" onClick={event => onNavigate(event, '/help-feedback')}><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">{t('helpAndFeedback', 'Help & feedback')}</span></a>
         {!collapsed ? <span className="sidebar-bottom-note">KhelGrid · India</span> : null}
       </div>
     </aside>
@@ -177,7 +177,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
       <nav className="sidebar-navigation" aria-label="Mobile feature navigation">{renderSections(true)}</nav>
       <div className="sidebar-promo"><strong>{t('promoTitle', 'Build your athlete profile')}</strong><p>{t('promoText', 'Create a Sports CV and prepare a profile-ready PDF on your device.')}</p><a href="/sports-cv" onClick={event => { onNavigate(event, '/sports-cv'); onClose() }}>{t('openSportsCv', 'Open Sports CV')} <SiteIcon name="arrow-up-right" size={13} /></a></div>
       <div className="sidebar-bottom">
-        <a className="sidebar-utility-link" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback" aria-label="Help and feedback"><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">{t('helpAndFeedback', 'Help & feedback')}</span></a>
+        <a className="sidebar-utility-link" href="/help-feedback" aria-label="Help and feedback" onClick={event => { onNavigate(event, '/help-feedback'); onClose() }}><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">{t('helpAndFeedback', 'Help & feedback')}</span></a>
       </div>
     </div>
     <nav className="mobile-bottom-nav" aria-label="Quick navigation">
