@@ -1173,7 +1173,7 @@ COMMIT;
 -- hashed bearer-token behavior as an already-migrated development database.
 -- ==============================================================================
 
--- Source migration: supabase/migrations/20261104110000_atomic_rsvp_reservation_integrity.sql
+-- Source migration: supabase/migrations/20261105084018_atomic_rsvp_reservation_integrity.sql
 -- ==============================================================================
 -- KhelGrid Play Security — Phase 2: RSVP abuse and reservation integrity
 -- This migration hardens the existing pickup-game setup:
@@ -1620,7 +1620,7 @@ GRANT EXECUTE ON FUNCTION public.cancel_pickup_game_reservation(uuid, text) TO a
 COMMIT;
 
 
--- Source migration: supabase/migrations/20261105100000_fix_rsvp_greatest_expression.sql
+-- Source migration: supabase/migrations/20261105084103_fix_rsvp_greatest_expression.sql
 -- Corrective Phase 2 patch: PostgreSQL GREATEST is a SQL special expression,
 -- not a schema-qualified function call.
 BEGIN;
@@ -1874,7 +1874,7 @@ $function$;
 COMMIT;
 
 
--- Source migration: supabase/migrations/20261105101000_hash_rsvp_cancellation_tokens.sql
+-- Source migration: supabase/migrations/20261105084210_hash_rsvp_cancellation_tokens.sql
 -- Store only a SHA-256 digest of guest cancellation bearer tokens.
 -- The raw token is returned once to the RSVP caller; legacy plaintext tokens remain valid during migration.
 BEGIN;
@@ -2254,7 +2254,7 @@ GRANT EXECUTE ON FUNCTION public.cancel_pickup_game_reservation(uuid, text) TO a
 COMMIT;
 
 
--- Source migration: supabase/migrations/20261105102000_fix_hash_migration_greatest.sql
+-- Source migration: supabase/migrations/20261105084244_fix_hash_migration_greatest.sql
 -- Store only a SHA-256 digest of guest cancellation bearer tokens.
 -- The raw token is returned once to the RSVP caller; legacy plaintext tokens remain valid during migration.
 BEGIN;
