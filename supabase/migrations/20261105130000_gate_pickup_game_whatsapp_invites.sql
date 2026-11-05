@@ -23,7 +23,7 @@ BEGIN
     'public.rsvp_pickup_game(text,text,text,boolean)'::regprocedure
   ) INTO v_definition;
 
-  IF pg_catalog.position(v_old IN v_definition) = 0 THEN
+  IF pg_catalog.strpos(v_definition, v_old) = 0 THEN
     RAISE EXCEPTION 'Expected RSVP invitation response was not found; refusing to overwrite an unexpected function definition.';
   END IF;
 
