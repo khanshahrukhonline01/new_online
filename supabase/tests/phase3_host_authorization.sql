@@ -98,6 +98,12 @@ BEGIN
   v_result := public.update_pickup_game_capacity(v_game_id::text,2,'₹150');
   IF v_result->>'status' <> 'success' THEN RAISE EXCEPTION 'Capacity reduction for reservation test failed: %',v_result; END IF;
 
+  -- Simulate separate anonymous guests; the host account must not be reused
+  -- for multiple reservations because account-level duplicate protection is
+  -- expected to reject a second active reservation from the same account.
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  PERFORM set_config('request.jwt.claims', '{"role":"anon"}', true);
+
   -- Fill both places, then add one player to the waitlist.
   v_rsvp_one := public.rsvp_pickup_game(v_game_id::text,'Phase 3 Guest One',v_phone_one,false);
   IF v_rsvp_one->>'status' <> 'confirmed' THEN RAISE EXCEPTION 'First guest RSVP failed: %',v_rsvp_one; END IF;
@@ -138,6 +144,11 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Waitlist promotion did not preserve reservation/capacity integrity';
   END IF;
+
+  -- Restore the authenticated host context before host-portfolio assertions.
+  PERFORM set_config('request.jwt.claim.sub', v_host_a::text, true);
+  PERFORM set_config('request.jwt.claims',
+    jsonb_build_object('sub',v_host_a,'role','authenticated','app_metadata','{}'::jsonb,'user_metadata','{}'::jsonb)::text, true);
 
   v_games := public.get_host_pickup_games();
   IF v_games->>'status' <> 'success' OR (v_games->'data')::text NOT LIKE '%'||v_game_id::text||'%' THEN
