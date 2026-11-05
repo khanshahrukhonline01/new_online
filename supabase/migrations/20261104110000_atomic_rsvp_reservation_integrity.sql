@@ -28,6 +28,8 @@ REVOKE ALL ON TABLE public.pickup_game_rsvp_rate_limits FROM PUBLIC, anon, authe
 -- Public game discovery must not expose whatsapp_group_url or host-only metadata.
 -- Column-level SELECT is intentional: table-level SELECT would expose every column.
 REVOKE ALL ON TABLE public.pickup_games FROM PUBLIC, anon, authenticated;
+REVOKE SELECT (whatsapp_group_url, host_user_id, cancellation_reason, cancelled_at, completed_at)
+  ON TABLE public.pickup_games FROM PUBLIC, anon, authenticated;
 GRANT SELECT (
   id, slug, sport, emoji, skill_level, venue_name, city, time_label, host_name,
   price_per_player, spots_open, total_players, confirmed_players, is_featured,
@@ -305,6 +307,127 @@ $function$;
 
 REVOKE EXECUTE ON FUNCTION public.rsvp_pickup_game(text, text, text, boolean) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.rsvp_pickup_game(text, text, text, boolean) TO anon, authenticated;
+
+
+-- Cancellation uses the same lock order as RSVP (game first, participant second)
+-- to avoid a game/participant deadlock under concurrent RSVP and cancellation.
+CREATE OR REPLACE FUNCTION public.cancel_pickup_game_reservation(
+  p_reservation_id uuid,
+  p_cancellation_token text DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+DECLARE
+  v_game_id text;
+  v_game record;
+  v_participant record;
+  v_next_waitlist record;
+  v_user_id text;
+  v_authorized boolean := false;
+BEGIN
+  SELECT game_id INTO v_game_id
+  FROM public.pickup_game_participants
+  WHERE id = p_reservation_id;
+
+  IF NOT FOUND THEN
+    RETURN pg_catalog.jsonb_build_object(
+      'status', 'error', 'error_code', 'RESERVATION_NOT_FOUND',
+      'message', 'Reservation record not found.'
+    );
+  END IF;
+
+  SELECT * INTO v_game
+  FROM public.pickup_games
+  WHERE id::text = v_game_id
+  FOR UPDATE;
+
+  SELECT * INTO v_participant
+  FROM public.pickup_game_participants
+  WHERE id = p_reservation_id
+  FOR UPDATE;
+
+  IF NOT FOUND OR v_participant.game_id <> v_game_id THEN
+    RETURN pg_catalog.jsonb_build_object(
+      'status', 'error', 'error_code', 'RESERVATION_NOT_FOUND',
+      'message', 'Reservation record not found.'
+    );
+  END IF;
+
+  v_user_id := auth.uid()::text;
+
+  IF v_user_id IS NOT NULL AND (
+    (v_game.host_user_id IS NOT NULL AND v_user_id = v_game.host_user_id::text)
+    OR (v_participant.user_id IS NOT NULL AND v_user_id = v_participant.user_id)
+    OR public.is_pickup_game_admin()
+  ) THEN
+    v_authorized := true;
+  ELSIF p_cancellation_token IS NOT NULL
+    AND v_participant.cancellation_token IS NOT NULL
+    AND pg_catalog.length(p_cancellation_token) >= 20
+    AND v_participant.cancellation_token = p_cancellation_token THEN
+    v_authorized := true;
+  END IF;
+
+  IF NOT v_authorized THEN
+    RETURN pg_catalog.jsonb_build_object(
+      'status', 'error', 'error_code', 'UNAUTHORIZED',
+      'message', 'A valid cancellation token or authenticated reservation owner/host is required.'
+    );
+  END IF;
+
+  IF v_participant.status = 'cancelled' THEN
+    RETURN pg_catalog.jsonb_build_object(
+      'status', 'already_cancelled', 'message', 'Reservation was already cancelled.'
+    );
+  END IF;
+
+  UPDATE public.pickup_game_participants
+  SET status = 'cancelled'
+  WHERE id = p_reservation_id;
+
+  IF v_participant.status = 'confirmed' THEN
+    SELECT * INTO v_next_waitlist
+    FROM public.pickup_game_participants
+    WHERE game_id = v_game_id AND status = 'waitlist'
+    ORDER BY joined_at ASC, id ASC
+    LIMIT 1
+    FOR UPDATE;
+
+    IF FOUND THEN
+      UPDATE public.pickup_game_participants
+      SET status = 'confirmed'
+      WHERE id = v_next_waitlist.id;
+
+      RETURN pg_catalog.jsonb_build_object(
+        'status', 'cancelled',
+        'message', 'Reservation cancelled. The next waitlisted player was promoted.',
+        'promoted_participant_id', v_next_waitlist.id
+      );
+    END IF;
+
+    UPDATE public.pickup_games
+    SET spots_open = LEAST(total_players - confirmed_players + 1, spots_open + 1),
+        confirmed_players = GREATEST(0, confirmed_players - 1),
+        status = CASE WHEN status = 'full' THEN 'open' ELSE status END,
+        updated_at = pg_catalog.now()
+    WHERE id = v_game.id;
+
+    RETURN pg_catalog.jsonb_build_object(
+      'status', 'cancelled',
+      'message', 'Reservation cancelled and spot reopened successfully.'
+    );
+  END IF;
+
+  RETURN pg_catalog.jsonb_build_object(
+    'status', 'cancelled', 'message', 'Waitlist reservation cancelled.'
+  );
+END;
+$function$;
+
+REVOKE EXECUTE ON FUNCTION public.cancel_pickup_game_reservation(uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.cancel_pickup_game_reservation(uuid, text) TO anon, authenticated;
 
 -- The bearer-token cancellation RPC is installed by the pickup-game setup /
 -- host-management migration. Keep its explicit guest and authenticated access.
