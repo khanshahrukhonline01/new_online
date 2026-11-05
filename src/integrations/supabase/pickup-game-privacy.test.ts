@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import * as publicClient from './public-client'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+let publicClient: typeof import('./public-client')
 import { type RealtimeTable } from './realtime-client'
 import privacyMigrationSql from '../../../supabase/migrations/20261104045129_secure_pickup_game_participant_privacy.sql?raw'
 import integrityMigrationSql from '../../../supabase/migrations/20261105084018_atomic_rsvp_reservation_integrity.sql?raw'
