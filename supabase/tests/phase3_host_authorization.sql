@@ -120,6 +120,24 @@ BEGIN
     RAISE EXCEPTION 'A host-management RPC is not SECURITY DEFINER with empty search_path';
   END IF;
 
+  IF (SELECT count(*) FROM pg_policies
+      WHERE schemaname='public' AND tablename='pickup_games'
+        AND cmd='SELECT' AND roles @> ARRAY['anon']::name[]) <> 1 THEN
+    RAISE EXCEPTION 'Anonymous pickup-game SELECT policy is duplicated or missing';
+  END IF;
+  IF (SELECT count(*) FROM pg_policies
+      WHERE schemaname='public' AND tablename='pickup_games'
+        AND cmd='SELECT' AND roles @> ARRAY['authenticated']::name[]) <> 1 THEN
+    RAISE EXCEPTION 'Authenticated pickup-game SELECT policy is duplicated or missing';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public' AND tablename='pickup_games'
+      AND policyname='pickup_games_read_published'
+  ) THEN
+    RAISE EXCEPTION 'Obsolete broad pickup-game read policy remains';
+  END IF;
+
   RAISE NOTICE 'PASS: host ownership, non-owner denial, metadata spoof rejection, admin authorization, portfolio isolation, lifecycle, legacy game lockout, and RPC grants.';
 END
 $phase3$;
