@@ -343,6 +343,13 @@ BEGIN
   WHERE id::text = v_game_id
   FOR UPDATE;
 
+  IF NOT FOUND THEN
+    RETURN pg_catalog.jsonb_build_object(
+      'status', 'error', 'error_code', 'GAME_NOT_FOUND',
+      'message', 'The associated pickup game no longer exists.'
+    );
+  END IF;
+
   SELECT * INTO v_participant
   FROM public.pickup_game_participants
   WHERE id = p_reservation_id
