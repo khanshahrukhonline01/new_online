@@ -103,7 +103,7 @@ CREATE OR REPLACE FUNCTION public.cancel_pickup_game_reservation(p_reservation_i
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 DECLARE
   v_game_id text;
   v_game record;
@@ -216,7 +216,7 @@ BEGIN
     'status', 'cancelled', 'message', 'Waitlist reservation cancelled.'
   );
 END;
-$function$
+$function$;
 
 
 -- 6. Hardened RSVP Function: rsvp_pickup_game
@@ -226,7 +226,7 @@ CREATE OR REPLACE FUNCTION public.rsvp_pickup_game(p_game_id text, p_player_name
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
-AS $function$
+AS $function$;
 DECLARE
   v_clean_name text;
   v_clean_phone text;
@@ -462,7 +462,7 @@ BEGIN
     'whatsapp_group_url', NULL
   );
 END;
-$function$
+$function$;
 
 
 -- 7. RPC: create_pickup_game
