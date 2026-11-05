@@ -1,68 +1,54 @@
-# KhelGrid Play Phase 3.5 — Private-schema hardening
+# KhelGrid Play Phase 3.5 — private-schema RPC hardening
 
-## Status
+**Status:** Draft PR for review; migration is not applied to the hosted Supabase database.  
+**Scope:** Supabase database security only. No live website deployment or frontend contract changes.
 
-Preparation only. This change must not be merged or deployed until the implementation migration and all regression tests pass. No database migration is included in this preparation commit.
+## Confirmed findings
 
-Target Supabase project: `hznsbxvovjxvmnchzzqt` (the production-intended database for the next KhelGrid website).
+Database inspection on 2026-11-05 established:
+- All 15 application RPCs were executable by both `anon` and `authenticated`.
+- Default function ACLs for both `postgres` and `supabase_admin` explicitly granted `anon` and `authenticated` EXECUTE in `public`.
+- Authenticated listing-moderator RLS failed with SQLSTATE `42501`: policies call `is_listing_moderator()`, but authenticated execution had been revoked.
+- The `private` schema did not exist.
+- Six internal helpers have dependencies from RLS policies, host/admin RPCs, table triggers, or the `ensure_rls` event trigger.
 
-## Verified baseline
+## Migration design
 
-- Dashboard exposure was reduced by the project owner from 21/21 to 15/21 functions. The latest dashboard count has not yet been independently re-read through the management API.
-- The database currently has `public` and `graphql_public`; no `private` schema exists.
-- All 15 remaining public RPCs were observed with `EXECUTE` available to both `anon` and `authenticated`.
-- The 15 include guest, host/admin, and listing-moderation endpoints. Broad grants are not acceptable for host/admin operations.
-- `get_listing_submissions` and `review_listing_submission` are invoker-security functions. They depend on `is_listing_moderator()`, which is currently not executable by `authenticated`; the helper is also used by listing RLS policies.
-- The Phase 2 RSVP SQL test passed.
-- Existing Phase 3 and Phase 3.5 invitation-gating SQL tests failed because anonymous execution remains possible for protected host/admin RPCs and invitation approval.
+1. Create a non-exposed `private` schema; grant schema USAGE only to authenticated because two helpers are called by authenticated RLS policies and an invoker moderation RPC.
+2. Move six internal helpers by OID: `enforce_listing_moderation_transition`, `is_listing_moderator`, `is_pickup_game_admin`, `rls_auto_enable`, `set_listing_submission_updated_at`, and `set_updated_at`.
+3. Rewrite stored function bodies that schema-qualify the policy helpers, preserving all 15 public RPC signatures, argument names/defaults, return types, and security modes.
+4. Preserve anon access only to the three guest RPCs (RSVP, reservation cancellation, token-gated invite retrieval); grant the other 12 public RPCs to authenticated only.
+5. Keep `is_listing_moderator` SECURITY INVOKER and `is_pickup_game_admin` SECURITY DEFINER with an empty search path.
+6. Remove direct browser execution from internal trigger/event-trigger helpers.
+7. Correct future function defaults for both known creators: revoke global PUBLIC EXECUTE and public-schema anon/authenticated defaults. Retain the existing public-schema service_role default. Make private-schema defaults deny-by-default.
 
-## Goals
+## Dependency checks
 
-1. Preserve the exact public RPC names, argument names, argument types, return types, and PostgREST call contract used by the frontend.
-2. Make `public` a narrow API boundary. Keep compatibility wrappers in `public`; move implementation-only helpers and privileged implementation bodies into an unexposed `private` schema where dependency and RLS behavior permit.
-3. Grant anonymous execution only to the guest-facing RSVP, guest cancellation, and token-authorized invite retrieval endpoints, after validating their guest/token authorization paths.
-4. Grant host operations to `authenticated` only, with ownership checks based on `auth.uid()` and trusted admin authorization.
-5. Grant admin operations to `authenticated` only, with trusted role checks. Never trust user-editable `user_metadata`.
-6. Repair listing moderator helper execution safely. Prefer a design that preserves invoker/RLS semantics and does not expose a helper as an API endpoint. If a narrowly scoped SECURITY DEFINER helper is required for RLS, pin an empty search_path, schema-qualify all objects, validate the trusted moderator source, and grant only the minimum required role.
-7. Keep trigger functions callable by PostgreSQL internally while preventing direct Data API execution.
-8. Preserve service-role operational access without making service-role credentials available to browsers.
+The migration and regression suite check 10 table triggers, the `ensure_rls` DDL event trigger, policy references, rewritten PL/pgSQL helper calls, and an event-trigger smoke test that creates a transactional public table and verifies RLS is enabled.
 
-## Required review before writing the migration
+## Public RPC access matrix
 
-- Capture exact signatures and full definitions for all 15 public RPCs and all dependencies.
-- Inspect all frontend `.rpc()` callsites and generated Supabase types.
-- Inspect all RLS policies, triggers, grants, function owners, default privileges, and schema USAGE grants.
-- Determine whether the current Supabase Data API can resolve public wrappers that call private functions under the chosen owner/SECURITY DEFINER model.
-- Confirm no views, triggers, policies, jobs, or other database objects depend on function OIDs or schema-qualified names in ways that would break on move/recreate.
-- Verify migration compatibility with the existing Supabase Postgres/PostgREST version.
+| RPC group | anon | authenticated |
+|---|---:|---:|
+| RSVP, reservation cancellation, token-gated invite retrieval (3) | Allow | Allow |
+| Host management (8) | Deny | Allow |
+| Play administration (2) | Deny | Allow |
+| Listing moderation (2) | Deny | Allow |
 
-## Required migration design
+## Regression coverage
 
-- Use a timestamped SQL migration with `BEGIN`/`COMMIT`.
-- Create `private` schema with restricted USAGE/CREATE grants.
-- Move/recreate internal implementations in `private` with explicit ownership and pinned search_path.
-- Recreate stable public wrappers with unchanged signatures and return types.
-- Explicitly revoke `EXECUTE` from PUBLIC/anon/authenticated as appropriate, then grant the minimum required role per wrapper.
-- Ensure function-level ACLs are correct after creation; do not rely on default privileges.
-- Do not use blanket grants or blanket revokes without enumerating each signature.
-- Do not alter unrelated schemas, tables, policies, or production website deployment.
-- Include rollback strategy and post-migration verification SQL.
+`supabase/tests/phase35_private_schema_security.sql` verifies all 15 contracts and the ACL matrix; private schema/helper privileges; absence of PUBLIC function execution; future default ACLs; trigger/event-trigger dependency preservation; event-trigger RLS behavior; active moderator RLS SELECT and review; and non-moderator denial.
 
-## Regression gates
+Also rerun `supabase/tests/phase3_host_authorization.sql` and the existing invitation-gating regressions.
 
-All of the following must pass against a disposable/transactional test context before applying to the production-intended database:
+## Review and deployment gate
 
-- Existing `supabase/tests/phase2_rsvp_integrity.sql`
-- Existing `supabase/tests/phase3_host_authorization.sql`
-- Existing `supabase/tests/phase35_whatsapp_invite_gating.sql`
-- New anonymous-denial tests for every host/admin RPC and invitation-approval RPC.
-- New host ownership tests: owner succeeds; another authenticated user fails; anonymous fails.
-- New trusted-admin tests: trusted admin succeeds; ordinary authenticated user fails; user_metadata spoof fails.
-- New guest tests: valid RSVP/cancellation/invite token works; invalid/expired/replayed token fails as specified.
-- New listing moderation tests: non-moderator denied; moderator can list/review; RLS remains effective; helper cannot be called through the Data API.
-- New wrapper contract tests: exact names, argument types/names, return types, and frontend RPC behavior remain unchanged.
-- Security Advisor review: investigate every remaining warning and document accepted exceptions.
+Do not apply this migration to the hosted project from this PR. Before deployment:
+1. Run the full database suite against an isolated database matching the hosted schema.
+2. Run Phase 3 host authorization and invitation-gating regressions.
+3. Review exact RPC signatures, ACLs, helper references, and trigger dependencies.
+4. Confirm exposed schemas remain `public` and `graphql_public`; never expose `private`.
+5. Run Security Advisor in the controlled environment and interpret remaining SECURITY DEFINER warnings by intended caller.
+6. Obtain explicit deployment approval and a backup/rollback plan.
 
-## Current blockers
-
-The existing Phase 3 and Phase 3.5 tests currently fail on anonymous EXECUTE access. The listing moderator helper permission path is also unresolved. Do not apply any migration until these issues are fixed and the complete test suite passes.
+This PR is a review artifact only. It does not authorize migration application or Phase 4 work.
