@@ -164,7 +164,7 @@ BEGIN
     WHERE id=v_game_id AND status='cancelled' AND confirmed_players=0 AND spots_open=total_players
   ) OR EXISTS (
     SELECT 1 FROM public.pickup_game_participants
-    WHERE game_id=v_game_id AND status IN ('confirmed','waitlist')
+    WHERE game_id=v_game_id::text AND status IN ('confirmed','waitlist')
   ) THEN
     RAISE EXCEPTION 'Host cancellation left active reservations or stale counters';
   END IF;
@@ -205,7 +205,7 @@ BEGIN
     WHERE id=v_game_id AND status='cancelled' AND confirmed_players=0 AND spots_open=total_players
   ) OR EXISTS (
     SELECT 1 FROM public.pickup_game_participants
-    WHERE game_id=v_game_id AND status IN ('confirmed','waitlist')
+    WHERE game_id=v_game_id::text AND status IN ('confirmed','waitlist')
   ) THEN
     RAISE EXCEPTION 'Admin force-cancellation left active reservations or stale counters';
   END IF;
