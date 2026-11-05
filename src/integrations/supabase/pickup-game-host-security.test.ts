@@ -1,8 +1,16 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import * as publicClient from './public-client'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+let publicClient: typeof import('./public-client')
 import phase3MigrationSql from '../../../supabase/migrations/20261104120000_secure_host_game_management.sql?raw'
 
 describe('Pickup Game Host Authorization & Game Management Security (Phase 3)', () => {
+  beforeAll(async () => {
+    // Exercise the local authorization adapter; backend failures are tested separately.
+    vi.stubEnv('VITE_SUPABASE_URL', '')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '')
+    vi.resetModules()
+    publicClient = await import('./public-client')
+  })
+
   const HOST_USER_A = 'user-host-alpha-uuid'
   const HOST_USER_B = 'user-host-beta-uuid'
 
