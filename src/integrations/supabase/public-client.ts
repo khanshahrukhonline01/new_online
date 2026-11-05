@@ -1578,11 +1578,34 @@ export async function getPickupGameWhatsAppInvite(input: {
   cancellationToken?: string
   accessToken?: string
 }): Promise<PickupGameInviteResult> {
+  // Explicit offline/demo mode: return an invite only when the caller proves
+  // possession of the reservation's cancellation token. This mirrors the
+  // server-side bearer-token gate without exposing links in the RSVP response.
   if (!supabaseUrl || !anonKey) {
+    const participant = localRsvpParticipants.find(
+      item => item.id === input.reservationId && item.status === 'confirmed',
+    )
+    if (!participant || !input.cancellationToken ||
+      participant.cancellation_token !== input.cancellationToken) {
+      return {
+        status: 'error',
+        errorCode: 'UNAUTHORIZED',
+        message: 'A valid reservation token is required to retrieve this invitation.',
+      }
+    }
+    const game = communitySubmissions.pickup_games.find(item => item.id === participant.game_id)
+      || BASELINE_PICKUP_GAMES.find(item => item.id === participant.game_id)
+    if (!game?.whatsapp_group_url) {
+      return {
+        status: 'error',
+        errorCode: 'INVITE_UNAVAILABLE',
+        message: 'The WhatsApp invitation is not available for this match.',
+      }
+    }
     return {
-      status: 'error',
-      errorCode: 'INVITE_SERVICE_UNAVAILABLE',
-      message: 'WhatsApp invitations require a verified server reservation.',
+      status: 'success',
+      message: 'Invitation verified for this reservation.',
+      whatsappGroupUrl: game.whatsapp_group_url,
     }
   }
   try {
