@@ -6,6 +6,15 @@ import integrityMigrationSql from '../../../supabase/migrations/20261105084018_a
 import tokenHashMigrationSql from '../../../supabase/migrations/20261105084210_hash_rsvp_cancellation_tokens.sql?raw'
 
 describe('Pickup Game Participant Privacy & Security Architecture (Phase 1 & Phase 2)', () => {
+  beforeAll(async () => {
+    // These tests exercise the explicit local demo adapter, not a remote RPC.
+    // Keep backend credentials unset so configured-backend failures remain fail-closed.
+    vi.stubEnv('VITE_SUPABASE_URL', '')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '')
+    vi.resetModules()
+    publicClient = await import('./public-client')
+  })
+
   beforeEach(() => {
     publicClient.resetLocalRsvpSecurityState()
   })
