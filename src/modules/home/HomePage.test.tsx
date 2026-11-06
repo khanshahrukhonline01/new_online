@@ -35,6 +35,11 @@ describe('HomePage 5 core live-website sections', () => {
     expect(html).toContain('₹200/player')
     expect(html).toContain('/play')
 
+    // 4b. Free Sports Books & Tactical Manuals
+    expect(html).toContain('Sports Books — Free to Read Online')
+    expect(html).toContain('All Books in Learning Hub')
+    expect(html).toContain('Free to Read')
+
     // 5. Featured Training Institutions
     expect(html).toContain('Featured Training Institutions')
     expect(html).toContain('Accredited sports centers actively scouted on KhelGrid')

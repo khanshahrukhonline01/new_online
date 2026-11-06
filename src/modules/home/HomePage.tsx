@@ -18,6 +18,7 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 import { createBannerSvg } from './homeSvgBanners'
 import { HomeKhelChronicle } from './HomeKhelChronicle'
 import { METRO_16_CITIES } from '../../shared/components/citiesData'
+import FreeSportsBooksSection from './components/FreeSportsBooksSection'
 import './home.css'
 
 interface PickupGame {
@@ -1611,6 +1612,9 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
           ))}
         </div>
       </section>
+
+      {/* 7. FREE SPORTS BOOKS & COACHING MANUALS */}
+      <FreeSportsBooksSection onNavigate={onNavigate} />
 
       {/* Flagship Digital Tools for Athletes & Scouts */}
       <section className="focus-section home-explore-section" aria-labelledby="home-tools-heading">

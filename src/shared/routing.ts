@@ -44,6 +44,7 @@ const featurePages: Record<string, string> = {
   '/ipr-policy': 'IPR & Copyright Policy', '/cancellation-policy': 'Cancellation Policy',
   '/posh-policy': 'POSH Policy', '/editorial-policy': 'Editorial Policy',
   '/verification-policy': 'Verification Policy', '/correction-policy': 'Corrections Policy',
+  '/workplace-policy': 'Workplace & Anti-Harassment Policy',
   '/settings': 'Account Settings', '/notifications': 'Notifications', '/login': 'Login',
   '/signup': 'Create Account', '/forgot-password': 'Password Recovery', '/book': 'Venue Booking',
   '/profile': 'Athlete Profile', '/my-profile': 'My Profile', '/saved': 'Saved Items',
