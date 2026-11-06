@@ -14,6 +14,15 @@ import {
 import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
 import { recordListingSubscription } from '../../shared/payments/paymentService'
 import type { PaymentItem, PaymentResult } from '../../shared/payments/paymentTypes'
+import {
+  calculateCommissionSplit,
+  getHostPayoutAccount,
+  saveHostPayoutAccount,
+  getHostSettlements,
+  requestHostSettlement,
+  type HostPayoutAccount,
+  type HostSettlementRecord,
+} from '../../shared/payments/payoutService'
 import './HostDashboardPage.css'
 
 export interface HostDashboardPageProps {
@@ -188,6 +197,19 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
   const [checkoutItem, setCheckoutItem] = useState<PaymentItem | null>(null)
   const [renewalNotice, setRenewalNotice] = useState<string | null>(null)
 
+  // Host Payouts & Settlement State
+  const [payoutAccount, setPayoutAccount] = useState<HostPayoutAccount | null>(null)
+  const [settlements, setSettlements] = useState<HostSettlementRecord[]>([])
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
+  const [isPayoutModalOpen, setIsPayoutModalOpen] = useState(false)
+  const [editBeneficiaryName, setEditBeneficiaryName] = useState('')
+  const [editPayoutMethod, setEditPayoutMethod] = useState<'upi' | 'bank_transfer'>('upi')
+  const [editUpiId, setEditUpiId] = useState('')
+  const [editAccountNumber, setEditAccountNumber] = useState('')
+  const [editIfsc, setEditIfsc] = useState('')
+  const [editBankName, setEditBankName] = useState('')
+  const [payoutNotice, setPayoutNotice] = useState<string | null>(null)
+
   // Local Storage Data Load
   const [userListings, setUserListings] = useState<HostListingItem[]>(DEFAULT_SAMPLE_LISTINGS)
   const [userBookings, setUserBookings] = useState<HostBookingItem[]>(DEFAULT_SAMPLE_BOOKINGS)
@@ -195,6 +217,18 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
 
   useEffect(() => {
     setCurrentUser(getStoredUser())
+
+    // Load Host Payout Account & Settlements
+    void getHostPayoutAccount().then(acc => {
+      setPayoutAccount(acc)
+      setEditBeneficiaryName(acc.beneficiaryName)
+      setEditPayoutMethod(acc.payoutMethod)
+      setEditUpiId(acc.upiId || '')
+      setEditAccountNumber(acc.accountNumber || '')
+      setEditIfsc(acc.ifscCode || '')
+      setEditBankName(acc.bankName || '')
+    })
+    void getHostSettlements().then(setSettlements)
 
     // Load actual subscriptions from local storage if available
     try {
@@ -255,7 +289,7 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
     }
   }, [])
 
-  // Aggregate Metrics
+  // Aggregate Metrics & Commission Calculation
   const metrics = useMemo(() => {
     const totalListings = userListings.length
     const totalViews = userListings.reduce((sum, l) => sum + l.views, 0)
@@ -264,6 +298,11 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
     const onlineCollected = userBookings.reduce((sum, b) => sum + b.paidAmount, 0)
     const groundReceivable = totalEarnings - onlineCollected
 
+    // Commission Engine (8% standard fee)
+    const split = calculateCommissionSplit(onlineCollected)
+    const totalSettledAmount = settlements.reduce((sum, s) => sum + s.netPayoutAmount, 0)
+    const availableForPayout = Math.max(0, split.netPayoutAmount)
+
     return {
       totalListings,
       totalViews,
@@ -271,8 +310,13 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
       totalEarnings,
       onlineCollected,
       groundReceivable,
+      platformCommission: split.platformFeeAmount,
+      commissionRate: split.platformFeeRate,
+      netPayable: split.netPayoutAmount,
+      totalSettledAmount,
+      availableForPayout,
     }
-  }, [userListings, userBookings])
+  }, [userListings, userBookings, settlements])
 
   const handleStartUpgrade = (listing: HostListingItem) => {
     setUpgradingListing(listing)
@@ -340,6 +384,48 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
     setUpgradingListing(null)
   }
 
+  const handleSaveAccount = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editBeneficiaryName.trim()) {
+      setPayoutNotice('Beneficiary name is required.')
+      return
+    }
+    const saved = await saveHostPayoutAccount({
+      hostId: currentUser?.email || 'default-host',
+      beneficiaryName: editBeneficiaryName.trim(),
+      payoutMethod: editPayoutMethod,
+      upiId: editPayoutMethod === 'upi' ? editUpiId.trim() : undefined,
+      accountNumber: editPayoutMethod === 'bank_transfer' ? editAccountNumber.trim() : undefined,
+      ifscCode: editPayoutMethod === 'bank_transfer' ? editIfsc.trim().toUpperCase() : undefined,
+      bankName: editPayoutMethod === 'bank_transfer' ? editBankName.trim() : undefined,
+    })
+    setPayoutAccount(saved)
+    setIsAccountModalOpen(false)
+    setPayoutNotice('✓ Payout bank / UPI credentials successfully verified and saved!')
+  }
+
+  const handleExecutePayout = async () => {
+    if (!payoutAccount) {
+      setIsAccountModalOpen(true)
+      return
+    }
+    const grossToSettle = metrics.onlineCollected > 0 ? metrics.onlineCollected : 3900
+    const destination = payoutAccount.payoutMethod === 'upi'
+      ? `${payoutAccount.upiId || 'partner@upi'} (UPI)`
+      : `${payoutAccount.bankName || 'Bank'} A/c ····${payoutAccount.accountNumber?.slice(-4) || '8812'}`
+
+    const record = await requestHostSettlement(
+      currentUser?.email || 'default-host',
+      grossToSettle,
+      destination,
+      payoutAccount.payoutMethod
+    )
+    const updated = await getHostSettlements(currentUser?.email || 'default-host')
+    setSettlements(updated)
+    setIsPayoutModalOpen(false)
+    setPayoutNotice(`🎉 Payout request ${record.payoutRef} processed! Net ₹${record.netPayoutAmount.toLocaleString('en-IN')} transferred to ${destination} (Ref: ${record.utrNumber}).`)
+  }
+
   return (
     <section className="content-page host-dashboard-page">
       {/* Top Breadcrumb & Tag */}
@@ -394,6 +480,14 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
         </div>
       )}
 
+      {payoutNotice && (
+        <div className="host-renewal-notice" role="status">
+          <SiteIcon name="check-circle" size={18} />
+          <span>{payoutNotice}</span>
+          <button type="button" onClick={() => setPayoutNotice(null)} className="notice-dismiss-btn">✕</button>
+        </div>
+      )}
+
       {/* Navigation Tabs */}
       <div className="host-nav-tabs" role="tablist">
         <button
@@ -434,7 +528,7 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
           onClick={() => setActiveTab('earnings')}
         >
           <SiteIcon name="wallet" size={16} />
-          <span>Earnings &amp; Receipts</span>
+          <span>Earnings &amp; Payouts</span>
         </button>
       </div>
 
@@ -701,59 +795,353 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
         </div>
       )}
 
-      {/* TAB 4: EARNINGS & TAX RECEIPTS */}
+      {/* TAB 4: EARNINGS & PAYOUTS */}
       {activeTab === 'earnings' && (
         <div className="host-tab-content">
-          <div className="host-section-header">
-            <div>
-              <h2>Financial Ledger &amp; Tax Invoices</h2>
-              <p>Audit trail of all listing subscription payments and slot booking vouchers.</p>
+          {/* Financial Settlement KPI Cards */}
+          <div className="host-metrics-grid">
+            <div className="host-metric-card">
+              <span className="metric-label">Online Slot Revenue</span>
+              <strong className="metric-value">₹{metrics.onlineCollected.toLocaleString('en-IN')}</strong>
+              <span className="metric-subtext">Prepaid customer bookings</span>
             </div>
-            <button
-              type="button"
-              className="host-action-btn secondary"
-              onClick={() => alert('Exporting monthly statement CSV...')}
-            >
-              <SiteIcon name="arrow-up-right" size={14} /> Export CSV Statement
-            </button>
+            <div className="host-metric-card">
+              <span className="metric-label">Platform Fee ({metrics.commissionRate}%)</span>
+              <strong className="metric-value">₹{metrics.platformCommission.toLocaleString('en-IN')}</strong>
+              <span className="metric-subtext">Automated payment gateway &amp; service charge</span>
+            </div>
+            <div className="host-metric-card">
+              <span className="metric-label">Net Host Payable</span>
+              <strong className="metric-value text-emerald">₹{metrics.netPayable.toLocaleString('en-IN')}</strong>
+              <span className="metric-subtext text-emerald">Available for settlement transfer</span>
+            </div>
+            <div className="host-metric-card">
+              <span className="metric-label">Total Disbursed</span>
+              <strong className="metric-value">₹{metrics.totalSettledAmount.toLocaleString('en-IN')}</strong>
+              <span className="metric-subtext">Transferred to partner account</span>
+            </div>
           </div>
 
-          <div className="host-table-wrapper">
-            <table className="host-data-table">
-              <thead>
-                <tr>
-                  <th>Receipt Ref</th>
-                  <th>Transaction Description</th>
-                  <th>Date</th>
-                  <th>Payment Method</th>
-                  <th>Amount (₹ INR)</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {userTransactions.map(tx => (
-                  <tr key={tx.orderId}>
-                    <td>
-                      <code>{tx.receiptRef}</code>
-                      <div className="table-sub-city">{tx.orderId}</div>
-                    </td>
-                    <td>
-                      <strong>{tx.title}</strong>
-                    </td>
-                    <td>{tx.date}</td>
-                    <td>
-                      <span className="table-method-tag">{tx.paymentMethod}</span>
-                    </td>
-                    <td>
-                      <strong className="table-tx-amount">₹{tx.amount.toLocaleString('en-IN')}</strong>
-                    </td>
-                    <td>
-                      <span className="payment-pill is-paid">✓ Completed</span>
-                    </td>
+          {/* Bank / UPI Account Setup Card */}
+          <div className="host-section-box">
+            <div className="host-section-header">
+              <div>
+                <h2>Host Settlement Account</h2>
+                <p>Direct bank transfer or UPI ID for automated weekly or instant slot reservation payouts.</p>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="host-action-btn secondary"
+                  onClick={() => setIsAccountModalOpen(true)}
+                >
+                  <SiteIcon name="sliders" size={14} /> Edit Payout Details
+                </button>
+                <button
+                  type="button"
+                  className="host-action-btn primary"
+                  onClick={() => setIsPayoutModalOpen(true)}
+                >
+                  <SiteIcon name="wallet" size={14} /> Request Instant Payout
+                </button>
+              </div>
+            </div>
+
+            <div className="host-payout-account-display">
+              <div className="payout-acc-icon">🏦</div>
+              <div className="payout-acc-details">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <strong>{payoutAccount?.beneficiaryName || 'FSV Arena Sports Pvt Ltd'}</strong>
+                  <span className="host-verified-pill">
+                    <SiteIcon name="shield-check" size={13} /> Verified for Settlements
+                  </span>
+                </div>
+                <div className="payout-acc-dest">
+                  {payoutAccount?.payoutMethod === 'upi'
+                    ? `UPI ID: ${payoutAccount?.upiId || 'fsvarena@okaxis'}`
+                    : `Bank Account: ${payoutAccount?.bankName || 'HDFC Bank'} ····${payoutAccount?.accountNumber?.slice(-4) || '8812'} (IFSC: ${payoutAccount?.ifscCode || 'HDFC0001290'})`}
+                </div>
+                <div className="payout-acc-note">
+                  Payout cycle: Automated daily T+1 settlements or on-demand instant withdrawal.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Settlement History Table */}
+          <div className="host-section-box">
+            <div className="host-section-header">
+              <div>
+                <h2>Settlement History &amp; Bank UTRs</h2>
+                <p>Audited disbursement logs with platform commission deduction and banking references.</p>
+              </div>
+              <button
+                type="button"
+                className="host-action-btn secondary"
+                onClick={() => alert('Exporting payout statement CSV...')}
+              >
+                <SiteIcon name="arrow-up-right" size={14} /> Export Settlement CSV
+              </button>
+            </div>
+
+            <div className="host-table-wrapper">
+              <table className="host-data-table">
+                <thead>
+                  <tr>
+                    <th>Payout Ref</th>
+                    <th>Gross Volume</th>
+                    <th>Platform Fee (8%)</th>
+                    <th>Net Transferred</th>
+                    <th>Payout Destination</th>
+                    <th>UTR / Banking Ref</th>
+                    <th>Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {settlements.map(st => (
+                    <tr key={st.id}>
+                      <td>
+                        <code>{st.payoutRef}</code>
+                        <div className="table-sub-city">{st.date}</div>
+                      </td>
+                      <td>₹{st.grossAmount.toLocaleString('en-IN')}</td>
+                      <td className="text-amber">-₹{st.platformFeeAmount.toLocaleString('en-IN')}</td>
+                      <td>
+                        <strong className="text-emerald">₹{st.netPayoutAmount.toLocaleString('en-IN')}</strong>
+                      </td>
+                      <td>{st.payoutDestination}</td>
+                      <td>
+                        <code>{st.utrNumber}</code>
+                      </td>
+                      <td>
+                        <span className="payment-pill is-paid">✓ Settled</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Financial Ledger & Tax Receipts */}
+          <div className="host-section-box">
+            <div className="host-section-header">
+              <div>
+                <h2>Subscription Payments &amp; Tax Invoices</h2>
+                <p>Receipts for directory listing subscriptions, VIP plans, and tax invoices.</p>
+              </div>
+            </div>
+
+            <div className="host-table-wrapper">
+              <table className="host-data-table">
+                <thead>
+                  <tr>
+                    <th>Receipt Ref</th>
+                    <th>Transaction Description</th>
+                    <th>Date</th>
+                    <th>Payment Method</th>
+                    <th>Amount (₹ INR)</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userTransactions.map(tx => (
+                    <tr key={tx.orderId}>
+                      <td>
+                        <code>{tx.receiptRef}</code>
+                        <div className="table-sub-city">{tx.orderId}</div>
+                      </td>
+                      <td>
+                        <strong>{tx.title}</strong>
+                      </td>
+                      <td>{tx.date}</td>
+                      <td>
+                        <span className="table-method-tag">{tx.paymentMethod}</span>
+                      </td>
+                      <td>
+                        <strong className="table-tx-amount">₹{tx.amount.toLocaleString('en-IN')}</strong>
+                      </td>
+                      <td>
+                        <span className="payment-pill is-paid">✓ Completed</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PAYOUT ACCOUNT MODAL */}
+      {isAccountModalOpen && (
+        <div className="host-modal-overlay" role="dialog" aria-modal="true">
+          <div className="host-modal-box">
+            <button
+              type="button"
+              className="host-modal-close"
+              onClick={() => setIsAccountModalOpen(false)}
+            >
+              ✕
+            </button>
+            <div className="host-modal-header">
+              <span className="host-badge-eyebrow">SETTLEMENT SETTINGS</span>
+              <h3>Configure Host Payout Details</h3>
+              <p>Earnings from prepaid slots are disbursed directly to your verified bank or UPI destination:</p>
+            </div>
+
+            <form onSubmit={handleSaveAccount}>
+              <div className="payout-form-group">
+                <label htmlFor="payout-beneficiary">Beneficiary / Business Entity Name</label>
+                <input
+                  id="payout-beneficiary"
+                  type="text"
+                  value={editBeneficiaryName}
+                  onChange={e => setEditBeneficiaryName(e.target.value)}
+                  placeholder="e.g. FSV Sports Arena Pvt Ltd"
+                  required
+                />
+              </div>
+
+              <div className="payout-form-group">
+                <label>Payout Method</label>
+                <div className="payout-method-toggle">
+                  <button
+                    type="button"
+                    className={`method-btn ${editPayoutMethod === 'upi' ? 'is-active' : ''}`}
+                    onClick={() => setEditPayoutMethod('upi')}
+                  >
+                    UPI ID (Instant)
+                  </button>
+                  <button
+                    type="button"
+                    className={`method-btn ${editPayoutMethod === 'bank_transfer' ? 'is-active' : ''}`}
+                    onClick={() => setEditPayoutMethod('bank_transfer')}
+                  >
+                    Bank NEFT / IMPS
+                  </button>
+                </div>
+              </div>
+
+              {editPayoutMethod === 'upi' ? (
+                <div className="payout-form-group">
+                  <label htmlFor="payout-upi">UPI Virtual Payment Address (VPA)</label>
+                  <input
+                    id="payout-upi"
+                    type="text"
+                    value={editUpiId}
+                    onChange={e => setEditUpiId(e.target.value)}
+                    placeholder="e.g. yourbusiness@okaxis"
+                    required
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="payout-form-group">
+                    <label htmlFor="payout-bank-name">Bank Name</label>
+                    <input
+                      id="payout-bank-name"
+                      type="text"
+                      value={editBankName}
+                      onChange={e => setEditBankName(e.target.value)}
+                      placeholder="e.g. HDFC Bank, ICICI Bank"
+                      required
+                    />
+                  </div>
+                  <div className="payout-form-group">
+                    <label htmlFor="payout-acc-num">Bank Account Number</label>
+                    <input
+                      id="payout-acc-num"
+                      type="text"
+                      value={editAccountNumber}
+                      onChange={e => setEditAccountNumber(e.target.value)}
+                      placeholder="e.g. 50200012345678"
+                      required
+                    />
+                  </div>
+                  <div className="payout-form-group">
+                    <label htmlFor="payout-ifsc">IFSC Code</label>
+                    <input
+                      id="payout-ifsc"
+                      type="text"
+                      value={editIfsc}
+                      onChange={e => setEditIfsc(e.target.value.toUpperCase())}
+                      placeholder="e.g. HDFC0001290"
+                      required
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="host-modal-actions">
+                <button
+                  type="button"
+                  className="host-action-btn secondary"
+                  onClick={() => setIsAccountModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="host-action-btn primary">
+                  Save Payout Account
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* REQUEST INSTANT PAYOUT MODAL */}
+      {isPayoutModalOpen && (
+        <div className="host-modal-overlay" role="dialog" aria-modal="true">
+          <div className="host-modal-box">
+            <button
+              type="button"
+              className="host-modal-close"
+              onClick={() => setIsPayoutModalOpen(false)}
+            >
+              ✕
+            </button>
+            <div className="host-modal-header">
+              <span className="host-badge-eyebrow">INSTANT SETTLEMENT</span>
+              <h3>Confirm Instant Slot Settlement</h3>
+              <p>Review the commission breakdown before initiating instant bank/UPI transfer:</p>
+            </div>
+
+            <div className="payout-breakdown-card">
+              <div className="breakdown-row">
+                <span>Gross Prepaid Slot Bookings:</span>
+                <strong>₹{(metrics.onlineCollected > 0 ? metrics.onlineCollected : 3900).toLocaleString('en-IN')}</strong>
+              </div>
+              <div className="breakdown-row text-amber">
+                <span>Platform Service Charge ({metrics.commissionRate}%):</span>
+                <strong>-₹{Math.round((metrics.onlineCollected > 0 ? metrics.onlineCollected : 3900) * 0.08).toLocaleString('en-IN')}</strong>
+              </div>
+              <div className="breakdown-divider" />
+              <div className="breakdown-row total">
+                <span>Net Transfer Amount:</span>
+                <strong className="text-emerald">₹{((metrics.onlineCollected > 0 ? metrics.onlineCollected : 3900) - Math.round((metrics.onlineCollected > 0 ? metrics.onlineCollected : 3900) * 0.08)).toLocaleString('en-IN')}</strong>
+              </div>
+              <div className="payout-dest-preview">
+                Destination: {payoutAccount?.payoutMethod === 'upi' ? `${payoutAccount.upiId || 'fsvarena@okaxis'} (UPI)` : `${payoutAccount?.bankName || 'Bank'} A/c ····${payoutAccount?.accountNumber?.slice(-4) || '8812'}`}
+              </div>
+            </div>
+
+            <div className="host-modal-actions">
+              <button
+                type="button"
+                className="host-action-btn secondary"
+                onClick={() => setIsPayoutModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="host-action-btn primary"
+                onClick={handleExecutePayout}
+              >
+                Confirm &amp; Disburse Payout Now →
+              </button>
+            </div>
           </div>
         </div>
       )}

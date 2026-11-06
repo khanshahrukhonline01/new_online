@@ -21,7 +21,7 @@ describe('HostDashboardPage Partner & Host Hub', () => {
     expect(html).toContain('Overview')
     expect(html).toContain('My Listings &amp; Plans')
     expect(html).toContain('Slot Bookings')
-    expect(html).toContain('Earnings &amp; Receipts')
+    expect(html).toContain('Earnings &amp; Payouts')
 
     // Metric cards
     expect(html).toContain('Active Listings')

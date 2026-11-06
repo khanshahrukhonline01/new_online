@@ -51,3 +51,21 @@ export interface FanPollVote {
   teamBCount: number;
   userVotedTeam?: 'A' | 'B';
 }
+
+export interface MatchEvent {
+  id: string;
+  time: string;
+  type: 'runs' | 'wicket' | 'extra' | 'goal' | 'card' | 'commentary' | 'status_change';
+  text: string;
+  runs?: number;
+  isWicket?: boolean;
+}
+
+export interface CommunityLiveMatch extends SportsMatch {
+  isCommunityMatch: true;
+  city: string;
+  venue: string;
+  hostName: string;
+  hostPhone?: string;
+  commentaryTimeline: MatchEvent[];
+}

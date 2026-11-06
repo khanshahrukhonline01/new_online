@@ -10,6 +10,7 @@ import { CitySportsGateway } from './components/CitySportsGateway';
 import { MatchCard } from './components/MatchCard';
 import { MatchDetailModal } from './components/MatchDetailModal';
 import { FloatingScoreTicker } from './components/FloatingScoreTicker';
+import { ScorekeeperModal } from './components/ScorekeeperModal';
 import './live-scores.css';
 
 const REFRESH_INTERVAL_SEC = 15;
@@ -40,6 +41,7 @@ export default function LiveScoresPage({ onNavigate }: LiveScoresPageProps) {
   const [isLiveFeedConnected, setIsLiveFeedConnected] = useState(false);
   const [activeModalMatch, setActiveModalMatch] = useState<SportsMatch | null>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
+  const [isScorekeeperOpen, setIsScorekeeperOpen] = useState(false);
 
   // Sound toggle (persistent)
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
@@ -288,6 +290,16 @@ export default function LiveScoresPage({ onNavigate }: LiveScoresPageProps) {
 
             <button
               type="button"
+              onClick={() => setIsScorekeeperOpen(true)}
+              className="live-btn is-scorekeeper"
+              title="Host Scorekeeper Console — Broadcast live match scores"
+            >
+              <SiteIcon name="activity" size={14} />
+              <span>⚡ Host Scorekeeper</span>
+            </button>
+
+            <button
+              type="button"
               onClick={toggleSound}
               className={`live-btn ${soundEnabled ? 'is-active' : ''}`}
               title={soundEnabled ? 'Mute sound alerts' : 'Enable audio chime on score updates'}
@@ -518,6 +530,13 @@ export default function LiveScoresPage({ onNavigate }: LiveScoresPageProps) {
         match={activeModalMatch}
         onClose={() => setActiveModalMatch(null)}
         onNavigate={onNavigate}
+      />
+
+      {/* SCOREKEEPER CONSOLE MODAL */}
+      <ScorekeeperModal
+        isOpen={isScorekeeperOpen}
+        onClose={() => setIsScorekeeperOpen(false)}
+        onMatchUpdated={() => void loadScores(true)}
       />
 
       {/* 12. FLOATING STICKY MINI-SCOREBOARD */}
