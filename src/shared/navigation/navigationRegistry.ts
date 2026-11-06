@@ -89,7 +89,7 @@ export const navigationModules: NavigationModule[] = [
     icon: 'globe',
     items: [
       { id: 'trust', label: 'Trust Center', href: '/trust', icon: 'shield-check', module: 'network', available: true },
-      { id: 'pricing', label: 'Pricing & Memberships', href: '/pricing', icon: 'wallet', module: 'network' },
+      { id: 'pricing', label: 'Pricing & Memberships', href: '/pricing', icon: 'wallet', module: 'network', available: true },
       { id: 'partners', label: 'Partner with KhelGrid', href: '/partners', icon: 'building', module: 'network' },
       { id: 'careers', label: 'Careers', href: '/careers', icon: 'users', module: 'network' },
       { id: 'about', label: 'About KhelGrid', href: '/about', icon: 'info', module: 'network', available: true },

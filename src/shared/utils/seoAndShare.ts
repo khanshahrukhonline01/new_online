@@ -159,6 +159,16 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
     }
   }
 
+  if (cleanPath === '/pricing' || cleanPath === '/memberships' || cleanPath === '/pro') {
+    return {
+      title: "Pricing & Memberships · KhelGrid (खेलग्रिड सदस्यता व शुल्क)",
+      description: "Simple, transparent sports memberships for athletes, sports academies, turf venues, and trial organizers across India. Unlock verified scout badges, admissions CRM, and 0% booking commission.",
+      canonicalUrl: 'https://khelgrid.com/pricing',
+      keywords: ['sports membership india', 'khelgrid pro athlete', 'academy listing pricing', 'turf booking zero commission', 'trial boost price', 'खेलग्रिड मेम्बरशिप', ...DEFAULT_KEYWORDS],
+      ogType: 'website'
+    }
+  }
+
   // Fallback for other standard pages
   const label = cleanPath.slice(1).replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
   return {
