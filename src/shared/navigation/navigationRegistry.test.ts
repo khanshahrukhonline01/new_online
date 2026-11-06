@@ -31,6 +31,7 @@ describe('shared navigation registry', () => {
       expect(primaryNavigation.find(item => item.href === href)?.available).not.toBe(true)
     }
     expect(primaryNavigation.find(item => item.href === '/talent-scanner')?.available).toBe(true)
+    expect(primaryNavigation.find(item => item.href === '/learning')?.available).toBe(true)
   })
 
   it('keeps destinations unique across the complete sidebar', () => {

@@ -75,7 +75,7 @@ export const navigationModules: NavigationModule[] = [
     label: 'Learn & Community',
     icon: 'file-text',
     items: [
-      { id: 'learning-hub', label: 'Sports Learning Hub', href: '/learning', icon: 'sports', module: 'learn-community' },
+      { id: 'learning-hub', label: 'Sports Learning Hub', href: '/learning', icon: 'book-open', module: 'learn-community', available: true },
       { id: 'guides', label: 'Sports Guides', href: '/guides', icon: 'file-text', module: 'learn-community' },
       { id: 'ai-guide', label: 'AI Sports Guide', href: '/ai-guide', icon: 'activity', module: 'learn-community' },
       { id: 'khelchronicle', label: 'KhelChronicle Research', href: '/khelchronicle', icon: 'award', module: 'learn-community', available: true },

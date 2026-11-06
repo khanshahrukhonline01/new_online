@@ -22,6 +22,7 @@ function isActive(item: NavigationItem, activePath: string) {
   if (item.href === '/khelchronicle') return activePath.startsWith('/khelchronicle') || activePath.startsWith('/chronicle')
   if (item.href === '/play') return activePath === '/play' || activePath.startsWith('/play/')
   if (item.href === '/live') return activePath === '/live' || activePath === '/live-scores' || activePath.startsWith('/live/')
+  if (item.href === '/learning') return activePath === '/learning' || activePath === '/learning-hub' || activePath.startsWith('/learning/')
   return activePath === item.href || activePath.startsWith(item.href + '/')
 }
 
