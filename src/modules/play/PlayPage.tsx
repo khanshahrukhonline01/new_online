@@ -4,6 +4,7 @@ import { AsyncState } from '../../shared/components/AsyncState'
 import {
   getPickupGames,
   joinPickupGame,
+  getPickupGameWhatsAppInvite,
   getUserRsvpGameIds,
   getStoredUser,
 } from '../../integrations/supabase/public-client'
@@ -16,7 +17,7 @@ import { createBannerSvg } from '../home/homeSvgBanners'
 import { COMMUNITY_PICKUP_GAMES, type PickupGame } from './pickupData'
 import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
 import { parseInrPrice } from '../../shared/payments/paymentService'
-import type { PaymentItem, PaymentResult } from '../../shared/payments/paymentTypes'
+import type { PaymentItem } from '../../shared/payments/paymentTypes'
 import './PlayPage.css'
 
 export interface PlayPageProps {
@@ -45,6 +46,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
     game: PickupGame
     whatsappGroupUrl?: string | null
     participantName: string
+    invitePending?: boolean
   } | null>(null)
   const [checkoutItem, setCheckoutItem] = useState<PaymentItem | null>(null)
 
@@ -152,7 +154,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
     setRsvpError('')
   }
 
-  const executeBooking = async (name: string, phone?: string, _paymentId?: string) => {
+  const executeBooking = async (name: string, phone?: string) => {
     if (!rsvpModalGame) return
     setRsvpSubmitting(true)
     setRsvpError('')
@@ -166,16 +168,32 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
 
       if (res.status === 'confirmed') {
         setJoinedGameIds(prev => new Set(prev).add(rsvpModalGame.id))
-        if (res.whatsappGroupUrl) {
-          setConfirmedWhatsappUrls(prev => ({
-            ...prev,
-            [rsvpModalGame.id]: res.whatsappGroupUrl!,
-          }))
+
+        // Retrieve the invitation through the protected endpoint. The RSVP
+        // response itself must never contain a WhatsApp group URL.
+        let inviteUrl: string | null = null
+        let invitePending = false
+        if (res.participantId && res.cancellationToken) {
+          const invite = await getPickupGameWhatsAppInvite({
+            reservationId: res.participantId,
+            cancellationToken: res.cancellationToken,
+          })
+          if (invite.status === 'success' && invite.whatsappGroupUrl) {
+            inviteUrl = invite.whatsappGroupUrl
+            setConfirmedWhatsappUrls(prev => ({
+              ...prev,
+              [rsvpModalGame.id]: invite.whatsappGroupUrl!,
+            }))
+          } else if (invite.status === 'pending_approval') {
+            invitePending = true
+          }
         }
+
         setRsvpSuccess({
           game: rsvpModalGame,
-          whatsappGroupUrl: res.whatsappGroupUrl || null,
+          whatsappGroupUrl: inviteUrl,
           participantName: name,
+          invitePending,
         })
         markLiveUpdated(rsvpModalGame.id)
 
@@ -243,9 +261,9 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
     await executeBooking(name, rsvpPhone.trim() || undefined)
   }
 
-  const handlePaymentSuccess = (paymentResult: PaymentResult) => {
+  const handlePaymentSuccess = () => {
     setCheckoutItem(null)
-    executeBooking(rsvpName.trim(), rsvpPhone.trim() || undefined, paymentResult.paymentId)
+    executeBooking(rsvpName.trim(), rsvpPhone.trim() || undefined)
   }
 
   const records = useMemo<PickupGame[]>(() => {
@@ -513,9 +531,9 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
                               <span className="play-badge-confirmed">
                                 <SiteIcon name="check" size={12} /> {t('confirmed', 'Confirmed')}
                               </span>
-                              {(confirmedWhatsappUrls[game.id] || game.whatsappGroupUrl) && (
+                              {confirmedWhatsappUrls[game.id] && (
                                 <a
-                                  href={confirmedWhatsappUrls[game.id] || game.whatsappGroupUrl}
+                                  href={confirmedWhatsappUrls[game.id]}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="play-whatsapp-btn"
@@ -597,6 +615,18 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
                     Your spot is locked at <strong>{rsvpSuccess.game.venueName}</strong>, {rsvpSuccess.game.city}.
                   </p>
                 </div>
+
+                {rsvpSuccess.invitePending && (
+                  <div className="play-whatsapp-unlock-card" role="status">
+                    <h4>
+                      <SiteIcon name="message-circle" size={18} />
+                      <span>WhatsApp invitation pending approval</span>
+                    </h4>
+                    <p>
+                      Your reservation is confirmed. The host must approve your invitation, or your phone number must be verified, before the private group link can be shared.
+                    </p>
+                  </div>
+                )}
 
                 {rsvpSuccess.whatsappGroupUrl && (
                   <div className="play-whatsapp-unlock-card">
