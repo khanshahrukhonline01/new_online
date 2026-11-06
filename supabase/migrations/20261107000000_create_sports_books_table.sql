@@ -1,4 +1,6 @@
 -- Migration: Create sports_books table for dynamic open-access athlete manuals and tactical coaching books
+BEGIN;
+
 create table if not exists public.sports_books (
   id text primary key,
   title text not null,
@@ -231,3 +233,5 @@ on conflict (id) do update set
   description = excluded.description,
   highlights = excluded.highlights,
   updated_at = now();
+
+COMMIT;
