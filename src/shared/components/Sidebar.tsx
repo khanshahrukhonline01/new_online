@@ -163,17 +163,44 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
     </aside>
     <div ref={drawerRef} id="mobile-sidebar-drawer" className={open ? 'mobile-drawer is-open' : 'mobile-drawer'} aria-hidden={!open} role="dialog" aria-modal={open ? 'true' : undefined} aria-label="Mobile navigation">
       <div className="mobile-drawer-header">
-        {onOpenIntake && (
-          <button
-            type="button"
-            className="sidebar-mobile-add-btn"
-            onClick={() => { onClose(); onOpenIntake() }}
-          >
-            <SiteIcon name="plus" size={15} />
-            <span>{t('listOnKhelgrid', { ns: 'common', defaultValue: '+ List on KhelGrid' })}</span>
-          </button>
-        )}
-        <button ref={closeRef} className="sidebar-mobile-close" type="button" onClick={() => { onClose(); toggleRef.current?.focus() }} aria-label="Close navigation"><SiteIcon name="close" size={20} /></button>
+        <a href="/" className="mobile-drawer-brand" onClick={event => { onNavigate(event, '/'); onClose() }} aria-label="KhelGrid home">
+          <img src="/assets/kg-logo.webp" alt="" className="mobile-drawer-logo" width="26" height="26" />
+          <span className="mobile-drawer-brand-name">KHELGRID</span>
+        </a>
+        <div className="mobile-drawer-actions">
+          {onOpenIntake && (
+            <button
+              type="button"
+              className="sidebar-mobile-add-btn"
+              onClick={() => { onClose(); onOpenIntake() }}
+              title={t('listOnKhelgrid', { ns: 'common', defaultValue: '+ List on KhelGrid' })}
+              aria-label={t('listOnKhelgrid', { ns: 'common', defaultValue: '+ List on KhelGrid' })}
+            >
+              <SiteIcon name="plus" size={14} />
+              <span>{t('listOnKhelgrid', { ns: 'common', defaultValue: '+ List on KhelGrid' })}</span>
+            </button>
+          )}
+          <button ref={closeRef} className="sidebar-mobile-close" type="button" onClick={() => { onClose(); toggleRef.current?.focus() }} aria-label="Close navigation"><SiteIcon name="close" size={20} /></button>
+        </div>
+      </div>
+      <div className="mobile-drawer-quick-nav" aria-label="Quick navigation links">
+        <a href="/live" className={`mobile-quick-chip ${activePath === '/live' || activePath.startsWith('/live/') ? 'is-active' : ''}`} onClick={e => { onNavigate(e, '/live'); onClose() }}>
+          <span className="quick-chip-live-dot" aria-hidden="true" />
+          <SiteIcon name="activity" size={13} />
+          <span>Live Scores</span>
+        </a>
+        <a href="/learning" className={`mobile-quick-chip ${activePath === '/learning' || activePath.startsWith('/learning/') ? 'is-active' : ''}`} onClick={e => { onNavigate(e, '/learning'); onClose() }}>
+          <SiteIcon name="book-open" size={13} />
+          <span>Learning Hub</span>
+        </a>
+        <a href="/opportunities" className={`mobile-quick-chip ${activePath === '/opportunities' || activePath.startsWith('/opportunities/') ? 'is-active' : ''}`} onClick={e => { onNavigate(e, '/opportunities'); onClose() }}>
+          <SiteIcon name="opportunities" size={13} />
+          <span>Trials</span>
+        </a>
+        <a href="/play" className={`mobile-quick-chip ${activePath === '/play' || activePath.startsWith('/play/') ? 'is-active' : ''}`} onClick={e => { onNavigate(e, '/play'); onClose() }}>
+          <SiteIcon name="sports" size={13} />
+          <span>Find Games</span>
+        </a>
       </div>
       <nav className="sidebar-navigation" aria-label="Mobile feature navigation">{renderSections(true)}</nav>
       <div className="sidebar-promo"><strong>{t('promoTitle', 'Build your athlete profile')}</strong><p>{t('promoText', 'Create a Sports CV and prepare a profile-ready PDF on your device.')}</p><a href="/sports-cv" onClick={event => { onNavigate(event, '/sports-cv'); onClose() }}>{t('openSportsCv', 'Open Sports CV')} <SiteIcon name="arrow-up-right" size={13} /></a></div>
