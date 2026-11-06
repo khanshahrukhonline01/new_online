@@ -31,7 +31,7 @@ const khelchronicleCategories = new Set([
   'sports-policy',
 ])
 const featurePages: Record<string, string> = {
-  '/dashboard': 'My Dashboard', '/live': 'Live Scores', '/live-scores': 'Live Scores', '/play': 'Play · Find Games',
+  '/dashboard': 'My Dashboard', '/host': 'Host & Partner Dashboard', '/partner-dashboard': 'Host & Partner Dashboard', '/live': 'Live Scores', '/live-scores': 'Live Scores', '/play': 'Play · Find Games',
   '/coaches': 'Coaches Directory', '/events': 'Events & Tournaments',
   '/stats': 'Athlete Statistics', '/sports-cv': 'Sports CV Wizard', '/talent-scanner': 'Talent Scanner',
   '/scout-portal': 'Scout Portal', '/verification': 'Athlete Verification',
@@ -47,7 +47,7 @@ const featurePages: Record<string, string> = {
   '/settings': 'Account Settings', '/notifications': 'Notifications', '/login': 'Login',
   '/signup': 'Create Account', '/forgot-password': 'Password Recovery', '/book': 'Venue Booking',
   '/profile': 'Athlete Profile', '/my-profile': 'My Profile', '/saved': 'Saved Items',
-  '/referrals': 'Referrals', '/help': 'Help & Support', '/submit-listing': 'Suggest a Listing',
+  '/referrals': 'Referrals', '/help': 'Help & Support', '/help-feedback': 'Help & Feedback', '/submit-listing': 'Suggest a Listing',
   '/start-from-zero': 'Start From Zero — Sports CV',
 }
 

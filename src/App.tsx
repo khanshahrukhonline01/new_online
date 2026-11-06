@@ -14,6 +14,7 @@ import type { CommunityListingCategory } from './integrations/supabase/public-cl
 import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAndShare'
 
 // Code-split route components via React.lazy()
+const HelpFeedbackPage = lazy(() => import('./modules/help/HelpFeedbackPage'))
 const PlayPage = lazy(() => import('./modules/play/PlayPage'))
 const SportsCvWizard = lazy(() => import('./modules/sports-cv/SportsCvWizard'))
 const OpportunitiesPage = lazy(() => import('./modules/opportunities/OpportunitiesPage'))
@@ -40,6 +41,7 @@ const KhelChroniclePaperPage = lazy(() => import('./modules/khelchronicle/KhelCh
 const KhelChronicleCategoryPage = lazy(() => import('./modules/khelchronicle/KhelChronicleCategoryPage'))
 const KhelChronicleAuthorPage = lazy(() => import('./modules/khelchronicle/KhelChronicleAuthorPage'))
 const KhelChronicleSubmitPage = lazy(() => import('./modules/khelchronicle/KhelChronicleSubmitPage'))
+const HostDashboardPage = lazy(() => import('./modules/host/HostDashboardPage'))
 
 // Code-split heavyweight modal dialogs
 const CommunityListingModal = lazy(() => import('./shared/components/CommunityListingModal'))
@@ -167,7 +169,9 @@ export default function App() {
     case 'khelchronicle-author': page = <KhelChronicleAuthorPage authorSlug={match.author} onNavigate={navigate} />; break
     case 'khelchronicle-paper': page = <KhelChroniclePaperPage slug={match.slug} onNavigate={navigate} />; break
     case 'feature':
-      if (match.canonicalPath === '/sports-cv') page = <SportsCvWizard />
+      if (match.canonicalPath === '/dashboard' || match.canonicalPath === '/host' || match.canonicalPath === '/partner-dashboard') page = <HostDashboardPage onNavigate={navigate} onOpenIntake={openIntake} />
+      else if (match.canonicalPath === '/help-feedback') page = <HelpFeedbackPage />
+      else if (match.canonicalPath === '/sports-cv') page = <SportsCvWizard />
       else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} />
       else if (match.canonicalPath === '/play') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openIntake('pickup_game')} />
       else if (match.canonicalPath === '/coaches') page = <FeatureDirectoryPage kind="coaches" />

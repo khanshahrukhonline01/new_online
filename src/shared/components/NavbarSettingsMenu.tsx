@@ -319,6 +319,18 @@ export default function NavbarSettingsMenu({ onNavigate, onOpenFeedback }: Navba
               </span>
               <span className="settings-badge-primary">Academies</span>
             </a>
+            <a
+              id="navbar-host-dashboard-btn"
+              href="/dashboard"
+              onClick={e => handleLinkClick(e, '/dashboard')}
+              className="settings-menu-link"
+            >
+              <span className="link-title-group">
+                <SiteIcon name="chart" size={15} className="link-icon" />
+                <span>Partner Dashboard</span>
+              </span>
+              <span className="settings-badge-emerald">Live Hub</span>
+            </a>
           </div>
 
           <div className="settings-menu-divider" />
