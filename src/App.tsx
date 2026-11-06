@@ -46,6 +46,7 @@ const LearningHubPage = lazy(() => import('./modules/learning/LearningHubPage'))
 const SportsCalendarPage = lazy(() => import('./modules/calendar/SportsCalendarPage'))
 const SportsToolsPage = lazy(() => import('./modules/tools/SportsToolsPage'))
 const PricingPage = lazy(() => import('./modules/pricing/PricingPage'))
+const PartnerPage = lazy(() => import('./modules/partner/PartnerPage'))
 
 // Code-split heavyweight modal dialogs
 const CommunityListingModal = lazy(() => import('./shared/components/CommunityListingModal'))
@@ -211,6 +212,7 @@ export default function App() {
       )
       else if (match.canonicalPath === '/settings') page = <SettingsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/pricing' || match.canonicalPath === '/memberships' || match.canonicalPath === '/pro') page = <PricingPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/partner' || match.canonicalPath === '/partners') page = <PartnerPage onNavigate={navigate} onOpenIntake={openIntake} />
       else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
       break
@@ -354,6 +356,7 @@ export default function App() {
         </nav>
         <nav className="footer-column" aria-label="About and support">
           <h2>Grow with KhelGrid</h2>
+          <a href="/partner" onClick={event => navigate(event, '/partner')}><strong>Partner with KhelGrid</strong></a>
           <a href="mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue" onClick={e => { e.preventDefault(); openIntake('venue') }}>List your venue</a>
           <a href="mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial" onClick={e => { e.preventDefault(); openIntake('opportunity') }}>Submit a trial</a>
           <a href="mailto:khelgrid@gmail.com?subject=Register%20as%20a%20coach%20on%20KhelGrid">Join as Coach</a>
@@ -428,6 +431,7 @@ export default function App() {
         </div>
       </section>
       <nav className="footer-policy-links" aria-label="Company, policies and legal">
+        <a href="/partner" onClick={event => navigate(event, '/partner')}>Partners</a>
         <a href="/about" onClick={event => navigate(event, '/about')}>About</a>
         <a href="/contact" onClick={event => navigate(event, '/contact')}>Contact</a>
         <a href="/privacy" onClick={event => navigate(event, '/privacy')}>Privacy</a>
