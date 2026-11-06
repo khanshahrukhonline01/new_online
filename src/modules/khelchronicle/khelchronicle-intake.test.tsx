@@ -161,4 +161,44 @@ describe('End-to-End Manuscript Intake Verification (KhelChronicle / Supabase)',
     expect(sentPayload.affiliation).toBe(submissionInput.primary_author_affiliation)
     expect(sentPayload.status).toBe('pending_review')
   })
+
+  it('renders 5-step interactive wizard structure with coaching cues, file dropzone, template download, and live preview', () => {
+    const html = renderToStaticMarkup(<KhelChronicleSubmitPage />)
+
+    // Stepper navigation tabs
+    expect(html).toContain('1. Article &amp; Category')
+    expect(html).toContain('2. Authors &amp; Affiliations')
+    expect(html).toContain('3. Abstract &amp; Takeaways')
+    expect(html).toContain('4. Files &amp; Data')
+    expect(html).toContain('5. Ethics &amp; Preview')
+
+    // Publication format choices
+    expect(html).toContain('Original Research Preprint')
+    expect(html).toContain('Field Biomechanics Protocol')
+    expect(html).toContain('Systematic Review / Meta-Analysis')
+    expect(html).toContain('Benchmark Sports Dataset')
+    expect(html).toContain('Elite Athlete Case Study')
+
+    // Coaching implications section
+    expect(html).toContain('Field Implications for Grassroots Coaches &amp; Scouts')
+    expect(html).toContain('Takeaway 1:')
+    expect(html).toContain('Takeaway 2:')
+    expect(html).toContain('Takeaway 3:')
+
+    // Drag and drop zone
+    expect(html).toContain('Preprint File Upload (PDF or DOCX, max 25MB)')
+    expect(html).toContain('Drag &amp; Drop Manuscript File Here')
+
+    // Template download and participating institutes
+    expect(html).toContain('Official KhelChronicle Preprint Template')
+    expect(html).toContain('Download Template (.md / .docx)')
+    expect(html).toContain('SAI NSNIS Patiala')
+    expect(html).toContain('LNIPE Gwalior')
+    expect(html).toContain('Inspire Institute of Sport (IIS)')
+
+    // Live preview card & provisional citation
+    expect(html).toContain('Live Preprint Archive Preview')
+    expect(html).toContain('PROVISIONAL APA CITATION:')
+    expect(html).toContain('KhelChronicle Open Sports Research Archive')
+  })
 })

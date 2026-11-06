@@ -1,0 +1,887 @@
+/* KhelChronicle Manuscript Submission Intake & Author Wizard */
+
+.kc-submit-container {
+  width: 100%;
+  max-width: 1360px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Breadcrumb & Top Bar */
+.kc-submit-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #64748b;
+  padding: 16px 0 20px;
+}
+
+.kc-submit-breadcrumb a {
+  color: #0f172a;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s ease;
+}
+
+.kc-submit-breadcrumb a:hover {
+  color: #0284c7;
+  text-decoration: underline;
+}
+
+/* Draft notification bar */
+.kc-draft-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-bottom: 24px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.kc-draft-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kc-draft-saved-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.kc-draft-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kc-draft-btn-clear {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.kc-draft-btn-clear:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+/* Submission Layout Grid (Form + Sidebar) */
+.kc-submit-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+}
+
+@media (min-width: 1024px) {
+  .kc-submit-layout {
+    grid-template-columns: minmax(0, 1fr) 360px;
+    align-items: start;
+  }
+}
+
+/* Stepper Bar */
+.kc-stepper {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 28px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.kc-stepper-progress-track {
+  width: 100%;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.kc-stepper-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0284c7 0%, #0ea5e9 100%);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.kc-stepper-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.kc-step-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.kc-step-tab:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.kc-step-tab.is-active {
+  background: #eff6ff;
+  color: #0284c7;
+  font-weight: 700;
+}
+
+.kc-step-tab.is-completed {
+  color: #059669;
+}
+
+.kc-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  background: #e2e8f0;
+  color: #475569;
+  transition: all 0.2s ease;
+}
+
+.kc-step-tab.is-active .kc-step-badge {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.kc-step-tab.is-completed .kc-step-badge {
+  background: #10b981;
+  color: #ffffff;
+}
+
+/* Main Form Card */
+.kc-submit-form-card {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.kc-step-panel {
+  display: none;
+}
+
+.kc-step-panel.is-active {
+  display: block;
+  animation: kcPanelFadeIn 0.25s ease-out;
+}
+
+@keyframes kcPanelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kc-step-heading {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.kc-step-desc {
+  margin: 0 0 24px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #475569;
+}
+
+/* Field Groups */
+.kc-field-group {
+  margin-bottom: 22px;
+}
+
+.kc-field-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.kc-field-hint {
+  font-size: 12px;
+  font-weight: 400;
+  color: #64748b;
+}
+
+.kc-input-text,
+.kc-select,
+.kc-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+  color: #0f172a;
+  background: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-family: inherit;
+}
+
+.kc-input-text:focus,
+.kc-select:focus,
+.kc-textarea:focus {
+  outline: none;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.kc-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 640px) {
+  .kc-grid-2col {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Article Type Cards */
+.kc-type-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.kc-type-card {
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  text-align: left;
+}
+
+.kc-type-card:hover {
+  border-color: #94a3b8;
+  background: #ffffff;
+}
+
+.kc-type-card.is-selected {
+  border-color: #0284c7;
+  background: #eff6ff;
+  box-shadow: 0 0 0 1px #0284c7;
+}
+
+.kc-type-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.kc-type-card-desc {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+/* Co-Authors dynamic list */
+.kc-authors-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.kc-author-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.kc-author-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.kc-author-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.kc-author-btn-remove {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.kc-author-btn-remove:hover {
+  background: #fee2e2;
+}
+
+.kc-btn-add-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1.5px dashed #cbd5e1;
+  color: #0284c7;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.kc-btn-add-author:hover {
+  background: #f0f9ff;
+  border-color: #0284c7;
+}
+
+/* Abstract Word Counter & Section Helpers */
+.kc-abstract-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.kc-word-counter {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.kc-word-counter.is-short {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.kc-word-counter.is-optimal {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.kc-word-counter.is-long {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.kc-template-btn {
+  background: none;
+  border: 1px solid #cbd5e1;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #0284c7;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-template-btn:hover {
+  background: #f0f9ff;
+  border-color: #0284c7;
+}
+
+/* Grassroots Coaching Takeaways */
+.kc-coaching-cues-card {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.kc-coaching-cues-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #166534;
+  margin-bottom: 8px;
+}
+
+/* File Drag & Drop Zone */
+.kc-dropzone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 32px 20px;
+  text-align: center;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.kc-dropzone:hover,
+.kc-dropzone.is-dragover {
+  border-color: #0284c7;
+  background: #f0f9ff;
+}
+
+.kc-dropzone-icon {
+  color: #0284c7;
+  margin-bottom: 10px;
+}
+
+.kc-dropzone-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.kc-dropzone-subtitle {
+  font-size: 12.5px;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.kc-file-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.kc-file-info {
+  text-align: left;
+}
+
+.kc-file-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.kc-file-meta {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Declarations & Checkboxes */
+.kc-checkbox-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.kc-checkbox-card:hover {
+  background: #f1f5f9;
+}
+
+.kc-checkbox-input {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  accent-color: #0284c7;
+}
+
+/* License Radios */
+.kc-license-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 640px) {
+  .kc-license-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.kc-license-card {
+  padding: 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-license-card.is-selected {
+  border-color: #0284c7;
+  background: #eff6ff;
+}
+
+/* Live Preprint Preview Card */
+.kc-live-preview-box {
+  background: #ffffff;
+  border: 1.5px solid #0284c7;
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 24px;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+}
+
+.kc-live-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.kc-live-preview-title {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kc-preview-paper-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.35;
+  margin: 0 0 10px;
+}
+
+.kc-preview-authors-row {
+  font-size: 13px;
+  color: #475569;
+  margin-bottom: 12px;
+}
+
+.kc-preview-abstract-box {
+  background: #f8fafc;
+  border-left: 3px solid #0284c7;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #334155;
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 14px;
+}
+
+/* Citations Box in Live Preview & Success */
+.kc-citation-box {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: #334155;
+  font-family: monospace;
+  position: relative;
+  word-break: break-all;
+}
+
+.kc-citation-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.kc-citation-tab-btn {
+  background: none;
+  border: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.kc-citation-tab-btn.is-active {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+/* Stepper Bottom Navigation Actions */
+.kc-step-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 24px;
+  margin-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.kc-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-btn-secondary:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.kc-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.kc-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: 8px;
+  background: #0284c7;
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.3);
+}
+
+.kc-btn-primary:hover:not(:disabled) {
+  background: #0369a1;
+}
+
+.kc-btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Sidebar Resources Card */
+.kc-submit-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.kc-sidebar-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.kc-sidebar-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kc-criteria-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #334155;
+}
+
+.kc-criteria-list li {
+  margin-bottom: 8px;
+}
+
+.kc-template-download-card {
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.kc-btn-download-template {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 6px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background 0.15s ease;
+}
+
+.kc-btn-download-template:hover {
+  background: #1e293b;
+}
+
+.kc-institutions-badge-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.kc-institution-chip {
+  font-size: 11px;
+  font-weight: 600;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 3px 8px;
+  color: #475569;
+}
+
+/* Submission Success State */
+.kc-success-card {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 14px;
+  padding: 36px 28px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(22, 101, 52, 0.06);
+}
+
+.kc-success-badge-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #166534;
+  margin: 12px 0 16px;
+}
+
+/* Screening Timeline Tracker */
+.kc-timeline-tracker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 28px auto;
+  max-width: 680px;
+  text-align: left;
+}
+
+.kc-timeline-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.kc-timeline-item.is-done {
+  border-color: #86efac;
+  background: #f7fee7;
+}
+
+.kc-timeline-step-num {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #16a34a;
+  margin-bottom: 4px;
+}
+
+.kc-timeline-step-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.kc-timeline-step-sub {
+  font-size: 11.5px;
+  color: #64748b;
+  line-height: 1.35;
+}
