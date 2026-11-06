@@ -53,6 +53,7 @@ const CommunityListingModal = lazy(() => import('./shared/components/CommunityLi
 const NotificationCenterDrawer = lazy(() => import('./shared/components/NotificationCenterDrawer'))
 const SpotlightSearchModal = lazy(() => import('./shared/components/SpotlightSearchModal'))
 const FeedbackSupportModal = lazy(() => import('./shared/components/FeedbackSupportModal'))
+const UserConsentModal = lazy(() => import('./shared/components/UserConsentModal'))
 
 function PageFallbackLoader() {
   return (
@@ -87,6 +88,7 @@ export default function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [unreadNotifCount, setUnreadNotifCount] = useState(3)
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
+  const [consentModalOpen, setConsentModalOpen] = useState(false)
   const menuToggleRef = useRef<HTMLButtonElement>(null)
 
   function openIntake(category: CommunityListingCategory = 'pickup_game') {
@@ -444,7 +446,15 @@ export default function App() {
         <a href="/verification-policy" onClick={event => navigate(event, '/verification-policy')}>Verification</a>
         <a href="/correction-policy" onClick={event => navigate(event, '/correction-policy')}>Corrections</a>
         <a href="https://www.khelgrid.com/sitemap.xml" target="_blank" rel="noopener noreferrer">Sitemap</a>
-        <a href="/cookies" onClick={event => navigate(event, '/cookies')}>Privacy &amp; Cookie Settings</a>
+        <a
+          href="/cookies"
+          onClick={event => {
+            event.preventDefault()
+            setConsentModalOpen(true)
+          }}
+        >
+          Privacy &amp; Cookie Settings
+        </a>
       </nav>
       <div className="footer-legal">
         <p>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</p>
@@ -482,6 +492,11 @@ export default function App() {
           onClose={() => setFeedbackModalOpen(false)}
         />
       )}
+      <UserConsentModal
+        forceOpen={consentModalOpen}
+        onClose={() => setConsentModalOpen(false)}
+        onNavigate={navigate}
+      />
     </Suspense>
   </div>
 }
