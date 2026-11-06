@@ -4,6 +4,7 @@ export type PaymentItemType =
   | 'trial_registration'
   | 'athlete_verification'
   | 'listing_plan'
+  | 'membership'
 
 export type { ListingPlanId, ListingPlan } from './listingPricing'
 

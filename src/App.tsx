@@ -45,6 +45,7 @@ const HostDashboardPage = lazy(() => import('./modules/host/HostDashboardPage'))
 const LearningHubPage = lazy(() => import('./modules/learning/LearningHubPage'))
 const SportsCalendarPage = lazy(() => import('./modules/calendar/SportsCalendarPage'))
 const SportsToolsPage = lazy(() => import('./modules/tools/SportsToolsPage'))
+const PricingPage = lazy(() => import('./modules/pricing/PricingPage'))
 
 // Code-split heavyweight modal dialogs
 const CommunityListingModal = lazy(() => import('./shared/components/CommunityListingModal'))
@@ -209,6 +210,7 @@ export default function App() {
         </section>
       )
       else if (match.canonicalPath === '/settings') page = <SettingsPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/pricing' || match.canonicalPath === '/memberships' || match.canonicalPath === '/pro') page = <PricingPage onNavigate={navigate} />
       else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
       break
