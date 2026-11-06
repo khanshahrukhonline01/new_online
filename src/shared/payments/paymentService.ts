@@ -6,6 +6,10 @@ import type {
   VenueBookingResult,
   VenueSlotBookingInput,
 } from './paymentTypes'
+import {
+  calculatePlanExpiry,
+  type ListingPlanId,
+} from './listingPricing'
 
 const DEFAULT_UPI_VPA = 'khelgrid@icici'
 const DEFAULT_MERCHANT_NAME = 'KhelGrid Sports'
@@ -74,6 +78,20 @@ export function getRazorpayKey(): string | null {
   return env?.VITE_RAZORPAY_KEY_ID || null
 }
 
+function getSafeLocalStorage(): Storage | null {
+  try {
+    if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
+      return globalThis.localStorage
+    }
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage
+    }
+  } catch {
+    // Ignore restricted environments
+  }
+  return null
+}
+
 /**
  * Persists payment record to Supabase and browser local storage.
  */
@@ -109,17 +127,20 @@ export async function recordPaymentTransaction({
 
   // 1. Persist locally for instant receipt retrieval across sessions
   try {
-    const existing = JSON.parse(localStorage.getItem('khelgrid_payment_receipts') || '[]')
-    existing.unshift({
-      ...result,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      itemTitle: item.title,
-      itemType: item.type,
-      venueName: item.venueName,
-      city: item.city,
-    })
-    localStorage.setItem('khelgrid_payment_receipts', JSON.stringify(existing.slice(0, 50)))
+    const storage = getSafeLocalStorage()
+    if (storage) {
+      const existing = JSON.parse(storage.getItem('khelgrid_payment_receipts') || '[]')
+      existing.unshift({
+        ...result,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        itemTitle: item.title,
+        itemType: item.type,
+        venueName: item.venueName,
+        city: item.city,
+      })
+      storage.setItem('khelgrid_payment_receipts', JSON.stringify(existing.slice(0, 50)))
+    }
   } catch {
     // Ignore storage quota errors
   }
@@ -172,13 +193,16 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
 
   // Local storage cache
   try {
-    const existing = JSON.parse(localStorage.getItem('khelgrid_venue_bookings') || '[]')
-    existing.unshift({
-      ...input,
-      bookingRef: ref,
-      createdAt: timestamp,
-    })
-    localStorage.setItem('khelgrid_venue_bookings', JSON.stringify(existing.slice(0, 30)))
+    const storage = getSafeLocalStorage()
+    if (storage) {
+      const existing = JSON.parse(storage.getItem('khelgrid_venue_bookings') || '[]')
+      existing.unshift({
+        ...input,
+        bookingRef: ref,
+        createdAt: timestamp,
+      })
+      storage.setItem('khelgrid_venue_bookings', JSON.stringify(existing.slice(0, 30)))
+    }
   } catch {
     // Ignore
   }
@@ -235,5 +259,113 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
     slotTime: input.slotTime,
     paidAmount: input.paidAmount,
     paymentStatus: input.paymentStatus,
+  }
+}
+
+export interface ListingSubscriptionInput {
+  orderId: string
+  paymentId: string
+  listingType: 'academy' | 'venue' | 'opportunity' | 'pickup_game'
+  listingName: string
+  city: string
+  planId: ListingPlanId
+  planName: string
+  amount: number
+  durationDays: number
+  customerName: string
+  customerPhone: string
+  customerEmail?: string
+  paymentStatus?: 'paid' | 'pay_at_venue'
+  listingId?: string
+}
+
+export interface ListingSubscriptionResult {
+  status: 'success' | 'error'
+  subscriptionId?: string
+  planName?: string
+  expiresAt?: string | null
+  receiptRef?: string
+  message?: string
+}
+
+/**
+ * Records an activated listing subscription (1-Day, 1-Month, 6-Month, 1-Year, Lifelong).
+ */
+export async function recordListingSubscription(input: ListingSubscriptionInput): Promise<ListingSubscriptionResult> {
+  const timestamp = new Date().toISOString()
+  const expiresAt = calculatePlanExpiry(input.planId)
+  const subRef = `SUB-${input.planId.toUpperCase()}-${Date.now().toString().slice(-6)}`
+
+  // 1. Local storage cache
+  try {
+    const storage = getSafeLocalStorage()
+    if (storage) {
+      const existing = JSON.parse(storage.getItem('khelgrid_listing_subscriptions') || '[]')
+      existing.unshift({
+        ...input,
+        subscriptionId: subRef,
+        expiresAt,
+        createdAt: timestamp,
+      })
+      storage.setItem('khelgrid_listing_subscriptions', JSON.stringify(existing.slice(0, 50)))
+    }
+  } catch {
+    // Ignore storage quota
+  }
+
+  // 2. Supabase RPC if available
+  if (supabaseUrl && anonKey) {
+    try {
+      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/record_listing_subscription`, {
+        method: 'POST',
+        headers: {
+          'apikey': anonKey,
+          'Authorization': `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          p_order_id: input.orderId,
+          p_payment_id: input.paymentId,
+          p_listing_type: input.listingType,
+          p_listing_name: input.listingName,
+          p_city: input.city,
+          p_plan_id: input.planId,
+          p_plan_name: input.planName,
+          p_amount: input.amount,
+          p_duration_days: input.durationDays,
+          p_customer_name: input.customerName,
+          p_customer_phone: input.customerPhone,
+          p_customer_email: input.customerEmail || null,
+          p_payment_status: input.paymentStatus || 'paid',
+          p_listing_id: input.listingId || null,
+          p_metadata: {
+            expires_at: expiresAt,
+            subscription_ref: subRef,
+          },
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data && data.status === 'success') {
+          return {
+            status: 'success',
+            subscriptionId: data.subscription_id || subRef,
+            planName: data.plan_name || input.planName,
+            expiresAt: data.expires_at || expiresAt,
+            receiptRef: subRef,
+          }
+        }
+      }
+    } catch {
+      // Fall through to local cache
+    }
+  }
+
+  return {
+    status: 'success',
+    subscriptionId: subRef,
+    planName: input.planName,
+    expiresAt,
+    receiptRef: subRef,
   }
 }

@@ -10,6 +10,16 @@ import {
   type CommunityListingCategory,
   type CommunityListingInput,
 } from '../../integrations/supabase/public-client'
+import {
+  LISTING_PLANS,
+  getListingPlan,
+  calculatePlanExpiry,
+  formatPlanDuration,
+  type ListingPlanId,
+} from '../payments/listingPricing'
+import { PaymentCheckoutModal } from '../payments/PaymentCheckoutModal'
+import { recordListingSubscription } from '../payments/paymentService'
+import type { PaymentItem, PaymentResult } from '../payments/paymentTypes'
 import './CommunityListingModal.css'
 
 export interface CommunityListingModalProps {
@@ -17,6 +27,7 @@ export interface CommunityListingModalProps {
   onClose: () => void
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
   defaultCategory?: CommunityListingCategory
+  defaultPlanId?: ListingPlanId
 }
 
 const COMMON_CITIES = [
@@ -56,8 +67,29 @@ export default function CommunityListingModal({
   onClose,
   onNavigate,
   defaultCategory = 'pickup_game',
+  defaultPlanId,
 }: CommunityListingModalProps) {
   const [category, setCategory] = useState<CommunityListingCategory>(defaultCategory)
+  const [selectedPlanId, setSelectedPlanId] = useState<ListingPlanId>(
+    defaultPlanId || (defaultCategory === 'pickup_game' ? '1_day' : '1_month')
+  )
+
+  // Payment & Checkout state
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+  const [checkoutItem, setCheckoutItem] = useState<PaymentItem | null>(null)
+  const [pendingSubmission, setPendingSubmission] = useState<{
+    input: CommunityListingInput
+    createdName: string
+    directoryPath: string
+  } | null>(null)
+  const [paymentInfo, setPaymentInfo] = useState<{
+    receiptRef: string
+    orderId: string
+    paymentMethod: string
+    amount: number
+    planName: string
+    expiresAt: string | null
+  } | null>(null)
 
   // Common fields
   const [city, setCity] = useState('')
@@ -131,7 +163,8 @@ export default function CommunityListingModal({
 
   useEffect(() => {
     if (defaultCategory) setCategory(defaultCategory)
-  }, [defaultCategory])
+    if (defaultPlanId) setSelectedPlanId(defaultPlanId)
+  }, [defaultCategory, defaultPlanId])
 
   useEffect(() => {
     if (!isOpen) {
@@ -173,106 +206,219 @@ export default function CommunityListingModal({
     setShowAuthBox(false)
     setError('')
     setSuccessResult(null)
+    setPaymentInfo(null)
+    setPendingSubmission(null)
+    setIsCheckoutOpen(false)
+    setCheckoutItem(null)
+    setSelectedPlanId(defaultPlanId || (defaultCategory === 'pickup_game' ? '1_day' : '1_month'))
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
+
+    const cleanCity = city.trim()
+    if (!cleanCity) {
+      setError('City is required for all listings.')
+      return
+    }
+
+    let input: CommunityListingInput
+    let directoryPath = '/'
+    let createdName = ''
+
+    if (category === 'academy') {
+      const cleanName = academyName.trim()
+      if (cleanName.length < 2) {
+        setError('Academy name must be at least 2 characters.')
+        return
+      }
+      input = {
+        category: 'academy',
+        name: cleanName,
+        city: cleanCity,
+        sport: sport || undefined,
+        state: state || undefined,
+        description: description || undefined,
+        website_url: websiteUrl || undefined,
+        contact_name: currentUser?.name || contactName || undefined,
+        contact_phone: currentUser?.phone || currentUser?.email || contactPhone || undefined,
+        is_verified_user: Boolean(currentUser?.isVerified),
+      }
+      directoryPath = '/academies'
+      createdName = cleanName
+    } else if (category === 'venue') {
+      const cleanName = venueName.trim()
+      if (cleanName.length < 2) {
+        setError('Venue / arena name must be at least 2 characters.')
+        return
+      }
+      input = {
+        category: 'venue',
+        name: cleanName,
+        city: cleanCity,
+        sport: sport || undefined,
+        address: address || undefined,
+        description: description || undefined,
+        contact_name: currentUser?.name || contactName || undefined,
+        contact_phone: currentUser?.phone || currentUser?.email || contactPhone || undefined,
+        is_verified_user: Boolean(currentUser?.isVerified),
+      }
+      directoryPath = '/venues'
+      createdName = cleanName
+    } else if (category === 'opportunity') {
+      const cleanTitle = oppTitle.trim()
+      if (cleanTitle.length < 2) {
+        setError('Title must be at least 2 characters.')
+        return
+      }
+      input = {
+        category: 'opportunity',
+        title: cleanTitle,
+        opportunity_type: oppType,
+        sport: sport || undefined,
+        city: cleanCity,
+        venue_name: oppVenue || undefined,
+        organizer_name: organizer || currentUser?.name || contactName || undefined,
+        starts_at: oppStartsAt || undefined,
+        registration_fee: regFee || undefined,
+        age_category: ageCategory || undefined,
+        source_url: sourceUrl || undefined,
+        contact_name: currentUser?.name || contactName || undefined,
+        contact_phone: currentUser?.phone || currentUser?.email || contactPhone || undefined,
+        is_verified_user: Boolean(currentUser?.isVerified),
+      }
+      directoryPath = '/opportunities'
+      createdName = cleanTitle
+    } else {
+      const cleanSport = (sport || 'Football').trim()
+      const cleanVenue = pickupVenue.trim()
+      const cleanTime = timeLabel.trim()
+      if (cleanSport.length < 2) {
+        setError('Sport name must be at least 2 characters.')
+        return
+      }
+      if (cleanVenue.length < 2) {
+        setError('Venue / arena name must be at least 2 characters.')
+        return
+      }
+      if (cleanTime.length < 2) {
+        setError('Time / schedule label is required.')
+        return
+      }
+      input = {
+        category: 'pickup_game',
+        sport: cleanSport,
+        emoji,
+        venue_name: cleanVenue,
+        city: cleanCity,
+        time_label: cleanTime,
+        skill_level: skillLevel,
+        host_name: hostName || currentUser?.name || contactName || undefined,
+        contact_name: currentUser?.name || contactName || undefined,
+        contact_phone: currentUser?.phone || currentUser?.email || contactPhone || undefined,
+        price_per_player: pricePerPlayer || 'Free',
+        spots_open: spotsOpen,
+        total_players: totalPlayers,
+        whatsapp_group_url: whatsappGroupUrl.trim() || undefined,
+        is_verified_user: Boolean(currentUser?.isVerified),
+      }
+      directoryPath = '/play'
+      createdName = `${input.sport} at ${cleanVenue}`
+    }
+
+    if (!currentUser && (!contactName.trim() || !contactPhone.trim())) {
+      setError('Organizer contact name and WhatsApp/phone number are required.')
+      return
+    }
+
+    const currentPlan = getListingPlan(selectedPlanId)
+    setPendingSubmission({ input, createdName, directoryPath })
+    setCheckoutItem({
+      id: `listing-${category}-${Date.now().toString(36)}`,
+      type: 'listing_plan',
+      title: `${currentPlan.name} · ${createdName}`,
+      subtitle: `${currentPlan.durationLabel} · KhelGrid Sports Directory`,
+      amount: currentPlan.price,
+      currency: 'INR',
+      emoji: category === 'academy' ? '🏫' : category === 'venue' ? '🏟️' : category === 'opportunity' ? '🏆' : '⚽',
+      venueName: createdName,
+      city: cleanCity,
+      metadata: {
+        planId: currentPlan.id,
+        planName: currentPlan.name,
+        durationDays: currentPlan.durationDays,
+        category,
+      },
+    })
+    setIsCheckoutOpen(true)
+  }
+
+  async function handlePaymentSuccess(result: PaymentResult) {
+    if (!pendingSubmission) return
+    setIsCheckoutOpen(false)
     setIsSubmitting(true)
+    setError('')
+
+    const currentPlan = getListingPlan(selectedPlanId)
+    const expiry = calculatePlanExpiry(selectedPlanId)
 
     try {
-      let input: CommunityListingInput
-      let directoryPath = '/'
-      let createdName = ''
+      // 1. Audit log subscription
+      await recordListingSubscription({
+        orderId: result.orderId,
+        paymentId: result.paymentId,
+        listingType: pendingSubmission.input.category,
+        listingName: pendingSubmission.createdName,
+        city: pendingSubmission.input.city,
+        planId: selectedPlanId,
+        planName: currentPlan.name,
+        amount: currentPlan.price,
+        durationDays: currentPlan.durationDays,
+        customerName: currentUser?.name || contactName || 'Host',
+        customerPhone: currentUser?.phone || currentUser?.email || contactPhone || '9999999999',
+        customerEmail: currentUser?.email,
+        paymentStatus: result.status === 'pay_at_venue' ? 'pay_at_venue' : 'paid',
+      })
 
-      if (category === 'academy') {
-        input = {
-          category: 'academy',
-          name: academyName,
-          city,
-          sport: sport || undefined,
-          state: state || undefined,
-          description: description || undefined,
-          website_url: websiteUrl || undefined,
-          contact_name: currentUser?.name || contactName || undefined,
-          contact_phone: currentUser?.phone || currentUser?.email || contactPhone || undefined,
-          is_verified_user: Boolean(currentUser?.isVerified),
-        }
-        directoryPath = '/academies'
-        createdName = academyName
-      } else if (category === 'venue') {
-        input = {
-          category: 'venue',
-          name: venueName,
-          city,
-          sport: sport || undefined,
-          address: address || undefined,
-          description: description || undefined,
-          contact_name: currentUser?.name || contactName || undefined,
-          contact_phone: currentUser?.phone || currentUser?.email || contactPhone || undefined,
-          is_verified_user: Boolean(currentUser?.isVerified),
-        }
-        directoryPath = '/venues'
-        createdName = venueName
-      } else if (category === 'opportunity') {
-        input = {
-          category: 'opportunity',
-          title: oppTitle,
-          opportunity_type: oppType,
-          sport: sport || undefined,
-          city,
-          venue_name: oppVenue || undefined,
-          organizer_name: organizer || currentUser?.name || contactName || undefined,
-          starts_at: oppStartsAt || undefined,
-          registration_fee: regFee || undefined,
-          age_category: ageCategory || undefined,
-          source_url: sourceUrl || undefined,
-          contact_name: currentUser?.name || contactName || undefined,
-          contact_phone: currentUser?.phone || currentUser?.email || contactPhone || undefined,
-          is_verified_user: Boolean(currentUser?.isVerified),
-        }
-        directoryPath = '/opportunities'
-        createdName = oppTitle
-      } else {
-        input = {
-          category: 'pickup_game',
-          sport: sport || 'Football',
-          emoji,
-          venue_name: pickupVenue,
-          city,
-          time_label: timeLabel,
-          skill_level: skillLevel,
-          host_name: hostName || currentUser?.name || contactName || undefined,
-          contact_name: currentUser?.name || contactName || undefined,
-          contact_phone: currentUser?.phone || currentUser?.email || contactPhone || undefined,
-          price_per_player: pricePerPlayer || 'Free',
-          spots_open: spotsOpen,
-          total_players: totalPlayers,
-          whatsapp_group_url: whatsappGroupUrl.trim() || undefined,
-          is_verified_user: Boolean(currentUser?.isVerified),
-        }
-        directoryPath = '/play'
-        createdName = `${input.sport} at ${pickupVenue}`
+      // 2. Submit listing with plan metadata & payment ID
+      const fullInput: CommunityListingInput = {
+        ...pendingSubmission.input,
+        listing_plan: selectedPlanId,
+        plan_price: currentPlan.price,
+        plan_duration_days: currentPlan.durationDays,
+        plan_expires_at: expiry,
+        payment_id: result.paymentId,
+        payment_order_id: result.orderId,
+        payment_status: result.status === 'pay_at_venue' ? 'pay_at_venue' : 'paid',
       }
 
-      const result = await submitCommunityListing(input)
+      const subResult = await submitCommunityListing(fullInput)
 
-      if (result.status === 'submitted') {
+      if (subResult.status === 'submitted') {
+        setPaymentInfo({
+          receiptRef: result.receiptRef,
+          orderId: result.orderId,
+          paymentMethod: result.method,
+          amount: currentPlan.price,
+          planName: currentPlan.name,
+          expiresAt: expiry,
+        })
         setSuccessResult({
-          category,
-          name: createdName,
-          city,
-          directoryPath,
-          detailPath: result.detailPath,
-          mode: result.mode,
-          requiresReview: result.requiresReview,
-          message: result.message,
+          category: pendingSubmission.input.category,
+          name: pendingSubmission.createdName,
+          city: pendingSubmission.input.city,
+          directoryPath: pendingSubmission.directoryPath,
+          detailPath: subResult.detailPath,
+          mode: subResult.mode,
+          requiresReview: subResult.requiresReview,
+          message: subResult.message,
         })
       } else {
-        setError(result.message)
+        setError(subResult.message)
       }
     } catch {
-      setError('An unexpected error occurred while submitting your listing. Please try again.')
+      setError('An unexpected error occurred while activating your listing. Please contact support.')
     } finally {
       setIsSubmitting(false)
     }
@@ -330,6 +476,25 @@ export default function CommunityListingModal({
                 )}
               </div>
 
+              {paymentInfo && (
+                <div className="community-receipt-badge-card">
+                  <div className="community-receipt-header">
+                    <span className="receipt-plan-pill">
+                      {selectedPlanId === 'lifelong' ? '👑' : selectedPlanId === '1_year' ? '⭐' : '📅'} {paymentInfo.planName}
+                    </span>
+                    <span className="receipt-status-pill">
+                      {paymentInfo.paymentMethod === 'pay_at_venue' ? '⏳ Pay at Venue' : '✓ Payment Confirmed'}
+                    </span>
+                  </div>
+                  <div className="community-receipt-details">
+                    <div><span>Amount:</span> <strong>₹{paymentInfo.amount.toLocaleString('en-IN')}</strong></div>
+                    <div><span>Validity:</span> <strong>{formatPlanDuration(selectedPlanId, paymentInfo.expiresAt)}</strong></div>
+                    <div><span>Receipt Ref:</span> <code>{paymentInfo.receiptRef}</code></div>
+                    <div><span>Order ID:</span> <code>{paymentInfo.orderId}</code></div>
+                  </div>
+                </div>
+              )}
+
               <div className="community-intake-success-actions">
                 {successResult.detailPath && (
                   <a
@@ -372,6 +537,25 @@ export default function CommunityListingModal({
                 <strong>{successResult.name}</strong> has been published in <strong>{successResult.city}</strong>.
                 It is now immediately discoverable on the homepage rail, city directories, and sports catalogue.
               </p>
+
+              {paymentInfo && (
+                <div className="community-receipt-badge-card">
+                  <div className="community-receipt-header">
+                    <span className="receipt-plan-pill">
+                      {selectedPlanId === 'lifelong' ? '👑' : selectedPlanId === '1_year' ? '⭐' : '📅'} {paymentInfo.planName}
+                    </span>
+                    <span className="receipt-status-pill">
+                      {paymentInfo.paymentMethod === 'pay_at_venue' ? '⏳ Pay at Venue' : '✓ Payment Confirmed'}
+                    </span>
+                  </div>
+                  <div className="community-receipt-details">
+                    <div><span>Amount:</span> <strong>₹{paymentInfo.amount.toLocaleString('en-IN')}</strong></div>
+                    <div><span>Validity:</span> <strong>{formatPlanDuration(selectedPlanId, paymentInfo.expiresAt)}</strong></div>
+                    <div><span>Receipt Ref:</span> <code>{paymentInfo.receiptRef}</code></div>
+                    <div><span>Order ID:</span> <code>{paymentInfo.orderId}</code></div>
+                  </div>
+                </div>
+              )}
 
               <div className="community-intake-success-actions">
                 <a
@@ -961,6 +1145,69 @@ export default function CommunityListingModal({
                 </div>
               )}
 
+              {/* Listing Plan & Pricing Options */}
+              <div className="community-form-section community-plans-section">
+                <div className="community-section-label">
+                  <span>Select Listing Plan &amp; Duration *</span>
+                  <span className="community-plan-guarantee">🛡️ Direct Leads · Verified Badge · Search Discovery</span>
+                </div>
+                <p className="community-plans-subtitle">
+                  Choose an active visibility plan for your {category === 'academy' ? 'sports academy' : category === 'venue' ? 'turf arena' : category === 'opportunity' ? 'trial circular' : 'pickup game'} across KhelGrid:
+                </p>
+                <div className="community-plan-grid" role="radiogroup" aria-label="Listing Duration Plans">
+                  {LISTING_PLANS.map(plan => {
+                    const isSelected = selectedPlanId === plan.id
+                    return (
+                      <div
+                        key={plan.id}
+                        role="radio"
+                        aria-checked={isSelected}
+                        tabIndex={0}
+                        className={`community-plan-card ${isSelected ? 'is-selected' : ''} ${plan.popular ? 'is-popular' : ''} ${plan.id === 'lifelong' ? 'is-lifelong' : ''}`}
+                        onClick={() => setSelectedPlanId(plan.id)}
+                        onKeyDown={e => {
+                          if (e.key === ' ' || e.key === 'Enter') {
+                            e.preventDefault()
+                            setSelectedPlanId(plan.id)
+                          }
+                        }}
+                      >
+                        {plan.badge && <span className="community-plan-badge">{plan.badge}</span>}
+                        <div className="community-plan-header">
+                          <strong className="community-plan-name">{plan.name}</strong>
+                          <span className="community-plan-duration">{plan.durationLabel}</span>
+                        </div>
+                        <div className="community-plan-price-row">
+                          <span className="community-plan-price">₹{plan.price.toLocaleString('en-IN')}</span>
+                          {plan.originalPrice && (
+                            <span className="community-plan-orig-price">₹{plan.originalPrice.toLocaleString('en-IN')}</span>
+                          )}
+                          {plan.savingsLabel && (
+                            <span className="community-plan-savings">{plan.savingsLabel}</span>
+                          )}
+                        </div>
+                        <p className="community-plan-desc">{plan.description}</p>
+                        <ul className="community-plan-features">
+                          {plan.features.slice(0, 3).map((feat, i) => (
+                            <li key={i}>
+                              <SiteIcon name="check-circle" size={12} />
+                              <span>{feat}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="community-plan-select-indicator">
+                          {isSelected ? (
+                            <span className="indicator-selected">✓ Selected Plan</span>
+                          ) : (
+                            <span className="indicator-choose">Select Plan</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
               {/* Contact Information (for guest verification and player coordination) */}
               {!currentUser && (
                 <div className="community-form-section community-contact-section">
@@ -1014,18 +1261,34 @@ export default function CommunityListingModal({
                   ) : (!currentUser && (category === 'opportunity' || category === 'academy')) ? (
                     <>
                       <SiteIcon name="shield-check" size={16} />
-                      <span>Submit for Verification (2-4 hrs)</span>
+                      <span>Proceed to Pay ₹{getListingPlan(selectedPlanId).price.toLocaleString('en-IN')} &amp; Submit for Verification (2-4 hrs)</span>
                     </>
                   ) : (
                     <>
                       <SiteIcon name="plus" size={16} />
-                      <span>{currentUser ? 'Publish Live as Verified Host' : 'Publish Listing Now'}</span>
+                      <span>Proceed to Pay ₹{getListingPlan(selectedPlanId).price.toLocaleString('en-IN')} &amp; Publish Listing Now</span>
                     </>
                   )}
                 </button>
               </div>
             </form>
           </>
+        )}
+
+        {/* Indian Payment Gateway Checkout Modal */}
+        {isCheckoutOpen && checkoutItem && (
+          <PaymentCheckoutModal
+            isOpen={isCheckoutOpen}
+            onClose={() => setIsCheckoutOpen(false)}
+            item={checkoutItem}
+            initialCustomer={{
+              name: currentUser?.name || contactName || '',
+              phone: currentUser?.phone || contactPhone || '',
+              email: currentUser?.email || '',
+            }}
+            onSuccess={handlePaymentSuccess}
+            allowPayAtVenue={true}
+          />
         )}
       </div>
     </div>

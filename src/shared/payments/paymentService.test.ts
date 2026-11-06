@@ -1,14 +1,35 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
   generateOrderId,
   generateUpiUri,
   parseInrPrice,
   recordPaymentTransaction,
   recordVenueSlotBooking,
+  recordListingSubscription,
 } from './paymentService'
+import {
+  LISTING_PLANS,
+  getListingPlan,
+  calculatePlanExpiry,
+  formatPlanDuration,
+} from './listingPricing'
 import type { PaymentCustomer, PaymentItem } from './paymentTypes'
 
+const memoryStorage: Record<string, string> = {}
+globalThis.localStorage = {
+  getItem: (k: string) => memoryStorage[k] || null,
+  setItem: (k: string, v: string) => { memoryStorage[k] = v },
+  removeItem: (k: string) => { delete memoryStorage[k] },
+  clear: () => { Object.keys(memoryStorage).forEach(k => delete memoryStorage[k]) },
+  length: 0,
+  key: () => null,
+} as unknown as Storage
+
 describe('KhelGrid Payment Service', () => {
+  beforeEach(() => {
+    globalThis.localStorage.clear()
+  })
+
   describe('parseInrPrice', () => {
     it('parses typical Indian currency strings', () => {
       expect(parseInrPrice('₹200/player')).toBe(200)
@@ -84,7 +105,7 @@ describe('KhelGrid Payment Service', () => {
       expect(result.paymentId).toBe('PAY_TEST_202')
       expect(result.receiptRef).toContain('REC-')
 
-      const receipts = JSON.parse(localStorage.getItem('khelgrid_payment_receipts') || '[]')
+      const receipts = JSON.parse(globalThis.localStorage.getItem('khelgrid_payment_receipts') || '[]')
       expect(receipts.length).toBeGreaterThan(0)
       expect(receipts[0].orderId).toBe('KG_TEST_101')
       expect(receipts[0].customerName).toBe('Arjun Rao')
@@ -111,9 +132,96 @@ describe('KhelGrid Payment Service', () => {
       expect(booking.venueName).toBe('Sree Kanteerava Stadium')
       expect(booking.bookingRef).toMatch(/^VB-/)
 
-      const bookings = JSON.parse(localStorage.getItem('khelgrid_venue_bookings') || '[]')
+      const bookings = JSON.parse(globalThis.localStorage.getItem('khelgrid_venue_bookings') || '[]')
       expect(bookings.length).toBeGreaterThan(0)
       expect(bookings[0].venueName).toBe('Sree Kanteerava Stadium')
+    })
+  })
+
+  describe('recordListingSubscription', () => {
+    it('records 1-Day, 1-Month, 6-Month, 1-Year, and Lifelong subscriptions to local storage', async () => {
+      const sub = await recordListingSubscription({
+        orderId: 'KG_ORD_SUB_01',
+        paymentId: 'PAY_SUB_01',
+        listingType: 'academy',
+        listingName: 'Bhaichung Bhutia Football School',
+        city: 'Delhi',
+        planId: '1_year',
+        planName: '1-Year Listing',
+        amount: 4499,
+        durationDays: 365,
+        customerName: 'Coach Pradeep',
+        customerPhone: '9876543210',
+        paymentStatus: 'paid',
+      })
+
+      expect(sub.status).toBe('success')
+      expect(sub.subscriptionId).toMatch(/^SUB-1_YEAR-/)
+      expect(sub.planName).toBe('1-Year Listing')
+      expect(sub.expiresAt).not.toBeNull()
+
+      const cached = JSON.parse(globalThis.localStorage.getItem('khelgrid_listing_subscriptions') || '[]')
+      expect(cached.length).toBeGreaterThan(0)
+      expect(cached[0].listingName).toBe('Bhaichung Bhutia Football School')
+      expect(cached[0].amount).toBe(4499)
+    })
+
+    it('sets null expiresAt for lifelong subscription plan', async () => {
+      const sub = await recordListingSubscription({
+        orderId: 'KG_ORD_LIFE_01',
+        paymentId: 'PAY_LIFE_01',
+        listingType: 'venue',
+        listingName: 'FSV Arena Bengaluru',
+        city: 'Bengaluru',
+        planId: 'lifelong',
+        planName: 'Lifelong Listing',
+        amount: 9999,
+        durationDays: 0,
+        customerName: 'Arena Manager',
+        customerPhone: '9900112233',
+        paymentStatus: 'paid',
+      })
+
+      expect(sub.status).toBe('success')
+      expect(sub.expiresAt).toBeNull()
+      expect(sub.subscriptionId).toMatch(/^SUB-LIFELONG-/)
+    })
+  })
+
+  describe('listingPricing helper contracts', () => {
+    it('defines exactly the 5 requested listing plans with correct Indian pricing', () => {
+      expect(LISTING_PLANS.length).toBe(5)
+      const ids = LISTING_PLANS.map(p => p.id)
+      expect(ids).toEqual(['1_day', '1_month', '6_months', '1_year', 'lifelong'])
+
+      const dayPlan = getListingPlan('1_day')
+      expect(dayPlan.price).toBe(99)
+      expect(dayPlan.durationDays).toBe(1)
+
+      const monthPlan = getListingPlan('1_month')
+      expect(monthPlan.price).toBe(499)
+      expect(monthPlan.durationDays).toBe(30)
+
+      const sixMonthPlan = getListingPlan('6_months')
+      expect(sixMonthPlan.price).toBe(2499)
+      expect(sixMonthPlan.durationDays).toBe(180)
+
+      const yearPlan = getListingPlan('1_year')
+      expect(yearPlan.price).toBe(4499)
+      expect(yearPlan.durationDays).toBe(365)
+      expect(yearPlan.popular).toBe(true)
+
+      const lifelongPlan = getListingPlan('lifelong')
+      expect(lifelongPlan.price).toBe(9999)
+      expect(lifelongPlan.durationDays).toBe(0)
+    })
+
+    it('formats lifelong expiry and future dates cleanly', () => {
+      expect(formatPlanDuration('lifelong', null)).toBe('Lifelong (Never Expires)')
+      expect(calculatePlanExpiry('lifelong')).toBeNull()
+      expect(calculatePlanExpiry('1_day')).not.toBeNull()
+      const future = new Date('2027-11-06T12:00:00Z').toISOString()
+      expect(formatPlanDuration('1_year', future)).toContain('2027')
     })
   })
 })

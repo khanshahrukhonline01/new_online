@@ -782,7 +782,17 @@ export function signOutUser(): void {
 
 export type CommunityListingCategory = 'academy' | 'venue' | 'opportunity' | 'pickup_game'
 
-export interface CommunityAcademyInput {
+export interface CommunityListingPlanMeta {
+  listing_plan?: '1_day' | '1_month' | '6_months' | '1_year' | 'lifelong'
+  plan_price?: number
+  plan_duration_days?: number
+  plan_expires_at?: string | null
+  payment_id?: string
+  payment_order_id?: string
+  payment_status?: 'paid' | 'pay_at_venue' | 'unpaid'
+}
+
+export interface CommunityAcademyInput extends CommunityListingPlanMeta {
   category: 'academy'
   name: string
   city: string
@@ -796,7 +806,7 @@ export interface CommunityAcademyInput {
   is_verified_user?: boolean
 }
 
-export interface CommunityVenueInput {
+export interface CommunityVenueInput extends CommunityListingPlanMeta {
   category: 'venue'
   name: string
   city: string
@@ -808,7 +818,7 @@ export interface CommunityVenueInput {
   is_verified_user?: boolean
 }
 
-export interface CommunityOpportunityInput {
+export interface CommunityOpportunityInput extends CommunityListingPlanMeta {
   category: 'opportunity'
   title: string
   opportunity_type?: 'trial' | 'combine' | 'scholarship' | 'camp' | 'job' | 'other'
@@ -826,7 +836,7 @@ export interface CommunityOpportunityInput {
   is_verified_user?: boolean
 }
 
-export interface CommunityPickupGameInput {
+export interface CommunityPickupGameInput extends CommunityListingPlanMeta {
   category: 'pickup_game'
   sport: string
   emoji?: string
@@ -892,6 +902,26 @@ export async function submitCommunityListing(
   let targetTable: 'academies' | 'venues' | 'opportunities' | 'pickup_games'
   let record: Record<string, unknown>
 
+  const defaultPlan = input.category === 'pickup_game' ? '1_day' : '1_month'
+  const planId = input.listing_plan || defaultPlan
+  const planPrice = input.plan_price !== undefined
+    ? input.plan_price
+    : (planId === '1_day' ? 99 : planId === '1_month' ? 499 : planId === '6_months' ? 2499 : planId === '1_year' ? 4499 : 9999)
+  const durationDays = input.plan_duration_days !== undefined
+    ? input.plan_duration_days
+    : (planId === '1_day' ? 1 : planId === '1_month' ? 30 : planId === '6_months' ? 180 : planId === '1_year' ? 365 : 0)
+  const planExpiresAt = input.plan_expires_at !== undefined
+    ? input.plan_expires_at
+    : (durationDays > 0 ? new Date(Date.now() + 86400000 * durationDays).toISOString() : null)
+
+  const planMetadata = {
+    listing_plan: planId,
+    plan_price: planPrice,
+    plan_expires_at: planExpiresAt,
+    payment_id: input.payment_id || null,
+    payment_status: input.payment_status || 'paid',
+  }
+
   switch (input.category) {
     case 'academy': {
       if (!input.name || input.name.trim().length < 2) {
@@ -918,6 +948,7 @@ export async function submitCommunityListing(
         publication_status: requiresReview ? 'pending_review' : 'published',
         verification_status: isVerified ? 'verified' : 'pending_review',
         is_featured: false,
+        ...planMetadata,
       }
       break
     }
@@ -945,6 +976,7 @@ export async function submitCommunityListing(
         publication_status: 'published',
         verification_status: isVerified ? 'verified' : 'pending_review',
         is_featured: false,
+        ...planMetadata,
       }
       break
     }
@@ -973,6 +1005,7 @@ export async function submitCommunityListing(
         age_category: input.age_category?.trim() || 'Open Age',
         gender: 'All',
         is_featured: false,
+        ...planMetadata,
       }
       break
     }
@@ -1007,6 +1040,7 @@ export async function submitCommunityListing(
         status: spots > 0 ? 'open' : 'full',
         is_featured: false,
         publication_status: 'published',
+        ...planMetadata,
       }
       break
     }
