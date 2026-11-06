@@ -35,7 +35,12 @@ describe('HomePage 5 core live-website sections', () => {
     expect(html).toContain('₹200/player')
     expect(html).toContain('/play')
 
-    // 4b. Free Sports Books & Tactical Manuals
+    // 4b. Tactical Drills & Short Videos — YouTube Powered
+    expect(html).toContain('Tactical Drills &amp; Short Videos — YouTube Powered')
+    expect(html).toContain('Watch on YouTube')
+    expect(html).toContain('Fast Bowling: Front-Knee Bracing')
+
+    // 4c. Free Sports Books & Tactical Manuals
     expect(html).toContain('Sports Books — Free to Read Online')
     expect(html).toContain('All Books in Learning Hub')
     expect(html).toContain('Free to Read')

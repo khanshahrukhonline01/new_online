@@ -18,6 +18,7 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 import { createBannerSvg } from './homeSvgBanners'
 import { HomeKhelChronicle } from './HomeKhelChronicle'
 import { METRO_16_CITIES } from '../../shared/components/citiesData'
+import YouTubeShortsSection from './components/YouTubeShortsSection'
 import FreeSportsBooksSection from './components/FreeSportsBooksSection'
 import './home.css'
 
@@ -1613,7 +1614,10 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
         </div>
       </section>
 
-      {/* 7. FREE SPORTS BOOKS & COACHING MANUALS */}
+      {/* 7. KHELGRID SPORTS SHORTS & TACTICAL VIDEO DRILLS */}
+      <YouTubeShortsSection onNavigate={onNavigate} />
+
+      {/* 8. FREE SPORTS BOOKS & COACHING MANUALS */}
       <FreeSportsBooksSection onNavigate={onNavigate} />
 
       {/* Flagship Digital Tools for Athletes & Scouts */}
