@@ -141,6 +141,8 @@ describe('permanent sidebar layout contract', () => {
     expect(html).toContain('href="/search"')
     expect(html).toContain('aria-label="Notifications"')
     expect(html).toContain('aria-label="Help and feedback"')
+    expect(html).toContain('href="/help-feedback"')
+    expect(html).not.toContain('mailto:khelgrid@gmail.com?subject=KhelGrid%20help%20and%20feedback')
     expect(html).toContain('aria-label="Your profile"')
   })
 
@@ -149,5 +151,21 @@ describe('permanent sidebar layout contract', () => {
     expect(html).toContain('id="mobile-sidebar-drawer"')
     expect(html).toContain('class="mobile-bottom-nav"')
     expect(html).toContain('aria-label="Mobile navigation"')
+  })
+})
+
+
+describe('Help & Feedback Centre', () => {
+  it('renders searchable help, reporting options, and transparent email-only submission copy', async () => {
+    const { default: HelpFeedbackPage } = await import('./modules/help/HelpFeedbackPage')
+    const html = renderToStaticMarkup(<HelpFeedbackPage />)
+    expect(html).toContain('How can we help?')
+    expect(html).toContain('Search help articles and FAQs')
+    expect(html).toContain('Popular questions')
+    expect(html).toContain('Share feedback or report a problem')
+    expect(html).toContain('Report a safety concern')
+    expect(html).toContain('Continue by email')
+    expect(html).toContain('mailto:khelgrid@gmail.com')
+    expect(html).toContain('No message is submitted to a KhelGrid server')
   })
 })
