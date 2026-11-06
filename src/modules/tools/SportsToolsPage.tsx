@@ -18,6 +18,13 @@ import {
   calculateMatchFeeRoi,
   calculateAcademyFit,
   calculateBoostReach,
+  type AgeEligibilityInputs,
+  type Vo2MaxInputs,
+  type CalorieNeedsInputs,
+  type ScholarshipInputs,
+  type TravelBudgetInputs,
+  type AcademyEvalInputs,
+  type BoostReachInputs,
 } from './toolsData'
 import './SportsToolsPage.css'
 
@@ -759,7 +766,7 @@ export default function SportsToolsPage({ onNavigate, initialToolSlug }: SportsT
                     <select
                       id="age-federation"
                       value={ageFederation}
-                      onChange={e => setAgeFederation(e.target.value as any)}
+                      onChange={e => setAgeFederation(e.target.value as AgeEligibilityInputs['federation'])}
                       className="tools-native-select"
                     >
                       <option value="bcci">BCCI Cricket (September 1 Cut-off)</option>
@@ -860,7 +867,7 @@ export default function SportsToolsPage({ onNavigate, initialToolSlug }: SportsT
                     <select
                       id="vo2-method"
                       value={vo2Method}
-                      onChange={e => setVo2Method(e.target.value as any)}
+                      onChange={e => setVo2Method(e.target.value as Vo2MaxInputs['method'])}
                       className="tools-native-select"
                     >
                       <option value="cooper">12-Minute Cooper Run (Distance in Meters)</option>
@@ -960,7 +967,7 @@ export default function SportsToolsPage({ onNavigate, initialToolSlug }: SportsT
                       <select
                         id="vo2-gender"
                         value={vo2Gender}
-                        onChange={e => setVo2Gender(e.target.value as any)}
+                        onChange={e => setVo2Gender(e.target.value as Vo2MaxInputs['gender'])}
                         className="tools-native-select"
                       >
                         <option value="male">Male Athlete</option>
@@ -1037,7 +1044,7 @@ export default function SportsToolsPage({ onNavigate, initialToolSlug }: SportsT
                       <select
                         id="cal-gender"
                         value={calGender}
-                        onChange={e => setCalGender(e.target.value as any)}
+                        onChange={e => setCalGender(e.target.value as CalorieNeedsInputs['gender'])}
                         className="tools-native-select"
                       >
                         <option value="male">Male</option>
@@ -1113,7 +1120,7 @@ export default function SportsToolsPage({ onNavigate, initialToolSlug }: SportsT
                     <select
                       id="cal-goal"
                       value={calGoal}
-                      onChange={e => setCalGoal(e.target.value as any)}
+                      onChange={e => setCalGoal(e.target.value as CalorieNeedsInputs['goal'])}
                       className="tools-native-select"
                     >
                       <option value="maintain">Match Season Performance Maintenance</option>
@@ -1518,7 +1525,7 @@ export default function SportsToolsPage({ onNavigate, initialToolSlug }: SportsT
                       <select
                         id="schol-cat"
                         value={scholCategory}
-                        onChange={e => setScholCategory(e.target.value as any)}
+                        onChange={e => setScholCategory(e.target.value as ScholarshipInputs['category'])}
                         className="tools-native-select"
                       >
                         <option value="general">General</option>
@@ -1534,7 +1541,7 @@ export default function SportsToolsPage({ onNavigate, initialToolSlug }: SportsT
                     <select
                       id="schol-achieve"
                       value={scholAchievement}
-                      onChange={e => setScholAchievement(e.target.value as any)}
+                      onChange={e => setScholAchievement(e.target.value as ScholarshipInputs['highestAchievement'])}
                       className="tools-native-select"
                     >
                       <option value="khelo_india">Khelo India Youth Games / University Games Medal</option>
@@ -1720,7 +1727,7 @@ export default function SportsToolsPage({ onNavigate, initialToolSlug }: SportsT
                       <select
                         id="travel-class"
                         value={travelClass}
-                        onChange={e => setTravelClass(e.target.value as any)}
+                        onChange={e => setTravelClass(e.target.value as TravelBudgetInputs['travelClass'])}
                         className="tools-native-select"
                       >
                         <option value="sleeper">Train Sleeper Class (Budget)</option>
@@ -1750,7 +1757,7 @@ export default function SportsToolsPage({ onNavigate, initialToolSlug }: SportsT
                       <select
                         id="travel-lodging"
                         value={travelLodging}
-                        onChange={e => setTravelLodging(e.target.value as any)}
+                        onChange={e => setTravelLodging(e.target.value as TravelBudgetInputs['lodgingType'])}
                         className="tools-native-select"
                       >
                         <option value="dharamsala">Sports Hostel / Dharamsala (~₹500/night)</option>
@@ -1966,7 +1973,7 @@ export default function SportsToolsPage({ onNavigate, initialToolSlug }: SportsT
                     <select
                       id="acad-coach"
                       value={acadCoachTier}
-                      onChange={e => setAcadCoachTier(e.target.value as any)}
+                      onChange={e => setAcadCoachTier(e.target.value as AcademyEvalInputs['coachTier'])}
                       className="tools-native-select"
                     >
                       <option value="nis_bcci3">NIS Diploma / BCCI Level 3 / AFC Pro (Elite)</option>
@@ -2035,7 +2042,7 @@ export default function SportsToolsPage({ onNavigate, initialToolSlug }: SportsT
                     <select
                       id="boost-tier"
                       value={boostCityTier}
-                      onChange={e => setBoostCityTier(e.target.value as any)}
+                      onChange={e => setBoostCityTier(e.target.value as BoostReachInputs['cityTier'])}
                       className="tools-native-select"
                     >
                       <option value="metro">Tier 1 Metro (Delhi, Mumbai, Bengaluru, etc.)</option>
