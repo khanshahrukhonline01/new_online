@@ -22,10 +22,16 @@ type QueryOptions = {
 }
 
 const catalogueMemoryCache = new Map<string, { timestamp: number; result: CatalogueResult<unknown> }>()
+const inFlightRequests = new Map<string, Promise<CatalogueResult<unknown>>>()
+const unavailableTables = new Map<string, number>()
 const CACHE_TTL_MS = 60_000
+const STALE_TTL_MS = 300_000
+const TABLE_BACKOFF_MS = 120_000
 
 export function clearCatalogueCache(): void {
   catalogueMemoryCache.clear()
+  inFlightRequests.clear()
+  unavailableTables.clear()
   if (typeof window !== 'undefined') {
     try {
       const keysToRemove: string[] = []
@@ -49,19 +55,31 @@ async function readCatalogue<T>({
   if (!supabaseUrl || !anonKey) return { status: 'unconfigured', data: [] }
 
   const cacheKey = `${table}:${select}:${order}:${JSON.stringify(filters)}`
+  const sessionKey = `kg_cat_${cacheKey}`
+
+  // 1. Instant return from in-memory cache if fresh
   const cached = catalogueMemoryCache.get(cacheKey)
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS && cached.result.status === 'ready') {
-    return cached.result as CatalogueResult<T>
+  if (cached && cached.result.status === 'ready') {
+    const age = Date.now() - cached.timestamp
+    if (age < CACHE_TTL_MS) {
+      return cached.result as CatalogueResult<T>
+    }
+    // Stale-While-Revalidate: return stale immediately, revalidate asynchronously in background
+    if (age < STALE_TTL_MS) {
+      void fetchCatalogueRemote<T>({ table, select, order, filters }, cacheKey, sessionKey)
+      return cached.result as CatalogueResult<T>
+    }
   }
 
-  const sessionKey = `kg_cat_${cacheKey}`
+  // 2. Instant return from sessionStorage if available
   if (!cached && typeof window !== 'undefined') {
     try {
       const stored = sessionStorage.getItem(sessionKey)
       if (stored) {
         const parsed = JSON.parse(stored) as { timestamp: number; result: CatalogueResult<T> }
-        if (parsed && Date.now() - parsed.timestamp < 300_000 && parsed.result?.status === 'ready') {
+        if (parsed && Date.now() - parsed.timestamp < STALE_TTL_MS && parsed.result?.status === 'ready') {
           catalogueMemoryCache.set(cacheKey, { timestamp: parsed.timestamp, result: parsed.result })
+          void fetchCatalogueRemote<T>({ table, select, order, filters }, cacheKey, sessionKey)
           return parsed.result
         }
       }
@@ -70,6 +88,32 @@ async function readCatalogue<T>({
     }
   }
 
+  // 3. Fast-fail if table recently returned 401/404 to prevent network thrashing
+  const tableUnavailableUntil = unavailableTables.get(table)
+  if (tableUnavailableUntil && Date.now() < tableUnavailableUntil) {
+    return { status: 'unavailable', data: [], message: `Catalogue table ${table} is temporarily unconfigured or private.` }
+  }
+
+  // 4. In-flight request deduplication
+  const existingPromise = inFlightRequests.get(cacheKey)
+  if (existingPromise) {
+    return existingPromise as Promise<CatalogueResult<T>>
+  }
+
+  const fetchPromise = fetchCatalogueRemote<T>({ table, select, order, filters }, cacheKey, sessionKey)
+  inFlightRequests.set(cacheKey, fetchPromise as Promise<CatalogueResult<unknown>>)
+  try {
+    return await fetchPromise
+  } finally {
+    inFlightRequests.delete(cacheKey)
+  }
+}
+
+async function fetchCatalogueRemote<T>(
+  { table, select, order, filters }: QueryOptions,
+  cacheKey: string,
+  sessionKey: string,
+): Promise<CatalogueResult<T>> {
   let baseUrl: URL
   try {
     baseUrl = new URL(supabaseUrl)
@@ -93,6 +137,9 @@ async function readCatalogue<T>({
       },
     )
     if (!response.ok) {
+      if (response.status === 401 || response.status === 404) {
+        unavailableTables.set(table, Date.now() + TABLE_BACKOFF_MS)
+      }
       if (typeof window !== 'undefined') {
         try {
           const stored = sessionStorage.getItem(sessionKey)

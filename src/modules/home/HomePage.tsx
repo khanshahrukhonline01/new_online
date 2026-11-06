@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, memo } from 'react'
 import {
   getAcademies,
   getAnnouncements,
@@ -285,6 +285,94 @@ function parseHomeAcademy(a: Academy): FormattedHomeAcademy {
   }
 }
 
+interface HeroSlide {
+  name: string
+  sport: string
+  image: string
+  position: string
+  alt: string
+  title: string
+}
+
+const HERO_SLIDES: HeroSlide[] = [
+  {
+    name: 'Football',
+    sport: 'Football',
+    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=960&q=75',
+    position: 'center 54%',
+    alt: 'Competitive football match on floodlit stadium turf with players contesting possession',
+    title: 'Indian Grassroots Football & Selection Trials on KhelGrid',
+  },
+  {
+    name: 'Cricket',
+    sport: 'Cricket',
+    image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=960&q=75',
+    position: 'center 48%',
+    alt: 'Fast bowler delivering ball at championship cricket tournament stadium pitch',
+    title: 'State & Zonal Cricket Combines and Selection Trials',
+  },
+  {
+    name: 'Athletics',
+    sport: 'Athletics',
+    image: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=960&q=75',
+    position: 'center 42%',
+    alt: 'Junior track athletes launching from starting blocks on professional synthetic running track at national sports complex',
+    title: 'National Athletics Meets & SAI High Performance Centers',
+  },
+  {
+    name: 'Basketball',
+    sport: 'Basketball',
+    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=960&q=75',
+    position: 'center 48%',
+    alt: 'Basketball player executing mid-air shot on indoor championship hardwood arena court',
+    title: 'State & National Basketball Championships',
+  },
+  {
+    name: 'Badminton',
+    sport: 'Badminton',
+    image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=960&q=75',
+    position: 'center 45%',
+    alt: 'Badminton athlete executing powerful jump smash on indoor BWF-grade synthetic court mat',
+    title: 'Accredited Badminton Academies and State Ranking Tournaments',
+  },
+]
+
+const HeroBackgroundCarousel = memo(function HeroBackgroundCarousel({ reduceMotion }: { reduceMotion: boolean }) {
+  const [activeSlide, setActiveSlide] = useState(0)
+
+  useEffect(() => {
+    if (reduceMotion) return
+    const timer = window.setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return
+      setActiveSlide(current => (current + 1) % HERO_SLIDES.length)
+    }, 5500)
+    return () => window.clearInterval(timer)
+  }, [reduceMotion])
+
+  return (
+    <div className="home-hero-bg-layer" aria-hidden="true">
+      <div className="home-hero-slides">
+        {HERO_SLIDES.map((slide, index) => (
+          <img
+            key={slide.name}
+            className={`home-hero-bg-image${index === activeSlide ? ' is-active' : ''}`}
+            src={slide.image}
+            alt={slide.alt}
+            title={slide.title}
+            width={1920}
+            height={1080}
+            loading={index === 0 ? 'eager' : 'lazy'}
+            fetchPriority={index === 0 ? 'high' : 'auto'}
+            decoding="async"
+            style={{ objectPosition: slide.position }}
+          />
+        ))}
+      </div>
+      <div className="home-hero-bg-overlay" />
+    </div>
+  )
+})
+
 export interface HomePageProps {
   onNavigate?: (event: React.MouseEvent<HTMLAnchorElement>, href: string) => void
 }
@@ -332,13 +420,63 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   })
 
   const [reduceMotion, setReduceMotion] = useState(false)
-  const [activeHeroSlide, setActiveHeroSlide] = useState(0)
   const [heroSearch, setHeroSearch] = useState('')
-  const [selectedCity, setSelectedCity] = useState('All India')
+  const [selectedCity, setSelectedCity] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return localStorage.getItem('khelgrid_user_city') || 'All India'
+      } catch {
+        // ignore
+      }
+    }
+    return 'All India'
+  })
+  const [selectedSport, setSelectedSport] = useState<string>('All')
+  const [liveScoreFilter, setLiveScoreFilter] = useState<'All' | 'Cricket' | 'Football'>('All')
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false)
+  const [savedIds, setSavedIds] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('khelgrid_saved_items')
+        if (stored) return new Set(JSON.parse(stored))
+      } catch {
+        // ignore
+      }
+    }
+    return new Set()
+  })
+  const [joinedGameIds, setJoinedGameIds] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('khelgrid_joined_pickup_games')
+        if (stored) return new Set(JSON.parse(stored))
+      } catch {
+        // ignore
+      }
+    }
+    return new Set()
+  })
   const [seasonalAnnouncement, setSeasonalAnnouncement] = useState<DatabaseAnnouncement | null>(null)
   const [liveUpdatedIds, setLiveUpdatedIds] = useState<Set<string>>(new Set())
   const [joiningGameId, setJoiningGameId] = useState<string | null>(null)
+
+  const toggleSaveItem = (e: React.MouseEvent, id: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setSavedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('khelgrid_saved_items', JSON.stringify(Array.from(next)))
+        } catch {
+          // ignore
+        }
+      }
+      return next
+    })
+  }
 
   const markLiveUpdated = (id: string) => {
     setLiveUpdatedIds(prev => new Set(prev).add(id))
@@ -435,8 +573,11 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   ]
 
   const quickExploreChips = [
+    { label: 'All India', emoji: '🇮🇳', sport: 'All', href: '/' },
+    { label: 'Cricket', emoji: '🏏', sport: 'Cricket', href: '/opportunities?sport=Cricket' },
+    { label: 'Football', emoji: '⚽', sport: 'Football', href: '/venues?sport=football' },
+    { label: 'Badminton', emoji: '🏸', sport: 'Badminton', href: '/venues?sport=badminton' },
     { label: 'Live Matches', emoji: '🔴', href: '/live-scores' },
-    { label: 'Cricket Trials', emoji: '🏏', href: '/opportunities?sport=Cricket' },
     { label: 'KhelChronicle', emoji: '🔬', href: '/khelchronicle' },
     { label: 'Book Turf', emoji: '⚽', href: '/venues' },
     { label: 'Pickup Games', emoji: '🏸', href: '/play' },
@@ -484,49 +625,6 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   const turfsRailRef = useRef<HTMLDivElement>(null)
   const pickupRailRef = useRef<HTMLDivElement>(null)
   const academiesRailRef = useRef<HTMLDivElement>(null)
-
-  const heroSlides = [
-    {
-      name: 'Football',
-      sport: 'Football',
-      image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=960&q=75',
-      position: 'center 54%',
-      alt: 'Competitive football match on floodlit stadium turf with players contesting possession',
-      title: 'Indian Grassroots Football & Selection Trials on KhelGrid',
-    },
-    {
-      name: 'Cricket',
-      sport: 'Cricket',
-      image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=960&q=75',
-      position: 'center 48%',
-      alt: 'Fast bowler delivering ball at championship cricket tournament stadium pitch',
-      title: 'State & Zonal Cricket Combines and Selection Trials',
-    },
-    {
-      name: 'Athletics',
-      sport: 'Athletics',
-      image: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=960&q=75',
-      position: 'center 42%',
-      alt: 'Junior track athletes launching from starting blocks on professional synthetic running track at national sports complex',
-      title: 'National Athletics Meets & SAI High Performance Centers',
-    },
-    {
-      name: 'Basketball',
-      sport: 'Basketball',
-      image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=960&q=75',
-      position: 'center 48%',
-      alt: 'Basketball player executing mid-air shot on indoor championship hardwood arena court',
-      title: 'State & National Basketball Championships',
-    },
-    {
-      name: 'Badminton',
-      sport: 'Badminton',
-      image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=960&q=75',
-      position: 'center 45%',
-      alt: 'Badminton athlete executing powerful jump smash on indoor BWF-grade synthetic court mat',
-      title: 'Accredited Badminton Academies and State Ranking Tournaments',
-    },
-  ]
 
   const scrollRail = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
     if (ref.current) {
@@ -757,13 +855,24 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   ) => {
     e.preventDefault()
     e.stopPropagation()
+
+    // If athlete already joined, direct to community match coordination chat
+    if (joinedGameIds.has(game.id)) {
+      if (typeof window !== 'undefined') {
+        window.open('https://chat.whatsapp.com/', '_blank')
+      }
+      return
+    }
+
     if (game.spotsOpen <= 0 || joiningGameId === game.id) return
     setJoiningGameId(game.id)
     try {
+      const nextSpots = Math.max(0, game.spotsOpen - 1)
+      const nextConfirmed = game.confirmedPlayers + 1
       await updatePickupGameSpots(
         game.id,
-        Math.max(0, game.spotsOpen - 1),
-        game.confirmedPlayers + 1,
+        nextSpots,
+        nextConfirmed,
         {
           id: game.id,
           slug: game.id,
@@ -775,12 +884,23 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
           time_label: game.timeLabel,
           host_name: game.hostName,
           price_per_player: game.pricePerPlayer,
-          spots_open: Math.max(0, game.spotsOpen - 1),
+          spots_open: nextSpots,
           total_players: game.totalPlayers,
-          confirmed_players: game.confirmedPlayers + 1,
+          confirmed_players: nextConfirmed,
           is_featured: game.is_featured,
         },
       )
+      setJoinedGameIds(prev => {
+        const next = new Set(prev).add(game.id)
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('khelgrid_joined_pickup_games', JSON.stringify(Array.from(next)))
+          } catch {
+            // ignore
+          }
+        }
+        return next
+      })
     } finally {
       setJoiningGameId(null)
     }
@@ -818,22 +938,34 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
     return () => media.removeEventListener('change', update)
   }, [])
 
-  useEffect(() => {
-    if (reduceMotion) return
-    const timer = window.setInterval(
-      () => {
-        if (typeof document !== 'undefined' && document.hidden) return
-        setActiveHeroSlide(current => (current + 1) % heroSlides.length)
-      },
-      5500,
-    )
-    return () => window.clearInterval(timer)
-  }, [reduceMotion, heroSlides.length])
+  // Display matches filtered by selected sport
+  const displayMatches = useMemo(() => {
+    if (liveScoreFilter === 'All') return liveMatches
+    return liveMatches.filter(m => m.sport.toLowerCase() === liveScoreFilter.toLowerCase())
+  }, [liveMatches, liveScoreFilter])
 
-  // Display academies: 12 dynamic institutions from Supabase database (zero hardcoding, remaining on /academies)
+  // Display academies: dynamic institutions filtered by city and sport
   const displayAcademies = useMemo(() => {
     if (counts.academies?.status !== 'ready') return []
-    const sorted = [...counts.academies.data].sort((a, b) => getAcademyPriority(b) - getAcademyPriority(a))
+    let pool = counts.academies.data
+
+    if (selectedCity !== 'All India') {
+      const cityKey = selectedCity.toLowerCase()
+      const cityFiltered = pool.filter(a => (a.city || '').toLowerCase().includes(cityKey))
+      if (cityFiltered.length > 0) pool = cityFiltered
+    }
+
+    if (selectedSport !== 'All') {
+      const sportKey = selectedSport.toLowerCase()
+      const sportFiltered = pool.filter(a =>
+        (a.name || '').toLowerCase().includes(sportKey) ||
+        (a.description || '').toLowerCase().includes(sportKey) ||
+        (a.sport || '').toLowerCase().includes(sportKey)
+      )
+      if (sportFiltered.length > 0) pool = sportFiltered
+    }
+
+    const sorted = [...pool].sort((a, b) => getAcademyPriority(b) - getAcademyPriority(a))
     const seen = new Set<string>()
     const selected: FormattedHomeAcademy[] = []
     for (const item of sorted) {
@@ -841,17 +973,38 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
       if (!seen.has(key)) {
         seen.add(key)
         selected.push(parseHomeAcademy(item))
-        if (selected.length === 12) break
+        if (selected.length === 16) break
       }
     }
     return selected
-  }, [counts.academies])
+  }, [counts.academies, selectedCity, selectedSport])
 
-  // Selection trials: sorted by featured first, then upcoming dates / deadlines, then verified
+  // Selection trials: dynamically filtered by city and sport
   const displayOpportunities = useMemo(() => {
     if (counts.opportunities?.status !== 'ready') return []
     const now = Date.now()
-    return [...counts.opportunities.data]
+    let pool = counts.opportunities.data
+
+    if (selectedCity !== 'All India') {
+      const cityKey = selectedCity.toLowerCase()
+      const cityFiltered = pool.filter(opp =>
+        (opp.city || '').toLowerCase().includes(cityKey) ||
+        (opp.venue_name || '').toLowerCase().includes(cityKey)
+      )
+      if (cityFiltered.length > 0) pool = cityFiltered
+    }
+
+    if (selectedSport !== 'All') {
+      const sportKey = selectedSport.toLowerCase()
+      const sportFiltered = pool.filter(opp =>
+        (opp.title || '').toLowerCase().includes(sportKey) ||
+        (opp.opportunity_type || '').toLowerCase().includes(sportKey) ||
+        JSON.stringify(opp.metadata || {}).toLowerCase().includes(sportKey)
+      )
+      if (sportFiltered.length > 0) pool = sportFiltered
+    }
+
+    return [...pool]
       .sort((a, b) => {
         const aFeatured = Boolean(a.is_featured || a.metadata?.featured || a.metadata?.is_featured)
         const bFeatured = Boolean(b.is_featured || b.metadata?.featured || b.metadata?.is_featured)
@@ -871,13 +1024,30 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
 
         return (b.starts_at ?? '').localeCompare(a.starts_at ?? '')
       })
-      .slice(0, 12)
-  }, [counts.opportunities])
+      .slice(0, 16)
+  }, [counts.opportunities, selectedCity, selectedSport])
 
-  // Display venues: sorted by featured first, then government facility status, then alphabetical
+  // Display venues: dynamically filtered by city and sport
   const displayVenues = useMemo(() => {
     if (counts.venues?.status !== 'ready') return []
-    return [...counts.venues.data]
+    let pool = counts.venues.data
+
+    if (selectedCity !== 'All India') {
+      const cityKey = selectedCity.toLowerCase()
+      const cityFiltered = pool.filter(v => (v.city || '').toLowerCase().includes(cityKey))
+      if (cityFiltered.length > 0) pool = cityFiltered
+    }
+
+    if (selectedSport !== 'All') {
+      const sportKey = selectedSport.toLowerCase()
+      const sportFiltered = pool.filter(v =>
+        (v.name || '').toLowerCase().includes(sportKey) ||
+        (v.description || '').toLowerCase().includes(sportKey)
+      )
+      if (sportFiltered.length > 0) pool = sportFiltered
+    }
+
+    return [...pool]
       .sort((a, b) => {
         const aFeatured = Boolean(a.is_featured)
         const bFeatured = Boolean(b.is_featured)
@@ -889,63 +1059,56 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
 
         return a.name.localeCompare(b.name)
       })
-      .slice(0, 12)
-  }, [counts.venues])
+      .slice(0, 16)
+  }, [counts.venues, selectedCity, selectedSport])
 
-  // Pickup games: dynamic database community matches with fallback to COMMUNITY_PICKUP_GAMES
+  // Pickup games: dynamic database community matches filtered by city and sport
   const displayPickupGames = useMemo(() => {
-    if (counts.pickupGames?.status === 'ready' && counts.pickupGames.data.length > 0) {
-      return [...counts.pickupGames.data]
-        .sort((a, b) => {
-          if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1
-          return b.confirmed_players - a.confirmed_players
-        })
-        .slice(0, 12)
-        .map(g => ({
-          id: g.id,
-          sport: g.sport,
-          emoji: g.emoji || '⚽',
-          skillLevel: (g.skill_level as 'Beginner' | 'Intermediate' | 'Advanced') || 'Intermediate',
-          venueName: g.venue_name,
-          city: g.city,
-          timeLabel: g.time_label,
-          hostName: g.host_name,
-          pricePerPlayer: g.price_per_player,
-          spotsOpen: g.spots_open,
-          totalPlayers: g.total_players,
-          confirmedPlayers: g.confirmed_players,
-          is_featured: g.is_featured,
-        }))
+    let pool =
+      counts.pickupGames?.status === 'ready' && counts.pickupGames.data.length > 0
+        ? counts.pickupGames.data.map(g => ({
+            id: g.id,
+            sport: g.sport,
+            emoji: g.emoji || '⚽',
+            skillLevel: (g.skill_level as 'Beginner' | 'Intermediate' | 'Advanced') || 'Intermediate',
+            venueName: g.venue_name,
+            city: g.city,
+            timeLabel: g.time_label,
+            hostName: g.host_name,
+            pricePerPlayer: g.price_per_player,
+            spotsOpen: g.spots_open,
+            totalPlayers: g.total_players,
+            confirmedPlayers: g.confirmed_players,
+            is_featured: g.is_featured,
+          }))
+        : COMMUNITY_PICKUP_GAMES
+
+    if (selectedCity !== 'All India') {
+      const cityKey = selectedCity.toLowerCase()
+      const cityFiltered = pool.filter(g => (g.city || '').toLowerCase().includes(cityKey))
+      if (cityFiltered.length > 0) pool = cityFiltered
     }
-    return COMMUNITY_PICKUP_GAMES.slice(0, 12)
-  }, [counts.pickupGames])
+
+    if (selectedSport !== 'All') {
+      const sportKey = selectedSport.toLowerCase()
+      const sportFiltered = pool.filter(g => (g.sport || '').toLowerCase().includes(sportKey))
+      if (sportFiltered.length > 0) pool = sportFiltered
+    }
+
+    return [...pool]
+      .sort((a, b) => {
+        if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1
+        return b.confirmedPlayers - a.confirmedPlayers
+      })
+      .slice(0, 16)
+  }, [counts.pickupGames, selectedCity, selectedSport])
 
   return (
     <>
       {/* 0. Full-Bleed Cinematic Hero Panel */}
       <section className="home-hero-panel home-hero-cinematic" aria-label="KhelGrid sports universe hero">
-        {/* Ambient Full-Bleed Background Slides Layer */}
-        <div className="home-hero-bg-layer" aria-hidden="true">
-          <div className="home-hero-slides">
-            {heroSlides.map((slide, index) => (
-              <img
-                key={slide.name}
-                className={`home-hero-bg-image${index === activeHeroSlide ? ' is-active' : ''}`}
-                src={slide.image}
-                alt={slide.alt}
-                title={slide.title}
-                width={1920}
-                height={1080}
-                loading={index === 0 ? 'eager' : 'lazy'}
-                fetchPriority={index === 0 ? 'high' : 'auto'}
-                decoding="async"
-                style={{ objectPosition: slide.position }}
-              />
-            ))}
-          </div>
-          {/* Deep Directional Gradient Overlay for Contrast */}
-          <div className="home-hero-bg-overlay" />
-        </div>
+        {/* Ambient Full-Bleed Background Slides Layer (Isolated memoized carousel for zero-jank 60FPS) */}
+        <HeroBackgroundCarousel reduceMotion={reduceMotion} />
 
         {/* Foreground Content - Live Site Parity Option A */}
         <div className="home-hero-foreground">
@@ -1001,6 +1164,13 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                     onClick={() => {
                       setSelectedCity('All India')
                       setCityDropdownOpen(false)
+                      if (typeof window !== 'undefined') {
+                        try {
+                          localStorage.setItem('khelgrid_user_city', 'All India')
+                        } catch {
+                          // ignore
+                        }
+                      }
                     }}
                   >
                     All India
@@ -1014,7 +1184,13 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                       onClick={() => {
                         setSelectedCity(city.name)
                         setCityDropdownOpen(false)
-                        handleLink({ preventDefault: () => {} } as React.MouseEvent<HTMLAnchorElement>, `/venues?city=${encodeURIComponent(city.name)}`)
+                        if (typeof window !== 'undefined') {
+                          try {
+                            localStorage.setItem('khelgrid_user_city', city.name)
+                          } catch {
+                            // ignore
+                          }
+                        }
                       }}
                     >
                       {city.name}
@@ -1068,17 +1244,27 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
               <span>Quick Explore:</span>
             </span>
             <div className="home-hero-qe-chips">
-              {quickExploreChips.map(chip => (
-                <a
-                  key={chip.label}
-                  href={chip.href}
-                  onClick={e => handleLink(e, chip.href)}
-                  className="home-hero-qe-chip"
-                >
-                  <span className="home-hero-qe-emoji" aria-hidden="true">{chip.emoji}</span>
-                  <span>{chip.label}</span>
-                </a>
-              ))}
+              {quickExploreChips.map(chip => {
+                const isActive = (chip.sport && selectedSport === chip.sport) || (chip.sport === 'All' && selectedSport === 'All')
+                return (
+                  <a
+                    key={chip.label}
+                    href={chip.href}
+                    onClick={e => {
+                      if (chip.sport) {
+                        e.preventDefault()
+                        setSelectedSport(prev => (prev === chip.sport ? 'All' : chip.sport))
+                        return
+                      }
+                      handleLink(e, chip.href)
+                    }}
+                    className={`home-hero-qe-chip${isActive ? ' is-active' : ''}`}
+                  >
+                    <span className="home-hero-qe-emoji" aria-hidden="true">{chip.emoji}</span>
+                    <span>{chip.label}</span>
+                  </a>
+                )
+              })}
             </div>
           </div>
 
@@ -1132,6 +1318,54 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
         </div>
       </section>
 
+      {/* Dynamic Active Location & Sport Filter Status Bar */}
+      {(selectedCity !== 'All India' || selectedSport !== 'All') && (
+        <div className="home-dynamic-filter-bar" role="status" aria-label="Active catalogue filters">
+          <div className="home-dynamic-filter-badges">
+            <span className="home-dynamic-filter-label">Active Filter:</span>
+            {selectedCity !== 'All India' && (
+              <button
+                type="button"
+                className="home-dynamic-filter-chip"
+                onClick={() => {
+                  setSelectedCity('All India')
+                  if (typeof window !== 'undefined') localStorage.setItem('khelgrid_user_city', 'All India')
+                }}
+                title="Remove city filter"
+              >
+                <span>📍 {selectedCity}</span>
+                <SiteIcon name="close" size={12} />
+              </button>
+            )}
+            {selectedSport !== 'All' && (
+              <button
+                type="button"
+                className="home-dynamic-filter-chip"
+                onClick={() => setSelectedSport('All')}
+                title="Remove sport filter"
+              >
+                <span>🏆 {selectedSport}</span>
+                <SiteIcon name="close" size={12} />
+              </button>
+            )}
+            <span className="home-dynamic-filter-count">
+              · {displayOpportunities.length + displayVenues.length + displayAcademies.length + displayPickupGames.length} matching listings in grid
+            </span>
+          </div>
+          <button
+            type="button"
+            className="home-dynamic-filter-reset"
+            onClick={() => {
+              setSelectedCity('All India')
+              setSelectedSport('All')
+              if (typeof window !== 'undefined') localStorage.setItem('khelgrid_user_city', 'All India')
+            }}
+          >
+            Reset to All India
+          </button>
+        </div>
+      )}
+
       {/* 1. LIVE MATCH CENTER */}
       <section className="home-section-container" aria-label="Live Match Center">
         <div className="home-section-header">
@@ -1144,6 +1378,18 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
             <p className="home-section-subtitle">Real-time international and domestic sports scores</p>
           </div>
           <div className="home-section-actions">
+            <div className="home-live-filters">
+              {(['All', 'Cricket', 'Football'] as const).map(tab => (
+                <button
+                  key={tab}
+                  type="button"
+                  className={`home-live-filter-btn${liveScoreFilter === tab ? ' is-active' : ''}`}
+                  onClick={() => setLiveScoreFilter(tab)}
+                >
+                  {tab === 'All' ? 'All' : tab === 'Cricket' ? '🏏 Cricket' : '⚽ Football'}
+                </button>
+              ))}
+            </div>
             <div className="home-scroll-arrows">
               <button
                 type="button"
@@ -1172,7 +1418,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
         <div ref={liveMatchesRailRef} className="home-touch-rail" tabIndex={0} aria-label="Live matches list">
           {loadingMatches ? (
             <div className="home-rail-status-box">Loading live match scores…</div>
-          ) : liveMatches.length === 0 ? (
+          ) : displayMatches.length === 0 ? (
             <div className="home-rail-status-box">
               No live matches currently in play. Check upcoming schedules on the{' '}
               <a href="/live-scores" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
@@ -1181,7 +1427,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
               .
             </div>
           ) : (
-            liveMatches.map(match => (
+            displayMatches.map(match => (
               <a key={match.id} href="/live-scores" className="home-rail-card home-match-card">
                 <div>
                   <div className="home-card-media home-match-card-media">
@@ -1328,6 +1574,15 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                         Verified
                       </span>
                     </div>
+                    <button
+                      type="button"
+                      className={`home-card-bookmark-btn${savedIds.has(opp.id) ? ' is-saved' : ''}`}
+                      title={savedIds.has(opp.id) ? 'Saved' : 'Save'}
+                      aria-label={savedIds.has(opp.id) ? 'Saved' : 'Save'}
+                      onClick={e => toggleSaveItem(e, opp.id)}
+                    >
+                      <SiteIcon name={savedIds.has(opp.id) ? 'star' : 'bookmark'} size={14} />
+                    </button>
                   </div>
                   <h3 className="home-card-title">{opp.title}</h3>
                   <div className="home-card-meta">
@@ -1441,6 +1696,15 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                         Verified
                       </span>
                     </div>
+                    <button
+                      type="button"
+                      className={`home-card-bookmark-btn${savedIds.has(acad.id) ? ' is-saved' : ''}`}
+                      title={savedIds.has(acad.id) ? 'Saved' : 'Save'}
+                      aria-label={savedIds.has(acad.id) ? 'Saved' : 'Save'}
+                      onClick={e => toggleSaveItem(e, acad.id)}
+                    >
+                      <SiteIcon name={savedIds.has(acad.id) ? 'star' : 'bookmark'} size={14} />
+                    </button>
                     <div className="home-card-overlay-bottom">
                       <span className="home-academy-scout-badge">{acad.scoutBadge}</span>
                     </div>
@@ -1560,6 +1824,15 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                         {v.government_facility ? 'Govt Facility' : 'Verified Venue'}
                       </span>
                     </div>
+                    <button
+                      type="button"
+                      className={`home-card-bookmark-btn${savedIds.has(v.id) ? ' is-saved' : ''}`}
+                      title={savedIds.has(v.id) ? 'Saved' : 'Save'}
+                      aria-label={savedIds.has(v.id) ? 'Saved' : 'Save'}
+                      onClick={e => toggleSaveItem(e, v.id)}
+                    >
+                      <SiteIcon name={savedIds.has(v.id) ? 'star' : 'bookmark'} size={14} />
+                    </button>
                   </div>
                   <h3 className="home-card-title">{v.name}</h3>
                   <div className="home-card-meta">
@@ -1660,6 +1933,15 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                       {g.skillLevel}
                     </span>
                   </div>
+                  <button
+                    type="button"
+                    className={`home-card-bookmark-btn${savedIds.has(g.id) ? ' is-saved' : ''}`}
+                    title={savedIds.has(g.id) ? 'Saved' : 'Save'}
+                    aria-label={savedIds.has(g.id) ? 'Saved' : 'Save'}
+                    onClick={e => toggleSaveItem(e, g.id)}
+                  >
+                    <SiteIcon name={savedIds.has(g.id) ? 'star' : 'bookmark'} size={14} />
+                  </button>
                   <div className="home-card-overlay-bottom">
                     <span className="home-media-badge-green">
                       {g.spotsOpen} {g.spotsOpen === 1 ? 'spot' : 'spots'} open
@@ -1693,11 +1975,17 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                 <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
                   <button
                     type="button"
-                    className="home-pickup-join-btn"
-                    disabled={g.spotsOpen <= 0 || joiningGameId === g.id}
+                    className={`home-pickup-join-btn${joinedGameIds.has(g.id) ? ' is-joined' : ''}`}
+                    disabled={(!joinedGameIds.has(g.id) && g.spotsOpen <= 0) || joiningGameId === g.id}
                     onClick={e => handleReserveSpot(e, g)}
                   >
-                    {joiningGameId === g.id ? 'Reserving…' : g.spotsOpen <= 0 ? 'Full' : 'Reserve Spot'}
+                    {joiningGameId === g.id
+                      ? 'Reserving…'
+                      : joinedGameIds.has(g.id)
+                        ? '✓ Joined (Chat)'
+                        : g.spotsOpen <= 0
+                          ? 'Full'
+                          : 'Reserve Spot'}
                   </button>
                 </div>
               </div>

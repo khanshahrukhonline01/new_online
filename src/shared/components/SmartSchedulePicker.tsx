@@ -1,4 +1,4 @@
-import { useState, useEffect, useId, type ChangeEvent } from 'react'
+import { useState, useEffect, useId, useMemo, useCallback, useRef, type ChangeEvent } from 'react'
 import { SiteIcon } from './SiteIcon'
 import './SmartSchedulePicker.css'
 
@@ -48,6 +48,10 @@ const TRIAL_TIME_SESSIONS = [
   },
 ]
 
+function formatDateDisplay(d: Date): string {
+  return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
 export function SmartSchedulePicker({
   value,
   onChange,
@@ -67,35 +71,34 @@ export function SmartSchedulePicker({
   const [activeSessionTab, setActiveSessionTab] = useState<number>(mode === 'pickup' ? 1 : 0)
 
   // Compute upcoming dynamic days based on today's calendar
-  const now = new Date()
-  const today = new Date(now)
-  const tomorrow = new Date(now)
-  tomorrow.setDate(now.getDate() + 1)
+  const { today, dayOptions } = useMemo(() => {
+    const now = new Date()
+    const t = new Date(now)
+    const tm = new Date(now)
+    tm.setDate(now.getDate() + 1)
 
-  const sat = new Date(now)
-  const currentDay = now.getDay()
-  const daysUntilSat = (6 - currentDay + 7) % 7 || 7
-  sat.setDate(now.getDate() + daysUntilSat)
+    const satDate = new Date(now)
+    const currentDay = now.getDay()
+    const daysUntilSat = (6 - currentDay + 7) % 7 || 7
+    satDate.setDate(now.getDate() + daysUntilSat)
 
-  const sun = new Date(now)
-  const daysUntilSun = (7 - currentDay) % 7 || 7
-  sun.setDate(now.getDate() + daysUntilSun)
+    const sunDate = new Date(now)
+    const daysUntilSun = (7 - currentDay) % 7 || 7
+    sunDate.setDate(now.getDate() + daysUntilSun)
 
-  const formatDateDisplay = (d: Date) => {
-    return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })
-  }
-
-  const dayOptions: DayOption[] = [
-    { key: 'today', label: 'Today', date: today, displayDate: formatDateDisplay(today) },
-    { key: 'tomorrow', label: 'Tomorrow', date: tomorrow, displayDate: formatDateDisplay(tomorrow) },
-    { key: 'saturday', label: 'Saturday', date: sat, displayDate: formatDateDisplay(sat) },
-    { key: 'sunday', label: 'Sunday', date: sun, displayDate: formatDateDisplay(sun) },
-  ]
+    const options: DayOption[] = [
+      { key: 'today', label: 'Today', date: t, displayDate: formatDateDisplay(t) },
+      { key: 'tomorrow', label: 'Tomorrow', date: tm, displayDate: formatDateDisplay(tm) },
+      { key: 'saturday', label: 'Saturday', date: satDate, displayDate: formatDateDisplay(satDate) },
+      { key: 'sunday', label: 'Sunday', date: sunDate, displayDate: formatDateDisplay(sunDate) },
+    ]
+    return { today: t, dayOptions: options }
+  }, [])
 
   const sessions = mode === 'pickup' ? PICKUP_TIME_SESSIONS : TRIAL_TIME_SESSIONS
 
   // Helper to compute ISO and formatted string
-  const computeSchedule = (dayKey: string, timeStr: string, cDateStr?: string) => {
+  const computeSchedule = useCallback((dayKey: string, timeStr: string, cDateStr?: string) => {
     let dayPrefix = 'Today'
     let targetDate = today
 
@@ -143,7 +146,7 @@ export function SmartSchedulePicker({
     }
 
     return { formatted, iso }
-  }
+  }, [dayOptions, today])
 
   const handleSelectDay = (key: string) => {
     setSelectedDayKey(key)
@@ -189,15 +192,17 @@ export function SmartSchedulePicker({
     onChange(e.target.value)
   }
 
-  // Pre-fill initial value if empty
+  // Pre-fill initial value once if empty
+  const hasInitializedRef = useRef(false)
   useEffect(() => {
-    if (!value) {
+    if (!hasInitializedRef.current && !value) {
+      hasInitializedRef.current = true
       const initialTime = mode === 'pickup' ? '08:00 PM' : '07:00 AM'
       setSelectedTime(initialTime)
       const { formatted, iso } = computeSchedule('today', initialTime)
       onChange(formatted, iso)
     }
-  }, [])
+  }, [computeSchedule, mode, onChange, value])
 
   const todayIsoMin = new Date().toISOString().split('T')[0]
 
