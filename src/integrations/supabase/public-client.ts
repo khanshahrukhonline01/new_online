@@ -26,6 +26,18 @@ const CACHE_TTL_MS = 60_000
 
 export function clearCatalogueCache(): void {
   catalogueMemoryCache.clear()
+  if (typeof window !== 'undefined') {
+    try {
+      const keysToRemove: string[] = []
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const k = sessionStorage.key(i)
+        if (k?.startsWith('kg_cat_')) keysToRemove.push(k)
+      }
+      keysToRemove.forEach(k => sessionStorage.removeItem(k))
+    } catch {
+      // ignore
+    }
+  }
 }
 
 async function readCatalogue<T>({
@@ -40,6 +52,22 @@ async function readCatalogue<T>({
   const cached = catalogueMemoryCache.get(cacheKey)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS && cached.result.status === 'ready') {
     return cached.result as CatalogueResult<T>
+  }
+
+  const sessionKey = `kg_cat_${cacheKey}`
+  if (!cached && typeof window !== 'undefined') {
+    try {
+      const stored = sessionStorage.getItem(sessionKey)
+      if (stored) {
+        const parsed = JSON.parse(stored) as { timestamp: number; result: CatalogueResult<T> }
+        if (parsed && Date.now() - parsed.timestamp < 300_000 && parsed.result?.status === 'ready') {
+          catalogueMemoryCache.set(cacheKey, { timestamp: parsed.timestamp, result: parsed.result })
+          return parsed.result
+        }
+      }
+    } catch {
+      // ignore storage parse errors
+    }
   }
 
   let baseUrl: URL
@@ -65,6 +93,17 @@ async function readCatalogue<T>({
       },
     )
     if (!response.ok) {
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = sessionStorage.getItem(sessionKey)
+          if (stored) {
+            const parsed = JSON.parse(stored) as { timestamp: number; result: CatalogueResult<T> }
+            if (parsed?.result?.status === 'ready') return parsed.result
+          }
+        } catch {
+          // ignore
+        }
+      }
       return { status: 'unavailable', data: [], message: 'Catalogue data is temporarily unavailable. Please try again later.' }
     }
     const data: unknown = await response.json()
@@ -73,8 +112,26 @@ async function readCatalogue<T>({
     }
     const result: CatalogueResult<T> = { status: 'ready', data: data as T[] }
     catalogueMemoryCache.set(cacheKey, { timestamp: Date.now(), result })
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(sessionKey, JSON.stringify({ timestamp: Date.now(), result }))
+      } catch {
+        // ignore
+      }
+    }
     return result
   } catch {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem(sessionKey)
+        if (stored) {
+          const parsed = JSON.parse(stored) as { timestamp: number; result: CatalogueResult<T> }
+          if (parsed?.result?.status === 'ready') return parsed.result
+        }
+      } catch {
+        // ignore
+      }
+    }
     return { status: 'unavailable', data: [], message: 'Could not connect to the catalogue. Check your connection and try again.' }
   }
 }

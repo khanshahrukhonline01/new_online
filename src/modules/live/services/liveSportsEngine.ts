@@ -1,7 +1,7 @@
 import type { SportsMatch, SportType, CricketFormat, LiveScoresResponse } from '../types';
 import { scorekeeperService } from './scorekeeperService';
 
-const CACHE_TTL_MS = 15 * 1000; // 15 seconds cache for fast live score synchronization
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds cache for fast live score synchronization
 const AUTO_ARCHIVE_HOURS = 12;
 
 interface CacheStore {
@@ -27,16 +27,20 @@ interface RawCompetitor {
 /**
  * Safely fetches with timeout
  */
-async function fetchWithTimeout(url: string, timeoutMs = 4500): Promise<Response | null> {
+async function fetchWithTimeout(url: string, timeoutMs = 2500): Promise<Response | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const isBrowser = typeof window !== 'undefined';
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  };
+  if (!isBrowser) {
+    headers['User-Agent'] = 'Mozilla/5.0 (compatible; KhelGridPlatform/2.0)';
+  }
   try {
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'Mozilla/5.0 (compatible; KhelGridPlatform/2.0)',
-      },
+      headers,
     });
     clearTimeout(timer);
     return res;
@@ -276,18 +280,43 @@ export class LiveSportsEngine {
     if (!options.forceRefresh && this.cache && now - this.cache.fetchedAt < CACHE_TTL_MS) {
       allMatches = this.cache.data;
     } else {
-      const [cricket, football] = await Promise.all([
-        this.fetchLiveCricket(),
-        this.fetchLiveFootball(),
-      ]);
+      if (!options.forceRefresh && !this.cache && typeof window !== 'undefined') {
+        try {
+          const stored = sessionStorage.getItem('kg_live_scores_cache');
+          if (stored) {
+            const parsed = JSON.parse(stored) as { data: SportsMatch[]; fetchedAt: number };
+            if (parsed && now - parsed.fetchedAt < CACHE_TTL_MS) {
+              this.cache = parsed;
+              allMatches = parsed.data;
+            }
+          }
+        } catch {
+          // ignore storage parse errors
+        }
+      }
 
-      const community = scorekeeperService.getCommunityMatches();
-      allMatches = this.filterArchived([...community, ...cricket, ...football]);
+      if (allMatches.length === 0) {
+        const [cricket, football] = await Promise.all([
+          this.fetchLiveCricket(),
+          this.fetchLiveFootball(),
+        ]);
 
-      this.cache = {
-        data: allMatches,
-        fetchedAt: now,
-      };
+        const community = scorekeeperService.getCommunityMatches();
+        allMatches = this.filterArchived([...community, ...cricket, ...football]);
+
+        this.cache = {
+          data: allMatches,
+          fetchedAt: now,
+        };
+
+        if (typeof window !== 'undefined') {
+          try {
+            sessionStorage.setItem('kg_live_scores_cache', JSON.stringify(this.cache));
+          } catch {
+            // ignore
+          }
+        }
+      }
     }
 
     let filtered = allMatches;
