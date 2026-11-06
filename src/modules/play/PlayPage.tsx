@@ -17,7 +17,7 @@ import { createBannerSvg } from '../home/homeSvgBanners'
 import { COMMUNITY_PICKUP_GAMES, type PickupGame } from './pickupData'
 import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
 import { parseInrPrice } from '../../shared/payments/paymentService'
-import type { PaymentItem, PaymentResult } from '../../shared/payments/paymentTypes'
+import type { PaymentItem } from '../../shared/payments/paymentTypes'
 import './PlayPage.css'
 
 export interface PlayPageProps {
@@ -154,7 +154,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
     setRsvpError('')
   }
 
-  const executeBooking = async (name: string, phone?: string, _paymentId?: string) => {
+  const executeBooking = async (name: string, phone?: string) => {
     if (!rsvpModalGame) return
     setRsvpSubmitting(true)
     setRsvpError('')
@@ -261,9 +261,9 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
     await executeBooking(name, rsvpPhone.trim() || undefined)
   }
 
-  const handlePaymentSuccess = (paymentResult: PaymentResult) => {
+  const handlePaymentSuccess = () => {
     setCheckoutItem(null)
-    executeBooking(rsvpName.trim(), rsvpPhone.trim() || undefined, paymentResult.paymentId)
+    executeBooking(rsvpName.trim(), rsvpPhone.trim() || undefined)
   }
 
   const records = useMemo<PickupGame[]>(() => {
