@@ -1,4 +1,5 @@
 import type { SportsMatch, SportType, CricketFormat, LiveScoresResponse } from '../types';
+import { scorekeeperService } from './scorekeeperService';
 
 const CACHE_TTL_MS = 15 * 1000; // 15 seconds cache for fast live score synchronization
 const AUTO_ARCHIVE_HOURS = 12;
@@ -280,7 +281,8 @@ export class LiveSportsEngine {
         this.fetchLiveFootball(),
       ]);
 
-      allMatches = this.filterArchived([...cricket, ...football]);
+      const community = scorekeeperService.getCommunityMatches();
+      allMatches = this.filterArchived([...community, ...cricket, ...football]);
 
       this.cache = {
         data: allMatches,

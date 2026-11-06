@@ -129,6 +129,33 @@
   border-color: var(--line-strong);
 }
 
+.live-btn.is-scorekeeper {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  font-weight: 750;
+}
+
+.live-btn.is-scorekeeper:hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.community-match-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 99px;
+  text-transform: uppercase;
+}
+
 .live-btn.is-active {
   background: var(--accent-soft);
   border-color: var(--accent);

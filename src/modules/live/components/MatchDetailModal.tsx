@@ -1,5 +1,5 @@
 import type { MouseEvent } from 'react';
-import type { SportsMatch } from '../types';
+import type { SportsMatch, CommunityLiveMatch } from '../types';
 import { SiteIcon } from '../../../shared/components/SiteIcon';
 
 interface MatchDetailModalProps {
@@ -10,6 +10,10 @@ interface MatchDetailModalProps {
 
 export function MatchDetailModal({ match, onClose, onNavigate }: MatchDetailModalProps) {
   if (!match) return null;
+
+  const communityTimeline = 'commentaryTimeline' in match && Array.isArray((match as CommunityLiveMatch).commentaryTimeline)
+    ? (match as CommunityLiveMatch).commentaryTimeline
+    : null;
 
   const handleLinkClick = (e: MouseEvent<HTMLAnchorElement>, target: string) => {
     if (onNavigate) {
@@ -81,6 +85,22 @@ export function MatchDetailModal({ match, onClose, onNavigate }: MatchDetailModa
             <strong>{match.source}</strong>
           </div>
         </div>
+
+        {communityTimeline && communityTimeline.length > 0 && (
+          <div className="modal-commentary-section" style={{ marginTop: '16px', background: 'rgba(15,23,42,0.6)', padding: '14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <h4 style={{ fontSize: '13px', fontWeight: 800, margin: '0 0 10px', color: '#94a3b8', textTransform: 'uppercase' }}>
+              ⚡ Live Ball-by-Ball Commentary
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {communityTimeline.map((ev) => (
+                <div key={ev.id} style={{ display: 'flex', gap: '8px', fontSize: '12px' }}>
+                  <span style={{ fontWeight: 800, color: '#38bdf8', whiteSpace: 'nowrap' }}>{ev.time}</span>
+                  <span style={{ color: '#e2e8f0' }}>{ev.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Grassroots Action Launchpad */}
         <div className="modal-grassroots-launchpad">

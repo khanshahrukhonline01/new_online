@@ -1,5 +1,5 @@
 import type { MouseEvent } from 'react';
-import type { SportsMatch } from '../types';
+import type { SportsMatch, CommunityLiveMatch } from '../types';
 import { SiteIcon } from '../../../shared/components/SiteIcon';
 
 interface MatchCardProps {
@@ -18,6 +18,7 @@ export function MatchCard({
   onNavigate,
 }: MatchCardProps) {
   const isLive = match.status === 'LIVE';
+  const isCommunity = 'isCommunityMatch' in match && Boolean((match as CommunityLiveMatch).isCommunityMatch);
   const isUpcoming = match.status === 'UPCOMING';
 
   const sportIcon = match.sport === 'Football' ? '⚽' : '🏏';
@@ -51,6 +52,11 @@ export function MatchCard({
         </div>
 
         <div className="card-top-actions">
+          {isCommunity && (
+            <span className="community-match-pill" title="Local Tournament / Turf League Scored on KhelGrid">
+              ⚡ Local League
+            </span>
+          )}
           <span className={`status-pill ${isLive ? 'is-live' : isUpcoming ? 'is-upcoming' : 'is-finished'}`}>
             {isLive && <span className="live-ping-dot" />}
             {match.status}
