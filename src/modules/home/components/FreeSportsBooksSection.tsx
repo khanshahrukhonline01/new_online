@@ -1,6 +1,6 @@
-import { useRef, type MouseEvent } from 'react'
+import { useEffect, useState, useRef, type MouseEvent } from 'react'
 import { SiteIcon } from '../../../shared/components/SiteIcon'
-import { SPORTS_BOOKS, type SportsBook } from '../../learning/booksData'
+import { SPORTS_BOOKS, getDynamicSportsBooks, type SportsBook } from '../../learning/booksData'
 import './FreeSportsBooksSection.css'
 
 interface FreeSportsBooksSectionProps {
@@ -8,7 +8,20 @@ interface FreeSportsBooksSectionProps {
 }
 
 export default function FreeSportsBooksSection({ onNavigate }: FreeSportsBooksSectionProps) {
+  const [books, setBooks] = useState<SportsBook[]>(SPORTS_BOOKS)
   const railRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let active = true
+    getDynamicSportsBooks().then(data => {
+      if (active && data.length > 0) {
+        setBooks(data)
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const scrollRail = (direction: 'left' | 'right') => {
     if (!railRef.current) return
@@ -57,7 +70,7 @@ export default function FreeSportsBooksSection({ onNavigate }: FreeSportsBooksSe
             href="/learning"
             onClick={e => onNavigate?.(e, '/learning')}
           >
-            <span>All Books in Learning Hub ({SPORTS_BOOKS.length})</span>
+            <span>All Books in Learning Hub ({books.length})</span>
             <SiteIcon name="chevron-right" size={13} />
           </a>
         </div>
@@ -69,7 +82,7 @@ export default function FreeSportsBooksSection({ onNavigate }: FreeSportsBooksSe
         tabIndex={0}
         aria-label="Free sports books catalog rail"
       >
-        {SPORTS_BOOKS.map(book => (
+        {books.map(book => (
           <a
             key={book.id}
             href={`/learning?book=${book.id}`}
