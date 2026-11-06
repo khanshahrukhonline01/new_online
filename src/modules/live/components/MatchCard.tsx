@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react';
 import type { SportsMatch, CommunityLiveMatch } from '../types';
 import { SiteIcon } from '../../../shared/components/SiteIcon';
+import { createBannerSvg } from '../../home/homeSvgBanners';
 
 interface MatchCardProps {
   match: SportsMatch;
@@ -44,6 +45,27 @@ export function MatchCard({
 
   return (
     <article className={`match-score-card ${isPinned ? 'is-pinned-card' : ''}`} onClick={onOpenDetails}>
+      <div className="match-card-media-banner">
+        <img
+          src={createBannerSvg(
+            `${match.sport} Match`,
+            match.tournament,
+            sportIcon,
+            'navy',
+            match.id
+          )}
+          alt={`${match.teamA.name} vs ${match.teamB.name} — ${match.tournament}`}
+          title={`${match.teamA.name} vs ${match.teamB.name}`}
+          loading="lazy"
+          decoding="async"
+          width={400}
+          height={140}
+        />
+        <div className="match-media-overlay-sport">
+          <span>{sportIcon} {match.sport}</span>
+        </div>
+      </div>
+
       {/* Top Header */}
       <div className="card-top-header">
         <div className="tournament-info">

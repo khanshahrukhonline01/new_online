@@ -1183,29 +1183,55 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
           ) : (
             liveMatches.map(match => (
               <a key={match.id} href="/live-scores" className="home-rail-card home-match-card">
-                <div className="home-match-top">
-                  <span className="home-match-tournament">
-                    {match.sport === 'Football' ? '⚽' : '🏏'} · {match.tournament}
-                  </span>
-                  <span className={`home-live-tag ${match.status !== 'LIVE' ? 'is-finished' : ''}`}>
-                    {match.status === 'LIVE' && <span className="home-live-pulse-dot" />}
-                    {match.status}
-                  </span>
-                </div>
-                <div className="home-match-teams">
-                  <div className="home-match-team-row">
-                    <span className="home-match-team-name">
-                      <span>{match.teamA.flag || (match.sport === 'Football' ? '⚽' : '🏏')}</span>
-                      <span>{match.teamA.name}</span>
-                    </span>
-                    <span className="home-match-score">{match.teamA.score || '—'}</span>
+                <div>
+                  <div className="home-card-media home-match-card-media">
+                    <img
+                      src={createBannerSvg(
+                        `${match.sport} Match`,
+                        match.tournament,
+                        match.sport === 'Football' ? '⚽' : '🏏',
+                        'navy',
+                        match.id
+                      )}
+                      alt={`${match.teamA.name} vs ${match.teamB.name} — ${match.tournament}`}
+                      title={`${match.teamA.name} vs ${match.teamB.name}`}
+                      loading="lazy"
+                      decoding="async"
+                      width={400}
+                      height={200}
+                    />
+                    <div className="home-card-overlay-top-left">
+                      <span className="home-media-badge-dark">
+                        {match.sport === 'Football' ? '⚽ Football' : '🏏 Cricket'}
+                      </span>
+                    </div>
+                    <div className="home-card-overlay-top-right">
+                      <span className={`home-live-tag ${match.status !== 'LIVE' ? 'is-finished' : ''}`}>
+                        {match.status === 'LIVE' && <span className="home-live-pulse-dot" />}
+                        {match.status}
+                      </span>
+                    </div>
                   </div>
-                  <div className="home-match-team-row">
-                    <span className="home-match-team-name">
-                      <span>{match.teamB.flag || (match.sport === 'Football' ? '⚽' : '🏏')}</span>
-                      <span>{match.teamB.name}</span>
+                  <div className="home-match-top">
+                    <span className="home-match-tournament">
+                      {match.tournament}
                     </span>
-                    <span className="home-match-score">{match.teamB.score || '—'}</span>
+                  </div>
+                  <div className="home-match-teams">
+                    <div className="home-match-team-row">
+                      <span className="home-match-team-name">
+                        <span>{match.teamA.flag || (match.sport === 'Football' ? '⚽' : '🏏')}</span>
+                        <span>{match.teamA.name}</span>
+                      </span>
+                      <span className="home-match-score">{match.teamA.score || '—'}</span>
+                    </div>
+                    <div className="home-match-team-row">
+                      <span className="home-match-team-name">
+                        <span>{match.teamB.flag || (match.sport === 'Football' ? '⚽' : '🏏')}</span>
+                        <span>{match.teamB.name}</span>
+                      </span>
+                      <span className="home-match-score">{match.teamB.score || '—'}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="home-match-footer">
@@ -1266,23 +1292,42 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                 className={`home-rail-card${liveUpdatedIds.has(opp.id) ? ' is-live-updated' : ''}`}
               >
                 <div>
-                  <div className="home-trial-header">
-                    <span className="home-trial-type-badge">{opp.opportunity_type}</span>
-                    {liveUpdatedIds.has(opp.id) && (
-                      <span className="home-media-badge-live-pulse">
-                        ⚡ Live Updated
+                  <div className="home-card-media">
+                    <img
+                      src={createBannerSvg(
+                        opp.title,
+                        opp.city || 'India',
+                        '🏆',
+                        'amber',
+                        opp.id || opp.slug
+                      )}
+                      alt={`${opp.title} — Selection trial in ${opp.city || 'India'}`}
+                      title={`${opp.title} (${opp.city || 'Pan-India'})`}
+                      loading="lazy"
+                      decoding="async"
+                      width={400}
+                      height={240}
+                    />
+                    <div className="home-card-overlay-top-left">
+                      <span className="home-media-badge-dark">{opp.opportunity_type}</span>
+                      {liveUpdatedIds.has(opp.id) && (
+                        <span className="home-media-badge-live-pulse">
+                          ⚡ Live Updated
+                        </span>
+                      )}
+                    </div>
+                    <div className="home-card-overlay-top-right">
+                      {Boolean(opp.is_featured || opp.metadata?.featured || opp.metadata?.is_featured) && (
+                        <span className="home-featured-star-pill" style={{ marginRight: 4 }}>
+                          <SiteIcon name="sparkles" size={11} />
+                          Featured
+                        </span>
+                      )}
+                      <span className="home-verified-pill">
+                        <SiteIcon name="shield-check" size={12} />
+                        Verified
                       </span>
-                    )}
-                    {Boolean(opp.is_featured || opp.metadata?.featured || opp.metadata?.is_featured) && (
-                      <span className="home-featured-star-pill">
-                        <SiteIcon name="sparkles" size={11} />
-                        Featured
-                      </span>
-                    )}
-                    <span className="home-verified-pill">
-                      <SiteIcon name="shield-check" size={12} />
-                      Verified
-                    </span>
+                    </div>
                   </div>
                   <h3 className="home-card-title">{opp.title}</h3>
                   <div className="home-card-meta">

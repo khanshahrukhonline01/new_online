@@ -27,7 +27,7 @@ export interface SportCoverImageOptions {
   name?: string
   city?: string
   sport?: string
-  category?: 'venue' | 'academy' | 'pickup' | 'trial' | 'sport'
+  category?: 'venue' | 'academy' | 'pickup' | 'trial' | 'sport' | 'match'
   id?: string
   seed?: string
   customUrl?: string
@@ -373,6 +373,28 @@ export const SPORT_IMAGE_POOLS: Record<string, PhotoPoolEntry[]> = {
       defaultAlt: 'Olympic pathway sports academy pavilion with outdoor training track and fields',
     },
   ],
+  trial: [
+    {
+      url: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=480&q=75',
+      defaultAlt: 'Youth sports selection trials and talent combine on championship turf',
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=480&q=75',
+      defaultAlt: 'Athlete acceleration and sprint testing at selection trials combine',
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?auto=format&fit=crop&w=480&q=75',
+      defaultAlt: 'Coaching staff evaluating youth talent at academy scouting combine',
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?auto=format&fit=crop&w=480&q=75',
+      defaultAlt: 'Multi-sport federation selection trials at national indoor sports arena',
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1505305976870-c0be1cd39939?auto=format&fit=crop&w=480&q=75',
+      defaultAlt: 'Open selection trials combine held at regional sports complex stadium',
+    },
+  ],
 }
 
 /**
@@ -427,6 +449,7 @@ export function getSportCoverImage(options: SportCoverImageOptions): SportCoverI
   else if (text.includes('wrestling') || text.includes('akhada')) detectedKey = 'wrestling'
   else if (text.includes('kabaddi')) detectedKey = 'kabaddi'
   else if (options.category === 'academy' || text.includes('academy') || text.includes('institute') || text.includes('school')) detectedKey = 'academy'
+  else if (options.category === 'trial' || text.includes('trial') || text.includes('combine') || text.includes('scout')) detectedKey = 'trial'
 
   const pool = SPORT_IMAGE_POOLS[detectedKey] || SPORT_IMAGE_POOLS.venue
 
@@ -447,7 +470,9 @@ export function getSportCoverImage(options: SportCoverImageOptions): SportCoverI
       ? 'Community Pickup Sports Game'
       : options.category === 'trial'
         ? 'Selection Trials Combine'
-        : 'Sports Turf and Arena'
+        : options.category === 'match'
+          ? 'Live Sports Fixture'
+          : 'Sports Turf and Arena'
 
   const alt = name
     ? `${name} — ${facilityType} in ${city}. ${img.defaultAlt}`
