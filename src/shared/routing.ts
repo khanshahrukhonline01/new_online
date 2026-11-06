@@ -17,6 +17,7 @@ export type RouteMatch =
   | { name: 'khelchronicle-category'; canonicalPath: '/khelchronicle/category/:category'; category: string }
   | { name: 'khelchronicle-author'; canonicalPath: '/khelchronicle/author/:author'; author: string }
   | { name: 'khelchronicle-paper'; canonicalPath: '/khelchronicle/:slug'; slug: string }
+  | { name: 'tools-index'; canonicalPath: string; toolSlug?: string }
   | { name: 'feature'; canonicalPath: string; slug: string }
   | { name: 'not-found'; canonicalPath: '/404' }
 
@@ -127,6 +128,17 @@ export function resolveRoute(pathname: string): RouteMatch {
         return { name: 'khelchronicle-category', canonicalPath: '/khelchronicle/category/:category', category: decoded }
       }
       return { name: 'khelchronicle-paper', canonicalPath: '/khelchronicle/:slug', slug: decoded }
+    }
+  }
+
+  // Sports Tools & Calculators
+  if (path === '/tools' || path === '/sports-tools') {
+    return { name: 'feature', canonicalPath: '/tools', slug: 'Sports Tools & Calculators' }
+  }
+  if (path.startsWith('/tools/')) {
+    const slug = path.slice('/tools/'.length)
+    if (slug && !slug.includes('/')) {
+      return { name: 'feature', canonicalPath: path, slug: 'Sports Tools & Calculators' }
     }
   }
 

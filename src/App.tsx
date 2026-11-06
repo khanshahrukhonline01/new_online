@@ -44,6 +44,7 @@ const KhelChronicleSubmitPage = lazy(() => import('./modules/khelchronicle/KhelC
 const HostDashboardPage = lazy(() => import('./modules/host/HostDashboardPage'))
 const LearningHubPage = lazy(() => import('./modules/learning/LearningHubPage'))
 const SportsCalendarPage = lazy(() => import('./modules/calendar/SportsCalendarPage'))
+const SportsToolsPage = lazy(() => import('./modules/tools/SportsToolsPage'))
 
 // Code-split heavyweight modal dialogs
 const CommunityListingModal = lazy(() => import('./shared/components/CommunityListingModal'))
@@ -165,6 +166,7 @@ export default function App() {
     case 'city-detail': page = <CityDetailPage citySlug={match.slug} onNavigate={navigate} onOpenIntake={openIntake} />; break
     case 'venue-detail': page = <VenueDetailPage slug={match.slug} onNavigate={navigate} onOpenIntake={openIntake} />; break
     case 'search': page = <SearchPage initialQuery={searchQuery} />; break
+    case 'tools-index': page = <SportsToolsPage onNavigate={navigate} initialToolSlug={match.toolSlug} />; break
     case 'khelchronicle-index': page = <KhelChronicleHome onNavigate={navigate} />; break
     case 'khelchronicle-submit': page = <KhelChronicleSubmitPage onNavigate={navigate} />; break
     case 'khelchronicle-category': page = <KhelChronicleCategoryPage categorySlug={match.category} onNavigate={navigate} />; break
@@ -179,6 +181,7 @@ export default function App() {
       else if (match.canonicalPath === '/coaches') page = <FeatureDirectoryPage kind="coaches" />
       else if (match.canonicalPath === '/events') page = <FeatureDirectoryPage kind="events" />
       else if (match.canonicalPath === '/calendar') page = <SportsCalendarPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/tools' || match.canonicalPath === '/sports-tools' || match.canonicalPath.startsWith('/tools/')) page = <SportsToolsPage onNavigate={navigate} initialToolSlug={match.canonicalPath.startsWith('/tools/') ? match.canonicalPath.slice('/tools/'.length) : undefined} />
       else if (match.canonicalPath === '/live' || match.canonicalPath === '/live-scores') page = <LiveScoresPage onNavigate={navigate} />
       else if (match.canonicalPath === '/submit-listing' || match.canonicalPath === '/list') page = <ListingSubmissionPage onOpenIntake={() => openIntake('pickup_game')} />
       else if (match.canonicalPath === '/learning' || match.canonicalPath === '/learning-hub') page = <LearningHubPage onNavigate={navigate} />
