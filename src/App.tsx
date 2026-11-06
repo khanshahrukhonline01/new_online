@@ -43,6 +43,7 @@ const KhelChronicleAuthorPage = lazy(() => import('./modules/khelchronicle/KhelC
 const KhelChronicleSubmitPage = lazy(() => import('./modules/khelchronicle/KhelChronicleSubmitPage'))
 const HostDashboardPage = lazy(() => import('./modules/host/HostDashboardPage'))
 const LearningHubPage = lazy(() => import('./modules/learning/LearningHubPage'))
+const SportsCalendarPage = lazy(() => import('./modules/calendar/SportsCalendarPage'))
 
 // Code-split heavyweight modal dialogs
 const CommunityListingModal = lazy(() => import('./shared/components/CommunityListingModal'))
@@ -177,7 +178,7 @@ export default function App() {
       else if (match.canonicalPath === '/play') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openIntake('pickup_game')} />
       else if (match.canonicalPath === '/coaches') page = <FeatureDirectoryPage kind="coaches" />
       else if (match.canonicalPath === '/events') page = <FeatureDirectoryPage kind="events" />
-      else if (match.canonicalPath === '/calendar') page = <FeatureDirectoryPage kind="calendar" />
+      else if (match.canonicalPath === '/calendar') page = <SportsCalendarPage onNavigate={navigate} />
       else if (match.canonicalPath === '/live' || match.canonicalPath === '/live-scores') page = <LiveScoresPage onNavigate={navigate} />
       else if (match.canonicalPath === '/submit-listing' || match.canonicalPath === '/list') page = <ListingSubmissionPage onOpenIntake={() => openIntake('pickup_game')} />
       else if (match.canonicalPath === '/learning' || match.canonicalPath === '/learning-hub') page = <LearningHubPage onNavigate={navigate} />
