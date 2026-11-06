@@ -4,7 +4,13 @@ import { getVenues } from '../../integrations/supabase/public-client'
 import type { CatalogueResult } from '../../integrations/supabase/public-client'
 import type { Venue } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
+import {
+  CatalogueEmptyState,
+  CatalogueFilterPanel,
+  CatalogueQuickFilters,
+  CatalogueActiveChips,
+  type QuickFilterPill,
+} from '../../shared/components/CatalogueFilterPanel'
 import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 
 const EMPTY_VENUES: Venue[] = []
@@ -24,6 +30,7 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
   const defaultCity = initial.get('city') ?? (pathCityMatch ? decodeURIComponent(pathCityMatch[1]) : '')
   const [query, setQuery] = useState(initial.get('q') ?? '')
   const [city, setCity] = useState(defaultCity)
+  const [sport, setSport] = useState(initial.get('sport') ?? '')
   const [facility, setFacility] = useState(initial.get('facility') ?? '')
   const [sort, setSort] = useState(initial.get('sort') ?? 'name')
 
@@ -49,6 +56,16 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
     [records],
   )
 
+  const sports = useMemo(() => {
+    const list = new Set<string>()
+    records.forEach(item => {
+      if (item.sport) list.add(item.sport)
+      item.sports?.forEach(s => list.add(s.name))
+    })
+    ;['Badminton', 'Cricket', 'Football', 'Swimming', 'Tennis', 'Basketball', 'Table Tennis', 'Squash', 'Athletics'].forEach(s => list.add(s))
+    return [...list].sort()
+  }, [records])
+
   const visible = useMemo(
     () =>
       records
@@ -56,6 +73,12 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
           item =>
             (!city || item.city.toLowerCase().includes(city.toLowerCase())) &&
             (!facility || String(Boolean(item.government_facility)) === facility) &&
+            (!sport || (
+              (item.sport && item.sport.toLowerCase().includes(sport.toLowerCase())) ||
+              item.sports?.some(s => s.name.toLowerCase().includes(sport.toLowerCase())) ||
+              item.name.toLowerCase().includes(sport.toLowerCase()) ||
+              (item.description && item.description.toLowerCase().includes(sport.toLowerCase()))
+            )) &&
             (!query.trim() ||
               [item.name, item.description, item.city, item.address].some(value =>
                 value?.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
@@ -64,17 +87,19 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
         .sort((a, b) =>
           sort === 'city' ? (a.city ?? '').localeCompare(b.city ?? '') : a.name.localeCompare(b.name),
         ),
-    [records, city, query, facility, sort],
+    [records, city, sport, query, facility, sort],
   )
 
   const clearAll = () => {
     setQuery('')
     setCity('')
+    setSport('')
     setFacility('')
     setSort('name')
   }
 
   const fields = [
+    { key: 'sport', label: 'Sport', value: sport, onChange: setSport, options: sports.map(value => ({ value, label: value })) },
     { key: 'city', label: 'City', value: city, onChange: setCity, options: cities.map(value => ({ value, label: value })) },
     {
       key: 'facility',
@@ -88,7 +113,15 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
     },
   ]
 
-  const hasActiveFilters = Boolean(query.trim() || city || facility || sort !== 'name')
+  const quickFilters: QuickFilterPill[] = [
+    { id: 'govt', label: 'Govt Complexes', icon: 'building', active: facility === 'true', onClick: () => setFacility(prev => prev === 'true' ? '' : 'true') },
+    { id: 'badminton', label: 'Badminton Courts', icon: 'sports', active: sport === 'Badminton', onClick: () => setSport(prev => prev === 'Badminton' ? '' : 'Badminton') },
+    { id: 'cricket', label: 'Cricket Turfs', icon: 'sports', active: sport === 'Cricket', onClick: () => setSport(prev => prev === 'Cricket' ? '' : 'Cricket') },
+    { id: 'football', label: 'Football Grounds', icon: 'sports', active: sport === 'Football', onClick: () => setSport(prev => prev === 'Football' ? '' : 'Football') },
+    { id: 'swimming', label: 'Swimming Pools', icon: 'sports', active: sport === 'Swimming', onClick: () => setSport(prev => prev === 'Swimming' ? '' : 'Swimming') },
+  ]
+
+  const hasActiveFilters = Boolean(query.trim() || city || sport || facility || sort !== 'name')
 
   return (
     <section className="content-page">
@@ -120,8 +153,11 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
           defaultSort="name"
           resultCount={visible.length}
           totalCount={records.length}
+          quickFilters={quickFilters}
         />
         <div className="kg-catalogue-results">
+          <CatalogueQuickFilters items={quickFilters} />
+          <CatalogueActiveChips search={query} onSearch={setQuery} fields={fields} onClear={clearAll} />
           <div className="kg-results-toolbar">
             <span>
               {visible.length} of {records.length} venues
@@ -148,41 +184,30 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
                           <span className="test-only-label">TEST ONLY — NOT A REAL LISTING</span>
                         )}
                         <span className="card-kicker">
-                          <SiteIcon name="building" size={14} /> VENUE
+                          {venue.government_facility ? 'Government facility' : 'Sports venue'}
                         </span>
-                        <h2>
-                          <a
-                            href={`/venues/${venue.slug}`}
-                            onClick={e => onNavigate?.(e, `/venues/${venue.slug}`)}
-                            style={{ color: 'inherit', textDecoration: 'none' }}
-                          >
-                            {venue.name}
-                          </a>
-                        </h2>
-                        <p>
-                          <SiteIcon name="map-pin" size={15} /> {venue.city}
-                        </p>
-                        {venue.address && <p className="muted">{venue.address}</p>}
-                        {venue.description && <p>{venue.description}</p>}
-                        <div style={{ marginTop: 'auto', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          {venue.verification_status === 'pending_review' || venue.verification_status === 'unverified' ? (
-                            <span className="availability-note" style={{ color: '#b45309' }}>
-                              <SiteIcon name="alert-triangle" size={14} /> Under Review
-                            </span>
-                          ) : (
-                            <span className="availability-note">
-                              <SiteIcon name="shield-check" size={14} /> Verified Ground
-                            </span>
-                          )}
-                          <a
-                            href={`/venues/${venue.slug}`}
-                            onClick={e => onNavigate?.(e, `/venues/${venue.slug}`)}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700, color: '#087b45', textDecoration: 'none' }}
-                          >
-                            <span>View Facility</span>
-                            <SiteIcon name="arrow-right" size={13} />
-                          </a>
+                        <h2>{venue.name}</h2>
+                        <p>{venue.city}</p>
+                        {venue.description ? <p className="venue-description">{venue.description}</p> : null}
+                        <div className="card-meta">
+                          <span>
+                            <SiteIcon name="map-pin" size={14} /> {venue.address || venue.city}
+                          </span>
+                          <span>
+                            <SiteIcon name="clock" size={14} /> {venue.timezone}
+                          </span>
                         </div>
+                        <a
+                          className="card-action"
+                          href={`/venues/${encodeURIComponent(venue.slug)}`}
+                          onClick={event => {
+                            if (onNavigate) {
+                              onNavigate(event, `/venues/${encodeURIComponent(venue.slug)}`)
+                            }
+                          }}
+                        >
+                          View venue details
+                        </a>
                       </article>
                     ))}
                   </div>
@@ -193,7 +218,7 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
                   message={
                     records.length
                       ? 'Try another search, city or facility type, or clear your filters.'
-                      : 'Published records will appear here when available.'
+                      : 'Published venues will appear here when available.'
                   }
                   hasFilters={hasActiveFilters}
                   onClear={clearAll}

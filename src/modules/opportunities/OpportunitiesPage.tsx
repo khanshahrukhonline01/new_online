@@ -4,7 +4,13 @@ import { getOpportunities } from '../../integrations/supabase/public-client'
 import type { CatalogueResult } from '../../integrations/supabase/public-client'
 import type { Opportunity } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
+import {
+  CatalogueEmptyState,
+  CatalogueFilterPanel,
+  CatalogueQuickFilters,
+  CatalogueActiveChips,
+  type QuickFilterPill,
+} from '../../shared/components/CatalogueFilterPanel'
 import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 import { TrialAlertActions } from './TrialAlertActions'
 import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
@@ -20,6 +26,14 @@ function formatDate(value: string | null) {
 
 const EMPTY_OPPORTUNITIES: Opportunity[] = []
 
+const AGE_OPTIONS = [
+  { value: 'u14', label: 'Under-14 (U-14)' },
+  { value: 'u16', label: 'Under-16 (U-16)' },
+  { value: 'u19', label: 'Under-19 (U-19)' },
+  { value: 'u23', label: 'Under-23 (U-23)' },
+  { value: 'open', label: 'Senior / Open (All Ages)' },
+]
+
 export interface OpportunitiesPageProps {
   onOpenIntake?: () => void
 }
@@ -32,6 +46,8 @@ export default function OpportunitiesPage({ onOpenIntake }: OpportunitiesPagePro
   const initial = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
   const [query, setQuery] = useState(initial.get('q') ?? '')
   const [city, setCity] = useState(initial.get('city') ?? '')
+  const [sport, setSport] = useState(initial.get('sport') ?? '')
+  const [ageCategory, setAgeCategory] = useState(initial.get('age') ?? '')
   const [type, setType] = useState(initial.get('type') ?? '')
   const [verification, setVerification] = useState(initial.get('status') ?? '')
   const [feeFilter, setFeeFilter] = useState(initial.get('free') === 'true' ? 'free' : (initial.get('fee') ?? ''))
@@ -69,6 +85,15 @@ export default function OpportunitiesPage({ onOpenIntake }: OpportunitiesPagePro
     [records],
   )
 
+  const sports = useMemo(() => {
+    const list = new Set<string>()
+    records.forEach(item => {
+      if (item.sport?.name) list.add(item.sport.name)
+    })
+    ;['Cricket', 'Football', 'Badminton', 'Basketball', 'Athletics', 'Kabaddi', 'Swimming', 'Tennis', 'Hockey', 'Volleyball', 'Boxing', 'Table Tennis'].forEach(s => list.add(s))
+    return [...list].sort()
+  }, [records])
+
   const visible = useMemo(
     () =>
       records
@@ -79,10 +104,19 @@ export default function OpportunitiesPage({ onOpenIntake }: OpportunitiesPagePro
           const before = toDate ? new Date(toDate + 'T23:59:59.999+05:30').getTime() : Number.POSITIVE_INFINITY
           return (
             (!q ||
-              [item.title, item.organizer_name, item.city, item.venue_name, item.opportunity_type].some(value =>
+              [item.title, item.organizer_name, item.city, item.venue_name, item.opportunity_type, item.sport?.name].some(value =>
                 value?.toLocaleLowerCase().includes(q),
               )) &&
             (!city || (item.city ? (item.city.toLowerCase() === city.toLowerCase() || item.city.toLowerCase().includes(city.toLowerCase()) || city.toLowerCase().includes(item.city.toLowerCase())) : false)) &&
+            (!sport || (item.sport?.name?.toLowerCase() === sport.toLowerCase() || item.title.toLowerCase().includes(sport.toLowerCase()) || (item.opportunity_type && item.opportunity_type.toLowerCase().includes(sport.toLowerCase())))) &&
+            (!ageCategory || (
+              (item.age_category && item.age_category.toLowerCase().includes(ageCategory.toLowerCase())) ||
+              (ageCategory === 'u14' && (item.title.toLowerCase().includes('u-14') || item.title.toLowerCase().includes('u14') || item.title.toLowerCase().includes('under 14'))) ||
+              (ageCategory === 'u16' && (item.title.toLowerCase().includes('u-16') || item.title.toLowerCase().includes('u16') || item.title.toLowerCase().includes('under 16'))) ||
+              (ageCategory === 'u19' && (item.title.toLowerCase().includes('u-19') || item.title.toLowerCase().includes('u19') || item.title.toLowerCase().includes('under 19'))) ||
+              (ageCategory === 'u23' && (item.title.toLowerCase().includes('u-23') || item.title.toLowerCase().includes('u23') || item.title.toLowerCase().includes('under 23'))) ||
+              (ageCategory === 'open' && (item.title.toLowerCase().includes('open') || item.title.toLowerCase().includes('senior')))
+            )) &&
             (!type || item.opportunity_type === type) &&
             (!verification || item.verification_status === verification) &&
             (!feeFilter || (feeFilter === 'free' ? (item.registration_fee === 0 || item.registration_fee === undefined) : true)) &&
@@ -99,12 +133,14 @@ export default function OpportunitiesPage({ onOpenIntake }: OpportunitiesPagePro
               ? (a.application_deadline ?? '9999').localeCompare(b.application_deadline ?? '9999')
               : (b.starts_at ?? '').localeCompare(a.starts_at ?? ''),
         ),
-    [records, query, city, type, verification, feeFilter, fromDate, toDate, sort],
+    [records, query, city, sport, ageCategory, type, verification, feeFilter, fromDate, toDate, sort],
   )
 
   const clearAll = () => {
     setQuery('')
     setCity('')
+    setSport('')
+    setAgeCategory('')
     setType('')
     setVerification('')
     setFeeFilter('')
@@ -114,7 +150,9 @@ export default function OpportunitiesPage({ onOpenIntake }: OpportunitiesPagePro
   }
 
   const fields = [
+    { key: 'sport', label: 'Sport', value: sport, onChange: setSport, options: sports.map(value => ({ value, label: value })) },
     { key: 'city', label: 'City', value: city, onChange: setCity, options: cities.map(value => ({ value, label: value })) },
+    { key: 'age', label: 'Age group', value: ageCategory, onChange: setAgeCategory, options: AGE_OPTIONS },
     {
       key: 'type',
       label: 'Opportunity type',
@@ -148,8 +186,17 @@ export default function OpportunitiesPage({ onOpenIntake }: OpportunitiesPagePro
     { key: 'to', label: 'Start date to', value: toDate, onChange: setToDate, options: [], inputType: 'date' as const },
   ]
 
+  const quickFilters: QuickFilterPill[] = [
+    { id: 'free', label: 'Free Entry (₹0)', icon: 'wallet', active: feeFilter === 'free', onClick: () => setFeeFilter(prev => prev === 'free' ? '' : 'free') },
+    { id: 'verified', label: 'Verified Only', icon: 'badge-check', active: verification === 'verified', onClick: () => setVerification(prev => prev === 'verified' ? '' : 'verified') },
+    { id: 'trial', label: 'Trials & Combines', icon: 'target', active: type === 'trial', onClick: () => setType(prev => prev === 'trial' ? '' : 'trial') },
+    { id: 'cricket', label: 'Cricket', icon: 'sports', active: sport === 'Cricket', onClick: () => setSport(prev => prev === 'Cricket' ? '' : 'Cricket') },
+    { id: 'football', label: 'Football', icon: 'sports', active: sport === 'Football', onClick: () => setSport(prev => prev === 'Football' ? '' : 'Football') },
+    { id: 'badminton', label: 'Badminton', icon: 'sports', active: sport === 'Badminton', onClick: () => setSport(prev => prev === 'Badminton' ? '' : 'Badminton') },
+  ]
+
   const hasActiveFilters = Boolean(
-    query.trim() || city || type || verification || feeFilter || fromDate || toDate || sort !== 'newest',
+    query.trim() || city || sport || ageCategory || type || verification || feeFilter || fromDate || toDate || sort !== 'newest',
   )
 
   return (
@@ -181,8 +228,11 @@ export default function OpportunitiesPage({ onOpenIntake }: OpportunitiesPagePro
           defaultSort="newest"
           resultCount={visible.length}
           totalCount={records.length}
+          quickFilters={quickFilters}
         />
         <div className="kg-catalogue-results">
+          <CatalogueQuickFilters items={quickFilters} />
+          <CatalogueActiveChips search={query} onSearch={setQuery} fields={fields} onClear={clearAll} />
           <div className="kg-results-toolbar">
             <span>
               {visible.length} of {records.length} opportunities

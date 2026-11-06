@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { SiteIcon } from './SiteIcon'
+import { SiteIcon, type SiteIconName } from './SiteIcon'
 import './CatalogueFilterPanel.css'
 
 export type CatalogueFilterField = {
@@ -9,6 +9,14 @@ export type CatalogueFilterField = {
   options: Array<{ value: string; label: string }>
   inputType?: 'date' | 'select'
   onChange: (value: string) => void
+}
+
+export type QuickFilterPill = {
+  id: string
+  label: string
+  icon?: SiteIconName
+  active: boolean
+  onClick: () => void
 }
 
 export type CatalogueFilterPanelProps = {
@@ -24,6 +32,7 @@ export type CatalogueFilterPanelProps = {
   resultCount?: number
   totalCount?: number
   title?: string
+  quickFilters?: QuickFilterPill[]
 }
 
 function formatChipValue(field: CatalogueFilterField): string {
@@ -43,6 +52,74 @@ function formatChipValue(field: CatalogueFilterField): string {
   return field.options.find(option => option.value === field.value)?.label ?? field.value
 }
 
+export function CatalogueQuickFilters({ items }: { items: QuickFilterPill[] }) {
+  if (!items || items.length === 0) return null
+  return (
+    <div className="kg-quick-filter-rail" aria-label="Quick filters">
+      {items.map(pill => (
+        <button
+          key={pill.id}
+          type="button"
+          className={pill.active ? 'kg-quick-pill is-active' : 'kg-quick-pill'}
+          onClick={pill.onClick}
+          aria-pressed={pill.active}
+        >
+          {pill.icon && <SiteIcon name={pill.icon} size={13} />}
+          <span>{pill.label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export function CatalogueActiveChips({
+  search,
+  onSearch,
+  fields,
+  onClear,
+}: {
+  search: string
+  onSearch: (value: string) => void
+  fields: CatalogueFilterField[]
+  onClear: () => void
+}) {
+  const active = fields.filter(field => Boolean(field.value))
+  const activeCount = (search.trim() ? 1 : 0) + active.length
+  if (activeCount === 0) return null
+
+  return (
+    <div className="kg-active-filters-bar" aria-label="Active filters">
+      <div className="kg-active-chips-wrap">
+        <span className="kg-active-chips-label">Active filters ({activeCount}):</span>
+        {search.trim() && (
+          <button
+            type="button"
+            className="kg-active-chip"
+            onClick={() => onSearch('')}
+            aria-label={`Remove search filter ${search.trim()}`}
+          >
+            Search: “{search.trim()}” <span aria-hidden="true">×</span>
+          </button>
+        )}
+        {active.map(field => (
+          <button
+            type="button"
+            className="kg-active-chip"
+            key={field.key}
+            onClick={() => field.onChange('')}
+            aria-label={`Remove filter: ${field.label}`}
+          >
+            {field.label}: {formatChipValue(field)} <span aria-hidden="true">×</span>
+          </button>
+        ))}
+        <button type="button" className="kg-clear-text-btn" onClick={onClear}>
+          Reset all
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function CatalogueFilterPanel({
   search,
   onSearch,
@@ -56,11 +133,24 @@ export function CatalogueFilterPanel({
   resultCount,
   totalCount,
   title = 'Filters',
+  quickFilters,
 }: CatalogueFilterPanelProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const isPopStateRef = useRef(false)
   const active = useMemo(() => fields.filter(field => Boolean(field.value)), [fields])
   const activeCount = (search.trim() ? 1 : 0) + active.length
+
+  // Lock background body scroll when mobile drawer is open
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (mobileOpen) {
+      const original = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = original
+      }
+    }
+  }, [mobileOpen])
 
   // Sync React state -> URL
   useEffect(() => {
@@ -206,14 +296,36 @@ export function CatalogueFilterPanel({
         </div>
 
         <div className="kg-filter-scroll-body">
+          {quickFilters && quickFilters.length > 0 && (
+            <div className="kg-drawer-quick-section">
+              <span className="kg-drawer-section-title">Quick Picks</span>
+              <CatalogueQuickFilters items={quickFilters} />
+            </div>
+          )}
+
           <label className="kg-filter-search">
             Search
-            <input
-              type="search"
-              value={search}
-              onChange={event => onSearch(event.target.value)}
-              placeholder={searchPlaceholder}
-            />
+            <div className="kg-filter-search-box">
+              <span className="kg-filter-search-icon" aria-hidden="true">
+                <SiteIcon name="search" size={15} />
+              </span>
+              <input
+                type="search"
+                value={search}
+                onChange={event => onSearch(event.target.value)}
+                placeholder={searchPlaceholder}
+              />
+              {search.trim() ? (
+                <button
+                  type="button"
+                  className="kg-filter-search-clear"
+                  onClick={() => onSearch('')}
+                  aria-label="Clear search"
+                >
+                  <SiteIcon name="close" size={13} />
+                </button>
+              ) : null}
+            </div>
           </label>
 
           {fields.map(field => (
@@ -226,17 +338,22 @@ export function CatalogueFilterPanel({
                   onChange={event => field.onChange(event.target.value)}
                 />
               ) : (
-                <select
-                  value={field.value}
-                  onChange={event => field.onChange(event.target.value)}
-                >
-                  <option value="">All {field.label.toLocaleLowerCase()}</option>
-                  {field.options.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="kg-filter-select-wrap">
+                  <select
+                    value={field.value}
+                    onChange={event => field.onChange(event.target.value)}
+                  >
+                    <option value="">All {field.label.toLocaleLowerCase()}</option>
+                    {field.options.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="kg-select-chevron" aria-hidden="true">
+                    <SiteIcon name="chevron-down" size={13} />
+                  </span>
+                </div>
               )}
             </label>
           ))}

@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { getAcademies } from '../../integrations/supabase/public-client'
 import type { Academy } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
+import {
+  CatalogueEmptyState,
+  CatalogueFilterPanel,
+  CatalogueQuickFilters,
+  CatalogueActiveChips,
+  type QuickFilterPill,
+} from '../../shared/components/CatalogueFilterPanel'
 import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 import { CURATED_ACADEMIES } from '../../shared/data/curatedEntitiesData'
 import './AcademiesPage.css'
@@ -94,6 +100,14 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
     { key: 'sport', label: 'Sport', value: sport, onChange: setSport, options: sports.map(val => ({ value: val, label: val })) },
   ]
 
+  const quickFilters: QuickFilterPill[] = [
+    { id: 'football', label: 'Football Academies', icon: 'sports', active: sport === 'Football', onClick: () => setSport(prev => prev === 'Football' ? '' : 'Football') },
+    { id: 'badminton', label: 'Badminton Academies', icon: 'sports', active: sport === 'Badminton', onClick: () => setSport(prev => prev === 'Badminton' ? '' : 'Badminton') },
+    { id: 'boxing', label: 'Boxing Academies', icon: 'sports', active: sport === 'Boxing', onClick: () => setSport(prev => prev === 'Boxing' ? '' : 'Boxing') },
+    { id: 'bengaluru', label: 'Bengaluru', icon: 'map-pin', active: city === 'Bengaluru', onClick: () => setCity(prev => prev === 'Bengaluru' ? '' : 'Bengaluru') },
+    { id: 'hyderabad', label: 'Hyderabad', icon: 'map-pin', active: city === 'Hyderabad', onClick: () => setCity(prev => prev === 'Hyderabad' ? '' : 'Hyderabad') },
+  ]
+
   const hasActiveFilters = Boolean(query.trim() || city || sport || sort !== 'name')
 
   return (
@@ -126,9 +140,12 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
           defaultSort="name"
           resultCount={visible.length}
           totalCount={academies.length}
+          quickFilters={quickFilters}
         />
 
         <div className="kg-catalogue-results">
+          <CatalogueQuickFilters items={quickFilters} />
+          <CatalogueActiveChips search={query} onSearch={setQuery} fields={fields} onClear={clearAll} />
           <div className="kg-results-toolbar">
             <span>
               {visible.length} of {academies.length} academies
@@ -143,67 +160,54 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
           </div>
 
           {loading ? (
-            <div className="academies-loading-box">
-              <div className="academy-loading-spinner" />
-              <p>Loading sports academies…</p>
-            </div>
+            <div className="loading-state">Loading certified academies…</div>
           ) : visible.length > 0 ? (
-            <div className="catalogue-grid">
-              {visible.map(item => (
-                <article className="catalogue-card academy-card" key={item.id}>
-                  <div className="academy-card-top">
-                    <span className="card-kicker">
-                      <SiteIcon name="building" size={14} /> ACADEMY
-                    </span>
-                    {item.sport && <span className="academy-card-sport">{item.sport}</span>}
-                  </div>
+            <div className="academies-grid">
+              {visible.map(academy => {
+                const academySlug = academy.slug || academy.id
+                return (
+                  <article className="academy-card" key={academy.id}>
+                    <div className="academy-card-header">
+                      <span className="academy-card-sport">{academy.sport || 'Multi-Sport'}</span>
+                      {academy.verification_status === 'verified' ? (
+                        <span className="academy-card-verified">
+                          <SiteIcon name="badge-check" size={13} /> Source Verified
+                        </span>
+                      ) : (
+                        <span className="academy-card-unverified">Listed Institute</span>
+                      )}
+                    </div>
 
-                  <h2>
-                    <a
-                      href={`/academies/${item.slug}`}
-                      onClick={e => onNavigate?.(e, `/academies/${item.slug}`)}
-                      className="academy-card-link"
-                    >
-                      {item.name}
-                    </a>
-                  </h2>
+                    <h2 className="academy-card-name">{academy.name}</h2>
+                    <p className="academy-card-location">
+                      <SiteIcon name="map-pin" size={14} />
+                      <span>{[academy.city, academy.state].filter(Boolean).join(', ') || 'Pan-India'}</span>
+                    </p>
 
-                  <p className="academy-card-location">
-                    <SiteIcon name="map-pin" size={15} /> {item.city}
-                    {item.state ? `, ${item.state}` : ''}
-                  </p>
+                    <p className="academy-card-desc">
+                      {academy.description || 'Dedicated sports coaching, youth athlete training batches, and skills development center.'}
+                    </p>
 
-                  {item.description && <p className="academy-card-desc">{item.description}</p>}
-
-                  <div className="academy-card-footer">
-                    {item.verification_status === 'pending_review' || item.verification_status === 'unverified' ? (
-                      <span className="academy-card-unverified">
-                        <SiteIcon name="alert-triangle" size={14} /> Under Review
-                      </span>
-                    ) : (
-                      <span className="academy-card-verified">
-                        <SiteIcon name="shield-check" size={14} /> Source Verified
-                      </span>
-                    )}
-                    <a
-                      href={`/academies/${item.slug}`}
-                      onClick={e => onNavigate?.(e, `/academies/${item.slug}`)}
-                      className="academy-view-btn"
-                    >
-                      <span>View Profile</span>
-                      <SiteIcon name="arrow-right" size={14} />
-                    </a>
-                  </div>
-                </article>
-              ))}
+                    <div className="academy-card-footer">
+                      <a
+                        href={`/academies/${academySlug}`}
+                        className="academy-view-btn"
+                        onClick={e => onNavigate?.(e, `/academies/${academySlug}`)}
+                      >
+                        View Profile <SiteIcon name="arrow-right" size={14} />
+                      </a>
+                    </div>
+                  </article>
+                )
+              })}
             </div>
           ) : (
             <CatalogueEmptyState
-              title={academies.length ? 'No matching academies' : 'No academies available'}
+              title={academies.length ? 'No matching academies' : 'No academies listed yet'}
               message={
                 academies.length
-                  ? 'Try another search keyword, city or sport, or clear your filters.'
-                  : 'Newly registered academies will appear here.'
+                  ? 'Try selecting another sport, city, or clearing your search filters.'
+                  : 'Verified academy directories will appear here as they are published.'
               }
               hasFilters={hasActiveFilters}
               onClear={clearAll}

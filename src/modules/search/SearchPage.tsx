@@ -16,7 +16,7 @@ import type { ResearchPaper } from '../khelchronicle/data/khelchronicleData'
 import type { Academy, Coach, EventItem, Opportunity, Sport, Venue } from '../../shared/domain'
 import { AsyncState } from '../../shared/components/AsyncState'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
+import { CatalogueEmptyState, CatalogueFilterPanel, CatalogueActiveChips } from '../../shared/components/CatalogueFilterPanel'
 
 type SearchRecord = {
   type: 'Sport' | 'Opportunity' | 'Venue' | 'Academy' | 'Coach' | 'Event' | 'Research' | 'City' | 'Pickup'
@@ -275,6 +275,7 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
           totalCount={records.length}
         />
         <div className="kg-catalogue-results">
+          <CatalogueActiveChips search={query} onSearch={setQuery} fields={fields} onClear={clearAll} />
           <div className="kg-results-toolbar">
             <span>
               {results.length} of {records.length} catalogue records
