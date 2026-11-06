@@ -14,6 +14,9 @@ import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/componen
 import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 import { createBannerSvg } from '../home/homeSvgBanners'
 import { COMMUNITY_PICKUP_GAMES, type PickupGame } from './pickupData'
+import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
+import { parseInrPrice } from '../../shared/payments/paymentService'
+import type { PaymentItem, PaymentResult } from '../../shared/payments/paymentTypes'
 import './PlayPage.css'
 
 export interface PlayPageProps {
@@ -43,6 +46,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
     whatsappGroupUrl?: string | null
     participantName: string
   } | null>(null)
+  const [checkoutItem, setCheckoutItem] = useState<PaymentItem | null>(null)
 
   const markLiveUpdated = (id: string) => {
     setLiveUpdatedIds(prev => new Set(prev).add(id))
@@ -148,16 +152,8 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
     setRsvpError('')
   }
 
-  const handleConfirmRsvp = async (e: FormEvent) => {
-    e.preventDefault()
+  const executeBooking = async (name: string, phone?: string, _paymentId?: string) => {
     if (!rsvpModalGame) return
-
-    const name = rsvpName.trim()
-    if (name.length < 2) {
-      setRsvpError('Please enter your full name (at least 2 characters).')
-      return
-    }
-
     setRsvpSubmitting(true)
     setRsvpError('')
 
@@ -165,7 +161,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
       const res = await joinPickupGame({
         gameId: rsvpModalGame.id,
         playerName: name,
-        playerPhone: rsvpPhone.trim() || undefined,
+        playerPhone: phone,
       })
 
       if (res.status === 'confirmed') {
@@ -214,6 +210,42 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
     } finally {
       setRsvpSubmitting(false)
     }
+  }
+
+  const handleConfirmRsvp = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!rsvpModalGame) return
+
+    const name = rsvpName.trim()
+    if (name.length < 2) {
+      setRsvpError('Please enter your full name (at least 2 characters).')
+      return
+    }
+
+    const price = parseInrPrice(rsvpModalGame.pricePerPlayer)
+    if (price > 0) {
+      // Launch Indian Payment Checkout (UPI / Cards / Pay at Venue)
+      setCheckoutItem({
+        id: rsvpModalGame.id,
+        type: 'pickup_match',
+        title: `${rsvpModalGame.sport} Match Spot`,
+        subtitle: `${rsvpModalGame.venueName}, ${rsvpModalGame.city}`,
+        amount: price,
+        emoji: rsvpModalGame.emoji,
+        venueName: rsvpModalGame.venueName,
+        city: rsvpModalGame.city,
+        dateOrTime: rsvpModalGame.timeLabel,
+      })
+      return
+    }
+
+    // Direct booking for ₹0 Free games
+    await executeBooking(name, rsvpPhone.trim() || undefined)
+  }
+
+  const handlePaymentSuccess = (paymentResult: PaymentResult) => {
+    setCheckoutItem(null)
+    executeBooking(rsvpName.trim(), rsvpPhone.trim() || undefined, paymentResult.paymentId)
   }
 
   const records = useMemo<PickupGame[]>(() => {
@@ -658,13 +690,29 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
                     className="play-rsvp-submit-btn"
                     disabled={rsvpSubmitting}
                   >
-                    {rsvpSubmitting ? t('loading', { ns: 'common', defaultValue: 'Reserving…' }) : t('confirmRsvp', 'Confirm Spot')}
+                    {rsvpSubmitting
+                      ? t('loading', { ns: 'common', defaultValue: 'Reserving…' })
+                      : parseInrPrice(rsvpModalGame.pricePerPlayer) > 0
+                        ? `Proceed to Pay (₹${parseInrPrice(rsvpModalGame.pricePerPlayer)}) →`
+                        : t('confirmRsvp', 'Confirm Spot (Free)')}
                   </button>
                 </div>
               </form>
             )}
           </div>
         </div>
+      )}
+
+      {/* Indian Unified Payment Checkout Modal */}
+      {checkoutItem && (
+        <PaymentCheckoutModal
+          isOpen={Boolean(checkoutItem)}
+          onClose={() => setCheckoutItem(null)}
+          item={checkoutItem}
+          initialCustomer={{ name: rsvpName, phone: rsvpPhone }}
+          onSuccess={handlePaymentSuccess}
+          allowPayAtVenue={true}
+        />
       )}
     </section>
   )
