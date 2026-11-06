@@ -86,6 +86,8 @@ CREATE POLICY "pickup_games_read_published" ON public.pickup_games
     OR public.is_pickup_game_admin()
   );
 
+GRANT SELECT ON public.pickup_games TO anon, authenticated;
+
 -- 5. Hardened Cancellation Function: cancel_pickup_game_reservation
 -- Replaces guessable phone-number check with genuine ownership verification:
 -- - Authenticated reservation owner (auth.uid() = participant.user_id)
