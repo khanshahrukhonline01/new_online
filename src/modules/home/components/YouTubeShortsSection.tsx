@@ -100,6 +100,7 @@ export default function YouTubeShortsSection({ onNavigate }: YouTubeShortsSectio
                 alt={`${video.title} video thumbnail`}
                 className="home-yt-thumb-img"
                 loading="lazy"
+                decoding="async"
                 width={400}
                 height={225}
                 onError={e => {

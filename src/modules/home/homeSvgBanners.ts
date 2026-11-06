@@ -18,87 +18,87 @@ export interface SportCoverImage {
 
 export const REAL_SPORTS_IMAGES: Record<string, { url: string; defaultAlt: string }> = {
   football: {
-    url: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Floodlit artificial synthetic football turf arena with regulation pitch markings',
   },
   futsal: {
-    url: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Enclosed 5-a-side synthetic futsal turf arena with goals and boundary netting',
   },
   cricket: {
-    url: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Championship cricket stadium pitch with turf wickets and boundary perimeter',
   },
   'box cricket': {
-    url: 'https://images.unsplash.com/photo-1624880357913-a8539238245b?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1624880357913-a8539238245b?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Enclosed all-weather box cricket turf cage with overhead floodlighting',
   },
   badminton: {
-    url: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Indoor professional BWF-standard badminton court with green synthetic mat and net',
   },
   pickleball: {
-    url: 'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1599474924187-334a4ae5bd3c?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Dedicated outdoor regulation pickleball court with non-volley kitchen zone and net',
   },
   tennis: {
-    url: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Championship hardcourt tennis arena with crisp white baselines and regulation net',
   },
   basketball: {
-    url: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Professional indoor hardwood basketball court with glass backboard and hoop',
   },
   athletics: {
-    url: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=480&q=75',
     defaultAlt: '8-lane red polyurethane all-weather synthetic running track at sports stadium',
   },
   swimming: {
-    url: 'https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Olympic 50-meter indoor competition swimming pool with lane lines and starting blocks',
   },
   boxing: {
-    url: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Professional competition boxing ring with ropes, canvas mat, and corner pads',
   },
   'table tennis': {
-    url: 'https://images.unsplash.com/photo-1534158914592-062992fbe900?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1534158914592-062992fbe900?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'ITTF-standard indoor blue table tennis arena with competition net and court barriers',
   },
   shooting: {
-    url: 'https://images.unsplash.com/photo-1595590424283-b8f17842773f?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1595590424283-b8f17842773f?auto=format&fit=crop&w=480&q=75',
     defaultAlt: '10m and 50m precision indoor sports shooting range with electronic target scoring',
   },
   archery: {
-    url: 'https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Outdoor target archery range with multi-colored circular target faces and distance markers',
   },
   hockey: {
-    url: 'https://images.unsplash.com/photo-1580748141549-71748dbe0bdc?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1580748141549-71748dbe0bdc?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'FIH-certified blue water-based synthetic turf hockey ground with striking circle',
   },
   rowing: {
-    url: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'National water sports regatta course for rowing, kayaking, and canoeing',
   },
   kayaking: {
-    url: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'National water sports regatta course for rowing, kayaking, and canoeing',
   },
   wrestling: {
-    url: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Olympic regulation combat wrestling mat and martial arts high-performance dojo',
   },
   kabaddi: {
-    url: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Indoor synthetic kabaddi court mat with baulk and bonus line markings',
   },
   venue: {
-    url: 'https://images.unsplash.com/photo-1471295253337-3ceaaedca402?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1471295253337-3ceaaedca402?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Modern sports arena complex with multi-discipline floodlit facilities',
   },
   academy: {
-    url: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=800&q=80',
+    url: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=480&q=75',
     defaultAlt: 'Accredited high-performance athletic training center and sports academy campus',
   },
 }

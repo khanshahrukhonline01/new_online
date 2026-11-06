@@ -309,8 +309,27 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
     return {}
   })
 
-  const [liveMatches, setLiveMatches] = useState<SportsMatch[]>([])
-  const [loadingMatches, setLoadingMatches] = useState(true)
+  const [liveMatches, setLiveMatches] = useState<SportsMatch[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('khelgrid_live_matches_cache')
+        if (cached) return JSON.parse(cached)
+      } catch {
+        // ignore
+      }
+    }
+    return []
+  })
+  const [loadingMatches, setLoadingMatches] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return !sessionStorage.getItem('khelgrid_live_matches_cache')
+      } catch {
+        // ignore
+      }
+    }
+    return true
+  })
 
   const [reduceMotion, setReduceMotion] = useState(false)
   const [activeHeroSlide, setActiveHeroSlide] = useState(0)
@@ -770,13 +789,17 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   // Load live matches from liveSportsEngine
   useEffect(() => {
     let active = true
-    setLoadingMatches(true)
     liveSportsEngine
       .getScores()
       .then(res => {
         if (active) {
           setLiveMatches(res.matches)
           setLoadingMatches(false)
+          try {
+            sessionStorage.setItem('khelgrid_live_matches_cache', JSON.stringify(res.matches))
+          } catch {
+            // ignore storage quota errors
+          }
         }
       })
       .catch(() => {
@@ -798,8 +821,11 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   useEffect(() => {
     if (reduceMotion) return
     const timer = window.setInterval(
-      () => setActiveHeroSlide(current => (current + 1) % heroSlides.length),
-      3500,
+      () => {
+        if (typeof document !== 'undefined' && document.hidden) return
+        setActiveHeroSlide(current => (current + 1) % heroSlides.length)
+      },
+      5500,
     )
     return () => window.clearInterval(timer)
   }, [reduceMotion, heroSlides.length])
@@ -825,41 +851,45 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   const displayOpportunities = useMemo(() => {
     if (counts.opportunities?.status !== 'ready') return []
     const now = Date.now()
-    return [...counts.opportunities.data].sort((a, b) => {
-      const aFeatured = Boolean(a.is_featured || a.metadata?.featured || a.metadata?.is_featured)
-      const bFeatured = Boolean(b.is_featured || b.metadata?.featured || b.metadata?.is_featured)
-      if (aFeatured !== bFeatured) return aFeatured ? -1 : 1
+    return [...counts.opportunities.data]
+      .sort((a, b) => {
+        const aFeatured = Boolean(a.is_featured || a.metadata?.featured || a.metadata?.is_featured)
+        const bFeatured = Boolean(b.is_featured || b.metadata?.featured || b.metadata?.is_featured)
+        if (aFeatured !== bFeatured) return aFeatured ? -1 : 1
 
-      const aVerified = a.verification_status === 'verified'
-      const bVerified = b.verification_status === 'verified'
-      if (aVerified !== bVerified) return aVerified ? -1 : 1
+        const aVerified = a.verification_status === 'verified'
+        const bVerified = b.verification_status === 'verified'
+        if (aVerified !== bVerified) return aVerified ? -1 : 1
 
-      const aStart = a.starts_at ? new Date(a.starts_at).getTime() : Number.POSITIVE_INFINITY
-      const bStart = b.starts_at ? new Date(b.starts_at).getTime() : Number.POSITIVE_INFINITY
-      const aUpcoming = aStart >= now
-      const bUpcoming = bStart >= now
-      if (aUpcoming && !bUpcoming) return -1
-      if (!aUpcoming && bUpcoming) return 1
-      if (aUpcoming && bUpcoming && aStart !== bStart) return aStart - bStart
+        const aStart = a.starts_at ? new Date(a.starts_at).getTime() : Number.POSITIVE_INFINITY
+        const bStart = b.starts_at ? new Date(b.starts_at).getTime() : Number.POSITIVE_INFINITY
+        const aUpcoming = aStart >= now
+        const bUpcoming = bStart >= now
+        if (aUpcoming && !bUpcoming) return -1
+        if (!aUpcoming && bUpcoming) return 1
+        if (aUpcoming && bUpcoming && aStart !== bStart) return aStart - bStart
 
-      return (b.starts_at ?? '').localeCompare(a.starts_at ?? '')
-    })
+        return (b.starts_at ?? '').localeCompare(a.starts_at ?? '')
+      })
+      .slice(0, 12)
   }, [counts.opportunities])
 
   // Display venues: sorted by featured first, then government facility status, then alphabetical
   const displayVenues = useMemo(() => {
     if (counts.venues?.status !== 'ready') return []
-    return [...counts.venues.data].sort((a, b) => {
-      const aFeatured = Boolean(a.is_featured)
-      const bFeatured = Boolean(b.is_featured)
-      if (aFeatured !== bFeatured) return aFeatured ? -1 : 1
+    return [...counts.venues.data]
+      .sort((a, b) => {
+        const aFeatured = Boolean(a.is_featured)
+        const bFeatured = Boolean(b.is_featured)
+        if (aFeatured !== bFeatured) return aFeatured ? -1 : 1
 
-      const aGov = Boolean(a.government_facility)
-      const bGov = Boolean(b.government_facility)
-      if (aGov !== bGov) return aGov ? -1 : 1
+        const aGov = Boolean(a.government_facility)
+        const bGov = Boolean(b.government_facility)
+        if (aGov !== bGov) return aGov ? -1 : 1
 
-      return a.name.localeCompare(b.name)
-    })
+        return a.name.localeCompare(b.name)
+      })
+      .slice(0, 12)
   }, [counts.venues])
 
   // Pickup games: dynamic database community matches with fallback to COMMUNITY_PICKUP_GAMES
@@ -870,6 +900,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
           if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1
           return b.confirmed_players - a.confirmed_players
         })
+        .slice(0, 12)
         .map(g => ({
           id: g.id,
           sport: g.sport,
@@ -886,7 +917,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
           is_featured: g.is_featured,
         }))
     }
-    return COMMUNITY_PICKUP_GAMES
+    return COMMUNITY_PICKUP_GAMES.slice(0, 12)
   }, [counts.pickupGames])
 
   return (
