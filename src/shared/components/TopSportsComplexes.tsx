@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { MouseEvent } from 'react'
 import { SiteIcon } from './SiteIcon'
 import { TOP_CITY_SPORTS_COMPLEXES } from './cityComplexesData'
@@ -109,4 +110,4 @@ export function TopSportsComplexes({ onNavigate }: TopSportsComplexesProps) {
   )
 }
 
-export default TopSportsComplexes
+export default memo(TopSportsComplexes)

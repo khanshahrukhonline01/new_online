@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useMemo, useState } from 'react'
 import type { MouseEvent } from 'react'
 import { SiteIcon } from './SiteIcon'
@@ -189,4 +190,4 @@ export function FrequentlyAskedQuestions({ activePath = '/', onNavigate }: Frequ
     </section>
   )
 }
-export default FrequentlyAskedQuestions
+export default memo(FrequentlyAskedQuestions)

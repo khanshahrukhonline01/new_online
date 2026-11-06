@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react'
+import { memo, type MouseEvent } from 'react'
 import { SiteIcon } from './SiteIcon'
 import { GAME_SPORT_PLAY_DIRECTORIES } from './gameSportPlayData'
 import './GameSportPlayAcrossIndia.css'
@@ -23,7 +23,7 @@ const GSP_SCHEMA_DATA = {
   ),
 }
 
-export default function GameSportPlayAcrossIndia({ onNavigate }: GameSportPlayAcrossIndiaProps) {
+function GameSportPlayAcrossIndia({ onNavigate }: GameSportPlayAcrossIndiaProps) {
   function handleClick(event: MouseEvent<HTMLAnchorElement>, href: string) {
     if (onNavigate) {
       onNavigate(event, href)
@@ -83,3 +83,5 @@ export default function GameSportPlayAcrossIndia({ onNavigate }: GameSportPlayAc
     </section>
   )
 }
+
+export default memo(GameSportPlayAcrossIndia)

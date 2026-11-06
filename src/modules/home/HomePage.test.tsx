@@ -110,4 +110,20 @@ describe('HomePage 5 core live-website sections', () => {
     expect(html).toContain('Talent Scanner')
     expect(html).toContain('href="/talent-scanner"')
   })
+
+  it('renders dynamic interactive controls including live score sport tabs and card bookmark actions', () => {
+    const html = renderToStaticMarkup(<HomePage />)
+
+    // Dynamic Live Score sport filters
+    expect(html).toContain('home-live-filters')
+    expect(html).toContain('🏏 Cricket')
+    expect(html).toContain('⚽ Football')
+
+    // Dynamic Card Bookmark / Save Action
+    expect(html).toContain('home-card-bookmark-btn')
+
+    // Dynamic Pickup Game reservation CTA
+    expect(html).toContain('home-pickup-join-btn')
+    expect(html).toContain('Reserve Spot')
+  })
 })
