@@ -8,6 +8,9 @@ import { getCuratedVenueBySlug, type CuratedVenue } from '../../shared/data/cura
 import ReportListingModal from '../../shared/components/ReportListingModal'
 import VerificationClaimModal from '../../shared/components/VerificationClaimModal'
 import { CommunityReviewsSection } from '../../shared/components/CommunityReviewsSection'
+import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
+import { parseInrPrice, recordVenueSlotBooking } from '../../shared/payments/paymentService'
+import type { PaymentItem, VenueBookingResult } from '../../shared/payments/paymentTypes'
 import './VenueDetailPage.css'
 
 export interface VenueDetailPageProps {
@@ -25,6 +28,17 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: Venu
   const [openFaq, setOpenFaq] = useState<number | null>(0)
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false)
+
+  // Turf / Court Slot Booking State
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
+  const [selectedSport, setSelectedSport] = useState('')
+  const [selectedDate, setSelectedDate] = useState('Today')
+  const [selectedSlot, setSelectedSlot] = useState('7:00 PM – 8:00 PM')
+  const [bookingName, setBookingName] = useState('')
+  const [bookingPhone, setBookingPhone] = useState('')
+  const [bookingError, setBookingError] = useState('')
+  const [checkoutItem, setCheckoutItem] = useState<PaymentItem | null>(null)
+  const [confirmedBooking, setConfirmedBooking] = useState<VenueBookingResult | null>(null)
 
   useEffect(() => {
     let active = true
@@ -228,6 +242,19 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: Venu
 
         {/* Primary Action Buttons */}
         <div className="venue-actions-bar">
+          <button
+            type="button"
+            onClick={() => {
+              setIsBookingModalOpen(true)
+              setConfirmedBooking(null)
+              setBookingError('')
+            }}
+            className="venue-btn venue-btn-book"
+          >
+            <SiteIcon name="calendar-check" size={16} />
+            <span>Book Turf / Court Slot</span>
+          </button>
+
           <a
             href={whatsappUrl}
             target="_blank"
@@ -511,6 +538,256 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: Venu
         entitySlug={venue.slug}
         entityName={venue.name}
       />
+
+      {/* Venue Court / Turf Slot Booking Modal */}
+      {isBookingModalOpen && (
+        <div className="venue-booking-overlay" onClick={() => setIsBookingModalOpen(false)}>
+          <div
+            className="venue-booking-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="venue-booking-title"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="venue-booking-header">
+              <h3 id="venue-booking-title">
+                <SiteIcon name="calendar-check" size={20} />
+                <span>{confirmedBooking ? 'Slot Booking Confirmed!' : `Book Slot · ${venue.name}`}</span>
+              </h3>
+              <button
+                type="button"
+                className="kg-checkout-close"
+                onClick={() => setIsBookingModalOpen(false)}
+                aria-label="Close"
+              >
+                <SiteIcon name="close" size={18} />
+              </button>
+            </div>
+
+            {confirmedBooking ? (
+              <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                <div style={{ fontSize: '44px', marginBottom: '8px' }}>🏟️</div>
+                <h4 style={{ margin: '0 0 6px', fontSize: '19px', fontWeight: 800, color: '#059669' }}>
+                  Court Reserved Successfully!
+                </h4>
+                <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#64748b' }}>
+                  Your slot is locked at <strong>{confirmedBooking.venueName}</strong>.
+                </p>
+
+                <div className="venue-summary-pill" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px', textAlign: 'left' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#64748b' }}>Booking Reference:</span>
+                    <strong style={{ fontFamily: 'monospace', color: '#059669' }}>{confirmedBooking.bookingRef}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#64748b' }}>Date &amp; Time:</span>
+                    <strong>{confirmedBooking.slotDate} · {confirmedBooking.slotTime}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#64748b' }}>Sport / Ground:</span>
+                    <strong>{selectedSport || sportName}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <span style={{ color: '#64748b' }}>Status:</span>
+                    <strong>{confirmedBooking.paymentStatus === 'pay_at_venue' ? 'Pay at Venue' : 'Deposit Paid'} (₹{confirmedBooking.paidAmount})</strong>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                  <button
+                    type="button"
+                    className="kg-btn-cancel"
+                    style={{ flex: 1 }}
+                    onClick={() => window.print?.()}
+                  >
+                    <SiteIcon name="download" size={15} />
+                    <span>Print Voucher</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="venue-btn venue-btn-book"
+                    style={{ flex: 1, justifyContent: 'center' }}
+                    onClick={() => setIsBookingModalOpen(false)}
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form
+                onSubmit={e => {
+                  e.preventDefault()
+                  if (bookingName.trim().length < 2) {
+                    setBookingError('Please enter your full name (at least 2 characters).')
+                    return
+                  }
+                  if (bookingPhone.replace(/\D/g, '').length < 10) {
+                    setBookingError('Please enter a valid 10-digit mobile number.')
+                    return
+                  }
+                  const slotFee = parseInrPrice(pricingText) || 800
+                  const depositAmount = Math.min(300, slotFee)
+                  setCheckoutItem({
+                    id: venue.id,
+                    type: 'venue_booking',
+                    title: `${venue.name} Court Slot`,
+                    subtitle: `${selectedSport || sportName} · ${selectedDate} · ${selectedSlot}`,
+                    amount: depositAmount,
+                    emoji: '🏟️',
+                    venueName: venue.name,
+                    city: venue.city,
+                    dateOrTime: `${selectedDate} · ${selectedSlot}`,
+                  })
+                }}
+              >
+                {bookingError && (
+                  <div style={{ padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#b91c1c', fontSize: '13px', marginBottom: '14px' }}>
+                    {bookingError}
+                  </div>
+                )}
+
+                <div className="kg-field-group" style={{ marginBottom: '14px' }}>
+                  <label>Select Sport</label>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {[sportName, 'Football', 'Badminton', 'Cricket'].filter((v, i, a) => a.indexOf(v) === i).map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        className={`venue-slot-chip ${(selectedSport || sportName) === s ? 'selected' : ''}`}
+                        onClick={() => setSelectedSport(s)}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="kg-field-group" style={{ marginBottom: '14px' }}>
+                  <label>Select Date</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {['Today', 'Tomorrow', 'Day After'].map(d => (
+                      <button
+                        key={d}
+                        type="button"
+                        className={`venue-slot-chip ${selectedDate === d ? 'selected' : ''}`}
+                        onClick={() => setSelectedDate(d)}
+                        style={{ flex: 1 }}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="kg-field-group" style={{ marginBottom: '14px' }}>
+                  <label>Select Time Slot</label>
+                  <div className="venue-slot-chips">
+                    {[
+                      '6:00 AM – 7:00 AM',
+                      '7:00 AM – 8:00 AM',
+                      '6:00 PM – 7:00 PM',
+                      '7:00 PM – 8:00 PM',
+                      '8:00 PM – 9:00 PM',
+                      '9:00 PM – 10:00 PM',
+                    ].map(slot => (
+                      <button
+                        key={slot}
+                        type="button"
+                        className={`venue-slot-chip ${selectedSlot === slot ? 'selected' : ''}`}
+                        onClick={() => setSelectedSlot(slot)}
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="kg-customer-grid" style={{ marginBottom: '14px' }}>
+                  <div className="kg-field-group">
+                    <label>Full Name *</label>
+                    <input
+                      type="text"
+                      className="kg-input"
+                      value={bookingName}
+                      onChange={e => setBookingName(e.target.value)}
+                      placeholder="e.g. Vikram Verma"
+                      required
+                    />
+                  </div>
+                  <div className="kg-field-group">
+                    <label>Mobile Number *</label>
+                    <input
+                      type="tel"
+                      className="kg-input"
+                      value={bookingPhone}
+                      onChange={e => setBookingPhone(e.target.value)}
+                      placeholder="10-digit mobile number"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="venue-summary-pill">
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>Slot Advance Deposit</div>
+                    <strong style={{ fontSize: '16px', color: '#059669' }}>
+                      ₹{Math.min(300, parseInrPrice(pricingText) || 800)}
+                    </strong>
+                    <small style={{ display: 'block', fontSize: '11px', color: '#64748b' }}>
+                      (Total estimated: ₹{parseInrPrice(pricingText) || 800}/hr · remainder at venue)
+                    </small>
+                  </div>
+                  <SiteIcon name="shield-check" size={24} style={{ color: '#059669' }} />
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '16px' }}>
+                  <button
+                    type="button"
+                    className="kg-btn-cancel"
+                    onClick={() => setIsBookingModalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="venue-btn venue-btn-book">
+                    <SiteIcon name="lock" size={15} />
+                    <span>Proceed to Payment (₹{Math.min(300, parseInrPrice(pricingText) || 800)}) →</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Checkout Modal for Venue Booking */}
+      {checkoutItem && (
+        <PaymentCheckoutModal
+          isOpen={Boolean(checkoutItem)}
+          onClose={() => setCheckoutItem(null)}
+          item={checkoutItem}
+          initialCustomer={{ name: bookingName, phone: bookingPhone }}
+          onSuccess={async paymentResult => {
+            setCheckoutItem(null)
+            const slotFee = parseInrPrice(pricingText) || 800
+            const res = await recordVenueSlotBooking({
+              venueId: venue.id,
+              venueName: venue.name,
+              city: venue.city,
+              sport: selectedSport || sportName,
+              slotDate: selectedDate,
+              slotTime: selectedSlot,
+              customerName: bookingName,
+              customerPhone: bookingPhone,
+              totalAmount: slotFee,
+              paidAmount: paymentResult.amount,
+              paymentStatus: paymentResult.status === 'pay_at_venue' ? 'pay_at_venue' : 'paid',
+              paymentId: paymentResult.paymentId,
+            })
+            setConfirmedBooking(res)
+          }}
+          allowPayAtVenue={true}
+        />
+      )}
     </article>
   )
 }
