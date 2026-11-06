@@ -24,6 +24,18 @@ export default defineConfig({
               return 'vendor-icons'
             }
           }
+          if (id.includes('booksData')) {
+            return 'sports-books-data'
+          }
+          if (id.includes('faqData')) {
+            return 'faq-data'
+          }
+          if (id.includes('khelchronicleData')) {
+            return 'khelchronicle-data'
+          }
+          if (id.includes('curatedEntitiesData')) {
+            return 'curated-entities-data'
+          }
         },
       },
     },

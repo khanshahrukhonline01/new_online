@@ -15,10 +15,17 @@ export type CatalogueResult<T> =
   | { status: 'unavailable'; data: []; message: string }
 
 type QueryOptions = {
-  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities' | 'pickup_games' | 'site_announcements' | 'reviews'
+  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities' | 'pickup_games' | 'site_announcements' | 'reviews' | 'sports_books'
   select: string
   order: string
   filters: Record<string, string>
+}
+
+const catalogueMemoryCache = new Map<string, { timestamp: number; result: CatalogueResult<unknown> }>()
+const CACHE_TTL_MS = 60_000
+
+export function clearCatalogueCache(): void {
+  catalogueMemoryCache.clear()
 }
 
 async function readCatalogue<T>({
@@ -28,6 +35,12 @@ async function readCatalogue<T>({
   filters,
 }: QueryOptions): Promise<CatalogueResult<T>> {
   if (!supabaseUrl || !anonKey) return { status: 'unconfigured', data: [] }
+
+  const cacheKey = `${table}:${select}:${order}:${JSON.stringify(filters)}`
+  const cached = catalogueMemoryCache.get(cacheKey)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS && cached.result.status === 'ready') {
+    return cached.result as CatalogueResult<T>
+  }
 
   let baseUrl: URL
   try {
@@ -58,7 +71,9 @@ async function readCatalogue<T>({
     if (!Array.isArray(data)) {
       return { status: 'unavailable', data: [], message: 'The catalogue returned an unexpected response.' }
     }
-    return { status: 'ready', data: data as T[] }
+    const result: CatalogueResult<T> = { status: 'ready', data: data as T[] }
+    catalogueMemoryCache.set(cacheKey, { timestamp: Date.now(), result })
+    return result
   } catch {
     return { status: 'unavailable', data: [], message: 'Could not connect to the catalogue. Check your connection and try again.' }
   }
@@ -555,6 +570,37 @@ export async function getPickupGames(): Promise<CatalogueResult<DatabasePickupGa
     return { status: 'ready', data: fallback }
   }
   return result
+}
+
+export interface DatabaseSportsBook {
+  id: string
+  title: string
+  subtitle: string
+  author: string
+  author_role?: string
+  category: string
+  sport: string
+  reading_time_minutes: number
+  total_pages: number
+  cover_emoji: string
+  cover_gradient: string
+  rating: number
+  ratings_count: number
+  published_year: number
+  isbn: string
+  badge?: string
+  description: string
+  highlights?: string[]
+  chapters?: unknown[]
+}
+
+export async function getSportsBooks(): Promise<CatalogueResult<DatabaseSportsBook>> {
+  return readCatalogue<DatabaseSportsBook>({
+    table: 'sports_books',
+    select: 'id,title,subtitle,author,author_role,category,sport,reading_time_minutes,total_pages,cover_emoji,cover_gradient,rating,ratings_count,published_year,isbn,badge,description,highlights,chapters',
+    order: 'rating.desc',
+    filters: {},
+  })
 }
 
 export interface DatabaseAnnouncement {

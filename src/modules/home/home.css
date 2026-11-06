@@ -3,6 +3,8 @@
 .home-section-container {
   margin: 28px 0;
   width: 100%;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 380px;
 }
 
 .home-section-header {

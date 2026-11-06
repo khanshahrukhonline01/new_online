@@ -1,3 +1,5 @@
+import { getSportsBooks, type DatabaseSportsBook } from '../../integrations/supabase/public-client'
+
 export type BookCategory =
   | 'Tactical Play'
   | 'Biomechanics'
@@ -667,3 +669,40 @@ export const SPORTS_BOOKS: SportsBook[] = [
     ],
   },
 ]
+
+export function adaptDatabaseBookToSportsBook(dbBook: DatabaseSportsBook): SportsBook {
+  const fallbackBook = SPORTS_BOOKS.find(b => b.id === dbBook.id)
+  return {
+    id: dbBook.id,
+    title: dbBook.title,
+    subtitle: dbBook.subtitle,
+    author: dbBook.author,
+    authorRole: dbBook.author_role || fallbackBook?.authorRole || 'Sports Specialist',
+    category: (dbBook.category as BookCategory) || fallbackBook?.category || 'Tactical Play',
+    sport: dbBook.sport,
+    readingTimeMinutes: dbBook.reading_time_minutes || fallbackBook?.readingTimeMinutes || 30,
+    totalPages: dbBook.total_pages || fallbackBook?.totalPages || 100,
+    coverEmoji: dbBook.cover_emoji || fallbackBook?.coverEmoji || '📚',
+    coverGradient: dbBook.cover_gradient || fallbackBook?.coverGradient || 'linear-gradient(135deg, #1e3a8a 0%, #0284c7 100%)',
+    rating: Number(dbBook.rating) || fallbackBook?.rating || 4.9,
+    ratingsCount: dbBook.ratings_count || fallbackBook?.ratingsCount || 1000,
+    publishedYear: dbBook.published_year || fallbackBook?.publishedYear || 2026,
+    isbn: dbBook.isbn || fallbackBook?.isbn || 'KG-978-IN-01',
+    badge: dbBook.badge || fallbackBook?.badge,
+    description: dbBook.description || fallbackBook?.description || '',
+    highlights: Array.isArray(dbBook.highlights) && dbBook.highlights.length > 0 ? (dbBook.highlights as string[]) : fallbackBook?.highlights || [],
+    chapters: (Array.isArray(dbBook.chapters) && dbBook.chapters.length > 0 ? (dbBook.chapters as BookChapter[]) : fallbackBook?.chapters) || [],
+  }
+}
+
+export async function getDynamicSportsBooks(): Promise<SportsBook[]> {
+  try {
+    const res = await getSportsBooks()
+    if (res.status === 'ready' && res.data.length > 0) {
+      return res.data.map(adaptDatabaseBookToSportsBook)
+    }
+  } catch {
+    // Fallback smoothly to curated baseline
+  }
+  return SPORTS_BOOKS
+}

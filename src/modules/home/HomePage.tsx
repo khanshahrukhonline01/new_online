@@ -297,7 +297,17 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
     academies?: CatalogueResult<Academy>
     cities?: CatalogueResult<DatabaseCity>
     pickupGames?: CatalogueResult<DatabasePickupGame>
-  }>({})
+  }>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('khelgrid_home_catalogue_counts')
+        if (cached) return JSON.parse(cached)
+      } catch {
+        // ignore parse errors
+      }
+    }
+    return {}
+  })
 
   const [liveMatches, setLiveMatches] = useState<SportsMatch[]>([])
   const [loadingMatches, setLoadingMatches] = useState(true)
@@ -460,7 +470,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
     {
       name: 'Football',
       sport: 'Football',
-      image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1920&q=80',
+      image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=960&q=75',
       position: 'center 54%',
       alt: 'Competitive football match on floodlit stadium turf with players contesting possession',
       title: 'Indian Grassroots Football & Selection Trials on KhelGrid',
@@ -468,7 +478,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
     {
       name: 'Cricket',
       sport: 'Cricket',
-      image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=1920&q=80',
+      image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=960&q=75',
       position: 'center 48%',
       alt: 'Fast bowler delivering ball at championship cricket tournament stadium pitch',
       title: 'State & Zonal Cricket Combines and Selection Trials',
@@ -476,7 +486,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
     {
       name: 'Athletics',
       sport: 'Athletics',
-      image: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=1920&q=80',
+      image: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=960&q=75',
       position: 'center 42%',
       alt: 'Junior track athletes launching from starting blocks on professional synthetic running track at national sports complex',
       title: 'National Athletics Meets & SAI High Performance Centers',
@@ -484,7 +494,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
     {
       name: 'Basketball',
       sport: 'Basketball',
-      image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1920&q=80',
+      image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=960&q=75',
       position: 'center 48%',
       alt: 'Basketball player executing mid-air shot on indoor championship hardwood arena court',
       title: 'State & National Basketball Championships',
@@ -492,7 +502,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
     {
       name: 'Badminton',
       sport: 'Badminton',
-      image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1920&q=80',
+      image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=960&q=75',
       position: 'center 45%',
       alt: 'Badminton athlete executing powerful jump smash on indoor BWF-grade synthetic court mat',
       title: 'Accredited Badminton Academies and State Ranking Tournaments',
@@ -521,7 +531,13 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
       ]).then(
         ([sports, opportunities, venues, academies, cities, pickupGames, announcements]) => {
           if (active) {
-            setCounts({ sports, opportunities, venues, academies, cities, pickupGames })
+            const nextCounts = { sports, opportunities, venues, academies, cities, pickupGames }
+            setCounts(nextCounts)
+            try {
+              sessionStorage.setItem('khelgrid_home_catalogue_counts', JSON.stringify(nextCounts))
+            } catch {
+              // ignore storage errors
+            }
             if (announcements.status === 'ready' && announcements.data.length > 0) {
               setSeasonalAnnouncement(announcements.data[0])
             }

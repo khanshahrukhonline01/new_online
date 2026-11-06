@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { SPORTS_BOOKS, type BookCategory, type SportsBook } from './booksData'
+import { SPORTS_BOOKS, getDynamicSportsBooks, type BookCategory, type SportsBook } from './booksData'
 import './LearningHubPage.css'
 
 interface LearningHubPageProps {
@@ -18,11 +18,36 @@ const CATEGORIES: ('All' | BookCategory)[] = [
 ]
 
 export default function LearningHubPage({ onNavigate }: LearningHubPageProps) {
+  const [books, setBooks] = useState<SportsBook[]>(SPORTS_BOOKS)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<'All' | BookCategory>('All')
   const [activeBook, setActiveBook] = useState<SportsBook | null>(null)
   const [activeChapterIndex, setActiveChapterIndex] = useState(0)
   const [largeFont, setLargeFont] = useState(false)
+
+  // Fetch dynamic books from database with fallback to curated baseline
+  useEffect(() => {
+    let active = true
+    getDynamicSportsBooks().then(data => {
+      if (active && data.length > 0) {
+        setBooks(data)
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search)
+          const bookSlug = params.get('book')
+          if (bookSlug) {
+            const found = data.find(b => b.id === bookSlug)
+            if (found) {
+              setActiveBook(found)
+              setActiveChapterIndex(0)
+            }
+          }
+        }
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   // Sync from URL search params on mount (e.g. /learning?book=modern-football-tactics)
   useEffect(() => {
@@ -30,14 +55,14 @@ export default function LearningHubPage({ onNavigate }: LearningHubPageProps) {
       const params = new URLSearchParams(window.location.search)
       const bookSlug = params.get('book')
       if (bookSlug) {
-        const found = SPORTS_BOOKS.find(b => b.id === bookSlug)
+        const found = books.find(b => b.id === bookSlug)
         if (found) {
           setActiveBook(found)
           setActiveChapterIndex(0)
         }
       }
     }
-  }, [])
+  }, [books])
 
   // Listen for Escape key to close reader
   useEffect(() => {
@@ -61,7 +86,7 @@ export default function LearningHubPage({ onNavigate }: LearningHubPageProps) {
 
   const filteredBooks = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
-    return SPORTS_BOOKS.filter(book => {
+    return books.filter(book => {
       const matchesCategory = selectedCategory === 'All' || book.category === selectedCategory
       if (!matchesCategory) return false
 
@@ -76,7 +101,7 @@ export default function LearningHubPage({ onNavigate }: LearningHubPageProps) {
 
       return matchesTitle || matchesSubtitle || matchesAuthor || matchesSport || matchesHighlights || matchesChapters
     })
-  }, [searchQuery, selectedCategory])
+  }, [books, searchQuery, selectedCategory])
 
   const currentChapter = activeBook?.chapters[activeChapterIndex]
 
@@ -100,7 +125,7 @@ export default function LearningHubPage({ onNavigate }: LearningHubPageProps) {
         <div className="learning-stat-item">
           <div className="learning-stat-icon" aria-hidden="true">📚</div>
           <div>
-            <div className="learning-stat-val">{SPORTS_BOOKS.length} Complete Books</div>
+            <div className="learning-stat-val">{books.length} Complete Books</div>
             <div className="learning-stat-lbl">Full-text open manuals</div>
           </div>
         </div>
