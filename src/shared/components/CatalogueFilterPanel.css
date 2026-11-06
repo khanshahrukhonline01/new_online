@@ -73,6 +73,77 @@
   font-weight: 750;
 }
 
+/* Enhanced Search Box with Inner Icon and Clear Button */
+.foundation-v1 .kg-filter-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.foundation-v1 .kg-filter-search-icon {
+  position: absolute;
+  left: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.foundation-v1 .kg-filter-search-clear {
+  position: absolute;
+  right: 8px;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--text-soft);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.foundation-v1 .kg-filter-search-clear:hover {
+  background: var(--line-strong);
+  color: var(--text);
+}
+
+.foundation-v1 .kg-filter-search-box input[type="search"] {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 32px 9px 34px !important;
+}
+
+/* Enhanced Select Dropdown with Custom Chevron */
+.foundation-v1 .kg-filter-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.foundation-v1 .kg-filter-select-wrap select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 32px !important;
+  cursor: pointer;
+}
+
+.foundation-v1 .kg-select-chevron {
+  position: absolute;
+  right: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  pointer-events: none;
+}
+
 .foundation-v1 .kg-filter-fields input,
 .foundation-v1 .kg-filter-fields select,
 .foundation-v1 .kg-filter-scroll-body input,
@@ -82,11 +153,12 @@
   min-height: 42px;
   padding: 9px 11px;
   border: 1px solid var(--line-strong);
-  border-radius: 9px;
+  border-radius: 10px;
   background: var(--page-elevated);
   color: var(--text);
   font: inherit;
   font-size: 13px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .foundation-v1 .kg-filter-fields input:focus-visible,
@@ -116,11 +188,100 @@
   border-color: var(--line-strong);
 }
 
+/* Quick Filter Pills Rail */
+.foundation-v1 .kg-quick-filter-rail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 0 10px;
+  margin-bottom: 8px;
+  scrollbar-width: none;
+}
+
+.foundation-v1 .kg-quick-filter-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.foundation-v1 .kg-quick-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-soft);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.foundation-v1 .kg-quick-pill:hover {
+  background: var(--surface-soft);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.foundation-v1 .kg-quick-pill:active {
+  transform: scale(0.97);
+}
+
+.foundation-v1 .kg-quick-pill.is-active {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.38);
+  color: var(--green-dark);
+  font-weight: 750;
+  box-shadow: 0 1px 4px rgba(16, 185, 129, 0.12);
+}
+
+.foundation-v1 .kg-drawer-quick-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 6px;
+}
+
+.foundation-v1 .kg-drawer-section-title {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Active Filter Chips Bar (Both in Rail and Above Results) */
 .foundation-v1 .kg-active-filters {
   display: grid;
   gap: 8px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
+}
+
+.foundation-v1 .kg-active-filters-bar {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.foundation-v1 .kg-active-chips-label {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 4px;
 }
 
 .foundation-v1 .kg-active-filters-top {
@@ -152,6 +313,7 @@
 .foundation-v1 .kg-active-chips-wrap {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
 }
 
@@ -160,22 +322,26 @@
   align-items: center;
   gap: 5px;
   max-width: 100%;
-  padding: 5px 9px;
+  padding: 5px 10px;
   border: 1px solid rgba(7, 150, 79, 0.28);
   border-radius: 999px;
   background: rgba(7, 150, 79, 0.09);
   color: var(--green-dark);
   font: inherit;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 650;
   overflow-wrap: anywhere;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
 
 .foundation-v1 .kg-active-chips-wrap button:hover {
   background: rgba(7, 150, 79, 0.18);
   border-color: rgba(7, 150, 79, 0.4);
+}
+
+.foundation-v1 .kg-active-chips-wrap button:active {
+  transform: scale(0.97);
 }
 
 .foundation-v1 .kg-filter-mobile-toggle {
@@ -295,29 +461,35 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    min-height: 42px;
+    min-height: 44px;
     margin-top: 10px;
-    padding: 9px 12px;
+    padding: 9px 14px;
     border: 1px solid var(--line);
-    border-radius: 9px;
+    border-radius: 11px;
     background: var(--surface-soft);
     color: var(--text);
     font: inherit;
     font-size: 13px;
     font-weight: 750;
     cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .foundation-v1 .kg-filter-mobile-toggle:active {
+    transform: scale(0.985);
   }
 
   .foundation-v1 .kg-filter-mobile-toggle span {
     display: inline-grid;
     place-items: center;
-    min-width: 20px;
-    height: 20px;
+    min-width: 22px;
+    height: 22px;
     margin-left: auto;
     border-radius: 999px;
     background: var(--accent);
     color: white;
     font-size: 11px;
+    font-weight: 800;
   }
 
   /* Mobile Drawer Overlay */
@@ -325,8 +497,9 @@
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(5, 22, 38, 0.55);
-    backdrop-filter: blur(2px);
+    background: rgba(5, 22, 38, 0.6);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
     z-index: 9998;
     animation: kgDrawerFadeIn 0.2s ease-out;
   }
@@ -342,12 +515,12 @@
     top: 0;
     right: 0;
     bottom: 0;
-    width: min(350px, 88vw);
+    width: min(360px, 90vw);
     height: 100vh;
     max-height: 100vh;
     background: var(--surface);
     z-index: 9999;
-    box-shadow: -10px 0 36px rgba(5, 22, 38, 0.28);
+    box-shadow: -12px 0 40px rgba(5, 22, 38, 0.3);
     animation: kgDrawerSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
   }
@@ -356,9 +529,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
+    padding: max(16px, env(safe-area-inset-top)) 20px 14px;
     border-bottom: 1px solid var(--line);
     background: var(--surface);
+    flex: 0 0 auto;
   }
 
   .foundation-v1 .kg-filter-drawer-title {
@@ -392,20 +566,27 @@
   .foundation-v1 .kg-filter-drawer-close {
     display: grid;
     place-items: center;
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
     border: 0;
-    border-radius: 8px;
+    border-radius: 9px;
     background: var(--surface-soft);
     color: var(--text);
     cursor: pointer;
     padding: 0;
+    transition: background 0.15s ease;
+  }
+
+  .foundation-v1 .kg-filter-drawer-close:hover {
+    background: var(--line);
   }
 
   .foundation-v1 .kg-filter-scroll-body {
-    flex: 1;
+    flex: 1 1 auto;
     overflow-y: auto;
-    padding: 18px 20px;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 20px;
     align-content: start;
   }
 
@@ -413,28 +594,35 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    padding: 14px 20px;
+    padding: 14px 20px max(14px, env(safe-area-inset-bottom));
     border-top: 1px solid var(--line);
     background: var(--surface);
+    flex: 0 0 auto;
   }
 
   .foundation-v1 .kg-filter-drawer-footer .kg-filter-clear {
-    min-height: 42px;
+    min-height: 44px;
     margin: 0;
+    border-radius: 10px;
   }
 
   .foundation-v1 .kg-filter-drawer-footer .kg-filter-apply-btn {
     display: grid;
     place-items: center;
-    min-height: 42px;
+    min-height: 44px;
     border: 0;
-    border-radius: 9px;
+    border-radius: 10px;
     background: var(--accent);
     color: #ffffff;
     font: inherit;
     font-size: 13px;
     font-weight: 750;
     cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .foundation-v1 .kg-filter-drawer-footer .kg-filter-apply-btn:hover {
+    background: var(--green-dark);
   }
 }
 

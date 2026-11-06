@@ -11,7 +11,7 @@ import {
 import type { CatalogueResult, DatabasePickupGame } from '../../integrations/supabase/public-client'
 import { subscribeToRealtimeCatalogue } from '../../integrations/supabase/realtime-client'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/components/CatalogueFilterPanel'
+import { CatalogueEmptyState, CatalogueFilterPanel, CatalogueQuickFilters, CatalogueActiveChips, type QuickFilterPill } from '../../shared/components/CatalogueFilterPanel'
 import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 import { createBannerSvg } from '../home/homeSvgBanners'
 import { COMMUNITY_PICKUP_GAMES, type PickupGame } from './pickupData'
@@ -361,6 +361,14 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
     },
   ]
 
+  const quickFilters: QuickFilterPill[] = [
+    { id: 'football', label: 'Football Matches', icon: 'sports', active: sport === 'Football', onClick: () => setSport(prev => prev === 'Football' ? '' : 'Football') },
+    { id: 'badminton', label: 'Badminton', icon: 'sports', active: sport === 'Badminton', onClick: () => setSport(prev => prev === 'Badminton' ? '' : 'Badminton') },
+    { id: 'pickleball', label: 'Pickleball', icon: 'sports', active: sport === 'Pickleball', onClick: () => setSport(prev => prev === 'Pickleball' ? '' : 'Pickleball') },
+    { id: 'intermediate', label: 'Intermediate', icon: 'sliders', active: skillLevel === 'Intermediate', onClick: () => setSkillLevel(prev => prev === 'Intermediate' ? '' : 'Intermediate') },
+    { id: 'beginner', label: 'Beginner Friendly', icon: 'check', active: skillLevel === 'Beginner', onClick: () => setSkillLevel(prev => prev === 'Beginner' ? '' : 'Beginner') },
+  ]
+
   const hasActiveFilters = Boolean(query.trim() || sport || city || skillLevel || sort !== 'featured')
 
   return (
@@ -411,9 +419,12 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
             defaultSort="featured"
             resultCount={visible.length}
             totalCount={records.length}
+            quickFilters={quickFilters}
           />
 
           <div className="kg-catalogue-results">
+            <CatalogueQuickFilters items={quickFilters} />
+            <CatalogueActiveChips search={query} onSearch={setQuery} fields={fields} onClear={clearAll} />
             <div className="kg-results-toolbar">
               <span>
                 {visible.length} of {records.length} pickup games
