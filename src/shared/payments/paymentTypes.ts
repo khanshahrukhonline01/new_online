@@ -3,6 +3,9 @@ export type PaymentItemType =
   | 'venue_booking'
   | 'trial_registration'
   | 'athlete_verification'
+  | 'listing_plan'
+
+export type { ListingPlanId, ListingPlan } from './listingPricing'
 
 export type PaymentMethod =
   | 'upi'

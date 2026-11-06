@@ -78,4 +78,39 @@ describe('CommunityListingModal', () => {
     expect(html).toContain('Your Name / Organizer *')
     expect(html).toContain('Contact WhatsApp / Phone *')
   })
+
+  it('renders all 5 listing payment plans with durations and pricing in INR', () => {
+    const html = renderToStaticMarkup(
+      <CommunityListingModal isOpen={true} onClose={vi.fn()} defaultCategory="venue" />
+    )
+
+    // Plans Section Heading
+    expect(html).toContain('Select Listing Plan &amp; Duration *')
+
+    // 1-Day Flash / Single-day Pass (₹99)
+    expect(html).toContain('1-Day Listing')
+    expect(html).toContain('24 Hours (1 Day)')
+    expect(html).toContain('₹99')
+
+    // 1-Month Plan (₹499)
+    expect(html).toContain('1-Month Listing')
+    expect(html).toContain('30 Days (Monthly)')
+    expect(html).toContain('₹499')
+
+    // 6-Month Semi-Annual Plan (₹2,499)
+    expect(html).toContain('6-Month Listing')
+    expect(html).toContain('180 Days (Semi-Annual)')
+    expect(html).toContain('₹2,499')
+
+    // 1-Year Annual Plan (₹4,499)
+    expect(html).toContain('1-Year Listing')
+    expect(html).toContain('365 Days (Annual)')
+    expect(html).toContain('₹4,499')
+
+    // Lifelong / Lifetime Plan (₹9,999)
+    expect(html).toContain('Lifelong Listing')
+    expect(html).toContain('Lifetime (Never Expires)')
+    expect(html).toContain('₹9,999')
+    expect(html).toContain('VIP Lifetime')
+  })
 })
