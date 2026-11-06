@@ -149,6 +149,16 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
     }
   }
 
+  if (cleanPath === '/tools' || cleanPath === '/sports-tools' || cleanPath.startsWith('/tools/')) {
+    return {
+      title: "Athlete Sports Tools, Calculators & Trial Planners · KhelGrid (खेल टूल्स व कैलकुलेटर)",
+      description: "Free interactive sports performance calculators, trial readiness scores, BCCI/SAI age cut-off eligibility, VO2 max tests, and turf cost splitters for Indian athletes and coaches.",
+      canonicalUrl: 'https://khelgrid.com/tools',
+      keywords: ['athlete calculators', 'trial readiness score', 'bcci age eligibility calculator', 'vo2 max estimator', 'turf match fee splitter', 'sports cv checklist', 'sports tools india', ...DEFAULT_KEYWORDS],
+      ogType: 'website'
+    }
+  }
+
   // Fallback for other standard pages
   const label = cleanPath.slice(1).replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
   return {
