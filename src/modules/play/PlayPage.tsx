@@ -455,7 +455,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
                       <div>
                         <div className="play-card-media">
                           <img
-                            src={createBannerSvg(`${game.sport} Pickup`, `${game.venueName} · ${game.city}`, game.emoji, 'cyan')}
+                            src={createBannerSvg(`${game.sport} Pickup`, `${game.venueName} · ${game.city}`, game.emoji, 'cyan', game.id)}
                             alt={`${game.sport} pickup game at ${game.venueName} in ${game.city}`}
                             title={`${game.sport} Community Match · ${game.venueName}, ${game.city}`}
                             loading="lazy"

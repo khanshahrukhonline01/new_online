@@ -441,7 +441,7 @@ export default function CityDetailPage({
               >
                 <div className="city-card-media-wrap">
                   <img
-                    src={createBannerSvg(v.name, v.city, '🏟️', 'emerald')}
+                    src={createBannerSvg(v.name, v.city, '🏟️', 'emerald', v.id || v.slug)}
                     alt={`${v.name} — Sports Venue & Turf in ${v.city}`}
                     title={`${v.name} (${v.city})`}
                     loading="lazy"
@@ -623,7 +623,7 @@ export default function CityDetailPage({
               <div key={acad.id} className="city-hub-card city-academy-card">
                 <div className="city-card-media-wrap">
                   <img
-                    src={createBannerSvg(acad.name, city.name, '🏛️', 'navy')}
+                    src={createBannerSvg(acad.name, city.name, '🏛️', 'navy', acad.id || acad.slug)}
                     alt={`${acad.name} — Sports Training Academy in ${city.name}`}
                     title={`${acad.name} (${city.name})`}
                     loading="lazy"

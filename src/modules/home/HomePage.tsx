@@ -281,7 +281,7 @@ function parseHomeAcademy(a: Academy): FormattedHomeAcademy {
     category,
     trialsLink: `/opportunities?city=${encodeURIComponent(a.city)}`,
     cardLink: `/academies?q=${encodeURIComponent(a.name)}`,
-    svgBanner: createBannerSvg(a.name, location, emoji, theme),
+    svgBanner: createBannerSvg(a.name, location, emoji, theme, a.id || a.slug),
   }
 }
 
@@ -1487,7 +1487,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                 <div>
                   <div className="home-card-media">
                     <img
-                      src={createBannerSvg(v.name, v.city, '🏟️', 'emerald')}
+                      src={createBannerSvg(v.name, v.city, '🏟️', 'emerald', v.id || v.slug)}
                       alt={`${v.name} — Sports complex and turf facility in ${v.city}`}
                       title={`${v.name} (${v.city})`}
                       loading="lazy"
@@ -1587,7 +1587,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
               <div>
                 <div className="home-card-media">
                   <img
-                    src={createBannerSvg(`${g.sport} Pickup`, `${g.venueName} · ${g.city}`, g.emoji, 'cyan')}
+                    src={createBannerSvg(`${g.sport} Pickup`, `${g.venueName} · ${g.city}`, g.emoji, 'cyan', g.id)}
                     alt={`${g.sport} pickup match at ${g.venueName} in ${g.city}`}
                     title={`${g.sport} Pickup — ${g.venueName}, ${g.city}`}
                     loading="lazy"
