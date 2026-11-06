@@ -42,6 +42,7 @@ const KhelChronicleCategoryPage = lazy(() => import('./modules/khelchronicle/Khe
 const KhelChronicleAuthorPage = lazy(() => import('./modules/khelchronicle/KhelChronicleAuthorPage'))
 const KhelChronicleSubmitPage = lazy(() => import('./modules/khelchronicle/KhelChronicleSubmitPage'))
 const HostDashboardPage = lazy(() => import('./modules/host/HostDashboardPage'))
+const LearningHubPage = lazy(() => import('./modules/learning/LearningHubPage'))
 
 // Code-split heavyweight modal dialogs
 const CommunityListingModal = lazy(() => import('./shared/components/CommunityListingModal'))
@@ -179,6 +180,7 @@ export default function App() {
       else if (match.canonicalPath === '/calendar') page = <FeatureDirectoryPage kind="calendar" />
       else if (match.canonicalPath === '/live' || match.canonicalPath === '/live-scores') page = <LiveScoresPage onNavigate={navigate} />
       else if (match.canonicalPath === '/submit-listing' || match.canonicalPath === '/list') page = <ListingSubmissionPage onOpenIntake={() => openIntake('pickup_game')} />
+      else if (match.canonicalPath === '/learning' || match.canonicalPath === '/learning-hub') page = <LearningHubPage onNavigate={navigate} />
       else if (match.canonicalPath === '/notifications') page = (
         <section className="content-page">
           <p className="eyebrow">YOUR UPDATES &amp; ALERTS</p>
@@ -203,7 +205,7 @@ export default function App() {
         </section>
       )
       else if (match.canonicalPath === '/settings') page = <SettingsPage onNavigate={navigate} />
-      else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
+      else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
       break
     default:
@@ -427,6 +429,7 @@ export default function App() {
         <a href="/ipr-policy" onClick={event => navigate(event, '/ipr-policy')}><strong>IPR &amp; Copyright</strong></a>
         <a href="/cancellation-policy" onClick={event => navigate(event, '/cancellation-policy')}>Cancellation</a>
         <a href="/posh-policy" onClick={event => navigate(event, '/posh-policy')}>POSH Policy</a>
+        <a href="/workplace-policy" onClick={event => navigate(event, '/workplace-policy')}>Workplace Policy</a>
         <a href="/editorial-policy" onClick={event => navigate(event, '/editorial-policy')}>Editorial</a>
         <a href="/verification-policy" onClick={event => navigate(event, '/verification-policy')}>Verification</a>
         <a href="/correction-policy" onClick={event => navigate(event, '/correction-policy')}>Corrections</a>

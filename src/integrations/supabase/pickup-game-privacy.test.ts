@@ -1,10 +1,20 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import * as publicClient from './public-client'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+let publicClient: typeof import('./public-client')
 import { type RealtimeTable } from './realtime-client'
-import privacyMigrationSql from '../../../supabase/migrations/20261104100000_secure_pickup_game_participant_privacy.sql?raw'
-import integrityMigrationSql from '../../../supabase/migrations/20261104110000_atomic_rsvp_reservation_integrity.sql?raw'
+import privacyMigrationSql from '../../../supabase/migrations/20261104045129_secure_pickup_game_participant_privacy.sql?raw'
+import integrityMigrationSql from '../../../supabase/migrations/20261105084018_atomic_rsvp_reservation_integrity.sql?raw'
+import tokenHashMigrationSql from '../../../supabase/migrations/20261105084210_hash_rsvp_cancellation_tokens.sql?raw'
 
 describe('Pickup Game Participant Privacy & Security Architecture (Phase 1 & Phase 2)', () => {
+  beforeAll(async () => {
+    // These tests exercise the explicit local demo adapter, not a remote RPC.
+    // Keep backend credentials unset so configured-backend failures remain fail-closed.
+    vi.stubEnv('VITE_SUPABASE_URL', '')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '')
+    vi.resetModules()
+    publicClient = await import('./public-client')
+  })
+
   beforeEach(() => {
     publicClient.resetLocalRsvpSecurityState()
   })
@@ -162,7 +172,19 @@ describe('Pickup Game Participant Privacy & Security Architecture (Phase 1 & Pha
       playerPhone: '9123456781',
     })
     expect(p1Res.status).toBe('confirmed')
-    expect(p1Res.whatsappGroupUrl).toBe('https://chat.whatsapp.com/test-badminton-secret')
+    // The reservation response itself must never disclose the group invitation.
+    expect(p1Res.whatsappGroupUrl).toBeNull()
+    const unauthorizedInvite = await publicClient.getPickupGameWhatsAppInvite({
+      reservationId: p1Res.participantId!,
+    })
+    expect(unauthorizedInvite.status).toBe('error')
+    expect(unauthorizedInvite.whatsappGroupUrl).toBeUndefined()
+    const authorizedInvite = await publicClient.getPickupGameWhatsAppInvite({
+      reservationId: p1Res.participantId!,
+      cancellationToken: p1Res.cancellationToken!,
+    })
+    expect(authorizedInvite.status).toBe('success')
+    expect(authorizedInvite.whatsappGroupUrl).toBe('https://chat.whatsapp.com/test-badminton-secret')
     expect(p1Res.game?.spots_open).toBe(0)
     expect(p1Res.game?.status).toBe('full')
 
@@ -196,15 +218,27 @@ describe('Pickup Game Participant Privacy & Security Architecture (Phase 1 & Pha
       expect((g as unknown as Record<string, unknown>).whatsapp_group_url).toBeUndefined()
     }
 
-    // Joining returns the link only to the confirmed player
+    // RSVP confirms the reservation but never returns the invite directly.
     const res = await publicClient.joinPickupGame({
       gameId: 'pg-whatsapp-test',
       playerName: 'Private Attendee',
       playerPhone: '9888877777',
     })
     expect(res.status).toBe('confirmed')
-    expect(res.whatsappGroupUrl).toBeTruthy()
-    expect(res.whatsappGroupUrl).toContain('whatsapp.com')
+    expect(res.whatsappGroupUrl).toBeNull()
+    const unauthorized = await publicClient.getPickupGameWhatsAppInvite({
+      reservationId: res.participantId!,
+    })
+    expect(unauthorized.status).toBe('error')
+    expect(unauthorized.whatsappGroupUrl).toBeUndefined()
+
+    const invite = await publicClient.getPickupGameWhatsAppInvite({
+      reservationId: res.participantId!,
+      cancellationToken: res.cancellationToken!,
+    })
+    expect(invite.status).toBe('success')
+    expect(invite.whatsappGroupUrl).toBeTruthy()
+    expect(invite.whatsappGroupUrl).toContain('whatsapp.com')
   })
 
   it('verifies SQL migrations for Phase 1 privacy and Phase 2 integrity', () => {
@@ -217,11 +251,19 @@ describe('Pickup Game Participant Privacy & Security Architecture (Phase 1 & Pha
 
     // Phase 2 migration checks
     expect(integrityMigrationSql).toContain('pickup_game_rsvp_rate_limits')
-    expect(integrityMigrationSql).toContain('REVOKE INSERT ON public.pickup_game_participants FROM PUBLIC, anon, authenticated')
-    expect(integrityMigrationSql).toContain('REVOKE UPDATE ON public.pickup_games FROM PUBLIC, anon, authenticated')
+    expect(integrityMigrationSql).toContain('REVOKE ALL ON TABLE public.pickup_game_participants FROM PUBLIC, anon, authenticated')
+    expect(integrityMigrationSql).toContain('REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
+    expect(integrityMigrationSql).toContain('GRANT SELECT (')
+    expect(integrityMigrationSql).toContain('whatsapp_group_url')
     expect(integrityMigrationSql).toContain('CREATE OR REPLACE FUNCTION public.rsvp_pickup_game')
     expect(integrityMigrationSql).toContain('FOR UPDATE')
     expect(integrityMigrationSql).toContain('CREATE OR REPLACE FUNCTION public.cancel_pickup_game_reservation')
     expect(integrityMigrationSql).toContain('GRANT EXECUTE ON FUNCTION public.rsvp_pickup_game')
+    expect(integrityMigrationSql).toContain('ON CONFLICT (identifier) DO UPDATE')
+    expect(integrityMigrationSql).toContain('RATE_LIMITED')
+    expect(integrityMigrationSql).toContain('A valid mobile number is required')
+    expect(tokenHashMigrationSql).toContain('extensions.digest')
+    expect(tokenHashMigrationSql).toContain('SHA-256 digest')
+    expect(tokenHashMigrationSql).toContain('SET search_path = \'\'')
   })
 })

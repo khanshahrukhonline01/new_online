@@ -110,6 +110,22 @@ const policies: Record<string, PolicyDocument> = {
     contact: { label: 'Published safeguarding contact (verify before use)', email: 'posh@khelgrid.com' },
     related: [{ label: 'Contact', href: '/contact' }, { label: 'Correction Policy', href: '/correction-policy' }]
   },
+  '/workplace-policy': {
+    eyebrow: 'WORKPLACE ETHICS & SAFETY',
+    title: 'Workplace & Professional Conduct Policy',
+    summary: 'KhelGrid is dedicated to providing an inclusive, safe, and professional environment across all operations, contractor interactions, partner facilities, and community engagements.',
+    status: 'Draft — owner/legal review required',
+    updatedLabel: 'Effective date: November 2026',
+    sections: [
+      { heading: '1. Commitment to a Safe and Inclusive Workplace', paragraphs: ['KhelGrid strictly prohibits discrimination or harassment on the grounds of gender, race, religion, caste, sexual orientation, disability, age, or socioeconomic background across all digital platforms and on-ground activities.'] },
+      { heading: '2. Anti-Harassment & Minor Safeguarding', paragraphs: ['Harassment, bullying, intimidating behaviour, or non-consensual sharing of personal or athletic information is strictly forbidden. POSH guidelines and minor athlete safeguarding protocols apply to all trials, tournaments, and events.'] },
+      { heading: '3. Fair Practices with Venue Hosts & Sports Organizers', paragraphs: ['Representatives must conduct all engagements transparently, honouring published pricing, commission rates, and verified slot availability. Requesting improper inducements or off-platform cash transactions is strictly prohibited.'] },
+      { heading: '4. Health, Safety & Field Operations', paragraphs: ['During on-ground selection trials and match scorekeeping, representatives prioritize athlete physical safety, emergency first-aid readiness, and adhere to local sports council directives.'] },
+      { heading: '5. Grievance Redressal and Whistleblower Protection', paragraphs: ['Reports of policy violations should be sent to workplace@khelgrid.com or khelgrid@gmail.com. All reports are handled confidentially and without fear of retaliation.'] }
+    ],
+    contact: { label: 'Workplace grievance contact', email: 'workplace@khelgrid.com' },
+    related: [{ label: 'POSH Policy', href: '/posh-policy' }, { label: 'Terms of Use', href: '/terms' }]
+  },
   '/editorial-policy': {
     eyebrow: 'EDITORIAL STANDARDS',
     title: 'Editorial & Source Policy',

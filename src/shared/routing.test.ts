@@ -74,9 +74,9 @@ describe('platform route coverage', () => {
     '/learning', '/guides', '/ai-guide', '/community', '/tools',
     '/dashboard', '/profile', '/my-profile', '/saved', '/settings', '/notifications',
     '/login', '/signup', '/forgot-password', '/about', '/contact', '/partners', '/careers', '/trust',
-    '/pricing', '/mobile-app', '/help', '/privacy', '/terms', '/cookies', '/for-you', '/referrals',
+    '/pricing', '/mobile-app', '/help', '/help-feedback', '/privacy', '/terms', '/cookies', '/for-you', '/referrals',
     '/ipr-policy', '/cancellation-policy', '/posh-policy', '/editorial-policy',
-    '/verification-policy', '/correction-policy',
+    '/verification-policy', '/correction-policy', '/workplace-policy',
   ])('%s opens a registered feature page', path => {
     const match = resolveRoute(path)
     expect(match.name).toBe('feature')

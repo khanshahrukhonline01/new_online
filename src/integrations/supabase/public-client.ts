@@ -1470,6 +1470,16 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
     return rpcResult
   }
 
+  // Once Supabase is configured, a failed or rejected RPC must never fall
+  // through to the in-memory demo path and report a reservation as confirmed.
+  if (supabaseUrl && anonKey) {
+    return {
+      status: 'error',
+      errorCode: 'RESERVATION_SERVICE_UNAVAILABLE',
+      message: 'We could not verify your reservation with the server. No spot has been reserved. Please try again.',
+    }
+  }
+
   // Offline / local simulation
   let game = communitySubmissions.pickup_games.find(g => g.id === input.gameId)
   if (!game && mockGameFromFetch && mockGameFromFetch.id === input.gameId) {
@@ -1564,8 +1574,6 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
   localRsvpParticipants.push(participant)
   saveUserRsvpGame(input.gameId)
 
-  const whatsappUrl = game.whatsapp_group_url || 'https://chat.whatsapp.com/sample-match-group'
-
   return {
     status: 'confirmed',
     message: `Spot confirmed! Welcome to the match, ${name}.`,
@@ -1573,7 +1581,7 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
     participantId: participant.id,
     cancellationToken,
     game,
-    whatsappGroupUrl: whatsappUrl,
+    whatsappGroupUrl: null,
   }
 }
 
@@ -1590,6 +1598,127 @@ export interface CancelReservationResult {
   message: string
   errorCode?: string
   promotedParticipantId?: string
+}
+
+export interface PickupGameInviteResult {
+  status: 'success' | 'pending_approval' | 'error'
+  message: string
+  errorCode?: string
+  whatsappGroupUrl?: string
+}
+
+export async function getPickupGameWhatsAppInvite(input: {
+  reservationId: string
+  cancellationToken?: string
+  accessToken?: string
+}): Promise<PickupGameInviteResult> {
+  // Explicit offline/demo mode: return an invite only when the caller proves
+  // possession of the reservation's cancellation token. This mirrors the
+  // server-side bearer-token gate without exposing links in the RSVP response.
+  if (!supabaseUrl || !anonKey) {
+    const participant = localRsvpParticipants.find(
+      item => item.id === input.reservationId && item.status === 'confirmed',
+    )
+    if (!participant || !input.cancellationToken ||
+      participant.cancellation_token !== input.cancellationToken) {
+      return {
+        status: 'error',
+        errorCode: 'UNAUTHORIZED',
+        message: 'A valid reservation token is required to retrieve this invitation.',
+      }
+    }
+    const game = communitySubmissions.pickup_games.find(item => item.id === participant.game_id)
+      || BASELINE_PICKUP_GAMES.find(item => item.id === participant.game_id)
+    if (!game?.whatsapp_group_url) {
+      return {
+        status: 'error',
+        errorCode: 'INVITE_UNAVAILABLE',
+        message: 'The WhatsApp invitation is not available for this match.',
+      }
+    }
+    return {
+      status: 'success',
+      message: 'Invitation verified for this reservation.',
+      whatsappGroupUrl: game.whatsapp_group_url,
+    }
+  }
+  try {
+    const baseUrl = new URL(supabaseUrl)
+    if (baseUrl.protocol !== 'https:' && baseUrl.hostname !== 'localhost' && baseUrl.hostname !== '127.0.0.1') {
+      throw new Error('HTTPS required')
+    }
+    const response = await fetch(
+      `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/get_pickup_game_whatsapp_invite`,
+      {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${input.accessToken || anonKey}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          p_reservation_id: input.reservationId,
+          p_cancellation_token: input.cancellationToken?.trim() || null,
+        }),
+      },
+    )
+    if (!response.ok) throw new Error('Invite lookup rejected')
+    const data = await response.json()
+    return {
+      status: data.status === 'success' || data.status === 'pending_approval' ? data.status : 'error',
+      message: data.message || (data.status === 'success' ? 'Invitation is ready.' : 'Invitation is not available.'),
+      errorCode: data.error_code,
+      whatsappGroupUrl: data.status === 'success' ? data.whatsapp_group_url : undefined,
+    }
+  } catch {
+    return {
+      status: 'error',
+      errorCode: 'INVITE_SERVICE_UNAVAILABLE',
+      message: 'The server could not verify invitation access. No invitation was released.',
+    }
+  }
+}
+
+export async function approvePickupGameWhatsAppInvite(
+  reservationId: string,
+  accessToken: string,
+): Promise<{ status: 'success' | 'error'; message: string; errorCode?: string }> {
+  if (!supabaseUrl || !anonKey || !accessToken) {
+    return { status: 'error', errorCode: 'UNAUTHORIZED', message: 'A signed-in host session is required.' }
+  }
+  try {
+    const baseUrl = new URL(supabaseUrl)
+    if (baseUrl.protocol !== 'https:' && baseUrl.hostname !== 'localhost' && baseUrl.hostname !== '127.0.0.1') {
+      throw new Error('HTTPS required')
+    }
+    const response = await fetch(
+      `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/approve_pickup_game_whatsapp_invite`,
+      {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ p_reservation_id: reservationId }),
+      },
+    )
+    if (!response.ok) throw new Error('Approval rejected')
+    const data = await response.json()
+    return {
+      status: data.status === 'success' ? 'success' : 'error',
+      message: data.message || 'Invitation approval failed.',
+      errorCode: data.error_code,
+    }
+  } catch {
+    return {
+      status: 'error',
+      errorCode: 'INVITE_APPROVAL_UNAVAILABLE',
+      message: 'The server could not verify host approval. No invitation status was changed.',
+    }
+  }
 }
 
 export async function cancelPickupGameReservation(
@@ -1628,6 +1757,16 @@ export async function cancelPickupGameReservation(
       }
     } catch {
       // Offline fallback
+    }
+  }
+
+  // Never let a failed configured backend request fall through to a local
+  // simulation and claim that a database reservation was cancelled.
+  if (supabaseUrl && anonKey) {
+    return {
+      status: 'error',
+      errorCode: 'CANCELLATION_SERVICE_UNAVAILABLE',
+      message: 'We could not verify the cancellation with the server. No change was made. Please try again.',
     }
   }
 
@@ -1791,47 +1930,62 @@ async function callHostRpc(
   bodyParams: Record<string, unknown>,
   accessToken?: string,
 ): Promise<{ handled: boolean; result?: PickupGameMutationResult }> {
-  if (supabaseUrl && anonKey && accessToken) {
-    try {
-      const baseUrl = new URL(supabaseUrl)
-      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
-        const response = await fetch(
-          `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/${rpcName}`,
-          {
-            method: 'POST',
-            headers: {
-              apikey: anonKey,
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
-            },
-            body: JSON.stringify(bodyParams),
-          },
-        )
-        if (response.ok) {
-          const res = await response.json()
-          if (res && typeof res === 'object') {
-            return {
-              handled: true,
-              result: {
-                status: res.status || 'success',
-                message: res.message || 'Operation completed.',
-                errorCode: res.error_code,
-                gameId: res.game_id,
-                gameStatus: res.game_status,
-                action: res.action,
-                confirmedReservationsCancelled: res.confirmed_reservations_cancelled,
-                waitlistReservationsCancelled: res.waitlist_reservations_cancelled,
-              },
-            }
-          }
-        }
-      }
-    } catch {
-      // Fall through to local simulation
-    }
+  // Local simulation is available only when Supabase is deliberately unconfigured
+  // (for isolated tests/demo mode). A configured backend must fail closed.
+  if (!supabaseUrl || !anonKey) return { handled: false }
+  const unavailable = (message: string, errorCode = 'HOST_SERVICE_UNAVAILABLE') => ({
+    handled: true,
+    result: {
+      status: 'error' as const,
+      errorCode,
+      message,
+    },
+  })
+  if (!accessToken) {
+    return unavailable('Sign in is required to manage a hosted match.', 'UNAUTHORIZED')
   }
-  return { handled: false }
+
+  try {
+    const baseUrl = new URL(supabaseUrl)
+    if (baseUrl.protocol !== 'https:' && baseUrl.hostname !== 'localhost' && baseUrl.hostname !== '127.0.0.1') {
+      return unavailable('The host management service requires a secure HTTPS connection.')
+    }
+    const response = await fetch(
+      `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/${rpcName}`,
+      {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(bodyParams),
+      },
+    )
+    if (!response.ok) {
+      return unavailable('The server could not verify this host action. No changes were made.')
+    }
+    const res = await response.json()
+    if (!res || typeof res !== 'object' || typeof res.status !== 'string') {
+      return unavailable('The server returned an invalid host-management response.')
+    }
+    return {
+      handled: true,
+      result: {
+        status: res.status,
+        message: res.message || 'Operation completed.',
+        errorCode: res.error_code,
+        gameId: res.game_id,
+        gameStatus: res.game_status,
+        action: res.action,
+        confirmedReservationsCancelled: res.confirmed_reservations_cancelled,
+        waitlistReservationsCancelled: res.waitlist_reservations_cancelled,
+      },
+    }
+  } catch {
+    return unavailable('The host management service is unavailable. No changes were made.')
+  }
 }
 
 export async function createPickupGame(
@@ -1858,6 +2012,16 @@ export async function createPickupGame(
   }
   if (!Number.isFinite(total) || total < 2 || total > 100) {
     return { status: 'error', errorCode: 'INVALID_INPUT', message: 'Total players must be between 2 and 100.' }
+  }
+
+  // A configured backend requires a real authenticated session. Never simulate a
+  // successful host action because the access token is missing.
+  if (supabaseUrl && anonKey && !options?.accessToken) {
+    return {
+      status: 'error',
+      errorCode: 'UNAUTHORIZED',
+      message: 'Authentication is required to create and host a match.',
+    }
   }
 
   // Supabase RPC
@@ -1935,7 +2099,15 @@ export async function createPickupGame(
         }
       }
     } catch {
-      // Fall through to local simulation
+      // Backend failures must not be represented as successful local host creation.
+    }
+  }
+
+  if (supabaseUrl && anonKey) {
+    return {
+      status: 'error',
+      errorCode: 'HOST_SERVICE_UNAVAILABLE',
+      message: 'The server could not verify game creation. No game was created. Please try again.',
     }
   }
 
@@ -2361,6 +2533,15 @@ export async function getHostPickupGames(options?: {
   hostUserId?: string
   isAdmin?: boolean
 }): Promise<{ status: 'success' | 'error'; data: DatabasePickupGame[]; message?: string; errorCode?: string }> {
+  if (supabaseUrl && anonKey && !options?.accessToken) {
+    return {
+      status: 'error',
+      errorCode: 'UNAUTHORIZED',
+      message: 'A valid sign-in session is required to view hosted games.',
+      data: [],
+    }
+  }
+
   if (supabaseUrl && anonKey && options?.accessToken) {
     try {
       const baseUrl = new URL(supabaseUrl)
@@ -2389,7 +2570,16 @@ export async function getHostPickupGames(options?: {
         }
       }
     } catch {
-      // Fall through to local simulation
+      // Fail closed below; do not show an in-memory host portfolio.
+    }
+  }
+
+  if (supabaseUrl && anonKey) {
+    return {
+      status: 'error',
+      errorCode: 'HOST_SERVICE_UNAVAILABLE',
+      message: 'The server could not verify your hosted games. Please try again.',
+      data: [],
     }
   }
 
