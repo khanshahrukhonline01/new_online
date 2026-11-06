@@ -938,13 +938,16 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
     return () => media.removeEventListener('change', update)
   }, [])
 
-  // Display matches filtered by selected sport
+  // Display matches filtered by selected sport (max 10 for rapid 60FPS rail performance)
   const displayMatches = useMemo(() => {
-    if (liveScoreFilter === 'All') return liveMatches
-    return liveMatches.filter(m => m.sport.toLowerCase() === liveScoreFilter.toLowerCase())
+    const list =
+      liveScoreFilter === 'All'
+        ? liveMatches
+        : liveMatches.filter(m => m.sport.toLowerCase() === liveScoreFilter.toLowerCase())
+    return list.slice(0, 10)
   }, [liveMatches, liveScoreFilter])
 
-  // Display academies: dynamic institutions filtered by city and sport
+  // Display academies: dynamic institutions filtered by city and sport (max 10)
   const displayAcademies = useMemo(() => {
     if (counts.academies?.status !== 'ready') return []
     let pool = counts.academies.data
@@ -973,13 +976,13 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
       if (!seen.has(key)) {
         seen.add(key)
         selected.push(parseHomeAcademy(item))
-        if (selected.length === 16) break
+        if (selected.length === 10) break
       }
     }
     return selected
   }, [counts.academies, selectedCity, selectedSport])
 
-  // Selection trials: dynamically filtered by city and sport
+  // Selection trials: dynamically filtered by city and sport (max 10)
   const displayOpportunities = useMemo(() => {
     if (counts.opportunities?.status !== 'ready') return []
     const now = Date.now()
@@ -1024,10 +1027,10 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
 
         return (b.starts_at ?? '').localeCompare(a.starts_at ?? '')
       })
-      .slice(0, 16)
+      .slice(0, 10)
   }, [counts.opportunities, selectedCity, selectedSport])
 
-  // Display venues: dynamically filtered by city and sport
+  // Display venues: dynamically filtered by city and sport (max 10)
   const displayVenues = useMemo(() => {
     if (counts.venues?.status !== 'ready') return []
     let pool = counts.venues.data
@@ -1059,10 +1062,10 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
 
         return a.name.localeCompare(b.name)
       })
-      .slice(0, 16)
+      .slice(0, 10)
   }, [counts.venues, selectedCity, selectedSport])
 
-  // Pickup games: dynamic database community matches filtered by city and sport
+  // Pickup games: dynamic database community matches filtered by city and sport (max 10)
   const displayPickupGames = useMemo(() => {
     let pool =
       counts.pickupGames?.status === 'ready' && counts.pickupGames.data.length > 0
@@ -1100,7 +1103,7 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
         if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1
         return b.confirmedPlayers - a.confirmedPlayers
       })
-      .slice(0, 16)
+      .slice(0, 10)
   }, [counts.pickupGames, selectedCity, selectedSport])
 
   return (
@@ -1427,7 +1430,8 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
               .
             </div>
           ) : (
-            displayMatches.map(match => (
+            <>
+              {displayMatches.map(match => (
               <a key={match.id} href="/live-scores" className="home-rail-card home-match-card">
                 <div>
                   <div className="home-card-media home-match-card-media">
@@ -1484,8 +1488,29 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                   {match.statusText || match.venueOrOvers || match.status}
                 </div>
               </a>
-            ))
-          )}
+            ))}
+            {displayMatches.length > 0 && (
+              <a
+                href="/live-scores"
+                onClick={e => handleLink(e, '/live-scores')}
+                className="home-rail-view-all-card"
+                aria-label="View all live scores and fixtures"
+              >
+                <div className="home-rail-view-all-content">
+                  <div className="home-rail-view-all-icon-wrap tone-rose">
+                    <SiteIcon name="activity" size={24} />
+                  </div>
+                  <strong className="home-rail-view-all-title">Explore Match Center</strong>
+                  <span className="home-rail-view-all-desc">Ball-by-ball cards, upcoming fixtures & scorekeeper</span>
+                  <span className="home-rail-view-all-btn">
+                    <span>View All Scores</span>
+                    <SiteIcon name="arrow-right" size={13} />
+                  </span>
+                </div>
+              </a>
+            )}
+          </>
+        )}
         </div>
       </section>
 
@@ -1531,85 +1556,109 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
           ) : counts.opportunities.status !== 'ready' || displayOpportunities.length === 0 ? (
             <div className="home-rail-status-box">No published selection trials currently available.</div>
           ) : (
-            displayOpportunities.map(opp => (
-              <a
-                key={opp.id}
-                href={`/opportunities/${opp.slug}`}
-                className={`home-rail-card${liveUpdatedIds.has(opp.id) ? ' is-live-updated' : ''}`}
-              >
-                <div>
-                  <div className="home-card-media">
-                    <img
-                      src={createBannerSvg(
-                        opp.title,
-                        opp.city || 'India',
-                        '🏆',
-                        'amber',
-                        opp.id || opp.slug
-                      )}
-                      alt={`${opp.title} — Selection trial in ${opp.city || 'India'}`}
-                      title={`${opp.title} (${opp.city || 'Pan-India'})`}
-                      loading="lazy"
-                      decoding="async"
-                      width={400}
-                      height={240}
-                    />
-                    <div className="home-card-overlay-top-left">
-                      <span className="home-media-badge-dark">{opp.opportunity_type}</span>
-                      {liveUpdatedIds.has(opp.id) && (
-                        <span className="home-media-badge-live-pulse">
-                          ⚡ Live Updated
+            <>
+              {displayOpportunities.map(opp => (
+                <a
+                  key={opp.id}
+                  href={`/opportunities/${opp.slug}`}
+                  className={`home-rail-card${liveUpdatedIds.has(opp.id) ? ' is-live-updated' : ''}`}
+                >
+                  <div>
+                    <div className="home-card-media">
+                      <img
+                        src={createBannerSvg(
+                          opp.title,
+                          opp.city || 'India',
+                          '🏆',
+                          'amber',
+                          opp.id || opp.slug
+                        )}
+                        alt={`${opp.title} — Selection trial in ${opp.city || 'India'}`}
+                        title={`${opp.title} (${opp.city || 'Pan-India'})`}
+                        loading="lazy"
+                        decoding="async"
+                        width={400}
+                        height={240}
+                      />
+                      <div className="home-card-overlay-top-left">
+                        <span className="home-media-badge-dark">{opp.opportunity_type}</span>
+                        {liveUpdatedIds.has(opp.id) && (
+                          <span className="home-media-badge-live-pulse">
+                            ⚡ Live Updated
+                          </span>
+                        )}
+                      </div>
+                      <div className="home-card-overlay-top-right">
+                        {Boolean(opp.is_featured || opp.metadata?.featured || opp.metadata?.is_featured) && (
+                          <span className="home-featured-star-pill" style={{ marginRight: 4 }}>
+                            <SiteIcon name="sparkles" size={11} />
+                            Featured
+                          </span>
+                        )}
+                        <span className="home-verified-pill">
+                          <SiteIcon name="shield-check" size={12} />
+                          Verified
                         </span>
-                      )}
+                      </div>
+                      <button
+                        type="button"
+                        className={`home-card-bookmark-btn${savedIds.has(opp.id) ? ' is-saved' : ''}`}
+                        title={savedIds.has(opp.id) ? 'Saved' : 'Save'}
+                        aria-label={savedIds.has(opp.id) ? 'Saved' : 'Save'}
+                        onClick={e => toggleSaveItem(e, opp.id)}
+                      >
+                        <SiteIcon name={savedIds.has(opp.id) ? 'star' : 'bookmark'} size={14} />
+                      </button>
                     </div>
-                    <div className="home-card-overlay-top-right">
-                      {Boolean(opp.is_featured || opp.metadata?.featured || opp.metadata?.is_featured) && (
-                        <span className="home-featured-star-pill" style={{ marginRight: 4 }}>
-                          <SiteIcon name="sparkles" size={11} />
-                          Featured
-                        </span>
-                      )}
-                      <span className="home-verified-pill">
-                        <SiteIcon name="shield-check" size={12} />
-                        Verified
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className={`home-card-bookmark-btn${savedIds.has(opp.id) ? ' is-saved' : ''}`}
-                      title={savedIds.has(opp.id) ? 'Saved' : 'Save'}
-                      aria-label={savedIds.has(opp.id) ? 'Saved' : 'Save'}
-                      onClick={e => toggleSaveItem(e, opp.id)}
-                    >
-                      <SiteIcon name={savedIds.has(opp.id) ? 'star' : 'bookmark'} size={14} />
-                    </button>
-                  </div>
-                  <h3 className="home-card-title">{opp.title}</h3>
-                  <div className="home-card-meta">
-                    <SiteIcon name="map-pin" size={12} />
-                    <span>{opp.city || 'Pan-India'}</span>
-                  </div>
-                  {opp.organizer_name && (
+                    <h3 className="home-card-title">{opp.title}</h3>
                     <div className="home-card-meta">
-                      <SiteIcon name="badge-check" size={12} />
-                      <span>{opp.organizer_name}</span>
+                      <SiteIcon name="map-pin" size={12} />
+                      <span>{opp.city || 'Pan-India'}</span>
                     </div>
-                  )}
-                </div>
-                <div className="home-card-bottom">
-                  <span className="home-card-deadline">
-                    {opp.application_deadline
-                      ? `Deadline: ${opp.application_deadline}`
-                      : opp.starts_at
-                        ? `Starts: ${opp.starts_at.slice(0, 10)}`
-                        : 'Open Entry'}
-                  </span>
-                  <span className="home-card-cta">
-                    Details <SiteIcon name="chevron-right" size={11} />
-                  </span>
-                </div>
-              </a>
-            ))
+                    {opp.organizer_name && (
+                      <div className="home-card-meta">
+                        <SiteIcon name="badge-check" size={12} />
+                        <span>{opp.organizer_name}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="home-card-bottom">
+                    <span className="home-card-deadline">
+                      {opp.application_deadline
+                        ? `Deadline: ${opp.application_deadline}`
+                        : opp.starts_at
+                          ? `Starts: ${opp.starts_at.slice(0, 10)}`
+                          : 'Open Entry'}
+                    </span>
+                    <span className="home-card-cta">
+                      Details <SiteIcon name="chevron-right" size={11} />
+                    </span>
+                  </div>
+                </a>
+              ))}
+              {displayOpportunities.length > 0 && (
+                <a
+                  href={selectedSport !== 'All' ? `/opportunities?sport=${encodeURIComponent(selectedSport)}` : '/opportunities'}
+                  onClick={e => handleLink(e, selectedSport !== 'All' ? `/opportunities?sport=${encodeURIComponent(selectedSport)}` : '/opportunities')}
+                  className="home-rail-view-all-card"
+                  aria-label="View all selection trials and combines"
+                >
+                  <div className="home-rail-view-all-content">
+                    <div className="home-rail-view-all-icon-wrap tone-amber">
+                      <SiteIcon name="trophy" size={24} />
+                    </div>
+                    <strong className="home-rail-view-all-title">
+                      View All ({counts.opportunities?.status === 'ready' ? counts.opportunities.data.length : '350+'})
+                    </strong>
+                    <span className="home-rail-view-all-desc">Full calendar, age categories, federation trials & dates</span>
+                    <span className="home-rail-view-all-btn">
+                      <span>Explore Trials</span>
+                      <SiteIcon name="arrow-right" size={13} />
+                    </span>
+                  </div>
+                </a>
+              )}
+            </>
           )}
         </div>
       </section>
@@ -1733,6 +1782,28 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
                 </div>
               </div>
             ))}
+            {displayAcademies.length > 0 && (
+              <a
+                href={selectedCity !== 'All India' ? `/academies?city=${encodeURIComponent(selectedCity)}` : '/academies'}
+                onClick={e => handleLink(e, selectedCity !== 'All India' ? `/academies?city=${encodeURIComponent(selectedCity)}` : '/academies')}
+                className="home-rail-view-all-card"
+                aria-label="View all sports academies and institutes"
+              >
+                <div className="home-rail-view-all-content">
+                  <div className="home-rail-view-all-icon-wrap tone-purple">
+                    <SiteIcon name="building" size={24} />
+                  </div>
+                  <strong className="home-rail-view-all-title">
+                    View All ({counts.academies?.status === 'ready' ? counts.academies.data.length : '80+'})
+                  </strong>
+                  <span className="home-rail-view-all-desc">Compare hostel facilities, NIS coaches & fee structures</span>
+                  <span className="home-rail-view-all-btn">
+                    <span>Explore Academies</span>
+                    <SiteIcon name="arrow-right" size={13} />
+                  </span>
+                </div>
+              </a>
+            )}
           </div>
         ) : (
           <div className="home-touch-rail home-rail-loading">
@@ -1787,67 +1858,91 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
           ) : counts.venues.status !== 'ready' || displayVenues.length === 0 ? (
             <div className="home-rail-status-box">No published venues currently available.</div>
           ) : (
-            displayVenues.map(v => (
-              <a
-                key={v.id}
-                href={`/venues/${v.slug}`}
-                className={`home-rail-card${liveUpdatedIds.has(v.id) ? ' is-live-updated' : ''}`}
-              >
-                <div>
-                  <div className="home-card-media">
-                    <img
-                      src={createBannerSvg(v.name, v.city, '🏟️', 'emerald', v.id || v.slug)}
-                      alt={`${v.name} — Sports complex and turf facility in ${v.city}`}
-                      title={`${v.name} (${v.city})`}
-                      loading="lazy"
-                      decoding="async"
-                      width={400}
-                      height={240}
-                    />
-                    <div className="home-card-overlay-top-left">
-                      <span className="home-media-badge-dark">{v.city}</span>
-                      {liveUpdatedIds.has(v.id) && (
-                        <span className="home-media-badge-live-pulse">
-                          ⚡ Live Updated
+            <>
+              {displayVenues.map(v => (
+                <a
+                  key={v.id}
+                  href={`/venues/${v.slug}`}
+                  className={`home-rail-card${liveUpdatedIds.has(v.id) ? ' is-live-updated' : ''}`}
+                >
+                  <div>
+                    <div className="home-card-media">
+                      <img
+                        src={createBannerSvg(v.name, v.city, '🏟️', 'emerald', v.id || v.slug)}
+                        alt={`${v.name} — Sports complex and turf facility in ${v.city}`}
+                        title={`${v.name} (${v.city})`}
+                        loading="lazy"
+                        decoding="async"
+                        width={400}
+                        height={240}
+                      />
+                      <div className="home-card-overlay-top-left">
+                        <span className="home-media-badge-dark">{v.city}</span>
+                        {liveUpdatedIds.has(v.id) && (
+                          <span className="home-media-badge-live-pulse">
+                            ⚡ Live Updated
+                          </span>
+                        )}
+                      </div>
+                      <div className="home-card-overlay-top-right">
+                        {v.is_featured && (
+                          <span className="home-featured-star-pill" style={{ marginRight: 4 }}>
+                            <SiteIcon name="sparkles" size={11} />
+                            Featured
+                          </span>
+                        )}
+                        <span className="home-verified-pill">
+                          <SiteIcon name="shield-check" size={11} />
+                          {v.government_facility ? 'Govt Facility' : 'Verified Venue'}
                         </span>
-                      )}
+                      </div>
+                      <button
+                        type="button"
+                        className={`home-card-bookmark-btn${savedIds.has(v.id) ? ' is-saved' : ''}`}
+                        title={savedIds.has(v.id) ? 'Saved' : 'Save'}
+                        aria-label={savedIds.has(v.id) ? 'Saved' : 'Save'}
+                        onClick={e => toggleSaveItem(e, v.id)}
+                      >
+                        <SiteIcon name={savedIds.has(v.id) ? 'star' : 'bookmark'} size={14} />
+                      </button>
                     </div>
-                    <div className="home-card-overlay-top-right">
-                      {v.is_featured && (
-                        <span className="home-featured-star-pill" style={{ marginRight: 4 }}>
-                          <SiteIcon name="sparkles" size={11} />
-                          Featured
-                        </span>
-                      )}
-                      <span className="home-verified-pill">
-                        <SiteIcon name="shield-check" size={11} />
-                        {v.government_facility ? 'Govt Facility' : 'Verified Venue'}
-                      </span>
+                    <h3 className="home-card-title">{v.name}</h3>
+                    <div className="home-card-meta">
+                      <SiteIcon name="map-pin" size={12} />
+                      <span>{v.city}{v.address ? ` · ${v.address}` : ''}</span>
                     </div>
-                    <button
-                      type="button"
-                      className={`home-card-bookmark-btn${savedIds.has(v.id) ? ' is-saved' : ''}`}
-                      title={savedIds.has(v.id) ? 'Saved' : 'Save'}
-                      aria-label={savedIds.has(v.id) ? 'Saved' : 'Save'}
-                      onClick={e => toggleSaveItem(e, v.id)}
-                    >
-                      <SiteIcon name={savedIds.has(v.id) ? 'star' : 'bookmark'} size={14} />
-                    </button>
                   </div>
-                  <h3 className="home-card-title">{v.name}</h3>
-                  <div className="home-card-meta">
-                    <SiteIcon name="map-pin" size={12} />
-                    <span>{v.city}{v.address ? ` · ${v.address}` : ''}</span>
+                  <div className="home-card-bottom">
+                    <span className="home-card-deadline">Informational Listing</span>
+                    <span className="home-card-cta">
+                      View <SiteIcon name="chevron-right" size={11} />
+                    </span>
                   </div>
-                </div>
-                <div className="home-card-bottom">
-                  <span className="home-card-deadline">Informational Listing</span>
-                  <span className="home-card-cta">
-                    View <SiteIcon name="chevron-right" size={11} />
-                  </span>
-                </div>
-              </a>
-            ))
+                </a>
+              ))}
+              {displayVenues.length > 0 && (
+                <a
+                  href={selectedCity !== 'All India' ? `/venues?city=${encodeURIComponent(selectedCity)}` : '/venues'}
+                  onClick={e => handleLink(e, selectedCity !== 'All India' ? `/venues?city=${encodeURIComponent(selectedCity)}` : '/venues')}
+                  className="home-rail-view-all-card"
+                  aria-label="View all sports turfs and venues"
+                >
+                  <div className="home-rail-view-all-content">
+                    <div className="home-rail-view-all-icon-wrap tone-emerald">
+                      <SiteIcon name="calendar-check" size={24} />
+                    </div>
+                    <strong className="home-rail-view-all-title">
+                      View All ({counts.venues?.status === 'ready' ? counts.venues.data.length : '120+'})
+                    </strong>
+                    <span className="home-rail-view-all-desc">Synthetic turfs, indoor badminton, hourly booking & lights</span>
+                    <span className="home-rail-view-all-btn">
+                      <span>Explore Turfs</span>
+                      <SiteIcon name="arrow-right" size={13} />
+                    </span>
+                  </div>
+                </a>
+              )}
+            </>
           )}
         </div>
       </section>
@@ -1991,6 +2086,28 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
               </div>
             </a>
           ))}
+          {displayPickupGames.length > 0 && (
+            <a
+              href="/play"
+              onClick={e => handleLink(e, '/play')}
+              className="home-rail-view-all-card"
+              aria-label="View all pickup games"
+            >
+              <div className="home-rail-view-all-content">
+                <div className="home-rail-view-all-icon-wrap tone-blue">
+                  <SiteIcon name="activity" size={24} />
+                </div>
+                <strong className="home-rail-view-all-title">
+                  View All ({counts.pickupGames?.status === 'ready' ? counts.pickupGames.data.length : displayPickupGames.length}+)
+                </strong>
+                <span className="home-rail-view-all-desc">Find games in your neighborhood or host your own match</span>
+                <span className="home-rail-view-all-btn">
+                  <span>Explore Games</span>
+                  <SiteIcon name="arrow-right" size={13} />
+                </span>
+              </div>
+            </a>
+          )}
         </div>
       </section>
 

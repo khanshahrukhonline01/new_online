@@ -125,5 +125,9 @@ describe('HomePage 5 core live-website sections', () => {
     // Dynamic Pickup Game reservation CTA
     expect(html).toContain('home-pickup-join-btn')
     expect(html).toContain('Reserve Spot')
+
+    // Terminal View-All Card at end of rails
+    expect(html).toContain('home-rail-view-all-card')
+    expect(html).toContain('Explore Games')
   })
 })
