@@ -185,10 +185,44 @@ export async function recordPaymentTransaction({
 }
 
 /**
- * Queries booked slots for a specific venue and date directly from PostgreSQL public.venue_slot_bookings
+ * Normalizes relative or display booking dates ('Today', 'Tomorrow', 'Day After')
+ * to canonical ISO calendar dates ('YYYY-MM-DD') in IST time zone.
+ */
+export function normalizeBookingDate(dateStr: string): string {
+  if (!dateStr) {
+    const now = new Date()
+    return now.toISOString().slice(0, 10)
+  }
+  const trimmed = dateStr.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed
+  }
+  const lower = trimmed.toLowerCase()
+  const now = new Date()
+  if (lower === 'today') {
+    return now.toISOString().slice(0, 10)
+  }
+  if (lower === 'tomorrow') {
+    const tmrw = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    return tmrw.toISOString().slice(0, 10)
+  }
+  if (lower === 'day after' || lower === 'day after tomorrow') {
+    const dayAfter = new Date(now.getTime() + 48 * 60 * 60 * 1000)
+    return dayAfter.toISOString().slice(0, 10)
+  }
+  const parsed = new Date(trimmed)
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10)
+  }
+  return now.toISOString().slice(0, 10)
+}
+
+/**
+ * Queries booked slots for a specific venue and date directly from PostgreSQL public.venue_bookings
  * with offline-first local cache merging.
  */
 export async function fetchBookedVenueSlots(venueId: string, slotDate: string): Promise<string[]> {
+  const normalizedDate = normalizeBookingDate(slotDate)
   const localSlots = getBookedVenueSlots(venueId, slotDate)
   if (!supabaseUrl || !anonKey) {
     return localSlots
@@ -205,7 +239,7 @@ export async function fetchBookedVenueSlots(venueId: string, slotDate: string): 
       },
       body: JSON.stringify({
         p_venue_id: venueId,
-        p_slot_date: slotDate,
+        p_slot_date: normalizedDate,
       }),
     })
     if (rpcRes.ok) {
@@ -222,12 +256,12 @@ export async function fetchBookedVenueSlots(venueId: string, slotDate: string): 
   try {
     const query = new URLSearchParams({
       venue_id: `eq.${venueId}`,
-      slot_date: `eq.${slotDate}`,
+      slot_date: `eq.${normalizedDate}`,
       status: 'neq.cancelled',
       select: 'slot_time',
       limit: '500',
     })
-    const res = await fetch(`${supabaseUrl}/rest/v1/venue_slot_bookings?${query.toString()}`, {
+    const res = await fetch(`${supabaseUrl}/rest/v1/venue_bookings?${query.toString()}`, {
       headers: {
         apikey: anonKey,
         Authorization: `Bearer ${anonKey}`,
