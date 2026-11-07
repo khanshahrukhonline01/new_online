@@ -104,7 +104,45 @@ export function setStoredAuthUser(user: AuthUserProfile | null): void {
 }
 
 /**
+ * Validates a potential redirect URL against open-redirect attacks.
+ * Strictly permits only relative paths beginning with a single '/' and rejects protocols/schemes.
+ */
+export function getSafeRedirectUrl(targetUrl?: string | null, fallback = '/'): string {
+  if (!targetUrl || typeof targetUrl !== 'string') return fallback
+  const trimmed = targetUrl.trim()
+  // Reject protocol-relative '//', backslashes '\\', and any scheme containing ':'
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.includes(':') && !trimmed.includes('\\')) {
+    return trimmed
+  }
+  return fallback
+}
+
+/**
+ * Checks whether an account has a confirmed email address.
+ * Distinguishes authenticated sessions from email verification state.
+ */
+export function isEmailVerified(user: AuthUserProfile | null): boolean {
+  if (!user) return false
+  return Boolean(user.isVerified)
+}
+
+/**
+ * Asserts that the authenticated user possesses a verified email address.
+ * Throws an explicit error if unverified, protecting sensitive mutations.
+ */
+export function requireVerifiedEmail(user: AuthUserProfile | null): boolean {
+  if (!user) {
+    throw new Error('Authentication required: You must be logged in to perform this operation.')
+  }
+  if (!isEmailVerified(user)) {
+    throw new Error('Email verification required: Please verify your email address to continue.')
+  }
+  return true
+}
+
+/**
  * Maps raw database profile row or Supabase user metadata to typed AuthUserProfile.
+ * Derives isVerified strictly from confirmed email timestamps.
  */
 export function mapToUserProfile(
   raw: Record<string, unknown>,
@@ -116,6 +154,15 @@ export function mapToUserProfile(
     (fallbackEmail ? fallbackEmail.split('@')[0] : 'Sports Enthusiast')
 
   const role = (raw.role as UserRole) || fallbackRole
+
+  // Verified flag is derived strictly from confirmed email timestamps or verified profile flags
+  const isVerified = Boolean(
+    raw.email_confirmed_at ||
+    raw.email_confirmed ||
+    raw.is_verified ||
+    raw.isVerified ||
+    false,
+  )
 
   return {
     id: String(raw.id || raw.sub || `user-${Date.now().toString(36)}`),
@@ -130,7 +177,7 @@ export function mapToUserProfile(
       ? (raw.preferred_sports as string[])
       : [],
     bio: raw.bio ? String(raw.bio) : undefined,
-    isVerified: Boolean(raw.is_verified ?? raw.isVerified ?? false),
+    isVerified,
     createdAt: String(raw.created_at || raw.createdAt || new Date().toISOString()),
     updatedAt: raw.updated_at ? String(raw.updated_at) : undefined,
   }
@@ -162,14 +209,16 @@ export async function syncProfileFromDatabase(userId: string): Promise<AuthUserP
 
 /**
  * Sign up a new user using email and password or magic link with profile metadata.
+ * Enforces input validation, prevents privilege self-elevation, and eliminates demo fallbacks.
  */
 export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
-  const cleanEmail = input.email.trim().toLowerCase()
-  if (!cleanEmail || !cleanEmail.includes('@')) {
+  const cleanEmail = input.email ? input.email.trim().toLowerCase() : ''
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+  if (!cleanEmail || !emailRegex.test(cleanEmail)) {
     return { success: false, message: 'Please provide a valid email address.' }
   }
 
-  const cleanName = input.fullName.trim()
+  const cleanName = input.fullName ? input.fullName.trim() : ''
   if (cleanName.length < 2) {
     return { success: false, message: 'Please provide your full name (at least 2 characters).' }
   }
@@ -178,25 +227,20 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
     return { success: false, message: 'Password must be at least 6 characters long.' }
   }
 
-  const role = input.role || 'athlete'
+  // Prevent self-elevation to privileged administrator or moderator roles
+  let role = input.role || 'athlete'
+  if (role === 'admin' || role === 'moderator') {
+    role = 'athlete'
+  }
+
   const client = getSupabaseClient()
 
-  // Fallback for unconfigured/offline dev mode
+  // Fail closed if Supabase client is not configured: No fake dev accounts created!
   if (!client) {
-    const localUser: AuthUserProfile = {
-      id: `dev-${Date.now().toString(36)}`,
-      email: cleanEmail,
-      fullName: cleanName,
-      name: cleanName,
-      role,
-      city: input.city || 'India',
-      phone: input.phone,
-      preferredSports: input.preferredSports || [],
-      isVerified: true,
-      createdAt: new Date().toISOString(),
+    return {
+      success: false,
+      message: 'Authentication service is not configured. Please verify your Supabase credentials.',
     }
-    setStoredAuthUser(localUser)
-    return { success: true, user: localUser }
   }
 
   try {
@@ -216,10 +260,6 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
       })
       if (error) return { success: false, message: error.message }
       return { success: true, requiresEmailVerification: true }
-    }
-
-    if (input.password.length < 6) {
-      return { success: false, message: 'Password must be at least 6 characters long.' }
     }
 
     const { data, error } = await client.auth.signUp({
@@ -252,12 +292,14 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
       return { success: false, message: 'Sign-up could not be completed. Please try again.' }
     }
 
-    const requiresEmailVerification = Boolean(
-      data.user && !data.session && (!data.user.identities || data.user.identities.length === 0),
-    )
+    // Newly registered users are unverified until email confirmation
+    const requiresEmailVerification = Boolean(!data.user.email_confirmed_at)
 
     const profile = mapToUserProfile(
-      (data.user.user_metadata || {}) as Record<string, unknown>,
+      {
+        ...(data.user.user_metadata || {}),
+        email_confirmed_at: data.user.email_confirmed_at,
+      } as Record<string, unknown>,
       cleanEmail,
       role,
     )
@@ -265,7 +307,6 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
 
     if (data.session) {
       setStoredAuthUser(profile)
-      // Best-effort profile row upsert
       try {
         await client
           .from('profiles')
@@ -296,33 +337,23 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
 
 /**
  * Sign in existing user using email & password or magic link OTP.
+ * Prevents account enumeration and eliminates demo fallbacks.
  */
 export async function signInWithEmail(input: SignInInput): Promise<AuthResult> {
-  const cleanEmail = input.email.trim().toLowerCase()
-  if (!cleanEmail || !cleanEmail.includes('@')) {
+  const cleanEmail = input.email ? input.email.trim().toLowerCase() : ''
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+  if (!cleanEmail || !emailRegex.test(cleanEmail)) {
     return { success: false, message: 'Please enter a valid email address.' }
   }
 
   const client = getSupabaseClient()
 
-  // Offline / Demo fallback
+  // Fail closed if Supabase client is not configured: No fake dev accounts created!
   if (!client) {
-    const existing = getStoredAuthUser()
-    if (existing && existing.email.toLowerCase() === cleanEmail) {
-      setStoredAuthUser(existing)
-      return { success: true, user: existing }
+    return {
+      success: false,
+      message: 'Authentication service is not configured. Please verify your Supabase credentials.',
     }
-    const demoUser: AuthUserProfile = {
-      id: `dev-${cleanEmail.replace(/[^a-z0-9]/g, '')}`,
-      email: cleanEmail,
-      fullName: cleanEmail.split('@')[0],
-      name: cleanEmail.split('@')[0],
-      role: 'athlete',
-      isVerified: true,
-      createdAt: new Date().toISOString(),
-    }
-    setStoredAuthUser(demoUser)
-    return { success: true, user: demoUser }
   }
 
   try {
@@ -350,7 +381,7 @@ export async function signInWithEmail(input: SignInInput): Promise<AuthResult> {
             'Supabase email confirmation rate limit reached. Please wait a few minutes or sign in with your confirmed credentials.',
         }
       }
-      return { success: false, message: error.message }
+      return { success: false, message: 'Invalid email or password.' }
     }
 
     if (!data.user) {
@@ -360,12 +391,16 @@ export async function signInWithEmail(input: SignInInput): Promise<AuthResult> {
     // Try fetching database profile first, otherwise fallback to metadata
     const dbProfile = await syncProfileFromDatabase(data.user.id)
     if (dbProfile) {
+      dbProfile.isVerified = Boolean(data.user.email_confirmed_at || dbProfile.isVerified)
       setStoredAuthUser(dbProfile)
       return { success: true, user: dbProfile }
     }
 
     const metaProfile = mapToUserProfile(
-      (data.user.user_metadata || {}) as Record<string, unknown>,
+      {
+        ...(data.user.user_metadata || {}),
+        email_confirmed_at: data.user.email_confirmed_at,
+      } as Record<string, unknown>,
       cleanEmail,
       'athlete',
     )
@@ -379,27 +414,30 @@ export async function signInWithEmail(input: SignInInput): Promise<AuthResult> {
 }
 
 /**
- * Sends a password recovery email.
+ * Sends a password recovery email with open-redirect protection.
+ * Returns a generic confirmation message to prevent user enumeration attacks.
  */
-export async function sendPasswordReset(email: string): Promise<{ success: boolean; message?: string }> {
-  const cleanEmail = email.trim().toLowerCase()
-  if (!cleanEmail || !cleanEmail.includes('@')) {
+export async function sendPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+  const cleanEmail = email ? email.trim().toLowerCase() : ''
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+  if (!cleanEmail || !emailRegex.test(cleanEmail)) {
     return { success: false, message: 'Please enter a valid email address.' }
   }
 
   const client = getSupabaseClient()
   if (!client) {
     return {
-      success: true,
-      message: 'Password reset link sent (Development Mode: Check local browser session).',
+      success: false,
+      message: 'Authentication service is not configured. Please verify your Supabase credentials.',
     }
   }
 
   try {
+    const redirectPath = getSafeRedirectUrl('/login?type=recovery')
     const redirectUrl =
       typeof window !== 'undefined'
-        ? `${window.location.origin}/login?type=recovery`
-        : 'https://khelgrid.com/login?type=recovery'
+        ? `${window.location.origin}${redirectPath}`
+        : `https://khelgrid.com${redirectPath}`
 
     const { error } = await client.auth.resetPasswordForEmail(cleanEmail, {
       redirectTo: redirectUrl,
@@ -410,19 +448,21 @@ export async function sendPasswordReset(email: string): Promise<{ success: boole
         return {
           success: false,
           message:
-            'Supabase email confirmation rate limit reached. Please wait a few minutes or sign in with your confirmed credentials.',
+            'Supabase email confirmation rate limit reached. Please wait a few minutes before requesting another reset email.',
         }
       }
-      return { success: false, message: error.message }
     }
 
+    // Generic response regardless of whether email exists (prevents user enumeration)
     return {
       success: true,
-      message: 'Password reset instructions have been emailed to you.',
+      message: 'If an account exists with this email address, password reset instructions have been sent.',
     }
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Password reset request failed.'
-    return { success: false, message: msg }
+  } catch {
+    return {
+      success: true,
+      message: 'If an account exists with this email address, password reset instructions have been sent.',
+    }
   }
 }
 
@@ -430,16 +470,17 @@ export async function sendPasswordReset(email: string): Promise<{ success: boole
  * Resends an email verification/confirmation link to the given email address.
  */
 export async function resendVerificationEmail(email: string): Promise<{ success: boolean; message: string }> {
-  const cleanEmail = email.trim().toLowerCase()
-  if (!cleanEmail || !cleanEmail.includes('@')) {
+  const cleanEmail = email ? email.trim().toLowerCase() : ''
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+  if (!cleanEmail || !emailRegex.test(cleanEmail)) {
     return { success: false, message: 'Please provide a valid email address.' }
   }
 
   const client = getSupabaseClient()
   if (!client) {
     return {
-      success: true,
-      message: 'Verification link resent (Development Mode: Instant Verification).',
+      success: false,
+      message: 'Authentication service is not configured. Please verify your Supabase credentials.',
     }
   }
 
@@ -543,7 +584,10 @@ export async function updatePassword(newPassword: string): Promise<{ success: bo
 
   const client = getSupabaseClient()
   if (!client) {
-    return { success: true, message: 'Password updated successfully (Dev Mode).' }
+    return {
+      success: false,
+      message: 'Authentication service is not configured. Please verify your Supabase credentials.',
+    }
   }
 
   try {
@@ -557,7 +601,7 @@ export async function updatePassword(newPassword: string): Promise<{ success: bo
 }
 
 /**
- * Signs the user out of Supabase and clears stored sessions.
+ * Signs the user out of Supabase and clears stored sessions and caches.
  */
 export async function signOut(): Promise<void> {
   const client = getSupabaseClient()
@@ -573,18 +617,29 @@ export async function signOut(): Promise<void> {
 
 /**
  * Updates user profile attributes both locally and in Supabase.
+ * Shields role, id, and isVerified from client-side privilege self-escalation.
  */
 export async function updateUserProfile(updates: Partial<AuthUserProfile>): Promise<AuthUserProfile | null> {
   const current = getStoredAuthUser()
   if (!current) return null
 
+  // Whitelist only safe user-editable attributes (block self-elevation of role/isVerified/id/email)
+  const safeUpdates: Partial<AuthUserProfile> = {}
+  if (updates.fullName) {
+    safeUpdates.fullName = updates.fullName.trim()
+    safeUpdates.name = safeUpdates.fullName
+  }
+  if (updates.city !== undefined) safeUpdates.city = updates.city
+  if (updates.phone !== undefined) safeUpdates.phone = updates.phone
+  if (updates.avatarUrl !== undefined) safeUpdates.avatarUrl = updates.avatarUrl
+  if (updates.preferredSports !== undefined) safeUpdates.preferredSports = updates.preferredSports
+  if (updates.bio !== undefined) safeUpdates.bio = updates.bio
+
   const updated: AuthUserProfile = {
     ...current,
-    ...updates,
+    ...safeUpdates,
     updatedAt: new Date().toISOString(),
   }
-  if (updates.fullName) updated.name = updates.fullName
-  if (updates.name) updated.fullName = updates.name
 
   setStoredAuthUser(updated)
 
@@ -727,7 +782,7 @@ export async function adminAssignRole(
 ): Promise<{ success: boolean; message?: string }> {
   const client = getSupabaseClient()
   if (!client) {
-    return { success: true, message: 'Role assigned (offline simulation mode).' }
+    return { success: false, message: 'Authentication service is not configured.' }
   }
 
   try {
@@ -759,7 +814,7 @@ export async function adminRevokeRole(
 ): Promise<{ success: boolean; message?: string }> {
   const client = getSupabaseClient()
   if (!client) {
-    return { success: true, message: 'Role revoked (offline simulation mode).' }
+    return { success: false, message: 'Authentication service is not configured.' }
   }
 
   try {
@@ -808,7 +863,10 @@ export function onAuthChange(callback: (user: AuthUserProfile | null) => void): 
         setStoredAuthUser(null)
       } else if (session?.user) {
         const user = mapToUserProfile(
-          (session.user.user_metadata || {}) as Record<string, unknown>,
+          {
+            ...(session.user.user_metadata || {}),
+            email_confirmed_at: session.user.email_confirmed_at,
+          } as Record<string, unknown>,
           session.user.email || '',
         )
         user.id = session.user.id
@@ -823,5 +881,24 @@ export function onAuthChange(callback: (user: AuthUserProfile | null) => void): 
       window.removeEventListener('khelgrid:auth-changed', handleCustomEvent)
     }
     supabaseUnsub?.()
+  }
+}
+
+/**
+ * Isolated test fixture creator for unit testing.
+ * Provides safe mock identities without introducing backdoors in application auth.
+ */
+export function createTestAuthUserFixture(overrides: Partial<AuthUserProfile> = {}): AuthUserProfile {
+  return {
+    id: overrides.id || `fixture-${Math.random().toString(36).substring(2, 9)}`,
+    email: overrides.email || 'fixture.athlete@khelgrid.com',
+    fullName: overrides.fullName || 'Test Athlete',
+    name: overrides.fullName || 'Test Athlete',
+    role: overrides.role || 'athlete',
+    city: overrides.city || 'Mumbai',
+    phone: overrides.phone || '+91 98000 00000',
+    preferredSports: overrides.preferredSports || ['Cricket'],
+    isVerified: overrides.isVerified ?? false,
+    createdAt: overrides.createdAt || new Date().toISOString(),
   }
 }

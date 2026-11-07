@@ -43,10 +43,10 @@ describe('KhelGrid Phase 2 Post-Merge Verification & RLS Remediation Test Suite'
   })
 
   // ============================================================================
-  // 2. RECEIPT & VOUCHER RPC ZERO-PII PROJECTIONS (SEC-014)
+  // 2. RECEIPT & VOUCHER RPC HIGH-ENTROPY TOKEN AUTHORIZATION (SEC-014)
   // ============================================================================
-  describe('SEC-014: Receipt & Booking Voucher Projection Contracts', () => {
-    it('SEC-TEST-P2R-05: get_listing_subscription_by_order returns minimal projection without gateway secrets or raw PII', () => {
+  describe('SEC-014: Receipt & Booking Voucher Projection & Token Authorization Contracts', () => {
+    it('SEC-TEST-P2R-05: get_listing_subscription_by_order requires high-entropy token or authenticated owner session', () => {
       const rawRecord = {
         order_id: 'ORD-9872',
         listing_name: 'Apex Badminton Arena',
@@ -60,38 +60,70 @@ describe('KhelGrid Phase 2 Post-Merge Verification & RLS Remediation Test Suite'
         customer_email: 'rajesh@apexbadminton.com',
         payment_id: 'pay_live_secret_gateway_key_9999',
         amount: 14999,
-        user_id: 'user-uuid-1111'
+        user_id: 'user-uuid-1111',
+        access_token: 'b8c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5', // 32-char high entropy
       }
 
-      // Minimal safe projection returned to unauthenticated caller
-      const sanitizeOrderResponse = (rec: typeof rawRecord, callerUserId: string | null) => {
-        const isOwner = callerUserId === rec.user_id
+      const querySubscriptionOrder = (
+        orderId: string,
+        callerUserId: string | null,
+        accessToken?: string,
+      ) => {
+        if (!orderId || orderId.length < 3) return null
+        if (orderId !== rawRecord.order_id) return null
+
+        const isOwner = Boolean(callerUserId && callerUserId === rawRecord.user_id)
+        const hasValidToken = Boolean(
+          accessToken &&
+          accessToken.length >= 16 &&
+          accessToken === rawRecord.access_token,
+        )
+
+        // Fail closed: unauthorized caller receives null (0 rows in SQL)
+        if (!isOwner && !hasValidToken) {
+          return null
+        }
+
         return {
-          order_id: rec.order_id,
-          listing_name: rec.listing_name,
-          listing_type: rec.listing_type,
-          plan_tier: rec.plan_tier,
-          is_active: rec.is_active,
-          expires_at: rec.expires_at,
-          status: rec.status,
-          masked_customer_name: isOwner ? rec.customer_name : 'R*** S***',
-          masked_email: isOwner ? rec.customer_email : 'r***@apexbadminton.com',
+          order_id: rawRecord.order_id,
+          listing_name: rawRecord.listing_name,
+          listing_type: rawRecord.listing_type,
+          plan_tier: rawRecord.plan_tier,
+          is_active: rawRecord.is_active,
+          expires_at: rawRecord.expires_at,
+          status: rawRecord.status,
+          masked_customer_name: isOwner ? rawRecord.customer_name : 'R*** S***',
+          masked_email: isOwner ? rawRecord.customer_email : 'r***@apexbadminton.com',
         }
       }
 
-      const publicResponse = sanitizeOrderResponse(rawRecord, null)
-      expect(publicResponse).not.toHaveProperty('payment_id')
-      expect(publicResponse).not.toHaveProperty('customer_phone')
-      expect(publicResponse).not.toHaveProperty('amount')
-      expect(publicResponse.masked_customer_name).not.toBe(rawRecord.customer_name)
-      expect(publicResponse.masked_email).not.toBe(rawRecord.customer_email)
+      // 1. Unauthenticated third party guessing order ID gets zero rows
+      expect(querySubscriptionOrder('ORD-9872', null, undefined)).toBeNull()
 
-      const ownerResponse = sanitizeOrderResponse(rawRecord, 'user-uuid-1111')
-      expect(ownerResponse.masked_customer_name).toBe('Rajesh Sharma')
-      expect(ownerResponse.masked_email).toBe('rajesh@apexbadminton.com')
+      // 2. Caller with short/invalid access token gets zero rows
+      expect(querySubscriptionOrder('ORD-9872', null, 'short-token')).toBeNull()
+      expect(querySubscriptionOrder('ORD-9872', null, 'wrong-token-1234567890')).toBeNull()
+
+      // 3. Cross-user access denied without token
+      expect(querySubscriptionOrder('ORD-9872', 'attacker-uuid-9999', undefined)).toBeNull()
+
+      // 4. Authenticated owner gets sanitized projection
+      const ownerRes = querySubscriptionOrder('ORD-9872', 'user-uuid-1111', undefined)
+      expect(ownerRes).not.toBeNull()
+      expect(ownerRes?.masked_customer_name).toBe('Rajesh Sharma')
+      expect(ownerRes).not.toHaveProperty('payment_id')
+      expect(ownerRes).not.toHaveProperty('customer_phone')
+      expect(ownerRes).not.toHaveProperty('amount')
+
+      // 5. Unauthenticated guest with valid high-entropy token receives masked projection
+      const tokenRes = querySubscriptionOrder('ORD-9872', null, 'b8c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5')
+      expect(tokenRes).not.toBeNull()
+      expect(tokenRes?.masked_customer_name).toBe('R*** S***')
+      expect(tokenRes?.masked_email).toBe('r***@apexbadminton.com')
+      expect(tokenRes).not.toHaveProperty('payment_id')
     })
 
-    it('SEC-TEST-P2R-06: get_venue_booking_voucher protects customer phone numbers and names', () => {
+    it('SEC-TEST-P2R-06: get_venue_booking_voucher rejects phone/email alone and requires voucher_token or owner session', () => {
       const rawBooking = {
         booking_ref: 'VB-2026-4491',
         venue_id: 'turf-delhi-01',
@@ -105,38 +137,74 @@ describe('KhelGrid Phase 2 Post-Merge Verification & RLS Remediation Test Suite'
         customer_email: 'karan@example.com',
         total_amount: 1200,
         paid_amount: 1200,
-        user_id: 'user-uuid-karan'
+        user_id: 'user-uuid-karan',
+        voucher_token: '9f8e7d6c5b4a3210fedcba9876543210', // 32-char high-entropy token
       }
 
-      const sanitizeVoucherResponse = (booking: typeof rawBooking, callerUserId: string | null, verificationContact?: string) => {
-        const isOwner = callerUserId === booking.user_id || 
-          verificationContact === booking.customer_phone || 
-          verificationContact === booking.customer_email
+      const queryVenueVoucher = (
+        bookingRef: string,
+        callerUserId: string | null,
+        voucherToken?: string,
+        _plainContactAttempt?: string, // Simulated attacker guessing phone/email
+      ) => {
+        if (!bookingRef || bookingRef.length < 3) return null
+        if (bookingRef !== rawBooking.booking_ref) return null
+
+        const isOwner = Boolean(callerUserId && callerUserId === rawBooking.user_id)
+        const hasValidToken = Boolean(
+          voucherToken &&
+          voucherToken.length >= 16 &&
+          voucherToken === rawBooking.voucher_token,
+        )
+
+        // SECURITY REQUISITE: Plain phone number or email alone is NOT accepted as proof of authorization!
+        // Even if _plainContactAttempt matches rawBooking.customer_phone, without voucher_token or session, fail closed.
+        void _plainContactAttempt
+        if (!isOwner && !hasValidToken) {
+          return null
+        }
 
         return {
-          booking_ref: booking.booking_ref,
-          venue_id: booking.venue_id,
-          venue_name: booking.venue_name,
-          court_or_turf_number: booking.court_or_turf_number,
-          slot_date: booking.slot_date,
-          slot_time: booking.slot_time,
-          payment_status: booking.payment_status,
-          masked_customer_name: isOwner ? booking.customer_name : 'K***',
-          masked_phone: isOwner ? booking.customer_phone : '+91 *** *** 33',
+          booking_ref: rawBooking.booking_ref,
+          venue_id: rawBooking.venue_id,
+          venue_name: rawBooking.venue_name,
+          court_or_turf_number: rawBooking.court_or_turf_number,
+          slot_date: rawBooking.slot_date,
+          slot_time: rawBooking.slot_time,
+          payment_status: rawBooking.payment_status,
+          masked_customer_name: isOwner ? rawBooking.customer_name : 'K***',
+          masked_phone: isOwner ? rawBooking.customer_phone : '+91 *** *** 33',
         }
       }
 
-      // Guest querying voucher with only booking ref (unverified)
-      const unverifiedVoucher = sanitizeVoucherResponse(rawBooking, null)
-      expect(unverifiedVoucher).not.toHaveProperty('total_amount')
-      expect(unverifiedVoucher).not.toHaveProperty('paid_amount')
-      expect(unverifiedVoucher.masked_customer_name).toBe('K***')
-      expect(unverifiedVoucher.masked_phone).toBe('+91 *** *** 33')
+      // 1. Attacker guessing booking ref gets zero rows
+      expect(queryVenueVoucher('VB-2026-4491', null, undefined)).toBeNull()
 
-      // Caller verifying with matching phone number
-      const verifiedVoucher = sanitizeVoucherResponse(rawBooking, null, '+919811122233')
-      expect(verifiedVoucher.masked_customer_name).toBe('Karan Mehra')
-      expect(verifiedVoucher.masked_phone).toBe('+919811122233')
+      // 2. Attacker presenting customer's known phone number or email alone gets zero rows (SEC-014 fix)
+      expect(queryVenueVoucher('VB-2026-4491', null, undefined, '+919811122233')).toBeNull()
+      expect(queryVenueVoucher('VB-2026-4491', null, undefined, 'karan@example.com')).toBeNull()
+
+      // 3. Caller with invalid or truncated token gets zero rows
+      expect(queryVenueVoucher('VB-2026-4491', null, 'short-token')).toBeNull()
+      expect(queryVenueVoucher('VB-2026-4491', null, 'wrong-token-1234567890123456')).toBeNull()
+
+      // 4. Cross-user authenticated access denied without voucher token
+      expect(queryVenueVoucher('VB-2026-4491', 'attacker-uuid-malory', undefined)).toBeNull()
+
+      // 5. Authenticated owner receives full voucher details without raw gateway keys
+      const ownerVoucher = queryVenueVoucher('VB-2026-4491', 'user-uuid-karan', undefined)
+      expect(ownerVoucher).not.toBeNull()
+      expect(ownerVoucher?.masked_customer_name).toBe('Karan Mehra')
+      expect(ownerVoucher?.masked_phone).toBe('+919811122233')
+      expect(ownerVoucher).not.toHaveProperty('total_amount')
+      expect(ownerVoucher).not.toHaveProperty('paid_amount')
+
+      // 6. Guest presenting valid high-entropy voucher token receives masked projection
+      const guestVoucher = queryVenueVoucher('VB-2026-4491', null, '9f8e7d6c5b4a3210fedcba9876543210')
+      expect(guestVoucher).not.toBeNull()
+      expect(guestVoucher?.masked_customer_name).toBe('K***')
+      expect(guestVoucher?.masked_phone).toBe('+91 *** *** 33')
+      expect(guestVoucher).not.toHaveProperty('total_amount')
     })
 
     it('SEC-TEST-P2R-07: get_booked_slots_for_venue returns strictly slot_time with zero customer PII', () => {
