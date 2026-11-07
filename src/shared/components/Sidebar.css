@@ -415,10 +415,14 @@
   text-decoration: none;
   box-sizing: border-box;
 }
+.sidebar-utility-link svg {
+  flex-shrink: 0;
+}
 .sidebar-utility-label {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
 }
 
 /* Pulse animation for live score indicator in quick bar */
@@ -599,6 +603,7 @@
     display: flex;
     align-items: center;
     gap: 11px;
+    width: 100%;
     min-height: 42px;
     padding: 10px 14px;
     border-radius: 10px;

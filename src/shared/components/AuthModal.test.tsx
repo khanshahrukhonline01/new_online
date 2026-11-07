@@ -79,4 +79,22 @@ describe('AuthModal Component', () => {
     expect(html).toContain('Send Reset Instructions')
     expect(html).toContain('Back to Sign In')
   })
+
+  it('5. renders expired link recovery form with resend button in expired_link mode', () => {
+    const html = renderToStaticMarkup(
+      <AuthModal
+        isOpen={true}
+        initialTab="expired_link"
+        initialError="Email verification link is invalid or has expired."
+        initialEmail="user@example.com"
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(html).toContain('Verification Link Expired')
+    expect(html).toContain('Resend Verification Email')
+    expect(html).toContain('user@example.com')
+    expect(html).toContain('Email verification link is invalid or has expired.')
+    expect(html).toContain('Already verified? Sign in with password')
+  })
 })

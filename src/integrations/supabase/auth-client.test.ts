@@ -5,6 +5,9 @@ import {
   sendPasswordReset,
   updatePassword,
   signOut,
+  resendVerificationEmail,
+  parseAuthUrlCallback,
+  clearAuthUrlHash,
   getStoredAuthUser,
   setStoredAuthUser,
   updateUserProfile,
@@ -265,5 +268,35 @@ describe('Supabase Auth Client Architecture', () => {
     expect(profile.fullName).toBe('fallback')
     expect(profile.role).toBe('scout')
     expect(profile.isVerified).toBe(false)
+  })
+
+  it('11. parseAuthUrlCallback extracts otp_expired and access_denied hash parameters', () => {
+    const rawHash = '#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired&sb='
+    const info = parseAuthUrlCallback(rawHash)
+
+    expect(info.type).toBe('error')
+    expect(info.errorCode).toBe('otp_expired')
+    expect(info.errorDescription).toBe('Email link is invalid or has expired')
+  })
+
+  it('12. parseAuthUrlCallback extracts recovery and signup tokens', () => {
+    const recoveryHash = '#access_token=test-token-123&type=recovery'
+    const info = parseAuthUrlCallback(recoveryHash)
+
+    expect(info.type).toBe('recovery')
+    expect(info.accessToken).toBe('test-token-123')
+  })
+
+  it('13. resendVerificationEmail validates email input properly', async () => {
+    const invalid = await resendVerificationEmail('not-an-email')
+    expect(invalid.success).toBe(false)
+    expect(invalid.message).toContain('valid email')
+
+    const valid = await resendVerificationEmail('athlete@khelgrid.com')
+    expect(valid.success).toBe(true)
+  })
+
+  it('14. clearAuthUrlHash operates without crashing', () => {
+    expect(() => clearAuthUrlHash()).not.toThrow()
   })
 })

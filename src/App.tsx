@@ -15,6 +15,8 @@ import {
   getStoredAuthUser,
   onAuthChange,
   signOut,
+  parseAuthUrlCallback,
+  clearAuthUrlHash,
   type AuthUserProfile,
 } from './integrations/supabase/auth-client'
 import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAndShare'
@@ -105,7 +107,8 @@ export default function App() {
   const [consentInitialTab, setConsentInitialTab] = useState<'sports_pass' | 'rules_privacy'>('sports_pass')
   const [goProModalOpen, setGoProModalOpen] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
-  const [authModalTab, setAuthModalTab] = useState<'login' | 'signup' | 'forgot_password'>('login')
+  const [authModalTab, setAuthModalTab] = useState<'login' | 'signup' | 'forgot_password' | 'expired_link'>('login')
+  const [authModalError, setAuthModalError] = useState<string | undefined>(undefined)
   const [authUser, setAuthUser] = useState<AuthUserProfile | null>(() => getStoredAuthUser())
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const menuToggleRef = useRef<HTMLButtonElement>(null)
@@ -114,6 +117,33 @@ export default function App() {
     setIntakeCategory(category)
     setIntakeModalOpen(true)
   }
+
+  // Detect Supabase Auth callback errors or tokens from URL hash / search params
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const callbackInfo = parseAuthUrlCallback()
+
+    if (callbackInfo.type === 'error') {
+      const isOtpExpired =
+        callbackInfo.errorCode === 'otp_expired' ||
+        callbackInfo.errorDescription?.toLowerCase().includes('expired')
+      setAuthModalTab(isOtpExpired ? 'expired_link' : 'login')
+      setAuthModalError(
+        isOtpExpired
+          ? 'Email verification link is invalid or has expired. Enter your email below to receive a fresh verification link.'
+          : (callbackInfo.errorDescription || 'Authentication could not be completed. Please sign in with your credentials.')
+      )
+      setAuthModalOpen(true)
+      clearAuthUrlHash()
+    } else if (callbackInfo.type === 'recovery') {
+      setAuthModalTab('forgot_password')
+      setAuthModalError('Please enter a new password for your account.')
+      setAuthModalOpen(true)
+      clearAuthUrlHash()
+    } else if (callbackInfo.type === 'signup_confirmed') {
+      clearAuthUrlHash()
+    }
+  }, [])
 
   useEffect(() => {
     return onAuthChange(user => {
@@ -692,9 +722,14 @@ export default function App() {
         <AuthModal
           isOpen={authModalOpen}
           initialTab={authModalTab}
-          onClose={() => setAuthModalOpen(false)}
+          initialError={authModalError}
+          onClose={() => {
+            setAuthModalOpen(false)
+            setAuthModalError(undefined)
+          }}
           onSuccess={user => {
             setAuthUser(user)
+            setAuthModalError(undefined)
           }}
           onNavigate={navigate}
         />

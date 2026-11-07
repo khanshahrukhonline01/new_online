@@ -132,6 +132,10 @@
   border-bottom: 1px solid var(--line, #e2e8f0);
 }
 
+.kg-auth-tabs.has-four-tabs {
+  grid-template-columns: 1fr 1.2fr 1fr 1.1fr;
+}
+
 .kg-auth-tab {
   display: inline-flex;
   align-items: center;
