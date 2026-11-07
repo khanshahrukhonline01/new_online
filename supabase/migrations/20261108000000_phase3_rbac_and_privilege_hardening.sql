@@ -1,16 +1,20 @@
 -- ==============================================================================
 -- KhelGrid — Phase 3: Role-Based Access Control (RBAC) & Privilege Hardening
 -- Migration: 20261108000000_phase3_rbac_and_privilege_hardening.sql
+-- Target: Development Database hznsbxvovjxvmnchzzqt (PREPARED ONLY — NOT YET APPLIED)
 --
 -- Purpose:
 -- 1. Create normalized, granular permission mapping tables:
 --    - public.role_permissions (role -> granular action permission)
 --    - public.user_roles (user -> one or more assigned roles)
--- 2. Pre-seed standard permissions across all 6 roles (athlete, host, coach, scout, academy, admin).
+--    - public.user_role_audit_logs (immutable audit trail of role grants & revocations)
+-- 2. Pre-seed standard permissions across all platform roles:
+--    athlete, parent, coach, academy, host, venue_owner, submitter, scout, moderator, admin.
 -- 3. Install atomic, administrative RPCs for safe role delegation:
---    - public.admin_assign_role (SEC-004 hardening: admin-only assignment)
---    - public.admin_revoke_role (with last-admin prevention)
--- 4. Install permission evaluation helper:
+--    - public.admin_assign_role (SEC-004 hardening: admin-only assignment with audit log)
+--    - public.admin_revoke_role (with last-admin prevention and audit log)
+-- 4. Install permission evaluation helpers:
+--    - public.has_role(p_user_id uuid, p_role text)
 --    - public.has_permission(p_permission text)
 --    - public.get_user_effective_permissions(p_user_id uuid)
 -- 5. Revoke default public schema privileges and enforce least-privilege grants
@@ -24,7 +28,7 @@ BEGIN;
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.role_permissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  role text NOT NULL CHECK (role IN ('athlete', 'host', 'coach', 'scout', 'academy', 'admin')),
+  role text NOT NULL CHECK (role IN ('athlete', 'parent', 'coach', 'scout', 'academy', 'host', 'venue_owner', 'submitter', 'moderator', 'admin')),
   permission text NOT NULL CHECK (permission ~ '^[a-z_]+:[a-z_]+$'),
   description text,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -40,10 +44,11 @@ CREATE INDEX IF NOT EXISTS idx_role_permissions_permission ON public.role_permis
 CREATE TABLE IF NOT EXISTS public.user_roles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  role text NOT NULL CHECK (role IN ('athlete', 'host', 'coach', 'scout', 'academy', 'admin')),
+  role text NOT NULL CHECK (role IN ('athlete', 'parent', 'coach', 'scout', 'academy', 'host', 'venue_owner', 'submitter', 'moderator', 'admin')),
   assigned_at timestamptz NOT NULL DEFAULT now(),
   assigned_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   notes text,
+  is_active boolean NOT NULL DEFAULT true,
   CONSTRAINT unique_user_role UNIQUE (user_id, role)
 );
 
@@ -51,7 +56,23 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_user ON public.user_roles(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_roles_role ON public.user_roles(role);
 
 -- -----------------------------------------------------------------------------
--- 3. PRE-SEED GRANULAR ROLE PERMISSIONS
+-- 3. USER ROLE AUDIT LOGS (IMMUTABLE AUDIT TRAIL)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.user_role_audit_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role text NOT NULL,
+  action text NOT NULL CHECK (action IN ('ASSIGN', 'REVOKE')),
+  performed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  reason text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_role_audit_user ON public.user_role_audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_role_audit_created ON public.user_role_audit_logs(created_at DESC);
+
+-- -----------------------------------------------------------------------------
+-- 4. PRE-SEED GRANULAR ROLE PERMISSIONS
 -- -----------------------------------------------------------------------------
 INSERT INTO public.role_permissions (role, permission, description) VALUES
   -- Athlete permissions
@@ -63,14 +84,12 @@ INSERT INTO public.role_permissions (role, permission, description) VALUES
   ('athlete', 'review:create', 'Submit reviews and ratings for facilities'),
   ('athlete', 'score:view', 'View live match scoreboards and event streams'),
 
-  -- Host permissions
-  ('host', 'profile:view', 'View own host profile'),
-  ('host', 'profile:edit', 'Update host profile and venue details'),
-  ('host', 'venue:manage', 'Manage turf slots, rates, and operating hours'),
-  ('host', 'venue:view_payouts', 'Inspect own booking settlements and earnings'),
-  ('host', 'payout:request', 'Request bank or UPI payouts for settled games'),
-  ('host', 'match:create', 'Create live match scoreboards for hosted tournaments'),
-  ('host', 'match:score', 'Update ball-by-ball or point-by-point live match scores'),
+  -- Parent / Guardian permissions
+  ('parent', 'profile:view', 'View personal and child profile'),
+  ('parent', 'profile:edit', 'Update ward information'),
+  ('parent', 'trial:submit', 'Apply for junior selection trials on behalf of athlete'),
+  ('parent', 'academy:inquire', 'Submit junior academy admission inquiries'),
+  ('parent', 'venue:book', 'Reserve family court slots'),
 
   -- Coach permissions
   ('coach', 'profile:view', 'View verified coach profile'),
@@ -92,6 +111,31 @@ INSERT INTO public.role_permissions (role, permission, description) VALUES
   ('academy', 'academy:view_candidates', 'Inspect applicant verified Sports CVs'),
   ('academy', 'trial:publish', 'Publish and schedule grassroots selection trials'),
 
+  -- Host / Venue Owner permissions
+  ('host', 'profile:view', 'View own host profile'),
+  ('host', 'profile:edit', 'Update host profile and venue details'),
+  ('host', 'venue:manage', 'Manage turf slots, rates, and operating hours'),
+  ('host', 'venue:view_payouts', 'Inspect own booking settlements and earnings'),
+  ('host', 'payout:request', 'Request bank or UPI payouts for settled games'),
+  ('host', 'match:create', 'Create live match scoreboards for hosted tournaments'),
+  ('host', 'match:score', 'Update ball-by-ball or point-by-point live match scores'),
+
+  ('venue_owner', 'profile:view', 'View venue owner profile'),
+  ('venue_owner', 'venue:manage', 'Manage court slots and rates'),
+  ('venue_owner', 'venue:view_payouts', 'View booking revenue and settlement history'),
+  ('venue_owner', 'payout:request', 'Request payout settlement'),
+
+  -- Listing Submitter permissions
+  ('submitter', 'listing:submit', 'Submit new academy, venue, or coach listing'),
+  ('submitter', 'listing:view_own', 'Track review status of own listing submissions'),
+  ('submitter', 'listing:edit_own', 'Update draft or pending listing submission details'),
+
+  -- Moderator permissions
+  ('moderator', 'listing:moderate', 'Approve, verify, or reject directory listings'),
+  ('moderator', 'review:moderate', 'Flag or approve community reviews'),
+  ('moderator', 'report:review', 'Investigate listing dispute reports'),
+  ('moderator', 'claim:review', 'Inspect verification claim documents'),
+
   -- Admin permissions (Superuser / Federation Directors)
   ('admin', 'admin:assign_role', 'Assign roles to platform users'),
   ('admin', 'admin:revoke_role', 'Revoke assigned roles from platform users'),
@@ -102,15 +146,17 @@ ON CONFLICT (role, permission) DO UPDATE SET
   description = EXCLUDED.description;
 
 -- -----------------------------------------------------------------------------
--- 4. ROW LEVEL SECURITY (RLS) ON RBAC TABLES
+-- 5. ROW LEVEL SECURITY (RLS) ON RBAC TABLES
 -- -----------------------------------------------------------------------------
 ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_role_audit_logs ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE public.role_permissions FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.user_roles FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.user_role_audit_logs FORCE ROW LEVEL SECURITY;
 
--- 4.1 role_permissions: Read-only catalog for public & authenticated
+-- 5.1 role_permissions: Read-only catalog for public & authenticated
 DROP POLICY IF EXISTS "Public can view role permissions" ON public.role_permissions;
 CREATE POLICY "Public can view role permissions"
   ON public.role_permissions
@@ -118,7 +164,7 @@ CREATE POLICY "Public can view role permissions"
   TO anon, authenticated
   USING (true);
 
--- 4.2 user_roles: Users view own roles, Admins view all roles
+-- 5.2 user_roles: Users view own roles, Admins view all roles
 DROP POLICY IF EXISTS "Users can view own assigned roles" ON public.user_roles;
 CREATE POLICY "Users can view own assigned roles"
   ON public.user_roles
@@ -130,15 +176,27 @@ CREATE POLICY "Users can view own assigned roles"
     OR (SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'service_role'
   );
 
--- Direct mutation of user_roles from client is strictly prohibited
+-- 5.3 user_role_audit_logs: Admins and service role view audit logs; zero mutation from clients
+DROP POLICY IF EXISTS "Admins can view role audit logs" ON public.user_role_audit_logs;
+CREATE POLICY "Admins can view role audit logs"
+  ON public.user_role_audit_logs
+  FOR SELECT
+  TO authenticated
+  USING (
+    public.is_admin()
+    OR (SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'service_role'
+  );
+
+-- Direct mutation of user_roles, role_permissions, and audit logs from client is strictly prohibited
 REVOKE INSERT, UPDATE, DELETE ON public.user_roles FROM PUBLIC, anon, authenticated;
 REVOKE INSERT, UPDATE, DELETE ON public.role_permissions FROM PUBLIC, anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE ON public.user_role_audit_logs FROM PUBLIC, anon, authenticated;
 
 -- -----------------------------------------------------------------------------
--- 5. ADMINISTRATIVE RPC FUNCTIONS (SEC-004 PRIVILEGE HARDENING)
+-- 6. ADMINISTRATIVE RPC FUNCTIONS (SEC-004 PRIVILEGE HARDENING & AUDITING)
 -- -----------------------------------------------------------------------------
 
--- 5.1 Explicit Admin Role Assignment
+-- 6.1 Explicit Admin Role Assignment
 CREATE OR REPLACE FUNCTION public.admin_assign_role(
   p_target_user_id uuid,
   p_role text,
@@ -162,8 +220,8 @@ BEGIN
   END IF;
 
   -- Validate role input
-  IF p_role NOT IN ('athlete', 'host', 'coach', 'scout', 'academy', 'admin') THEN
-    RAISE EXCEPTION 'Invalid role: "%". Must be one of athlete, host, coach, scout, academy, admin.', p_role;
+  IF p_role NOT IN ('athlete', 'parent', 'coach', 'scout', 'academy', 'host', 'venue_owner', 'submitter', 'moderator', 'admin') THEN
+    RAISE EXCEPTION 'Invalid role: "%". Must be one of athlete, parent, coach, scout, academy, host, venue_owner, submitter, moderator, admin.', p_role;
   END IF;
 
   -- Verify target user exists
@@ -177,20 +235,40 @@ BEGIN
     role,
     assigned_by,
     notes,
+    is_active,
     assigned_at
   ) VALUES (
     p_target_user_id,
     p_role,
     auth.uid(),
     trim(p_notes),
+    true,
     now()
   )
   ON CONFLICT (user_id, role) DO UPDATE SET
     assigned_by = EXCLUDED.assigned_by,
     notes = coalesce(EXCLUDED.notes, public.user_roles.notes),
+    is_active = true,
     assigned_at = now();
 
-  -- Synchronize public.profiles.role if target role has higher authority
+  -- Record audit log entry
+  INSERT INTO public.user_role_audit_logs (
+    user_id,
+    role,
+    action,
+    performed_by,
+    reason,
+    created_at
+  ) VALUES (
+    p_target_user_id,
+    p_role,
+    'ASSIGN',
+    auth.uid(),
+    trim(p_notes),
+    now()
+  );
+
+  -- Synchronize public.profiles.role
   UPDATE public.profiles
   SET role = p_role, updated_at = now()
   WHERE id = p_target_user_id;
@@ -204,10 +282,11 @@ BEGIN
 END;
 $$;
 
--- 5.2 Explicit Admin Role Revocation (with last-admin protection)
+-- 6.2 Explicit Admin Role Revocation (with last-admin protection & audit trail)
 CREATE OR REPLACE FUNCTION public.admin_revoke_role(
   p_target_user_id uuid,
-  p_role text
+  p_role text,
+  p_reason text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -232,9 +311,9 @@ BEGIN
   IF p_role = 'admin' THEN
     SELECT count(DISTINCT user_id) INTO v_admin_count
     FROM public.user_roles
-    WHERE role = 'admin';
+    WHERE role = 'admin' AND is_active = true;
 
-    IF v_admin_count <= 1 AND EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = p_target_user_id AND role = 'admin') THEN
+    IF v_admin_count <= 1 AND EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = p_target_user_id AND role = 'admin' AND is_active = true) THEN
       RAISE EXCEPTION 'Operation blocked: Cannot revoke the last remaining system administrator.';
     END IF;
   END IF;
@@ -243,17 +322,36 @@ BEGIN
   DELETE FROM public.user_roles
   WHERE user_id = p_target_user_id AND role = p_role;
 
+  -- Record audit log entry
+  INSERT INTO public.user_role_audit_logs (
+    user_id,
+    role,
+    action,
+    performed_by,
+    reason,
+    created_at
+  ) VALUES (
+    p_target_user_id,
+    p_role,
+    'REVOKE',
+    auth.uid(),
+    trim(p_reason),
+    now()
+  );
+
   -- Find highest fallback role for public.profiles
   SELECT role INTO v_fallback_role
   FROM public.user_roles
-  WHERE user_id = p_target_user_id
+  WHERE user_id = p_target_user_id AND is_active = true
   ORDER BY CASE
     WHEN role = 'admin' THEN 1
-    WHEN role = 'academy' THEN 2
-    WHEN role = 'coach' THEN 3
-    WHEN role = 'scout' THEN 4
-    WHEN role = 'host' THEN 5
-    ELSE 6
+    WHEN role = 'moderator' THEN 2
+    WHEN role = 'academy' THEN 3
+    WHEN role = 'coach' THEN 4
+    WHEN role = 'scout' THEN 5
+    WHEN role = 'host' THEN 6
+    WHEN role = 'venue_owner' THEN 7
+    ELSE 8
   END ASC
   LIMIT 1;
 
@@ -271,10 +369,26 @@ END;
 $$;
 
 -- -----------------------------------------------------------------------------
--- 6. PERMISSION EVALUATION HELPERS
+-- 7. PERMISSION EVALUATION HELPERS
 -- -----------------------------------------------------------------------------
 
--- 6.1 Check if current caller has specific permission
+-- 7.1 Check if specific user has role
+CREATE OR REPLACE FUNCTION public.has_role(p_user_id uuid, p_role text)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+STABLE
+AS $$
+  SELECT (
+    -- Admin has all roles implicitly
+    EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = p_user_id AND role = 'admin' AND is_active = true)
+    -- Or user holds the explicit role
+    OR EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = p_user_id AND role = p_role AND is_active = true)
+  );
+$$;
+
+-- 7.2 Check if current caller has specific permission
 CREATE OR REPLACE FUNCTION public.has_permission(p_permission text)
 RETURNS boolean
 LANGUAGE sql
@@ -292,12 +406,13 @@ AS $$
       FROM public.user_roles ur
       JOIN public.role_permissions rp ON rp.role = ur.role
       WHERE ur.user_id = auth.uid()
+        AND ur.is_active = true
         AND rp.permission = p_permission
     )
   );
 $$;
 
--- 6.2 Get all effective permissions for a user
+-- 7.3 Get all effective permissions for a user
 CREATE OR REPLACE FUNCTION public.get_user_effective_permissions(p_user_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -311,7 +426,7 @@ DECLARE
 BEGIN
   -- Check if user is admin
   SELECT EXISTS (
-    SELECT 1 FROM public.user_roles WHERE user_id = p_user_id AND role = 'admin'
+    SELECT 1 FROM public.user_roles WHERE user_id = p_user_id AND role = 'admin' AND is_active = true
   ) INTO v_is_admin;
 
   IF v_is_admin THEN
@@ -321,7 +436,8 @@ BEGIN
     SELECT coalesce(jsonb_agg(DISTINCT rp.permission), '[]'::jsonb) INTO v_permissions
     FROM public.user_roles ur
     JOIN public.role_permissions rp ON rp.role = ur.role
-    WHERE ur.user_id = p_user_id;
+    WHERE ur.user_id = p_user_id
+      AND ur.is_active = true;
   END IF;
 
   RETURN coalesce(v_permissions, '[]'::jsonb);
@@ -329,7 +445,7 @@ END;
 $$;
 
 -- -----------------------------------------------------------------------------
--- 7. REVISE handle_new_user() TO AUTOMATICALLY SEED user_roles
+-- 8. REVISE handle_new_user() TO AUTOMATICALLY SEED user_roles
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
@@ -350,8 +466,8 @@ BEGIN
   );
 
   user_role := coalesce(new.raw_user_meta_data->>'role', 'athlete');
-  -- SEC-004 fix: Prevent self-assignment of 'admin' role via user metadata
-  IF user_role NOT IN ('athlete', 'host', 'coach', 'scout', 'academy') THEN
+  -- SEC-004 fix: Prevent self-assignment of 'admin' or 'moderator' role via user metadata
+  IF user_role NOT IN ('athlete', 'parent', 'coach', 'scout', 'academy', 'host', 'venue_owner', 'submitter') THEN
     user_role := 'athlete';
   END IF;
 
@@ -396,11 +512,13 @@ BEGIN
     user_id,
     role,
     notes,
+    is_active,
     assigned_at
   ) VALUES (
     new.id,
     user_role,
     'Initial registration role',
+    true,
     now()
   )
   ON CONFLICT (user_id, role) DO NOTHING;
@@ -410,31 +528,31 @@ END;
 $$;
 
 -- -----------------------------------------------------------------------------
--- 8. REVOKE DEFAULT PUBLIC SCHEMA PRIVILEGES (LEAST PRIVILEGE ENFORCEMENT)
+-- 9. REVOKE DEFAULT PUBLIC SCHEMA PRIVILEGES (LEAST PRIVILEGE ENFORCEMENT)
 -- -----------------------------------------------------------------------------
 
--- 8.1 Revoke schema creation privileges from PUBLIC and anon
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 REVOKE CREATE ON SCHEMA public FROM anon;
 
--- Ensure roles have USAGE on public schema
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 
--- 8.2 Revoke default execution on functions from PUBLIC
-REVOKE EXECUTE ON FUNCTION public.admin_assign_role(uuid, text, text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.admin_assign_role(uuid, text, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.admin_assign_role(uuid, text, text) TO authenticated, service_role;
 
-REVOKE EXECUTE ON FUNCTION public.admin_revoke_role(uuid, text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.admin_revoke_role(uuid, text) TO authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION public.admin_revoke_role(uuid, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_revoke_role(uuid, text, text) TO authenticated, service_role;
 
-REVOKE EXECUTE ON FUNCTION public.has_permission(text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.has_role(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.has_role(uuid, text) TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.has_permission(text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.has_permission(text) TO authenticated, service_role;
 
-REVOKE EXECUTE ON FUNCTION public.get_user_effective_permissions(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.get_user_effective_permissions(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_user_effective_permissions(uuid) TO authenticated, service_role;
 
--- 8.3 Grants on RBAC tables
 GRANT SELECT ON public.role_permissions TO anon, authenticated, service_role;
 GRANT SELECT ON public.user_roles TO authenticated, service_role;
+GRANT SELECT ON public.user_role_audit_logs TO authenticated, service_role;
 
 COMMIT;
