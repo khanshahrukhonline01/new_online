@@ -4,31 +4,138 @@
 -- Target: Development Database hznsbxvovjxvmnchzzqt (PREPARED ONLY — NOT YET APPLIED)
 --
 -- Purpose:
--- 1. SEC-014 Remediation: Eliminate whole-row PII disclosure in receipt and voucher
---    RPCs (get_listing_subscription_by_order and get_venue_booking_voucher).
---    Replace SETOF public.* with minimal, zero-PII table projections.
--- 2. SEC-003 Remediation: Fix unsafe trial_reminders_authenticated_update policy
+-- 1. SEC-001/002/003/014 Remediation: Eliminate broad SELECT policies on listing_subscriptions,
+--    venue_bookings, and trial_reminders. Replace them with strict owner-only SELECT and
+--    high-entropy token-authorized receipt/voucher RPCs with zero-PII minimal projections.
+-- 2. SEC-014 Hardening: Eliminate phone/email matching as authorization secrets.
+--    Require authenticated session ownership (auth.uid() = user_id) OR an unguessable
+--    cryptographic voucher token (voucher_token / access_token). Unauthenticated callers
+--    guessing order or booking IDs receive 0 rows.
+-- 3. SEC-003 Remediation: Fix unsafe trial_reminders_authenticated_update policy
 --    which previously permitted any authenticated user to modify other users' reminders.
--- 3. SEC-015 Remediation: Define explicit RLS policies on tables that had RLS enabled
+-- 4. SEC-015 Remediation: Define explicit RLS policies on tables that had RLS enabled
 --    with 0 policies (pickup_game_participants, pickup_game_rsvp_rate_limits).
--- 4. SEC-016 Remediation: Revoke anonymous EXECUTE privileges on all host-only and
---    moderator-only SECURITY DEFINER stored procedures via dynamic catalog query
---    to eliminate function signature mismatches.
--- 5. SEC-012 Remediation: Enforce FORCE ROW LEVEL SECURITY on all user-facing tables.
+-- 5. SEC-016 Remediation: Revoke anonymous EXECUTE privileges on all host-only and
+--    moderator-only SECURITY DEFINER stored procedures via dynamic catalog query.
+--    Eliminate silent exception swallowing.
+-- 6. SEC-012 Remediation: Enforce FORCE ROW LEVEL SECURITY on all sensitive tables.
 -- ==============================================================================
 
 BEGIN;
 
 -- -----------------------------------------------------------------------------
--- 1. SEC-014: REMEDIATE WHOLE-ROW RECEIPT & VOUCHER RPCs (ZERO-PII PROJECTIONS)
+-- 1. SCHEMA HARDENING: USER_ID & HIGH-ENTROPY VOUCHER TOKENS
 -- -----------------------------------------------------------------------------
 
--- Drop previous whole-row SETOF functions if they exist
-DROP FUNCTION IF EXISTS public.get_listing_subscription_by_order(text);
-DROP FUNCTION IF EXISTS public.get_venue_booking_voucher(text);
+-- Ensure venue_bookings has user_id and high-entropy voucher_token for secure access
+ALTER TABLE public.venue_bookings
+  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS voucher_token text DEFAULT encode(gen_random_bytes(24), 'hex');
 
--- 1.1 Minimal projection for subscription order confirmation (NO RAW PII, NO GATEWAY CREDENTIALS)
-CREATE OR REPLACE FUNCTION public.get_listing_subscription_by_order(p_order_id text)
+CREATE INDEX IF NOT EXISTS idx_venue_bookings_user_id ON public.venue_bookings(user_id);
+CREATE INDEX IF NOT EXISTS idx_venue_bookings_voucher_token ON public.venue_bookings(voucher_token);
+
+-- Ensure listing_subscriptions has user_id and high-entropy access_token
+ALTER TABLE public.listing_subscriptions
+  ADD COLUMN IF NOT EXISTS access_token text DEFAULT encode(gen_random_bytes(24), 'hex');
+
+CREATE INDEX IF NOT EXISTS idx_listing_subs_access_token ON public.listing_subscriptions(access_token);
+
+-- -----------------------------------------------------------------------------
+-- 2. REMEDIATE BROAD SELECT POLICIES (SEC-001, SEC-002, SEC-003)
+-- -----------------------------------------------------------------------------
+
+-- 2.1 public.listing_subscriptions
+ALTER TABLE public.listing_subscriptions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "listing_subscriptions_read" ON public.listing_subscriptions;
+DROP POLICY IF EXISTS "listing_subscriptions_owner_read" ON public.listing_subscriptions;
+DROP POLICY IF EXISTS "listing_subscriptions_service_read" ON public.listing_subscriptions;
+
+CREATE POLICY "listing_subscriptions_owner_read"
+  ON public.listing_subscriptions
+  FOR SELECT
+  TO authenticated
+  USING (
+    auth.uid() IS NOT NULL AND user_id = auth.uid()
+  );
+
+CREATE POLICY "listing_subscriptions_service_read"
+  ON public.listing_subscriptions
+  FOR SELECT
+  TO service_role
+  USING (true);
+
+-- 2.2 public.venue_bookings
+ALTER TABLE public.venue_bookings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "venue_bookings_read" ON public.venue_bookings;
+DROP POLICY IF EXISTS "venue_bookings_owner_read" ON public.venue_bookings;
+DROP POLICY IF EXISTS "venue_bookings_service_read" ON public.venue_bookings;
+
+CREATE POLICY "venue_bookings_owner_read"
+  ON public.venue_bookings
+  FOR SELECT
+  TO authenticated
+  USING (
+    auth.uid() IS NOT NULL AND user_id = auth.uid()
+  );
+
+CREATE POLICY "venue_bookings_service_read"
+  ON public.venue_bookings
+  FOR SELECT
+  TO service_role
+  USING (true);
+
+-- 2.3 public.trial_reminders
+ALTER TABLE public.trial_reminders ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "trial_reminders_read" ON public.trial_reminders;
+DROP POLICY IF EXISTS "trial_reminders_owner_read" ON public.trial_reminders;
+DROP POLICY IF EXISTS "trial_reminders_service_read" ON public.trial_reminders;
+DROP POLICY IF EXISTS "trial_reminders_authenticated_update" ON public.trial_reminders;
+DROP POLICY IF EXISTS "trial_reminders_owner_update" ON public.trial_reminders;
+
+CREATE POLICY "trial_reminders_owner_read"
+  ON public.trial_reminders
+  FOR SELECT
+  TO authenticated
+  USING (
+    auth.uid() IS NOT NULL AND user_id = auth.uid()
+  );
+
+CREATE POLICY "trial_reminders_service_read"
+  ON public.trial_reminders
+  FOR SELECT
+  TO service_role
+  USING (true);
+
+-- Restrict UPDATE strictly to the reminder owner with matching WITH CHECK
+CREATE POLICY "trial_reminders_owner_update"
+  ON public.trial_reminders
+  FOR UPDATE
+  TO authenticated
+  USING (
+    auth.uid() IS NOT NULL AND user_id = auth.uid()
+  )
+  WITH CHECK (
+    auth.uid() IS NOT NULL AND user_id = auth.uid()
+  );
+
+-- -----------------------------------------------------------------------------
+-- 3. SEC-014: HIGH-ENTROPY TOKEN & OWNER-AUTHORIZED RECEIPT & VOUCHER RPCs
+-- -----------------------------------------------------------------------------
+
+-- Drop previous function signatures
+DROP FUNCTION IF EXISTS public.get_listing_subscription_by_order(text);
+DROP FUNCTION IF EXISTS public.get_listing_subscription_by_order(text, text);
+DROP FUNCTION IF EXISTS public.get_venue_booking_voucher(text);
+DROP FUNCTION IF EXISTS public.get_venue_booking_voucher(text, text);
+
+-- 3.1 Subscription Order Confirmation RPC:
+-- Requires authenticated owner (auth.uid() = user_id) OR high-entropy access_token.
+-- Third parties guessing order_id receive 0 rows. Never returns gateway secrets or phone numbers.
+CREATE OR REPLACE FUNCTION public.get_listing_subscription_by_order(
+  p_order_id text,
+  p_access_token text DEFAULT NULL
+)
 RETURNS TABLE (
   order_id text,
   listing_name text,
@@ -48,6 +155,7 @@ AS $$
 DECLARE
   v_trimmed_id text := trim(p_order_id);
   v_rec record;
+  v_is_authorized boolean := false;
 BEGIN
   IF v_trimmed_id IS NULL OR length(v_trimmed_id) < 3 THEN
     RETURN;
@@ -62,7 +170,28 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Verify authorization: Caller must be owner, service_role, or receive masked projection
+  -- 1. Authenticated session ownership check
+  IF auth.uid() IS NOT NULL AND v_rec.user_id = auth.uid() THEN
+    v_is_authorized := true;
+  END IF;
+
+  -- 2. Unguessable high-entropy token check (minimum 16 characters)
+  IF p_access_token IS NOT NULL AND length(trim(p_access_token)) >= 16 THEN
+    IF v_rec.access_token IS NOT NULL AND trim(p_access_token) = v_rec.access_token THEN
+      v_is_authorized := true;
+    END IF;
+  END IF;
+
+  -- Service role override for trusted backend workers
+  IF current_user = 'service_role' THEN
+    v_is_authorized := true;
+  END IF;
+
+  -- Fail-closed: unauthorized callers receive zero rows
+  IF NOT v_is_authorized THEN
+    RETURN;
+  END IF;
+
   RETURN QUERY SELECT
     v_rec.order_id,
     v_rec.listing_name,
@@ -86,13 +215,16 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.get_listing_subscription_by_order(text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_listing_subscription_by_order(text) TO anon, authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION public.get_listing_subscription_by_order(text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_listing_subscription_by_order(text, text) TO anon, authenticated, service_role;
 
--- 1.2 Minimal projection for venue booking vouchers (NO SENSITIVE PHONE/EMAIL TO ARBITRARY CALLERS)
+-- 3.2 Venue Booking Voucher RPC:
+-- Requires authenticated owner (auth.uid() = user_id) OR unguessable high-entropy voucher_token.
+-- Plain phone numbers and email addresses are NOT accepted as authorization.
+-- Guessing booking_ref alone yields 0 rows.
 CREATE OR REPLACE FUNCTION public.get_venue_booking_voucher(
   p_booking_ref text,
-  p_verification_contact text DEFAULT NULL
+  p_voucher_token text DEFAULT NULL
 )
 RETURNS TABLE (
   booking_ref text,
@@ -113,7 +245,7 @@ AS $$
 DECLARE
   v_trimmed_ref text := trim(p_booking_ref);
   v_rec record;
-  v_is_owner boolean := false;
+  v_is_authorized boolean := false;
 BEGIN
   IF v_trimmed_ref IS NULL OR length(v_trimmed_ref) < 3 THEN
     RETURN;
@@ -128,17 +260,26 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Check if authenticated user is the booking owner
+  -- 1. Check authenticated user session ownership
   IF auth.uid() IS NOT NULL AND v_rec.user_id = auth.uid() THEN
-    v_is_owner := true;
+    v_is_authorized := true;
   END IF;
 
-  -- Check if caller provided matching phone or email verification credential
-  IF p_verification_contact IS NOT NULL AND (
-    trim(p_verification_contact) = v_rec.customer_phone
-    OR trim(p_verification_contact) = v_rec.customer_email
-  ) THEN
-    v_is_owner := true;
+  -- 2. Check high-entropy unguessable voucher token (minimum 16 characters)
+  IF p_voucher_token IS NOT NULL AND length(trim(p_voucher_token)) >= 16 THEN
+    IF v_rec.voucher_token IS NOT NULL AND trim(p_voucher_token) = v_rec.voucher_token THEN
+      v_is_authorized := true;
+    END IF;
+  END IF;
+
+  -- Service role override for trusted background jobs
+  IF current_user = 'service_role' THEN
+    v_is_authorized := true;
+  END IF;
+
+  -- Fail-closed: arbitrary callers guessing booking_ref receive zero rows
+  IF NOT v_is_authorized THEN
+    RETURN;
   END IF;
 
   RETURN QUERY SELECT
@@ -150,13 +291,13 @@ BEGIN
     v_rec.slot_time,
     v_rec.payment_status,
     CASE 
-      WHEN v_is_owner THEN v_rec.customer_name
+      WHEN auth.uid() IS NOT NULL AND v_rec.user_id = auth.uid() THEN v_rec.customer_name
       WHEN length(v_rec.customer_name) > 2 THEN 
         substr(v_rec.customer_name, 1, 1) || '***'
       ELSE 'Guest'
     END,
     CASE 
-      WHEN v_is_owner THEN v_rec.customer_phone
+      WHEN auth.uid() IS NOT NULL AND v_rec.user_id = auth.uid() THEN v_rec.customer_phone
       WHEN length(v_rec.customer_phone) > 4 THEN 
         '+91 *** *** ' || substr(v_rec.customer_phone, length(v_rec.customer_phone) - 1)
       ELSE '+91 ***'
@@ -167,7 +308,7 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.get_venue_booking_voucher(text, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_venue_booking_voucher(text, text) TO anon, authenticated, service_role;
 
--- 1.3 Verified zero-PII slot availability RPC
+-- 3.3 Verified zero-PII slot availability RPC (Publicly callable by anon & authenticated)
 CREATE OR REPLACE FUNCTION public.get_booked_slots_for_venue(p_venue_id text, p_slot_date text)
 RETURNS TABLE (slot_time text)
 LANGUAGE sql
@@ -185,30 +326,10 @@ REVOKE EXECUTE ON FUNCTION public.get_booked_slots_for_venue(text, text) FROM PU
 GRANT EXECUTE ON FUNCTION public.get_booked_slots_for_venue(text, text) TO anon, authenticated, service_role;
 
 -- -----------------------------------------------------------------------------
--- 2. SEC-003: REMEDIATE TRIAL_REMINDERS UNSAFE UPDATE POLICY
+-- 4. SEC-015: DEFINE EXPLICIT RLS POLICIES ON ZERO-POLICY TABLES
 -- -----------------------------------------------------------------------------
 
--- Drop over-permissive update policy that allowed any authenticated user to update all records
-DROP POLICY IF EXISTS "trial_reminders_authenticated_update" ON public.trial_reminders;
-DROP POLICY IF EXISTS "trial_reminders_owner_update" ON public.trial_reminders;
-
--- Restrict UPDATE strictly to the reminder owner
-CREATE POLICY "trial_reminders_owner_update"
-  ON public.trial_reminders
-  FOR UPDATE
-  TO authenticated
-  USING (
-    auth.uid() IS NOT NULL AND user_id = auth.uid()
-  )
-  WITH CHECK (
-    auth.uid() IS NOT NULL AND user_id = auth.uid()
-  );
-
--- -----------------------------------------------------------------------------
--- 3. SEC-015: DEFINE EXPLICIT RLS POLICIES ON ZERO-POLICY TABLES
--- -----------------------------------------------------------------------------
-
--- 3.1 public.pickup_game_participants
+-- 4.1 public.pickup_game_participants
 ALTER TABLE public.pickup_game_participants ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "pickup_game_participants_anon_deny" ON public.pickup_game_participants;
@@ -254,7 +375,7 @@ CREATE POLICY "pickup_game_participants_service_all"
   USING (true)
   WITH CHECK (true);
 
--- 3.2 public.pickup_game_rsvp_rate_limits
+-- 4.2 public.pickup_game_rsvp_rate_limits
 ALTER TABLE public.pickup_game_rsvp_rate_limits ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "pickup_game_rate_limits_deny_all" ON public.pickup_game_rsvp_rate_limits;
@@ -276,13 +397,15 @@ CREATE POLICY "pickup_game_rate_limits_service_all"
   WITH CHECK (true);
 
 -- -----------------------------------------------------------------------------
--- 4. SEC-016: REVOKE ANONYMOUS EXECUTE ON HOST & MODERATOR FUNCTIONS
+-- 5. SEC-016: REVOKE ANONYMOUS EXECUTE ON HOST & MODERATOR FUNCTIONS
 -- -----------------------------------------------------------------------------
 
--- Dynamically query pg_proc to accurately resolve all function overloads without signature mismatches
+-- Dynamically query pg_proc to accurately resolve all function overloads without signature mismatches.
+-- No silent error swallowing.
 DO $$
 DECLARE
   r RECORD;
+  v_count int := 0;
 BEGIN
   FOR r IN 
     SELECT proname, oid::regprocedure AS func_sig
@@ -302,11 +425,15 @@ BEGIN
   LOOP
     EXECUTE 'REVOKE EXECUTE ON FUNCTION ' || r.func_sig || ' FROM PUBLIC, anon;';
     EXECUTE 'GRANT EXECUTE ON FUNCTION ' || r.func_sig || ' TO authenticated, service_role;';
+    v_count := v_count + 1;
   END LOOP;
+  
+  -- Log hardened procedure count
+  RAISE NOTICE 'Hardened EXECUTE permissions on % host/moderation procedures.', v_count;
 END $$;
 
 -- -----------------------------------------------------------------------------
--- 5. SEC-012: ENFORCE FORCE ROW LEVEL SECURITY
+-- 6. SEC-012: ENFORCE FORCE ROW LEVEL SECURITY
 -- -----------------------------------------------------------------------------
 ALTER TABLE public.listing_subscriptions FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.venue_bookings FORCE ROW LEVEL SECURITY;
