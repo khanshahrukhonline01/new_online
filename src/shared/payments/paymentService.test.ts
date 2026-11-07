@@ -5,6 +5,8 @@ import {
   parseInrPrice,
   recordPaymentTransaction,
   recordVenueSlotBooking,
+  getBookedVenueSlots,
+  getUserVenueBookings,
   recordListingSubscription,
 } from './paymentService'
 import {
@@ -222,6 +224,38 @@ describe('KhelGrid Payment Service', () => {
       expect(calculatePlanExpiry('1_day')).not.toBeNull()
       const future = new Date('2027-11-06T12:00:00Z').toISOString()
       expect(formatPlanDuration('1_year', future)).toContain('2027')
+    })
+  })
+
+  describe('venue slot booking and real-time availability', () => {
+    it('records venue slot booking, returns booking ref and persists in user bookings', async () => {
+      const res = await recordVenueSlotBooking({
+        venueId: 'fsv-sports-arena',
+        venueName: 'FSV Sports Arena',
+        city: 'Bengaluru',
+        sport: 'Football',
+        slotDate: 'Today',
+        slotTime: '7:00 PM – 8:00 PM',
+        customerName: 'Aarav Sharma',
+        customerPhone: '9876543210',
+        totalAmount: 1200,
+        paidAmount: 300,
+        paymentStatus: 'paid',
+      })
+
+      expect(res.status).toBe('success')
+      expect(res.bookingRef).toBeTruthy()
+      expect(res.slotTime).toBe('7:00 PM – 8:00 PM')
+
+      const booked = getBookedVenueSlots('fsv-sports-arena', 'Today')
+      expect(booked).toContain('7:00 PM – 8:00 PM')
+
+      const unbooked = getBookedVenueSlots('fsv-sports-arena', 'Tomorrow')
+      expect(unbooked).not.toContain('7:00 PM – 8:00 PM')
+
+      const userBookings = getUserVenueBookings()
+      expect(userBookings.length).toBeGreaterThan(0)
+      expect(userBookings[0].venueName).toBe('FSV Sports Arena')
     })
   })
 })

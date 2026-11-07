@@ -251,7 +251,7 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
     }
   }
 
-  return {
+  const result: VenueBookingResult = {
     status: 'success',
     bookingRef: ref,
     venueName: input.venueName,
@@ -260,6 +260,53 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
     paidAmount: input.paidAmount,
     paymentStatus: input.paymentStatus,
   }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('khelgrid:venue-booked', {
+        detail: { bookingRef: ref, venueId: input.venueId, slotDate: input.slotDate, slotTime: input.slotTime },
+      }),
+    )
+  }
+
+  return result
+}
+
+export function getBookedVenueSlots(venueId: string, slotDate: string): string[] {
+  try {
+    const storage = getSafeLocalStorage()
+    if (storage) {
+      const existing = JSON.parse(storage.getItem('khelgrid_venue_bookings') || '[]') as Array<{
+        venueId?: string
+        venueName?: string
+        slotDate?: string
+        slotTime?: string
+      }>
+      if (Array.isArray(existing)) {
+        return existing
+          .filter(b => (b.venueId === venueId || b.venueName === venueId) && b.slotDate === slotDate && b.slotTime)
+          .map(b => b.slotTime as string)
+      }
+    }
+  } catch {
+    // Ignore
+  }
+  return []
+}
+
+export function getUserVenueBookings(): Array<VenueBookingResult & { createdAt?: string; customerName?: string; venueId?: string; city?: string; sport?: string }> {
+  try {
+    const storage = getSafeLocalStorage()
+    if (storage) {
+      const existing = JSON.parse(storage.getItem('khelgrid_venue_bookings') || '[]')
+      if (Array.isArray(existing)) {
+        return existing
+      }
+    }
+  } catch {
+    // Ignore
+  }
+  return []
 }
 
 export interface ListingSubscriptionInput {

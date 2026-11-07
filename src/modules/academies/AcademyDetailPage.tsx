@@ -1,5 +1,5 @@
 import { useState, useEffect, type MouseEvent } from 'react'
-import { getAcademyBySlug, getAcademies, getCommunityAcademyBySlug } from '../../integrations/supabase/public-client'
+import { getAcademyBySlug, getAcademies, getCommunityAcademyBySlug, getReviews, computeReviewStats } from '../../integrations/supabase/public-client'
 import type { Academy } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { ShareBar } from '../../shared/components/ShareBar'
@@ -27,6 +27,8 @@ export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPag
   const [openFaq, setOpenFaq] = useState<number | null>(0)
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false)
+  const [liveRating, setLiveRating] = useState<number>(() => initialCurated?.rating || 4.9)
+  const [liveReviewCount, setLiveReviewCount] = useState<number>(() => initialCurated?.review_count || 128)
 
   useEffect(() => {
     let active = true
@@ -55,6 +57,41 @@ export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPag
       active = false
     }
   }, [slug, initialCurated])
+
+  // Dynamic Community Rating & Review Stats
+  useEffect(() => {
+    let active = true
+    const updateDynamicRating = async () => {
+      try {
+        const res = await getReviews('academy', slug)
+        if (active && res.data && res.data.length > 0) {
+          const stats = computeReviewStats(res.data)
+          if (stats.totalReviews > 0) {
+            const baselineR = initialCurated?.rating || 4.9
+            const baselineC = initialCurated?.review_count || 128
+            const communitySum = stats.averageRating * stats.totalReviews
+            const totalCount = baselineC + stats.totalReviews - Math.min(stats.totalReviews, 2)
+            const newAvg = Number(((baselineR * baselineC + communitySum) / (baselineC + stats.totalReviews)).toFixed(1))
+            setLiveRating(newAvg)
+            setLiveReviewCount(totalCount)
+          }
+        }
+      } catch {
+        // Keep baseline
+      }
+    }
+
+    void updateDynamicRating()
+
+    const onReviewAdded = () => {
+      void updateDynamicRating()
+    }
+    window.addEventListener('khelgrid:review-added', onReviewAdded)
+    return () => {
+      active = false
+      window.removeEventListener('khelgrid:review-added', onReviewAdded)
+    }
+  }, [slug, initialCurated?.rating, initialCurated?.review_count])
 
   // SEO & Schema.org Structured Data
   useEffect(() => {
@@ -154,8 +191,6 @@ export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPag
   const ageGroupsList = curated.age_groups || ['Under-10 Grassroots', 'Under-14 Sub-Junior', 'Under-17 Junior', 'Open Senior']
   const timingsText = curated.timings || 'Morning: 6:00 AM – 8:30 AM | Evening: 4:30 PM – 7:00 PM (Tuesday – Sunday)'
   const feeText = curated.fee_structure || 'Contact academy directly for current batch fees and trial sessions'
-  const ratingVal = curated.rating || 4.9
-  const reviewCount = curated.review_count || 128
 
   const faqs = curated.faqs || [
     {
@@ -218,8 +253,8 @@ export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPag
           </span>
           <span className="academy-meta-item">
             <SiteIcon name="star" size={15} />
-            <span className="academy-rating">{ratingVal} ★</span>
-            <span className="academy-reviews">({reviewCount} reviews)</span>
+            <span className="academy-rating">{liveRating} ★</span>
+            <span className="academy-reviews">({liveReviewCount} reviews)</span>
           </span>
           {curated.head_coach && (
             <span className="academy-meta-item">

@@ -1,6 +1,6 @@
 # KhelGrid Platform: Comprehensive Changelog & Architectural Record
 
-> **Document Version:** 3.3.0 (Talent Scanner Dynamic Profile Sync & Combine Scorecard Release)  
+> **Document Version:** 3.4.0 (Full Dynamic Operations Release)  
 > **Repository:** `khelgrid-dotcom/khelgrid-platform`  
 > **Mirrors:** `khanshahrukhonline01/new_online` | `khanshahrukhonline01/khelgrid`  
 > **Last Synchronized:** 2026-11-07  
@@ -39,6 +39,7 @@ It explains **what was changed**, **how it was implemented**, **why it exists in
 | Phase 16: Universal 1-Tap Dynamic Bookmark System & Saved Hub (2026-11-07)        |
 | Phase 17: Live Database Scout Portal & Normative Workbench (2026-11-07)           |
 | Phase 18: Talent Scanner Direct Profile Sync & Dynamic Ecosystem (2026-11-07)   |
+| Phase 19: Dynamic Reviews, Live Turf Bookings & Trial Applications (2026-11-07)  |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -499,6 +500,33 @@ Unifies the empirical physical testing workbench (`/talent-scanner`) with the at
 
 ---
 
+---
+
+### Phase 19: Dynamic Community Reviews, Live Turf Slot Booking, and Trial Application Flow (2026-11-07)
+
+#### What Was Built:
+- **Option 1: Dynamic Community Reviews & Star Ratings across Academies & Venues**:
+  - Implemented client-side community review persistence engine with offline-first local storage caching (`khelgrid_community_reviews`) in `public-client.ts`.
+  - Added `getStoredLocalReviews`, `saveStoredLocalReview`, and `getUserSubmittedReviews`.
+  - Upgraded `getReviews` to merge live database reviews, local offline-first reviews, and curated entity reviews, computing live average star ratings and review counts dynamically.
+  - Added dynamic reactive listeners (`khelgrid:review-added`) in `VenueDetailPage.tsx` and `AcademyDetailPage.tsx` to instantly recalculate and update rating badges and review counts without page refreshes.
+- **Option 2: Live "Book a Turf Slot" Real-Time Availability & Booking Flow**:
+  - Integrated dynamic booking flow with direct routing support (`/venues/:id/book`).
+  - Added real-time slot conflict checking via `getBookedVenueSlots(venueId, slotDate)`.
+  - Booked slots are reactively disabled and badged with `(Booked)` to prevent double booking.
+  - Seamlessly connected `PaymentCheckoutModal` for instant deposit or full payment settlement.
+  - Successfully booked slots write to `khelgrid_venue_bookings`, record payment transactions, and dispatch `khelgrid:venue-booked` browser events.
+  - Confirmed turf & court bookings appear dynamically in Tab 3 ("Matches & Bookings") of the User Dashboard (`/dashboard`) with slot times, booking references, payment status, and 1-click Google Maps navigation.
+- **Option 3: Dynamic Selection Trial Application & Registration Flow (`/opportunities/:slug/apply`)**:
+  - Added 1-click "Apply with Sports CV" action button across all opportunity cards on `/opportunities`.
+  - Created dedicated `TrialApplicationModal` pulling the applicant's verified athletic profile, physical combine percentiles (Yo-Yo IR1, 30m sprint, CMJ jump height), video highlights telemetry, and selectors statement.
+  - Handled application persistence via `submitTrialApplication`, storing submissions in `khelgrid_trial_applications` and writing to Supabase `trial_applications` table.
+  - Added duplicate application prevention via `isTrialAlreadyApplied`.
+  - Submitted trial applications dynamically appear in the User Dashboard with application reference IDs (`APP-XXX`), tested combine percentile badges, applied dates, and live review status badges.
+
+#### Why in Online Repository:
+Eliminates static operational dead-ends by turning turf discovery into real-time bookings, trial notices into 1-click verified applications, and review displays into dynamic, interactive community scorecards.
+
 ## 3. Why These Changes Are in the Online Repository
 
 1. **Production Parity**:
@@ -520,7 +548,7 @@ Every change in this repository has passed all three release gates:
 ```bash
 # 1. Automated Vitest Suite (100% Pass)
 npm run test
-# Output: 74 passed test files (477 passed tests, 0 failed)
+# Output: 74 passed test files (479 passed tests, 0 failed)
 
 # 2. Production Build & Static Sitemap Compilation
 npm run build

@@ -736,3 +736,169 @@ html.dark .user-dash-breadcrumb .current {
   border: 1px dashed rgba(56, 189, 248, 0.25);
   border-radius: 10px;
 }
+
+
+/* Turf & Court Bookings in Dashboard */
+.user-bookings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.user-booking-card {
+  background: var(--card-bg, #090e17);
+  border: 1px solid var(--border-color, #1f2937);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.user-booking-card:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  transform: translateY(-2px);
+}
+
+.user-booking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.user-booking-ref {
+  display: inline-block;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.user-booking-status {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.user-booking-status.paid {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.user-booking-status.pay-at-venue {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.user-booking-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: #94a3b8;
+}
+
+.user-booking-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-booking-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color, #1f2937);
+}
+
+/* Trial Applications in Dashboard */
+.user-applications-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.user-app-card {
+  background: var(--card-bg, #090e17);
+  border: 1px solid var(--border-color, #1f2937);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.user-app-card:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  transform: translateY(-2px);
+}
+
+.user-app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.user-app-ref {
+  display: inline-block;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.user-app-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.user-app-status.submitted {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.user-app-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.user-app-pill {
+  font-size: 12px;
+  color: #94a3b8;
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: rgba(30, 41, 59, 0.4);
+  border-radius: 6px;
+}
+
+.user-app-pill strong {
+  color: #f8fafc;
+}
+
+.user-app-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color, #1f2937);
+}
