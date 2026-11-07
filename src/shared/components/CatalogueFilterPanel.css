@@ -12,7 +12,10 @@
   top: 92px;
   min-width: 0;
   max-height: calc(100vh - 112px);
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -245,10 +248,29 @@
 .foundation-v1 .kg-drawer-quick-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding-bottom: 8px;
+  gap: 8px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
-  margin-bottom: 6px;
+  margin-bottom: 12px;
+}
+
+.foundation-v1 .kg-drawer-quick-section .kg-quick-filter-rail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  overflow: visible;
+  padding: 4px 0 2px;
+  margin-bottom: 0;
+}
+
+.foundation-v1 .kg-drawer-quick-section .kg-quick-pill {
+  flex: 0 1 auto;
+  min-height: 30px;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  border-radius: 8px;
+  white-space: normal;
 }
 
 .foundation-v1 .kg-drawer-section-title {
@@ -257,6 +279,13 @@
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+/* On desktop viewports (>800px), hide redundant quick picks from the narrow filter rail since they are prominently displayed above results */
+@media (min-width: 801px) {
+  .foundation-v1 .kg-filter-rail .kg-drawer-quick-section {
+    display: none;
+  }
 }
 
 /* Active Filter Chips Bar (Both in Rail and Above Results) */
