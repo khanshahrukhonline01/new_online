@@ -19,6 +19,7 @@ import {
   type DatabasePickupGame,
   type CommunityListingCategory,
 } from '../../integrations/supabase/public-client' 
+import { subscribeSavedItems } from '../../shared/services/savedService'
 import { PlayerCard } from '../athlete-profile/PlayerCard'
 import './UserDashboardPage.css'
 
@@ -122,27 +123,23 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
       }
     })
 
-    // 3. Saved Items & Bookmarks
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = window.localStorage.getItem('khelgrid_saved_items_v1')
-        const savedIds = stored ? new Set(JSON.parse(stored) as string[]) : new Set<string>()
-        setSavedCount(savedIds.size)
-
-        void getOpportunities().then(res => {
-          if (!active) return
-          if (res.status === 'ready') {
-            const opps = res.data.filter(o => savedIds.has(o.id)).slice(0, 4)
-            setSavedOpportunities(opps)
-          }
-        })
-      } catch {
-        // Ignore parse error
-      }
-    }
+    // 3. Saved Items & Bookmarks (Live Reactive Subscription)
+    const unsubscribeSaved = subscribeSavedItems(items => {
+      if (!active) return
+      setSavedCount(items.length)
+      const trialIds = new Set(items.filter(i => i.category === 'trial').map(i => i.id))
+      void getOpportunities().then(res => {
+        if (!active) return
+        if (res.status === 'ready') {
+          const opps = res.data.filter(o => trialIds.has(o.id)).slice(0, 4)
+          setSavedOpportunities(opps)
+        }
+      })
+    })
 
     return () => {
       active = false
+      unsubscribeSaved()
     }
   }, [authUser])
 

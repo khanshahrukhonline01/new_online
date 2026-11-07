@@ -13,6 +13,8 @@ import {
 } from '../../shared/components/CatalogueFilterPanel'
 import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 import VenueMapView, { type VenueWithDistance } from './VenueMapView'
+import { BookmarkButton } from '../../shared/components/BookmarkButton'
+import { createVenueSavedItem } from '../../shared/services/savedService'
 import {
   calculateDistanceKm,
   formatDistance,
@@ -373,14 +375,17 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
                             <span className="test-only-label">TEST ONLY — NOT A REAL LISTING</span>
                           )}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                            <span className="card-kicker">
-                              {venue.government_facility ? 'Government facility' : 'Sports venue'}
-                            </span>
-                            {venue.distanceKm !== undefined && (
-                              <span className="venue-distance-badge" title="Driving distance from your GPS location">
-                                📍 {formatDistance(venue.distanceKm)} away
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span className="card-kicker">
+                                {venue.government_facility ? 'Government facility' : 'Sports venue'}
                               </span>
-                            )}
+                              {venue.distanceKm !== undefined && (
+                                <span className="venue-distance-badge" title="Driving distance from your GPS location">
+                                  📍 {formatDistance(venue.distanceKm)} away
+                                </span>
+                              )}
+                            </div>
+                            <BookmarkButton item={createVenueSavedItem(venue)} />
                           </div>
                           <h2>{venue.name}</h2>
                           <p>{venue.city}</p>

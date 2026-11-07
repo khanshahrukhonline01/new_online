@@ -10,6 +10,8 @@ import {
   type CredentialAuthority,
 } from './coachesData'
 import CoachInquiryModal from './CoachInquiryModal'
+import { BookmarkButton } from '../../shared/components/BookmarkButton'
+import { createCoachSavedItem } from '../../shared/services/savedService'
 import './CoachesPage.css'
 
 export interface CoachesPageProps {
@@ -388,9 +390,12 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
                     </span>
                   </div>
 
-                  <div className="coach-rating-badge" title={`${coach.reviewCount} verified athlete reviews`}>
-                    <SiteIcon name="star" size={12} style={{ fill: '#f59e0b', color: '#f59e0b' }} />
-                    <span>{coach.rating.toFixed(1)}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="coach-rating-badge" title={`${coach.reviewCount} verified athlete reviews`}>
+                      <SiteIcon name="star" size={12} style={{ fill: '#f59e0b', color: '#f59e0b' }} />
+                      <span>{coach.rating.toFixed(1)}</span>
+                    </div>
+                    <BookmarkButton item={createCoachSavedItem(coach)} />
                   </div>
                 </div>
 

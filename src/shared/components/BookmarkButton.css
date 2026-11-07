@@ -1,0 +1,87 @@
+.khelgrid-bookmark-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--bg-card-hover, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 6px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1;
+  position: relative;
+  z-index: 2;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.khelgrid-bookmark-btn:hover {
+  background: var(--bg-card-active, rgba(255, 255, 255, 0.12));
+  border-color: var(--border-color-focus, rgba(255, 255, 255, 0.25));
+  color: var(--text-primary, #ffffff);
+  transform: translateY(-1px);
+}
+
+.khelgrid-bookmark-btn:active {
+  transform: scale(0.92);
+}
+
+/* Saved State */
+.khelgrid-bookmark-btn.is-saved {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #f59e0b;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+}
+
+.khelgrid-bookmark-btn.is-saved svg {
+  fill: #f59e0b;
+  stroke: #f59e0b;
+}
+
+.khelgrid-bookmark-btn.is-saved:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+}
+
+/* Variants */
+.khelgrid-bookmark-btn.variant-icon-only {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  padding: 0;
+}
+
+.khelgrid-bookmark-btn.variant-pill {
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+.khelgrid-bookmark-btn.variant-card-corner {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.khelgrid-bookmark-btn.variant-card-corner:hover {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.08);
+}
+
+.khelgrid-bookmark-btn.variant-card-corner.is-saved {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: #f59e0b;
+}

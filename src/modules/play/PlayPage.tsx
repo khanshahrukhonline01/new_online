@@ -19,6 +19,8 @@ import { COMMUNITY_PICKUP_GAMES, type PickupGame } from './pickupData'
 import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
 import { parseInrPrice } from '../../shared/payments/paymentService'
 import type { PaymentItem } from '../../shared/payments/paymentTypes'
+import { BookmarkButton } from '../../shared/components/BookmarkButton'
+import { createPickupGameSavedItem } from '../../shared/services/savedService'
 import './PlayPage.css'
 
 export interface PlayPageProps {
@@ -482,6 +484,7 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
                             )}
                             <span className="play-badge-skill">{game.skillLevel}</span>
                           </div>
+                          <BookmarkButton item={createPickupGameSavedItem(game)} variant="card-corner" />
                           <div className="play-card-overlay-bottom">
                             {isFull ? (
                               <span className="play-badge-full">Match Full</span>

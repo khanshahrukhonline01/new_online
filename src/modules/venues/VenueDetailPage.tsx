@@ -3,6 +3,8 @@ import { getVenueBySlug, getVenues, getCommunityVenueBySlug } from '../../integr
 import type { Venue } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { ShareBar } from '../../shared/components/ShareBar'
+import { BookmarkButton } from '../../shared/components/BookmarkButton'
+import { createVenueSavedItem } from '../../shared/services/savedService'
 import { updatePageSeoMetadata } from '../../shared/utils/seoAndShare'
 import { getCuratedVenueBySlug, type CuratedVenue } from '../../shared/data/curatedEntitiesData'
 import ReportListingModal from '../../shared/components/ReportListingModal'
@@ -242,6 +244,8 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: Venu
 
         {/* Primary Action Buttons */}
         <div className="venue-actions-bar">
+          <BookmarkButton item={createVenueSavedItem(venue)} variant="pill" showLabel={true} />
+
           <button
             type="button"
             onClick={() => {

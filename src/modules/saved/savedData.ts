@@ -1,9 +1,9 @@
-export type SavedItemCategory = 'all' | 'trials' | 'academies' | 'venues' | 'pickup' | 'papers'
+export type SavedItemCategory = 'all' | 'trials' | 'academies' | 'venues' | 'coaches' | 'pickup' | 'papers'
 
 export interface SavedItem {
   id: string
   title: string
-  category: 'trial' | 'academy' | 'venue' | 'pickup' | 'paper'
+  category: 'trial' | 'academy' | 'venue' | 'coach' | 'pickup' | 'paper'
   categoryLabel: string
   sport: string
   city: string
@@ -108,6 +108,22 @@ export const BASELINE_SAVED_ITEMS: SavedItem[] = [
     feeOrPrice: '₹150 / slot',
     href: '/venues/sree-kanteerava-stadium',
     savedAt: '2026-11-01T20:10:00Z',
+  },
+  {
+    id: 'coach-gursharan-singh-cricket',
+    title: 'Coach Gursharan Singh',
+    category: 'coach',
+    categoryLabel: 'Certified Coach',
+    sport: 'Cricket',
+    city: 'Delhi NCR',
+    location: 'National Cricket Academy & DDA Sports Complex, New Delhi',
+    dateOrDeadline: 'Available for 1-on-1 & Batches',
+    badgeText: 'BCCI Level 3 Elite Coach',
+    rating: 4.9,
+    feeOrPrice: '₹4,500 / month',
+    organizerOrAuthor: 'BCCI Level 3 Senior Coach',
+    href: '/coaches',
+    savedAt: '2026-11-05T14:00:00Z',
   },
   {
     id: 'game-bandra-football',
