@@ -49,9 +49,9 @@ ALTER TABLE public.coaches
   ADD COLUMN IF NOT EXISTS student_track_record text DEFAULT 'Trained state champions and national school games medalists.',
   ADD COLUMN IF NOT EXISTS specialties jsonb NOT NULL DEFAULT '["Technique & Biomechanics", "Match Strategy"]'::jsonb,
   ADD COLUMN IF NOT EXISTS languages jsonb NOT NULL DEFAULT '["English", "Hindi"]'::jsonb,
-  ADD COLUMN IF NOT EXISTS rating numeric(3, 2) NOT NULL DEFAULT 4.90 CHECK (rating BETWEEN 1.0 AND 5.0),
-  ADD COLUMN IF NOT EXISTS review_count integer NOT NULL DEFAULT 48 CHECK (review_count >= 0),
-  ADD COLUMN IF NOT EXISTS verified_badge text NOT NULL DEFAULT 'NIS Verified',
+  ADD COLUMN IF NOT EXISTS rating numeric(3, 2) NOT NULL DEFAULT 0.00 CHECK (rating BETWEEN 0.0 AND 5.0),
+  ADD COLUMN IF NOT EXISTS review_count integer NOT NULL DEFAULT 0 CHECK (review_count >= 0),
+  ADD COLUMN IF NOT EXISTS verified_badge text,
   ADD COLUMN IF NOT EXISTS available_for_one_on_one boolean NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS available_for_batches boolean NOT NULL DEFAULT true;
 
@@ -366,26 +366,34 @@ DO $$ BEGIN
     FOR UPDATE USING (auth.uid() IS NOT NULL AND auth.uid() = booked_by_user_id);
 EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
--- 8.5 Trial Applications: Anyone can submit application; public read for applicant
+-- 8.5 Trial Applications: Anyone can submit application; users view ONLY their own applications
 DO $$ BEGIN
   DROP POLICY IF EXISTS "Public can submit trial applications" ON public.trial_applications;
   CREATE POLICY "Public can submit trial applications" ON public.trial_applications
     FOR INSERT WITH CHECK (true);
 
+  -- SEC-008 fix: Restrict SELECT so candidate combine percentiles & contact info are private to the applicant
   DROP POLICY IF EXISTS "Users can view their own trial applications" ON public.trial_applications;
   CREATE POLICY "Users can view their own trial applications" ON public.trial_applications
-    FOR SELECT USING (true);
+    FOR SELECT USING (
+      (auth.uid() IS NOT NULL AND auth.uid() = user_id)
+      OR (SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'service_role'
+    );
 EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
--- 8.6 Academy Enquiries: Anyone can submit academy enquiry; public read for applicant
+-- 8.6 Academy Enquiries: Anyone can submit academy enquiry; users view ONLY their own enquiries
 DO $$ BEGIN
   DROP POLICY IF EXISTS "Public can submit academy enquiries" ON public.academy_enquiries;
   CREATE POLICY "Public can submit academy enquiries" ON public.academy_enquiries
     FOR INSERT WITH CHECK (true);
 
+  -- SEC-008 fix: Restrict SELECT so candidate admission inquiries are private to the applicant
   DROP POLICY IF EXISTS "Users can view their own academy enquiries" ON public.academy_enquiries;
   CREATE POLICY "Users can view their own academy enquiries" ON public.academy_enquiries
-    FOR SELECT USING (true);
+    FOR SELECT USING (
+      (auth.uid() IS NOT NULL AND auth.uid() = user_id)
+      OR (SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'service_role'
+    );
 EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
 -- 8.7 User Bookmarks: Strictly owner-only access!
@@ -403,7 +411,7 @@ DO $$ BEGIN
     FOR DELETE USING (auth.uid() IS NOT NULL AND auth.uid() = user_id);
 EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
--- 8.8 Live Matches & Events: Public read access, scorers/service_role write access
+-- 8.8 Live Matches & Events: Public read access, authenticated scorers write access
 DO $$ BEGIN
   DROP POLICY IF EXISTS "Public can view live matches" ON public.live_matches;
   CREATE POLICY "Public can view live matches" ON public.live_matches
@@ -411,7 +419,10 @@ DO $$ BEGIN
 
   DROP POLICY IF EXISTS "Scorers can insert and update live matches" ON public.live_matches;
   CREATE POLICY "Scorers can insert and update live matches" ON public.live_matches
-    FOR ALL USING (true);
+    FOR ALL USING (
+      auth.uid() IS NOT NULL
+      OR (SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'service_role'
+    );
 
   DROP POLICY IF EXISTS "Public can view live score events" ON public.live_score_events;
   CREATE POLICY "Public can view live score events" ON public.live_score_events
@@ -419,7 +430,10 @@ DO $$ BEGIN
 
   DROP POLICY IF EXISTS "Scorers can insert score events" ON public.live_score_events;
   CREATE POLICY "Scorers can insert score events" ON public.live_score_events
-    FOR INSERT WITH CHECK (true);
+    FOR INSERT WITH CHECK (
+      auth.uid() IS NOT NULL
+      OR (SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'service_role'
+    );
 EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
 -- -----------------------------------------------------------------------------
