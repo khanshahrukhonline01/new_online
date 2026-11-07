@@ -49,6 +49,7 @@ const KhelChronicleCategoryPage = lazy(() => import('./modules/khelchronicle/Khe
 const KhelChronicleAuthorPage = lazy(() => import('./modules/khelchronicle/KhelChronicleAuthorPage'))
 const KhelChronicleSubmitPage = lazy(() => import('./modules/khelchronicle/KhelChronicleSubmitPage'))
 const HostDashboardPage = lazy(() => import('./modules/host/HostDashboardPage'))
+const UserDashboardPage = lazy(() => import('./modules/dashboard/UserDashboardPage'))
 const LearningHubPage = lazy(() => import('./modules/learning/LearningHubPage'))
 const SportsCalendarPage = lazy(() => import('./modules/calendar/SportsCalendarPage'))
 const SportsToolsPage = lazy(() => import('./modules/tools/SportsToolsPage'))
@@ -251,7 +252,36 @@ export default function App() {
     case 'khelchronicle-author': page = <KhelChronicleAuthorPage authorSlug={match.author} onNavigate={navigate} />; break
     case 'khelchronicle-paper': page = <KhelChroniclePaperPage slug={match.slug} onNavigate={navigate} />; break
     case 'feature':
-      if (match.canonicalPath === '/dashboard' || match.canonicalPath === '/host' || match.canonicalPath === '/partner-dashboard') page = <HostDashboardPage onNavigate={navigate} onOpenIntake={openIntake} />
+      if (match.canonicalPath === '/dashboard') {
+        page = (
+          <UserDashboardPage
+            onNavigate={navigate}
+            onOpenIntake={openIntake}
+            onOpenAuth={tab => {
+              setAuthModalTab(tab || 'login')
+              setAuthModalOpen(true)
+            }}
+          />
+        )
+      } else if (match.canonicalPath === '/profile' || match.canonicalPath === '/my-profile') {
+        if (authUser) {
+          const handle = (authUser.fullName || 'athlete').toLowerCase().replace(/\s+/g, '-')
+          page = <AthleteProfilePage username={handle} onNavigate={navigate} />
+        } else {
+          page = (
+            <UserDashboardPage
+              onNavigate={navigate}
+              onOpenIntake={openIntake}
+              onOpenAuth={tab => {
+                setAuthModalTab(tab || 'login')
+                setAuthModalOpen(true)
+              }}
+            />
+          )
+        }
+      } else if (match.canonicalPath === '/host' || match.canonicalPath === '/partner-dashboard') {
+        page = <HostDashboardPage onNavigate={navigate} onOpenIntake={openIntake} />
+      }
       else if (match.canonicalPath === '/help-feedback') page = <HelpFeedbackPage />
       else if (match.canonicalPath === '/sports-cv') page = <SportsCvWizard />
       else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} />
@@ -406,6 +436,18 @@ export default function App() {
               </div>
               <div className="header-user-dropdown-divider" />
               <a
+                href="/dashboard"
+                className="header-user-dropdown-item"
+                role="menuitem"
+                onClick={e => {
+                  setUserMenuOpen(false)
+                  navigate(e, '/dashboard')
+                }}
+              >
+                <SiteIcon name="chart" size={15} />
+                <span>My Dashboard</span>
+              </a>
+              <a
                 href={`/u/@${authUser.fullName.toLowerCase().replace(/\s+/g, '-')}`}
                 className="header-user-dropdown-item"
                 role="menuitem"
@@ -416,6 +458,18 @@ export default function App() {
               >
                 <SiteIcon name="user-round" size={15} />
                 <span>My Athlete Profile</span>
+              </a>
+              <a
+                href="/saved"
+                className="header-user-dropdown-item"
+                role="menuitem"
+                onClick={e => {
+                  setUserMenuOpen(false)
+                  navigate(e, '/saved')
+                }}
+              >
+                <SiteIcon name="bookmark" size={15} />
+                <span>Saved Deadlines</span>
               </a>
               {(authUser.role === 'host' || authUser.role === 'admin') && (
                 <a

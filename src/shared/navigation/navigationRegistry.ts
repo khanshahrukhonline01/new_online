@@ -29,7 +29,7 @@ export const navigationModules: NavigationModule[] = [
     icon: 'user-round',
     items: [
       { id: 'home', label: 'Home', href: '/', icon: 'home', module: 'your-space', available: true },
-      { id: 'dashboard', label: 'My Dashboard', href: '/dashboard', icon: 'chart', module: 'your-space' },
+      { id: 'dashboard', label: 'My Dashboard', href: '/dashboard', icon: 'chart', module: 'your-space', available: true },
       { id: 'saved', label: 'Saved Items', href: '/saved', icon: 'bookmark', module: 'your-space', available: true },
     ],
   },

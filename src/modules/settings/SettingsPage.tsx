@@ -1,6 +1,14 @@
-import { useState, type MouseEvent } from 'react'
+import { useState, useEffect, type MouseEvent, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { usePreferences } from '../../shared/usePreferences'
+import {
+  getStoredAuthUser,
+  onAuthChange,
+  updateUserProfile,
+  updatePassword,
+  signOut,
+  type AuthUserProfile,
+} from '../../integrations/supabase/auth-client'
 import {
   INDIAN_SPORTS_CITIES,
   ALL_SPORTS_DISCIPLINES,
@@ -30,9 +38,80 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
     resetPreferences,
   } = usePreferences()
 
+  const [authUser, setAuthUser] = useState<AuthUserProfile | null>(() => getStoredAuthUser())
+  const [profileName, setProfileName] = useState(() => getStoredAuthUser()?.fullName || '')
+  const [profilePhone, setProfilePhone] = useState(() => getStoredAuthUser()?.phone || '')
+  const [profileCity, setProfileCity] = useState(() => getStoredAuthUser()?.city || preferences.preferredCity)
+  const [profileSport, setProfileSport] = useState(() => getStoredAuthUser()?.preferredSports?.[0] || 'Football')
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+
+  useEffect(() => {
+    return onAuthChange(u => {
+      setAuthUser(u)
+      if (u) {
+        setProfileName(u.fullName)
+        setProfilePhone(u.phone || '')
+        setProfileCity(u.city || preferences.preferredCity)
+        setProfileSport(u.preferredSports?.[0] || 'Football')
+      }
+    })
+  }, [preferences.preferredCity])
+
   function showToast(msg: string) {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 2800)
+  }
+
+  async function handleSaveProfile(e: FormEvent) {
+    e.preventDefault()
+    setIsSavingProfile(true)
+    try {
+      const updated = await updateUserProfile({
+        fullName: profileName.trim(),
+        phone: profilePhone.trim(),
+        city: profileCity,
+        preferredSports: [profileSport],
+      })
+      updatePreferences({ preferredCity: profileCity })
+      showToast(updated ? 'Athlete profile updated successfully' : 'Profile updated locally')
+    } catch {
+      showToast('Error updating profile')
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
+  async function handleUpdatePassword(e: FormEvent) {
+    e.preventDefault()
+    setPasswordError(null)
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters long.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match.')
+      return
+    }
+    setIsUpdatingPassword(true)
+    const res = await updatePassword(newPassword)
+    setIsUpdatingPassword(false)
+    if (res.success) {
+      setNewPassword('')
+      setConfirmPassword('')
+      showToast('Password updated successfully')
+    } else {
+      setPasswordError(res.message || 'Failed to update password')
+    }
+  }
+
+  async function handleSignOut() {
+    await signOut()
+    showToast('Signed out of KhelGrid session')
   }
 
   function handleThemeChange(theme: ThemeMode) {
@@ -455,19 +534,209 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 <p>Manage your athlete credential, digital Sports CV, and session details.</p>
               </div>
 
-              <div className="account-status-card">
-                <div className="account-avatar">
-                  <SiteIcon name="user" size={32} />
-                </div>
-                <div className="account-details">
-                  <div className="account-badge-row">
-                    <span className="account-role-pill">{preferences.role}</span>
-                    <span className="account-active-pill">Guest Active Session</span>
+              {authUser ? (
+                <>
+                  <div className="account-status-card">
+                    <div className="account-avatar">
+                      {authUser.avatarUrl ? (
+                        <img src={authUser.avatarUrl} alt={authUser.fullName} />
+                      ) : (
+                        <span>{(authUser.fullName || 'A').charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div className="account-details">
+                      <div className="account-badge-row">
+                        <span className="account-role-pill">{authUser.role.toUpperCase()}</span>
+                        <span className="account-active-pill">Authenticated Session</span>
+                        {authUser.isVerified && (
+                          <span className="account-verified-pill">NIS Verified</span>
+                        )}
+                      </div>
+                      <h3>{authUser.fullName}</h3>
+                      <p>{authUser.email} {authUser.city ? `• ${authUser.city}` : ''}</p>
+                    </div>
                   </div>
-                  <h3>Athlete Profile</h3>
-                  <p>Your local profile and community listings are saved on this browser device.</p>
-                </div>
-              </div>
+
+                  {/* Quick Hub Navigation Links */}
+                  <div className="settings-form-row">
+                    <div className="settings-quick-nav-strip">
+                      <a
+                        href="/dashboard"
+                        onClick={e => onNavigate(e, '/dashboard')}
+                        className="settings-hub-link"
+                      >
+                        <SiteIcon name="chart" size={16} />
+                        <span>Go to My Dashboard</span>
+                      </a>
+                      <a
+                        href={`/u/@${(authUser.fullName || 'athlete').toLowerCase().replace(/\s+/g, '-')}`}
+                        onClick={e => onNavigate(e, `/u/@${(authUser.fullName || 'athlete').toLowerCase().replace(/\s+/g, '-')}`)}
+                        className="settings-hub-link secondary"
+                      >
+                        <SiteIcon name="user-round" size={16} />
+                        <span>View Public Player Card</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Profile Editing Form */}
+                  <div className="settings-form-row">
+                    <h3 className="settings-subsection-title">Personal Profile Details</h3>
+                    <form onSubmit={handleSaveProfile} className="account-form-grid">
+                      <div className="account-form-field">
+                        <label htmlFor="settings-name-input">Full Name</label>
+                        <input
+                          id="settings-name-input"
+                          type="text"
+                          value={profileName}
+                          onChange={e => setProfileName(e.target.value)}
+                          required
+                          placeholder="e.g. Aarav Sharma"
+                        />
+                      </div>
+                      <div className="account-form-field">
+                        <label htmlFor="settings-phone-input">Contact Phone / WhatsApp</label>
+                        <input
+                          id="settings-phone-input"
+                          type="tel"
+                          value={profilePhone}
+                          onChange={e => setProfilePhone(e.target.value)}
+                          placeholder="+91 98765 43210"
+                        />
+                      </div>
+                      <div className="account-form-field">
+                        <label htmlFor="settings-city-select">Home Sports City</label>
+                        <select
+                          id="settings-city-select"
+                          value={profileCity}
+                          onChange={e => setProfileCity(e.target.value)}
+                        >
+                          {INDIAN_SPORTS_CITIES.map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="account-form-field">
+                        <label htmlFor="settings-sport-select">Primary Sport Discipline</label>
+                        <select
+                          id="settings-sport-select"
+                          value={profileSport}
+                          onChange={e => setProfileSport(e.target.value)}
+                        >
+                          {ALL_SPORTS_DISCIPLINES.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="account-form-actions" style={{ gridColumn: '1 / -1' }}>
+                        <button
+                          type="submit"
+                          className="settings-submit-btn"
+                          disabled={isSavingProfile}
+                        >
+                          <SiteIcon name="check" size={16} />
+                          <span>{isSavingProfile ? 'Saving Changes...' : 'Save Profile Changes'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Security & Password Form */}
+                  <div className="settings-form-row">
+                    <h3 className="settings-subsection-title">Security &amp; Password</h3>
+                    <form onSubmit={handleUpdatePassword} className="account-form-grid">
+                      <div className="account-form-field">
+                        <label htmlFor="settings-new-pass">New Password</label>
+                        <input
+                          id="settings-new-pass"
+                          type="password"
+                          value={newPassword}
+                          onChange={e => setNewPassword(e.target.value)}
+                          placeholder="At least 6 characters"
+                          minLength={6}
+                        />
+                      </div>
+                      <div className="account-form-field">
+                        <label htmlFor="settings-conf-pass">Confirm New Password</label>
+                        <input
+                          id="settings-conf-pass"
+                          type="password"
+                          value={confirmPassword}
+                          onChange={e => setConfirmPassword(e.target.value)}
+                          placeholder="Re-type password"
+                          minLength={6}
+                        />
+                      </div>
+                      {passwordError && (
+                        <p className="settings-error-text" style={{ gridColumn: '1 / -1', color: '#ef4444', fontSize: '12px' }}>
+                          {passwordError}
+                        </p>
+                      )}
+                      <div className="account-form-actions" style={{ gridColumn: '1 / -1' }}>
+                        <button
+                          type="submit"
+                          className="settings-submit-btn secondary"
+                          disabled={isUpdatingPassword || !newPassword}
+                        >
+                          <SiteIcon name="shield-check" size={16} />
+                          <span>{isUpdatingPassword ? 'Updating Password...' : 'Update Password'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Session Sign Out */}
+                  <div className="settings-form-row" style={{ marginTop: '20px' }}>
+                    <div className="settings-signout-row">
+                      <div>
+                        <strong>Active Authentication Session</strong>
+                        <p className="settings-hint">End your active session on this device.</p>
+                      </div>
+                      <button
+                        type="button"
+                        className="account-signout-btn"
+                        onClick={handleSignOut}
+                      >
+                        <SiteIcon name="close" size={15} />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="account-status-card">
+                    <div className="account-avatar">
+                      <SiteIcon name="user" size={32} />
+                    </div>
+                    <div className="account-details">
+                      <div className="account-badge-row">
+                        <span className="account-role-pill">{preferences.role}</span>
+                        <span className="account-active-pill">Guest Active Session</span>
+                      </div>
+                      <h3>Athlete Profile (Guest)</h3>
+                      <p>Your local profile and community listings are saved on this browser device.</p>
+                    </div>
+                  </div>
+
+                  <div className="settings-form-row">
+                    <div className="sports-cv-prompt-card">
+                      <div>
+                        <h4>Unlock Cloud Sync &amp; Trial Registrations</h4>
+                        <p>Sign in or create a KhelGrid account to track trial alerts, confirm turf RSVPs, and share your verified Sports CV.</p>
+                      </div>
+                      <a
+                        href="/dashboard"
+                        onClick={e => onNavigate(e, '/dashboard')}
+                        className="primary-link"
+                      >
+                        <span>Open My Dashboard</span>
+                        <SiteIcon name="arrow-right" size={16} />
+                      </a>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Sports CV Wizard link */}
               <div className="settings-form-row">

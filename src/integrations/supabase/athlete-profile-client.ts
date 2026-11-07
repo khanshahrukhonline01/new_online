@@ -277,7 +277,44 @@ export async function getAthleteProfile(username: string): Promise<AthleteProfil
   }
 
   const locals = getLocalProfiles()
-  return locals[clean] ?? null
+  if (locals[clean]) return locals[clean]
+
+  // Synthesize profile for authenticated user if matching handle
+  if (typeof window !== 'undefined') {
+    try {
+      const rawUser = window.localStorage.getItem('khelgrid_auth_user')
+      if (rawUser) {
+        const authUser = JSON.parse(rawUser) as Record<string, unknown>
+        const fullName = String(authUser.fullName || authUser.name || '').trim()
+        const userHandle = normalizeUsername(fullName)
+        const emailHandle = normalizeUsername(String(authUser.email || '').split('@')[0])
+        if ((fullName && userHandle === clean) || (emailHandle && emailHandle === clean)) {
+          const preferredSports = Array.isArray(authUser.preferredSports) ? (authUser.preferredSports as string[]) : []
+          return {
+            id: String(authUser.id || `prof-${clean}`),
+            userId: authUser.id ? String(authUser.id) : undefined,
+            username: clean,
+            fullName: fullName || 'Verified Athlete',
+            sport: preferredSports[0] || 'Multi-Sport',
+            playingPosition: authUser.role === 'coach' ? 'Head Coach' : authUser.role === 'host' ? 'Venue Partner' : 'Athlete',
+            city: String(authUser.city || 'India'),
+            summary: typeof authUser.bio === 'string' && authUser.bio
+              ? authUser.bio
+              : `Passionate ${preferredSports[0] || 'sports'} athlete on KhelGrid. Building verified Sports CV and tracking selection trials.`,
+            achievements: [],
+            videoClips: [],
+            verificationStatus: authUser.isVerified ? 'verified' : 'community',
+            createdAt: String(authUser.createdAt || new Date().toISOString()),
+            updatedAt: String(authUser.updatedAt || new Date().toISOString()),
+          }
+        }
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
+  return null
 }
 
 export const getAthleteProfileByUsername = getAthleteProfile

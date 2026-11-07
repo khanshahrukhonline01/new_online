@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent, type MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { getStoredAuthUser } from '../../integrations/supabase/auth-client'
 import { AsyncState } from '../../shared/components/AsyncState'
 import {
   getPickupGames,
@@ -143,9 +144,12 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
     setRsvpModalGame(game)
     setRsvpError('')
     setRsvpSuccess(null)
+    const authUser = getStoredAuthUser()
     const stored = getStoredUser()
-    if (stored?.name && !rsvpName) setRsvpName(stored.name)
-    if (stored?.phone && !rsvpPhone) setRsvpPhone(stored.phone)
+    const candidateName = authUser?.fullName || stored?.name
+    const candidatePhone = authUser?.phone || stored?.phone
+    if (candidateName && !rsvpName) setRsvpName(candidateName)
+    if (candidatePhone && !rsvpPhone) setRsvpPhone(candidatePhone)
   }
 
   const handleCloseRsvp = () => {
