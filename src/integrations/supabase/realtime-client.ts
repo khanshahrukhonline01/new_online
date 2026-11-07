@@ -44,6 +44,12 @@ export function getSupabaseClient(urlOverride?: string, keyOverride?: string): S
       return null
     }
     const client = createClient(urlStr, keyStr, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: typeof window !== 'undefined',
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      },
       realtime: {
         params: {
           eventsPerSecond: 10,
