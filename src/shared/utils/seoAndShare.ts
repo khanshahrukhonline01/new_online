@@ -169,6 +169,16 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
     }
   }
 
+  if (cleanPath === '/saved') {
+    return {
+      title: "Saved Items & Trial Deadline Planner · KhelGrid (सहेजे गए ट्रायल व अकादमियां)",
+      description: "Manage your bookmarked selection trials, sports academies, turf venues, pickup games, and KhelChronicle research papers. Track registration deadlines and export to calendar (.ics / Google Calendar).",
+      canonicalUrl: 'https://khelgrid.com/saved',
+      keywords: ['saved sports trials', 'bookmarked academies', 'trial calendar export', 'sports deadline tracker', 'सहेजे गए ट्रायल', ...DEFAULT_KEYWORDS],
+      ogType: 'website'
+    }
+  }
+
   // Fallback for other standard pages
   const label = cleanPath.slice(1).replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
   return {

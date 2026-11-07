@@ -47,6 +47,7 @@ const SportsCalendarPage = lazy(() => import('./modules/calendar/SportsCalendarP
 const SportsToolsPage = lazy(() => import('./modules/tools/SportsToolsPage'))
 const PricingPage = lazy(() => import('./modules/pricing/PricingPage'))
 const PartnerPage = lazy(() => import('./modules/partner/PartnerPage'))
+const SavedPage = lazy(() => import('./modules/saved/SavedPage'))
 
 // Code-split heavyweight modal dialogs
 const CommunityListingModal = lazy(() => import('./shared/components/CommunityListingModal'))
@@ -216,6 +217,7 @@ export default function App() {
       )
       else if (match.canonicalPath === '/settings') page = <SettingsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/pricing' || match.canonicalPath === '/memberships' || match.canonicalPath === '/pro') page = <PricingPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/saved') page = <SavedPage onNavigate={navigate} />
       else if (match.canonicalPath === '/partner' || match.canonicalPath === '/partners') page = <PartnerPage onNavigate={navigate} onOpenIntake={openIntake} />
       else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
