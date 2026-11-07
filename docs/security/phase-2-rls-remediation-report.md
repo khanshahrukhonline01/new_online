@@ -1,84 +1,89 @@
 # KhelGrid — Phase 2: Row Level Security (RLS) Remediation
-## Execution & Verification Report
+## Execution & Status Reconciliation Report
 
 ### 1. Executive Summary
 - **Programme:** KhelGrid 10-Phase Security & Authorization Programme
 - **Phase:** Phase 2 — Row Level Security (RLS) Remediation
-- **Branch:** `security/phase-2-row-level-security-remediation`
+- **Merged PR:** PR #173 (`security/phase-2-row-level-security-remediation`, commit `456ba0a2fc99020d8ee0cd1c65f7218fa48b09ab`)
+- **Verification Branch:** `security/phase-2-rls-post-merge-verification`
 - **Target Systems:**
   - Live Development Supabase Project: `hznsbxvovjxvmnchzzqt`
-  - Repository Migrations: `20261106150000`, `20261107120000`, `20261107180000`
-  - Frontend Client Integrations: `src/shared/payments/paymentService.ts`
-- **Status:** Completed & Fully Verified
+  - Repository Migration: `supabase/migrations/20261107233000_phase2_rls_remediation.sql`
+  - Corrective Post-Merge Migration: `supabase/migrations/20261108040000_phase2_rls_post_merge_remediation.sql`
+- **Deployment Status:**
+  - **Repository Code:** Merged & Verified in automated test suites.
+  - **Live Database (`hznsbxvovjxvmnchzzqt`):** **Pending Controlled Application (NOT YET APPLIED).**
+  - **Production (`https://khelgrid.com/`):** Completely untouched.
 - **Lead Security Architect:** Antigravity
 
 ---
 
-### 2. Remediation Overview
+### 2. Remediation Overview & Live Database Drift
 
-| Finding ID | Severity | Target | Status | Remediation Summary |
-| :--- | :--- | :--- | :--- | :--- |
-| **SEC-001** | **Critical** | `listing_subscriptions` | **Remediated** | Removed public `USING (true)` policy. Added owner-only SELECT (`auth.uid() = user_id`) and single-order lookup RPC `get_listing_subscription_by_order(text)` with zero bulk disclosure. |
-| **SEC-002** | **Critical** | `venue_bookings` | **Remediated** | Added `user_id` column and owner-only SELECT policy. Installed zero-PII RPC `get_booked_slots_for_venue(venue_id, date)` returning only `slot_time`, eliminating customer PII exposure while preserving slot availability checks. |
-| **SEC-003** | **High** | `trial_reminders` | **Remediated** | Dropped public read policy `trial_reminders_public_read`. Preserved public INSERT for athlete alert registrations while locking down SELECT to the owner/service-role. |
-| **SEC-004** | **Critical** | `handle_new_user()` trigger | **Remediated** | Patched `20261107120000` to whitelist only `('athlete', 'host', 'coach', 'scout', 'academy')`, completely preventing self-asserted `admin` privilege escalation during signup. |
-| **SEC-005** | **Critical** | `profiles` | **Remediated** | Patched `20261107120000` to drop public `USING (true)` policy on `profiles`. Replaced with owner/admin SELECT and created secure `public_profiles` view excluding private `email` and `phone` columns. |
-| **SEC-006** | **Critical** | `host_payout_accounts` & `host_settlement_payouts` | **Remediated** | Patched `20261106150000` to enforce strict host owner matching (`auth.uid()::text = host_id`), preventing unauthorized inspection or tampering with bank account / IFSC credentials. |
-| **SEC-007** | **High** | `community_live_matches` | **Remediated** | Patched `20261106150000` to restrict direct table UPDATE mutations to authenticated hosts/scorers, preventing public scoreboard tampering. |
-| **SEC-008** | **High** | `trial_applications` & `academy_enquiries` | **Remediated** | Patched `20261107180000` to restrict SELECT policies strictly to `auth.uid() = user_id`, keeping athlete Sports CV combine percentiles and admission requests private. |
-| **SEC-009** | **High** | `is_admin()`, `has_role()`, `handle_new_user()` | **Remediated** | Set explicit `search_path = public, pg_temp` on all helper functions, mitigating search path hijacking. |
-| **SEC-011** | **Medium** | `coaches` schema defaults | **Remediated** | Patched `20261107180000` defaults from fake values (`rating: 4.90`, `review_count: 48`, `verified_badge: 'NIS Verified'`) to honest baselines (`rating: 0.00`, `review_count: 0`, `verified_badge: NULL`). |
-| **SEC-012** | **Low** | Table Owner Bypass | **Remediated** | Added `FORCE ROW LEVEL SECURITY` statements for `listing_subscriptions`, `venue_bookings`, `trial_reminders`, and `khelgrid_payments`. |
+| Finding ID | Severity | Target Object | Status in Repository | Status on Live DB (`hznsbxvovjxvmnchzzqt`) | Remediation Summary |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **SEC-001** | **Critical** | `listing_subscriptions` | **Remediated in Code** | **Active Broad Policy** (`USING true`) | Merged migration drops broad read; adds owner-only SELECT (`auth.uid() = user_id`). Pending DB application. |
+| **SEC-002** | **Critical** | `venue_bookings` | **Remediated in Code** | **Active Broad Policy** (`USING true`) | Merged migration adds `user_id` and owner-only SELECT. Installed `get_booked_slots_for_venue`. Pending DB application. |
+| **SEC-003** | **High** | `trial_reminders` | **Remediated in Code** | **Active Broad Policy** (`USING true`) | Merged migration drops `trial_reminders_public_read`. Preserves public INSERT. Pending DB application. |
+| **SEC-004** | **Critical** | `handle_new_user()` trigger | **Remediated in Code** | Unapplied (No profiles trigger) | Whitelisted non-admin roles in migration `20261107120000`. |
+| **SEC-005** | **Critical** | `profiles` | **Remediated in Code** | Active (Restricted Select) | Replaced public read with owner/admin SELECT and `public_profiles` view. |
+| **SEC-006** | **Critical** | `host_payout_accounts` | **Remediated in Code** | Unapplied (Table not created) | Restricted to `auth.uid()::text = host_id` with `pgcrypto` column encryption. |
+| **SEC-007** | **High** | `community_live_matches` | **Remediated in Code** | Unapplied (Table not created) | Restricted direct UPDATE to authenticated scorers. |
+| **SEC-008** | **High** | `trial_applications` & `academy_enquiries` | **Remediated in Code** | Unapplied (Tables not created) | Restricted SELECT to applicant owner (`auth.uid() = user_id`). |
+| **SEC-009** | **High** | Helper functions | **Remediated in Code** | Unapplied | Pinned `SET search_path = public, pg_temp`. |
+| **SEC-011** | **Medium** | `coaches` schema defaults | **Remediated in Code** | Unapplied | Reset synthetic ratings/badges to unverified baselines. |
+| **SEC-012** | **Low** | Table Owner Bypass | **Remediated in Code** | Active (0 tables forced) | Added `FORCE ROW LEVEL SECURITY` statements. |
+| **SEC-014** | **Critical** | Whole-Row RPCs | **Remediated in `20261108040000`** | Unapplied | Replaced `SETOF public.*` with minimal zero-PII projections. |
+| **SEC-015** | **Medium** | Zero-Policy Tables | **Remediated in `20261108040000`** | Active (0 policies) | Added explicit denial & host viewing policies on participants & rate limits. |
+| **SEC-016** | **High** | Host Functions `anon` EXECUTE | **Remediated in `20261108040000`** | Active (16 callable by anon) | Revoked `EXECUTE` on host procedures from `anon`. |
 
 ---
 
-### 3. Detailed File Modifications
+### 3. Post-Merge Critical Findings & Corrections
 
-#### 3.1 New Migration: `supabase/migrations/20261107233000_phase2_rls_remediation.sql`
-- Contains safe, non-breaking, idempotent DDL and RLS policies targeting the live development database.
-- Drops over-permissive `USING (true)` policies on `listing_subscriptions`, `venue_bookings`, and `trial_reminders`.
-- Defines zero-PII security definer RPCs:
-  - `get_booked_slots_for_venue(p_venue_id text, p_slot_date text)`: Returns `TABLE (slot_time text)`.
-  - `get_venue_booking_voucher(p_booking_ref text)`: Returns booking voucher for single ref.
-  - `get_listing_subscription_by_order(p_order_id text)`: Returns subscription receipt for single order.
-- Enforces `FORCE ROW LEVEL SECURITY` on all 4 sensitive tables.
+#### 3.1 SEC-014: Whole-Row PII Exposure in Receipt RPCs
+- **Defect in PR #173 (`20261107233000`)**:
+  `get_listing_subscription_by_order(text)` and `get_venue_booking_voucher(text)` were declared returning `SETOF public.listing_subscriptions` and `SETOF public.venue_bookings` via `SELECT *`.
+- **Vulnerability**: If an order ID or booking reference was guessed or shared, an anonymous caller could retrieve the customer's full legal name, phone number, email address, payment gateway ID, and billing amount.
+- **Correction in `20261108040000`**:
+  Replaced whole-row returns with minimal projections returning only order confirmation status, listing metadata, and masked names/emails. Sensitive gateway keys and raw telephone numbers are completely omitted.
 
-#### 3.2 Patched Migration: `supabase/migrations/20261107120000_auth_and_user_profiles_hardening.sql`
-- Removed `'admin'` from `handle_new_user()` role whitelist.
-- Pinned `SET search_path = public, pg_temp` on `handle_new_user()`, `is_admin()`, and `has_role()`.
-- Replaced `profiles_select_public` with `profiles_select_own_or_admin` (`auth.uid() = id or is_admin()`).
-- Created `public.public_profiles` view exposing only safe public discovery fields (`display_name`, `avatar_url`, `city`, `role`, `preferred_sports`, `bio`, `is_verified`).
+#### 3.2 SEC-003: Unsafe Authenticated UPDATE on `trial_reminders`
+- **Defect on Live Database**: `trial_reminders_authenticated_update` had `USING (true)` and `WITH CHECK (true)`. Any authenticated user could overwrite or delete any other athlete's trial reminder preferences.
+- **Correction in `20261108040000`**:
+  Replaced with `trial_reminders_owner_update` enforcing `auth.uid() IS NOT NULL AND auth.uid() = user_id`.
 
-#### 3.3 Patched Migration: `supabase/migrations/20261106150000_create_live_matches_and_host_payouts.sql`
-- Replaced permissive policies on `host_payout_accounts` with `USING (auth.uid()::text = host_id)`.
-- Replaced permissive policies on `host_settlement_payouts` with `USING (auth.uid()::text = host_id)`.
-- Restricted `community_live_matches` INSERT and UPDATE to `TO authenticated`.
+#### 3.3 SEC-015: Tables with RLS Enabled but Zero Policies
+- **Defect on Live Database**: `public.pickup_game_participants` and `public.pickup_game_rsvp_rate_limits` had RLS enabled without any explicit policies.
+- **Correction in `20261108040000`**:
+  - `pickup_game_participants`: Explicitly denied direct anonymous access; granted host viewing for their games; shielded cancellation tokens from direct querying.
+  - `pickup_game_rsvp_rate_limits`: Locked down as strictly internal-only (`USING (false)` for anon and authenticated).
 
-#### 3.4 Patched Migration: `supabase/migrations/20261107180000_pillar1_unified_relational_schema.sql`
-- Restricted `trial_applications` SELECT to `auth.uid() = user_id`.
-- Restricted `academy_enquiries` SELECT to `auth.uid() = user_id`.
-- Reset synthetic coach column defaults to honest baselines (`0.00` rating, `0` reviews, `NULL` badge).
-
-#### 3.5 Client Service Hardening: `src/shared/payments/paymentService.ts`
-- Updated `fetchBookedVenueSlots(venueId, slotDate)` to prioritize calling `get_booked_slots_for_venue` RPC.
-- Retains fallback to table query and local storage caching, guaranteeing zero disruption if offline or in migration transit.
+#### 3.4 SEC-016: Host Functions Public Execution Privileges
+- **Defect on Live Database**: 16 `SECURITY DEFINER` functions granted EXECUTE to `anon`.
+- **Correction in `20261108040000`**:
+  Revoked `EXECUTE` from `anon` and `PUBLIC` on all host management procedures (`cancel_pickup_game_as_host`, `complete_pickup_game_as_host`, `reopen_pickup_game_as_host`, `update_pickup_game_capacity`, `update_pickup_game_details`, `reschedule_pickup_game`, `get_host_pickup_games`, `approve_pickup_game_whatsapp_invite`) and moderation procedures (`admin_moderate_pickup_game`).
 
 ---
 
 ### 4. Verification and Regression Testing
 
-#### 4.1 New Test Suite: `src/integrations/supabase/database-security-phase2.test.ts`
-- **SEC-TEST-P2-01:** Owner read isolation for `listing_subscriptions`.
-- **SEC-TEST-P2-02:** Zero-PII contract for `get_booked_slots_for_venue` RPC (validating only slot times are returned without customer name, phone, or financial figures).
-- **SEC-TEST-P2-03:** Alert registration permission (public INSERT allowed, public SELECT blocked).
-- **SEC-TEST-P2-04:** Privilege escalation rejection (user metadata with `'admin'` defaults to `'athlete'`).
-- **SEC-TEST-P2-05:** Profile PII isolation (email and phone restricted to account owner).
-- **SEC-TEST-P2-06:** Host payout isolation (bank credentials inaccessible to third parties).
-- **SEC-TEST-P2-07:** Match scoreboard integrity (anonymous callers blocked from direct updates).
-- **SEC-TEST-P2-08:** Applicant dossier isolation for trial applications and academy enquiries.
-- **SEC-TEST-P2-09:** Coach default integrity (no unearned ratings or badges).
+- **Regression Test Suites**:
+  - `database-security-phase2.test.ts` (9 tests passed).
+  - `database-security-phase2-remediation.test.ts` (14 tests passed).
+- **Test Invariants Verified**:
+  - Anonymous denial on `listing_subscriptions`, `venue_bookings`, and `trial_reminders`.
+  - Zero-PII projection verification for `get_listing_subscription_by_order` and `get_venue_booking_voucher`.
+  - Cross-user update prevention on `trial_reminders`.
+  - Rate-limit table isolation.
+  - Revocation of anonymous execution on host functions.
+  - Public sports catalogue accessibility preserved.
 
-#### 4.2 Complete Quality Gate Verification
-- `npm test`: **76 test files passed, 510 tests passed, 0 failures**.
-- `npx tsc -b`: **0 errors**.
-- `npm run lint`: **0 errors**.
+---
+
+### 5. Deployment Safety & Non-Destructive Guarantee
+
+- **Zero live migrations applied.**
+- **Zero destructive SQL commands executed.**
+- **Production website (`https://khelgrid.com/`) completely untouched.**
+- Both migrations (`20261107233000` and `20261108040000`) are fully idempotent, forward-only, and ready for deployment in a coordinated maintenance window.
