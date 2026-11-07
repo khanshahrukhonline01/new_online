@@ -92,6 +92,7 @@ export default function App() {
   const [unreadNotifCount, setUnreadNotifCount] = useState(3)
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [consentModalOpen, setConsentModalOpen] = useState(false)
+  const [consentInitialTab, setConsentInitialTab] = useState<'sports_pass' | 'rules_privacy'>('sports_pass')
   const [goProModalOpen, setGoProModalOpen] = useState(false)
   const menuToggleRef = useRef<HTMLButtonElement>(null)
 
@@ -462,9 +463,20 @@ export default function App() {
         <a href="/correction-policy" onClick={event => navigate(event, '/correction-policy')}>Corrections</a>
         <a href="https://www.khelgrid.com/sitemap.xml" target="_blank" rel="noopener noreferrer">Sitemap</a>
         <a
+          href="#sports-pass"
+          onClick={event => {
+            event.preventDefault()
+            setConsentInitialTab('sports_pass')
+            setConsentModalOpen(true)
+          }}
+        >
+          Sports Pass &amp; Interests
+        </a>
+        <a
           href="/cookies"
           onClick={event => {
             event.preventDefault()
+            setConsentInitialTab('rules_privacy')
             setConsentModalOpen(true)
           }}
         >
@@ -509,6 +521,7 @@ export default function App() {
       )}
       <UserConsentModal
         forceOpen={consentModalOpen}
+        initialTab={consentInitialTab}
         onClose={() => setConsentModalOpen(false)}
         onNavigate={navigate}
       />
