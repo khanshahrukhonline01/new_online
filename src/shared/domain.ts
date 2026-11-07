@@ -103,6 +103,7 @@ export interface Coach {
   id: string
   slug: string
   display_name: string
+  name?: string
   bio: string | null
   city: string
   state: string | null
@@ -110,21 +111,87 @@ export interface Coach {
   public_contact_url: string | null
   verification_status: 'unverified' | 'pending_review' | 'verified' | 'rejected'
   sports?: Sport[]
+  sport?: string
+  sportCategory?: string
+  certification?: string
+  credential_authority?: string
+  credentialAuthority?: string
+  authority_label?: string
+  authorityLabel?: string
+  experience_years?: number
+  experienceYears?: number
+  academy_affiliation?: string
+  academyAffiliation?: string
+  monthly_fee?: string
+  monthlyFee?: string
+  fee_range_category?: string
+  feeRangeCategory?: string
+  student_track_record?: string
+  studentTrackRecord?: string
+  specialties?: string[]
+  languages?: string[]
+  rating?: number
+  review_count?: number
+  reviewCount?: number
+  verified_badge?: string
+  verifiedBadge?: string
+  available_one_on_one?: boolean
+  availableForOneOnOne?: boolean
+  available_batches?: boolean
+  availableForBatches?: boolean
 }
 
 export interface EventItem {
   id: string
   slug: string
   title: string
+  hindi_title?: string
+  hindiTitle?: string
+  sport?: string
+  category?: string
+  sanctioning_body?: string
+  sanctioningBody?: string
+  edition?: string
   event_type: 'tournament' | 'camp' | 'league' | 'workshop' | 'meetup' | 'other'
   organizer_name: string | null
+  organizer?: string
   city: string | null
+  state?: string
   venue_name: string | null
+  venue?: string
   starts_at: string
+  startDate?: string
   ends_at: string | null
+  endDate?: string
+  registration_deadline?: string
+  registrationDeadline?: string
   source_url: string | null
   source_name: string | null
   verification_status: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+  age_categories?: string[]
+  ageCategories?: string[]
+  gender?: string
+  prize_pool?: string
+  prizePool?: string
+  entry_fee?: string
+  entryFee?: string
+  team_or_individual?: string
+  teamOrIndividual?: string
+  official_notice_url?: string
+  officialNoticeUrl?: string
+  rulebook_pdf_url?: string
+  rulebookPdfUrl?: string
+  registration_url?: string
+  registrationUrl?: string
+  contact_phone?: string
+  contactPhone?: string
+  contact_email?: string
+  contactEmail?: string
+  is_featured?: boolean
+  featured?: boolean
+  qualification_requirements?: string[]
+  qualificationRequirements?: string[]
+  description?: string
 }
 
 export interface VideoClip {

@@ -57,6 +57,7 @@ const CoachesPage = lazy(() => import('./modules/coaches/CoachesPage'))
 const EventsPage = lazy(() => import('./modules/events/EventsPage'))
 const ScoutPortalPage = lazy(() => import('./modules/scouting/ScoutPortalPage'))
 const AthleteVerificationPage = lazy(() => import('./modules/verification/AthleteVerificationPage'))
+const AdminModerationPage = lazy(() => import('./modules/admin/AdminModerationPage'))
 
 // Code-split heavyweight modal dialogs
 const CommunityListingModal = lazy(() => import('./shared/components/CommunityListingModal'))
@@ -229,6 +230,7 @@ export default function App() {
       else if (match.canonicalPath === '/events') page = <EventsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/scout-portal') page = <ScoutPortalPage onNavigate={navigate} />
       else if (match.canonicalPath === '/verification') page = <AthleteVerificationPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/admin' || match.canonicalPath === '/moderation') page = <AdminModerationPage onNavigate={navigate} />
       else if (match.canonicalPath === '/calendar') page = <SportsCalendarPage onNavigate={navigate} />
       else if (match.canonicalPath === '/tools' || match.canonicalPath === '/sports-tools' || match.canonicalPath.startsWith('/tools/')) page = <SportsToolsPage onNavigate={navigate} initialToolSlug={match.canonicalPath.startsWith('/tools/') ? match.canonicalPath.slice('/tools/'.length) : undefined} />
       else if (match.canonicalPath === '/live' || match.canonicalPath === '/live-scores') page = <LiveScoresPage onNavigate={navigate} />
@@ -397,6 +399,20 @@ export default function App() {
                 >
                   <SiteIcon name="building" size={15} />
                   <span>Host &amp; Partner Dashboard</span>
+                </a>
+              )}
+              {authUser.role === 'admin' && (
+                <a
+                  href="/admin"
+                  className="header-user-dropdown-item"
+                  role="menuitem"
+                  onClick={e => {
+                    setUserMenuOpen(false)
+                    navigate(e, '/admin')
+                  }}
+                >
+                  <SiteIcon name="shield-check" size={15} />
+                  <span>Admin Moderation Desk</span>
                 </a>
               )}
               <a

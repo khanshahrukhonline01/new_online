@@ -1,5 +1,6 @@
-import { useState, useMemo, type MouseEvent } from 'react'
+import { useState, useMemo, useEffect, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { getEvents } from '../../integrations/supabase/public-client'
 import {
   BASELINE_EVENTS,
   EVENT_SPORTS_FILTER,
@@ -19,7 +20,8 @@ export interface EventsPageProps {
 }
 
 export function EventsPage({ onNavigate }: EventsPageProps) {
-  const [events] = useState<SportEvent[]>(BASELINE_EVENTS)
+  const [events, setEvents] = useState<SportEvent[]>(BASELINE_EVENTS)
+  const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSport, setSelectedSport] = useState('All Sports')
   const [selectedAge, setSelectedAge] = useState('all')
@@ -28,6 +30,52 @@ export function EventsPage({ onNavigate }: EventsPageProps) {
   const [selectedEventForModal, setSelectedEventForModal] = useState<SportEvent | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    getEvents().then(res => {
+      if (!active) return
+      if (res.status === 'ready' && res.data.length > 0) {
+        const mapped: SportEvent[] = res.data.map(evt => ({
+          id: evt.id,
+          slug: evt.slug,
+          title: evt.title,
+          hindiTitle: evt.hindi_title || evt.hindiTitle || evt.title,
+          sport: evt.sport || 'Multi-Sport',
+          category: (evt.category || 'championship') as SportEvent['category'],
+          sanctioningBody: (evt.sanctioning_body || evt.sanctioningBody || 'State Olympic Association') as SportEvent['sanctioningBody'],
+          edition: evt.edition || 'Annual Edition',
+          startDate: evt.starts_at ? evt.starts_at.slice(0, 10) : evt.startDate || '2026-12-01',
+          endDate: evt.ends_at ? evt.ends_at.slice(0, 10) : evt.endDate || '2026-12-05',
+          registrationDeadline: evt.registration_deadline || evt.registrationDeadline || '2026-11-25',
+          city: evt.city || 'India',
+          state: evt.state || 'All India',
+          venue: evt.venue_name || evt.venue || 'Sports Complex',
+          ageCategories: (evt.age_categories || evt.ageCategories || ['Open']) as SportEvent['ageCategories'],
+          gender: (evt.gender || 'Boys & Girls') as SportEvent['gender'],
+          prizePool: evt.prize_pool || evt.prizePool || 'Medals & Certificates',
+          entryFee: evt.entry_fee || evt.entryFee || 'Free',
+          teamOrIndividual: (evt.team_or_individual || evt.teamOrIndividual || 'Individual & Team') as SportEvent['teamOrIndividual'],
+          officialNoticeUrl: evt.official_notice_url || evt.source_url || 'https://kheloindia.gov.in/',
+          rulebookPdfUrl: evt.rulebook_pdf_url || evt.rulebookPdfUrl,
+          registrationUrl: evt.registration_url || evt.source_url || 'https://kheloindia.gov.in/',
+          organizer: evt.organizer_name || evt.organizer || evt.source_name || 'Organizing Committee',
+          contactPhone: evt.contact_phone || evt.contactPhone || '+91 11 2436 8393',
+          contactEmail: evt.contact_email || evt.contactEmail || 'contact@khelgrid.com',
+          verifiedBadge: true,
+          featured: evt.is_featured ?? evt.featured ?? false,
+          description: evt.description || `${evt.title} - Official sports tournament listing on KhelGrid.`,
+          qualificationRequirements: evt.qualification_requirements || evt.qualificationRequirements || ['Valid athlete identification', 'Age verification clearance'],
+        }))
+        setEvents(mapped)
+      }
+      setLoading(false)
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
@@ -289,7 +337,13 @@ export function EventsPage({ onNavigate }: EventsPageProps) {
       {/* Events Results Header */}
       <div className="events-results-bar">
         <span className="results-count">
-          Showing <strong>{filteredEvents.length}</strong> sanctioned {filteredEvents.length === 1 ? 'championship' : 'championships'}
+          {loading ? (
+            <span>Updating championship calendar…</span>
+          ) : (
+            <>
+              Showing <strong>{filteredEvents.length}</strong> sanctioned {filteredEvents.length === 1 ? 'championship' : 'championships'}
+            </>
+          )}
         </span>
         <div className="quick-nav-links">
           <a

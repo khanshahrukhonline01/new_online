@@ -1,7 +1,12 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import type { AthleteProfile, VideoClip } from '../../shared/domain'
-import { publishAthleteProfile, normalizeUsername } from '../../integrations/supabase/athlete-profile-client'
+import {
+  publishAthleteProfile,
+  normalizeUsername,
+  getAthleteProfileByUsername,
+} from '../../integrations/supabase/athlete-profile-client'
+import { getStoredUser, type KhelGridUser } from '../../integrations/supabase/auth-client'
 import { PlayerCard } from '../athlete-profile/PlayerCard'
 import './sports-cv.css'
 
@@ -57,11 +62,65 @@ const initialCv: Cv = {
 }
 
 export default function SportsCvWizard() {
+  const [currentUser] = useState<KhelGridUser | null>(() => getStoredUser())
   const [cv, setCv] = useState<Cv>(initialCv)
   const [savedForPrint, setSavedForPrint] = useState(false)
   const [publishedProfile, setPublishedProfile] = useState<AthleteProfile | null>(null)
   const [publishMessage, setPublishMessage] = useState<string | null>(null)
   const [isPublishing, setIsPublishing] = useState(false)
+  const [hasExistingProfile, setHasExistingProfile] = useState(false)
+
+  // Auto-sync with authenticated athlete profile
+  useEffect(() => {
+    if (currentUser) {
+      const rawName = currentUser.fullName || currentUser.name || ''
+      setCv(prev => ({
+        ...prev,
+        fullName: prev.fullName || rawName,
+        email: prev.email || currentUser.email || '',
+        username: prev.username || (rawName ? normalizeUsername(rawName) : ''),
+      }))
+
+      if (rawName) {
+        const handle = normalizeUsername(rawName)
+        void getAthleteProfileByUsername(handle).then((existing: AthleteProfile | null) => {
+          if (existing) {
+            setPublishedProfile(existing)
+            setHasExistingProfile(true)
+          }
+        })
+      }
+    }
+  }, [currentUser])
+
+  const handleLoadExistingProfile = () => {
+    if (!publishedProfile) return
+    setCv({
+      username: publishedProfile.username,
+      fullName: publishedProfile.fullName,
+      sport: publishedProfile.sport,
+      city: publishedProfile.city,
+      state: publishedProfile.state || '',
+      dateOfBirth: publishedProfile.dateOfBirth || '',
+      email: publishedProfile.email || '',
+      phone: publishedProfile.phone || '',
+      playingPosition: publishedProfile.playingPosition || '',
+      teamOrAcademy: publishedProfile.teamOrAcademy || '',
+      coach: publishedProfile.coach || '',
+      experience: publishedProfile.experienceYears || '',
+      primaryFootOrHand: publishedProfile.primaryFootOrHand || '',
+      heightCm: publishedProfile.heightCm ? String(publishedProfile.heightCm) : '',
+      weightKg: publishedProfile.weightKg ? String(publishedProfile.weightKg) : '',
+      goals: publishedProfile.summary || '',
+      achievements:
+        publishedProfile.achievements && publishedProfile.achievements.length > 0
+          ? publishedProfile.achievements
+          : [{ year: '', event: '', result: '' }],
+      videoClips: publishedProfile.videoClips || [],
+      fitnessBenchmarks: publishedProfile.fitnessBenchmarks || {},
+    })
+    setPublishMessage(`Loaded profile for @${publishedProfile.username}. You can make edits and re-publish.`)
+  }
 
   const update = (field: keyof Omit<Cv, 'achievements' | 'videoClips' | 'fitnessBenchmarks'>, value: string) => {
     setCv(current => ({ ...current, [field]: value }))
@@ -119,6 +178,7 @@ export default function SportsCvWizard() {
     const handle = normalizeUsername(cv.username || cv.fullName)
 
     const res = await publishAthleteProfile({
+      userId: currentUser?.id,
       username: handle,
       fullName: cv.fullName,
       sport: cv.sport,
@@ -180,6 +240,17 @@ export default function SportsCvWizard() {
             <a className="primary-link" href={`/u/@${publishedProfile.username}`} target="_blank" rel="noreferrer">
               <SiteIcon name="external-link" size={16} /> View Live Profile
             </a>
+            {hasExistingProfile && (
+              <button
+                type="button"
+                className="secondary-link"
+                onClick={handleLoadExistingProfile}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              >
+                <SiteIcon name="refresh" size={15} />
+                <span>Load Existing Data into Form</span>
+              </button>
+            )}
           </div>
         </div>
       )}

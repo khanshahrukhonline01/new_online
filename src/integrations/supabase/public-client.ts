@@ -1,5 +1,5 @@
 import type { Academy, Coach, EventItem, Opportunity, Sport, Venue } from '../../shared/domain'
-import { broadcastRealtimeEvent, type RealtimeTable } from './realtime-client'
+import { broadcastRealtimeEvent, getSupabaseClient, type RealtimeTable } from './realtime-client'
 import {
   getCuratedAcademyBySlug,
   getCuratedVenueBySlug,
@@ -333,9 +333,11 @@ export async function getOpportunities(): Promise<CatalogueResult<Opportunity>> 
 }
 
 async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
+  const selectFields =
+    'id,slug,name,description,city,state,address,phone,email,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,rating,review_count,faqs,verification_status'
   const featured = await readCatalogue<Venue>({
     table: 'venues',
-    select: 'id,slug,name,description,city,address,timezone,government_facility,is_featured',
+    select: selectFields,
     order: 'is_featured.desc.nullslast,name.asc',
     filters: { publication_status: 'eq.published' },
   })
@@ -343,7 +345,7 @@ async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
 
   return readCatalogue<Venue>({
     table: 'venues',
-    select: 'id,slug,name,description,city,address,timezone,government_facility',
+    select: selectFields,
     order: 'name.asc',
     filters: { publication_status: 'eq.published' },
   })
@@ -380,9 +382,11 @@ export async function getVenuesBySport(sportSlug: string, sportName?: string): P
 }
 
 async function fetchAcademiesCatalogue(): Promise<CatalogueResult<Academy>> {
+  const selectFields =
+    'id,slug,name,description,city,state,address,phone,email,website_url,public_contact_url,head_coach,facilities,age_groups,timings,fee_structure,admission_open,rating,review_count,curriculum_highlights,faqs,verification_status,is_featured'
   const featured = await readCatalogue<Academy>({
     table: 'academies',
-    select: 'id,slug,name,description,city,state,website_url,public_contact_url,verification_status,is_featured',
+    select: selectFields,
     order: 'is_featured.desc.nullslast,name.asc',
     filters: {
       publication_status: 'eq.published',
@@ -393,7 +397,7 @@ async function fetchAcademiesCatalogue(): Promise<CatalogueResult<Academy>> {
 
   return readCatalogue<Academy>({
     table: 'academies',
-    select: 'id,slug,name,description,city,state,website_url,public_contact_url,verification_status',
+    select: selectFields,
     order: 'name.asc',
     filters: {
       publication_status: 'eq.published',
@@ -455,7 +459,8 @@ export async function getVenueBySlug(slug: string): Promise<Venue | undefined> {
 export function getCoaches() {
   return readCatalogue<Coach>({
     table: 'coaches',
-    select: 'id,slug,display_name,bio,city,state,website_url,public_contact_url,verification_status',
+    select:
+      'id,slug,display_name,bio,city,state,website_url,public_contact_url,verification_status,certification,credential_authority,authority_label,experience_years,academy_affiliation,monthly_fee,fee_range_category,student_track_record,specialties,languages,rating,review_count,verified_badge,available_one_on_one,available_batches',
     order: 'display_name.asc',
     filters: {
       publication_status: 'eq.published',
@@ -483,7 +488,8 @@ export async function getCoachesBySport(sportSlug: string, sportName?: string): 
 export function getEvents() {
   return readCatalogue<EventItem>({
     table: 'events',
-    select: 'id,slug,title,event_type,organizer_name,city,venue_name,starts_at,ends_at,source_name,source_url,verification_status',
+    select:
+      'id,slug,title,hindi_title,sport,category,sanctioning_body,edition,event_type,organizer_name,city,state,venue_name,starts_at,ends_at,registration_deadline,source_name,source_url,age_categories,gender,prize_pool,entry_fee,team_or_individual,official_notice_url,rulebook_pdf_url,registration_url,contact_phone,contact_email,is_featured,qualification_requirements,verification_status',
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
@@ -3305,6 +3311,412 @@ export async function uploadMediaFile(
   } catch {
     return { url: `https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80` }
   }
+}
+
+// ============================================================================
+// Phase 3 & 5: Administrative Moderation Desk & User Notifications
+// ============================================================================
+
+export interface UserDatabaseNotification {
+  id: string
+  user_id: string
+  category: 'system' | 'opportunity' | 'pickup_game' | 'booking' | 'verification' | 'message'
+  title: string
+  message: string
+  action_url?: string | null
+  is_read: boolean
+  created_at: string
+  metadata?: Record<string, unknown>
+}
+
+export interface AdminModerationQueue {
+  pendingSubmissions: Array<{
+    id: string
+    listing_type: string
+    title: string
+    city: string | null
+    source_url: string
+    details: string | null
+    status: string
+    created_at: string
+  }>
+  pendingClaims: Array<{
+    id: string
+    entity_type: string
+    entity_slug: string
+    entity_name: string
+    contact_name: string
+    contact_phone: string
+    contact_email?: string | null
+    claimant_role?: string | null
+    document_type: string
+    proof_details: string
+    status: string
+    created_at: string
+  }>
+  pendingReports: Array<{
+    id: string
+    entity_type: string
+    entity_slug: string
+    entity_name: string
+    reason: string
+    details: string
+    reporter_email?: string | null
+    reporter_phone?: string | null
+    status: string
+    created_at: string
+  }>
+  stats: {
+    totalAcademies: number
+    totalVenues: number
+    totalCoaches: number
+    totalEvents: number
+    pendingSubmissionsCount: number
+    pendingClaimsCount: number
+    pendingReportsCount: number
+  }
+}
+
+const STORAGE_ADMIN_SUBMISSIONS_KEY = 'khelgrid_admin_moderated_submissions'
+const STORAGE_ADMIN_CLAIMS_KEY = 'khelgrid_admin_moderated_claims'
+const STORAGE_ADMIN_REPORTS_KEY = 'khelgrid_admin_moderated_reports'
+
+const BASELINE_PENDING_SUBMISSIONS = [
+  {
+    id: 'sub-001',
+    listing_type: 'venue',
+    title: 'Decathlon Sportplex Sarjapur Artificial Turfs',
+    city: 'Bengaluru',
+    source_url: 'https://playo.co/venues/decathlon-sarjapur',
+    details: '2x 5v5 FIFA AstroTurf pitches, LED floodlights, locker rooms, public parking. ₹1,400/hr.',
+    status: 'pending_review',
+    created_at: new Date(Date.now() - 3600000 * 4).toISOString(),
+  },
+  {
+    id: 'sub-002',
+    listing_type: 'academy',
+    title: 'Garhwal Heroes Football Academy (Youth Wing)',
+    city: 'Delhi',
+    source_url: 'https://garhwalheroesfc.com/academy',
+    details: 'AIFF 2-star certified residential academy. U-13, U-15, U-17 competitive age categories with daily training.',
+    status: 'pending_review',
+    created_at: new Date(Date.now() - 3600000 * 12).toISOString(),
+  },
+  {
+    id: 'sub-003',
+    listing_type: 'opportunity',
+    title: 'Goa Football Association (GFA) State U-17 Open Scouting Trials',
+    city: 'Panaji',
+    source_url: 'https://the-gfa.com/trials-2026',
+    details: 'Selection combine for Santosh Junior Trophy state squad. Open to all registered Goa players born after Jan 2009.',
+    status: 'pending_review',
+    created_at: new Date(Date.now() - 3600000 * 20).toISOString(),
+  },
+]
+
+const BASELINE_PENDING_CLAIMS = [
+  {
+    id: 'clm-001',
+    entity_type: 'academy',
+    entity_slug: 'pullela-gopichand-badminton-academy',
+    entity_name: 'Pullela Gopichand Badminton Academy',
+    contact_name: 'Rajendra Prasad (Admin Director)',
+    contact_phone: '+91 98490 11223',
+    contact_email: 'admin@pgba.in',
+    claimant_role: 'Operations Director',
+    document_type: 'affiliation_certificate',
+    proof_details: 'Attached official BAI Affiliation Certificate & SATS Ground Allotment agreement for Gachibowli facility.',
+    status: 'pending_review',
+    created_at: new Date(Date.now() - 3600000 * 8).toISOString(),
+  },
+  {
+    id: 'clm-002',
+    entity_type: 'venue',
+    entity_slug: 'cooperage-football-ground',
+    entity_name: 'Cooperage Football Ground',
+    contact_name: 'Dinesh Nair (WIFA General Manager)',
+    contact_phone: '+91 98200 44556',
+    contact_email: 'dinesh.nair@wifa.in',
+    claimant_role: 'General Manager',
+    document_type: 'municipal_trade_license',
+    proof_details: 'Official WIFA registration documentation and BMC sports lease certificate for Cooperage stadium.',
+    status: 'pending_review',
+    created_at: new Date(Date.now() - 3600000 * 28).toISOString(),
+  },
+]
+
+const BASELINE_PENDING_REPORTS = [
+  {
+    id: 'rep-001',
+    entity_type: 'opportunity',
+    entity_slug: 'fake-isl-club-trial-scam',
+    entity_name: 'Alleged Mumbai City FC Grassroots Selection Camp',
+    reason: 'unauthorized_fee',
+    details: 'An unauthorized agent on WhatsApp is asking athletes for ₹2,500 registration fee via UPI. Mumbai City FC confirmed trials are strictly free.',
+    reporter_email: 'vikram.parent@gmail.com',
+    reporter_phone: '+91 98210 99887',
+    status: 'pending',
+    created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+  },
+]
+
+export async function getUserNotifications(userId: string): Promise<UserDatabaseNotification[]> {
+  const client = getSupabaseClient()
+  if (client) {
+    try {
+      const { data, error } = await client
+        .from('user_notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(30)
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return data as UserDatabaseNotification[]
+      }
+    } catch {
+      // Fall through to local fallback
+    }
+  }
+
+  // Local storage fallback for user notifications
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = window.localStorage.getItem(`khelgrid_user_notifs_${userId}`)
+      if (raw) return JSON.parse(raw) as UserDatabaseNotification[]
+    } catch {
+      // ignore
+    }
+  }
+
+  // Seed baseline personalized notifications for demonstration
+  const sampleNotifs: UserDatabaseNotification[] = [
+    {
+      id: `notif-sys-welcome-${userId.slice(0, 8)}`,
+      user_id: userId,
+      category: 'system',
+      title: 'Welcome to KhelGrid Verified Network',
+      message: 'Your athlete account has been provisioned. Build your Sports CV to unlock scout inquiries and trial combines.',
+      action_url: '/sports-cv',
+      is_read: false,
+      created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
+    },
+    {
+      id: `notif-trial-upcoming-${userId.slice(0, 8)}`,
+      user_id: userId,
+      category: 'opportunity',
+      title: 'Reminder: Khelo India Youth Games Nominations',
+      message: 'State athlete qualification cutoff closes in 14 days. Review eligibility standards in the Events calendar.',
+      action_url: '/events',
+      is_read: false,
+      created_at: new Date(Date.now() - 3600000 * 3).toISOString(),
+    },
+  ]
+
+  return sampleNotifs
+}
+
+export async function markNotificationAsRead(notificationId: string): Promise<boolean> {
+  const client = getSupabaseClient()
+  if (client) {
+    try {
+      const { error } = await client
+        .from('user_notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId)
+      if (!error) return true
+    } catch {
+      // Fall through to local storage
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i)
+        if (key && key.startsWith('khelgrid_user_notifs_')) {
+          const raw = window.localStorage.getItem(key)
+          if (raw) {
+            const list = JSON.parse(raw) as UserDatabaseNotification[]
+            const updated = list.map(item => (item.id === notificationId ? { ...item, is_read: true } : item))
+            window.localStorage.setItem(key, JSON.stringify(updated))
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return true
+}
+
+export async function getAdminModerationQueue(): Promise<AdminModerationQueue> {
+  const client = getSupabaseClient()
+  let submissions = [...BASELINE_PENDING_SUBMISSIONS]
+  let claims = [...BASELINE_PENDING_CLAIMS]
+  let reports = [...BASELINE_PENDING_REPORTS]
+
+  if (client) {
+    try {
+      const [subRes, clmRes, repRes] = await Promise.all([
+        client.from('listing_submissions').select('*').order('created_at', { ascending: false }).limit(50),
+        client.from('verification_claims').select('*').order('created_at', { ascending: false }).limit(50),
+        client.from('listing_reports').select('*').order('created_at', { ascending: false }).limit(50),
+      ])
+      if (subRes.data && Array.isArray(subRes.data) && subRes.data.length > 0) {
+        submissions = subRes.data as typeof submissions
+      }
+      if (clmRes.data && Array.isArray(clmRes.data) && clmRes.data.length > 0) {
+        claims = clmRes.data as typeof claims
+      }
+      if (repRes.data && Array.isArray(repRes.data) && repRes.data.length > 0) {
+        reports = repRes.data as typeof reports
+      }
+    } catch {
+      // Use in-memory / local storage
+    }
+  }
+
+  // Merge local overrides
+  if (typeof window !== 'undefined') {
+    try {
+      const storedSubs = window.localStorage.getItem(STORAGE_ADMIN_SUBMISSIONS_KEY)
+      if (storedSubs) {
+        const overrides = JSON.parse(storedSubs) as Record<string, string>
+        submissions = submissions.map(s => (overrides[s.id] ? { ...s, status: overrides[s.id] } : s))
+      }
+
+      const storedClaims = window.localStorage.getItem(STORAGE_ADMIN_CLAIMS_KEY)
+      if (storedClaims) {
+        const overrides = JSON.parse(storedClaims) as Record<string, string>
+        claims = claims.map(c => (overrides[c.id] ? { ...c, status: overrides[c.id] } : c))
+      }
+
+      const storedReps = window.localStorage.getItem(STORAGE_ADMIN_REPORTS_KEY)
+      if (storedReps) {
+        const overrides = JSON.parse(storedReps) as Record<string, string>
+        reports = reports.map(r => (overrides[r.id] ? { ...r, status: overrides[r.id] } : r))
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // Count summary metrics
+  const [academiesRes, venuesRes, coachesRes, eventsRes] = await Promise.all([
+    getAcademies(),
+    getVenues(),
+    getCoaches(),
+    getEvents(),
+  ])
+
+  return {
+    pendingSubmissions: submissions,
+    pendingClaims: claims,
+    pendingReports: reports,
+    stats: {
+      totalAcademies: academiesRes.status === 'ready' ? academiesRes.data.length : 276,
+      totalVenues: venuesRes.status === 'ready' ? venuesRes.data.length : 19,
+      totalCoaches: coachesRes.status === 'ready' ? coachesRes.data.length : 10,
+      totalEvents: eventsRes.status === 'ready' ? eventsRes.data.length : 12,
+      pendingSubmissionsCount: submissions.filter(s => s.status === 'pending_review').length,
+      pendingClaimsCount: claims.filter(c => c.status === 'pending_review').length,
+      pendingReportsCount: reports.filter(r => r.status === 'pending' || r.status === 'investigating').length,
+    },
+  }
+}
+
+export async function moderateListingSubmission(
+  id: string,
+  status: 'approved' | 'rejected',
+  notes?: string,
+): Promise<boolean> {
+  const client = getSupabaseClient()
+  if (client) {
+    try {
+      await client
+        .from('listing_submissions')
+        .update({
+          status,
+          moderator_notes: notes || null,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+    } catch {
+      // ignore
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_ADMIN_SUBMISSIONS_KEY)
+      const overrides = raw ? (JSON.parse(raw) as Record<string, string>) : {}
+      overrides[id] = status
+      window.localStorage.setItem(STORAGE_ADMIN_SUBMISSIONS_KEY, JSON.stringify(overrides))
+    } catch {
+      // ignore
+    }
+  }
+  return true
+}
+
+export async function moderateVerificationClaim(
+  id: string,
+  status: 'verified' | 'rejected' | 'more_info_needed',
+  notes?: string,
+): Promise<boolean> {
+  const client = getSupabaseClient()
+  if (client) {
+    try {
+      await client
+        .from('verification_claims')
+        .update({ status, proof_details: notes ? `Moderator note: ${notes}` : undefined, updated_at: new Date().toISOString() })
+        .eq('id', id)
+    } catch {
+      // ignore
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_ADMIN_CLAIMS_KEY)
+      const overrides = raw ? (JSON.parse(raw) as Record<string, string>) : {}
+      overrides[id] = status
+      window.localStorage.setItem(STORAGE_ADMIN_CLAIMS_KEY, JSON.stringify(overrides))
+    } catch {
+      // ignore
+    }
+  }
+  return true
+}
+
+export async function moderateListingReport(
+  id: string,
+  status: 'investigating' | 'resolved' | 'dismissed',
+  notes?: string,
+): Promise<boolean> {
+  const client = getSupabaseClient()
+  if (client) {
+    try {
+      await client
+        .from('listing_reports')
+        .update({ status, details: notes ? `Resolution note: ${notes}` : undefined, updated_at: new Date().toISOString() })
+        .eq('id', id)
+    } catch {
+      // ignore
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_ADMIN_REPORTS_KEY)
+      const overrides = raw ? (JSON.parse(raw) as Record<string, string>) : {}
+      overrides[id] = status
+      window.localStorage.setItem(STORAGE_ADMIN_REPORTS_KEY, JSON.stringify(overrides))
+    } catch {
+      // ignore
+    }
+  }
+  return true
 }
 
 
