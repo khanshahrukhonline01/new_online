@@ -675,3 +675,64 @@ html.dark .user-demo-btn {
 html.dark .user-dash-breadcrumb .current {
   color: #f1f5f9;
 }
+
+/* Benchmarks Panel in Player Card Tab */
+.user-benchmarks-panel {
+  margin-top: 2rem;
+  background: var(--surface-bg, #0b0f17);
+  border: 1px solid var(--border-color, #1f2937);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+}
+
+.benchmarks-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.benchmarks-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem;
+}
+
+.benchmark-stat-box {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid var(--border-color, #1f2937);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.benchmark-stat-box.highlight {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.benchmark-stat-box .b-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.benchmark-stat-box .b-val {
+  font-size: 1.15rem;
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.benchmark-empty-box {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(56, 189, 248, 0.05);
+  border: 1px dashed rgba(56, 189, 248, 0.25);
+  border-radius: 10px;
+}

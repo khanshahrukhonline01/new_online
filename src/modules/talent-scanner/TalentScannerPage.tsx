@@ -9,10 +9,12 @@ import {
   type AthletePreset,
   type Gender,
 } from './normativeData'
+import { saveAthleteFitnessBenchmarks } from '../../integrations/supabase/athlete-profile-client'
 import './TalentScanner.css'
 
 interface TalentScannerPageProps {
   onNavigate?: (e: React.MouseEvent<HTMLAnchorElement>, path: string) => void
+  onOpenAuth?: (mode?: 'login' | 'signup') => void
 }
 
 const SPORTS_LIST = [
@@ -32,7 +34,7 @@ const SPORTS_LIST = [
   'Boxing',
 ]
 
-export function TalentScannerPage({ onNavigate }: TalentScannerPageProps) {
+export function TalentScannerPage({ onNavigate, onOpenAuth }: TalentScannerPageProps) {
   const [gender, setGender] = useState<Gender>('Male')
   const [ageCategory, setAgeCategory] = useState<AgeCategory>('U-16')
   const [sport, setSport] = useState<string>('Football')
@@ -41,6 +43,9 @@ export function TalentScannerPage({ onNavigate }: TalentScannerPageProps) {
   const [yoyo, setYoyo] = useState<number>(1800)
   const [sprint, setSprint] = useState<number>(4.05)
   const [cmj, setCmj] = useState<number>(51)
+  const [isSaving, setIsSaving] = useState<boolean>(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'guest_saved' | 'error'>('idle')
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null)
 
   const handleApplyPreset = (preset: AthletePreset) => {
     setGender(preset.gender)
@@ -79,6 +84,102 @@ export function TalentScannerPage({ onNavigate }: TalentScannerPageProps) {
   const yoyoDelta = yoyo - norms.yoyo_ir1_meters.p50
   const sprintDelta = Number((norms.sprint_30m_seconds.p50 - sprint).toFixed(2)) // positive if faster
   const cmjDelta = cmj - norms.cmj_height_cm.p50
+
+  const handleSaveBenchmarks = async () => {
+    setIsSaving(true)
+    setSaveFeedback(null)
+    try {
+      const res = await saveAthleteFitnessBenchmarks(
+        {
+          yoyoIr1Meters: yoyo,
+          sprint30mSeconds: sprint,
+          cmjHeightCm: cmj,
+          tier: tier.name,
+          percentileAvg: compositePct,
+          sport,
+          gender,
+          ageCategory,
+        },
+        {
+          sport,
+          gender,
+          ageCategory,
+        },
+      )
+      if (res.status === 'guest_saved') {
+        setSaveStatus('guest_saved')
+        setSaveFeedback(res.message)
+      } else {
+        setSaveStatus('success')
+        setSaveFeedback(res.message)
+      }
+    } catch {
+      setSaveStatus('error')
+      setSaveFeedback('Failed to save benchmarks. Please check network connection and try again.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDownloadScorecard = () => {
+    const testedDate = new Date().toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+
+    const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="750" viewBox="0 0 600 750">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1329" />
+      <stop offset="100%" stop-color="#030712" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="750" rx="20" fill="url(#bgGrad)" stroke="#1e293b" stroke-width="2" />
+  <rect x="20" y="20" width="560" height="710" rx="14" fill="none" stroke="url(#goldGrad)" stroke-width="2" opacity="0.4" />
+  <text x="300" y="70" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#38bdf8" text-anchor="middle" letter-spacing="2">KHELGRID NATIONAL COMBINE BENCHMARK</text>
+  <text x="300" y="105" font-family="system-ui, sans-serif" font-size="24" font-weight="800" fill="#f8fafc" text-anchor="middle">Official Athletic Scorecard</text>
+  <text x="300" y="130" font-family="system-ui, sans-serif" font-size="13" fill="#94a3b8" text-anchor="middle">${sport.toUpperCase()} · ${ageCategory} · ${gender.toUpperCase()}</text>
+  <circle cx="300" cy="225" r="65" fill="#0f172a" stroke="#10b981" stroke-width="4" />
+  <text x="300" y="222" font-family="system-ui, sans-serif" font-size="38" font-weight="900" fill="#10b981" text-anchor="middle">${compositePct}</text>
+  <text x="300" y="246" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#94a3b8" text-anchor="middle">PERCENTILE</text>
+  <text x="300" y="325" font-family="system-ui, sans-serif" font-size="16" font-weight="700" fill="#f8fafc" text-anchor="middle">${tier.name}</text>
+  <rect x="50" y="360" width="500" height="80" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+  <text x="75" y="395" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">Yo-Yo IR1 Distance</text>
+  <text x="75" y="420" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8">Aerobic Intermittent Recovery</text>
+  <text x="525" y="405" font-family="system-ui, sans-serif" font-size="18" font-weight="800" fill="#38bdf8" text-anchor="end">${yoyo} m</text>
+  <text x="525" y="423" font-family="system-ui, sans-serif" font-size="11" fill="#10b981" text-anchor="end">${yoyoPct}th Percentile</text>
+  <rect x="50" y="455" width="500" height="80" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+  <text x="75" y="490" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">30m Linear Sprint Time</text>
+  <text x="75" y="515" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8">Acceleration &amp; Top Velocity</text>
+  <text x="525" y="500" font-family="system-ui, sans-serif" font-size="18" font-weight="800" fill="#38bdf8" text-anchor="end">${sprint} s</text>
+  <text x="525" y="518" font-family="system-ui, sans-serif" font-size="11" fill="#10b981" text-anchor="end">${sprintPct}th Percentile</text>
+  <rect x="50" y="550" width="500" height="80" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+  <text x="75" y="585" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">Countermovement Jump (CMJ)</text>
+  <text x="75" y="610" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8">Vertical Kinetic Power Impulse</text>
+  <text x="525" y="595" font-family="system-ui, sans-serif" font-size="18" font-weight="800" fill="#38bdf8" text-anchor="end">${cmj} cm</text>
+  <text x="525" y="613" font-family="system-ui, sans-serif" font-size="11" fill="#10b981" text-anchor="end">${cmjPct}th Percentile</text>
+  <text x="300" y="670" font-family="system-ui, sans-serif" font-size="11" fill="#64748b" text-anchor="middle">Standardized Empirical Normative Data: KhelChronicle Preprint KG-2026-002</text>
+  <text x="300" y="690" font-family="system-ui, sans-serif" font-size="11" fill="#64748b" text-anchor="middle">Tested On: ${testedDate} · Verified by KhelGrid Grassroots Combine Desk</text>
+</svg>`
+
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `khelgrid-combine-scorecard-${sport.toLowerCase()}-${ageCategory.toLowerCase()}-${Date.now().toString(36)}.svg`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    }
+  }
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
     if (onNavigate) {
@@ -355,8 +456,98 @@ export function TalentScannerPage({ onNavigate }: TalentScannerPageProps) {
             </div>
           </div>
 
+          {/* Save Status Feedback Notice */}
+          {saveStatus !== 'idle' && saveFeedback && (
+            <div className={`scanner-save-banner status-${saveStatus}`} role="status">
+              <div className="save-banner-icon">
+                <SiteIcon name={saveStatus === 'success' ? 'badge-check' : saveStatus === 'error' ? 'alert-triangle' : 'info'} size={20} />
+              </div>
+              <div className="save-banner-body">
+                <strong>
+                  {saveStatus === 'success'
+                    ? 'Player Card & Scout Portal Updated!'
+                    : saveStatus === 'guest_saved'
+                    ? 'Benchmarks Saved to Device'
+                    : 'Sync Notice'}
+                </strong>
+                <p>{saveFeedback}</p>
+                <div className="save-banner-actions">
+                  {saveStatus === 'success' && (
+                    <>
+                      <a
+                        href="/dashboard"
+                        onClick={e => handleLinkClick(e, '/dashboard')}
+                        className="save-action-link"
+                      >
+                        <SiteIcon name="chart" size={13} />
+                        <span>View on My Dashboard</span>
+                      </a>
+                      <a
+                        href="/scout-portal"
+                        onClick={e => handleLinkClick(e, '/scout-portal')}
+                        className="save-action-link"
+                      >
+                        <SiteIcon name="target" size={13} />
+                        <span>View in Scout Portal</span>
+                      </a>
+                    </>
+                  )}
+                  {saveStatus === 'guest_saved' && onOpenAuth && (
+                    <button
+                      type="button"
+                      className="save-auth-trigger-btn"
+                      onClick={() => onOpenAuth('signup')}
+                    >
+                      <SiteIcon name="user" size={13} />
+                      <span>Sign In to Claim Permanent Profile</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Action CTAs for User Retention */}
           <div className="scanner-actions">
+            <button
+              type="button"
+              className={`btn-save-player-card ${saveStatus === 'success' ? 'is-saved' : ''}`}
+              onClick={handleSaveBenchmarks}
+              disabled={isSaving}
+              aria-label="Save benchmarks to my player card and scout portal"
+            >
+              <SiteIcon
+                name={isSaving ? 'refresh' : saveStatus === 'success' ? 'badge-check' : 'sparkles'}
+                size={18}
+                className={isSaving ? 'scanner-spin-icon' : ''}
+              />
+              <span>
+                {isSaving
+                  ? 'Saving Benchmarks...'
+                  : saveStatus === 'success'
+                  ? 'Saved to Player Card & Scout Portal ✓'
+                  : 'Save Benchmarks to My Player Card'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-download-scorecard"
+              onClick={handleDownloadScorecard}
+              aria-label="Download verified combine test scorecard"
+            >
+              <SiteIcon name="download" size={17} />
+              <span>Download Official Combine Scorecard</span>
+            </button>
+
+            <a
+              href="/scout-portal"
+              onClick={e => handleLinkClick(e, '/scout-portal')}
+              className="btn-secondary-link"
+            >
+              <SiteIcon name="target" size={16} />
+              <span>Explore Top Verified Talent in Scout Portal</span>
+            </a>
             <a
               href={`/sports-cv?sport=${encodeURIComponent(sport)}&yoyo=${yoyo}&sprint=${sprint}&cmj=${cmj}&pct=${compositePct}`}
               onClick={e => handleLinkClick(e, `/sports-cv?sport=${encodeURIComponent(sport)}`)}

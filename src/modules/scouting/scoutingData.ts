@@ -771,3 +771,9 @@ export async function getScoutAthletes(forceRefresh = false): Promise<ScoutAthle
   scoutAthletesCache = merged
   return merged
 }
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('khelgrid:benchmarks-updated', () => {
+    clearScoutAthletesCache()
+  })
+}

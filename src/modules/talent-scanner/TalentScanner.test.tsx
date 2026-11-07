@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { TalentScannerPage } from './TalentScannerPage'
+import { saveAthleteFitnessBenchmarks } from '../../integrations/supabase/athlete-profile-client'
 import {
   ATHLETE_PRESETS,
   NORMATIVE_BENCHMARKS,
@@ -82,10 +83,84 @@ describe('Talent Scanner Operationalized with KhelChronicle Normative Percentile
     expect(html).toContain('Add Score to KhelGrid Sports CV')
     expect(html).toContain('/opportunities?sport=Football')
     expect(html).toContain('/academies?sport=Football')
+    expect(html).toContain('Save Benchmarks to My Player Card')
+    expect(html).toContain('Download Official Combine Scorecard')
+    expect(html).toContain('Explore Top Verified Talent in Scout Portal')
 
     // Structured Data
     expect(html).toContain('application/ld+json')
     expect(html).toContain('"@type":"WebApplication"')
     expect(html).toContain('"name":"KhelGrid Talent Scanner"')
+  })
+
+  it('saves fitness benchmarks to local storage profile and dispatches cross-component update event', async () => {
+    const hadWindow = typeof window !== 'undefined'
+    const storage = new Map<string, string>()
+    const listeners: Record<string, ((ev: unknown) => void)[]> = {}
+
+    if (!hadWindow) {
+      ;(globalThis as unknown as { window: unknown }).window = {
+        localStorage: {
+          getItem: (key: string) => storage.get(key) ?? null,
+          setItem: (key: string, val: string) => storage.set(key, val),
+          removeItem: (key: string) => storage.delete(key),
+          clear: () => storage.clear(),
+        },
+        addEventListener: (event: string, fn: (ev: unknown) => void) => {
+          listeners[event] = listeners[event] || []
+          listeners[event].push(fn)
+        },
+        removeEventListener: (event: string, fn: (ev: unknown) => void) => {
+          if (listeners[event]) {
+            listeners[event] = listeners[event].filter(cb => cb !== fn)
+          }
+        },
+        dispatchEvent: (ev: { type: string }) => {
+          const cbs = listeners[ev.type] || []
+          for (const cb of cbs) cb(ev)
+          return true
+        },
+      }
+      ;(globalThis as unknown as { CustomEvent: unknown }).CustomEvent = class {
+        type: string
+        detail: unknown
+        constructor(type: string, init?: { detail?: unknown }) {
+          this.type = type
+          this.detail = init?.detail
+        }
+      }
+    }
+
+    let dispatched = false
+    const listener = () => {
+      dispatched = true
+    }
+    window.addEventListener('khelgrid:benchmarks-updated', listener)
+
+    const result = await saveAthleteFitnessBenchmarks({
+      yoyoIr1Meters: 1840,
+      sprint30mSeconds: 4.12,
+      cmjHeightCm: 52,
+      tier: 'State Academy Contender (Top 25%)',
+      percentileAvg: 82,
+      sport: 'Football',
+      gender: 'Male',
+      ageCategory: 'U-16',
+    })
+
+    expect(result.status).toBeDefined()
+    expect(result.profile.fitnessBenchmarks).toBeDefined()
+    expect(result.profile.fitnessBenchmarks?.yoyoIr1Meters).toBe(1840)
+    expect(result.profile.fitnessBenchmarks?.sprint30mSeconds).toBe(4.12)
+    expect(result.profile.fitnessBenchmarks?.cmjHeightCm).toBe(52)
+    expect(result.profile.fitnessBenchmarks?.percentileAvg).toBe(82)
+    expect(dispatched).toBe(true)
+
+    window.removeEventListener('khelgrid:benchmarks-updated', listener)
+
+    if (!hadWindow) {
+      delete (globalThis as Record<string, unknown>).window
+      delete (globalThis as Record<string, unknown>).CustomEvent
+    }
   })
 })
