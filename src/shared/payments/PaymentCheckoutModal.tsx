@@ -3,6 +3,7 @@ import { SiteIcon } from '../components/SiteIcon'
 import {
   generateOrderId,
   generateUpiUri,
+  getRazorpayKey,
   recordPaymentTransaction,
 } from './paymentService'
 import type { PaymentCustomer, PaymentItem, PaymentMethod, PaymentResult } from './paymentTypes'
@@ -71,18 +72,28 @@ export function PaymentCheckoutModal({
       return
     }
 
+    if (method === 'card') {
+      const razorpayKey = getRazorpayKey()
+      if (!razorpayKey) {
+        setErrorMsg('Direct card payment gateway is undergoing bank verification. Please pay via UPI (GPay / PhonePe) or select Pay at Ground.')
+        return
+      }
+    }
+
+    if (method === 'upi' && upiRef.trim().length < 6) {
+      setErrorMsg('Please transfer via your UPI app and enter the 12-digit UTR Reference number to submit for verification.')
+      return
+    }
+
     setStep('processing')
 
     try {
-      // Simulate bank network authorization
-      await new Promise(resolve => setTimeout(resolve, 1200))
-
       const paymentId =
         method === 'pay_at_venue'
           ? `VENUE_${Date.now().toString().slice(-6)}`
           : upiRef.trim()
-            ? `UPI_${upiRef.trim().toUpperCase()}`
-            : `KG_PAY_${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+            ? `UPI_UTR_${upiRef.trim().toUpperCase()}`
+            : `RZP_${Date.now().toString(36).toUpperCase()}`
 
       const customer: PaymentCustomer = {
         name: cleanName,
@@ -90,20 +101,27 @@ export function PaymentCheckoutModal({
         email: email.trim() || undefined,
       }
 
+      const status: 'completed' | 'pay_at_venue' | 'pending_verification' =
+        method === 'pay_at_venue'
+          ? 'pay_at_venue'
+          : method === 'upi'
+            ? 'pending_verification'
+            : 'completed'
+
       const result = await recordPaymentTransaction({
         orderId,
         paymentId,
         customer,
         item,
         method,
-        status: method === 'pay_at_venue' ? 'pay_at_venue' : 'completed',
+        status,
       })
 
       setCompletedResult(result)
       setStep('success')
       onSuccess(result)
     } catch {
-      setErrorMsg('Payment verification failed. Please try again.')
+      setErrorMsg('Transaction could not be recorded. Please try again.')
       setStep('input')
     }
   }
@@ -300,29 +318,28 @@ export function PaymentCheckoutModal({
               {/* Card / NetBanking Tab */}
               {method === 'card' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div className="kg-field-group">
-                    <label>Card Number</label>
-                    <input
-                      type="text"
-                      className="kg-input"
-                      placeholder="4532 •••• •••• 8920 (Visa, Mastercard, RuPay)"
-                      defaultValue="4532 8920 1204 7781"
-                    />
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div className="kg-field-group">
-                      <label>Expiry MM/YY</label>
-                      <input type="text" className="kg-input" placeholder="MM / YY" defaultValue="08/29" />
+                  {getRazorpayKey() ? (
+                    <div className="kg-venue-pay-card">
+                      <div className="kg-venue-pay-header">
+                        <SiteIcon name="credit-card" size={20} />
+                        <span>Razorpay Instant Payment Gateway</span>
+                      </div>
+                      <p className="kg-venue-pay-body">
+                        You will be redirected to the secure PCI-DSS Level 1 Razorpay gateway supporting all major Indian Debit &amp; Credit Cards, NetBanking, and UPI.
+                      </p>
                     </div>
-                    <div className="kg-field-group">
-                      <label>CVV</label>
-                      <input type="password" maxLength={4} className="kg-input" placeholder="•••" defaultValue="782" />
+                  ) : (
+                    <div style={{ padding: '14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: 750, fontSize: '13px', marginBottom: '6px' }}>
+                        <SiteIcon name="lock" size={16} />
+                        <span>Direct Card Gateway Verification in Progress</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: 1.5 }}>
+                        Online card processing is temporarily restricted while bank merchant verification is being completed.
+                        Please use <strong>UPI (GPay / PhonePe)</strong> or <strong>Pay at Ground</strong> to complete your reservation without delay.
+                      </p>
                     </div>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <SiteIcon name="lock" size={12} />
-                    <span>256-bit SSL encrypted. Test sandbox active in development.</span>
-                  </p>
+                  )}
                 </div>
               )}
 
@@ -384,12 +401,18 @@ export function PaymentCheckoutModal({
             </div>
             <div>
               <h4 style={{ margin: '0 0 6px', fontSize: '20px', fontWeight: 800 }}>
-                {completedResult.method === 'pay_at_venue' ? 'Spot Reserved Successfully!' : 'Payment Confirmed!'}
+                {completedResult.status === 'pay_at_venue'
+                  ? 'Spot Reserved Successfully!'
+                  : completedResult.status === 'pending_verification'
+                    ? 'UPI Reference Submitted!'
+                    : 'Payment Confirmed!'}
               </h4>
               <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
-                {completedResult.method === 'pay_at_venue'
+                {completedResult.status === 'pay_at_venue'
                   ? `Please pay ₹${item.amount} directly to the match host at the venue.`
-                  : `₹${item.amount} received via ${completedResult.method.toUpperCase()}. Your pass is ready.`}
+                  : completedResult.status === 'pending_verification'
+                    ? `Reference ${completedResult.paymentId} recorded. Our match desk will verify your UTR within 15 minutes.`
+                    : `₹${item.amount} received via ${completedResult.method.toUpperCase()}. Your pass is ready.`}
               </p>
             </div>
 

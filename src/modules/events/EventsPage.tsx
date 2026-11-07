@@ -36,7 +36,7 @@ export function EventsPage({ onNavigate }: EventsPageProps) {
     setLoading(true)
     getEvents().then(res => {
       if (!active) return
-      if (res.status === 'ready' && res.data.length > 0) {
+      if (res.status === 'ready') {
         const mapped: SportEvent[] = res.data.map(evt => ({
           id: evt.id,
           slug: evt.slug,

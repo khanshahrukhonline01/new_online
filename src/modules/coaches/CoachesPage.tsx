@@ -33,7 +33,7 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
     setLoading(true)
     getCoaches().then(res => {
       if (!active) return
-      if (res.status === 'ready' && res.data.length > 0) {
+      if (res.status === 'ready') {
         const mapped: VerifiedCoach[] = res.data.map(c => ({
           id: c.id,
           slug: c.slug,
