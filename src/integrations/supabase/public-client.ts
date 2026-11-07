@@ -3632,10 +3632,16 @@ export async function getAdminModerationQueue(): Promise<AdminModerationQueue> {
 
   if (client) {
     try {
-      const [subRes, clmRes, repRes] = await Promise.all([
-        client.from('listing_submissions').select('*').order('created_at', { ascending: false }).limit(50),
-        client.from('verification_claims').select('*').order('created_at', { ascending: false }).limit(50),
-        client.from('listing_reports').select('*').order('created_at', { ascending: false }).limit(50),
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Moderation queue timeout')), 4000)
+      )
+      const [subRes, clmRes, repRes] = await Promise.race([
+        Promise.all([
+          client.from('listing_submissions').select('*').order('created_at', { ascending: false }).limit(50),
+          client.from('verification_claims').select('*').order('created_at', { ascending: false }).limit(50),
+          client.from('listing_reports').select('*').order('created_at', { ascending: false }).limit(50),
+        ]),
+        timeoutPromise,
       ])
       if (subRes.data && Array.isArray(subRes.data) && subRes.data.length > 0) {
         submissions = subRes.data as typeof submissions
