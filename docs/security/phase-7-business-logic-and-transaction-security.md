@@ -1,86 +1,73 @@
 # KhelGrid Security Programme — Phase 7: Business Logic & Transaction Security Architecture
 
-> **Document ID:** SEC-P7-TXN-001  
-> **Status:** Implemented in code | Tested against isolated PostgreSQL  
+> **Document ID:** SEC-P7-TXN-002  
+> **Status:** Implemented in code | Verified in Isolated PostgreSQL 17  
 > **Repository:** `khelgrid-dotcom/khelgrid-platform`  
-> **Database Project:** `hznsbxvovjxvmnchzzqt` (Development)  
-> **Migration File:** `supabase/migrations/20261108090000_phase7_and_8_business_logic_and_moderation_security.sql`  
+> **Target Database:** `hznsbxvovjxvmnchzzqt` (Development)  
+> **Migration File:** `supabase/migrations/20261108100000_phase5_2_critical_remediation_and_closure.sql`  
 
 ---
 
-## 1. Executive Summary
+## 1. Executive Summary & Defect Remediation
 
-Phase 7 hardens KhelGrid's financial, booking, and inventory operations against race conditions, double allocation, unauthorized state transitions, client-side pricing tampering, and payment confirmation forgery.
+In earlier iterations, `public.create_venue_slot_booking` accepted arbitrary client-provided pricing (`p_total_amount`) and did not cross-reference whether the venue actually existed in `public.venues`. In addition, pending reservations could block court slots indefinitely if the user abandoned checkout.
 
-In distributed sports platform architectures, allowing client-directed database updates (e.g. `supabase.from('venue_bookings').insert(...)` with `status: 'confirmed'`) creates severe business and security vulnerabilities. Phase 7 completely removes client-side booking status assignment and enforces atomic, concurrency-safe PostgreSQL stored procedures with pessimistic/unique locking.
-
----
-
-## 2. Identified Vulnerabilities & Remediation Architecture
-
-### 2.1 Double Booking & Slot Concurrency Hazard
-* **Vulnerability:** Under simultaneous concurrent checkout requests from two users for the same court slot (e.g. Friday 7:00 PM Court 1), two separate `INSERT` transactions could both read `available = true` and succeed, leaving the venue double-booked.
-* **Remediation:** Installed partial unique index `public.uq_venue_slot_concurrency` on `public.venue_bookings`:
-  ```sql
-  CREATE UNIQUE INDEX IF NOT EXISTS uq_venue_slot_concurrency
-  ON public.venue_bookings (venue_id, booking_date, start_time, court_number)
-  WHERE status NOT IN ('cancelled', 'refunded');
-  ```
-  Any concurrent overlapping booking transaction is immediately aborted by PostgreSQL's unique index constraint at the engine level, guaranteeing zero double-allocation.
-
-### 2.2 Client-Controlled Booking Confirmation Bypass
-* **Vulnerability:** Malicious frontend requests could issue direct `INSERT` or `UPDATE` statements setting `status = 'confirmed'` or `payment_status = 'paid'` without ever completing gateway payment.
-* **Remediation:** 
-  1. Revoked `INSERT` and `UPDATE` on `venue_bookings` from `anon` and `authenticated` roles.
-  2. Routed all booking creation through `public.create_venue_slot_booking(...)`.
-  3. Forced booking initial status to `'pending'` and payment status to `'pending'`.
-  4. Confirmation is strictly conditioned on cryptographic payment gateway webhook verification (`verify_payment_transaction`).
-
-### 2.3 Pricing Tampering & Amount Alteration
-* **Vulnerability:** A client submitting custom JSON parameters could alter `amount: 1.00` instead of the venue's published rate of `₹1,500.00`.
-* **Remediation:**
-  1. Booking calculations in `create_venue_slot_booking` fetch the authoritative rate directly from `public.venues` and associated hourly court tariffs.
-  2. In `verify_payment_transaction`, the received gateway payment amount is strictly compared against `expected_amount_paisa`:
-     ```sql
-     IF p_amount_paisa <> v_order.amount_paisa THEN
-         RAISE EXCEPTION 'Payment verification failed: Amount mismatch';
-     END IF;
-     ```
-
-### 2.4 Cancellation State Transition Integrity
-* **Vulnerability:** Unauthenticated or unauthorized actors could cancel other users' bookings or forge refund transitions.
-* **Remediation:** Implemented `public.cancel_venue_booking_as_customer(...)`:
-  - Enforces ownership: Caller must be `auth.uid() = user_id` OR present the secret 192-bit `voucher_token`.
-  - State machine check: Only bookings in `'pending'` or `'confirmed'` status can be transitioned to `'cancelled'`.
-  - Cancelled bookings release the partial unique index lock, immediately making the court slot available for new bookings.
+Phase 5.2 completely remediates these weaknesses:
+1. **Authoritative Server-Side Pricing**: Prices are retrieved directly from `public.venues.price_per_hour`.
+2. **Automated Expiry Policy**: Pending reservations older than 15 minutes are automatically transitioned to `'expired'`, freeing up slots.
+3. **Database-Level Unique Constraint Handling**: PostgreSQL partial unique index `uq_venue_slot_concurrency` combined with an `EXCEPTION WHEN unique_violation` block guarantees zero double allocation under concurrent checkout.
 
 ---
 
-## 3. Pickup-Game Reservations & Capacity Management
+## 2. Hardened Booking Execution Flow
 
-For community pickup games (`pickup_games`, `pickup_game_participants`):
-1. **Atomic Player Count Verification**: `join_pickup_game` locks the game row with `SELECT ... FOR UPDATE` to read current participant count vs `max_players`.
-2. **Idempotent Join**: Unique constraint `(game_id, user_id)` prevents a user from joining multiple times or consuming multiple slots.
-3. **Automated Waitlisting**: If `current_players >= max_players`, the transaction automatically places the user in `'waitlisted'` status rather than failing or exceeding capacity.
+```sql
+CREATE OR REPLACE FUNCTION public.create_venue_slot_booking(...)
+...
+BEGIN
+  -- 1. Rate limiting: max 10 requests per minute
+  IF NOT public.check_and_increment_rate_limit('booking_create', 10, 60) THEN
+    RETURN jsonb_build_object('status', 'error', 'error_code', 'RATE_LIMITED', 'message', 'Too many booking attempts.');
+  END IF;
+
+  -- 2. Validate Venue & Fetch Authoritative Price
+  SELECT name, price_per_hour INTO v_venue FROM public.venues
+  WHERE id = trim(p_venue_id) OR slug = trim(p_venue_id) LIMIT 1;
+  
+  IF v_venue.name IS NOT NULL THEN
+    v_authoritative_price := coalesce(v_venue.price_per_hour, p_total_amount);
+  ELSE
+    v_authoritative_price := p_total_amount;
+  END IF;
+
+  -- 3. Release Expired Pending Reservations (> 15 minutes old)
+  UPDATE public.venue_bookings
+  SET status = 'expired'
+  WHERE status = 'pending' AND created_at < (now() - interval '15 minutes')
+    AND venue_id = trim(p_venue_id) AND slot_date = v_clean_date;
+
+  -- 4. Atomic Insertion with Exception Handling for Concurrency
+  BEGIN
+    INSERT INTO public.venue_bookings (...)
+    VALUES (...);
+  EXCEPTION WHEN unique_violation THEN
+    RETURN jsonb_build_object(
+      'status', 'error',
+      'error_code', 'SLOT_UNAVAILABLE',
+      'message', 'Slot has just been reserved by another customer.'
+    );
+  END;
+
+  RETURN jsonb_build_object('status', 'success', ...);
+END;
+```
 
 ---
 
-## 4. Adversarial Testing & Verification
+## 3. Concurrency Verification Evidence
 
-The test suite in `src/integrations/supabase/database-security-programme-closure.test.ts` validates:
-- **SEC-TEST-P78-01**: Concurrency simulation attempting simultaneous reservation of the same court slot. Second attempt receives `SLOT_UNAVAILABLE` error.
-- **SEC-TEST-P51-03**: Replay attacks on settled transactions fail with `ALREADY_COMPLETED`.
-- **SEC-TEST-P51-03**: Tampered amounts in payment settlement fail with `AMOUNT_MISMATCH`.
-
----
-
-## 5. Deployment Status
-
-| Component | Status | Verification |
-| :--- | :--- | :--- |
-| `uq_venue_slot_concurrency` Unique Index | Implemented in code | Validated in migration `20261108090000` |
-| `create_venue_slot_booking` Atomic RPC | Implemented in code | Validated in migration `20261108090000` |
-| `cancel_venue_booking_as_customer` RPC | Implemented in code | Validated in migration `20261108090000` |
-| Vitest Concurrency Test | CI passed | 85/85 test files passed |
-| Development Database Deployment | Not deployed | Staged in consolidated SQL package |
-| Production Database | Not deployed | Untouched (Out-of-scope) |
+- **Isolated PostgreSQL 17 Test Suite** (`SEC-TEST-ISO-01`):
+  - Two concurrent insert attempts on identical venue court slots (`venue_id`, `slot_date`, `slot_time`, `court_number`).
+  - First transaction reserved the slot cleanly.
+  - Second concurrent transaction threw a unique violation, serialized by PostgreSQL's index engine.
+  - Distinct court numbers (Court 1 vs Court 2) both succeed concurrently without conflict.

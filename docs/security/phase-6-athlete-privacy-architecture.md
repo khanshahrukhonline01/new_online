@@ -1,58 +1,71 @@
-# KhelGrid — Phase 6: Athlete Privacy & Profile Security Architecture
-## Private-by-Default Profiles, Consent Controls & Sanitized CV Projections
+# KhelGrid Security Programme — Phase 6: Athlete Privacy & Statutory Minor Protection Architecture
 
-**Document:** Athlete Privacy & Profile Security Architecture  
-**Programme:** KhelGrid 10-Phase Security & Authorization Programme  
-**Phase:** Phase 6 — Athlete and Personal Data Privacy  
-**Target Database:** Supabase Development Instance `hznsbxvovjxvmnchzzqt`  
-**Date:** November 8, 2026  
-
----
-
-## 1. Core Principles
-
-1. **Private-by-Default**: Athlete profiles created on KhelGrid default to private (`public_consent_granted = false`). Only athletic information explicitly consented to by the athlete (or their legal guardian, if a minor) is rendered in public discovery.
-2. **Decoupled Identity & Projections**: Direct Data API queries to `public.profiles` or `public.athlete_profiles` cannot scrape private fields (`email`, `phone`, exact `date_of_birth`, or uploaded identity cards).
-3. **Statutory Consent Ledger**: All consents are recorded with timestamp, IP address, user-agent, and consent version in `public.user_consents` under the Digital Personal Data Protection Act (DPDP Act 2023).
-4. **Data Portability & Erasure**: Compliant export (`public.export_user_data`) and right-to-be-forgotten (`public.anonymize_user_account`) procedures are provided at the database level.
+> **Document ID:** SEC-P6-ARCH-002  
+> **Status:** Implemented in code | Tested in Isolated PostgreSQL 17  
+> **Applicable Regulations:** Digital Personal Data Protection Act, 2023 (DPDP Act 2023)  
+> **Repository:** `khelgrid-dotcom/khelgrid-platform`  
+> **Migration File:** `supabase/migrations/20261108100000_phase5_2_critical_remediation_and_closure.sql`  
 
 ---
 
-## 2. Profile RLS Policy Enforcement
+## 1. Architectural Principles
+
+1. **Private-by-Default Athlete Profiles**: Direct table access via PostgREST is owner-only (`auth.uid() = user_id`). Public discovery queries route strictly through the `get_athlete_public_cv(p_username)` RPC.
+2. **Elimination of Public INSERT Vulnerability**: Dropped the legacy `athlete_profiles_public_insert` policy. Profile creation is strictly authenticated and owner-bound.
+3. **Statutory Minor Protection (< 18 Years)**: Dynamic PostgreSQL age computation identifies minors. Minors remain completely invisible to the public directory unless an active, evidence-verified guardian consent record exists.
+4. **Data Minimization on Public Projections**: Even when approved for public listing, minor athletes have their direct phone number, email address, and exact date of birth suppressed (only birth year is projected).
+5. **Immutable Consent Logs**: Normal users cannot delete records from `public.user_consents`. Revocation is performed via `UPDATE` setting `revoked_at = now()`, preserving statutory compliance history.
+
+---
+
+## 2. Statutory Guardian Verification Architecture
+
+Under DPDP Act 2023 Section 9, a self-asserted timestamp does not constitute legal proof of guardian consent. The table `public.guardian_consents` enforces:
 
 ```sql
--- Direct table access: Authenticated owners can only read/update their own profile
-CREATE POLICY "athlete_profiles_owner_read"
-  ON public.athlete_profiles FOR SELECT TO authenticated
-  USING (auth.uid() IS NOT NULL AND user_id = auth.uid());
+CREATE TABLE IF NOT EXISTS public.guardian_consents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  minor_user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  guardian_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  guardian_name text NOT NULL,
+  guardian_phone text NOT NULL,
+  guardian_email text,
+  relationship text NOT NULL CHECK (relationship IN ('parent', 'legal_guardian', 'authorized_coach')),
+  consent_scope text NOT NULL DEFAULT 'profile_and_trials',
+  is_verified boolean NOT NULL DEFAULT false, -- STRICTLY FALSE UNTIL EVIDENCE RECORDED
+  verified_at timestamptz DEFAULT NULL,
+  verified_by uuid REFERENCES auth.users(id),
+  verification_method text DEFAULT NULL,
+  evidence_reference text DEFAULT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  revoked_at timestamptz DEFAULT NULL
+);
+```
 
-CREATE POLICY "athlete_profiles_owner_write"
-  ON public.athlete_profiles FOR UPDATE TO authenticated
-  USING (auth.uid() IS NOT NULL AND user_id = auth.uid())
-  WITH CHECK (auth.uid() IS NOT NULL AND user_id = auth.uid());
-
--- Public discovery is gated on explicit consent & minor safety
-CREATE POLICY "athlete_profiles_public_read"
-  ON public.athlete_profiles FOR SELECT TO anon, authenticated
-  USING (
-    publication_status = 'published'
-    AND public_consent_granted = true
-    AND (
-      is_minor = false
-      OR EXISTS (
+### Minor Visibility Decision Logic inside `get_athlete_public_cv`:
+```sql
+v_is_minor := (v_athlete.date_of_birth IS NOT NULL AND v_athlete.date_of_birth > (CURRENT_DATE - INTERVAL '18 years'));
+IF v_is_minor THEN
+    SELECT EXISTS (
         SELECT 1 FROM public.guardian_consents
-        WHERE minor_user_id = athlete_profiles.user_id AND is_active = true
-      )
-    )
-  );
+        WHERE minor_user_id = v_athlete.user_id
+          AND is_active = true
+          AND is_verified = true
+          AND revoked_at IS NULL
+    ) INTO v_has_guardian_consent;
+
+    IF NOT v_has_guardian_consent THEN
+        RETURN NULL; -- Profile remains completely private
+    END IF;
+    v_birth_year := extract(YEAR FROM v_athlete.date_of_birth)::int;
+END IF;
 ```
 
 ---
 
-## 3. Sanitized Public CV Projection (`public.get_athlete_public_cv`)
+## 3. Verification Evidence
 
-To eliminate inadvertent data exposure through GraphQL or PostgREST schema reflection, public athlete profiles are served via `public.get_athlete_public_cv(p_username)`.
-
-### Shielded vs. Public Fields:
-- **Exposed Publicly**: `username`, `full_name`, `sport`, `playing_position`, `city`, `state`, `birth_year` (only year, not full date), `team_or_academy`, `coach`, `experience_years`, `primary_foot_or_hand`, `height_cm`, `weight_kg`, `summary`, `achievements`, `video_clips`, `fitness_benchmarks`, `player_card_stats`, `verification_status`.
-- **Completely Shielded**: Mobile phone, email, full date of birth, Aadhaar/document IDs, home address, school name, and guardian contact details.
+- **Isolated PostgreSQL 17 Test Suite** (`SEC-TEST-ISO-04`):
+  - Minor athlete with `is_verified = false` -> `get_athlete_public_cv` returns `null`.
+  - Minor athlete with `is_verified = true` -> returns sanitized public view, omitting phone and email.
+  - Revoked consent -> returns `null` immediately.
