@@ -54,6 +54,7 @@ const NotificationCenterDrawer = lazy(() => import('./shared/components/Notifica
 const SpotlightSearchModal = lazy(() => import('./shared/components/SpotlightSearchModal'))
 const FeedbackSupportModal = lazy(() => import('./shared/components/FeedbackSupportModal'))
 const UserConsentModal = lazy(() => import('./shared/components/UserConsentModal'))
+const GoProModal = lazy(() => import('./shared/components/GoProModal'))
 
 function PageFallbackLoader() {
   return (
@@ -89,6 +90,7 @@ export default function App() {
   const [unreadNotifCount, setUnreadNotifCount] = useState(3)
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [consentModalOpen, setConsentModalOpen] = useState(false)
+  const [goProModalOpen, setGoProModalOpen] = useState(false)
   const menuToggleRef = useRef<HTMLButtonElement>(null)
 
   function openIntake(category: CommunityListingCategory = 'pickup_game') {
@@ -298,7 +300,17 @@ export default function App() {
         onOpenFeedback={() => setFeedbackModalOpen(true)}
       />
       <span className="header-login-link is-unavailable" aria-disabled="true" aria-label="Your profile" title="Your profile / Login coming soon"><SiteIcon name="user-round" size={17} /><span>{t('login', 'Login')} <small>{t('comingSoon', 'Coming Soon')}</small></span></span>
-      <a className="header-go-pro" href="mailto:khelgrid@gmail.com?subject=KhelGrid%20Pro%20enquiry"><SiteIcon name="star" size={16} /><span>{t('goPro', 'Go Pro')}</span></a>
+      <a
+        className="header-go-pro"
+        href="/pricing"
+        onClick={event => {
+          event.preventDefault()
+          setGoProModalOpen(true)
+        }}
+      >
+        <SiteIcon name="star" size={16} />
+        <span>{t('goPro', 'Go Pro')}</span>
+      </a>
     </header>
     <div className="app-workspace">
       <Sidebar
@@ -497,6 +509,13 @@ export default function App() {
         onClose={() => setConsentModalOpen(false)}
         onNavigate={navigate}
       />
+      {goProModalOpen && (
+        <GoProModal
+          isOpen={goProModalOpen}
+          onClose={() => setGoProModalOpen(false)}
+          onNavigate={navigate}
+        />
+      )}
     </Suspense>
   </div>
 }
