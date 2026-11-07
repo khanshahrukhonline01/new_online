@@ -228,6 +228,13 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
     })
 
     if (error) {
+      if (error.message?.toLowerCase().includes('rate limit')) {
+        return {
+          success: false,
+          message:
+            'Supabase email confirmation rate limit reached. Please wait a few minutes or sign in with your confirmed credentials.',
+        }
+      }
       return { success: false, message: error.message }
     }
 
@@ -326,6 +333,13 @@ export async function signInWithEmail(input: SignInInput): Promise<AuthResult> {
     })
 
     if (error) {
+      if (error.message?.toLowerCase().includes('rate limit')) {
+        return {
+          success: false,
+          message:
+            'Supabase email confirmation rate limit reached. Please wait a few minutes or sign in with your confirmed credentials.',
+        }
+      }
       return { success: false, message: error.message }
     }
 
@@ -382,6 +396,13 @@ export async function sendPasswordReset(email: string): Promise<{ success: boole
     })
 
     if (error) {
+      if (error.message?.toLowerCase().includes('rate limit')) {
+        return {
+          success: false,
+          message:
+            'Supabase email confirmation rate limit reached. Please wait a few minutes or sign in with your confirmed credentials.',
+        }
+      }
       return { success: false, message: error.message }
     }
 

@@ -34,11 +34,8 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
       setLoading(true)
       getAcademies().then(res => {
         if (!active) return
-        if (res.status === 'ready' && res.data.length > 0) {
-          // Merge with curated items that are not in res.data
-          const slugs = new Set(res.data.map(a => a.slug))
-          const merged = [...res.data, ...CURATED_ACADEMIES.filter(c => !slugs.has(c.slug))]
-          setAcademies(merged)
+        if (res.status === 'ready') {
+          setAcademies(res.data)
         } else {
           setAcademies(CURATED_ACADEMIES)
         }

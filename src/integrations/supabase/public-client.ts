@@ -333,19 +333,30 @@ export async function getOpportunities(): Promise<CatalogueResult<Opportunity>> 
 }
 
 async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
-  const selectFields =
-    'id,slug,name,description,city,state,address,phone,email,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,rating,review_count,faqs,verification_status'
+  const enrichedFields =
+    'id,slug,name,description,city,state,address,phone,email,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,rating,review_count,faqs,verification_status,sport'
+  const baseFields =
+    'id,slug,name,description,city,address,phone,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,verification_status,sport'
+
   const featured = await readCatalogue<Venue>({
     table: 'venues',
-    select: selectFields,
+    select: enrichedFields,
     order: 'is_featured.desc.nullslast,name.asc',
     filters: { publication_status: 'eq.published' },
   })
   if (featured.status === 'ready') return featured
 
+  const base = await readCatalogue<Venue>({
+    table: 'venues',
+    select: baseFields,
+    order: 'is_featured.desc.nullslast,name.asc',
+    filters: { publication_status: 'eq.published' },
+  })
+  if (base.status === 'ready') return base
+
   return readCatalogue<Venue>({
     table: 'venues',
-    select: selectFields,
+    select: baseFields,
     order: 'name.asc',
     filters: { publication_status: 'eq.published' },
   })
@@ -382,11 +393,14 @@ export async function getVenuesBySport(sportSlug: string, sportName?: string): P
 }
 
 async function fetchAcademiesCatalogue(): Promise<CatalogueResult<Academy>> {
-  const selectFields =
-    'id,slug,name,description,city,state,address,phone,email,website_url,public_contact_url,head_coach,facilities,age_groups,timings,fee_structure,admission_open,rating,review_count,curriculum_highlights,faqs,verification_status,is_featured'
+  const enrichedFields =
+    'id,slug,name,description,city,state,address,phone,email,website_url,public_contact_url,head_coach,facilities,age_groups,timings,fee_structure,admission_open,rating,review_count,curriculum_highlights,faqs,verification_status,is_featured,sport'
+  const baseFields =
+    'id,slug,name,description,city,state,address,phone,website_url,public_contact_url,facilities,age_groups,timings,fee_structure,admission_open,verification_status,is_featured,sport'
+
   const featured = await readCatalogue<Academy>({
     table: 'academies',
-    select: selectFields,
+    select: enrichedFields,
     order: 'is_featured.desc.nullslast,name.asc',
     filters: {
       publication_status: 'eq.published',
@@ -395,9 +409,20 @@ async function fetchAcademiesCatalogue(): Promise<CatalogueResult<Academy>> {
   })
   if (featured.status === 'ready') return featured
 
+  const base = await readCatalogue<Academy>({
+    table: 'academies',
+    select: baseFields,
+    order: 'is_featured.desc.nullslast,name.asc',
+    filters: {
+      publication_status: 'eq.published',
+      verification_status: 'neq.rejected',
+    },
+  })
+  if (base.status === 'ready') return base
+
   return readCatalogue<Academy>({
     table: 'academies',
-    select: selectFields,
+    select: baseFields,
     order: 'name.asc',
     filters: {
       publication_status: 'eq.published',
@@ -440,6 +465,16 @@ export async function getAcademyBySlug(slug: string): Promise<Academy | undefine
   const communityFound = getCommunityAcademyBySlug(clean)
   if (communityFound) return communityFound
 
+  const client = getSupabaseClient()
+  if (client) {
+    try {
+      const { data } = await client.from('academies').select('*').ilike('slug', clean).maybeSingle()
+      if (data) return data as unknown as Academy
+    } catch {
+      // ignore
+    }
+  }
+
   return getCuratedAcademyBySlug(clean)
 }
 
@@ -453,14 +488,39 @@ export async function getVenueBySlug(slug: string): Promise<Venue | undefined> {
   const communityFound = getCommunityVenueBySlug(clean)
   if (communityFound) return communityFound
 
+  const client = getSupabaseClient()
+  if (client) {
+    try {
+      const { data } = await client.from('venues').select('*').ilike('slug', clean).maybeSingle()
+      if (data) return data as unknown as Venue
+    } catch {
+      // ignore
+    }
+  }
+
   return getCuratedVenueBySlug(clean)
 }
 
-export function getCoaches() {
+export async function getCoaches(): Promise<CatalogueResult<Coach>> {
+  const enrichedFields =
+    'id,slug,display_name,bio,city,state,website_url,public_contact_url,verification_status,certification,credential_authority,authority_label,experience_years,academy_affiliation,monthly_fee,fee_range_category,student_track_record,specialties,languages,rating,review_count,verified_badge,available_one_on_one,available_batches'
+  const baseFields =
+    'id,slug,display_name,bio,city,state,website_url,public_contact_url,verification_status'
+
+  const enriched = await readCatalogue<Coach>({
+    table: 'coaches',
+    select: enrichedFields,
+    order: 'display_name.asc',
+    filters: {
+      publication_status: 'eq.published',
+      verification_status: 'neq.rejected',
+    },
+  })
+  if (enriched.status === 'ready') return enriched
+
   return readCatalogue<Coach>({
     table: 'coaches',
-    select:
-      'id,slug,display_name,bio,city,state,website_url,public_contact_url,verification_status,certification,credential_authority,authority_label,experience_years,academy_affiliation,monthly_fee,fee_range_category,student_track_record,specialties,languages,rating,review_count,verified_badge,available_one_on_one,available_batches',
+    select: baseFields,
     order: 'display_name.asc',
     filters: {
       publication_status: 'eq.published',
@@ -485,11 +545,26 @@ export async function getCoachesBySport(sportSlug: string, sportName?: string): 
   return { status: 'ready', data: matches }
 }
 
-export function getEvents() {
+export async function getEvents(): Promise<CatalogueResult<EventItem>> {
+  const enrichedFields =
+    'id,slug,title,hindi_title,sport,category,sanctioning_body,edition,event_type,organizer_name,city,state,venue_name,starts_at,ends_at,registration_deadline,source_name,source_url,age_categories,gender,prize_pool,entry_fee,team_or_individual,official_notice_url,rulebook_pdf_url,registration_url,contact_phone,contact_email,is_featured,qualification_requirements,verification_status'
+  const baseFields =
+    'id,slug,title,event_type,organizer_name,city,venue_name,starts_at,ends_at,source_name,source_url,verification_status'
+
+  const enriched = await readCatalogue<EventItem>({
+    table: 'events',
+    select: enrichedFields,
+    order: 'starts_at.asc.nullslast',
+    filters: {
+      publication_status: 'eq.published',
+      verification_status: 'neq.rejected',
+    },
+  })
+  if (enriched.status === 'ready') return enriched
+
   return readCatalogue<EventItem>({
     table: 'events',
-    select:
-      'id,slug,title,hindi_title,sport,category,sanctioning_body,edition,event_type,organizer_name,city,state,venue_name,starts_at,ends_at,registration_deadline,source_name,source_url,age_categories,gender,prize_pool,entry_fee,team_or_individual,official_notice_url,rulebook_pdf_url,registration_url,contact_phone,contact_email,is_featured,qualification_requirements,verification_status',
+    select: baseFields,
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
@@ -3652,6 +3727,9 @@ export async function moderateListingSubmission(
       const overrides = raw ? (JSON.parse(raw) as Record<string, string>) : {}
       overrides[id] = status
       window.localStorage.setItem(STORAGE_ADMIN_SUBMISSIONS_KEY, JSON.stringify(overrides))
+      if (status === 'approved') {
+        window.dispatchEvent(new CustomEvent('khelgrid:listing-added', { detail: { id, status } }))
+      }
     } catch {
       // ignore
     }

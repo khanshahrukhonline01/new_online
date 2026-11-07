@@ -42,7 +42,7 @@ export interface PaymentResult {
   amount: number
   currency: string
   method: PaymentMethod
-  status: 'completed' | 'pay_at_venue' | 'failed'
+  status: 'completed' | 'pay_at_venue' | 'pending_verification' | 'failed'
   timestamp: string
   receiptRef: string
   errorMessage?: string

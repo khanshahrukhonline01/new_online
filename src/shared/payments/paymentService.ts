@@ -108,7 +108,7 @@ export async function recordPaymentTransaction({
   customer: PaymentCustomer
   item: PaymentItem
   method: PaymentMethod
-  status?: 'completed' | 'pay_at_venue' | 'failed'
+  status?: 'completed' | 'pay_at_venue' | 'pending_verification' | 'failed'
 }): Promise<PaymentResult> {
   const timestamp = new Date().toISOString()
   const receiptRef = `REC-${orderId.slice(-8)}-${paymentId.slice(-4)}`
