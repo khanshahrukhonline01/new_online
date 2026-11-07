@@ -20,6 +20,11 @@ import {
   type CommunityListingCategory,
 } from '../../integrations/supabase/public-client' 
 import { subscribeSavedItems } from '../../shared/services/savedService'
+import {
+  getUserTrialApplications,
+  type TrialApplication,
+} from '../../integrations/supabase/athlete-profile-client'
+import { getUserVenueBookings } from '../../shared/payments/paymentService'
 import { PlayerCard } from '../athlete-profile/PlayerCard'
 import './UserDashboardPage.css'
 
@@ -73,6 +78,26 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
       setAuthUser(user)
     })
   }, [])
+
+  const [venueBookings, setVenueBookings] = useState<ReturnType<typeof getUserVenueBookings>>([])
+  const [trialApplications, setTrialApplications] = useState<TrialApplication[]>([])
+
+  // Listen for live venue bookings and trial applications updates
+  useEffect(() => {
+    const loadUserData = () => {
+      setVenueBookings(getUserVenueBookings())
+      setTrialApplications(getUserTrialApplications())
+    }
+    loadUserData()
+
+    const onUpdate = () => loadUserData()
+    window.addEventListener('khelgrid:venue-booked', onUpdate)
+    window.addEventListener('khelgrid:trial-applied', onUpdate)
+    return () => {
+      window.removeEventListener('khelgrid:venue-booked', onUpdate)
+      window.removeEventListener('khelgrid:trial-applied', onUpdate)
+    }
+  }, [authUser])
 
   // Listen for live physical benchmark updates from Talent Scanner
   useEffect(() => {
@@ -422,7 +447,7 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
           className={`user-dash-tab-btn ${activeTab === 'matches' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('matches')}
         >
-          <SiteIcon name="sports" size={16} /> Confirmed Matches ({confirmedGames.length})
+          <SiteIcon name="sports" size={16} /> Matches &amp; Bookings ({confirmedGames.length + venueBookings.length + trialApplications.length})
         </button>
         <button
           type="button"
@@ -703,9 +728,162 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
         </div>
       )}
 
-      {/* TAB 3: CONFIRMED MATCHES */}
+      {/* TAB 3: CONFIRMED MATCHES & BOOKINGS */}
       {activeTab === 'matches' && (
         <div className="user-dash-section">
+          {/* Section 1: My Turf & Court Slot Bookings */}
+          <div className="user-dash-card" style={{ marginBottom: '24px' }}>
+            <div className="user-dash-card-header">
+              <h2><SiteIcon name="venues" size={18} /> My Turf &amp; Court Bookings ({venueBookings.length})</h2>
+              <a
+                href="/venues"
+                onClick={e => handleLink(e, '/venues')}
+                className="user-dash-btn secondary"
+                style={{ fontSize: '0.82rem', padding: '6px 12px' }}
+              >
+                + Book Another Turf
+              </a>
+            </div>
+
+            {venueBookings.length > 0 ? (
+              <div className="user-bookings-grid">
+                {venueBookings.map((b, idx) => (
+                  <div key={b.bookingRef || idx} className="user-booking-card">
+                    <div className="user-booking-header">
+                      <div>
+                        <span className="user-booking-ref">{b.bookingRef}</span>
+                        <h3 style={{ margin: '4px 0 0', fontSize: '1rem', color: '#f8fafc' }}>{b.venueName}</h3>
+                        <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#94a3b8' }}>
+                          {b.city ? `${b.city} · ` : ''}{b.sport || 'Multi-Sport Turf'}
+                        </p>
+                      </div>
+                      <span className={`user-booking-status ${b.paymentStatus === 'paid' ? 'paid' : 'pay-at-venue'}`}>
+                        {b.paymentStatus === 'paid' ? 'Deposit Paid' : 'Pay at Venue'}
+                      </span>
+                    </div>
+                    <div className="user-booking-details">
+                      <div className="user-booking-meta-item">
+                        <SiteIcon name="calendar" size={14} />
+                        <span>{b.slotDate} · {b.slotTime}</span>
+                      </div>
+                      <div className="user-booking-meta-item">
+                        <SiteIcon name="wallet" size={14} />
+                        <span>Amount: ₹{b.paidAmount || 0}</span>
+                      </div>
+                    </div>
+                    <div className="user-booking-actions">
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.venueName + (b.city ? ' ' + b.city : ''))}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="user-dash-btn secondary"
+                        style={{ fontSize: '12px', padding: '6px 10px', textDecoration: 'none' }}
+                      >
+                        <SiteIcon name="map-pin" size={13} />
+                        <span>Directions</span>
+                      </a>
+                      <a
+                        href="/venues"
+                        onClick={e => handleLink(e, '/venues')}
+                        className="user-dash-btn secondary"
+                        style={{ fontSize: '12px', padding: '6px 10px', textDecoration: 'none' }}
+                      >
+                        <SiteIcon name="external-link" size={13} />
+                        <span>View Ground</span>
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="user-empty-state">
+                <div className="empty-icon">🏟️</div>
+                <h3>No Turf Bookings Yet</h3>
+                <p>Reserve football turfs, badminton courts, and cricket nets with instant slot confirmation.</p>
+                <a href="/venues" onClick={e => handleLink(e, '/venues')} className="user-dash-btn primary">
+                  Browse Sports Venues &amp; Turfs
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Section 2: My Selection Trial Applications */}
+          <div className="user-dash-card" style={{ marginBottom: '24px' }}>
+            <div className="user-dash-card-header">
+              <h2><SiteIcon name="badge-check" size={18} /> My Selection Trial Applications ({trialApplications.length})</h2>
+              <a
+                href="/opportunities"
+                onClick={e => handleLink(e, '/opportunities')}
+                className="user-dash-btn secondary"
+                style={{ fontSize: '0.82rem', padding: '6px 12px' }}
+              >
+                Explore More Trials
+              </a>
+            </div>
+
+            {trialApplications.length > 0 ? (
+              <div className="user-applications-grid">
+                {trialApplications.map((app, idx) => (
+                  <div key={app.id || app.applicationRef || idx} className="user-app-card">
+                    <div className="user-app-header">
+                      <div>
+                        <span className="user-app-ref">{app.applicationRef}</span>
+                        <h3 style={{ margin: '4px 0 0', fontSize: '1rem', color: '#f8fafc' }}>{app.trialTitle}</h3>
+                        <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#94a3b8' }}>
+                          {app.organizerName ? `${app.organizerName} · ` : ''}{app.city} ({app.sport})
+                        </p>
+                      </div>
+                      <span className="user-app-status submitted">
+                        <SiteIcon name="shield-check" size={12} />
+                        <span>Submitted · Under Review</span>
+                      </span>
+                    </div>
+                    <div className="user-app-metrics">
+                      {app.fitnessBenchmarks?.percentileAvg ? (
+                        <div className="user-app-pill">
+                          <span>Tested Combine:</span>
+                          <strong>{app.fitnessBenchmarks.percentileAvg}th %ile ({app.fitnessBenchmarks.tier})</strong>
+                        </div>
+                      ) : (
+                        <div className="user-app-pill">
+                          <span>Status:</span>
+                          <strong>Verified Sports CV Attached</strong>
+                        </div>
+                      )}
+                      {app.videoClipsCount > 0 && (
+                        <div className="user-app-pill">
+                          <span>Highlights:</span>
+                          <strong>{app.videoClipsCount} Video Clips</strong>
+                        </div>
+                      )}
+                    </div>
+                    <div className="user-app-footer">
+                      <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                        Applied on {new Date(app.appliedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                      <a
+                        href={`/opportunities/${app.trialSlug}`}
+                        onClick={e => handleLink(e, `/opportunities/${app.trialSlug}`)}
+                        className="user-dash-btn secondary"
+                        style={{ fontSize: '12px', padding: '5px 10px', textDecoration: 'none' }}
+                      >
+                        View Trial Details
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="user-empty-state">
+                <div className="empty-icon">🎯</div>
+                <h3>No Trial Applications Yet</h3>
+                <p>Apply to state and national football, cricket, and athletics trials directly with your Sports CV.</p>
+                <a href="/opportunities" onClick={e => handleLink(e, '/opportunities')} className="user-dash-btn primary">
+                  Find Selection Trials
+                </a>
+              </div>
+            )}
+          </div>
           <div className="user-dash-card">
             <div className="user-dash-card-header">
               <h2><SiteIcon name="sports" size={18} /> Confirmed Matches &amp; Turf RSVPs</h2>

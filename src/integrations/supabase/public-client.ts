@@ -3093,13 +3093,54 @@ export function computeReviewStats(reviews: ReviewItem[]): ReviewStats {
   }
 }
 
+function getStoredLocalReviews(): ReviewItem[] {
+  if (typeof window === 'undefined' || !window.localStorage) return []
+  try {
+    const raw = window.localStorage.getItem('khelgrid_community_reviews')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed as ReviewItem[]
+    }
+  } catch {
+    // ignore
+  }
+  return []
+}
+
+function saveStoredLocalReview(review: ReviewItem): void {
+  if (typeof window === 'undefined' || !window.localStorage) return
+  try {
+    const current = getStoredLocalReviews()
+    const updated = [review, ...current.filter(r => r.id !== review.id)].slice(0, 50)
+    window.localStorage.setItem('khelgrid_community_reviews', JSON.stringify(updated))
+  } catch {
+    // ignore
+  }
+}
+
+export function getUserSubmittedReviews(userIdOrName?: string): ReviewItem[] {
+  const all = [...communitySubmissions.reviews, ...getStoredLocalReviews()].filter(
+    (r, idx, self) => self.findIndex(s => s.id === r.id) === idx,
+  )
+  if (!userIdOrName) return all
+  const clean = userIdOrName.toLowerCase().trim()
+  return all.filter(
+    r => (r.user_id && r.user_id.toLowerCase() === clean) ||
+         (r.author_name && r.author_name.toLowerCase() === clean),
+  )
+}
+
 export async function getReviews(
   entityType: 'academy' | 'venue',
   entitySlug: string,
 ): Promise<CatalogueResult<ReviewItem>> {
   const cleanSlug = entitySlug.toLowerCase().trim()
-  const localList = communitySubmissions.reviews.filter(
-    r => r.entity_type === entityType && r.entity_slug.toLowerCase() === cleanSlug,
+  const storedLocals = getStoredLocalReviews()
+  const localList = [...communitySubmissions.reviews, ...storedLocals].filter(
+    (r, idx, self) =>
+      self.findIndex(s => s.id === r.id) === idx &&
+      r.entity_type === entityType &&
+      r.entity_slug.toLowerCase() === cleanSlug,
   )
 
   const curatedList = INITIAL_CURATED_REVIEWS.filter(
@@ -3216,8 +3257,9 @@ export async function submitReview(
     }
   }
 
-  // 2. Cache in local memory
+  // 2. Cache in local memory and offline storage
   communitySubmissions.reviews = [review, ...communitySubmissions.reviews]
+  saveStoredLocalReview(review)
 
   // 3. Realtime event & custom DOM notification
   broadcastRealtimeEvent('reviews', 'INSERT', review)

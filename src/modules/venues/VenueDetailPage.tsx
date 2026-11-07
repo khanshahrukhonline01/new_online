@@ -1,5 +1,5 @@
 import { useState, useEffect, type MouseEvent } from 'react'
-import { getVenueBySlug, getVenues, getCommunityVenueBySlug } from '../../integrations/supabase/public-client'
+import { getVenueBySlug, getVenues, getCommunityVenueBySlug, getReviews, computeReviewStats } from '../../integrations/supabase/public-client'
 import type { Venue } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { ShareBar } from '../../shared/components/ShareBar'
@@ -11,7 +11,7 @@ import ReportListingModal from '../../shared/components/ReportListingModal'
 import VerificationClaimModal from '../../shared/components/VerificationClaimModal'
 import { CommunityReviewsSection } from '../../shared/components/CommunityReviewsSection'
 import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
-import { parseInrPrice, recordVenueSlotBooking } from '../../shared/payments/paymentService'
+import { parseInrPrice, recordVenueSlotBooking, getBookedVenueSlots } from '../../shared/payments/paymentService'
 import type { PaymentItem, VenueBookingResult } from '../../shared/payments/paymentTypes'
 import './VenueDetailPage.css'
 
@@ -19,9 +19,10 @@ export interface VenueDetailPageProps {
   slug: string
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
   onOpenIntake?: (category?: 'venue' | 'pickup_game' | 'opportunity') => void
+  initialBookingOpen?: boolean
 }
 
-export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: VenueDetailPageProps) {
+export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initialBookingOpen }: VenueDetailPageProps) {
   const isServer = typeof window === 'undefined'
   const initialCurated = getCuratedVenueBySlug(slug) || getCommunityVenueBySlug(slug)
   const [venue, setVenue] = useState<Venue | CuratedVenue | null>(initialCurated || null)
@@ -32,7 +33,10 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: Venu
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false)
 
   // Turf / Court Slot Booking State
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(initialBookingOpen ?? false)
+  const [liveRating, setLiveRating] = useState<number>(() => initialCurated?.rating || 4.8)
+  const [liveReviewCount, setLiveReviewCount] = useState<number>(() => initialCurated?.review_count || 96)
+  const [bookedSlots, setBookedSlots] = useState<string[]>([])
   const [selectedSport, setSelectedSport] = useState('')
   const [selectedDate, setSelectedDate] = useState('Today')
   const [selectedSlot, setSelectedSlot] = useState('7:00 PM – 8:00 PM')
@@ -68,6 +72,57 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: Venu
       active = false
     }
   }, [slug, initialCurated])
+
+  // Dynamic Community Rating & Review Stats
+  useEffect(() => {
+    let active = true
+    const updateDynamicRating = async () => {
+      try {
+        const res = await getReviews('venue', slug)
+        if (active && res.data && res.data.length > 0) {
+          const stats = computeReviewStats(res.data)
+          if (stats.totalReviews > 0) {
+            const baselineR = initialCurated?.rating || 4.8
+            const baselineC = initialCurated?.review_count || 96
+            const communitySum = stats.averageRating * stats.totalReviews
+            const totalCount = baselineC + stats.totalReviews - Math.min(stats.totalReviews, 2)
+            const newAvg = Number(((baselineR * baselineC + communitySum) / (baselineC + stats.totalReviews)).toFixed(1))
+            setLiveRating(newAvg)
+            setLiveReviewCount(totalCount)
+          }
+        }
+      } catch {
+        // Keep baseline
+      }
+    }
+
+    void updateDynamicRating()
+
+    const onReviewAdded = () => {
+      void updateDynamicRating()
+    }
+    window.addEventListener('khelgrid:review-added', onReviewAdded)
+    return () => {
+      active = false
+      window.removeEventListener('khelgrid:review-added', onReviewAdded)
+    }
+  }, [slug, initialCurated?.rating, initialCurated?.review_count])
+
+  // Real-time booked slots tracking
+  useEffect(() => {
+    if (venue?.id) {
+      setBookedSlots(getBookedVenueSlots(venue.id, selectedDate))
+    }
+    const onBooking = () => {
+      if (venue?.id) {
+        setBookedSlots(getBookedVenueSlots(venue.id, selectedDate))
+      }
+    }
+    window.addEventListener('khelgrid:venue-booked', onBooking)
+    return () => {
+      window.removeEventListener('khelgrid:venue-booked', onBooking)
+    }
+  }, [venue?.id, selectedDate])
 
   // SEO & Schema.org JSON-LD
   useEffect(() => {
@@ -167,8 +222,6 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: Venu
   const surfaceText = curated.surface_type || 'Professional Playing Surface'
   const courtText = curated.court_count || 'Standard Multi-Sport Playing Ground'
   const pricingText = curated.pricing || 'Hourly rates starting from ₹800/hr'
-  const ratingVal = curated.rating || 4.8
-  const reviewCount = curated.review_count || 96
 
   const faqs = curated.faqs || [
     {
@@ -237,8 +290,8 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: Venu
           </span>
           <span className="venue-meta-item">
             <SiteIcon name="star" size={15} />
-            <span className="venue-rating">{ratingVal} ★</span>
-            <span className="venue-reviews">({reviewCount} reviews)</span>
+            <span className="venue-rating">{liveRating} ★</span>
+            <span className="venue-reviews">({liveReviewCount} reviews)</span>
           </span>
         </div>
 
@@ -693,16 +746,22 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake }: Venu
                       '7:00 PM – 8:00 PM',
                       '8:00 PM – 9:00 PM',
                       '9:00 PM – 10:00 PM',
-                    ].map(slot => (
-                      <button
-                        key={slot}
-                        type="button"
-                        className={`venue-slot-chip ${selectedSlot === slot ? 'selected' : ''}`}
-                        onClick={() => setSelectedSlot(slot)}
-                      >
-                        {slot}
-                      </button>
-                    ))}
+                    ].map(slot => {
+                      const isBooked = bookedSlots.includes(slot)
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          className={`venue-slot-chip ${selectedSlot === slot ? 'selected' : ''} ${isBooked ? 'is-booked' : ''}`}
+                          onClick={() => !isBooked && setSelectedSlot(slot)}
+                          disabled={isBooked}
+                          title={isBooked ? 'Slot already reserved by another team' : `Reserve ${slot}`}
+                        >
+                          <span>{slot}</span>
+                          {isBooked && <span className="slot-booked-tag">Booked</span>}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { AsyncState } from '../../shared/components/AsyncState'
 import { getOpportunities } from '../../integrations/supabase/public-client'
 import type { CatalogueResult } from '../../integrations/supabase/public-client'
@@ -17,6 +17,8 @@ import { BookmarkButton } from '../../shared/components/BookmarkButton'
 import { createOpportunitySavedItem } from '../../shared/services/savedService'
 import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
 import type { PaymentItem } from '../../shared/payments/paymentTypes'
+import { TrialApplicationModal } from './TrialApplicationModal'
+import { getUserTrialApplications } from '../../integrations/supabase/athlete-profile-client'
 
 function formatDate(value: string | null) {
   if (!value) return 'Date not provided'
@@ -38,9 +40,11 @@ const AGE_OPTIONS = [
 
 export interface OpportunitiesPageProps {
   onOpenIntake?: () => void
+  onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
+  initialApplySlug?: string
 }
 
-export default function OpportunitiesPage({ onOpenIntake }: OpportunitiesPageProps = {}) {
+export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApplySlug }: OpportunitiesPageProps = {}) {
   const [result, setResult] = useState<CatalogueResult<Opportunity> | { status: 'loading'; data: [] }>({
     status: 'loading',
     data: [],
@@ -64,6 +68,29 @@ export default function OpportunitiesPage({ onOpenIntake }: OpportunitiesPagePro
     athletePhone: string
     amount: number
   } | null>(null)
+  const [applyOpportunity, setApplyOpportunity] = useState<Opportunity | null>(null)
+  const [appliedSlugs, setAppliedSlugs] = useState<Set<string>>(() => {
+    const apps = getUserTrialApplications()
+    return new Set(apps.map(a => a.trialSlug))
+  })
+
+  useEffect(() => {
+    const handleApplied = () => {
+      const apps = getUserTrialApplications()
+      setAppliedSlugs(new Set(apps.map(a => a.trialSlug)))
+    }
+    window.addEventListener('khelgrid:trial-applied', handleApplied)
+    return () => {
+      window.removeEventListener('khelgrid:trial-applied', handleApplied)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (initialApplySlug && result.status === 'ready' && result.data.length > 0) {
+      const found = result.data.find(r => r.slug === initialApplySlug)
+      if (found) setApplyOpportunity(found)
+    }
+  }, [initialApplySlug, result])
 
   useEffect(() => {
     let active = true
@@ -329,7 +356,29 @@ export default function OpportunitiesPage({ onOpenIntake }: OpportunitiesPagePro
                           venueName={item.venue_name}
                           compact
                         />
-                        <div style={{ marginTop: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ marginTop: '12px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => setApplyOpportunity(item)}
+                            className="btn-apply-sports-cv"
+                            style={{
+                              padding: '8px 14px',
+                              fontSize: '12.5px',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              border: 'none',
+                              color: '#fff',
+                              fontWeight: 700,
+                              background: appliedSlugs.has(item.slug) ? '#059669' : '#2563eb',
+                            }}
+                            aria-label={`Apply with Sports CV to ${item.title}`}
+                          >
+                            <SiteIcon name={appliedSlugs.has(item.slug) ? 'badge-check' : 'sports-cv'} size={14} />
+                            <span>{appliedSlugs.has(item.slug) ? 'Application Submitted ✓' : 'Apply with Sports CV'}</span>
+                          </button>
                           <button
                             type="button"
                             onClick={() => {
@@ -475,6 +524,18 @@ export default function OpportunitiesPage({ onOpenIntake }: OpportunitiesPagePro
             }
           }}
           allowPayAtVenue={false}
+        />
+      )}
+
+      {/* Dynamic Selection Trial Application Modal */}
+      {applyOpportunity && (
+        <TrialApplicationModal
+          opportunity={applyOpportunity}
+          onClose={() => setApplyOpportunity(null)}
+          onSuccess={() => {
+            setAppliedSlugs(prev => new Set([...prev, applyOpportunity.slug]))
+          }}
+          onNavigate={onNavigate}
         />
       )}
     </section>

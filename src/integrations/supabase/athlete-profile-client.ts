@@ -612,3 +612,160 @@ export async function saveAthleteFitnessBenchmarks(
     message: `Physical benchmarks successfully synced! Your Player Card now reflects ${benchmarks.percentileAvg}th percentile (${benchmarks.tier}).`,
   }
 }
+
+export interface TrialApplication {
+  id: string
+  applicationRef: string
+  trialSlug: string
+  trialTitle: string
+  sport: string
+  city: string
+  venueName?: string
+  startsAt?: string
+  deadlineDate?: string
+  organizerName?: string
+  athleteName: string
+  athletePhone: string
+  athleteEmail?: string
+  ageCategory?: string
+  playingPosition?: string
+  summary?: string
+  fitnessBenchmarks?: {
+    yoyoIr1Meters?: number
+    sprint30mSeconds?: number
+    cmjHeightCm?: number
+    tier?: string
+    percentileAvg?: number
+  }
+  videoClipsCount: number
+  statement: string
+  status: 'submitted' | 'under_review' | 'shortlisted' | 'admit_issued'
+  appliedAt: string
+}
+
+export interface SubmitTrialApplicationInput {
+  trialSlug: string
+  trialTitle: string
+  sport: string
+  city: string
+  venueName?: string
+  startsAt?: string
+  deadlineDate?: string
+  organizerName?: string
+  athleteName: string
+  athletePhone: string
+  athleteEmail?: string
+  ageCategory?: string
+  playingPosition?: string
+  summary?: string
+  fitnessBenchmarks?: {
+    yoyoIr1Meters?: number
+    sprint30mSeconds?: number
+    cmjHeightCm?: number
+    tier?: string
+    percentileAvg?: number
+  }
+  videoClipsCount?: number
+  statement?: string
+}
+
+export async function submitTrialApplication(
+  input: SubmitTrialApplicationInput,
+): Promise<{ status: 'submitted'; application: TrialApplication; message: string }> {
+  const ref = `APP-${input.sport.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase()}-${Date.now().toString(36).slice(-5).toUpperCase()}`
+  const now = new Date().toISOString()
+  const application: TrialApplication = {
+    id: `appl-${Date.now().toString(36)}`,
+    applicationRef: ref,
+    trialSlug: input.trialSlug,
+    trialTitle: input.trialTitle,
+    sport: input.sport,
+    city: input.city,
+    venueName: input.venueName,
+    startsAt: input.startsAt,
+    deadlineDate: input.deadlineDate,
+    organizerName: input.organizerName,
+    athleteName: input.athleteName.trim() || 'Verified Athlete',
+    athletePhone: input.athletePhone.trim(),
+    athleteEmail: input.athleteEmail?.trim(),
+    ageCategory: input.ageCategory,
+    playingPosition: input.playingPosition,
+    summary: input.summary,
+    fitnessBenchmarks: input.fitnessBenchmarks,
+    videoClipsCount: input.videoClipsCount || 0,
+    statement: input.statement?.trim() || 'Registered candidate applying with verified KhelGrid Sports CV and combine evaluation metrics.',
+    status: 'submitted',
+    appliedAt: now,
+  }
+
+  // Local storage persistence
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const existing = JSON.parse(window.localStorage.getItem('khelgrid_trial_applications') || '[]') as TrialApplication[]
+      const updated = [application, ...existing.filter(a => a.trialSlug !== input.trialSlug)].slice(0, 50)
+      window.localStorage.setItem('khelgrid_trial_applications', JSON.stringify(updated))
+    } catch {
+      // ignore
+    }
+  }
+
+  // Supabase write if configured
+  if (supabaseUrl && anonKey) {
+    try {
+      await fetch(`${supabaseUrl}/rest/v1/trial_applications`, {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          application_ref: application.applicationRef,
+          trial_slug: application.trialSlug,
+          trial_title: application.trialTitle,
+          sport: application.sport,
+          city: application.city,
+          athlete_name: application.athleteName,
+          athlete_phone: application.athletePhone,
+          fitness_benchmarks: application.fitnessBenchmarks || {},
+          status: 'submitted',
+        }),
+      })
+    } catch {
+      // ignore
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('khelgrid:trial-applied', {
+        detail: { application },
+      }),
+    )
+  }
+
+  return {
+    status: 'submitted',
+    application,
+    message: `Application submitted successfully! Reference #${ref} is registered with ${input.organizerName || 'the trial selection committee'}.`,
+  }
+}
+
+export function getUserTrialApplications(): TrialApplication[] {
+  if (typeof window === 'undefined' || !window.localStorage) return []
+  try {
+    const raw = window.localStorage.getItem('khelgrid_trial_applications')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed as TrialApplication[]
+    }
+  } catch {
+    // ignore
+  }
+  return []
+}
+
+export function isTrialAlreadyApplied(trialSlug: string): boolean {
+  const apps = getUserTrialApplications()
+  return apps.some(a => a.trialSlug.toLowerCase() === trialSlug.toLowerCase())
+}
