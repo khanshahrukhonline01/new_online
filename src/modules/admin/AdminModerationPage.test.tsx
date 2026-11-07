@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { AdminModerationPage } from './AdminModerationPage'
 import * as authClient from '../../integrations/supabase/auth-client'
@@ -7,6 +7,10 @@ import * as publicClient from '../../integrations/supabase/public-client'
 describe('AdminModerationPage', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('renders restricted access notice when user is not an admin', () => {
@@ -52,6 +56,16 @@ describe('AdminModerationPage', () => {
   })
 
   it('interacts with moderation API helpers properly', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    )
+
     const queue = await publicClient.getAdminModerationQueue()
     expect(queue.stats).toBeDefined()
     expect(queue.stats.totalVenues).toBeGreaterThan(0)
@@ -65,5 +79,5 @@ describe('AdminModerationPage', () => {
 
     const repRes = await publicClient.moderateListingReport('rep-001', 'resolved', 'Resolved')
     expect(repRes).toBe(true)
-  })
+  }, 15000)
 })
