@@ -205,7 +205,23 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
       <nav className="sidebar-navigation" aria-label="Mobile feature navigation">{renderSections(true)}</nav>
       <div className="sidebar-promo"><strong>{t('promoTitle', 'Build your athlete profile')}</strong><p>{t('promoText', 'Create a Sports CV and prepare a profile-ready PDF on your device.')}</p><a href="/sports-cv" onClick={event => { onNavigate(event, '/sports-cv'); onClose() }}>{t('openSportsCv', 'Open Sports CV')} <SiteIcon name="arrow-up-right" size={13} /></a></div>
       <div className="sidebar-bottom">
-        <a className="sidebar-utility-link" href="/help-feedback" aria-label="Help and feedback" onClick={event => { onNavigate(event, '/help-feedback'); onClose() }}><SiteIcon name="help-circle" size={18} /><span className="sidebar-utility-label">{t('helpAndFeedback', 'Help & feedback')}</span></a>
+        {onOpenIntake && (
+          <button
+            type="button"
+            className="sidebar-utility-link sidebar-intake-btn"
+            onClick={() => { onClose(); onOpenIntake() }}
+            title={t('listOnKhelgrid', { ns: 'common', defaultValue: '+ List on KhelGrid' })}
+            aria-label={t('listOnKhelgrid', { ns: 'common', defaultValue: '+ List on KhelGrid' })}
+          >
+            <SiteIcon name="plus" size={18} />
+            <span className="sidebar-utility-label">{t('listOnKhelgrid', { ns: 'common', defaultValue: '+ List on KhelGrid' })}</span>
+          </button>
+        )}
+        <a className="sidebar-utility-link" href="/help-feedback" aria-label="Help and feedback" onClick={event => { onNavigate(event, '/help-feedback'); onClose() }}>
+          <SiteIcon name="help-circle" size={18} />
+          <span className="sidebar-utility-label">{t('helpAndFeedback', 'Help & feedback')}</span>
+        </a>
+        <span className="sidebar-bottom-note">KhelGrid · India</span>
       </div>
     </div>
     <nav className="mobile-bottom-nav" aria-label="Quick navigation">

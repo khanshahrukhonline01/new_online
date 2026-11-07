@@ -158,7 +158,7 @@
     border-top: 1px solid var(--kg-sidebar-border);
   }
 
-  .foundation-v1 .app-workspace > .app-sidebar .sidebar-utility-link {
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed .sidebar-utility-link {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -170,9 +170,10 @@
     border-radius: 11px;
     color: var(--kg-sidebar-text);
     text-decoration: none;
+    box-sizing: border-box;
   }
 
-  .foundation-v1 .app-workspace > .app-sidebar .sidebar-utility-link:hover { background: #edf3f0; color: var(--kg-sidebar-green); }
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed .sidebar-utility-link:hover { background: #edf3f0; color: var(--kg-sidebar-green); }
 
   /* Hover temporarily reveals the full navigation without pinning it open. */
   .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-rail-links,
@@ -273,6 +274,74 @@
   }
   .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-link-label { display: flex; flex: 1; }
   .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-promo { display: block; }
+
+  .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    width: 100%;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--kg-sidebar-border, #e2e8f0);
+    box-sizing: border-box;
+  }
+
+  .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-utility-link {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 38px;
+    padding: 8px 12px;
+    border-radius: 9px;
+    color: var(--kg-sidebar-text, #53647b);
+    text-decoration: none;
+    font-size: 12.5px;
+    font-weight: 600;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background 150ms ease, color 150ms ease;
+  }
+
+  .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-utility-link:hover {
+    background: #edf3f0;
+    color: var(--kg-sidebar-green, #087b45);
+  }
+
+  .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-utility-label {
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 12.5px;
+  }
+
+  .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-intake-btn {
+    background: #e8f5ed;
+    color: #087b45;
+    border: 1px solid #d4ebd9;
+    font-weight: 700;
+    border-radius: 9px;
+  }
+
+  .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-intake-btn:hover {
+    background: #087b45;
+    color: #ffffff;
+  }
+
+  .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-bottom-note {
+    display: block;
+    padding: 4px 6px 0;
+    color: #94a3b8;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
 }
 
 /* Shared navigation presentation used by both desktop rail and mobile drawer. */
@@ -471,16 +540,57 @@
 
   /* Mobile Drawer Bottom Utility Row */
   .mobile-drawer .sidebar-bottom {
-    display: flex; flex-direction: column; gap: 3px; padding-top: 10px;
-    border-top: 1px solid #e4e9ef; flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 12px;
+    border-top: 1px solid #e4e9ef;
+    flex: 0 0 auto;
+    margin-top: auto;
+    box-sizing: border-box;
   }
   .mobile-drawer .sidebar-utility-link {
-    display: flex; align-items: center; gap: 11px; min-height: 44px; padding: 8px 11px;
-    border-radius: 10px; color: #53647b; text-decoration: none; font-size: 12.5px; font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-height: 42px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    color: #53647b;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    box-sizing: border-box;
     transition: background 150ms ease, color 150ms ease;
   }
-  .mobile-drawer .sidebar-utility-link:hover { background: #f1f5f9; color: #087b45; }
-  button.sidebar-utility-link { background: transparent; border: 0; width: 100%; cursor: pointer; font-family: inherit; font-size: inherit; }
+  .mobile-drawer .sidebar-utility-link:hover {
+    background: #f1f5f9;
+    color: #087b45;
+  }
+  .mobile-drawer .sidebar-intake-btn {
+    background: #e8f5ed;
+    color: #087b45;
+    border: 1px solid #d4ebd9;
+    font-weight: 700;
+  }
+  .mobile-drawer .sidebar-intake-btn:hover {
+    background: #087b45;
+    color: #ffffff;
+  }
+  .mobile-drawer .sidebar-bottom-note {
+    display: block;
+    padding: 4px 6px 0;
+    color: #94a3b8;
+    font-size: 10.5px;
+  }
+  button.sidebar-utility-link {
+    background: transparent;
+    border: 0;
+    width: 100%;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+  }
 
   /* Mobile Bottom Navigation Bar */
   .mobile-bottom-nav {
@@ -609,6 +719,34 @@ html.dark .mobile-drawer .sidebar-utility-link {
 html.dark .mobile-drawer .sidebar-utility-link:hover {
   background: #172336;
   color: #34d399;
+}
+html.dark .mobile-drawer .sidebar-intake-btn {
+  background: rgba(16, 185, 129, 0.14);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+html.dark .mobile-drawer .sidebar-intake-btn:hover {
+  background: #10b981;
+  color: #ffffff;
+}
+html.dark .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-bottom {
+  border-top-color: #1e293b;
+}
+html.dark .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-utility-link {
+  color: #94a3b8;
+}
+html.dark .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-utility-link:hover {
+  background: #172336;
+  color: #34d399;
+}
+html.dark .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-intake-btn {
+  background: rgba(16, 185, 129, 0.14);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+html.dark .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-intake-btn:hover {
+  background: #10b981;
+  color: #ffffff;
 }
 html.dark .mobile-bottom-nav {
   background: rgba(12, 20, 33, 0.94);
