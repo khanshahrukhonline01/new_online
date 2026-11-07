@@ -156,6 +156,24 @@ ALTER TABLE public.athlete_profiles
   ADD COLUMN IF NOT EXISTS is_public_cv boolean DEFAULT false,
   ADD COLUMN IF NOT EXISTS consent_scout_sharing boolean DEFAULT false;
 
+-- Deduplicate historical duplicate slots before index creation:
+-- Keeps the newest record active and transitions older duplicates to 'superseded'
+-- Preserves 100% of historical records without deleting any customer data.
+UPDATE public.venue_bookings
+SET status = 'superseded'
+WHERE id IN (
+  SELECT vb1.id
+  FROM public.venue_bookings vb1
+  JOIN public.venue_bookings vb2
+    ON vb1.venue_id = vb2.venue_id
+   AND vb1.slot_date = vb2.slot_date
+   AND vb1.slot_time = vb2.slot_time
+   AND coalesce(vb1.court_number, 1) = coalesce(vb2.court_number, 1)
+   AND (vb2.created_at > vb1.created_at OR (vb2.created_at = vb1.created_at AND vb2.id > vb1.id))
+  WHERE vb1.status IN ('confirmed', 'pending', 'reserved')
+    AND vb2.status IN ('confirmed', 'pending', 'reserved')
+);
+
 -- 2.7 Partial Unique Index for Booking Concurrency
 CREATE UNIQUE INDEX IF NOT EXISTS uq_venue_slot_concurrency
   ON public.venue_bookings(venue_id, slot_date, slot_time, court_number)
