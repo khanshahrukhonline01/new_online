@@ -200,12 +200,37 @@
   .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-coming-soon,
   .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-coming-soon { display: inline-flex; }
   .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-bottom,
-  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-bottom { align-items: stretch; }
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-bottom {
+    align-items: stretch;
+    padding-inline: 4px;
+  }
   .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-utility-link,
   .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-utility-link {
     justify-content: flex-start;
+    gap: 10px;
     width: 100%;
-    padding-inline: 10px;
+    min-width: 0;
+    height: auto;
+    min-height: 38px;
+    padding: 8px 12px;
+    border-radius: 9px;
+  }
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-intake-btn,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-intake-btn {
+    background: #e8f5ed;
+    color: #087b45;
+    border: 1px solid #d4ebd9;
+    font-weight: 700;
+  }
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-intake-btn:hover,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-intake-btn:hover {
+    background: #087b45;
+    color: #ffffff;
+  }
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:hover .sidebar-bottom-note,
+  .foundation-v1 .app-workspace > .app-sidebar.is-collapsed:focus-within .sidebar-bottom-note {
+    display: block;
+    padding: 4px 6px 0;
   }
 
   .foundation-v1 .app-workspace > .page-shell {
@@ -374,6 +399,27 @@
 .sidebar-promo p { margin: 7px 0 12px; color: #64748b; font-size: 10px; line-height: 1.6; }
 .sidebar-promo a { display: flex; justify-content: space-between; gap: 6px; color: #087b45; font-size: 10px; font-weight: 750; text-decoration: none; }
 .sidebar-link:focus-visible,.sidebar-utility-link:focus-visible,.sidebar-module-toggle:focus-visible { outline: 3px solid #07964f; outline-offset: 2px; }
+
+/* Base utility link and label presentation */
+.sidebar-utility-link {
+  display: flex;
+  align-items: center;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--kg-sidebar-text, #53647b);
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.sidebar-utility-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* Pulse animation for live score indicator in quick bar */
 @keyframes kg-pulse {
