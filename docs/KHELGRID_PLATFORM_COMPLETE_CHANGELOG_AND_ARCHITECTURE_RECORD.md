@@ -1,6 +1,6 @@
 # KhelGrid Platform: Comprehensive Changelog & Architectural Record
 
-> **Document Version:** 3.5.0 (Dynamic Academy Enrolment & Batch Registration Release)  
+> **Document Version:** 3.6.0 (Pillar 1 Unified PostgreSQL Relational Schema Release)  
 > **Repository:** `khelgrid-dotcom/khelgrid-platform`  
 > **Mirrors:** `khanshahrukhonline01/new_online` | `khanshahrukhonline01/khelgrid`  
 > **Last Synchronized:** 2026-11-07  
@@ -41,6 +41,7 @@ It explains **what was changed**, **how it was implemented**, **why it exists in
 | Phase 18: Talent Scanner Direct Profile Sync & Dynamic Ecosystem (2026-11-07)   |
 | Phase 19: Dynamic Reviews, Live Turf Bookings & Trial Applications (2026-11-07)  |
 | Phase 20: Dynamic Academy Enrolment & Batch Registration (2026-11-07)            |
+| Phase 21: Pillar 1 Unified PostgreSQL Relational Schema (2026-11-07)             |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -552,6 +553,31 @@ Eliminates static operational dead-ends by turning turf discovery into real-time
 
 #### Why in Online Repository:
 Eliminates static operational dead-ends by enabling aspiring grassroots athletes and parents to officially register for academy trials and batch admissions directly with their verified KhelGrid credentials and physical combine data.
+
+---
+
+### Phase 21: Pillar 1 Unified PostgreSQL Relational Schema (`supabase/migrations/`) (2026-11-07)
+
+#### What Was Built:
+- **Consolidated Relational Schema (`20261107180000_pillar1_unified_relational_schema.sql`)**:
+  1. **`coaches` & `coach_inquiries`**: Extended with full biographical, NIS/BCCI/AFC credential authority (`sai-nis`, `bcci`, `aiff-afc`, `bwf-bai`), pricing (`fee_range_category`), student track record, ratings, and dedicated session inquiries.
+  2. **`tournaments_and_events`**: Scheduled grassroots tournaments, school games (`SGFI`), national championships (`KIYG`, `AFI`, `AIFF Subroto Cup`), entry fees, age categories, rules, and organizers.
+  3. **`venue_slot_bookings`**: Real-time court & turf reservations with a database-level `UNIQUE (venue_id, slot_date, slot_time) WHERE (status != 'cancelled')` constraint, making double-booking physically impossible at the PostgreSQL engine level.
+  4. **`trial_applications`**: Relational candidate submissions linking applicant profile IDs, tested combine metrics, video counts, and review notes.
+  5. **`academy_enquiries`**: Batch enquiries with training schedules (weekend vs weekday), skill tiers (beginner vs elite), and review tracking.
+  6. **`user_bookmarks`**: Cross-device saved items in PostgreSQL linked directly to `auth.users(id)` with unique user constraints.
+  7. **`live_matches` & `live_score_events`**: Live match scoreboards with normalized ball-by-ball / minute-by-minute score event logs and commentary.
+- **Seed Data Expansion (`20261107181000_seed_tournaments_and_coaches_expansion.sql`)**:
+  - Pre-seeded flagship grassroots events (Khelo India Youth Games, Subroto Cup, SGFI National School Badminton, AFI Junior Athletics).
+  - Populated verified elite coach credentials (BCCI Level 3, AFC Pro, Dronacharya Awardees).
+  - Pre-seeded live grassroots match scoreboards with ball-by-ball score events for live score engines.
+- **1-Click Master SQL Script (`supabase/master_schema_and_seed.sql`)**:
+  - Standalone, zero-extension, idempotent SQL script ready to copy-paste into the Supabase SQL Editor on Free Tier.
+- **Security & RLS Policies**:
+  - Row Level Security (RLS) enabled on all 14 tables with public read access for discovery catalogue and owner-scoped write permissions for user records.
+
+#### Why in Online Repository:
+Lays the foundation for KhelGrid's transition into a 100% database-driven platform, ensuring every operational domain (slots, bookmarks, enquiries, applications, coaches, tournaments, and live scores) is backed by ACID-compliant PostgreSQL tables.
 
 ## 3. Why These Changes Are in the Online Repository
 
