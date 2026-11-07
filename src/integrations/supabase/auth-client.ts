@@ -417,6 +417,113 @@ export async function sendPasswordReset(email: string): Promise<{ success: boole
 }
 
 /**
+ * Resends an email verification/confirmation link to the given email address.
+ */
+export async function resendVerificationEmail(email: string): Promise<{ success: boolean; message: string }> {
+  const cleanEmail = email.trim().toLowerCase()
+  if (!cleanEmail || !cleanEmail.includes('@')) {
+    return { success: false, message: 'Please provide a valid email address.' }
+  }
+
+  const client = getSupabaseClient()
+  if (!client) {
+    return {
+      success: true,
+      message: 'Verification link resent (Development Mode: Instant Verification).',
+    }
+  }
+
+  try {
+    const { error } = await client.auth.resend({
+      type: 'signup',
+      email: cleanEmail,
+      options: {
+        emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+      },
+    })
+
+    if (error) {
+      if (error.message?.toLowerCase().includes('rate limit') || error.status === 429) {
+        return {
+          success: false,
+          message:
+            'Supabase email confirmation rate limit reached. Please wait a few minutes before requesting another verification email.',
+        }
+      }
+      return { success: false, message: error.message }
+    }
+
+    return {
+      success: true,
+      message: `A fresh verification link has been sent to ${cleanEmail}. Please check your inbox and spam folder.`,
+    }
+  } catch (err: unknown) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : 'Could not resend verification email.',
+    }
+  }
+}
+
+export interface AuthUrlCallbackInfo {
+  type: 'error' | 'recovery' | 'signup_confirmed' | null
+  errorCode?: string
+  errorDescription?: string
+  accessToken?: string
+}
+
+/**
+ * Parses authentication errors and callback tokens from URL hash or query parameters.
+ */
+export function parseAuthUrlCallback(
+  rawUrl?: string,
+): AuthUrlCallbackInfo {
+  const input = rawUrl !== undefined
+    ? rawUrl
+    : typeof window !== 'undefined'
+      ? `${window.location.hash || ''}&${window.location.search || ''}`
+      : ''
+
+  if (!input || input === '&') return { type: null }
+
+  const cleaned = input.replace(/^[#?]/, '').replace(/[#?]/g, '&')
+  const params = new URLSearchParams(cleaned)
+
+  const errorCode = params.get('error_code') || params.get('error')
+  const errorDescription = params.get('error_description')
+
+  if (errorCode || errorDescription) {
+    return {
+      type: 'error',
+      errorCode: errorCode || undefined,
+      errorDescription: errorDescription ? decodeURIComponent(errorDescription.replace(/\+/g, ' ')) : undefined,
+    }
+  }
+
+  const type = params.get('type')
+  const accessToken = params.get('access_token')
+
+  if (type === 'recovery') {
+    return { type: 'recovery', accessToken: accessToken || undefined }
+  }
+
+  if (type === 'signup' || accessToken) {
+    return { type: 'signup_confirmed', accessToken: accessToken || undefined }
+  }
+
+  return { type: null }
+}
+
+/**
+ * Safely removes authentication hash fragments and error query params from the browser address bar.
+ */
+export function clearAuthUrlHash(): void {
+  if (typeof window === 'undefined') return
+  const cleanUrl = window.location?.pathname || '/'
+  window.history?.replaceState?.(null, '', cleanUrl)
+}
+
+/**
  * Updates the password for the currently signed-in user.
  */
 export async function updatePassword(newPassword: string): Promise<{ success: boolean; message?: string }> {

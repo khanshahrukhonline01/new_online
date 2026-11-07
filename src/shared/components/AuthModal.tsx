@@ -4,16 +4,19 @@ import {
   signInWithEmail,
   signUpWithEmail,
   sendPasswordReset,
+  resendVerificationEmail,
   type UserRole,
   type AuthUserProfile,
 } from '../../integrations/supabase/auth-client'
 import './AuthModal.css'
 
-export type AuthModalTab = 'login' | 'signup' | 'forgot_password'
+export type AuthModalTab = 'login' | 'signup' | 'forgot_password' | 'expired_link'
 
 export interface AuthModalProps {
   isOpen: boolean
   initialTab?: AuthModalTab
+  initialError?: string
+  initialEmail?: string
   onClose: () => void
   onSuccess?: (user: AuthUserProfile) => void
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
@@ -84,13 +87,15 @@ const DEMO_ACCOUNTS: Array<{
 export default function AuthModal({
   isOpen,
   initialTab = 'login',
+  initialError,
+  initialEmail,
   onClose,
   onSuccess,
 }: AuthModalProps) {
   const [tab, setTab] = useState<AuthModalTab>(initialTab)
 
   // Form Fields
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(initialEmail || '')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [role, setRole] = useState<UserRole>('athlete')
@@ -100,7 +105,7 @@ export default function AuthModal({
 
   // Status & Feedback
   const [submitting, setSubmitting] = useState(false)
-  const [errorMsg, setErrorMsg] = useState('')
+  const [errorMsg, setErrorMsg] = useState(initialError || '')
   const [successMsg, setSuccessMsg] = useState('')
   const [emailVerificationPending, setEmailVerificationPending] = useState(false)
 
@@ -112,13 +117,20 @@ export default function AuthModal({
 
   const cardRef = useRef<HTMLDivElement>(null)
 
-  // Sync tab with initialTab prop
+  // Sync tab with initialTab and initialError prop
   useEffect(() => {
     setTab(initialTab)
-    setErrorMsg('')
+    if (initialError) {
+      setErrorMsg(initialError)
+    } else {
+      setErrorMsg('')
+    }
+    if (initialEmail) {
+      setEmail(initialEmail)
+    }
     setSuccessMsg('')
     setEmailVerificationPending(false)
-  }, [initialTab, isOpen])
+  }, [initialTab, initialError, initialEmail, isOpen])
 
   // Close on Escape key
   useEffect(() => {
@@ -235,6 +247,31 @@ export default function AuthModal({
     }
   }
 
+  const handleResendVerification = async (e?: FormEvent) => {
+    if (e) e.preventDefault()
+    if (!email.trim() || !email.includes('@')) {
+      setErrorMsg('Please enter your email address to receive a fresh verification link.')
+      return
+    }
+    setErrorMsg('')
+    setSuccessMsg('')
+    setSubmitting(true)
+
+    try {
+      const res = await resendVerificationEmail(email.trim())
+      if (res.success) {
+        setSuccessMsg(res.message)
+        setEmailVerificationPending(true)
+      } else {
+        setErrorMsg(res.message)
+      }
+    } catch {
+      setErrorMsg('Failed to resend verification link. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const handleDemoLogin = async (demo: (typeof DEMO_ACCOUNTS)[0]) => {
     setEmail(demo.email)
     setPassword('KhelGrid@2026')
@@ -303,7 +340,7 @@ export default function AuthModal({
         </div>
 
         {/* Tab Switcher */}
-        <div className="kg-auth-tabs" role="tablist" aria-label="Sign in or register">
+        <div className={`kg-auth-tabs ${tab === 'expired_link' ? 'has-four-tabs' : ''}`} role="tablist" aria-label="Sign in or register">
           <button
             type="button"
             role="tab"
@@ -346,6 +383,18 @@ export default function AuthModal({
             <SiteIcon name="help-circle" size={14} />
             <span>Recovery</span>
           </button>
+          {tab === 'expired_link' && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={true}
+              className="kg-auth-tab is-active"
+              style={{ color: '#dc2626', borderBottomColor: '#dc2626' }}
+            >
+              <SiteIcon name="alert-circle" size={14} />
+              <span>Verify Link</span>
+            </button>
+          )}
         </div>
 
         {/* Status Alerts */}
@@ -434,6 +483,19 @@ export default function AuthModal({
                 </button>
               </div>
             </div>
+
+            {errorMsg && (errorMsg.toLowerCase().includes('confirm') || errorMsg.toLowerCase().includes('expired')) && (
+              <div style={{ margin: '8px 0 12px', textAlign: 'center' }}>
+                <button
+                  type="button"
+                  className="kg-text-link"
+                  onClick={() => setTab('expired_link')}
+                  style={{ fontWeight: 700 }}
+                >
+                  ✉️ Need a fresh confirmation link? Click here to resend →
+                </button>
+              </div>
+            )}
 
             <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
               {submitting ? 'Signing in…' : 'Sign In with Password'}
@@ -675,6 +737,66 @@ export default function AuthModal({
                 onClick={() => setTab('login')}
               >
                 ← Back to Sign In
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* TAB 4: EXPIRED LINK / RESEND VERIFICATION */}
+        {tab === 'expired_link' && !emailVerificationPending && (
+          <form className="kg-auth-form" onSubmit={handleResendVerification}>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <span style={{ display: 'inline-flex', padding: 12, borderRadius: '50%', background: '#fef2f2', color: '#dc2626' }}>
+                <SiteIcon name="alert-circle" size={28} />
+              </span>
+            </div>
+            <h2 id="kg-auth-title" className="kg-auth-title" style={{ textAlign: 'center' }}>
+              Verification Link Expired
+            </h2>
+            <p className="kg-auth-subtitle" style={{ textAlign: 'center' }}>
+              Email links expire after 1 hour or when pre-scanned by email security filters. Enter your registered email to receive a fresh verification link.
+            </p>
+
+            <div className="kg-auth-field">
+              <label htmlFor={emailInputId}>Your Registered Email</label>
+              <div className="kg-auth-input-wrap">
+                <SiteIcon name="mail" size={16} className="kg-input-icon" />
+                <input
+                  id={emailInputId}
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
+              {submitting ? 'Sending Fresh Link…' : 'Resend Verification Email'}
+            </button>
+
+            <div style={{ textAlign: 'center', marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button
+                type="button"
+                className="kg-text-link"
+                onClick={() => {
+                  setTab('login')
+                  setErrorMsg('')
+                }}
+              >
+                Already verified? Sign in with password
+              </button>
+              <button
+                type="button"
+                className="kg-text-link"
+                onClick={() => {
+                  setTab('signup')
+                  setErrorMsg('')
+                }}
+              >
+                Need to create a new account? Register here
               </button>
             </div>
           </form>
