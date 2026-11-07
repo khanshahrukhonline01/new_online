@@ -36,7 +36,7 @@ create index if not exists profiles_city_idx on public.profiles (city);
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
-security definer set search_path = public
+security definer set search_path = public, pg_temp
 as $$
 declare
   user_full_name text;
@@ -51,7 +51,8 @@ begin
   );
 
   user_role := coalesce(new.raw_user_meta_data->>'role', 'athlete');
-  if user_role not in ('athlete', 'host', 'coach', 'scout', 'academy', 'admin') then
+  -- SEC-004 fix: Prevent self-assignment of 'admin' role via user metadata on registration
+  if user_role not in ('athlete', 'host', 'coach', 'scout', 'academy') then
     user_role := 'athlete';
   end if;
 
@@ -111,7 +112,7 @@ $$;
 create or replace function public.is_admin()
 returns boolean
 language sql
-security definer set search_path = public
+security definer set search_path = public, pg_temp
 stable
 as $$
   select exists (
@@ -125,7 +126,7 @@ $$;
 create or replace function public.has_role(required_role text)
 returns boolean
 language sql
-security definer set search_path = public
+security definer set search_path = public, pg_temp
 stable
 as $$
   select exists (
@@ -146,12 +147,30 @@ grant execute on function public.has_role(text) to authenticated, service_role;
 -- 4. Row Level Security Policies
 alter table public.profiles enable row level security;
 
--- Public read: Anyone can read basic sports profiles (display_name, role, city, sports, avatar)
+-- SEC-005 fix: Users can view their own profile; admins can view all profiles
+-- Prevents exposing private email and phone numbers to anonymous callers
 drop policy if exists "profiles_select_public" on public.profiles;
-create policy "profiles_select_public" on public.profiles
+drop policy if exists "profiles_select_own_or_admin" on public.profiles;
+create policy "profiles_select_own_or_admin" on public.profiles
   for select
-  to anon, authenticated
-  using (true);
+  to authenticated
+  using (auth.uid() = id or public.is_admin());
+
+-- Secure public view for anonymous/public directory profile discovery (without private email/phone)
+create or replace view public.public_profiles with (security_invoker = false) as
+  select
+    id,
+    display_name,
+    avatar_url,
+    city,
+    role,
+    preferred_sports,
+    bio,
+    is_verified,
+    created_at
+  from public.profiles;
+
+grant select on public.public_profiles to anon, authenticated;
 
 -- Users can insert their own profile
 drop policy if exists "profiles_insert_own" on public.profiles;

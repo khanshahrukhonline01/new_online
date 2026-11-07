@@ -85,41 +85,47 @@ CREATE POLICY "Public can view community live matches"
   FOR SELECT
   USING (true);
 
--- Anonymous / Authenticated hosts can insert matches
-CREATE POLICY "Allow public match creation"
+-- SEC-007 fix: Direct table mutation restricted to authenticated hosts/scorers
+-- Public anonymous updates are blocked from tampering with scoreboards
+CREATE POLICY "Allow authenticated host match creation"
   ON public.community_live_matches
   FOR INSERT
+  TO authenticated
   WITH CHECK (true);
 
--- Allow public match score updates
-CREATE POLICY "Allow public match updates"
+CREATE POLICY "Allow authenticated host match updates"
   ON public.community_live_matches
   FOR UPDATE
+  TO authenticated
   USING (true)
   WITH CHECK (true);
 
--- Host payout accounts
-CREATE POLICY "Public read own host payout account"
+-- SEC-006 fix: Host payout accounts restricted strictly to authenticated account owner
+CREATE POLICY "Host read own payout account"
   ON public.host_payout_accounts
   FOR SELECT
-  USING (true);
+  TO authenticated
+  USING (auth.uid()::text = host_id OR (SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'service_role');
 
-CREATE POLICY "Public insert/update own host payout account"
+CREATE POLICY "Host manage own payout account"
   ON public.host_payout_accounts
   FOR ALL
-  USING (true)
-  WITH CHECK (true);
+  TO authenticated
+  USING (auth.uid()::text = host_id OR (SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'service_role')
+  WITH CHECK (auth.uid()::text = host_id OR (SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'service_role');
 
--- Host settlements
-CREATE POLICY "Public read own settlements"
+-- SEC-006 fix: Host settlements restricted to authenticated host or service_role
+CREATE POLICY "Host read own settlements"
   ON public.host_settlement_payouts
   FOR SELECT
-  USING (true);
+  TO authenticated
+  USING (auth.uid()::text = host_id OR (SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'service_role');
 
-CREATE POLICY "Public insert settlements"
+CREATE POLICY "Host insert settlements"
   ON public.host_settlement_payouts
   FOR INSERT
-  WITH CHECK (true);
+  TO authenticated
+  WITH CHECK (auth.uid()::text = host_id OR (SELECT current_setting('request.jwt.claims', true)::jsonb->>'role') = 'service_role');
 
 -- 5. RPC Functions
 

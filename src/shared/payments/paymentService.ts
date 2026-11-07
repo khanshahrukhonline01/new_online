@@ -194,6 +194,31 @@ export async function fetchBookedVenueSlots(venueId: string, slotDate: string): 
     return localSlots
   }
 
+  // 1. Try safe zero-PII RPC first (Phase 2 RLS compliant)
+  try {
+    const rpcRes = await fetch(`${supabaseUrl}/rest/v1/rpc/get_booked_slots_for_venue`, {
+      method: 'POST',
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        p_venue_id: venueId,
+        p_slot_date: slotDate,
+      }),
+    })
+    if (rpcRes.ok) {
+      const data = (await rpcRes.json()) as Array<{ slot_time: string }>
+      if (Array.isArray(data)) {
+        const remoteSlots = data.map(r => r.slot_time).filter(Boolean)
+        return Array.from(new Set([...localSlots, ...remoteSlots]))
+      }
+    }
+  } catch {
+    // Graceful fallback to table query or local storage
+  }
+
   try {
     const query = new URLSearchParams({
       venue_id: `eq.${venueId}`,
