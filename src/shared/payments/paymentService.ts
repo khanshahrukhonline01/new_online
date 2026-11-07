@@ -185,13 +185,179 @@ export async function recordPaymentTransaction({
 }
 
 /**
- * Creates and records a venue turf/court booking.
+ * Queries booked slots for a specific venue and date directly from PostgreSQL public.venue_slot_bookings
+ * with offline-first local cache merging.
+ */
+export async function fetchBookedVenueSlots(venueId: string, slotDate: string): Promise<string[]> {
+  const localSlots = getBookedVenueSlots(venueId, slotDate)
+  if (!supabaseUrl || !anonKey) {
+    return localSlots
+  }
+
+  try {
+    const query = new URLSearchParams({
+      venue_id: `eq.${venueId}`,
+      slot_date: `eq.${slotDate}`,
+      status: 'neq.cancelled',
+      select: 'slot_time',
+      limit: '500',
+    })
+    const res = await fetch(`${supabaseUrl}/rest/v1/venue_slot_bookings?${query.toString()}`, {
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+        Accept: 'application/json',
+      },
+    })
+    if (res.ok) {
+      const data = (await res.json()) as Array<{ slot_time: string }>
+      if (Array.isArray(data)) {
+        const remoteSlots = data.map(r => r.slot_time).filter(Boolean)
+        const merged = Array.from(new Set([...localSlots, ...remoteSlots]))
+        return merged
+      }
+    }
+  } catch {
+    // Return local slots on network or CORS failure
+  }
+  return localSlots
+}
+
+/**
+ * Creates and records a venue turf/court booking with PostgreSQL database-level
+ * zero double-booking enforcement via UNIQUE(venue_id, slot_date, slot_time).
  */
 export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Promise<VenueBookingResult> {
   const timestamp = new Date().toISOString()
-  const ref = `VB-${input.venueName.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`
+  const venueCode = input.venueName.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'VEN'
+  const ref = `VB-${venueCode}-${Date.now().toString().slice(-6)}`
 
-  // Local storage cache
+  // 1. Instant local storage double-booking check
+  const localBooked = getBookedVenueSlots(input.venueId, input.slotDate)
+  if (localBooked.includes(input.slotTime)) {
+    return {
+      status: 'double_booking_conflict',
+      bookingRef: '',
+      venueName: input.venueName,
+      slotDate: input.slotDate,
+      slotTime: input.slotTime,
+      paidAmount: 0,
+      paymentStatus: 'cancelled',
+      message: `Slot "${input.slotTime}" on ${input.slotDate} is already reserved. Please select a different time slot.`,
+      errorMessage: `Slot "${input.slotTime}" on ${input.slotDate} is already reserved. Please select a different time slot.`,
+    }
+  }
+
+  // 2. Direct PostgreSQL insertion to public.venue_slot_bookings enforcing UNIQUE(venue_id, slot_date, slot_time)
+  if (supabaseUrl && anonKey) {
+    try {
+      const response = await fetch(`${supabaseUrl}/rest/v1/venue_slot_bookings`, {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({
+          booking_ref: ref,
+          venue_id: input.venueId,
+          venue_name: input.venueName,
+          city: input.city,
+          sport: input.sport,
+          court_or_turf_number: input.courtOrTurfNumber || 'Turf 1 (Main Pitch)',
+          slot_date: input.slotDate,
+          slot_time: input.slotTime,
+          booked_by_user_id: input.userId || null,
+          customer_name: input.customerName,
+          customer_phone: input.customerPhone,
+          customer_email: input.customerEmail || null,
+          total_amount: input.totalAmount,
+          paid_amount: input.paidAmount,
+          payment_status: input.paymentStatus,
+          payment_id: input.paymentId || null,
+          status: 'confirmed',
+        }),
+      })
+
+      if (response.status === 409) {
+        // Unique index violation (idx_venue_slot_active_unique)
+        return {
+          status: 'double_booking_conflict',
+          bookingRef: '',
+          venueName: input.venueName,
+          slotDate: input.slotDate,
+          slotTime: input.slotTime,
+          paidAmount: 0,
+          paymentStatus: 'cancelled',
+          message: `Slot "${input.slotTime}" on ${input.slotDate} was just reserved by another player. Please select a different time slot.`,
+          errorMessage: `Slot "${input.slotTime}" on ${input.slotDate} was just reserved by another player. Please select a different time slot.`,
+        }
+      }
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '')
+        if (
+          text.includes('idx_venue_slot_active_unique') ||
+          text.includes('duplicate key value') ||
+          text.includes('unique constraint')
+        ) {
+          return {
+            status: 'double_booking_conflict',
+            bookingRef: '',
+            venueName: input.venueName,
+            slotDate: input.slotDate,
+            slotTime: input.slotTime,
+            paidAmount: 0,
+            paymentStatus: 'cancelled',
+            message: `Slot "${input.slotTime}" on ${input.slotDate} was just reserved by another player. Please select a different time slot.`,
+            errorMessage: `Slot "${input.slotTime}" on ${input.slotDate} was just reserved by another player. Please select a different time slot.`,
+          }
+        }
+      } else {
+        const data = await response.json().catch(() => null)
+        const row = Array.isArray(data) && data[0] ? data[0] : data
+        if (row && row.booking_ref) {
+          const remoteBooking: VenueBookingResult = {
+            status: 'success',
+            bookingRef: row.booking_ref,
+            venueName: row.venue_name || input.venueName,
+            slotDate: row.slot_date || input.slotDate,
+            slotTime: row.slot_time || input.slotTime,
+            paidAmount: Number(row.paid_amount ?? input.paidAmount),
+            paymentStatus: row.payment_status || input.paymentStatus,
+          }
+          // Persist locally
+          try {
+            const storage = getSafeLocalStorage()
+            if (storage) {
+              const existing = JSON.parse(storage.getItem('khelgrid_venue_bookings') || '[]')
+              existing.unshift({
+                ...input,
+                bookingRef: row.booking_ref,
+                createdAt: timestamp,
+              })
+              storage.setItem('khelgrid_venue_bookings', JSON.stringify(existing.slice(0, 50)))
+            }
+          } catch {
+            // Ignore
+          }
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('khelgrid:venue-booked', {
+                detail: { bookingRef: row.booking_ref, venueId: input.venueId, slotDate: input.slotDate, slotTime: input.slotTime },
+              }),
+            )
+          }
+          return remoteBooking
+        }
+      }
+    } catch (err) {
+      console.warn('[KhelGrid Payments] Remote slot booking failed, using local offline fallback:', err)
+    }
+  }
+
+  // 3. Local storage caching for offline retrieval and instant cross-component updates
   try {
     const storage = getSafeLocalStorage()
     if (storage) {
@@ -201,54 +367,10 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
         bookingRef: ref,
         createdAt: timestamp,
       })
-      storage.setItem('khelgrid_venue_bookings', JSON.stringify(existing.slice(0, 30)))
+      storage.setItem('khelgrid_venue_bookings', JSON.stringify(existing.slice(0, 50)))
     }
   } catch {
-    // Ignore
-  }
-
-  // Supabase RPC if available
-  if (supabaseUrl && anonKey) {
-    try {
-      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/create_venue_slot_booking`, {
-        method: 'POST',
-        headers: {
-          'apikey': anonKey,
-          'Authorization': `Bearer ${anonKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          p_venue_id: input.venueId,
-          p_venue_name: input.venueName,
-          p_city: input.city,
-          p_sport: input.sport,
-          p_slot_date: input.slotDate,
-          p_slot_time: input.slotTime,
-          p_customer_name: input.customerName,
-          p_customer_phone: input.customerPhone,
-          p_total_amount: input.totalAmount,
-          p_paid_amount: input.paidAmount,
-          p_payment_status: input.paymentStatus,
-          p_payment_id: input.paymentId || null,
-        }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        if (data && data.status === 'success') {
-          return {
-            status: 'success',
-            bookingRef: data.booking_ref,
-            venueName: data.venue_name,
-            slotDate: data.slot_date,
-            slotTime: data.slot_time,
-            paidAmount: Number(data.paid_amount),
-            paymentStatus: data.payment_status,
-          }
-        }
-      }
-    } catch {
-      // Fall through to local receipt
-    }
+    // Ignore storage quota error
   }
 
   const result: VenueBookingResult = {

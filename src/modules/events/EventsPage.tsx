@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { getEvents } from '../../integrations/supabase/public-client'
+import { fetchTournaments } from '../../integrations/supabase/public-client'
 import {
   BASELINE_EVENTS,
   EVENT_SPORTS_FILTER,
@@ -34,7 +34,11 @@ export function EventsPage({ onNavigate }: EventsPageProps) {
   useEffect(() => {
     let active = true
     setLoading(true)
-    getEvents().then(res => {
+    fetchTournaments({
+      sport: selectedSport,
+      state: selectedState,
+      ageCategory: selectedAge,
+    }).then(res => {
       if (!active) return
       if (res.status === 'ready') {
         const mapped: SportEvent[] = res.data.map(evt => ({
@@ -75,7 +79,7 @@ export function EventsPage({ onNavigate }: EventsPageProps) {
     return () => {
       active = false
     }
-  }, [])
+  }, [selectedSport, selectedState, selectedAge])
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
