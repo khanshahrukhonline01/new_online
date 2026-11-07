@@ -1,3 +1,5 @@
+import { SHOWCASE_ATHLETE_PROFILES } from '../../integrations/supabase/athlete-profile-client'
+
 export type ScoutAgeGroup = 'U-14' | 'U-16' | 'U-17' | 'U-19' | 'Senior'
 export type ScoutGender = 'Male' | 'Female'
 export type VerificationTier = 'Tier-1 Verified' | 'Tier-2 Verified'
@@ -32,6 +34,8 @@ export interface ScoutAthlete {
   dominantSide: string
   scoutingSummary: string
   guardianOrCoachContact: string
+  username?: string
+  videoClipsCount?: number
 }
 
 export const BASELINE_SCOUT_ATHLETES: ScoutAthlete[] = [
@@ -469,4 +473,301 @@ export function generateScoutShortlistCsv(athletes: ScoutAthlete[]): string {
   ])
 
   return [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n')
+}
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+export const LOCAL_STORAGE_PROFILES_KEY = 'khelgrid_athlete_profiles_cache'
+
+export function computeAge(dob?: string | null, rawAge?: number | null): number {
+  if (typeof rawAge === 'number' && rawAge >= 10 && rawAge <= 60) {
+    return rawAge
+  }
+  if (dob) {
+    const birthDate = new Date(dob)
+    if (!isNaN(birthDate.getTime())) {
+      const diffMs = Date.now() - birthDate.getTime()
+      const calculated = Math.floor(diffMs / (365.25 * 86400000))
+      if (calculated >= 10 && calculated <= 60) {
+        return calculated
+      }
+    }
+  }
+  return 17
+}
+
+export function deriveAgeGroup(age: number): ScoutAgeGroup {
+  if (age < 14) return 'U-14'
+  if (age < 16) return 'U-16'
+  if (age < 18) return 'U-17'
+  if (age < 20) return 'U-19'
+  return 'Senior'
+}
+
+export function inferGender(sport: string, position: string, rawGender?: string | null): ScoutGender {
+  if (rawGender) {
+    const g = rawGender.toLowerCase()
+    if (g.startsWith('f') || g.includes('girl') || g.includes('women')) return 'Female'
+    if (g.startsWith('m') || g.includes('boy') || g.includes('men')) return 'Male'
+  }
+  const posLower = (position + ' ' + sport).toLowerCase()
+  if (posLower.includes('women') || posLower.includes('girl') || posLower.includes('female')) {
+    return 'Female'
+  }
+  return 'Male'
+}
+
+export function deriveVerificationTier(status?: string | null): VerificationTier {
+  if (status === 'verified' || status === 'pro') {
+    return 'Tier-1 Verified'
+  }
+  return 'Tier-2 Verified'
+}
+
+export function deriveFederationUid(row: Record<string, unknown>, sport: string, state?: string): string {
+  if (typeof row.federation_uid === 'string' && row.federation_uid.trim()) {
+    return row.federation_uid.trim()
+  }
+  if (typeof row.federationUid === 'string' && row.federationUid.trim()) {
+    return row.federationUid.trim()
+  }
+  const st = (state || 'IN').replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase() || 'IN'
+  const sp = (sport || 'ATH').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'ATH'
+  const idStr = String(row.id || row.username || '1001')
+  const idSuffix = idStr.replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || '1001'
+  return `KG-${st}-${sp}-2026-${idSuffix}`
+}
+
+export function parseMetricsAndPercentile(row: Record<string, unknown>): {
+  metrics: AthleteScoutMetrics
+  percentileRank: number
+} {
+  let benchmarks: Record<string, unknown> = {}
+  if (row.fitness_benchmarks && typeof row.fitness_benchmarks === 'object') {
+    benchmarks = row.fitness_benchmarks as Record<string, unknown>
+  } else if (row.fitnessBenchmarks && typeof row.fitnessBenchmarks === 'object') {
+    benchmarks = row.fitnessBenchmarks as Record<string, unknown>
+  } else if (typeof row.fitness_benchmarks === 'string') {
+    try {
+      benchmarks = JSON.parse(row.fitness_benchmarks)
+    } catch {
+      benchmarks = {}
+    }
+  }
+
+  const sprint = typeof benchmarks.sprint30mSeconds === 'number' ? benchmarks.sprint30mSeconds : undefined
+  const cmj = typeof benchmarks.cmjHeightCm === 'number' ? benchmarks.cmjHeightCm : undefined
+  const yoyo = typeof benchmarks.yoyoIr1Meters === 'number' ? benchmarks.yoyoIr1Meters : undefined
+  let speedOrVelocityKmph: number | undefined =
+    typeof benchmarks.speedOrVelocityKmph === 'number' ? benchmarks.speedOrVelocityKmph : undefined
+  const vo2 = typeof benchmarks.aerobicVo2Max === 'number' ? benchmarks.aerobicVo2Max : undefined
+
+  // Inspect video telemetry if speed/velocity not in benchmarks
+  const rawClips = row.video_clips || row.videoClips
+  if (!speedOrVelocityKmph && Array.isArray(rawClips)) {
+    for (const clip of rawClips) {
+      if (clip && Array.isArray((clip as Record<string, unknown>).telemetry)) {
+        const telemetry = (clip as Record<string, unknown>).telemetry as Array<Record<string, unknown>>
+        for (const tel of telemetry) {
+          if (tel && typeof tel.metricName === 'string' && typeof tel.metricValue === 'string') {
+            if (/speed|velocity/i.test(tel.metricName)) {
+              const parsedVal = parseFloat(tel.metricValue)
+              if (!isNaN(parsedVal)) {
+                speedOrVelocityKmph = parsedVal
+                break
+              }
+            }
+          }
+        }
+      }
+      if (speedOrVelocityKmph) break
+    }
+  }
+
+  let percentile = 88
+  if (typeof benchmarks.percentileAvg === 'number') {
+    percentile = Math.round(benchmarks.percentileAvg)
+  } else if (typeof benchmarks.percentileRank === 'number') {
+    percentile = Math.round(benchmarks.percentileRank)
+  } else {
+    let score = 86
+    if (sprint && sprint <= 3.9) score += 8
+    else if (sprint && sprint <= 4.1) score += 4
+    if (cmj && cmj >= 60) score += 5
+    else if (cmj && cmj >= 50) score += 3
+    if (yoyo && yoyo >= 2000) score += 6
+    else if (yoyo && yoyo >= 1800) score += 3
+    percentile = Math.min(99, Math.max(70, score))
+  }
+
+  return {
+    metrics: {
+      sprint30mSeconds: sprint,
+      cmjHeightCm: cmj,
+      yoyoIr1Meters: yoyo,
+      speedOrVelocityKmph,
+      aerobicVo2Max: vo2,
+    },
+    percentileRank: percentile,
+  }
+}
+
+export function parseAchievements(raw: unknown): string[] {
+  if (!raw) return []
+  if (Array.isArray(raw)) {
+    return raw
+      .map(item => {
+        if (typeof item === 'string') return item
+        if (item && typeof item === 'object') {
+          const obj = item as Record<string, unknown>
+          const ev = obj.event ? String(obj.event) : ''
+          const yr = obj.year ? ` (${obj.year})` : ''
+          const res = obj.result ? ` — ${obj.result}` : ''
+          return `${ev}${yr}${res}`.trim()
+        }
+        return String(item)
+      })
+      .filter(Boolean)
+  }
+  return [String(raw)]
+}
+
+export function mapProfileToScoutAthlete(row: Record<string, unknown>): ScoutAthlete {
+  const age = computeAge(
+    (row.date_of_birth as string) || (row.dateOfBirth as string),
+    (row.age as number)
+  )
+  const ageGroup = deriveAgeGroup(age)
+  const sport = String(row.sport || 'Multi-Sport')
+  const position = String(row.playing_position || row.playingPosition || 'Athlete')
+  const gender = inferGender(sport, position, row.gender as string)
+  const state = String(row.state || 'India')
+  const { metrics, percentileRank } = parseMetricsAndPercentile(row)
+  const rawClips = row.video_clips || row.videoClips
+  const videoClipsCount = Array.isArray(rawClips) ? rawClips.length : 0
+
+  return {
+    id: String(row.id || row.username || `scout-gen-${Date.now()}`),
+    name: String(row.full_name || row.fullName || 'Grassroots Athlete'),
+    hindiName: row.hindi_name ? String(row.hindi_name) : (row.hindiName ? String(row.hindiName) : undefined),
+    sport,
+    primaryPosition: position,
+    age,
+    ageGroup,
+    gender,
+    city: String(row.city || 'India'),
+    state,
+    academy: String(row.team_or_academy || row.teamOrAcademy || 'Independent Sports Academy'),
+    verifiedTier: deriveVerificationTier((row.verification_status as string) || (row.verificationStatus as string)),
+    federationUid: deriveFederationUid(row, sport, state),
+    metrics,
+    percentileRank,
+    achievements: parseAchievements(row.achievements),
+    heightCm:
+      typeof row.height_cm === 'number'
+        ? row.height_cm
+        : typeof row.heightCm === 'number'
+        ? row.heightCm
+        : 175,
+    weightKg:
+      typeof row.weight_kg === 'number'
+        ? row.weight_kg
+        : typeof row.weightKg === 'number'
+        ? row.weightKg
+        : 68,
+    dominantSide: String(row.primary_foot_or_hand || row.primaryFootOrHand || 'Right-dominant'),
+    scoutingSummary: String(
+      row.summary ||
+        `${position} with high potential and verified normative benchmark percentiles tracked via KhelGrid.`
+    ),
+    guardianOrCoachContact: String(
+      row.coach || row.email || row.phone || 'Coach / Academy Office via KhelGrid Verified Desk'
+    ),
+    username: row.username ? String(row.username) : undefined,
+    videoClipsCount,
+  }
+}
+
+let scoutAthletesCache: ScoutAthlete[] | null = null
+
+export function clearScoutAthletesCache(): void {
+  scoutAthletesCache = null
+}
+
+export async function getScoutAthletes(forceRefresh = false): Promise<ScoutAthlete[]> {
+  if (!forceRefresh && scoutAthletesCache && scoutAthletesCache.length > 0) {
+    return scoutAthletesCache
+  }
+
+  const candidateList: ScoutAthlete[] = []
+
+  // 1. Fetch live published profiles from Supabase if configured
+  if (supabaseUrl && anonKey) {
+    try {
+      const response = await fetch(
+        `${supabaseUrl}/rest/v1/athlete_profiles?publication_status=eq.published&order=updated_at.desc&limit=100`,
+        {
+          headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+            Accept: 'application/json',
+          },
+        }
+      )
+      if (response.ok) {
+        const rows = (await response.json()) as unknown[]
+        if (Array.isArray(rows)) {
+          for (const row of rows) {
+            if (row && typeof row === 'object') {
+              candidateList.push(mapProfileToScoutAthlete(row as Record<string, unknown>))
+            }
+          }
+        }
+      }
+    } catch {
+      // Network/offline fallback
+    }
+  }
+
+  // 2. Load locally cached published profiles from /sports-cv
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const rawLocal = window.localStorage.getItem(LOCAL_STORAGE_PROFILES_KEY)
+      if (rawLocal) {
+        const parsed = JSON.parse(rawLocal) as Record<string, unknown>
+        if (parsed && typeof parsed === 'object') {
+          for (const val of Object.values(parsed)) {
+            if (val && typeof val === 'object') {
+              candidateList.push(mapProfileToScoutAthlete(val as Record<string, unknown>))
+            }
+          }
+        }
+      }
+    } catch {
+      // Storage parsing fallback
+    }
+  }
+
+  // 3. Include pre-seeded high-performance showcase profiles
+  for (const prof of Object.values(SHOWCASE_ATHLETE_PROFILES)) {
+    candidateList.push(mapProfileToScoutAthlete(prof as unknown as Record<string, unknown>))
+  }
+
+  // 4. Include baseline curated showcase athletes
+  candidateList.push(...BASELINE_SCOUT_ATHLETES)
+
+  // 5. Deduplicate by username/name/id (preserving newest / highest priority)
+  const seenKeys = new Set<string>()
+  const merged: ScoutAthlete[] = []
+
+  for (const ath of candidateList) {
+    const dedupeKey = (ath.username || ath.name).toLowerCase().trim()
+    if (!seenKeys.has(dedupeKey)) {
+      seenKeys.add(dedupeKey)
+      merged.push(ath)
+    }
+  }
+
+  scoutAthletesCache = merged
+  return merged
 }

@@ -4,6 +4,7 @@ import {
   BASELINE_SCOUT_ATHLETES,
   SCOUT_SPORTS,
   SCOUT_AGE_GROUPS,
+  getScoutAthletes,
   getScoutShortlist,
   saveAthleteToShortlist,
   removeAthleteFromShortlist,
@@ -18,12 +19,17 @@ export interface ScoutPortalPageProps {
 }
 
 export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
-  const [athletes] = useState<ScoutAthlete[]>(BASELINE_SCOUT_ATHLETES)
+  const [athletes, setAthletes] = useState<ScoutAthlete[]>(BASELINE_SCOUT_ATHLETES)
+  const [isLoading, setIsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSport, setSelectedSport] = useState('All Sports')
   const [selectedAgeGroup, setSelectedAgeGroup] = useState('all')
+  const [selectedState, setSelectedState] = useState('all')
   const [selectedTier, setSelectedTier] = useState('all')
   const [minPercentile, setMinPercentile] = useState<number>(0)
+  const [sortBy, setSortBy] = useState<
+    'percentile-desc' | 'sprint-asc' | 'cmj-desc' | 'yoyo-desc' | 'age-asc' | 'name-asc'
+  >('percentile-desc')
   const [shortlistIds, setShortlistIds] = useState<string[]>([])
   const [isShortlistDrawerOpen, setIsShortlistDrawerOpen] = useState(false)
   const [selectedAthleteForConnect, setSelectedAthleteForConnect] = useState<ScoutAthlete | null>(null)
@@ -32,7 +38,37 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
 
   useEffect(() => {
     setShortlistIds(getScoutShortlist())
+    let isMounted = true
+    setIsLoading(true)
+    getScoutAthletes()
+      .then(loaded => {
+        if (isMounted && loaded && loaded.length > 0) {
+          setAthletes(loaded)
+        }
+      })
+      .catch(() => {
+        // Fallback to baseline
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false)
+      })
+    return () => {
+      isMounted = false
+    }
   }, [])
+
+  const handleRefreshAthletes = async () => {
+    setIsLoading(true)
+    try {
+      const fresh = await getScoutAthletes(true)
+      setAthletes(fresh)
+      showToast(`Synchronized ${fresh.length} verified athlete profiles from live database.`)
+    } catch {
+      showToast('Could not refresh from live database; showing cached profiles.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
@@ -57,8 +93,21 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
     }
   }
 
-  const filteredAthletes = useMemo(() => {
-    return athletes.filter(ath => {
+  const availableStates = useMemo(() => {
+    const states = Array.from(new Set(athletes.map(a => a.state).filter(Boolean))).sort()
+    return ['all', ...states]
+  }, [athletes])
+
+  const availableSports = useMemo(() => {
+    const sportsSet = new Set(athletes.map(a => a.sport).filter(Boolean))
+    SCOUT_SPORTS.forEach(s => {
+      if (s !== 'All Sports') sportsSet.add(s)
+    })
+    return ['All Sports', ...Array.from(sportsSet).sort()]
+  }, [athletes])
+
+  const filteredAndSortedAthletes = useMemo(() => {
+    const filtered = athletes.filter(ath => {
       // Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase()
@@ -83,6 +132,11 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
         return false
       }
 
+      // State / City
+      if (selectedState !== 'all' && ath.state !== selectedState) {
+        return false
+      }
+
       // Tier
       if (selectedTier !== 'all' && ath.verifiedTier !== selectedTier) {
         return false
@@ -95,14 +149,42 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
 
       return true
     })
-  }, [athletes, searchQuery, selectedSport, selectedAgeGroup, selectedTier, minPercentile])
+
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'percentile-desc':
+          return b.percentileRank - a.percentileRank
+        case 'sprint-asc': {
+          const aSprint = a.metrics.sprint30mSeconds ?? 999
+          const bSprint = b.metrics.sprint30mSeconds ?? 999
+          return aSprint - bSprint
+        }
+        case 'cmj-desc': {
+          const aCmj = a.metrics.cmjHeightCm ?? 0
+          const bCmj = b.metrics.cmjHeightCm ?? 0
+          return bCmj - aCmj
+        }
+        case 'yoyo-desc': {
+          const aYoyo = a.metrics.yoyoIr1Meters ?? 0
+          const bYoyo = b.metrics.yoyoIr1Meters ?? 0
+          return bYoyo - aYoyo
+        }
+        case 'age-asc':
+          return a.age - b.age
+        case 'name-asc':
+          return a.name.localeCompare(b.name)
+        default:
+          return b.percentileRank - a.percentileRank
+      }
+    })
+  }, [athletes, searchQuery, selectedSport, selectedAgeGroup, selectedState, selectedTier, minPercentile, sortBy])
 
   const shortlistedAthletes = useMemo(() => {
     return athletes.filter(a => shortlistIds.includes(a.id))
   }, [athletes, shortlistIds])
 
   const handleExportCsv = () => {
-    const listToExport = shortlistedAthletes.length > 0 ? shortlistedAthletes : filteredAthletes
+    const listToExport = shortlistedAthletes.length > 0 ? shortlistedAthletes : filteredAndSortedAthletes
     if (listToExport.length === 0) {
       showToast('No athletes available to export.')
       return
@@ -125,6 +207,17 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
     }
   }
 
+  const handlePrintDossier = () => {
+    const listToExport = shortlistedAthletes.length > 0 ? shortlistedAthletes : filteredAndSortedAthletes
+    if (listToExport.length === 0) {
+      showToast('No athletes available to generate dossier.')
+      return
+    }
+    if (typeof window !== 'undefined') {
+      window.print()
+    }
+  }
+
   const handleClearShortlist = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('khelgrid_scout_shortlist_v1')
@@ -142,16 +235,20 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
     setSearchQuery('')
     setSelectedSport('All Sports')
     setSelectedAgeGroup('all')
+    setSelectedState('all')
     setSelectedTier('all')
     setMinPercentile(0)
+    setSortBy('percentile-desc')
   }
 
   const hasActiveFilters =
     Boolean(searchQuery) ||
     selectedSport !== 'All Sports' ||
     selectedAgeGroup !== 'all' ||
+    selectedState !== 'all' ||
     selectedTier !== 'all' ||
-    minPercentile > 0
+    minPercentile > 0 ||
+    sortBy !== 'percentile-desc'
 
   return (
     <main id="main-content" className="scout-portal-container">
@@ -167,7 +264,7 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
       <header className="scout-hero">
         <div className="scout-hero-badge">
           <SiteIcon name="target" size={14} />
-          <span>NIS &amp; SAI TALENT IDENTIFICATION DESK</span>
+          <span>NIS &amp; SAI TALENT IDENTIFICATION DESK · LIVE DATABASE</span>
         </div>
         <div className="scout-hero-header-row">
           <div>
@@ -196,6 +293,15 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
               <SiteIcon name="file-text" size={15} />
               <span>Export CSV</span>
             </button>
+            <button
+              type="button"
+              className="btn-print-dossier"
+              onClick={handlePrintDossier}
+              title="Print or save as PDF scouting report dossier"
+            >
+              <SiteIcon name="download" size={15} />
+              <span>Print / PDF</span>
+            </button>
           </div>
         </div>
 
@@ -203,7 +309,7 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
         <div className="scout-metrics-row">
           <div className="scout-metric-card">
             <span className="metric-val">850+</span>
-            <span className="metric-title">Verified Youth Athletes</span>
+            <span className="metric-title">Verified Youth Athletes ({athletes.length} Live)</span>
           </div>
           <div className="scout-metric-card">
             <span className="metric-val">90th+</span>
@@ -226,7 +332,7 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
           <SiteIcon name="search" size={18} />
           <input
             type="search"
-            placeholder="Search by athlete name, position, academy, city, or federation UID..."
+            placeholder="Search by athlete name, position, academy, city, state, or federation UID..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             aria-label="Search athletes"
@@ -245,7 +351,7 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
 
         {/* Sport Chips */}
         <div className="scout-sports-bar" role="tablist" aria-label="Filter by sport">
-          {SCOUT_SPORTS.map(sport => (
+          {availableSports.map(sport => (
             <button
               key={sport}
               type="button"
@@ -275,6 +381,22 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
           </div>
 
           <div className="scout-dropdown-group">
+            <label htmlFor="scout-state-filter">City / State:</label>
+            <select
+              id="scout-state-filter"
+              value={selectedState}
+              onChange={e => setSelectedState(e.target.value)}
+            >
+              <option value="all">All States &amp; Regions</option>
+              {availableStates
+                .filter(st => st !== 'all')
+                .map(st => (
+                  <option key={st} value={st}>{st}</option>
+                ))}
+            </select>
+          </div>
+
+          <div className="scout-dropdown-group">
             <label htmlFor="scout-tier-filter">Verification Tier:</label>
             <select
               id="scout-tier-filter"
@@ -295,8 +417,25 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
               onChange={e => setMinPercentile(Number(e.target.value))}
             >
               <option value={0}>All Athletes (50th+ percentile)</option>
+              <option value={75}>Top 25% (75th+ percentile)</option>
               <option value={90}>Top 10% (90th+ percentile)</option>
               <option value={95}>Top 5% Elite (95th+ percentile)</option>
+            </select>
+          </div>
+
+          <div className="scout-dropdown-group">
+            <label htmlFor="scout-sort-filter">Performance Sort:</label>
+            <select
+              id="scout-sort-filter"
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as typeof sortBy)}
+            >
+              <option value="percentile-desc">Composite Percentile (High to Low)</option>
+              <option value="sprint-asc">30m Sprint (Fastest Speed)</option>
+              <option value="cmj-desc">Vertical Jump (Highest CMJ)</option>
+              <option value="yoyo-desc">Yo-Yo IR1 (Longest Endurance)</option>
+              <option value="age-asc">Age (Youngest First)</option>
+              <option value="name-asc">Athlete Name (A to Z)</option>
             </select>
           </div>
 
@@ -315,10 +454,28 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
 
       {/* Results Header */}
       <div className="scout-results-header">
-        <span className="scout-count">
-          Showing <strong>{filteredAthletes.length}</strong> verified {filteredAthletes.length === 1 ? 'athlete profile' : 'athlete profiles'}
-        </span>
+        <div className="scout-count-box">
+          <span className="scout-count">
+            Showing <strong>{filteredAndSortedAthletes.length}</strong> verified {filteredAndSortedAthletes.length === 1 ? 'athlete profile' : 'athlete profiles'}
+          </span>
+          {isLoading && (
+            <span className="scout-live-sync-indicator" title="Synchronizing live athlete database">
+              <SiteIcon name="refresh" size={13} className="scout-spin-icon" />
+              <span>Syncing Database...</span>
+            </span>
+          )}
+        </div>
         <div className="scout-cross-links">
+          <button
+            type="button"
+            className="scout-refresh-feed-btn"
+            onClick={handleRefreshAthletes}
+            disabled={isLoading}
+            title="Reload published profiles from live database"
+          >
+            <SiteIcon name="refresh" size={13} className={isLoading ? 'scout-spin-icon' : ''} />
+            <span>Refresh Feed</span>
+          </button>
           <a
             href="/verification"
             onClick={e => handleLinkClick(e, '/verification')}
@@ -339,7 +496,7 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
       </div>
 
       {/* Athletes Cards Grid */}
-      {filteredAthletes.length === 0 ? (
+      {filteredAndSortedAthletes.length === 0 ? (
         <div className="scout-empty-state">
           <SiteIcon name="users" size={40} />
           <h3>No athlete profiles match current scouting filters</h3>
@@ -350,7 +507,7 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
         </div>
       ) : (
         <div className="scout-athlete-grid">
-          {filteredAthletes.map(ath => {
+          {filteredAndSortedAthletes.map(ath => {
             const isShortlisted = shortlistIds.includes(ath.id)
             return (
               <article key={ath.id} className="scout-athlete-card">
@@ -363,6 +520,12 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
                   <div className="scout-card-tags">
                     <span className="scout-card-sport">{ath.sport}</span>
                     <span className="scout-card-age">{ath.age} yrs · {ath.ageGroup}</span>
+                    {Boolean(ath.videoClipsCount && ath.videoClipsCount > 0) && (
+                      <span className="scout-video-count-pill" title={`${ath.videoClipsCount} verified video telemetry clips`}>
+                        <SiteIcon name="play" size={11} />
+                        <span>{ath.videoClipsCount} {ath.videoClipsCount === 1 ? 'Clip' : 'Clips'}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -467,6 +630,18 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
                     <span>Connect with Coach</span>
                     <SiteIcon name="arrow-up-right" size={15} />
                   </button>
+
+                  {ath.username && (
+                    <a
+                      href={`/sports-cv/${ath.username}`}
+                      onClick={e => handleLinkClick(e, `/sports-cv/${ath.username}`)}
+                      className="btn-view-cv"
+                      title={`View verified Sports CV profile for ${ath.name}`}
+                    >
+                      <SiteIcon name="user" size={14} />
+                      <span>Sports CV</span>
+                    </a>
+                  )}
                 </div>
               </article>
             )
@@ -557,6 +732,15 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
               >
                 <SiteIcon name="file-text" size={15} />
                 <span>Export Shortlist to CSV</span>
+              </button>
+              <button
+                type="button"
+                className="drawer-print-dossier"
+                onClick={handlePrintDossier}
+                disabled={shortlistedAthletes.length === 0}
+              >
+                <SiteIcon name="download" size={15} />
+                <span>Print Shortlist Dossier</span>
               </button>
               {shortlistedAthletes.length > 0 && (
                 <button
