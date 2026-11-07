@@ -579,3 +579,161 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Account Profile Form & Dynamic Elements */
+.account-verified-pill {
+  font-size: 10px;
+  font-weight: 750;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(14, 165, 233, 0.15);
+  color: #0284c7;
+}
+
+.settings-quick-nav-strip {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.settings-hub-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  background: var(--accent, #07964f);
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 750;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.settings-hub-link:hover {
+  opacity: 0.9;
+}
+
+.settings-hub-link.secondary {
+  background: var(--surface-soft, #f0f5f8);
+  border: 1px solid var(--line, #e2e8f0);
+  color: var(--text, #1e293b);
+}
+
+.settings-hub-link.secondary:hover {
+  border-color: var(--accent, #07964f);
+  color: var(--accent, #07964f);
+}
+
+.settings-subsection-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--text);
+}
+
+.account-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 600px) {
+  .account-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.account-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.account-form-field label {
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--text-soft, #475569);
+}
+
+.account-form-field input,
+.account-form-field select {
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line, #cbd5e1);
+  background: var(--surface, #ffffff);
+  color: var(--text, #0f172a);
+  font: inherit;
+  font-size: 13px;
+}
+
+.account-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.settings-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent, #07964f);
+  color: #ffffff;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.settings-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.settings-submit-btn.secondary {
+  background: var(--surface-soft, #f1f5f9);
+  border: 1px solid var(--line, #cbd5e1);
+  color: var(--text, #1e293b);
+}
+
+.settings-submit-btn.secondary:hover:not(:disabled) {
+  border-color: var(--accent, #07964f);
+  color: var(--accent, #07964f);
+}
+
+.settings-signout-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.account-signout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.account-signout-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+}

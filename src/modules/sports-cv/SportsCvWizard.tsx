@@ -6,7 +6,13 @@ import {
   normalizeUsername,
   getAthleteProfileByUsername,
 } from '../../integrations/supabase/athlete-profile-client'
-import { getStoredUser, type KhelGridUser } from '../../integrations/supabase/auth-client'
+import {
+  getStoredUser,
+  getStoredAuthUser,
+  onAuthChange,
+  type KhelGridUser,
+  type AuthUserProfile,
+} from '../../integrations/supabase/auth-client'
 import { PlayerCard } from '../athlete-profile/PlayerCard'
 import './sports-cv.css'
 
@@ -62,7 +68,9 @@ const initialCv: Cv = {
 }
 
 export default function SportsCvWizard() {
-  const [currentUser] = useState<KhelGridUser | null>(() => getStoredUser())
+  const [currentUser, setCurrentUser] = useState<AuthUserProfile | KhelGridUser | null>(
+    () => getStoredAuthUser() || getStoredUser()
+  )
   const [cv, setCv] = useState<Cv>(initialCv)
   const [savedForPrint, setSavedForPrint] = useState(false)
   const [publishedProfile, setPublishedProfile] = useState<AthleteProfile | null>(null)
@@ -70,14 +78,29 @@ export default function SportsCvWizard() {
   const [isPublishing, setIsPublishing] = useState(false)
   const [hasExistingProfile, setHasExistingProfile] = useState(false)
 
+  useEffect(() => {
+    return onAuthChange(u => {
+      if (u) setCurrentUser(u)
+    })
+  }, [])
+
   // Auto-sync with authenticated athlete profile
   useEffect(() => {
     if (currentUser) {
       const rawName = currentUser.fullName || currentUser.name || ''
+      const email = currentUser.email || ''
+      const phone = currentUser.phone || ''
+      const city = 'city' in currentUser ? (currentUser.city || '') : ''
+      const preferredSports = 'preferredSports' in currentUser ? currentUser.preferredSports : undefined
+      const defaultSport = Array.isArray(preferredSports) && preferredSports[0] ? preferredSports[0] : ''
+
       setCv(prev => ({
         ...prev,
         fullName: prev.fullName || rawName,
-        email: prev.email || currentUser.email || '',
+        email: prev.email || email,
+        phone: prev.phone || phone,
+        city: prev.city || city,
+        sport: prev.sport || defaultSport,
         username: prev.username || (rawName ? normalizeUsername(rawName) : ''),
       }))
 

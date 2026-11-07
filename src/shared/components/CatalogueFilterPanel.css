@@ -254,6 +254,7 @@
   margin-bottom: 12px;
 }
 
+.kg-drawer-quick-section .kg-quick-filter-rail,
 .foundation-v1 .kg-drawer-quick-section .kg-quick-filter-rail {
   display: flex;
   flex-wrap: wrap;
@@ -264,6 +265,7 @@
   margin-bottom: 0;
 }
 
+.kg-drawer-quick-section .kg-quick-pill,
 .foundation-v1 .kg-drawer-quick-section .kg-quick-pill {
   flex: 0 1 auto;
   max-width: 100%;
@@ -285,8 +287,9 @@
 
 /* On desktop viewports (>800px), hide redundant quick picks from the narrow filter rail since they are prominently displayed above results */
 @media (min-width: 801px) {
+  .kg-filter-rail .kg-drawer-quick-section,
   .foundation-v1 .kg-filter-rail .kg-drawer-quick-section {
-    display: none;
+    display: none !important;
   }
 }
 
