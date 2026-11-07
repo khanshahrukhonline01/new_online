@@ -46,6 +46,8 @@ describe('platform route coverage', () => {
 
   it.each([
     ['/academies/bengaluru-fc-academy', 'bengaluru-fc-academy'],
+    ['/academies/bengaluru-fc-academy/enrol', 'bengaluru-fc-academy'],
+    ['/academy/mary-kom-boxing-academy/enroll', 'mary-kom-boxing-academy'],
     ['/academy/mary-kom-boxing-academy', 'mary-kom-boxing-academy'],
   ])('%s opens the academy detail page for %s', (path, expectedSlug) => {
     const match = resolveRoute(path)

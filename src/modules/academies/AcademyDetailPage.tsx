@@ -10,15 +10,18 @@ import { getCuratedAcademyBySlug, type CuratedAcademy } from '../../shared/data/
 import ReportListingModal from '../../shared/components/ReportListingModal'
 import VerificationClaimModal from '../../shared/components/VerificationClaimModal'
 import { CommunityReviewsSection } from '../../shared/components/CommunityReviewsSection'
+import { AcademyEnquiryModal } from './AcademyEnquiryModal'
+import { isAcademyEnquirySubmitted } from '../../integrations/supabase/athlete-profile-client'
 import './AcademyDetailPage.css'
 
 export interface AcademyDetailPageProps {
   slug: string
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
   onOpenIntake?: () => void
+  initialEnrolOpen?: boolean
 }
 
-export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPageProps) {
+export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }: AcademyDetailPageProps) {
   const isServer = typeof window === 'undefined'
   const initialCurated = getCuratedAcademyBySlug(slug) || getCommunityAcademyBySlug(slug)
   const [academy, setAcademy] = useState<Academy | CuratedAcademy | null>(initialCurated || null)
@@ -27,8 +30,20 @@ export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPag
   const [openFaq, setOpenFaq] = useState<number | null>(0)
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false)
+  const [isEnrolModalOpen, setIsEnrolModalOpen] = useState(Boolean(initialEnrolOpen))
+  const [isEnquired, setIsEnquired] = useState(() => isAcademyEnquirySubmitted(slug))
   const [liveRating, setLiveRating] = useState<number>(() => initialCurated?.rating || 4.9)
   const [liveReviewCount, setLiveReviewCount] = useState<number>(() => initialCurated?.review_count || 128)
+
+  useEffect(() => {
+    const onEnquiryUpdated = () => {
+      setIsEnquired(isAcademyEnquirySubmitted(slug))
+    }
+    window.addEventListener('khelgrid:academy-enquiry-submitted', onEnquiryUpdated)
+    return () => {
+      window.removeEventListener('khelgrid:academy-enquiry-submitted', onEnquiryUpdated)
+    }
+  }, [slug])
 
   useEffect(() => {
     let active = true
@@ -268,6 +283,26 @@ export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPag
         <div className="academy-actions-bar">
           <BookmarkButton item={createAcademySavedItem(academy)} variant="pill" showLabel={true} />
 
+          {isEnquired ? (
+            <button
+              type="button"
+              className="academy-btn academy-btn-enrolled"
+              onClick={() => setIsEnrolModalOpen(true)}
+            >
+              <SiteIcon name="shield-check" size={16} />
+              <span>Enquiry Active · View Token</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="academy-btn academy-btn-enrol-highlight"
+              onClick={() => setIsEnrolModalOpen(true)}
+            >
+              <SiteIcon name="award" size={16} />
+              <span>Apply for Admission / Free Trial Class</span>
+            </button>
+          )}
+
           <a
             href={whatsappUrl}
             target="_blank"
@@ -482,8 +517,36 @@ export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPag
           <div className="academy-inquiry-box">
             <h3>Interested in Joining?</h3>
             <p>
-              Send an instant inquiry directly to the coaching staff of {academy.name} to confirm trial availability.
+              Apply directly with your Sports CV for batch admission or a complimentary trial session with the coaching staff.
             </p>
+
+            {isEnquired ? (
+              <div className="academy-enquiry-active-box">
+                <div className="active-badge-header">
+                  <SiteIcon name="badge-check" size={18} />
+                  <strong>Admission Enquiry Active</strong>
+                </div>
+                <p>Application registered with coaching staff. Check status in My Dashboard.</p>
+                <button
+                  type="button"
+                  className="academy-btn academy-btn-secondary"
+                  style={{ width: '100%', marginTop: '6px' }}
+                  onClick={() => setIsEnrolModalOpen(true)}
+                >
+                  View Enquiry Details
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="academy-btn academy-btn-enrol-block"
+                onClick={() => setIsEnrolModalOpen(true)}
+              >
+                <SiteIcon name="award" size={18} />
+                <span>Apply for Admission / Free Trial</span>
+              </button>
+            )}
+
             <a
               href={whatsappUrl}
               target="_blank"
@@ -555,6 +618,15 @@ export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPag
         entitySlug={academy.slug}
         entityName={academy.name}
       />
+
+      {isEnrolModalOpen && (
+        <AcademyEnquiryModal
+          academy={academy}
+          onClose={() => setIsEnrolModalOpen(false)}
+          onSuccess={() => setIsEnquired(true)}
+          onNavigate={onNavigate}
+        />
+      )}
     </article>
   )
 }

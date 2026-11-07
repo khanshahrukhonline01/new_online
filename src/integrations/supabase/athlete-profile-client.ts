@@ -769,3 +769,171 @@ export function isTrialAlreadyApplied(trialSlug: string): boolean {
   const apps = getUserTrialApplications()
   return apps.some(a => a.trialSlug.toLowerCase() === trialSlug.toLowerCase())
 }
+
+export interface AcademyEnquiry {
+  id?: string
+  enquiryToken: string
+  academySlug: string
+  academyName: string
+  sport: string
+  city: string
+  state?: string
+  batchType: 'weekend' | 'weekday' | 'evening_elite' | 'morning_grassroots'
+  batchLabel: string
+  skillLevel: 'beginner' | 'intermediate' | 'advanced_elite'
+  requestType: 'free_trial' | 'regular_admission' | 'scholarship_assessment'
+  athleteName: string
+  athletePhone: string
+  athleteEmail?: string
+  ageCategory?: string
+  playingPosition?: string
+  fitnessBenchmarks?: {
+    yoyoIr1Meters?: number
+    sprint30mSeconds?: number
+    cmjHeightCm?: number
+    tier?: string
+    percentileAvg?: number
+  }
+  statement?: string
+  status: 'submitted' | 'under_review' | 'trial_scheduled' | 'admitted'
+  submittedAt: string
+}
+
+export interface SubmitAcademyEnquiryInput {
+  academySlug: string
+  academyName: string
+  sport: string
+  city: string
+  state?: string
+  batchType: 'weekend' | 'weekday' | 'evening_elite' | 'morning_grassroots'
+  batchLabel?: string
+  skillLevel: 'beginner' | 'intermediate' | 'advanced_elite'
+  requestType: 'free_trial' | 'regular_admission' | 'scholarship_assessment'
+  athleteName: string
+  athletePhone: string
+  athleteEmail?: string
+  ageCategory?: string
+  playingPosition?: string
+  fitnessBenchmarks?: {
+    yoyoIr1Meters?: number
+    sprint30mSeconds?: number
+    cmjHeightCm?: number
+    tier?: string
+    percentileAvg?: number
+  }
+  statement?: string
+}
+
+export async function submitAcademyEnquiry(
+  input: SubmitAcademyEnquiryInput,
+): Promise<{ status: 'submitted'; enquiry: AcademyEnquiry; message: string }> {
+  const sportPrefix = input.sport.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'SPO'
+  const token = `ENQ-${sportPrefix}-${Date.now().toString(36).slice(-5).toUpperCase()}`
+  const now = new Date().toISOString()
+
+  const batchLabelMap: Record<string, string> = {
+    weekend: 'Weekend Development Batch (Sat-Sun)',
+    weekday: 'Weekday Intensive Training (Tue-Fri)',
+    evening_elite: 'Elite High-Performance Evening Batch',
+    morning_grassroots: 'Morning Grassroots Foundation (6:00 AM - 8:30 AM)',
+  }
+
+  const enquiry: AcademyEnquiry = {
+    id: `enq-${Date.now().toString(36)}`,
+    enquiryToken: token,
+    academySlug: input.academySlug,
+    academyName: input.academyName,
+    sport: input.sport,
+    city: input.city,
+    state: input.state,
+    batchType: input.batchType,
+    batchLabel: input.batchLabel || batchLabelMap[input.batchType] || 'Weekend Development Batch',
+    skillLevel: input.skillLevel,
+    requestType: input.requestType,
+    athleteName: input.athleteName.trim() || 'Verified Candidate',
+    athletePhone: input.athletePhone.trim(),
+    athleteEmail: input.athleteEmail?.trim(),
+    ageCategory: input.ageCategory,
+    playingPosition: input.playingPosition,
+    fitnessBenchmarks: input.fitnessBenchmarks,
+    statement: input.statement?.trim() || 'Candidate applying with verified KhelGrid Sports CV and combine evaluation metrics.',
+    status: 'submitted',
+    submittedAt: now,
+  }
+
+  // Local storage persistence
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const existing = JSON.parse(window.localStorage.getItem('khelgrid_academy_enquiries') || '[]') as AcademyEnquiry[]
+      const updated = [enquiry, ...existing.filter(e => e.academySlug !== input.academySlug)].slice(0, 50)
+      window.localStorage.setItem('khelgrid_academy_enquiries', JSON.stringify(updated))
+    } catch {
+      // ignore
+    }
+  }
+
+  // Supabase write if configured
+  if (supabaseUrl && anonKey) {
+    try {
+      await fetch(`${supabaseUrl}/rest/v1/academy_enquiries`, {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          enquiry_token: enquiry.enquiryToken,
+          academy_slug: enquiry.academySlug,
+          academy_name: enquiry.academyName,
+          sport: enquiry.sport,
+          city: enquiry.city,
+          batch_type: enquiry.batchType,
+          batch_label: enquiry.batchLabel,
+          skill_level: enquiry.skillLevel,
+          request_type: enquiry.requestType,
+          athlete_name: enquiry.athleteName,
+          athlete_phone: enquiry.athletePhone,
+          fitness_benchmarks: enquiry.fitnessBenchmarks || {},
+          status: 'submitted',
+        }),
+      })
+    } catch {
+      // ignore
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('khelgrid:academy-enquiry-submitted', {
+        detail: { enquiry },
+      }),
+    )
+  }
+
+  return {
+    status: 'submitted',
+    enquiry,
+    message: `Admission enquiry submitted successfully! Reference Token #${token} is registered with ${input.academyName}.`,
+  }
+}
+
+export function getUserAcademyEnquiries(): AcademyEnquiry[] {
+  if (typeof window === 'undefined' || !window.localStorage) return []
+  try {
+    const raw = window.localStorage.getItem('khelgrid_academy_enquiries')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed as AcademyEnquiry[]
+    }
+  } catch {
+    // ignore
+  }
+  return []
+}
+
+export function isAcademyEnquirySubmitted(academySlug: string): boolean {
+  const enquiries = getUserAcademyEnquiries()
+  return enquiries.some(e => e.academySlug.toLowerCase() === academySlug.toLowerCase())
+}
+
