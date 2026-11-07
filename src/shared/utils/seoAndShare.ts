@@ -189,6 +189,36 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
     }
   }
 
+  if (cleanPath === '/events' || cleanPath === '/tournaments') {
+    return {
+      title: "National Events & State Tournaments Calendar · KhelGrid (राष्ट्रीय व राज्य खेल प्रतियोगिताएं)",
+      description: "Explore verified Indian sports tournaments, SGFI school games, Khelo India youth competitions, senior national meets, and state ranking events with official rulebooks and prize money.",
+      canonicalUrl: 'https://khelgrid.com/events',
+      keywords: ['sports tournaments india', 'sgfi national school games', 'khelo india youth games 2026', 'state athletics championship', 'badminton tournament india', 'subroto cup football', 'खेल प्रतियोगिताएं', ...DEFAULT_KEYWORDS],
+      ogType: 'website'
+    }
+  }
+
+  if (cleanPath === '/scout-portal' || cleanPath === '/scout') {
+    return {
+      title: "Scout Portal & Verified Athlete Workbench · KhelGrid (स्काउट पोर्टल)",
+      description: "Dedicated talent workbench for SAI selectors, NIS Patiala certified coaches, and pro league scouts. Filter verified grassroots athletes by normative biometrics, physical test percentiles, and achievements.",
+      canonicalUrl: 'https://khelgrid.com/scout-portal',
+      keywords: ['sports talent scouting india', 'sai talent identification', 'nis patiala scout workbench', 'grassroots athlete database', 'yo-yo test percentile', 'स्काउट पोर्टल', ...DEFAULT_KEYWORDS],
+      ogType: 'website'
+    }
+  }
+
+  if (cleanPath === '/verification' || cleanPath === '/verify-athlete') {
+    return {
+      title: "Athlete Verification Badge Desk · KhelGrid (खिलाड़ी सत्यापन डेस्क)",
+      description: "Authenticate age compliance, federation UIDs (AFI, BAI, AIFF, BCCI, SGFI), and state medal certificates. Protect yourself from age-fraud and earn your verified KhelGrid badge.",
+      canonicalUrl: 'https://khelgrid.com/verification',
+      keywords: ['athlete verification badge', 'afi athlete uid check', 'bai registration verification', 'sports certificate verification', 'age fraud prevention in sports', 'खिलाड़ी सत्यापन', ...DEFAULT_KEYWORDS],
+      ogType: 'website'
+    }
+  }
+
   // Fallback for other standard pages
   const label = cleanPath.slice(1).replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
   return {
