@@ -307,10 +307,10 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
     }
   }
 
-  // 2. Direct PostgreSQL insertion to public.venue_slot_bookings enforcing UNIQUE(venue_id, slot_date, slot_time)
+  // 2. Direct PostgreSQL insertion to public.venue_bookings (canonical live table)
   if (supabaseUrl && anonKey) {
     try {
-      const response = await fetch(`${supabaseUrl}/rest/v1/venue_slot_bookings`, {
+      let response = await fetch(`${supabaseUrl}/rest/v1/venue_bookings`, {
         method: 'POST',
         headers: {
           apikey: anonKey,
@@ -324,10 +324,10 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
           venue_name: input.venueName,
           city: input.city,
           sport: input.sport,
-          court_or_turf_number: input.courtOrTurfNumber || 'Turf 1 (Main Pitch)',
+          court_number: 1,
           slot_date: input.slotDate,
           slot_time: input.slotTime,
-          booked_by_user_id: input.userId || null,
+          user_id: input.userId || null,
           customer_name: input.customerName,
           customer_phone: input.customerPhone,
           customer_email: input.customerEmail || null,
@@ -338,6 +338,37 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
           status: 'confirmed',
         }),
       })
+
+      if (response.status === 404) {
+        response = await fetch(`${supabaseUrl}/rest/v1/venue_slot_bookings`, {
+          method: 'POST',
+          headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation',
+          },
+          body: JSON.stringify({
+            booking_ref: ref,
+            venue_id: input.venueId,
+            venue_name: input.venueName,
+            city: input.city,
+            sport: input.sport,
+            court_or_turf_number: input.courtOrTurfNumber || 'Turf 1 (Main Pitch)',
+            slot_date: input.slotDate,
+            slot_time: input.slotTime,
+            booked_by_user_id: input.userId || null,
+            customer_name: input.customerName,
+            customer_phone: input.customerPhone,
+            customer_email: input.customerEmail || null,
+            total_amount: input.totalAmount,
+            paid_amount: input.paidAmount,
+            payment_status: input.paymentStatus,
+            payment_id: input.paymentId || null,
+            status: 'confirmed',
+          }),
+        })
+      }
 
       if (response.status === 409) {
         // Unique index violation (idx_venue_slot_active_unique)
@@ -473,6 +504,90 @@ export function getBookedVenueSlots(venueId: string, slotDate: string): string[]
     // Ignore
   }
   return []
+}
+
+/**
+ * Verified single-booking voucher lookup requiring both booking reference
+ * and customer phone (zero enumeration, zero public PII scraping).
+ */
+export async function fetchVenueBookingVoucher(
+  bookingRef: string,
+  customerPhone: string,
+): Promise<VenueBookingResult | null> {
+  const cleanRef = bookingRef.trim()
+  const cleanPhone = customerPhone.replace(/[^0-9]/g, '')
+  if (!cleanRef || cleanPhone.length < 7) {
+    return null
+  }
+
+  if (supabaseUrl && anonKey) {
+    try {
+      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_venue_booking_voucher`, {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          p_booking_ref: cleanRef,
+          p_customer_phone: cleanPhone,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const row = Array.isArray(data) && data[0] ? data[0] : data
+        if (row && row.booking_ref) {
+          return {
+            status: 'success',
+            bookingRef: row.booking_ref,
+            venueName: row.venue_name,
+            slotDate: row.slot_date,
+            slotTime: row.slot_time,
+            paidAmount: Number(row.paid_amount || 0),
+            paymentStatus: row.payment_status || 'paid',
+          }
+        }
+      }
+    } catch {
+      // Fallback to local storage
+    }
+  }
+
+  try {
+    const storage = getSafeLocalStorage()
+    if (storage) {
+      const existing = JSON.parse(storage.getItem('khelgrid_venue_bookings') || '[]') as Array<{
+        bookingRef?: string
+        customerPhone?: string
+        venueName?: string
+        slotDate?: string
+        slotTime?: string
+        paidAmount?: number
+        paymentStatus?: string
+      }>
+      const match = existing.find(
+        b =>
+          b.bookingRef === cleanRef &&
+          b.customerPhone?.replace(/[^0-9]/g, '') === cleanPhone,
+      )
+      if (match) {
+        return {
+          status: 'success',
+          bookingRef: match.bookingRef || cleanRef,
+          venueName: match.venueName || '',
+          slotDate: match.slotDate || '',
+          slotTime: match.slotTime || '',
+          paidAmount: match.paidAmount || 0,
+          paymentStatus: match.paymentStatus || 'paid',
+        }
+      }
+    }
+  } catch {
+    // Ignore
+  }
+
+  return null
 }
 
 export function getUserVenueBookings(): Array<VenueBookingResult & { createdAt?: string; customerName?: string; venueId?: string; city?: string; sport?: string }> {
