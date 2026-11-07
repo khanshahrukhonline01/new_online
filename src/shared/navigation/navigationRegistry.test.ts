@@ -27,10 +27,12 @@ describe('shared navigation registry', () => {
   })
 
   it('does not mark unfinished personal and scouting tools as available', () => {
-    for (const href of ['/dashboard', '/for-you', '/stats', '/scout-portal', '/verification']) {
+    for (const href of ['/dashboard', '/for-you', '/stats']) {
       expect(primaryNavigation.find(item => item.href === href)?.available).not.toBe(true)
     }
     expect(primaryNavigation.find(item => item.href === '/saved')?.available).toBe(true)
+    expect(primaryNavigation.find(item => item.href === '/scout-portal')?.available).toBe(true)
+    expect(primaryNavigation.find(item => item.href === '/verification')?.available).toBe(true)
     expect(primaryNavigation.find(item => item.href === '/talent-scanner')?.available).toBe(true)
     expect(primaryNavigation.find(item => item.href === '/learning')?.available).toBe(true)
   })

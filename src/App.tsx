@@ -28,7 +28,6 @@ const SearchPage = lazy(() => import('./modules/search/SearchPage'))
 const FeatureComingSoonPage = lazy(() => import('./modules/coming-soon/FeatureComingSoonPage'))
 const AthleteProfilePage = lazy(() => import('./modules/athlete-profile/AthleteProfilePage'))
 const CatalogueDetailPage = lazy(() => import('./modules/catalogue/CatalogueDetailPage'))
-const FeatureDirectoryPage = lazy(() => import('./modules/directories/FeatureDirectoryPage'))
 const LiveScoresPage = lazy(() => import('./modules/live/LiveScoresPage'))
 const ListingSubmissionPage = lazy(() => import('./modules/listings/ListingSubmissionPage'))
 const PolicyPage = lazy(() => import('./modules/policies/PolicyPage'))
@@ -49,6 +48,9 @@ const PricingPage = lazy(() => import('./modules/pricing/PricingPage'))
 const PartnerPage = lazy(() => import('./modules/partner/PartnerPage'))
 const SavedPage = lazy(() => import('./modules/saved/SavedPage'))
 const CoachesPage = lazy(() => import('./modules/coaches/CoachesPage'))
+const EventsPage = lazy(() => import('./modules/events/EventsPage'))
+const ScoutPortalPage = lazy(() => import('./modules/scouting/ScoutPortalPage'))
+const AthleteVerificationPage = lazy(() => import('./modules/verification/AthleteVerificationPage'))
 
 // Code-split heavyweight modal dialogs
 const CommunityListingModal = lazy(() => import('./shared/components/CommunityListingModal'))
@@ -188,7 +190,9 @@ export default function App() {
       else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} />
       else if (match.canonicalPath === '/play') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openIntake('pickup_game')} />
       else if (match.canonicalPath === '/coaches') page = <CoachesPage onNavigate={navigate} onOpenCoachIntake={() => openIntake('academy')} />
-      else if (match.canonicalPath === '/events') page = <FeatureDirectoryPage kind="events" />
+      else if (match.canonicalPath === '/events') page = <EventsPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/scout-portal') page = <ScoutPortalPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/verification') page = <AthleteVerificationPage onNavigate={navigate} />
       else if (match.canonicalPath === '/calendar') page = <SportsCalendarPage onNavigate={navigate} />
       else if (match.canonicalPath === '/tools' || match.canonicalPath === '/sports-tools' || match.canonicalPath.startsWith('/tools/')) page = <SportsToolsPage onNavigate={navigate} initialToolSlug={match.canonicalPath.startsWith('/tools/') ? match.canonicalPath.slice('/tools/'.length) : undefined} />
       else if (match.canonicalPath === '/live' || match.canonicalPath === '/live-scores') page = <LiveScoresPage onNavigate={navigate} />
