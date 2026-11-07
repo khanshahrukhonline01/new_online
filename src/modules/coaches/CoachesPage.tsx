@@ -1,5 +1,6 @@
-import { useState, useMemo, type MouseEvent } from 'react'
+import { useState, useMemo, useEffect, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { getCoaches } from '../../integrations/supabase/public-client'
 import {
   VERIFIED_COACHES,
   COACH_SPORTS,
@@ -17,6 +18,8 @@ export interface CoachesPageProps {
 }
 
 export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps) {
+  const [coaches, setCoaches] = useState<VerifiedCoach[]>(VERIFIED_COACHES)
+  const [loading, setLoading] = useState(false)
   const [selectedSport, setSelectedSport] = useState<string>('All Sports')
   const [selectedCredential, setSelectedCredential] = useState<CredentialAuthority>('all')
   const [selectedCity, setSelectedCity] = useState<string>('All Cities')
@@ -24,6 +27,46 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [sortBy, setSortBy] = useState<'experience' | 'rating' | 'fee' | 'name'>('experience')
   const [activeCoachForModal, setActiveCoachForModal] = useState<VerifiedCoach | null>(null)
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    getCoaches().then(res => {
+      if (!active) return
+      if (res.status === 'ready' && res.data.length > 0) {
+        const mapped: VerifiedCoach[] = res.data.map(c => ({
+          id: c.id,
+          slug: c.slug,
+          name: c.name || c.display_name,
+          sport: c.sport || 'Multi-Sport',
+          sportCategory: c.sportCategory || c.sport || 'Multi-Sport',
+          certification: c.certification || 'Certified Coach',
+          credentialAuthority: (c.credential_authority || c.credentialAuthority || 'all') as CredentialAuthority,
+          authorityLabel: c.authority_label || c.authorityLabel || 'Certified Coach',
+          city: c.city,
+          state: c.state || '',
+          experienceYears: c.experience_years ?? c.experienceYears ?? 5,
+          academyAffiliation: c.academy_affiliation || c.academyAffiliation || 'Independent',
+          monthlyFee: c.monthly_fee || c.monthlyFee || '₹3,000 / month',
+          feeRangeCategory: (c.fee_range_category || c.feeRangeCategory || '3k-7k') as VerifiedCoach['feeRangeCategory'],
+          studentTrackRecord: c.student_track_record || c.studentTrackRecord || '',
+          specialties: c.specialties || [],
+          languages: c.languages || ['English', 'Hindi'],
+          rating: Number(c.rating || 4.8),
+          reviewCount: c.review_count ?? c.reviewCount ?? 0,
+          verifiedBadge: c.verified_badge || c.verifiedBadge || 'Verified Coach',
+          bio: c.bio || '',
+          availableForOneOnOne: c.available_one_on_one ?? c.availableForOneOnOne ?? true,
+          availableForBatches: c.available_batches ?? c.availableForBatches ?? true,
+        }))
+        setCoaches(mapped)
+      }
+      setLoading(false)
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const handleLinkClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (onNavigate) {
@@ -33,7 +76,7 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
 
   // Filter and sort coaches
   const filteredCoaches = useMemo(() => {
-    return VERIFIED_COACHES.filter(coach => {
+    return coaches.filter(coach => {
       // Sport filter
       if (selectedSport !== 'All Sports' && coach.sport !== selectedSport) {
         return false
@@ -108,7 +151,7 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
       }
       return 0
     })
-  }, [selectedSport, selectedCredential, selectedCity, selectedFee, searchQuery, sortBy])
+  }, [coaches, selectedSport, selectedCredential, selectedCity, selectedFee, searchQuery, sortBy])
 
   const handleResetFilters = () => {
     setSelectedSport('All Sports')
@@ -305,10 +348,16 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
       {/* Results Count Header */}
       <div className="coaches-results-header">
         <div>
-          Showing <span className="coaches-count-highlight">{filteredCoaches.length}</span> verified{' '}
-          {filteredCoaches.length === 1 ? 'coach' : 'coaches'}
-          {selectedSport !== 'All Sports' && ` in ${selectedSport}`}
-          {selectedCity !== 'All Cities' && ` in ${selectedCity}`}
+          {loading ? (
+            <span>Updating coaches directory…</span>
+          ) : (
+            <>
+              Showing <span className="coaches-count-highlight">{filteredCoaches.length}</span> verified{' '}
+              {filteredCoaches.length === 1 ? 'coach' : 'coaches'}
+              {selectedSport !== 'All Sports' && ` in ${selectedSport}`}
+              {selectedCity !== 'All Cities' && ` in ${selectedCity}`}
+            </>
+          )}
         </div>
 
         {isFiltered && (

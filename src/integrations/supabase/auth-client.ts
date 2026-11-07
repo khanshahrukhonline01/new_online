@@ -1,5 +1,7 @@
 import { getSupabaseClient } from './realtime-client'
 import type { KhelGridUser } from './public-client'
+export type { KhelGridUser }
+export { getStoredUser } from './public-client'
 
 export type UserRole = 'athlete' | 'host' | 'coach' | 'scout' | 'academy' | 'admin'
 

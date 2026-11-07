@@ -280,6 +280,8 @@ export async function getAthleteProfile(username: string): Promise<AthleteProfil
   return locals[clean] ?? null
 }
 
+export const getAthleteProfileByUsername = getAthleteProfile
+
 export type PublishProfileInput = Omit<AthleteProfile, 'id' | 'createdAt' | 'updatedAt' | 'verificationStatus'>
 
 export type PublishProfileResult =
