@@ -1,13 +1,11 @@
-import { useState, useEffect, useMemo, type MouseEvent } from 'react'
+import { useState, useMemo, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
-  BASELINE_SAVED_ITEMS,
-  STORAGE_SAVED_KEY,
-  STORAGE_CHRONICLE_KEY,
   generateTrialIcsCalendar,
   type SavedItem,
   type SavedItemCategory,
 } from './savedData'
+import { useSavedItems } from '../../shared/services/savedService'
 import './SavedPage.css'
 
 export interface SavedPageProps {
@@ -15,38 +13,11 @@ export interface SavedPageProps {
 }
 
 export function SavedPage({ onNavigate }: SavedPageProps) {
-  const [items, setItems] = useState<SavedItem[]>(BASELINE_SAVED_ITEMS)
+  const { items, removeSave, clearAll } = useSavedItems()
   const [selectedCategory, setSelectedCategory] = useState<SavedItemCategory>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'deadline' | 'recent' | 'az'>('deadline')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
-
-  // Load and sync from localStorage on mount
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    try {
-      const storedSaved = localStorage.getItem(STORAGE_SAVED_KEY)
-      const storedChronicle = localStorage.getItem(STORAGE_CHRONICLE_KEY)
-
-      const savedIds = storedSaved ? new Set(JSON.parse(storedSaved) as string[]) : null
-      const chronicleIds = storedChronicle ? new Set(JSON.parse(storedChronicle) as string[]) : null
-
-      if (savedIds || chronicleIds) {
-        // If user has specific bookmarks saved, filter or augment baseline items
-        setItems(prev => {
-          return prev.filter(item => {
-            if (item.category === 'paper') {
-              return chronicleIds ? chronicleIds.has(item.id) || chronicleIds.size === 0 : true
-            }
-            return savedIds ? savedIds.has(item.id) || savedIds.size === 0 : true
-          })
-        })
-      }
-    } catch {
-      // ignore parse error
-    }
-  }, [])
 
   const handleLinkClick = (e: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (onNavigate) {
@@ -61,36 +32,13 @@ export function SavedPage({ onNavigate }: SavedPageProps) {
 
   // Remove a saved item
   const handleRemoveItem = (id: string, title: string) => {
-    setItems(prev => {
-      const next = prev.filter(item => item.id !== id)
-      if (typeof window !== 'undefined') {
-        try {
-          const currentSaved = localStorage.getItem(STORAGE_SAVED_KEY)
-          if (currentSaved) {
-            const parsed = new Set(JSON.parse(currentSaved) as string[])
-            parsed.delete(id)
-            localStorage.setItem(STORAGE_SAVED_KEY, JSON.stringify(Array.from(parsed)))
-          }
-        } catch {
-          // ignore
-        }
-      }
-      return next
-    })
+    removeSave(id)
     showToast(`Removed "${title.slice(0, 32)}..." from saved items`)
   }
 
   // Clear all saved items
   const handleClearAll = () => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.removeItem(STORAGE_SAVED_KEY)
-        localStorage.removeItem(STORAGE_CHRONICLE_KEY)
-      } catch {
-        // ignore
-      }
-    }
-    setItems([])
+    clearAll()
     showToast('All saved items cleared from local device')
   }
 
@@ -135,6 +83,7 @@ export function SavedPage({ onNavigate }: SavedPageProps) {
         if (selectedCategory === 'trials' && item.category !== 'trial') return false
         if (selectedCategory === 'academies' && item.category !== 'academy') return false
         if (selectedCategory === 'venues' && item.category !== 'venue') return false
+        if (selectedCategory === 'coaches' && item.category !== 'coach') return false
         if (selectedCategory === 'pickup' && item.category !== 'pickup') return false
         if (selectedCategory === 'papers' && item.category !== 'paper') return false
 
@@ -177,6 +126,7 @@ export function SavedPage({ onNavigate }: SavedPageProps) {
       trials: items.filter(i => i.category === 'trial').length,
       academies: items.filter(i => i.category === 'academy').length,
       venues: items.filter(i => i.category === 'venue').length,
+      coaches: items.filter(i => i.category === 'coach').length,
       pickup: items.filter(i => i.category === 'pickup').length,
       papers: items.filter(i => i.category === 'paper').length,
     }
@@ -326,6 +276,17 @@ export function SavedPage({ onNavigate }: SavedPageProps) {
         >
           <span>Venues &amp; Turfs</span>
           <span className="saved-tab-count">{counts.venues}</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={selectedCategory === 'coaches'}
+          className={`saved-tab-btn ${selectedCategory === 'coaches' ? 'is-active' : ''}`}
+          onClick={() => setSelectedCategory('coaches')}
+        >
+          <span>Coaches</span>
+          <span className="saved-tab-count">{counts.coaches}</span>
         </button>
 
         <button

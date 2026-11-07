@@ -393,6 +393,18 @@
 .sidebar-link-label { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
 .sidebar-link-label small { color: #718097; font-size: 9px; font-weight: 500; }
 .sidebar-coming-soon { flex: 0 0 auto; color: #718097; font-size: 9px; }
+.sidebar-count-badge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.16);
+  color: #f59e0b;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
 .sidebar-bottom-note { padding: 8px 3px 0; color: #718097; font-size: 9px; }
 .sidebar-promo { margin: 7px 0 12px; padding: 14px; border: 1px solid #dceee3; border-radius: 11px; background: #f2faf5; }
 .sidebar-promo strong { display: block; color: #203b30; font-size: 11px; }

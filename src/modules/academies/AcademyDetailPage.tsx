@@ -3,6 +3,8 @@ import { getAcademyBySlug, getAcademies, getCommunityAcademyBySlug } from '../..
 import type { Academy } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { ShareBar } from '../../shared/components/ShareBar'
+import { BookmarkButton } from '../../shared/components/BookmarkButton'
+import { createAcademySavedItem } from '../../shared/services/savedService'
 import { updatePageSeoMetadata } from '../../shared/utils/seoAndShare'
 import { getCuratedAcademyBySlug, type CuratedAcademy } from '../../shared/data/curatedEntitiesData'
 import ReportListingModal from '../../shared/components/ReportListingModal'
@@ -229,6 +231,8 @@ export default function AcademyDetailPage({ slug, onNavigate }: AcademyDetailPag
 
         {/* Primary Action Buttons */}
         <div className="academy-actions-bar">
+          <BookmarkButton item={createAcademySavedItem(academy)} variant="pill" showLabel={true} />
+
           <a
             href={whatsappUrl}
             target="_blank"

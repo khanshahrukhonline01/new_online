@@ -13,6 +13,8 @@ import {
 } from '../../shared/components/CatalogueFilterPanel'
 import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 import { TrialAlertActions } from './TrialAlertActions'
+import { BookmarkButton } from '../../shared/components/BookmarkButton'
+import { createOpportunitySavedItem } from '../../shared/services/savedService'
 import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
 import type { PaymentItem } from '../../shared/payments/paymentTypes'
 
@@ -260,39 +262,42 @@ export default function OpportunitiesPage({ onOpenIntake }: OpportunitiesPagePro
                         {item.slug.startsWith('test-only-') && (
                           <span className="test-only-label">TEST ONLY — NOT A REAL LISTING</span>
                         )}
-                        <div className="listing-topline">
-                          <span className="tag">
-                            <SiteIcon name="calendar" size={14} /> {item.opportunity_type.replace('_', ' ')}
-                          </span>
-                          {Boolean(item.registration_fee && item.registration_fee > 0) && (
-                            <span className="tag" style={{ color: '#d97706', borderColor: 'rgba(217,119,6,0.3)', background: 'rgba(217,119,6,0.08)' }}>
-                              ₹{item.registration_fee} Entry Fee
+                        <div className="listing-topline" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                            <span className="tag">
+                              <SiteIcon name="calendar" size={14} /> {item.opportunity_type.replace('_', ' ')}
                             </span>
-                          )}
-                          {(item.registration_fee === 0 || item.registration_fee === undefined) && (
-                            <span className="tag" style={{ color: '#16a34a', borderColor: 'rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)' }}>
-                              ₹0 Free Entry
+                            {Boolean(item.registration_fee && item.registration_fee > 0) && (
+                              <span className="tag" style={{ color: '#d97706', borderColor: 'rgba(217,119,6,0.3)', background: 'rgba(217,119,6,0.08)' }}>
+                                ₹{item.registration_fee} Entry Fee
+                              </span>
+                            )}
+                            {(item.registration_fee === 0 || item.registration_fee === undefined) && (
+                              <span className="tag" style={{ color: '#16a34a', borderColor: 'rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)' }}>
+                                ₹0 Free Entry
+                              </span>
+                            )}
+                            {Boolean(item.available_spots) && (
+                              <span className="tag" style={{ color: '#2563eb', borderColor: 'rgba(37,99,235,0.3)', background: 'rgba(37,99,235,0.08)' }}>
+                                {item.available_spots} Spots
+                              </span>
+                            )}
+                            {item.age_category && (
+                              <span className="tag" style={{ opacity: 0.85 }}>
+                                {item.age_category}
+                              </span>
+                            )}
+                            <span
+                              className={item.verification_status === 'verified' ? 'verification verified' : 'verification'}
+                            >
+                              <SiteIcon
+                                name={item.verification_status === 'verified' ? 'shield-check' : 'info'}
+                                size={14}
+                              />{' '}
+                              {item.verification_status === 'verified' ? 'Source reviewed' : 'Not verified'}
                             </span>
-                          )}
-                          {Boolean(item.available_spots) && (
-                            <span className="tag" style={{ color: '#2563eb', borderColor: 'rgba(37,99,235,0.3)', background: 'rgba(37,99,235,0.08)' }}>
-                              {item.available_spots} Spots
-                            </span>
-                          )}
-                          {item.age_category && (
-                            <span className="tag" style={{ opacity: 0.85 }}>
-                              {item.age_category}
-                            </span>
-                          )}
-                          <span
-                            className={item.verification_status === 'verified' ? 'verification verified' : 'verification'}
-                          >
-                            <SiteIcon
-                              name={item.verification_status === 'verified' ? 'shield-check' : 'info'}
-                              size={14}
-                            />{' '}
-                            {item.verification_status === 'verified' ? 'Source reviewed' : 'Not verified'}
-                          </span>
+                          </div>
+                          <BookmarkButton item={createOpportunitySavedItem(item)} />
                         </div>
                         <h2>{item.title}</h2>
                         <p>

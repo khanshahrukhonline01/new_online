@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { navigationModules, type NavigationItem } from '../navigation/navigationRegistry'
+import { useSavedItems } from '../services/savedService'
 import { SiteIcon, type SiteIconName } from './SiteIcon'
 import './Sidebar.css'
 
@@ -28,7 +29,7 @@ function isActive(item: NavigationItem, activePath: string) {
   return activePath === item.href || activePath.startsWith(item.href + '/')
 }
 
-function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false, isLoggedIn = false, onOpenAuth }: {
+function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false, isLoggedIn = false, onOpenAuth, savedCount = 0 }: {
   item: NavigationItem
   activePath: string
   onNavigate: SidebarProps['onNavigate']
@@ -36,6 +37,7 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false,
   collapsed?: boolean
   isLoggedIn?: boolean
   onOpenAuth?: (tab?: 'login' | 'signup') => void
+  savedCount?: number
 }) {
   const { t } = useTranslation(['navigation', 'common'])
   const active = isActive(item, activePath)
@@ -46,10 +48,26 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false,
     itemLabel = `${itemLabel} (Sign In)`
   }
 
-  const label = <><span className="sidebar-icon" aria-hidden="true"><SiteIcon name={item.icon} size={18} /></span><span className="sidebar-link-label">{itemLabel}</span>{!item.available && !collapsed ? <span className="sidebar-coming-soon">{t('comingSoon', { ns: 'common', defaultValue: 'Coming soon' })}</span> : null}</>
+  const tooltipTitle = item.id === 'saved' && savedCount > 0 ? `${itemLabel} (${savedCount})` : itemLabel
+
+  const label = (
+    <>
+      <span className="sidebar-icon" aria-hidden="true">
+        <SiteIcon name={item.icon} size={18} />
+      </span>
+      <span className="sidebar-link-label">{itemLabel}</span>
+      {item.id === 'saved' && savedCount > 0 && !collapsed && (
+        <span className="sidebar-count-badge">{savedCount}</span>
+      )}
+      {!item.available && !collapsed ? (
+        <span className="sidebar-coming-soon">{t('comingSoon', { ns: 'common', defaultValue: 'Coming soon' })}</span>
+      ) : null}
+    </>
+  )
+
   if (!item.available) {
     return <div className="sidebar-item-wrap">
-      <span className="sidebar-link is-disabled" aria-disabled="true" title={collapsed ? itemLabel + ' — ' + t('comingSoon', { ns: 'common', defaultValue: 'Coming soon' }) : t('comingSoon', { ns: 'common', defaultValue: 'Coming soon' })}>{label}</span>
+      <span className="sidebar-link is-disabled" aria-disabled="true" title={collapsed ? tooltipTitle + ' — ' + t('comingSoon', { ns: 'common', defaultValue: 'Coming soon' }) : t('comingSoon', { ns: 'common', defaultValue: 'Coming soon' })}>{label}</span>
     </div>
   }
   return <div className="sidebar-item-wrap">
@@ -57,8 +75,8 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false,
       href={item.href}
       className={active ? 'sidebar-link is-active' : 'sidebar-link'}
       aria-current={active ? 'page' : undefined}
-      aria-label={collapsed ? itemLabel : undefined}
-      title={collapsed ? itemLabel : undefined}
+      aria-label={collapsed ? tooltipTitle : undefined}
+      title={collapsed ? tooltipTitle : undefined}
       onClick={event => {
         if (!isLoggedIn && (item.id === 'dashboard' || item.id === 'for-you')) {
           onNavigate(event, item.href)
@@ -77,6 +95,7 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false,
 
 export default function Sidebar({ activePath, onNavigate, open, onClose, toggleRef, collapsed, onOpenIntake, onOpenAuth, isLoggedIn = false }: SidebarProps) {
   const { t } = useTranslation(['navigation', 'common'])
+  const { count: savedCount } = useSavedItems()
   const closeRef = useRef<HTMLButtonElement>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
@@ -144,7 +163,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
         {navigationModules.map(section => (
           <div className="sidebar-rail-group" key={section.id} aria-label={section.label}>
             {section.items.map(item =>
-              <SidebarLink key={item.id} item={item} activePath={activePath} onNavigate={onNavigate} onClose={onClose} collapsed isLoggedIn={isLoggedIn} onOpenAuth={onOpenAuth} />
+              <SidebarLink key={item.id} item={item} activePath={activePath} onNavigate={onNavigate} onClose={onClose} collapsed isLoggedIn={isLoggedIn} onOpenAuth={onOpenAuth} savedCount={savedCount} />
             )}
           </div>
         ))}
@@ -159,7 +178,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
           {!collapsed || mobile ? <SiteIcon name={expanded ? 'chevron-down' : 'chevron-right'} size={14} /> : null}
         </button>
         {expanded ? <div id={`${mobile ? 'mobile-' : ''}nav-section-${section.id}`}>
-          {section.items.map(item => <SidebarLink key={item.id} item={item} activePath={activePath} onNavigate={onNavigate} onClose={onClose} collapsed={collapsed && !mobile} isLoggedIn={isLoggedIn} onOpenAuth={onOpenAuth} />)}
+          {section.items.map(item => <SidebarLink key={item.id} item={item} activePath={activePath} onNavigate={onNavigate} onClose={onClose} collapsed={collapsed && !mobile} isLoggedIn={isLoggedIn} onOpenAuth={onOpenAuth} savedCount={savedCount} />)}
         </div> : null}
       </section>
     })

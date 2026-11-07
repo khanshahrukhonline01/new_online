@@ -11,6 +11,8 @@ import {
 } from '../../shared/components/CatalogueFilterPanel'
 import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 import { CURATED_ACADEMIES } from '../../shared/data/curatedEntitiesData'
+import { BookmarkButton } from '../../shared/components/BookmarkButton'
+import { createAcademySavedItem } from '../../shared/services/savedService'
 import './AcademiesPage.css'
 
 export interface AcademiesPageProps {
@@ -164,15 +166,18 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
                 const academySlug = academy.slug || academy.id
                 return (
                   <article className="academy-card" key={academy.id}>
-                    <div className="academy-card-header">
-                      <span className="academy-card-sport">{academy.sport || 'Multi-Sport'}</span>
-                      {academy.verification_status === 'verified' ? (
-                        <span className="academy-card-verified">
-                          <SiteIcon name="badge-check" size={13} /> Source Verified
-                        </span>
-                      ) : (
-                        <span className="academy-card-unverified">Listed Institute</span>
-                      )}
+                    <div className="academy-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span className="academy-card-sport">{academy.sport || 'Multi-Sport'}</span>
+                        {academy.verification_status === 'verified' ? (
+                          <span className="academy-card-verified">
+                            <SiteIcon name="badge-check" size={13} /> Source Verified
+                          </span>
+                        ) : (
+                          <span className="academy-card-unverified">Listed Institute</span>
+                        )}
+                      </div>
+                      <BookmarkButton item={createAcademySavedItem(academy)} />
                     </div>
 
                     <h2 className="academy-card-name">{academy.name}</h2>
