@@ -1,106 +1,67 @@
 # KhelGrid Security Programme — Phase 8: Listing, Content & Moderation Security
 
-> **Document ID:** SEC-P8-MOD-001  
-> **Status:** Implemented in code | Tested against isolated PostgreSQL  
+> **Document ID:** SEC-P8-MOD-002  
+> **Status:** Implemented in code | Verified in Isolated PostgreSQL 17  
 > **Repository:** `khelgrid-dotcom/khelgrid-platform`  
-> **Database Project:** `hznsbxvovjxvmnchzzqt` (Development)  
-> **Migration File:** `supabase/migrations/20261108090000_phase7_and_8_business_logic_and_moderation_security.sql`  
+> **Target Database:** `hznsbxvovjxvmnchzzqt` (Development)  
+> **Migration File:** `supabase/migrations/20261108100000_phase5_2_critical_remediation_and_closure.sql`  
 
 ---
 
 ## 1. Executive Summary
 
-As a community-driven sports directory and talent platform, KhelGrid accepts user and academy submissions for sports venues, coaching academies, open trials, and tournament events.
+Phase 8 secures the community directory submission, review, and verification workflow. In open sports platforms, a major vulnerability is directory submitters exploiting elevated credentials to approve their own venues, academies, or tournament listings.
 
-Without strict server-side moderation controls, listing directories are vulnerable to:
-1. Self-approval of fraudulent listings or fake sports academies.
-2. Unchecked publication of scam trial opportunities charging extortionate registration fees.
-3. Fabrication of verification badges (`is_verified = true`) without document review.
-4. Reputational sabotage via malicious edits or unverified negative reviews.
-
-Phase 8 implements cryptographic anti-self-approval mechanisms, tamper-resistant moderation audit logs, and strict queue isolation in PostgreSQL.
+Phase 5.2 hardens `public.review_listing_submission` with an immutable anti-self-approval rule and an append-only audit log in `public.listing_moderation_audit_logs`.
 
 ---
 
-## 2. Listing Lifecycle & Workflow State Machine
+## 2. Anti-Self-Approval Enforcement & Audit Architecture
 
-Every submission across venues, academies, trials, and coaches follows an immutable lifecycle:
-
-```
-[User Draft / Submission] 
-           │
-           ▼
-     status: 'pending' (Unpublished, invisible to public search)
-           │
-           ├──────────────────────────────┐
-           ▼ (Moderator Review)           ▼ (Moderator Review)
-     status: 'approved'             status: 'rejected'
-  (Publicly Discoverable)       (Archived with audit reason)
-           │
-           ▼ (Subsequent Edit)
-     status: 'pending' (Re-enters moderation queue if core details change)
-```
-
----
-
-## 3. Core Security Rules & Technical Safeguards
-
-### 3.1 Strict Anti-Self-Approval Enforcement
-* **Rule:** A user—even one possessing platform moderator or administrative credentials—**cannot approve their own submission**.
-* **PostgreSQL Implementation (`public.review_listing_submission`)**:
-  ```sql
-  IF v_submission.submitted_by = auth.uid() THEN
-      RAISE EXCEPTION 'Security violation: Submitter cannot approve or review their own listing';
+```sql
+CREATE OR REPLACE FUNCTION public.review_listing_submission(
+  p_submission_id uuid,
+  p_decision text,
+  p_notes text DEFAULT NULL
+) RETURNS jsonb
+...
+BEGIN
+  v_reviewer_id := auth.uid();
+  IF v_reviewer_id IS NULL THEN
+    RETURN jsonb_build_object('status', 'error', 'error_code', 'UNAUTHORIZED', 'message', 'Authentication required.');
   END IF;
-  ```
-* This prevents rogue moderators or compromised accounts from unilaterally injecting fraudulent listings.
 
-### 3.2 Private Moderation Queue Isolation
-* Direct PostgREST access to the pending review queue is blocked for `anon` and standard `authenticated` users.
-* Only accounts holding verified `moderator` or `admin` roles in `public.user_roles` can view submissions in `'pending'` or `'flagged'` status.
-* The public directory API queries only rows with `status = 'approved'`.
+  -- 1. Moderator / Admin Authorization
+  IF NOT public.is_service_role_or_admin() THEN
+    RETURN jsonb_build_object('status', 'error', 'error_code', 'FORBIDDEN', 'message', 'Moderator privileges required.');
+  END IF;
 
-### 3.3 Immutable Moderation Audit Trail
-Every action (approval, rejection, modification, status suspension) creates an append-only entry in `public.listing_moderation_audit_logs`:
+  -- 2. Anti-Self-Approval Rule
+  SELECT id, submitted_by, status INTO v_submission FROM public.listing_submissions WHERE id = p_submission_id LIMIT 1;
+  IF v_submission.submitted_by = v_reviewer_id THEN
+    RETURN jsonb_build_object(
+      'status', 'error',
+      'error_code', 'SELF_APPROVAL_PROHIBITED',
+      'message', 'Security violation: Submitter cannot approve their own submission.'
+    );
+  END IF;
 
-| Column | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `UUID` | Primary key |
-| `submission_id` | `UUID` | Reference to moderated listing |
-| `moderator_id` | `UUID` | Identity of reviewing moderator (`auth.uid()`) |
-| `action` | `TEXT` | `'approved'`, `'rejected'`, `'flagged'`, `'suspended'` |
-| `notes` | `TEXT` | Documented reason / justification |
-| `created_at` | `TIMESTAMPTZ` | Timestamp of decision |
+  -- 3. Atomic Status Transition
+  UPDATE public.listing_submissions SET status = p_decision, updated_at = now() WHERE id = p_submission_id;
 
-* **Tamper Resistance:** RLS policies explicitly forbid `UPDATE` or `DELETE` on `listing_moderation_audit_logs`. Once recorded, moderation decisions cannot be altered or purged.
+  -- 4. Append-Only Audit Trail
+  INSERT INTO public.listing_moderation_audit_logs (submission_id, reviewer_id, action, review_notes)
+  VALUES (p_submission_id, v_reviewer_id, p_decision, p_notes);
 
-### 3.4 Verification Badge Integrity
-* The `is_verified` flag on venues, academies, and athlete profiles is protected from user updates.
-* Attempting to pass `is_verified: true` in user submission payloads is stripped by triggers or rejected by PostgreSQL validation.
-* Verification badges can only be granted via the privileged `verify_listing_entity` RPC requiring senior administrative privileges and document cross-referencing.
-
-### 3.5 Abuse Reporting & Reporter Anonymity
-* Users can flag listings or report fraudulent behavior via `report_listing_entity`.
-* The identity of the reporting user (`reporter_id`) is masked and accessible only to compliance administrators.
-* Listing owners cannot see who submitted abuse reports against their listings.
+  RETURN jsonb_build_object('status', 'success', 'submission_id', p_submission_id, 'action', p_decision);
+END;
+```
 
 ---
 
-## 4. Adversarial Testing & Verification
+## 3. Verification Evidence
 
-Automated test cases in `src/integrations/supabase/database-security-programme-closure.test.ts`:
-- **SEC-TEST-P78-01 (Anti-Self-Approval)**: Verified that when a submitter attempts to invoke moderation approval on their own submission, the system aborts with `SELF_APPROVAL_PROHIBITED` and preserves the pending status.
-- Independent moderator review succeeds with status transition to `approved`.
-
----
-
-## 5. Deployment Status
-
-| Component | Status | Verification |
-| :--- | :--- | :--- |
-| `listing_moderation_audit_logs` Table | Implemented in code | Validated in migration `20261108090000` |
-| Anti-Self-Approval Rule | Implemented in code | Validated in migration `20261108090000` |
-| Moderation Audit RLS (Append-Only) | Implemented in code | Validated in migration `20261108090000` |
-| Automated Vitest Moderation Suite | CI passed | 85/85 test files passed |
-| Development Database Deployment | Not deployed | Staged in consolidated SQL package |
-| Production Database | Not deployed | Untouched (Out-of-scope) |
+- **Isolated PostgreSQL 17 Test Suite** (`SEC-TEST-ISO-03`):
+  - Submitter attempting self-approval -> rejected with `SELF_APPROVAL_PROHIBITED`.
+  - Submission status verified to remain `'pending'`.
+  - Independent moderator review -> succeeds, status transitions to `'approved'`, and audit entry is recorded.
