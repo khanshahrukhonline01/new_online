@@ -126,6 +126,26 @@
   background: rgba(255, 255, 255, 0.12);
 }
 
+.btn-print-dossier {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(56, 189, 248, 0.08);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-print-dossier:hover {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: #38bdf8;
+}
+
 /* Metric Ribbons */
 .scout-metrics-row {
   display: grid;
@@ -300,6 +320,65 @@
   color: var(--text-secondary, #94a3b8);
 }
 
+.scout-count-box {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.scout-live-sync-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #10b981;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+}
+
+.scout-spin-icon {
+  animation: scoutSpin 1s linear infinite;
+}
+
+@keyframes scoutSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.scout-refresh-feed-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color, #1f2937);
+  color: var(--text-secondary, #94a3b8);
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.scout-refresh-feed-btn:hover:not(:disabled) {
+  color: var(--text-primary, #f8fafc);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.scout-refresh-feed-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .scout-cross-links {
   display: flex;
   gap: 0.75rem;
@@ -386,6 +465,19 @@
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 500;
+}
+
+.scout-video-count-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
 }
 
 .scout-athlete-name {
@@ -596,6 +688,28 @@
   color: #ffffff;
 }
 
+.btn-view-cv {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color, #1f2937);
+  color: var(--text-primary, #f8fafc);
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-view-cv:hover {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+}
+
 /* Empty State */
 .scout-empty-state {
   text-align: center;
@@ -771,6 +885,31 @@
 }
 
 .drawer-export-csv:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.drawer-print-dossier {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: rgba(56, 189, 248, 0.1);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.drawer-print-dossier:hover:not(:disabled) {
+  background: rgba(56, 189, 248, 0.2);
+}
+
+.drawer-print-dossier:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -1035,8 +1174,68 @@
     width: 100%;
   }
   .btn-open-shortlist,
-  .btn-export-dossier {
+  .btn-export-dossier,
+  .btn-print-dossier {
     flex: 1;
     justify-content: center;
+  }
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .scout-hero-badge,
+  .scout-shortlist-action-box,
+  .scout-filter-box,
+  .scout-cross-links,
+  .scout-toast,
+  .scout-card-actions,
+  .scout-drawer-backdrop,
+  .scout-modal-backdrop,
+  .scout-live-sync-indicator,
+  .scout-refresh-feed-btn {
+    display: none !important;
+  }
+  .scout-portal-container {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+  .scout-hero-title {
+    color: #000000 !important;
+    font-size: 1.8rem !important;
+  }
+  .scout-hero-desc {
+    color: #333333 !important;
+    font-size: 0.9rem !important;
+  }
+  .scout-athlete-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem !important;
+  }
+  .scout-athlete-card {
+    background: #ffffff !important;
+    border: 1px solid #cccccc !important;
+    color: #000000 !important;
+    break-inside: avoid;
+    box-shadow: none !important;
+    padding: 1rem !important;
+  }
+  .scout-athlete-name {
+    color: #000000 !important;
+  }
+  .scout-position-badge,
+  .scout-tier-pill {
+    background: #eeeeee !important;
+    color: #000000 !important;
+    border: 1px solid #999999 !important;
+  }
+  .metric-chip {
+    background: #f8fafc !important;
+    border: 1px solid #dddddd !important;
+  }
+  .metric-chip .m-val {
+    color: #000000 !important;
   }
 }

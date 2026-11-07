@@ -1,6 +1,6 @@
 # KhelGrid Platform: Comprehensive Changelog & Architectural Record
 
-> **Document Version:** 3.0.0 (Fully Dynamic Platform Release)  
+> **Document Version:** 3.2.0 (Dynamic Scout Portal & Universal Bookmarks Release)  
 > **Repository:** `khelgrid-dotcom/khelgrid-platform`  
 > **Mirrors:** `khanshahrukhonline01/new_online` | `khanshahrukhonline01/khelgrid`  
 > **Last Synchronized:** 2026-11-07  
@@ -36,6 +36,8 @@ It explains **what was changed**, **how it was implemented**, **why it exists in
 | Phase 13: Database Migration of Catalogue Data & Admin Desk (2026-11-07)          |
 | Phase 14: Geolocation & Map Discovery ("Turfs Near Me") (2026-11-07)              |
 | Phase 15: Unified "My Dashboard", Cross-Page Parity & Filter Polish (2026-11-07)  |
+| Phase 16: Universal 1-Tap Dynamic Bookmark System & Saved Hub (2026-11-07)        |
+| Phase 17: Live Database Scout Portal & Normative Workbench (2026-11-07)           |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -403,6 +405,76 @@ On `/sports`, the catalogue displayed only **22 sports**, while top navigation s
 
 ---
 
+### Phase 16: Universal 1-Tap Dynamic Bookmark System & Saved Hub (2026-11-07)
+
+#### What Was Built:
+- **Universal Saved Service (`src/shared/services/savedService.ts`)**:
+  - Implements an event-driven pub-sub architecture (`subscribeToSavedRecords()`) with cross-tab BroadcastChannel synchronization and local/session fallback adapters.
+  - Supports 5 core discovery entity types: `opportunity` (selection trials), `venue` (sports venues/turfs), `academy` (sports academies), `coach` (NIS/federation coaches), and `pickup_game` (community games).
+  - Provides quick lookup (`isRecordSaved(entityType, entityId)`), toggling with Toast feedback, and direct bookmark persistence.
+- **Universal Bookmark Button (`src/shared/components/BookmarkButton.tsx` & `.css`)**:
+  - Responsive, accessible bookmark toggle component with animated active states, custom sizing, and aria labeling.
+  - Seamlessly embedded into discovery cards across:
+    - Selection Trials (`/opportunities`, `OpportunitiesPage.tsx`)
+    - Sports Venues (`/venues`, `VenuesPage.tsx` & `VenueDetailPage.tsx`)
+    - Sports Academies (`/academies`, `AcademiesPage.tsx` & `AcademyDetailPage.tsx`)
+    - Coaches Directory (`/coaches`, `CoachesPage.tsx`)
+    - Pickup Matches (`/play`, `PlayPage.tsx`)
+- **Dynamic Saved Items Hub (`/saved`, `SavedPage.tsx`)**:
+  - Subscribes in real-time to `savedService`.
+  - Added multi-category filter tabs: `All`, `Trials & Camps`, `Venues`, `Academies`, `Coaches`, and `Pickup Matches`.
+  - Empty state with 1-click exploratory buttons to discovery sections.
+- **Live Badge & Dashboard Sync**:
+  - `Sidebar.tsx`: Real-time bookmark count badge (`<span className="sidebar-count-badge">{savedCount}</span>`).
+  - `UserDashboardPage.tsx`: Live KPI card and Saved Deadlines tab synced with `savedService`.
+
+#### Why in Online Repository:
+Provides registered athletes, parents, and coaches with a unified, persistent bookmarking experience that works seamlessly whether authenticated or in guest mode, eliminating fragmented saving across discovery pages.
+
+---
+
+### Phase 17: Live Database Scout Portal & Normative Workbench (2026-11-07)
+
+#### What Was Built:
+- **Dynamic Supabase Athlete Database Fetcher (`getScoutAthletes()`)**:
+  - Connects `/scout-portal` directly to live Supabase `athlete_profiles` table (`publication_status=eq.published`).
+  - Implements multi-tier caching with offline-first fallbacks:
+    1. Live Supabase PostgreSQL REST query with Bearer authentication.
+    2. Local storage cache (`khelgrid_athlete_profiles_cache`) for newly created user Sports CVs.
+    3. Pre-seeded high-performance showcase candidate profiles (`rohit-verma`, `priya-nair`, `arjun-singh`).
+    4. Curated baseline showcase athletes (`Aarav Choudhary`, `Kavya R. Nair`, etc.).
+  - Deduplicates records dynamically by username, athlete ID, and normalized full name.
+- **Biometric, Normative & Video Telemetry Parsing (`mapProfileToScoutAthlete`)**:
+  - Real-time age calculation from `date_of_birth` and normative age group classification (`U-14`, `U-16`, `U-17`, `U-19`, `Senior`).
+  - Gender inference from sport discipline and playing position.
+  - Verification tier mapping (`Tier-1 Verified` for Aadhaar + federation/UID authenticated, `Tier-2 Verified` for state certification).
+  - Federation UID derivation (`KG-[STATE]-[SPORT]-[YEAR]-[ID]`).
+  - Physical benchmark normalization (30m sprint speed, CMJ jump height, Yo-Yo IR1 endurance, sprint velocity from video clip telemetry).
+  - Dynamic composite normative percentile ranking.
+- **Multi-Faceted Scout Filters & Sorting**:
+  - **Dynamic Sport Chips**: Auto-populated from distinct sports across active database candidates.
+  - **City & State / Regional Filter**: Live dropdown filtering candidates across 28+ states and Union territories.
+  - **Age Category Filter**: Granular junior age brackets (`U-14`, `U-16`, `U-17`, `U-19`, `Senior`).
+  - **Verification Tier Filter**: Filter Tier-1 National vs Tier-2 State candidates.
+  - **Normative Percentile Filter**: Filter by top 25% (75th+ %ile), top 10% (90th+ %ile), or top 5% Elite (95th+ %ile).
+  - **Performance Metric Sort**:
+    - Composite Percentile (High to Low)
+    - 30m Sprint Speed (Fastest First)
+    - Vertical Jump CMJ (Highest Jump)
+    - Yo-Yo IR1 Endurance (Longest Distance)
+    - Age (Youngest First)
+    - Name (A to Z)
+- **Scouting Dossier Export (CSV & PDF / Print)**:
+  - 1-click RFC-4180 CSV dossier generator (`generateScoutShortlistCsv`).
+  - Print / PDF Dossier export with tailored `@media print` styles for scouting committees, SAI talent scouts, and academy selectors.
+  - 1-click links to athlete public Sports CV (`/sports-cv/:username`) and video telemetry counts.
+  - 1-click Live Database Refresh trigger with live synchronization state indicator.
+
+#### Why in Online Repository:
+Transitions the Scout Portal from a static demonstration into a live, production-grade talent identification workbench that directly reflects grassroots athletes as they publish their Sports CVs across India.
+
+---
+
 ## 3. Why These Changes Are in the Online Repository
 
 1. **Production Parity**:
@@ -424,7 +496,7 @@ Every change in this repository has passed all three release gates:
 ```bash
 # 1. Automated Vitest Suite (100% Pass)
 npm run test
-# Output: 71 passed test files (453 passed tests, 0 failed)
+# Output: 74 passed test files (476 passed tests, 0 failed)
 
 # 2. Production Build & Static Sitemap Compilation
 npm run build
