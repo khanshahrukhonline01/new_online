@@ -12,6 +12,8 @@ type SidebarProps = {
   toggleRef: RefObject<HTMLButtonElement | null>
   collapsed: boolean
   onOpenIntake?: () => void
+  onOpenAuth?: (tab?: 'login' | 'signup') => void
+  isLoggedIn?: boolean
 }
 
 function isActive(item: NavigationItem, activePath: string) {
@@ -26,16 +28,24 @@ function isActive(item: NavigationItem, activePath: string) {
   return activePath === item.href || activePath.startsWith(item.href + '/')
 }
 
-function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false }: {
+function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false, isLoggedIn = false, onOpenAuth }: {
   item: NavigationItem
   activePath: string
   onNavigate: SidebarProps['onNavigate']
   onClose?: () => void
   collapsed?: boolean
+  isLoggedIn?: boolean
+  onOpenAuth?: (tab?: 'login' | 'signup') => void
 }) {
   const { t } = useTranslation(['navigation', 'common'])
   const active = isActive(item, activePath)
-  const itemLabel = t(item.id, item.label)
+  let itemLabel = t(item.id, item.label)
+  if (!isLoggedIn && item.id === 'dashboard') {
+    itemLabel = `${itemLabel} (Sign In)`
+  } else if (!isLoggedIn && item.id === 'for-you') {
+    itemLabel = `${itemLabel} (Sign In)`
+  }
+
   const label = <><span className="sidebar-icon" aria-hidden="true"><SiteIcon name={item.icon} size={18} /></span><span className="sidebar-link-label">{itemLabel}</span>{!item.available && !collapsed ? <span className="sidebar-coming-soon">{t('comingSoon', { ns: 'common', defaultValue: 'Coming soon' })}</span> : null}</>
   if (!item.available) {
     return <div className="sidebar-item-wrap">
@@ -43,13 +53,29 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false 
     </div>
   }
   return <div className="sidebar-item-wrap">
-    <a href={item.href} className={active ? 'sidebar-link is-active' : 'sidebar-link'} aria-current={active ? 'page' : undefined} aria-label={collapsed ? itemLabel : undefined} title={collapsed ? itemLabel : undefined} onClick={event => { onNavigate(event, item.href); onClose?.() }}>
+    <a
+      href={item.href}
+      className={active ? 'sidebar-link is-active' : 'sidebar-link'}
+      aria-current={active ? 'page' : undefined}
+      aria-label={collapsed ? itemLabel : undefined}
+      title={collapsed ? itemLabel : undefined}
+      onClick={event => {
+        if (!isLoggedIn && (item.id === 'dashboard' || item.id === 'for-you')) {
+          onNavigate(event, item.href)
+          onClose?.()
+          onOpenAuth?.(item.id === 'dashboard' ? 'login' : 'signup')
+          return
+        }
+        onNavigate(event, item.href)
+        onClose?.()
+      }}
+    >
       {label}
     </a>
   </div>
 }
 
-export default function Sidebar({ activePath, onNavigate, open, onClose, toggleRef, collapsed, onOpenIntake }: SidebarProps) {
+export default function Sidebar({ activePath, onNavigate, open, onClose, toggleRef, collapsed, onOpenIntake, onOpenAuth, isLoggedIn = false }: SidebarProps) {
   const { t } = useTranslation(['navigation', 'common'])
   const closeRef = useRef<HTMLButtonElement>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
@@ -118,7 +144,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
         {navigationModules.map(section => (
           <div className="sidebar-rail-group" key={section.id} aria-label={section.label}>
             {section.items.map(item =>
-              <SidebarLink key={item.id} item={item} activePath={activePath} onNavigate={onNavigate} onClose={onClose} collapsed />
+              <SidebarLink key={item.id} item={item} activePath={activePath} onNavigate={onNavigate} onClose={onClose} collapsed isLoggedIn={isLoggedIn} onOpenAuth={onOpenAuth} />
             )}
           </div>
         ))}
@@ -133,7 +159,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
           {!collapsed || mobile ? <SiteIcon name={expanded ? 'chevron-down' : 'chevron-right'} size={14} /> : null}
         </button>
         {expanded ? <div id={`${mobile ? 'mobile-' : ''}nav-section-${section.id}`}>
-          {section.items.map(item => <SidebarLink key={item.id} item={item} activePath={activePath} onNavigate={onNavigate} onClose={onClose} collapsed={collapsed && !mobile} />)}
+          {section.items.map(item => <SidebarLink key={item.id} item={item} activePath={activePath} onNavigate={onNavigate} onClose={onClose} collapsed={collapsed && !mobile} isLoggedIn={isLoggedIn} onOpenAuth={onOpenAuth} />)}
         </div> : null}
       </section>
     })

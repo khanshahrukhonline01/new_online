@@ -42,7 +42,7 @@ export const navigationModules: NavigationModule[] = [
       { id: 'opportunities', label: 'Trials & Opportunities', href: '/opportunities', icon: 'opportunities', module: 'discover', available: true },
       { id: 'venues', label: 'Sports Venues', href: '/venues', icon: 'venues', module: 'discover', available: true },
       { id: 'search', label: 'Search Catalogue', href: '/search', icon: 'search', module: 'discover', available: true },
-      { id: 'for-you', label: 'For You', href: '/for-you', icon: 'star', module: 'discover' },
+      { id: 'for-you', label: 'For You', href: '/for-you', icon: 'star', module: 'discover', available: true },
     ],
   },
   {

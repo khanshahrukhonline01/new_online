@@ -50,6 +50,7 @@ const KhelChronicleAuthorPage = lazy(() => import('./modules/khelchronicle/KhelC
 const KhelChronicleSubmitPage = lazy(() => import('./modules/khelchronicle/KhelChronicleSubmitPage'))
 const HostDashboardPage = lazy(() => import('./modules/host/HostDashboardPage'))
 const UserDashboardPage = lazy(() => import('./modules/dashboard/UserDashboardPage'))
+const ForYouPage = lazy(() => import('./modules/for-you/ForYouPage'))
 const LearningHubPage = lazy(() => import('./modules/learning/LearningHubPage'))
 const SportsCalendarPage = lazy(() => import('./modules/calendar/SportsCalendarPage'))
 const SportsToolsPage = lazy(() => import('./modules/tools/SportsToolsPage'))
@@ -322,6 +323,7 @@ export default function App() {
       else if (match.canonicalPath === '/settings') page = <SettingsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/pricing' || match.canonicalPath === '/memberships' || match.canonicalPath === '/pro') page = <PricingPage onNavigate={navigate} />
       else if (match.canonicalPath === '/saved') page = <SavedPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/for-you') page = <ForYouPage onNavigate={navigate} onOpenAuth={tab => { setAuthModalTab(tab || 'signup'); setAuthModalOpen(true) }} />
       else if (match.canonicalPath === '/partner' || match.canonicalPath === '/partners') page = <PartnerPage onNavigate={navigate} onOpenIntake={openIntake} />
       else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
@@ -565,6 +567,11 @@ export default function App() {
         toggleRef={menuToggleRef}
         collapsed={sidebarCollapsed}
         onOpenIntake={() => openIntake('pickup_game')}
+        onOpenAuth={tab => {
+          setAuthModalTab(tab || 'login')
+          setAuthModalOpen(true)
+        }}
+        isLoggedIn={Boolean(authUser)}
       />
       <main id="main-content" className="page-shell">
         <SiteAnnouncementBanner onNavigate={navigate} />
