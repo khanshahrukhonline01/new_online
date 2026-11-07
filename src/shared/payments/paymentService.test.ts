@@ -6,6 +6,7 @@ import {
   recordPaymentTransaction,
   recordVenueSlotBooking,
   getBookedVenueSlots,
+  fetchBookedVenueSlots,
   getUserVenueBookings,
   recordListingSubscription,
 } from './paymentService'
@@ -256,6 +257,62 @@ describe('KhelGrid Payment Service', () => {
       const userBookings = getUserVenueBookings()
       expect(userBookings.length).toBeGreaterThan(0)
       expect(userBookings[0].venueName).toBe('FSV Sports Arena')
+    })
+
+
+    it('Pillar 2: rejects double-booking on the same venue slot with double_booking_conflict', async () => {
+      // First booking succeeds
+      const first = await recordVenueSlotBooking({
+        venueId: 'kanteerava-track',
+        venueName: 'Sree Kanteerava Stadium',
+        city: 'Bengaluru',
+        sport: 'Athletics',
+        slotDate: '2026-12-05',
+        slotTime: '6:00 AM – 7:00 AM',
+        customerName: 'Rohan Patil',
+        customerPhone: '9876543210',
+        totalAmount: 400,
+        paidAmount: 400,
+        paymentStatus: 'paid',
+      })
+      expect(first.status).toBe('success')
+
+      // Second booking on exact same venue, date, and slot time is rejected by double-booking logic
+      const duplicate = await recordVenueSlotBooking({
+        venueId: 'kanteerava-track',
+        venueName: 'Sree Kanteerava Stadium',
+        city: 'Bengaluru',
+        sport: 'Athletics',
+        slotDate: '2026-12-05',
+        slotTime: '6:00 AM – 7:00 AM',
+        customerName: 'Ananya Deshmukh',
+        customerPhone: '9988776655',
+        totalAmount: 400,
+        paidAmount: 400,
+        paymentStatus: 'paid',
+      })
+
+      expect(duplicate.status).toBe('double_booking_conflict')
+      expect(duplicate.errorMessage).toContain('already reserved')
+    })
+
+    it('Pillar 2: fetches and combines booked slots from database and local storage via fetchBookedVenueSlots', async () => {
+      await recordVenueSlotBooking({
+        venueId: 'kanteerava-track',
+        venueName: 'Sree Kanteerava Stadium',
+        city: 'Bengaluru',
+        sport: 'Athletics',
+        slotDate: '2026-12-05',
+        slotTime: '6:00 AM – 7:00 AM',
+        customerName: 'Rohan Patil',
+        customerPhone: '9876543210',
+        totalAmount: 400,
+        paidAmount: 400,
+        paymentStatus: 'paid',
+      })
+      const slots = await fetchBookedVenueSlots('kanteerava-track', '2026-12-05')
+      expect(Array.isArray(slots)).toBe(true)
+      expect(slots).toContain('6:00 AM – 7:00 AM')
     })
   })
 })

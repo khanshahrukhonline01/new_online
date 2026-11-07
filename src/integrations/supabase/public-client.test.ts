@@ -436,4 +436,91 @@ describe('public catalogue client', () => {
     const uploadRes = await client.uploadMediaFile('venue-media', mockFile)
     expect(uploadRes.url).toBeDefined()
   })
-})
+
+  it('Pillar 2: queries coaches directly with server-side filters via fetchCoaches', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse([
+        {
+          id: 'coach-1',
+          slug: 'ramakant-cricket',
+          display_name: 'Coach Ramakant Achrekar Legacy',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          sport: 'Cricket',
+          credential_authority: 'bcci',
+          monthly_fee: '₹5,000 / month',
+          fee_range_category: '3k-7k',
+          rating: 4.95,
+        },
+      ]),
+    )
+    const client = await loadClient()
+    const result = await client.fetchCoaches({ sport: 'Cricket', city: 'Mumbai', credential: 'bcci' })
+
+    expect(result.status).toBe('ready')
+    expect(result.data.length).toBe(1)
+    expect(result.data[0].display_name).toContain('Ramakant')
+    const [requestUrl] = vi.mocked(fetch).mock.calls[0]
+    const url = new URL(String(requestUrl))
+    expect(url.pathname).toBe('/rest/v1/coaches')
+    expect(url.searchParams.get('sport')).toBe('eq.Cricket')
+    expect(url.searchParams.get('city')).toBe('eq.Mumbai')
+    expect(url.searchParams.get('credential_authority')).toBe('eq.bcci')
+  })
+
+  it('Pillar 2: submits coach inquiry to public.coach_inquiries with inquiry token', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ id: 'inq-uuid-1' }, 201))
+    const client = await loadClient()
+    const inquiryRes = await client.submitCoachInquiry({
+      coachId: 'coach-1',
+      coachSlug: 'coach-ramakant',
+      coachName: 'Coach Ramakant',
+      athleteName: 'Devansh Verma',
+      phone: '9876543210',
+      email: 'devansh@example.com',
+      sport: 'Cricket',
+      objective: 'Trial preparation',
+    })
+
+    expect(inquiryRes.success).toBe(true)
+    expect(inquiryRes.inquiryToken).toMatch(/^INQ-COACH-\d+$/)
+    expect(fetch).toHaveBeenCalled()
+    const [requestUrl, options] = vi.mocked(fetch).mock.calls[0]
+    expect(String(requestUrl)).toContain('/rest/v1/coach_inquiries')
+    expect(options?.method).toBe('POST')
+    const body = JSON.parse(String(options?.body))
+    expect(body.athlete_name).toBe('Devansh Verma')
+    expect(body.coach_name).toBe('Coach Ramakant')
+  })
+
+  it('Pillar 2: queries tournaments and grassroots championships via fetchTournaments', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse([
+        {
+          id: 'tourn-1',
+          slug: 'khelo-india-youth-games-2026',
+          title: 'Khelo India Youth Games (KIYG) 2026',
+          sport: 'Multi-Sport',
+          state: 'Madhya Pradesh',
+          city: 'Bhopal',
+          venue: 'Tatya Tope Stadium',
+          start_date: '2026-12-10',
+          end_date: '2026-12-22',
+          age_categories: ['U-17', 'U-19'],
+          organizer: 'SAI',
+        },
+      ]),
+    )
+    const client = await loadClient()
+    const res = await client.fetchTournaments({ sport: 'Multi-Sport', state: 'Madhya Pradesh' })
+
+    expect(res.status).toBe('ready')
+    expect(res.data.length).toBe(1)
+    expect(res.data[0].title).toContain('Khelo India')
+    const [requestUrl] = vi.mocked(fetch).mock.calls[0]
+    const url = new URL(String(requestUrl))
+    expect(url.pathname).toBe('/rest/v1/tournaments_and_events')
+    expect(url.searchParams.get('sport')).toBe('eq.Multi-Sport')
+    expect(url.searchParams.get('state')).toBe('eq.Madhya Pradesh')
+  })
+});

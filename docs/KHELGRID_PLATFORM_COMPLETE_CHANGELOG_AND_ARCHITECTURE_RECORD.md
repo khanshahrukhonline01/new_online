@@ -600,7 +600,7 @@ Every change in this repository has passed all three release gates:
 ```bash
 # 1. Automated Vitest Suite (100% Pass)
 npm run test
-# Output: 74 passed test files (483 passed tests, 0 failed)
+# Output: 74 passed test files (488 passed tests, 0 failed)
 
 # 2. Production Build & Static Sitemap Compilation
 npm run build
@@ -610,3 +610,53 @@ npm run build
 npm run lint
 # Output: 0 errors
 ```
+
+---
+
+### Phase 22: Pillar 2 — Client Data Services Migration (Coaches, Tournaments & Zero Double-Booking Slot Reservations)
+
+**Date**: November 2026  
+**Primary Focus**: Transitioning frontend discovery, inquiry, tournament registration, and turf booking journeys from in-memory mocks to live Supabase PostgreSQL tables (`public.coaches`, `public.coach_inquiries`, `public.tournaments_and_events`, `public.venue_slot_bookings`) while maintaining offline-first resilience.
+
+#### 1. Technical Deliverables & Architecture
+
+##### A. Coach Directory & Inquiry Cloud Persistence (`src/integrations/supabase/public-client.ts`, `CoachInquiryModal.tsx`, `CoachesPage.tsx`)
+- **`fetchCoaches(options)`**:
+  - Direct PostgreSQL REST query against `public.coaches` selecting enriched fields: `sport`, `sport_category`, `avatar_url`, `certification`, `credential_authority`, `authority_label`, `experience_years`, `monthly_fee`, `fee_range_category`, `student_track_record`, `specialties`, `languages`, `rating`, `review_count`, `verified_badge`, `available_for_one_on_one`, `available_for_batches`.
+  - Supports server-side filtering: `sport=eq.${sport}`, `city=eq.${city}`, `credential_authority=eq.${credential}`, and `fee_range_category=eq.${feeRange}`.
+  - Graceful fallback to `VERIFIED_COACHES` baseline when unconfigured or offline.
+- **`submitCoachInquiry(input)`**:
+  - Generates official inquiry tracking token format `INQ-COACH-XXXXXX`.
+  - Posts payload directly to `public.coach_inquiries` via Supabase REST API (`POST /rest/v1/coach_inquiries`).
+  - Mirrors inquiry records to `khelgrid_coach_inquiries_v1` localStorage cache for offline persistence.
+- **`CoachInquiryModal.tsx`**:
+  - Integrated async inquiry submission triggering `submitCoachInquiry`.
+  - Generates instant reference ID receipt and pre-filled WhatsApp coordinator deep-link.
+
+##### B. Tournaments & Grassroots Championships (`public-client.ts`, `EventsPage.tsx`)
+- **`fetchTournaments(options)`**:
+  - Direct PostgreSQL query against `public.tournaments_and_events` ordered by `start_date.asc.nullslast`.
+  - Server-side filtering by sport (`sport=eq.${sport}`) and state (`state=eq.${state}`).
+  - Deserializes PostgreSQL `jsonb` columns (`age_categories`, `qualification_requirements`) and normalizes to standard `EventItem` domain entities.
+  - Seamless fallback to `getEvents()` and `BASELINE_EVENTS` if the table is unreachable.
+- **`EventsPage.tsx`**:
+  - Connected to `fetchTournaments` with dynamic filter dependencies (`selectedSport`, `selectedState`, `selectedAge`) for database-level search accuracy.
+
+##### C. Double-Booking Enforced Court & Turf Reservations (`paymentService.ts`, `VenueDetailPage.tsx`)
+- **`fetchBookedVenueSlots(venueId, slotDate)`**:
+  - Queries `public.venue_slot_bookings` where `status != 'cancelled'` and extracts reserved time slots.
+  - Merges remote database slots with local storage bookings to provide immediate, zero-latency availability checks.
+- **`recordVenueSlotBooking(input)`**:
+  - Posts reservation payload directly to `public.venue_slot_bookings` table.
+  - **Database-Level Double-Booking Prevention**: PostgreSQL enforces slot uniqueness via `CREATE UNIQUE INDEX idx_venue_slot_active_unique ON venue_slot_bookings (venue_id, slot_date, slot_time) WHERE (status != 'cancelled')`.
+  - If a 409 Conflict occurs (or unique constraint violation is returned), the client intercepts the error and returns `status: 'double_booking_conflict'` with user-friendly error message.
+  - On success, writes to local receipts, dispatches `khelgrid:venue-booked` window event, and returns confirmed booking receipt with `bookingRef`.
+- **`VenueDetailPage.tsx`**:
+  - Implements real-time slot availability tracking using `fetchBookedVenueSlots`.
+  - Displays red conflict alert banner if another user reserves the slot simultaneously, immediately refreshes availability, and prompts the player to select a different time slot.
+
+#### 2. Test Verification & Code Health
+- **74 passed test suites** (488 passed tests, 0 failed).
+- **TypeScript build**: `npx tsc -b` passed with 0 errors.
+- **ESLint rules**: 0 errors.
+- **Mirror parity**: 100% synchronized across `Live score` (`new_online`) and `khelgrid-platform`.

@@ -11,7 +11,7 @@ import ReportListingModal from '../../shared/components/ReportListingModal'
 import VerificationClaimModal from '../../shared/components/VerificationClaimModal'
 import { CommunityReviewsSection } from '../../shared/components/CommunityReviewsSection'
 import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
-import { parseInrPrice, recordVenueSlotBooking, getBookedVenueSlots } from '../../shared/payments/paymentService'
+import { parseInrPrice, recordVenueSlotBooking, getBookedVenueSlots, fetchBookedVenueSlots } from '../../shared/payments/paymentService'
 import type { PaymentItem, VenueBookingResult } from '../../shared/payments/paymentTypes'
 import './VenueDetailPage.css'
 
@@ -45,6 +45,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
   const [bookingError, setBookingError] = useState('')
   const [checkoutItem, setCheckoutItem] = useState<PaymentItem | null>(null)
   const [confirmedBooking, setConfirmedBooking] = useState<VenueBookingResult | null>(null)
+  const [slotConflictError, setSlotConflictError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -108,18 +109,29 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
     }
   }, [slug, initialCurated?.rating, initialCurated?.review_count])
 
-  // Real-time booked slots tracking
+  // Real-time booked slots tracking directly from PostgreSQL public.venue_slot_bookings
   useEffect(() => {
-    if (venue?.id) {
-      setBookedSlots(getBookedVenueSlots(venue.id, selectedDate))
-    }
+    if (!venue?.id) return
+    let active = true
+
+    // Synchronous initial cache hit
+    setBookedSlots(getBookedVenueSlots(venue.id, selectedDate))
+
+    // Asynchronous database query
+    fetchBookedVenueSlots(venue.id, selectedDate).then(slots => {
+      if (active) setBookedSlots(slots)
+    })
+
     const onBooking = () => {
       if (venue?.id) {
-        setBookedSlots(getBookedVenueSlots(venue.id, selectedDate))
+        fetchBookedVenueSlots(venue.id, selectedDate).then(slots => {
+          if (active) setBookedSlots(slots)
+        })
       }
     }
     window.addEventListener('khelgrid:venue-booked', onBooking)
     return () => {
+      active = false
       window.removeEventListener('khelgrid:venue-booked', onBooking)
     }
   }, [venue?.id, selectedDate])
@@ -738,6 +750,12 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
 
                 <div className="kg-field-group" style={{ marginBottom: '14px' }}>
                   <label>Select Time Slot</label>
+                  {slotConflictError && (
+                    <div className="venue-slot-conflict-alert" role="alert" style={{ marginBottom: '12px', padding: '10px 14px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', color: '#ef4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <SiteIcon name="alert-circle" size={16} />
+                      <span>{slotConflictError}</span>
+                    </div>
+                  )}
                   <div className="venue-slot-chips">
                     {[
                       '6:00 AM – 7:00 AM',
@@ -846,7 +864,13 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
               paymentStatus: paymentResult.status === 'pay_at_venue' ? 'pay_at_venue' : 'paid',
               paymentId: paymentResult.paymentId,
             })
-            setConfirmedBooking(res)
+            if (res.status === 'double_booking_conflict') {
+              setSlotConflictError(res.errorMessage || res.message || 'This slot was just booked by another player. Please select a different slot.')
+              const fresh = await fetchBookedVenueSlots(venue.id, selectedDate)
+              setBookedSlots(fresh)
+            } else {
+              setConfirmedBooking(res)
+            }
           }}
           allowPayAtVenue={true}
         />

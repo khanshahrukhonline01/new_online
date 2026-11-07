@@ -61,10 +61,13 @@ export interface VenueSlotBookingInput {
   paidAmount: number
   paymentStatus: 'paid' | 'pay_at_venue'
   paymentId?: string
+  userId?: string
+  customerEmail?: string
+  courtOrTurfNumber?: string
 }
 
 export interface VenueBookingResult {
-  status: 'success' | 'error'
+  status: 'success' | 'double_booking_conflict' | 'error'
   bookingRef?: string
   venueName?: string
   slotDate?: string
@@ -72,4 +75,5 @@ export interface VenueBookingResult {
   paidAmount?: number
   paymentStatus?: string
   message?: string
+  errorMessage?: string
 }

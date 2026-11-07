@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { getCoaches } from '../../integrations/supabase/public-client'
+import { fetchCoaches } from '../../integrations/supabase/public-client'
 import {
   VERIFIED_COACHES,
   COACH_SPORTS,
@@ -33,7 +33,12 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
   useEffect(() => {
     let active = true
     setLoading(true)
-    getCoaches().then(res => {
+    fetchCoaches({
+      sport: selectedSport,
+      city: selectedCity,
+      credential: selectedCredential,
+      feeRange: selectedFee,
+    }).then(res => {
       if (!active) return
       if (res.status === 'ready') {
         const mapped: VerifiedCoach[] = res.data.map(c => ({
@@ -68,7 +73,7 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
     return () => {
       active = false
     }
-  }, [])
+  }, [selectedSport, selectedCity, selectedCredential, selectedFee])
 
   const handleLinkClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (onNavigate) {

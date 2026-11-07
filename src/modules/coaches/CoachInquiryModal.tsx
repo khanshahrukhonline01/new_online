@@ -1,10 +1,10 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
-  saveCoachInquiry,
   type VerifiedCoach,
   type CoachInquiryData,
 } from './coachesData'
+import { submitCoachInquiry } from '../../integrations/supabase/public-client'
 
 export interface CoachInquiryModalProps {
   coach: VerifiedCoach | null
@@ -48,7 +48,7 @@ export function CoachInquiryModal({ coach, isOpen, onClose }: CoachInquiryModalP
 
   if (!isOpen || !coach) return null
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setErrorMsg(null)
 
@@ -66,7 +66,25 @@ export function CoachInquiryModal({ coach, isOpen, onClose }: CoachInquiryModalP
     setSubmitting(true)
 
     try {
-      const record = saveCoachInquiry({
+      const res = await submitCoachInquiry({
+        coachId: coach.id,
+        coachSlug: coach.slug,
+        coachName: coach.name,
+        athleteName: athleteName.trim(),
+        parentName: parentName.trim() || undefined,
+        phone: cleanPhone,
+        email: email.trim() || undefined,
+        sport: coach.sport,
+        trainingType: 'one_on_one',
+        ageCategory,
+        skillLevel,
+        objective,
+        preferredBatch,
+        notes: notes.trim() || undefined,
+      })
+
+      const record: CoachInquiryData = {
+        id: `inq-${Date.now()}`,
         coachId: coach.id,
         coachName: coach.name,
         athleteName: athleteName.trim(),
@@ -78,7 +96,9 @@ export function CoachInquiryModal({ coach, isOpen, onClose }: CoachInquiryModalP
         objective,
         preferredBatch,
         notes: notes.trim() || undefined,
-      })
+        submittedAt: res.submittedAt,
+        referenceId: res.inquiryToken || res.referenceId,
+      }
 
       setConfirmedInquiry(record)
     } catch {
