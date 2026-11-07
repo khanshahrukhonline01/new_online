@@ -5,7 +5,7 @@
 **Programme**: KhelGrid 10-Phase Security and Authorization Programme  
 **Phase**: Phase 1 — Database Security Foundation (Reconciled Baseline)  
 **Auditor**: Senior Database Security Engineer & Supabase Security Architect  
-**Reconciliation Date**: November 7, 2026  
+**Reconciliation Date**: November 8, 2026  
 **Development Instance**: `hznsbxvovjxvmnchzzqt` (`https://hznsbxvovjxvmnchzzqt.supabase.co`)  
 **Production Site**: `https://khelgrid.com/` (Strictly Out of Scope / Untouched)  
 
