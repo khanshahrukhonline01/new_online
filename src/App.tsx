@@ -48,6 +48,7 @@ const SportsToolsPage = lazy(() => import('./modules/tools/SportsToolsPage'))
 const PricingPage = lazy(() => import('./modules/pricing/PricingPage'))
 const PartnerPage = lazy(() => import('./modules/partner/PartnerPage'))
 const SavedPage = lazy(() => import('./modules/saved/SavedPage'))
+const CoachesPage = lazy(() => import('./modules/coaches/CoachesPage'))
 
 // Code-split heavyweight modal dialogs
 const CommunityListingModal = lazy(() => import('./shared/components/CommunityListingModal'))
@@ -185,7 +186,7 @@ export default function App() {
       else if (match.canonicalPath === '/sports-cv') page = <SportsCvWizard />
       else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} />
       else if (match.canonicalPath === '/play') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openIntake('pickup_game')} />
-      else if (match.canonicalPath === '/coaches') page = <FeatureDirectoryPage kind="coaches" />
+      else if (match.canonicalPath === '/coaches') page = <CoachesPage onNavigate={navigate} onOpenCoachIntake={() => openIntake('academy')} />
       else if (match.canonicalPath === '/events') page = <FeatureDirectoryPage kind="events" />
       else if (match.canonicalPath === '/calendar') page = <SportsCalendarPage onNavigate={navigate} />
       else if (match.canonicalPath === '/tools' || match.canonicalPath === '/sports-tools' || match.canonicalPath.startsWith('/tools/')) page = <SportsToolsPage onNavigate={navigate} initialToolSlug={match.canonicalPath.startsWith('/tools/') ? match.canonicalPath.slice('/tools/'.length) : undefined} />

@@ -179,6 +179,16 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
     }
   }
 
+  if (cleanPath === '/coaches') {
+    return {
+      title: "Certified Indian Sports Coaches Directory · KhelGrid (प्रमाणित खेल कोच)",
+      description: "Search and connect directly with verified sports coaches across India. Filter by SAI NIS Patiala, BCCI, AIFF, and BWF certifications, transparent monthly coaching fees, and student track records.",
+      canonicalUrl: 'https://khelgrid.com/coaches',
+      keywords: ['certified sports coaches india', 'cricket coach near me', 'badminton coach bengaluru', 'aiff certified football coach', 'sai nis patiala coach', 'sports coaching fees', 'प्रमाणित खेल कोच', ...DEFAULT_KEYWORDS],
+      ogType: 'website'
+    }
+  }
+
   // Fallback for other standard pages
   const label = cleanPath.slice(1).replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
   return {
