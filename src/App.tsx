@@ -240,7 +240,7 @@ export default function App() {
     case 'opportunities-index': page = <OpportunitiesPage onOpenIntake={() => openIntake('opportunity')} onNavigate={navigate} />; break
     case 'opportunity-detail': page = match.isApply ? <OpportunitiesPage onOpenIntake={() => openIntake('opportunity')} onNavigate={navigate} initialApplySlug={match.slug} /> : <CatalogueDetailPage kind="opportunity" slug={match.slug} />; break
     case 'academies-index': page = <AcademiesPage onOpenIntake={() => openIntake('academy')} onNavigate={navigate} />; break
-    case 'academy-detail': page = <AcademyDetailPage slug={match.slug} onNavigate={navigate} onOpenIntake={() => openIntake('academy')} />; break
+    case 'academy-detail': page = <AcademyDetailPage slug={match.slug} onNavigate={navigate} onOpenIntake={() => openIntake('academy')} initialEnrolOpen={match.isEnrol} />; break
     case 'venues-index': page = <VenuesPage onOpenIntake={() => openIntake('venue')} onNavigate={navigate} />; break
     case 'cities-index': page = <CitiesPage onNavigate={navigate} />; break
     case 'city-detail': page = <CityDetailPage citySlug={match.slug} onNavigate={navigate} onOpenIntake={openIntake} />; break

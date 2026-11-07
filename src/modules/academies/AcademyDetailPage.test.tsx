@@ -108,4 +108,75 @@ describe('AcademyDetailPage — Dedicated Academy Hub & Rich Content', () => {
     expect(html).toContain('Official Academy Staff? Verify this Listing')
     expect(html).toContain('Report Suspicious Listing')
   })
+
+  it('renders Apply for Admission / Free Trial Class button and enrolment modal when requested', () => {
+    const htmlNormal = renderToStaticMarkup(
+      <AcademyDetailPage slug="bengaluru-fc-academy" onNavigate={vi.fn()} />
+    )
+    expect(htmlNormal).toContain('Apply for Admission / Free Trial Class')
+    expect(htmlNormal).toContain('Apply for Admission / Free Trial')
+
+    const htmlEnrol = renderToStaticMarkup(
+      <AcademyDetailPage slug="bengaluru-fc-academy" onNavigate={vi.fn()} initialEnrolOpen={true} />
+    )
+    expect(htmlEnrol).toContain('Official Academy Admission &amp; Trial Desk')
+    expect(htmlEnrol).toContain('Select Program / Trial Option')
+    expect(htmlEnrol).toContain('Free Trial Class')
+    expect(htmlEnrol).toContain('Weekend Development')
+  })
+
+  it('submits a dynamic academy admission enquiry and registers an official token (ENQ-XXX)', async () => {
+    const { submitAcademyEnquiry, getUserAcademyEnquiries, isAcademyEnquirySubmitted } = await import('../../integrations/supabase/athlete-profile-client')
+
+    const hadWindow = typeof window !== 'undefined'
+    const storage = new Map<string, string>()
+
+    if (!hadWindow) {
+      ;(globalThis as unknown as { window: unknown }).window = {
+        localStorage: {
+          getItem: (key: string) => storage.get(key) ?? null,
+          setItem: (key: string, val: string) => storage.set(key, val),
+          removeItem: (key: string) => storage.delete(key),
+          clear: () => storage.clear(),
+        },
+        dispatchEvent: () => true,
+      }
+      ;(globalThis as unknown as { CustomEvent: unknown }).CustomEvent = class {
+        type: string
+        detail: unknown
+        constructor(type: string, init?: { detail?: unknown }) {
+          this.type = type
+          this.detail = init?.detail
+        }
+      }
+    }
+
+    const res = await submitAcademyEnquiry({
+      academySlug: 'bengaluru-fc-academy',
+      academyName: 'Bengaluru FC Youth Academy',
+      sport: 'Football',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      batchType: 'weekend',
+      skillLevel: 'intermediate',
+      requestType: 'free_trial',
+      athleteName: 'Vihaan Sen',
+      athletePhone: '9876543210',
+      playingPosition: 'Attacking Midfielder',
+      fitnessBenchmarks: {
+        percentileAvg: 88,
+        tier: 'National Talent Pool',
+      },
+    })
+
+    expect(res.status).toBe('submitted')
+    expect(res.enquiry.enquiryToken).toMatch(/^ENQ-[A-Z]{3}-[A-Z0-9]+$/)
+    expect(res.enquiry.academySlug).toBe('bengaluru-fc-academy')
+    expect(res.enquiry.batchType).toBe('weekend')
+
+    expect(isAcademyEnquirySubmitted('bengaluru-fc-academy')).toBe(true)
+    const all = getUserAcademyEnquiries()
+    expect(all.length).toBeGreaterThan(0)
+    expect(all[0].enquiryToken).toBe(res.enquiry.enquiryToken)
+  })
 })

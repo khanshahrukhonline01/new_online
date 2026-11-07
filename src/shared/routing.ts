@@ -6,7 +6,7 @@ export type RouteMatch =
   | { name: 'opportunities-index'; canonicalPath: '/opportunities'; alias?: string }
   | { name: 'opportunity-detail'; canonicalPath: '/opportunities/:slug'; slug: string; isApply?: boolean }
   | { name: 'academies-index'; canonicalPath: '/academies'; alias?: string }
-  | { name: 'academy-detail'; canonicalPath: '/academies/:slug'; slug: string }
+  | { name: 'academy-detail'; canonicalPath: '/academies/:slug'; slug: string; isEnrol?: boolean }
   | { name: 'venues-index'; canonicalPath: '/venues'; alias?: string }
   | { name: 'cities-index'; canonicalPath: '/cities' }
   | { name: 'city-detail'; canonicalPath: '/cities/:slug'; slug: string; alias?: string }
@@ -87,8 +87,12 @@ export function resolveRoute(pathname: string): RouteMatch {
   if (path === '/academies' || path === '/academy' || path === '/train') return { name: 'academies-index', canonicalPath: '/academies', ...(path === '/academies' ? {} : { alias: path }) }
   if (path.startsWith('/academies/') || path.startsWith('/academy/')) {
     const prefix = path.startsWith('/academies/') ? '/academies/' : '/academy/'
-    const slug = path.slice(prefix.length)
-    if (slug && !slug.includes('/')) return { name: 'academy-detail', canonicalPath: '/academies/:slug', slug: decodeURIComponentSafe(slug) }
+    const rest = path.slice(prefix.length)
+    if (rest.endsWith('/enrol') || rest.endsWith('/enroll')) {
+      const slug = rest.endsWith('/enrol') ? rest.slice(0, -('/enrol'.length)) : rest.slice(0, -('/enroll'.length))
+      if (slug && !slug.includes('/')) return { name: 'academy-detail', canonicalPath: '/academies/:slug', slug: decodeURIComponentSafe(slug), isEnrol: true }
+    }
+    if (rest && !rest.includes('/')) return { name: 'academy-detail', canonicalPath: '/academies/:slug', slug: decodeURIComponentSafe(rest) }
   }
   if (path === '/cities') return { name: 'cities-index', canonicalPath: '/cities' }
   if (path.startsWith('/cities/')) {

@@ -1,6 +1,6 @@
 # KhelGrid Platform: Comprehensive Changelog & Architectural Record
 
-> **Document Version:** 3.4.0 (Full Dynamic Operations Release)  
+> **Document Version:** 3.5.0 (Dynamic Academy Enrolment & Batch Registration Release)  
 > **Repository:** `khelgrid-dotcom/khelgrid-platform`  
 > **Mirrors:** `khanshahrukhonline01/new_online` | `khanshahrukhonline01/khelgrid`  
 > **Last Synchronized:** 2026-11-07  
@@ -40,6 +40,7 @@ It explains **what was changed**, **how it was implemented**, **why it exists in
 | Phase 17: Live Database Scout Portal & Normative Workbench (2026-11-07)           |
 | Phase 18: Talent Scanner Direct Profile Sync & Dynamic Ecosystem (2026-11-07)   |
 | Phase 19: Dynamic Reviews, Live Turf Bookings & Trial Applications (2026-11-07)  |
+| Phase 20: Dynamic Academy Enrolment & Batch Registration (2026-11-07)            |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -527,6 +528,31 @@ Unifies the empirical physical testing workbench (`/talent-scanner`) with the at
 #### Why in Online Repository:
 Eliminates static operational dead-ends by turning turf discovery into real-time bookings, trial notices into 1-click verified applications, and review displays into dynamic, interactive community scorecards.
 
+---
+
+### Phase 20: Dynamic Academy Admission Enquiry & Trial Batch Registration (/academies/:slug/enrol) (2026-11-07)
+
+#### What Was Built:
+- **1-Click "Apply for Admission / Free Trial Class" Action**: Prominently integrated on Academy Detail pages (`AcademyDetailPage.tsx`) in both the hero actions bar and sidebar inquiry box with reactive status tracking.
+- **Dedicated Interactive Enrolment Modal (`AcademyEnquiryModal.tsx`)**:
+  - Multi-tier program selection: ⚡ Free Trial Class (1 Session, ₹0), 🎯 Regular Term Admission, 🏅 Merit Scholarship Assessment.
+  - Training batch schedule selector: 📅 Weekend Development Batch (Sat-Sun), 🏃 Weekday Intensive (Tue-Fri), 🏆 Elite High-Performance, 🌱 Morning Grassroots.
+  - Skill level selection: Beginner (Fundamentals), Intermediate (School/Club Level), Advanced Elite (District/State Aspirant).
+  - Age category selection (Under-10 Grassroots, Under-14 Sub-Junior, Under-17 Junior, Open Senior).
+  - Pre-filled candidate contacts with input validation (10-digit mobile number, full name).
+  - Automatic attachment of applicant's verified Sports CV and tested combine physical metrics (Yo-Yo IR1, 30m sprint, CMJ jump, National Talent Pool percentile).
+  - Cryptographic Admission Inquiry Token generation formatted as `ENQ-[SPORT]-[ID]` (e.g. `ENQ-FOO-7A4B2`).
+- **Persistence & Real-Time Ripple**:
+  - Offline-first persistence via `khelgrid_academy_enquiries` in local storage, and cloud write to Supabase `academy_enquiries` table.
+  - Dispatches `khelgrid:academy-enquiry-submitted` browser event to instantly update academy buttons to `Enquiry Active · View Token`.
+- **User Dashboard Integration (`/dashboard`)**:
+  - Tab 3 ("Matches & Bookings") now includes a dedicated "My Academy Enquiries & Trial Batches" grid showing active enquiry tokens, academy name, sport, selected training batch, candidate skill level, tested combine metrics, and 1-click links to the academy page.
+- **Direct URL Deep Linking**:
+  - Extended `RouteMatch` and `resolveRoute()` to support `/academies/:slug/enrol` and `/academies/:slug/enroll` (or `/academy/:slug/enrol`), automatically opening the academy detail page with the enrolment modal active.
+
+#### Why in Online Repository:
+Eliminates static operational dead-ends by enabling aspiring grassroots athletes and parents to officially register for academy trials and batch admissions directly with their verified KhelGrid credentials and physical combine data.
+
 ## 3. Why These Changes Are in the Online Repository
 
 1. **Production Parity**:
@@ -548,7 +574,7 @@ Every change in this repository has passed all three release gates:
 ```bash
 # 1. Automated Vitest Suite (100% Pass)
 npm run test
-# Output: 74 passed test files (479 passed tests, 0 failed)
+# Output: 74 passed test files (483 passed tests, 0 failed)
 
 # 2. Production Build & Static Sitemap Compilation
 npm run build

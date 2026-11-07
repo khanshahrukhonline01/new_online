@@ -22,6 +22,8 @@ import {
 import { subscribeSavedItems } from '../../shared/services/savedService'
 import {
   getUserTrialApplications,
+  getUserAcademyEnquiries,
+  type AcademyEnquiry,
   type TrialApplication,
 } from '../../integrations/supabase/athlete-profile-client'
 import { getUserVenueBookings } from '../../shared/payments/paymentService'
@@ -81,21 +83,25 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
 
   const [venueBookings, setVenueBookings] = useState<ReturnType<typeof getUserVenueBookings>>([])
   const [trialApplications, setTrialApplications] = useState<TrialApplication[]>([])
+  const [academyEnquiries, setAcademyEnquiries] = useState<AcademyEnquiry[]>([])
 
   // Listen for live venue bookings and trial applications updates
   useEffect(() => {
     const loadUserData = () => {
       setVenueBookings(getUserVenueBookings())
       setTrialApplications(getUserTrialApplications())
+      setAcademyEnquiries(getUserAcademyEnquiries())
     }
     loadUserData()
 
     const onUpdate = () => loadUserData()
     window.addEventListener('khelgrid:venue-booked', onUpdate)
     window.addEventListener('khelgrid:trial-applied', onUpdate)
+    window.addEventListener('khelgrid:academy-enquiry-submitted', onUpdate)
     return () => {
       window.removeEventListener('khelgrid:venue-booked', onUpdate)
       window.removeEventListener('khelgrid:trial-applied', onUpdate)
+      window.removeEventListener('khelgrid:academy-enquiry-submitted', onUpdate)
     }
   }, [authUser])
 
@@ -447,7 +453,7 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
           className={`user-dash-tab-btn ${activeTab === 'matches' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('matches')}
         >
-          <SiteIcon name="sports" size={16} /> Matches &amp; Bookings ({confirmedGames.length + venueBookings.length + trialApplications.length})
+          <SiteIcon name="sports" size={16} /> Matches &amp; Bookings ({confirmedGames.length + venueBookings.length + trialApplications.length + academyEnquiries.length})
         </button>
         <button
           type="button"
@@ -884,6 +890,92 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
               </div>
             )}
           </div>
+          {/* Section 3: My Academy Enquiries & Trial Batches */}
+          <div className="user-dash-card" style={{ marginBottom: '24px' }}>
+            <div className="user-dash-card-header">
+              <h2><SiteIcon name="award" size={18} /> My Academy Enquiries &amp; Trial Batches ({academyEnquiries.length})</h2>
+              <a
+                href="/academies"
+                onClick={e => handleLink(e, '/academies')}
+                className="user-dash-btn secondary"
+                style={{ fontSize: '0.82rem', padding: '6px 12px' }}
+              >
+                Browse All Academies
+              </a>
+            </div>
+
+            {academyEnquiries.length > 0 ? (
+              <div className="user-applications-grid">
+                {academyEnquiries.map((enq, idx) => (
+                  <div key={enq.id || enq.enquiryToken || idx} className="user-app-card">
+                    <div className="user-app-header">
+                      <div>
+                        <span className="user-app-ref" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.12)' }}>
+                          {enq.enquiryToken}
+                        </span>
+                        <h3 style={{ margin: '4px 0 0', fontSize: '1rem', color: '#f8fafc' }}>{enq.academyName}</h3>
+                        <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#94a3b8' }}>
+                          {enq.city}{enq.state ? `, ${enq.state}` : ''} ({enq.sport})
+                        </p>
+                      </div>
+                      <span className="user-app-status submitted" style={{ color: '#34d399', background: 'rgba(16, 185, 129, 0.15)' }}>
+                        <SiteIcon name="shield-check" size={12} />
+                        <span>
+                          {enq.requestType === 'free_trial' ? 'Free Trial Requested' : 'Admission Under Review'}
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="user-app-metrics">
+                      <div className="user-app-pill">
+                        <span>Selected Batch:</span>
+                        <strong>{enq.batchLabel}</strong>
+                      </div>
+                      <div className="user-app-pill">
+                        <span>Candidate:</span>
+                        <strong>{enq.athleteName} ({enq.skillLevel})</strong>
+                      </div>
+                      {enq.fitnessBenchmarks?.percentileAvg ? (
+                        <div className="user-app-pill">
+                          <span>Sports CV Benchmarks:</span>
+                          <strong>{enq.fitnessBenchmarks.percentileAvg}th %ile ({enq.fitnessBenchmarks.tier})</strong>
+                        </div>
+                      ) : (
+                        <div className="user-app-pill">
+                          <span>Profile:</span>
+                          <strong>Verified Candidate Dossier Attached</strong>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="user-app-footer">
+                      <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                        Requested on {new Date(enq.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                      <a
+                        href={`/academies/${enq.academySlug}`}
+                        onClick={e => handleLink(e, `/academies/${enq.academySlug}`)}
+                        className="user-dash-btn secondary"
+                        style={{ fontSize: '12px', padding: '5px 10px', textDecoration: 'none' }}
+                      >
+                        View Academy Page
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="user-empty-state">
+                <div className="empty-icon">🏅</div>
+                <h3>No Academy Enquiries Yet</h3>
+                <p>Register for free trial classes and training batch admissions at verified sports academies.</p>
+                <a href="/academies" onClick={e => handleLink(e, '/academies')} className="user-dash-btn primary">
+                  Explore Sports Academies
+                </a>
+              </div>
+            )}
+          </div>
+
           <div className="user-dash-card">
             <div className="user-dash-card-header">
               <h2><SiteIcon name="sports" size={18} /> Confirmed Matches &amp; Turf RSVPs</h2>
