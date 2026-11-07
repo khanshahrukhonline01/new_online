@@ -2,9 +2,9 @@
 ## Reconciled Baseline Report (Post-Merge Audit Edition)
 
 **Execution Context**: KhelGrid 10-Phase Security and Authorization Programme  
-**Module**: Phase 1 — Database Security Foundation (Reconciled Baseline)  
+**Module**: Phase 1 — Database Security Foundation (Phase 5 Reconciled Baseline)  
 **Auditor**: Senior Database Security Engineer & Supabase Security Architect  
-**Reconciliation Date**: November 7, 2026  
+**Reconciliation Date**: November 8, 2026  
 **Development Supabase Reference**: `hznsbxvovjxvmnchzzqt`  
 **Target Environment**: Development Database (`https://hznsbxvovjxvmnchzzqt.supabase.co`)  
 **Production Site**: `https://khelgrid.com/` (Strictly Out of Scope / Untouched)  
