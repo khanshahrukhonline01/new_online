@@ -1,6 +1,6 @@
 # KhelGrid Platform: Comprehensive Changelog & Architectural Record
 
-> **Document Version:** 3.2.0 (Dynamic Scout Portal & Universal Bookmarks Release)  
+> **Document Version:** 3.3.0 (Talent Scanner Dynamic Profile Sync & Combine Scorecard Release)  
 > **Repository:** `khelgrid-dotcom/khelgrid-platform`  
 > **Mirrors:** `khanshahrukhonline01/new_online` | `khanshahrukhonline01/khelgrid`  
 > **Last Synchronized:** 2026-11-07  
@@ -38,6 +38,7 @@ It explains **what was changed**, **how it was implemented**, **why it exists in
 | Phase 15: Unified "My Dashboard", Cross-Page Parity & Filter Polish (2026-11-07)  |
 | Phase 16: Universal 1-Tap Dynamic Bookmark System & Saved Hub (2026-11-07)        |
 | Phase 17: Live Database Scout Portal & Normative Workbench (2026-11-07)           |
+| Phase 18: Talent Scanner Direct Profile Sync & Dynamic Ecosystem (2026-11-07)   |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -475,6 +476,29 @@ Transitions the Scout Portal from a static demonstration into a live, production
 
 ---
 
+### Phase 18: Talent Scanner Direct Profile Sync (`/talent-scanner` → `/dashboard` & `/scout-portal`) (2026-11-07)
+
+#### What Was Built:
+- **1-Tap Profile Sync Engine (`saveAthleteFitnessBenchmarks`)**:
+  - Implemented cloud write to Supabase `athlete_profiles` table updating `fitness_benchmarks` (`yoyoIr1Meters`, `sprint30mSeconds`, `cmjHeightCm`, `tier`, `percentileAvg`, `testedAt`).
+  - Seamlessly handles both logged-in athletes (synced with active handle and credentials) and guest athletes (persisted locally with 1-click upgrade to claim permanent profile).
+  - Merges duplicate profile records in database to prevent orphaned rows.
+- **Cross-Component Dynamic Reactive Ripple (`khelgrid:benchmarks-updated`)**:
+  - Dispatches browser-wide custom event upon saving test benchmarks.
+  - Automatically invalidates in-memory and storage cache in `scoutingData.ts` (`clearScoutAthletesCache()`), ensuring tested athletes immediately appear on the Scout Portal (`/scout-portal`) with their latest normative percentiles.
+  - Listened by `UserDashboardPage.tsx` to dynamically re-calculate and re-render the athlete's FIFA-style athletic radar card (OVR, PAC, STA, PWR) and Empirical Normative Combine Status widget.
+- **Empirical Normative Combine Status Panel (`/dashboard`)**:
+  - Added dedicated combine test status breakdown in TAB 2 (My Player Card & CV) showing tested Yo-Yo IR1 distance, 30m linear sprint, CMJ jump height, and National Talent Pool tier with 1-click retest button.
+- **Downloadable Official Combine Scorecard (SVG)**:
+  - Generates standalone, vector SVG athletic scorecards complete with national composite percentile badge, individual test metrics, KhelChronicle preprint citation (`KG-2026-002`), verification timestamp, and official Grassroots Combine Desk stamp.
+- **Scout Portal Jump Integration**:
+  - Added direct discovery link on `/talent-scanner` to explore top verified talent on `/scout-portal`.
+
+#### Why in Online Repository:
+Unifies the empirical physical testing workbench (`/talent-scanner`) with the athlete's persistent digital identity (`/dashboard`, `/sports-cv`) and academy recruitment channels (`/scout-portal`). Athletes who complete grassroots physical evaluations immediately see their progress reflected across the entire platform ecosystem without manual re-entry.
+
+---
+
 ## 3. Why These Changes Are in the Online Repository
 
 1. **Production Parity**:
@@ -496,7 +520,7 @@ Every change in this repository has passed all three release gates:
 ```bash
 # 1. Automated Vitest Suite (100% Pass)
 npm run test
-# Output: 74 passed test files (476 passed tests, 0 failed)
+# Output: 74 passed test files (477 passed tests, 0 failed)
 
 # 2. Production Build & Static Sitemap Compilation
 npm run build

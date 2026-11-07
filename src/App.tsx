@@ -285,7 +285,7 @@ export default function App() {
       }
       else if (match.canonicalPath === '/help-feedback') page = <HelpFeedbackPage />
       else if (match.canonicalPath === '/sports-cv') page = <SportsCvWizard />
-      else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} onOpenAuth={tab => { setAuthModalTab(tab || 'signup'); setAuthModalOpen(true) }} />
       else if (match.canonicalPath === '/play') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openIntake('pickup_game')} />
       else if (match.canonicalPath === '/coaches') page = <CoachesPage onNavigate={navigate} onOpenCoachIntake={() => openIntake('academy')} />
       else if (match.canonicalPath === '/events') page = <EventsPage onNavigate={navigate} />

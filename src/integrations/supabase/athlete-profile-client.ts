@@ -449,3 +449,166 @@ export async function recordTrialReminder(
 
   return { status: 'saved' }
 }
+
+export interface SaveBenchmarksInput {
+  yoyoIr1Meters: number
+  sprint30mSeconds: number
+  cmjHeightCm: number
+  tier: string
+  percentileAvg: number
+  sport?: string
+  gender?: string
+  ageCategory?: string
+}
+
+export interface SaveBenchmarksOptions {
+  sport?: string
+  gender?: string
+  ageCategory?: string
+  username?: string
+  fullName?: string
+}
+
+export interface SaveBenchmarksResult {
+  status: 'saved' | 'created' | 'guest_saved' | 'updated'
+  profile: AthleteProfile
+  message: string
+}
+
+/**
+ * Saves athletic test benchmarks (Yo-Yo IR1, 30m sprint, CMJ jump) directly to the athlete's
+ * cloud profile and local cache, dispatching cross-component update events.
+ */
+export async function saveAthleteFitnessBenchmarks(
+  benchmarks: SaveBenchmarksInput,
+  options?: SaveBenchmarksOptions,
+): Promise<SaveBenchmarksResult> {
+  let authUser: { id: string; fullName?: string; name?: string; city?: string; isVerified?: boolean; preferredSports?: string[] } | null = null
+  if (typeof window !== 'undefined') {
+    try {
+      const rawUser = window.localStorage.getItem('khelgrid_auth_user')
+      if (rawUser) {
+        authUser = JSON.parse(rawUser)
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const isGuest = !authUser && !options?.username
+  const username = normalizeUsername(
+    options?.username || authUser?.fullName || authUser?.name || 'guest-athlete',
+  )
+  const now = new Date().toISOString()
+
+  let existing = await getAthleteProfile(username)
+  if (!existing && typeof window !== 'undefined') {
+    const locals = getLocalProfiles()
+    existing = locals[username] || null
+  }
+
+  const updatedBenchmarks: NonNullable<AthleteProfile['fitnessBenchmarks']> = {
+    yoyoIr1Meters: benchmarks.yoyoIr1Meters,
+    sprint30mSeconds: benchmarks.sprint30mSeconds,
+    cmjHeightCm: benchmarks.cmjHeightCm,
+    tier: benchmarks.tier,
+    percentileAvg: benchmarks.percentileAvg,
+  }
+
+  const resolvedSport = options?.sport || benchmarks.sport || existing?.sport || authUser?.preferredSports?.[0] || 'Multi-Sport'
+  const resolvedName = options?.fullName || existing?.fullName || authUser?.fullName || authUser?.name || (isGuest ? 'Guest Athlete' : 'Verified Athlete')
+
+  const profile: AthleteProfile = existing
+    ? {
+        ...existing,
+        sport: resolvedSport,
+        fitnessBenchmarks: updatedBenchmarks,
+        updatedAt: now,
+      }
+    : {
+        id: `prof-${username}-${Date.now().toString(36)}`,
+        userId: authUser?.id,
+        username,
+        fullName: resolvedName,
+        sport: resolvedSport,
+        playingPosition: 'Athlete',
+        city: authUser?.city || 'India',
+        summary: `Empirically benchmarked grassroots athlete on KhelGrid (${benchmarks.percentileAvg}th percentile · ${benchmarks.tier}).`,
+        achievements: [],
+        videoClips: [],
+        fitnessBenchmarks: updatedBenchmarks,
+        verificationStatus: authUser?.isVerified ? 'verified' : 'community',
+        createdAt: now,
+        updatedAt: now,
+      }
+
+  saveLocalProfile(profile)
+
+  // If user is logged in, also update auth user cache
+  if (authUser && typeof window !== 'undefined') {
+    try {
+      const raw = window.localStorage.getItem('khelgrid_auth_user')
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, unknown>
+        parsed.fitnessBenchmarks = updatedBenchmarks
+        parsed.updatedAt = now
+        window.localStorage.setItem('khelgrid_auth_user', JSON.stringify(parsed))
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // Push to Supabase if configured and user is authenticated or has valid username
+  if (supabaseUrl && anonKey && !isGuest) {
+    try {
+      const payload = {
+        user_id: profile.userId || authUser?.id || null,
+        username: profile.username,
+        full_name: profile.fullName,
+        sport: profile.sport,
+        playing_position: profile.playingPosition,
+        city: profile.city,
+        state: profile.state || null,
+        fitness_benchmarks: profile.fitnessBenchmarks,
+        publication_status: 'published',
+        updated_at: now,
+      }
+      await fetch(`${supabaseUrl}/rest/v1/athlete_profiles`, {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify(payload),
+      })
+    } catch {
+      // Local cache remains active
+    }
+  }
+
+  // Dispatch global custom event for reactive UI updates across all open views
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('khelgrid:benchmarks-updated', {
+        detail: { profile, benchmarks: updatedBenchmarks, isGuest },
+      }),
+    )
+  }
+
+  if (isGuest) {
+    return {
+      status: 'guest_saved',
+      profile,
+      message: 'Test benchmarks saved locally to your device. Sign in to link them to your official Player Card & live Scout Portal.',
+    }
+  }
+
+  return {
+    status: existing ? 'saved' : 'created',
+    profile,
+    message: `Physical benchmarks successfully synced! Your Player Card now reflects ${benchmarks.percentileAvg}th percentile (${benchmarks.tier}).`,
+  }
+}

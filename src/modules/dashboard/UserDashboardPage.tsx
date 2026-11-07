@@ -74,6 +74,25 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
     })
   }, [])
 
+  // Listen for live physical benchmark updates from Talent Scanner
+  useEffect(() => {
+    const handleBenchmarksUpdated = (e: Event) => {
+      const custom = e as CustomEvent<{ profile?: AthleteProfile }>
+      if (custom.detail?.profile) {
+        setAthleteProfile(custom.detail.profile)
+      } else if (authUser) {
+        const handle = normalizeUsername(authUser.fullName || authUser.name || 'athlete')
+        void getAthleteProfile(handle).then(prof => {
+          if (prof) setAthleteProfile(prof)
+        })
+      }
+    }
+    window.addEventListener('khelgrid:benchmarks-updated', handleBenchmarksUpdated)
+    return () => {
+      window.removeEventListener('khelgrid:benchmarks-updated', handleBenchmarksUpdated)
+    }
+  }, [authUser])
+
   // Auto-prompt login modal on mount if guest visits dashboard directly
   useEffect(() => {
     if (!authUser && onOpenAuth) {
@@ -612,6 +631,57 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
               </div>
               <div style={{ maxWidth: '380px', margin: '0 auto' }}>
                 <PlayerCard profile={athleteProfile} />
+              </div>
+
+              <div className="user-benchmarks-panel">
+                <div className="benchmarks-panel-header">
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1rem', color: '#f8fafc' }}>
+                      Empirical Normative Combine Status
+                    </h3>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#94a3b8' }}>
+                      Benchmarked against 4,820 grassroots athletes tested under KhelChronicle KG-2026-002 protocols.
+                    </p>
+                  </div>
+                  <a
+                    href="/talent-scanner"
+                    onClick={e => handleLink(e, '/talent-scanner')}
+                    className="user-dash-btn secondary"
+                    style={{ fontSize: '0.82rem', padding: '6px 12px' }}
+                  >
+                    <SiteIcon name="target" size={14} />
+                    <span>{athleteProfile.fitnessBenchmarks?.percentileAvg ? 'Retest Scores' : 'Run Combine Test'}</span>
+                  </a>
+                </div>
+
+                {athleteProfile.fitnessBenchmarks?.percentileAvg ? (
+                  <div className="benchmarks-stats-grid">
+                    <div className="benchmark-stat-box">
+                      <span className="b-label">Yo-Yo IR1 Distance</span>
+                      <strong className="b-val">{athleteProfile.fitnessBenchmarks.yoyoIr1Meters || 'N/A'} m</strong>
+                    </div>
+                    <div className="benchmark-stat-box">
+                      <span className="b-label">30m Linear Sprint</span>
+                      <strong className="b-val">{athleteProfile.fitnessBenchmarks.sprint30mSeconds ? `${athleteProfile.fitnessBenchmarks.sprint30mSeconds}s` : 'N/A'}</strong>
+                    </div>
+                    <div className="benchmark-stat-box">
+                      <span className="b-label">Vertical Power (CMJ)</span>
+                      <strong className="b-val">{athleteProfile.fitnessBenchmarks.cmjHeightCm ? `${athleteProfile.fitnessBenchmarks.cmjHeightCm} cm` : 'N/A'}</strong>
+                    </div>
+                    <div className="benchmark-stat-box highlight">
+                      <span className="b-label">National Rank</span>
+                      <strong className="b-val">{athleteProfile.fitnessBenchmarks.percentileAvg}th %ile</strong>
+                      <small style={{ color: '#10b981', display: 'block', fontSize: '11px' }}>{athleteProfile.fitnessBenchmarks.tier || 'Verified Candidate'}</small>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="benchmark-empty-box">
+                    <SiteIcon name="target" size={24} style={{ color: '#38bdf8' }} />
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8' }}>
+                      No physical benchmarks recorded yet. Test your aerobic endurance, sprint speed, and vertical jump to unlock your radar OVR card.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
