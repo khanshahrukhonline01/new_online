@@ -687,6 +687,18 @@ CREATE POLICY "listing_subscriptions_service_all"
   WITH CHECK (true);
 
 -- 3.4 public.venue_bookings (Removing broad SELECT)
+ALTER TABLE public.venue_bookings
+  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS voucher_token text,
+  ADD COLUMN IF NOT EXISTS status text DEFAULT 'confirmed',
+  ADD COLUMN IF NOT EXISTS court_number int DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS expires_at timestamptz,
+  ADD COLUMN IF NOT EXISTS cancellation_reason text,
+  ADD COLUMN IF NOT EXISTS customer_email text,
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+
+CREATE INDEX IF NOT EXISTS idx_venue_bookings_user_id ON public.venue_bookings(user_id);
+
 ALTER TABLE public.venue_bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.venue_bookings FORCE ROW LEVEL SECURITY;
 
@@ -715,6 +727,11 @@ CREATE POLICY "venue_bookings_service_all"
   WITH CHECK (true);
 
 -- 3.5 public.trial_reminders (Removing broad SELECT/UPDATE)
+ALTER TABLE public.trial_reminders
+  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_trial_reminders_user_id ON public.trial_reminders(user_id);
+
 ALTER TABLE public.trial_reminders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trial_reminders FORCE ROW LEVEL SECURITY;
 
@@ -796,8 +813,21 @@ DROP POLICY IF EXISTS "athlete_profiles_owner_read" ON public.athlete_profiles;
 DROP POLICY IF EXISTS "athlete_profiles_owner_write" ON public.athlete_profiles;
 DROP POLICY IF EXISTS "athlete_profiles_service_all" ON public.athlete_profiles;
 
+ALTER TABLE public.athlete_profiles
+  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS is_public_cv boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS consent_scout_sharing boolean DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS idx_athlete_profiles_user_id ON public.athlete_profiles(user_id);
+
 ALTER TABLE public.athlete_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.athlete_profiles FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY "athlete_profiles_public_published_read"
+  ON public.athlete_profiles
+  FOR SELECT
+  TO anon, authenticated
+  USING (publication_status = 'published');
 
 CREATE POLICY "athlete_profiles_owner_read"
   ON public.athlete_profiles
@@ -862,6 +892,31 @@ CREATE POLICY "guardian_consents_service_all"
   WITH CHECK (true);
 
 -- Immutable User Consent log (No user DELETE)
+CREATE TABLE IF NOT EXISTS public.user_consents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  consent_type text NOT NULL CHECK (
+    consent_type IN (
+      'terms_of_service',
+      'privacy_policy',
+      'public_profile_display',
+      'contact_sharing_scouts',
+      'guardian_minor_consent',
+      'telemetry_video_sharing'
+    )
+  ),
+  is_given boolean NOT NULL DEFAULT true,
+  given_at timestamptz NOT NULL DEFAULT now(),
+  revoked_at timestamptz,
+  ip_address text,
+  user_agent text,
+  version text NOT NULL DEFAULT '2026-v1.0',
+  CONSTRAINT uq_user_consent UNIQUE (user_id, consent_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_consents_user ON public.user_consents(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_consents_type ON public.user_consents(consent_type);
+
 ALTER TABLE public.user_consents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_consents FORCE ROW LEVEL SECURITY;
 

@@ -160,6 +160,11 @@ ALTER TABLE public.athlete_profiles
   ADD COLUMN IF NOT EXISTS is_public_cv boolean DEFAULT false,
   ADD COLUMN IF NOT EXISTS consent_scout_sharing boolean DEFAULT false;
 
+ALTER TABLE public.trial_reminders
+  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_trial_reminders_user_id ON public.trial_reminders(user_id);
+
 -- Step 1: Normalize relative dates ('Today') in historical records to their creation calendar date (IST)
 UPDATE public.venue_bookings
 SET slot_date = to_char(created_at AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD')
@@ -405,10 +410,12 @@ CREATE POLICY "profiles_service_all" ON public.profiles FOR ALL TO service_role 
 -- 4.2 public.athlete_profiles (Drop public INSERT and broad SELECT)
 DROP POLICY IF EXISTS "athlete_profiles_public_insert" ON public.athlete_profiles;
 DROP POLICY IF EXISTS "athlete_profiles_public_read" ON public.athlete_profiles;
+DROP POLICY IF EXISTS "athlete_profiles_public_published_read" ON public.athlete_profiles;
 DROP POLICY IF EXISTS "athlete_profiles_owner_read" ON public.athlete_profiles;
 DROP POLICY IF EXISTS "athlete_profiles_owner_write" ON public.athlete_profiles;
 DROP POLICY IF EXISTS "athlete_profiles_service_all" ON public.athlete_profiles;
 
+CREATE POLICY "athlete_profiles_public_published_read" ON public.athlete_profiles FOR SELECT TO anon, authenticated USING (publication_status = 'published');
 CREATE POLICY "athlete_profiles_owner_read" ON public.athlete_profiles FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL AND user_id = auth.uid());
 CREATE POLICY "athlete_profiles_owner_write" ON public.athlete_profiles FOR ALL TO authenticated USING (auth.uid() IS NOT NULL AND user_id = auth.uid()) WITH CHECK (auth.uid() IS NOT NULL AND user_id = auth.uid());
 CREATE POLICY "athlete_profiles_service_all" ON public.athlete_profiles FOR ALL TO service_role USING (true) WITH CHECK (true);
@@ -441,6 +448,7 @@ DROP POLICY IF EXISTS "trial_reminders_owner_select" ON public.trial_reminders;
 DROP POLICY IF EXISTS "trial_reminders_owner_update" ON public.trial_reminders;
 DROP POLICY IF EXISTS "trial_reminders_service_all" ON public.trial_reminders;
 
+CREATE POLICY "trial_reminders_public_insert" ON public.trial_reminders FOR INSERT TO anon, authenticated WITH CHECK (athlete_phone IS NOT NULL OR athlete_email IS NOT NULL);
 CREATE POLICY "trial_reminders_owner_select" ON public.trial_reminders FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL AND user_id = auth.uid());
 CREATE POLICY "trial_reminders_owner_update" ON public.trial_reminders FOR UPDATE TO authenticated USING (auth.uid() IS NOT NULL AND user_id = auth.uid()) WITH CHECK (auth.uid() IS NOT NULL AND user_id = auth.uid());
 CREATE POLICY "trial_reminders_service_all" ON public.trial_reminders FOR ALL TO service_role USING (true) WITH CHECK (true);
