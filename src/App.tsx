@@ -11,6 +11,12 @@ import FrequentlyAskedQuestions from './shared/components/FrequentlyAskedQuestio
 import SiteAnnouncementBanner from './shared/components/SiteAnnouncementBanner'
 import NavbarSettingsMenu from './shared/components/NavbarSettingsMenu'
 import type { CommunityListingCategory } from './integrations/supabase/public-client'
+import {
+  getStoredAuthUser,
+  onAuthChange,
+  signOut,
+  type AuthUserProfile,
+} from './integrations/supabase/auth-client'
 import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAndShare'
 
 // Code-split route components via React.lazy()
@@ -59,6 +65,7 @@ const SpotlightSearchModal = lazy(() => import('./shared/components/SpotlightSea
 const FeedbackSupportModal = lazy(() => import('./shared/components/FeedbackSupportModal'))
 const UserConsentModal = lazy(() => import('./shared/components/UserConsentModal'))
 const GoProModal = lazy(() => import('./shared/components/GoProModal'))
+const AuthModal = lazy(() => import('./shared/components/AuthModal'))
 
 function PageFallbackLoader() {
   return (
@@ -96,12 +103,26 @@ export default function App() {
   const [consentModalOpen, setConsentModalOpen] = useState(false)
   const [consentInitialTab, setConsentInitialTab] = useState<'sports_pass' | 'rules_privacy'>('sports_pass')
   const [goProModalOpen, setGoProModalOpen] = useState(false)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [authModalTab, setAuthModalTab] = useState<'login' | 'signup' | 'forgot_password'>('login')
+  const [authUser, setAuthUser] = useState<AuthUserProfile | null>(() => getStoredAuthUser())
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const menuToggleRef = useRef<HTMLButtonElement>(null)
 
   function openIntake(category: CommunityListingCategory = 'pickup_game') {
     setIntakeCategory(category)
     setIntakeModalOpen(true)
   }
+
+  useEffect(() => {
+    return onAuthChange(user => {
+      setAuthUser(user)
+    })
+  }, [])
+
+  useEffect(() => {
+    setUserMenuOpen(false)
+  }, [path])
 
   useEffect(() => {
     function handleGlobalKeyDown(event: globalThis.KeyboardEvent) {
@@ -155,6 +176,21 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: 'auto' })
     }
     const nextPath = target.split('?')[0].replace(/\/$/, '') || '/'
+    if (nextPath === '/login') {
+      setAuthModalTab('login')
+      setAuthModalOpen(true)
+      return
+    }
+    if (nextPath === '/signup') {
+      setAuthModalTab('signup')
+      setAuthModalOpen(true)
+      return
+    }
+    if (nextPath === '/forgot-password') {
+      setAuthModalTab('forgot_password')
+      setAuthModalOpen(true)
+      return
+    }
     setPath(nextPath)
     if (nextPath === '/search') { const nextQuery = new URLSearchParams(target.split('?')[1] ?? '').get('q') ?? ''; setSearchQuery(nextQuery); setHeaderQuery(nextQuery) }
     setMenuOpen(false)
@@ -307,7 +343,107 @@ export default function App() {
         onNavigate={navigate}
         onOpenFeedback={() => setFeedbackModalOpen(true)}
       />
-      <span className="header-login-link is-unavailable" aria-disabled="true" aria-label="Your profile" title="Your profile / Login coming soon"><SiteIcon name="user-round" size={17} /><span>{t('login', 'Login')} <small>{t('comingSoon', 'Coming Soon')}</small></span></span>
+      {authUser ? (
+        <div className="header-user-menu-wrap">
+          <button
+            className="header-user-btn"
+            type="button"
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            aria-expanded={userMenuOpen}
+            aria-label={`User account menu for ${authUser.fullName}`}
+            title={`Signed in as ${authUser.fullName} (${authUser.role})`}
+          >
+            <span className="header-user-avatar">
+              {authUser.avatarUrl ? (
+                <img src={authUser.avatarUrl} alt="" />
+              ) : (
+                authUser.fullName.charAt(0).toUpperCase()
+              )}
+            </span>
+            <span className="header-user-details">
+              <span className="header-user-name">{authUser.fullName.split(' ')[0]}</span>
+              <span className="header-user-role-badge">{authUser.role}</span>
+            </span>
+          </button>
+          {userMenuOpen && (
+            <div className="header-user-dropdown" role="menu">
+              <div className="header-user-dropdown-header">
+                <strong>{authUser.fullName}</strong>
+                <small>{authUser.email}</small>
+                <span className="header-user-role-pill">{authUser.role.toUpperCase()}</span>
+              </div>
+              <div className="header-user-dropdown-divider" />
+              <a
+                href={`/u/@${authUser.fullName.toLowerCase().replace(/\s+/g, '-')}`}
+                className="header-user-dropdown-item"
+                role="menuitem"
+                onClick={e => {
+                  setUserMenuOpen(false)
+                  navigate(e, `/u/@${authUser.fullName.toLowerCase().replace(/\s+/g, '-')}`)
+                }}
+              >
+                <SiteIcon name="user-round" size={15} />
+                <span>My Athlete Profile</span>
+              </a>
+              {(authUser.role === 'host' || authUser.role === 'admin') && (
+                <a
+                  href="/host"
+                  className="header-user-dropdown-item"
+                  role="menuitem"
+                  onClick={e => {
+                    setUserMenuOpen(false)
+                    navigate(e, '/host')
+                  }}
+                >
+                  <SiteIcon name="building" size={15} />
+                  <span>Host &amp; Partner Dashboard</span>
+                </a>
+              )}
+              <a
+                href="/settings"
+                className="header-user-dropdown-item"
+                role="menuitem"
+                onClick={e => {
+                  setUserMenuOpen(false)
+                  navigate(e, '/settings')
+                }}
+              >
+                <SiteIcon name="sliders" size={15} />
+                <span>Account Settings</span>
+              </a>
+              <div className="header-user-dropdown-divider" />
+              <button
+                type="button"
+                className="header-user-dropdown-item is-signout"
+                role="menuitem"
+                onClick={() => {
+                  setUserMenuOpen(false)
+                  void signOut()
+                }}
+              >
+                <SiteIcon name="close" size={15} />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <button
+          className="header-login-link"
+          type="button"
+          onClick={() => {
+            setAuthModalTab('login')
+            setAuthModalOpen(true)
+          }}
+          aria-label="Your profile"
+          title="Sign in or register on KhelGrid"
+        >
+          <SiteIcon name="user-round" size={17} />
+          <span>
+            {t('login', 'Login')} <small>Sign In</small>
+          </span>
+        </button>
+      )}
       <a
         className="header-go-pro"
         href="/pricing"
@@ -533,6 +669,17 @@ export default function App() {
         <GoProModal
           isOpen={goProModalOpen}
           onClose={() => setGoProModalOpen(false)}
+          onNavigate={navigate}
+        />
+      )}
+      {authModalOpen && (
+        <AuthModal
+          isOpen={authModalOpen}
+          initialTab={authModalTab}
+          onClose={() => setAuthModalOpen(false)}
+          onSuccess={user => {
+            setAuthUser(user)
+          }}
           onNavigate={navigate}
         />
       )}

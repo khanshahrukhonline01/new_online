@@ -874,7 +874,8 @@ export interface KhelGridUser {
   name: string
   email?: string
   phone?: string
-  role: 'host' | 'athlete' | 'scout' | 'academy'
+  role: 'host' | 'athlete' | 'scout' | 'academy' | 'coach' | 'admin'
+  fullName?: string
   isVerified: boolean
   createdAt: string
 }
