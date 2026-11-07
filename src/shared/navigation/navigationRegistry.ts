@@ -30,7 +30,7 @@ export const navigationModules: NavigationModule[] = [
     items: [
       { id: 'home', label: 'Home', href: '/', icon: 'home', module: 'your-space', available: true },
       { id: 'dashboard', label: 'My Dashboard', href: '/dashboard', icon: 'chart', module: 'your-space' },
-      { id: 'saved', label: 'Saved Items', href: '/saved', icon: 'bookmark', module: 'your-space' },
+      { id: 'saved', label: 'Saved Items', href: '/saved', icon: 'bookmark', module: 'your-space', available: true },
     ],
   },
   {
