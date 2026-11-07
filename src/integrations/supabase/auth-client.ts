@@ -612,6 +612,141 @@ export function hasRole(user: AuthUserProfile | KhelGridUser | null, allowed: Us
 }
 
 /**
+ * Default granular permissions mapped to platform roles.
+ */
+export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, string[]> = {
+  athlete: [
+    'profile:view',
+    'profile:edit',
+    'trial:submit',
+    'venue:book',
+    'coach:inquire',
+    'review:create',
+    'score:view',
+  ],
+  host: [
+    'profile:view',
+    'profile:edit',
+    'venue:manage',
+    'venue:view_payouts',
+    'payout:request',
+    'match:create',
+    'match:score',
+  ],
+  coach: [
+    'profile:view',
+    'profile:edit',
+    'coach:manage_inquiries',
+    'coach:view_dossier',
+    'match:score',
+  ],
+  scout: [
+    'profile:view',
+    'scout:view_athletes',
+    'scout:export_dossier',
+    'scout:view_benchmarks',
+  ],
+  academy: [
+    'profile:view',
+    'profile:edit',
+    'academy:manage_enquiries',
+    'academy:view_candidates',
+    'trial:publish',
+  ],
+  admin: [
+    'admin:assign_role',
+    'admin:revoke_role',
+    'listing:moderate',
+    'audit:view',
+    'system:config',
+    'profile:view',
+    'profile:edit',
+    'trial:submit',
+    'venue:book',
+    'venue:manage',
+    'coach:inquire',
+    'review:create',
+    'score:view',
+    'match:score',
+  ],
+}
+
+/**
+ * Checks whether the user holds a granular permission.
+ * Admins implicitly possess all permissions.
+ */
+export function hasPermission(user: AuthUserProfile | KhelGridUser | null, permission: string): boolean {
+  if (!user) return false
+  if (user.role === 'admin') return true
+  const rolePerms = DEFAULT_ROLE_PERMISSIONS[user.role as UserRole] || []
+  return rolePerms.includes(permission)
+}
+
+/**
+ * Assigns a role to a user via the atomic admin RPC.
+ * Only callable by authorized system administrators.
+ */
+export async function adminAssignRole(
+  targetUserId: string,
+  role: UserRole,
+  notes?: string,
+): Promise<{ success: boolean; message?: string }> {
+  const client = getSupabaseClient()
+  if (!client) {
+    return { success: true, message: 'Role assigned (offline simulation mode).' }
+  }
+
+  try {
+    const { error } = await client.rpc('admin_assign_role', {
+      p_target_user_id: targetUserId,
+      p_role: role,
+      p_notes: notes || null,
+    })
+
+    if (error) {
+      return { success: false, message: error.message }
+    }
+    return { success: true, message: `Successfully assigned role ${role}.` }
+  } catch (err: unknown) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : 'Failed to assign role.',
+    }
+  }
+}
+
+/**
+ * Revokes a role from a user via the atomic admin RPC.
+ * Only callable by authorized system administrators.
+ */
+export async function adminRevokeRole(
+  targetUserId: string,
+  role: UserRole,
+): Promise<{ success: boolean; message?: string }> {
+  const client = getSupabaseClient()
+  if (!client) {
+    return { success: true, message: 'Role revoked (offline simulation mode).' }
+  }
+
+  try {
+    const { error } = await client.rpc('admin_revoke_role', {
+      p_target_user_id: targetUserId,
+      p_role: role,
+    })
+
+    if (error) {
+      return { success: false, message: error.message }
+    }
+    return { success: true, message: `Successfully revoked role ${role}.` }
+  } catch (err: unknown) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : 'Failed to revoke role.',
+    }
+  }
+}
+
+/**
  * Subscribes to authentication state changes across the application.
  * Returns an unsubscribe cleanup function.
  */
