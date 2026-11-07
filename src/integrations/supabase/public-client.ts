@@ -1191,7 +1191,7 @@ export interface KhelGridUser {
   name: string
   email?: string
   phone?: string
-  role: 'host' | 'athlete' | 'scout' | 'academy' | 'coach' | 'admin'
+  role: 'host' | 'athlete' | 'parent' | 'scout' | 'academy' | 'coach' | 'venue_owner' | 'submitter' | 'moderator' | 'admin'
   fullName?: string
   isVerified: boolean
   createdAt: string

@@ -3,7 +3,17 @@ import type { KhelGridUser } from './public-client'
 export type { KhelGridUser }
 export { getStoredUser } from './public-client'
 
-export type UserRole = 'athlete' | 'host' | 'coach' | 'scout' | 'academy' | 'admin'
+export type UserRole =
+  | 'athlete'
+  | 'parent'
+  | 'coach'
+  | 'scout'
+  | 'academy'
+  | 'host'
+  | 'venue_owner'
+  | 'submitter'
+  | 'moderator'
+  | 'admin'
 
 export interface AuthUserProfile {
   id: string
@@ -624,6 +634,13 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'review:create',
     'score:view',
   ],
+  parent: [
+    'profile:view',
+    'profile:edit',
+    'trial:submit',
+    'academy:inquire',
+    'venue:book',
+  ],
   host: [
     'profile:view',
     'profile:edit',
@@ -632,6 +649,12 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'payout:request',
     'match:create',
     'match:score',
+  ],
+  venue_owner: [
+    'profile:view',
+    'venue:manage',
+    'venue:view_payouts',
+    'payout:request',
   ],
   coach: [
     'profile:view',
@@ -652,6 +675,17 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'academy:manage_enquiries',
     'academy:view_candidates',
     'trial:publish',
+  ],
+  submitter: [
+    'listing:submit',
+    'listing:view_own',
+    'listing:edit_own',
+  ],
+  moderator: [
+    'listing:moderate',
+    'review:moderate',
+    'report:review',
+    'claim:review',
   ],
   admin: [
     'admin:assign_role',

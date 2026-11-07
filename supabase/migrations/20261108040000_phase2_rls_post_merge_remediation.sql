@@ -12,7 +12,8 @@
 -- 3. SEC-015 Remediation: Define explicit RLS policies on tables that had RLS enabled
 --    with 0 policies (pickup_game_participants, pickup_game_rsvp_rate_limits).
 -- 4. SEC-016 Remediation: Revoke anonymous EXECUTE privileges on all host-only and
---    moderator-only SECURITY DEFINER stored procedures.
+--    moderator-only SECURITY DEFINER stored procedures via dynamic catalog query
+--    to eliminate function signature mismatches.
 -- 5. SEC-012 Remediation: Enforce FORCE ROW LEVEL SECURITY on all user-facing tables.
 -- ==============================================================================
 
@@ -278,51 +279,31 @@ CREATE POLICY "pickup_game_rate_limits_service_all"
 -- 4. SEC-016: REVOKE ANONYMOUS EXECUTE ON HOST & MODERATOR FUNCTIONS
 -- -----------------------------------------------------------------------------
 
--- Host match management procedures: Revoke from anon & PUBLIC, grant to authenticated
-DO $$ BEGIN
-  REVOKE EXECUTE ON FUNCTION public.cancel_pickup_game_as_host(uuid, text) FROM PUBLIC, anon;
-  GRANT EXECUTE ON FUNCTION public.cancel_pickup_game_as_host(uuid, text) TO authenticated, service_role;
-EXCEPTION WHEN OTHERS THEN NULL; END $$;
-
-DO $$ BEGIN
-  REVOKE EXECUTE ON FUNCTION public.complete_pickup_game_as_host(uuid) FROM PUBLIC, anon;
-  GRANT EXECUTE ON FUNCTION public.complete_pickup_game_as_host(uuid) TO authenticated, service_role;
-EXCEPTION WHEN OTHERS THEN NULL; END $$;
-
-DO $$ BEGIN
-  REVOKE EXECUTE ON FUNCTION public.reopen_pickup_game_as_host(uuid) FROM PUBLIC, anon;
-  GRANT EXECUTE ON FUNCTION public.reopen_pickup_game_as_host(uuid) TO authenticated, service_role;
-EXCEPTION WHEN OTHERS THEN NULL; END $$;
-
-DO $$ BEGIN
-  REVOKE EXECUTE ON FUNCTION public.update_pickup_game_capacity(uuid, integer) FROM PUBLIC, anon;
-  GRANT EXECUTE ON FUNCTION public.update_pickup_game_capacity(uuid, integer) TO authenticated, service_role;
-EXCEPTION WHEN OTHERS THEN NULL; END $$;
-
-DO $$ BEGIN
-  REVOKE EXECUTE ON FUNCTION public.update_pickup_game_details(uuid, text, text, text) FROM PUBLIC, anon;
-  GRANT EXECUTE ON FUNCTION public.update_pickup_game_details(uuid, text, text, text) TO authenticated, service_role;
-EXCEPTION WHEN OTHERS THEN NULL; END $$;
-
-DO $$ BEGIN
-  REVOKE EXECUTE ON FUNCTION public.reschedule_pickup_game(uuid, text, text) FROM PUBLIC, anon;
-  GRANT EXECUTE ON FUNCTION public.reschedule_pickup_game(uuid, text, text) TO authenticated, service_role;
-EXCEPTION WHEN OTHERS THEN NULL; END $$;
-
-DO $$ BEGIN
-  REVOKE EXECUTE ON FUNCTION public.get_host_pickup_games() FROM PUBLIC, anon;
-  GRANT EXECUTE ON FUNCTION public.get_host_pickup_games() TO authenticated, service_role;
-EXCEPTION WHEN OTHERS THEN NULL; END $$;
-
-DO $$ BEGIN
-  REVOKE EXECUTE ON FUNCTION public.approve_pickup_game_whatsapp_invite(uuid, uuid) FROM PUBLIC, anon;
-  GRANT EXECUTE ON FUNCTION public.approve_pickup_game_whatsapp_invite(uuid, uuid) TO authenticated, service_role;
-EXCEPTION WHEN OTHERS THEN NULL; END $$;
-
-DO $$ BEGIN
-  REVOKE EXECUTE ON FUNCTION public.admin_moderate_pickup_game(uuid, text, text) FROM PUBLIC, anon;
-  GRANT EXECUTE ON FUNCTION public.admin_moderate_pickup_game(uuid, text, text) TO authenticated, service_role;
-EXCEPTION WHEN OTHERS THEN NULL; END $$;
+-- Dynamically query pg_proc to accurately resolve all function overloads without signature mismatches
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN 
+    SELECT proname, oid::regprocedure AS func_sig
+    FROM pg_proc
+    WHERE pronamespace = 'public'::regnamespace
+      AND proname IN (
+        'cancel_pickup_game_as_host',
+        'complete_pickup_game_as_host',
+        'reopen_pickup_game_as_host',
+        'update_pickup_game_capacity',
+        'update_pickup_game_details',
+        'reschedule_pickup_game',
+        'get_host_pickup_games',
+        'approve_pickup_game_whatsapp_invite',
+        'admin_moderate_pickup_game'
+      )
+  LOOP
+    EXECUTE 'REVOKE EXECUTE ON FUNCTION ' || r.func_sig || ' FROM PUBLIC, anon;';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION ' || r.func_sig || ' TO authenticated, service_role;';
+  END LOOP;
+END $$;
 
 -- -----------------------------------------------------------------------------
 -- 5. SEC-012: ENFORCE FORCE ROW LEVEL SECURITY
