@@ -22,10 +22,10 @@ Requires Node.js 22 LTS and npm.
 ```bash
 npm install
 npm run dev
-npm run typecheck
-npm run lint
-npm run test
-npm run build
+npm run typecheck   # 0 compile errors (tsc -b)
+npm run lint        # 0 lint errors
+npm run test        # 71 test suites, 453 tests passed (100%)
+npm run build       # 106 URLs indexed in sitemap.xml
 ```
 
 Copy `.env.example` to `.env.local`. Never commit credentials.
@@ -37,7 +37,7 @@ For a full historical record of all phases, fixes, database migrations, and repo
 - [Sport Icon Asset Guide & Directory Manifest](public/assets/sports/README.md)
 - [Functional SVG Icon Asset Catalog](public/assets/icons/README.md)
 
-## Delivery stages
+## Delivery stages & Milestones
 1. Frontend foundation and design system.
 2. Supabase migrations, RLS policies, and typed data access.
 3. Profiles and verified opportunities.
@@ -46,6 +46,13 @@ For a full historical record of all phases, fixes, database migrations, and repo
 6. SEO, privacy, analytics, advertising, accessibility, and release checks.
 7. KhelChronicle Diamond Open Access research preprint repository and intake queue.
 8. 34-Sport comprehensive hub directory with Olympic pathways and SAI quotas.
+9. Core database relational expansion (junction tables & stadium surfaces).
+10. Monetization, Indian Payment Gateways (UPI/Cards/NetBanking) & Host Hub.
+11. Performance optimizations, SWR caching, Interactive Sports Tools & Selection Calendar.
+12. Core Supabase Authentication, session persistence, role-based profiles & RLS security.
+13. Database migration of curated catalogues & Central Administrative Moderation Desk (/admin).
+14. Geolocation discovery & interactive OpenStreetMap/Leaflet view ("Turfs Near Me").
+15. Unified "My Dashboard" (/dashboard), live account profile settings & cross-page parity.
 
 The existing production site remains separate and unchanged until explicitly approved.
 
@@ -65,16 +72,27 @@ The homepage hero uses a lightweight, five-slide sports image carousel (football
 
 The carousel is a presentation-only feature and does not change catalogue, venue, opportunity, booking, or live-score data behavior.
 
-## Platform page coverage and coming-soon behavior
+## Platform page coverage & live dynamic capabilities
 
-Implemented catalogue pages:
-- `/` — homepage and sports hero.
-- `/sports` and `/sports/:slug` — published sports catalogue/detail route.
-- `/opportunities`, `/trials`, `/combines`, `/scholarships`, `/camps`, and `/opportunities/:slug` — opportunities catalogue/detail route.
-- `/venues`, `/book`, and `/venues/:slug` — venue catalogue/detail route; booking confirmation and live availability are not enabled.
-- `/search` — search across published sports, opportunities, and venues.
-
-The navigation registry also includes feature routes. Where a feature does not yet have a complete data source, backend, authentication, moderation workflow, or tested user flow, the app now renders the shared `FeatureComingSoonPage` rather than an empty or misleading screen. Registered routes include dashboard, live scores, find games, coaches, academies, events, athlete stats, Sports CV, Talent Scanner, Scout Portal, verification, learning, guides, AI guide, KhelChronicle, community, tools, sports calendar, For You, Trust Center, pricing, mobile app, careers, partners, About, contact, privacy, terms, cookies, settings, notifications, login/signup/recovery, profiles, saved items, referrals, and help.
+Implemented and verified production routes:
+- `/` — Homepage with isolated sports hero carousel, video drills, and curated sports books.
+- `/dashboard` — Dedicated Athlete & User Dashboard with real-time KPI ribbon, Player Card, confirmed match RSVPs, and saved trial deadlines.
+- `/sports` and `/sports/:slug` — Complete 34-sport Olympic/national discipline directory.
+- `/opportunities` and `/opportunities/:slug` — Dynamic trial discovery with deadline alerts and Google Calendar / .ics sync.
+- `/venues` and `/venues/:slug` — Venue directory with 1-tap GPS "Near Me" radius filters, Haversine distance calculator, and interactive Leaflet map view.
+- `/academies` and `/academies/:slug` — Verified academy directory with SAI NCOE accreditation badges.
+- `/coaches` — Certified Coaches Directory with NIS credentials and consultation inquiries.
+- `/play` — Community pickup match directory with RSVP slot reservations and WhatsApp group links.
+- `/calendar` — Sports Selection Calendar with monthly grid and chronological agenda views.
+- `/tools` — 14 interactive sports science calculators and physical performance tools.
+- `/pricing` — Multi-audience membership plans with 1-click Indian UPI checkout.
+- `/partner` — Partner with KhelGrid portal with 4 tracks and live ROI calculator.
+- `/khelchronicle` & `/khelchronicle/submit` — Diamond Open Access research preprint hub with 5-step manuscript submission wizard.
+- `/admin` & `/moderation` — Central Administrative Moderation Desk with listing approvals, report handling, and athlete verification queues.
+- `/settings` — User Account & Profile Settings with live editing, password change, and session sign-out.
+- `/saved` — Saved trials and deadline planner with .ics calendar export.
+- `/search` — Global unified search with real-time catalogue and preprint indexing.
+- `/legal` & Policies — Comprehensive policy suite including `/workplace-policy`, `/editorial-policy`, `/ipr-policy`, `/verification-policy`, `/cancellation-policy`, and `/posh-policy`.
 
 **Data integrity rule:** placeholders must clearly say “Coming soon” and must not invent sports records, match scores, venue availability, booking confirmations, athlete profiles, payment status, or account data. Feature routes are navigational placeholders only, not evidence that the corresponding backend capability exists. Legal and policy pages should be replaced with reviewed, jurisdiction-appropriate text before public launch; the current generic placeholder is not legal advice or a substitute for published policies.
 

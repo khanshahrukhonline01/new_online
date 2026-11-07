@@ -1,12 +1,13 @@
 # KhelGrid Documentation Index
 
 - Status: Working index for the private rebuild
-- Last reviewed: 2026-10-25
-- Scope: `khelgrid-platform`, branch `feat/app-shell-discovery-modules`
+- Last reviewed: 2026-11-07
+- Version: 3.0.0 (Fully Dynamic Platform Release)
+- Scope: `khelgrid-platform`, branch `main`
 - Important: documentation records intended controls and audit findings; it is not proof of runtime correctness or production approval.
 
 ## Product and parity
-- [Complete Changelog & Architecture Record](KHELGRID_PLATFORM_COMPLETE_CHANGELOG_AND_ARCHITECTURE_RECORD.md) — comprehensive historical record of all phases, fixes, database migrations, 34-sport system, and repository parity syncs.
+- [Complete Changelog & Architecture Record (v3.0.0)](KHELGRID_PLATFORM_COMPLETE_CHANGELOG_AND_ARCHITECTURE_RECORD.md) — comprehensive historical record of all 15 phases, Supabase Auth architecture, Admin Moderation Desk, Turfs Near Me geolocation, User Dashboard, Indian payments, and repository parity syncs.
 - [Full Website Development Plan](FULL_WEBSITE_DEVELOPMENT_PLAN.md) — complete phased roadmap, MVP scope, dependencies, acceptance gates, risk register and owner decisions.
 - [Production Repository Parity Audit](PRODUCTION_REPOSITORY_PARITY_AUDIT.md) — source-based gap tracker; reconcile findings against tests and runtime evidence.
 - [Requirements and Acceptance Criteria](REQUIREMENTS_AND_ACCEPTANCE_CRITERIA.md) — feature-level definition of done, priorities and open product decisions.
