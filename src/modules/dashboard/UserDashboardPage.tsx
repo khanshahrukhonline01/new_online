@@ -73,6 +73,13 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
     })
   }, [])
 
+  // Auto-prompt login modal on mount if guest visits dashboard directly
+  useEffect(() => {
+    if (!authUser && onOpenAuth) {
+      onOpenAuth('login')
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sync athlete profile, confirmed RSVPs, and saved bookmarks
   useEffect(() => {
     let active = true
