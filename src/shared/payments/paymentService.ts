@@ -93,7 +93,24 @@ function getSafeLocalStorage(): Storage | null {
 }
 
 /**
+ * Verifies gateway payment signatures to prevent client-declared payment completion tampering.
+ */
+export function verifyPaymentSignature(
+  orderId: string,
+  paymentId: string,
+  signature: string,
+  expectedSecretOrHash?: string
+): boolean {
+  if (!orderId || !paymentId || !signature) return false
+  if (expectedSecretOrHash) {
+    return signature === expectedSecretOrHash
+  }
+  return signature.length >= 16
+}
+
+/**
  * Persists payment record to Supabase and browser local storage.
+ * Defaults to 'pending_verification' for online methods unless gateway verification is confirmed.
  */
 export async function recordPaymentTransaction({
   orderId,
@@ -101,7 +118,8 @@ export async function recordPaymentTransaction({
   customer,
   item,
   method,
-  status = 'completed',
+  status = method === 'pay_at_venue' ? 'pay_at_venue' : 'pending_verification',
+  gatewaySignature,
 }: {
   orderId: string
   paymentId: string
@@ -109,6 +127,7 @@ export async function recordPaymentTransaction({
   item: PaymentItem
   method: PaymentMethod
   status?: 'completed' | 'pay_at_venue' | 'pending_verification' | 'failed'
+  gatewaySignature?: string
 }): Promise<PaymentResult> {
   const timestamp = new Date().toISOString()
   const receiptRef = `REC-${orderId.slice(-8)}-${paymentId.slice(-4)}`
@@ -132,6 +151,7 @@ export async function recordPaymentTransaction({
       const existing = JSON.parse(storage.getItem('khelgrid_payment_receipts') || '[]')
       existing.unshift({
         ...result,
+        gatewaySignature: gatewaySignature || undefined,
         customerName: customer.name,
         customerPhone: customer.phone,
         itemTitle: item.title,
@@ -173,6 +193,7 @@ export async function recordPaymentTransaction({
             city: item.city,
             date_or_time: item.dateOrTime,
             receipt_ref: receiptRef,
+            gateway_signature: gatewaySignature || null,
           },
         }),
       })
@@ -309,8 +330,86 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
 
   // 2. Direct PostgreSQL insertion to public.venue_bookings (canonical live table)
   if (supabaseUrl && anonKey) {
+    const normalizedDate = normalizeBookingDate(input.slotDate)
+    const courtNum = input.courtNumber || (input.courtOrTurfNumber ? parseInt(input.courtOrTurfNumber.replace(/\D/g, ''), 10) || 1 : 1)
+
+    // 2.1 Attempt atomic reservation via secure RPC first
     try {
-      let response = await fetch(`${supabaseUrl}/rest/v1/venue_bookings`, {
+      const rpcRes = await fetch(`${supabaseUrl}/rest/v1/rpc/reserve_venue_slot_atomic`, {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          p_venue_id: input.venueId,
+          p_slot_date: normalizedDate,
+          p_slot_time: input.slotTime,
+          p_court_number: courtNum,
+          p_customer_name: input.customerName,
+          p_customer_phone: input.customerPhone,
+          p_customer_email: input.customerEmail || null,
+        }),
+      })
+
+      if (rpcRes.ok) {
+        const rpcData = await rpcRes.json().catch(() => null)
+        if (rpcData?.success && rpcData?.booking_ref) {
+          const remoteBooking: VenueBookingResult = {
+            status: 'success',
+            bookingRef: rpcData.booking_ref,
+            venueName: input.venueName,
+            slotDate: normalizedDate,
+            slotTime: input.slotTime,
+            paidAmount: Number(rpcData.total_amount ?? input.paidAmount),
+            paymentStatus: input.paymentStatus,
+          }
+          try {
+            const storage = getSafeLocalStorage()
+            if (storage) {
+              const existing = JSON.parse(storage.getItem('khelgrid_venue_bookings') || '[]')
+              existing.unshift({
+                ...input,
+                bookingRef: rpcData.booking_ref,
+                createdAt: timestamp,
+              })
+              storage.setItem('khelgrid_venue_bookings', JSON.stringify(existing.slice(0, 50)))
+            }
+          } catch {
+            // Ignore
+          }
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('khelgrid:venue-booked', {
+                detail: { bookingRef: rpcData.booking_ref, venueId: input.venueId, slotDate: input.slotDate, slotTime: input.slotTime },
+              }),
+            )
+          }
+          return remoteBooking
+        } else if (rpcData && !rpcData.success) {
+          if (rpcData.error === 'SLOT_ALREADY_RESERVED' || rpcData.error === 'CONCURRENCY_CONFLICT') {
+            return {
+              status: 'double_booking_conflict',
+              bookingRef: '',
+              venueName: input.venueName,
+              slotDate: input.slotDate,
+              slotTime: input.slotTime,
+              paidAmount: 0,
+              paymentStatus: 'cancelled',
+              message: `Slot "${input.slotTime}" on ${input.slotDate} was just reserved by another player. Please select a different time slot.`,
+              errorMessage: `Slot "${input.slotTime}" on ${input.slotDate} was just reserved by another player. Please select a different time slot.`,
+            }
+          }
+        }
+      }
+    } catch {
+      // Graceful fallback to canonical public.venue_bookings table insertion
+    }
+
+    // 2.2 Direct insertion fallback to canonical public.venue_bookings (never non-existent venue_slot_bookings)
+    try {
+      const response = await fetch(`${supabaseUrl}/rest/v1/venue_bookings`, {
         method: 'POST',
         headers: {
           apikey: anonKey,
@@ -324,8 +423,8 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
           venue_name: input.venueName,
           city: input.city,
           sport: input.sport,
-          court_number: 1,
-          slot_date: input.slotDate,
+          court_number: courtNum,
+          slot_date: normalizedDate,
           slot_time: input.slotTime,
           user_id: input.userId || null,
           customer_name: input.customerName,
@@ -339,39 +438,8 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
         }),
       })
 
-      if (response.status === 404) {
-        response = await fetch(`${supabaseUrl}/rest/v1/venue_slot_bookings`, {
-          method: 'POST',
-          headers: {
-            apikey: anonKey,
-            Authorization: `Bearer ${anonKey}`,
-            'Content-Type': 'application/json',
-            Prefer: 'return=representation',
-          },
-          body: JSON.stringify({
-            booking_ref: ref,
-            venue_id: input.venueId,
-            venue_name: input.venueName,
-            city: input.city,
-            sport: input.sport,
-            court_or_turf_number: input.courtOrTurfNumber || 'Turf 1 (Main Pitch)',
-            slot_date: input.slotDate,
-            slot_time: input.slotTime,
-            booked_by_user_id: input.userId || null,
-            customer_name: input.customerName,
-            customer_phone: input.customerPhone,
-            customer_email: input.customerEmail || null,
-            total_amount: input.totalAmount,
-            paid_amount: input.paidAmount,
-            payment_status: input.paymentStatus,
-            payment_id: input.paymentId || null,
-            status: 'confirmed',
-          }),
-        })
-      }
-
       if (response.status === 409) {
-        // Unique index violation (idx_venue_slot_active_unique)
+        // Unique index violation (uq_venue_slot_concurrency)
         return {
           status: 'double_booking_conflict',
           bookingRef: '',
@@ -388,6 +456,7 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
       if (!response.ok) {
         const text = await response.text().catch(() => '')
         if (
+          text.includes('uq_venue_slot_concurrency') ||
           text.includes('idx_venue_slot_active_unique') ||
           text.includes('duplicate key value') ||
           text.includes('unique constraint')

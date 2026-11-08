@@ -417,11 +417,20 @@ BEGIN
 
   v_court := coalesce(p_court_number, 1);
 
-  -- Authoritative venue pricing lookup
+  -- Release expired pending reservations (> 15 mins)
+  UPDATE public.venue_bookings
+  SET status = 'cancelled',
+      cancellation_reason = 'Pending reservation window expired',
+      updated_at = now()
+  WHERE status = 'pending'
+    AND expires_at IS NOT NULL
+    AND expires_at < now();
+
+  -- Authoritative venue pricing lookup (safe uuid/text comparison)
   SELECT id, name, city, sport, coalesce(plan_price, 500.00) as price
   INTO v_venue_record
   FROM public.venues
-  WHERE id = p_venue_id OR slug = p_venue_id
+  WHERE (slug = trim(p_venue_id) OR id::text = trim(p_venue_id))
   LIMIT 1;
 
   IF NOT FOUND THEN
@@ -574,5 +583,156 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.get_listing_subscription_by_order(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_listing_subscription_by_order(text) TO anon, authenticated, service_role;
+
+-- 4.6 Legacy/Unified create_venue_slot_booking wrapper (backward compatibility)
+CREATE OR REPLACE FUNCTION public.create_venue_slot_booking(
+  p_venue_id text,
+  p_venue_name text,
+  p_sport text,
+  p_slot_date text,
+  p_slot_time text,
+  p_court_number int,
+  p_customer_name text,
+  p_customer_phone text,
+  p_customer_email text DEFAULT NULL,
+  p_total_amount numeric DEFAULT 0
+) RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path = public, auth, pg_temp
+AS $$
+DECLARE
+  v_user_id uuid;
+  v_booking_ref text;
+  v_voucher_token text;
+  v_clean_phone text;
+  v_clean_name text;
+  v_clean_date text;
+  v_clean_time text;
+  v_venue record;
+  v_authoritative_price numeric;
+  v_conflict_count int;
+  v_inserted_id uuid;
+BEGIN
+  v_user_id := auth.uid();
+  v_clean_name := trim(coalesce(p_customer_name, ''));
+  v_clean_phone := regexp_replace(coalesce(p_customer_phone, ''), '[^0-9]', '', 'g');
+  v_clean_date := trim(coalesce(p_slot_date, ''));
+  v_clean_time := trim(coalesce(p_slot_time, ''));
+
+  -- Auto-normalize relative dates
+  IF lower(v_clean_date) = 'today' THEN
+    v_clean_date := to_char(now() AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD');
+  ELSIF lower(v_clean_date) = 'tomorrow' THEN
+    v_clean_date := to_char((now() AT TIME ZONE 'Asia/Kolkata') + interval '1 day', 'YYYY-MM-DD');
+  ELSIF lower(v_clean_date) IN ('day after', 'day after tomorrow') THEN
+    v_clean_date := to_char((now() AT TIME ZONE 'Asia/Kolkata') + interval '2 days', 'YYYY-MM-DD');
+  END IF;
+
+  IF char_length(v_clean_name) < 2 OR char_length(v_clean_name) > 120 THEN
+    RETURN jsonb_build_object('status', 'error', 'error_code', 'INVALID_NAME', 'message', 'Invalid customer name.');
+  END IF;
+
+  IF char_length(v_clean_phone) < 10 OR char_length(v_clean_phone) > 15 THEN
+    RETURN jsonb_build_object('status', 'error', 'error_code', 'INVALID_PHONE', 'message', 'Valid mobile number required.');
+  END IF;
+
+  IF v_clean_date !~ '^\d{4}-\d{2}-\d{2}$' THEN
+    RETURN jsonb_build_object('status', 'error', 'error_code', 'INVALID_DATE', 'message', 'Invalid slot date (YYYY-MM-DD required).');
+  END IF;
+
+  IF p_court_number IS NULL OR p_court_number <= 0 THEN
+    RETURN jsonb_build_object('status', 'error', 'error_code', 'INVALID_COURT', 'message', 'Invalid court number.');
+  END IF;
+
+  -- Safe uuid/text lookup and pricing fallback
+  SELECT name, coalesce(plan_price, 500.00) as price INTO v_venue 
+  FROM public.venues 
+  WHERE (slug = trim(p_venue_id) OR id::text = trim(p_venue_id)) 
+  LIMIT 1;
+
+  IF v_venue.name IS NOT NULL THEN
+    v_authoritative_price := coalesce(v_venue.price, p_total_amount);
+  ELSE
+    v_authoritative_price := p_total_amount;
+  END IF;
+
+  -- Concurrency serialization: advisory transaction lock on specific venue slot
+  PERFORM pg_advisory_xact_lock(hashtext(trim(p_venue_id) || ':' || v_clean_date || ':' || v_clean_time || ':' || p_court_number::text));
+
+  -- Check for active reservation (confirmed or pending)
+  SELECT COUNT(*) INTO v_conflict_count
+  FROM public.venue_bookings
+  WHERE venue_id = trim(p_venue_id)
+    AND slot_date = v_clean_date
+    AND slot_time = v_clean_time
+    AND court_number = p_court_number
+    AND status IN ('confirmed', 'pending')
+    AND (expires_at IS NULL OR expires_at > now());
+
+  IF v_conflict_count > 0 THEN
+    RETURN jsonb_build_object('status', 'error', 'error_code', 'SLOT_UNAVAILABLE', 'message', 'The requested slot has already been reserved.');
+  END IF;
+
+  v_booking_ref := 'VB-' || upper(substr(encode(gen_random_bytes(3), 'hex'), 1, 6)) || '-' || to_char(now(), 'MMDD');
+  v_voucher_token := encode(gen_random_bytes(16), 'hex');
+
+  BEGIN
+    INSERT INTO public.venue_bookings (
+      booking_ref,
+      venue_id,
+      venue_name,
+      sport,
+      slot_date,
+      slot_time,
+      court_number,
+      customer_name,
+      customer_phone,
+      customer_email,
+      total_amount,
+      paid_amount,
+      payment_status,
+      status,
+      voucher_token,
+      user_id,
+      expires_at
+    ) VALUES (
+      v_booking_ref,
+      trim(p_venue_id),
+      coalesce(v_venue.name, p_venue_name),
+      p_sport,
+      v_clean_date,
+      v_clean_time,
+      p_court_number,
+      v_clean_name,
+      v_clean_phone,
+      p_customer_email,
+      v_authoritative_price,
+      0,
+      'pending',
+      'pending',
+      v_voucher_token,
+      v_user_id,
+      now() + interval '15 minutes'
+    ) RETURNING id INTO v_inserted_id;
+
+    RETURN jsonb_build_object(
+      'status', 'success',
+      'booking_id', v_inserted_id,
+      'booking_ref', v_booking_ref,
+      'voucher_token', v_voucher_token,
+      'amount', v_authoritative_price,
+      'slot_date', v_clean_date,
+      'slot_time', v_clean_time
+    );
+  EXCEPTION WHEN unique_violation THEN
+    RETURN jsonb_build_object('status', 'error', 'error_code', 'CONCURRENCY_CONFLICT', 'message', 'The requested slot was just reserved by another player.');
+  END;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.create_venue_slot_booking(text, text, text, text, text, int, text, text, text, numeric) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_venue_slot_booking(text, text, text, text, text, int, text, text, text, numeric) TO anon, authenticated, service_role;
 
 COMMIT;

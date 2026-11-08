@@ -15,7 +15,7 @@ export type CatalogueResult<T> =
   | { status: 'unavailable'; data: []; message: string }
 
 type QueryOptions = {
-  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities' | 'pickup_games' | 'site_announcements' | 'reviews' | 'sports_books' | 'tournaments_and_events' | 'coach_inquiries' | 'venue_slot_bookings'
+  table: 'sports' | 'opportunities' | 'venues' | 'academies' | 'coaches' | 'events' | 'cities' | 'pickup_games' | 'site_announcements' | 'reviews' | 'sports_books' | 'tournaments_and_events' | 'coach_inquiries' | 'venue_bookings' | 'venue_slot_bookings'
   select: string
   order: string
   filters: Record<string, string>

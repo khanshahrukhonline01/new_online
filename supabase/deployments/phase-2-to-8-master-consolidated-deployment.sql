@@ -658,9 +658,9 @@ BEGIN
     RETURN jsonb_build_object('status', 'error', 'error_code', 'INVALID_COURT', 'message', 'Invalid court number.');
   END IF;
 
-  SELECT name, price_per_hour INTO v_venue FROM public.venues WHERE id = trim(p_venue_id) OR slug = trim(p_venue_id) LIMIT 1;
+  SELECT name, coalesce(plan_price, 500.00) as price INTO v_venue FROM public.venues WHERE (slug = trim(p_venue_id) OR id::text = trim(p_venue_id)) LIMIT 1;
   IF v_venue.name IS NOT NULL THEN
-    v_authoritative_price := coalesce(v_venue.price_per_hour, p_total_amount);
+    v_authoritative_price := coalesce(v_venue.price, p_total_amount);
   ELSE
     v_authoritative_price := p_total_amount;
   END IF;

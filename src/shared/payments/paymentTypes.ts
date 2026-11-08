@@ -64,6 +64,8 @@ export interface VenueSlotBookingInput {
   userId?: string
   customerEmail?: string
   courtOrTurfNumber?: string
+  courtNumber?: number
+  gatewaySignature?: string
 }
 
 export interface VenueBookingResult {
