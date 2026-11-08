@@ -63,10 +63,35 @@ describe('KhelGrid Security Programme — Isolated PostgreSQL 17 Test Suite', ()
           created_at timestamptz NOT NULL DEFAULT now()
         );
 
+        -- Insert pre-existing duplicates (historical test data simulation)
+        INSERT INTO public.venue_bookings (
+          id, booking_ref, venue_id, venue_name, slot_date, slot_time, court_number,
+          customer_name, customer_phone, total_amount, status
+        ) VALUES
+          ('11111111-2222-3333-4444-555555555551', 'VB-DUP-1', 'v-1', 'Test Venue', 'Today', '6:00 PM – 7:00 PM', 1, 'Kavita Singh', '9876543210', 500, 'confirmed'),
+          ('11111111-2222-3333-4444-555555555552', 'VB-DUP-2', 'v-1', 'Test Venue', 'Today', '6:00 PM – 7:00 PM', 1, 'Kavita Singh', '9876543210', 500, 'confirmed');
+
+        -- Deduplicate historical duplicate slots before index creation:
+        -- Keep newest record active, transition older duplicates to 'superseded'
+        UPDATE public.venue_bookings
+        SET status = 'superseded'
+        WHERE id IN (
+          SELECT vb1.id
+          FROM public.venue_bookings vb1
+          JOIN public.venue_bookings vb2
+            ON vb1.venue_id = vb2.venue_id
+           AND vb1.slot_date = vb2.slot_date
+           AND vb1.slot_time = vb2.slot_time
+           AND coalesce(vb1.court_number, 1) = coalesce(vb2.court_number, 1)
+           AND (vb2.created_at > vb1.created_at OR (vb2.created_at = vb1.created_at AND vb2.id > vb1.id))
+          WHERE vb1.status IN ('confirmed', 'pending')
+            AND vb2.status IN ('confirmed', 'pending')
+        );
+
         -- Install partial unique index preventing double allocation
         CREATE UNIQUE INDEX uq_venue_slot_concurrency
           ON public.venue_bookings(venue_id, slot_date, slot_time, court_number)
-          WHERE status IN ('confirmed', 'pending', 'reserved');
+          WHERE status IN ('confirmed', 'pending');
       `)
 
       // First booking succeeds
@@ -107,8 +132,13 @@ describe('KhelGrid Security Programme — Isolated PostgreSQL 17 Test Suite', ()
         );
       `)
 
+      // Total historical records preserved intact (zero data deletion)
       const totalBookings = db.public.one(`SELECT count(*) as cnt FROM public.venue_bookings;`)
-      expect(Number(totalBookings.cnt)).toBe(2)
+      expect(Number(totalBookings.cnt)).toBe(4)
+
+      // Active bookings protected by the unique partial index
+      const activeBookings = db.public.one(`SELECT count(*) as cnt FROM public.venue_bookings WHERE status IN ('confirmed', 'pending');`)
+      expect(Number(activeBookings.cnt)).toBe(3)
     })
   })
 

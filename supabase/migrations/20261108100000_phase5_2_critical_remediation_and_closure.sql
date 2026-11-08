@@ -687,6 +687,18 @@ CREATE POLICY "listing_subscriptions_service_all"
   WITH CHECK (true);
 
 -- 3.4 public.venue_bookings (Removing broad SELECT)
+ALTER TABLE public.venue_bookings
+  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS voucher_token text,
+  ADD COLUMN IF NOT EXISTS status text DEFAULT 'confirmed',
+  ADD COLUMN IF NOT EXISTS court_number int DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS expires_at timestamptz,
+  ADD COLUMN IF NOT EXISTS cancellation_reason text,
+  ADD COLUMN IF NOT EXISTS customer_email text,
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+
+CREATE INDEX IF NOT EXISTS idx_venue_bookings_user_id ON public.venue_bookings(user_id);
+
 ALTER TABLE public.venue_bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.venue_bookings FORCE ROW LEVEL SECURITY;
 
@@ -715,6 +727,11 @@ CREATE POLICY "venue_bookings_service_all"
   WITH CHECK (true);
 
 -- 3.5 public.trial_reminders (Removing broad SELECT/UPDATE)
+ALTER TABLE public.trial_reminders
+  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_trial_reminders_user_id ON public.trial_reminders(user_id);
+
 ALTER TABLE public.trial_reminders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trial_reminders FORCE ROW LEVEL SECURITY;
 
@@ -796,8 +813,21 @@ DROP POLICY IF EXISTS "athlete_profiles_owner_read" ON public.athlete_profiles;
 DROP POLICY IF EXISTS "athlete_profiles_owner_write" ON public.athlete_profiles;
 DROP POLICY IF EXISTS "athlete_profiles_service_all" ON public.athlete_profiles;
 
+ALTER TABLE public.athlete_profiles
+  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS is_public_cv boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS consent_scout_sharing boolean DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS idx_athlete_profiles_user_id ON public.athlete_profiles(user_id);
+
 ALTER TABLE public.athlete_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.athlete_profiles FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY "athlete_profiles_public_published_read"
+  ON public.athlete_profiles
+  FOR SELECT
+  TO anon, authenticated
+  USING (publication_status = 'published');
 
 CREATE POLICY "athlete_profiles_owner_read"
   ON public.athlete_profiles
@@ -862,6 +892,31 @@ CREATE POLICY "guardian_consents_service_all"
   WITH CHECK (true);
 
 -- Immutable User Consent log (No user DELETE)
+CREATE TABLE IF NOT EXISTS public.user_consents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  consent_type text NOT NULL CHECK (
+    consent_type IN (
+      'terms_of_service',
+      'privacy_policy',
+      'public_profile_display',
+      'contact_sharing_scouts',
+      'guardian_minor_consent',
+      'telemetry_video_sharing'
+    )
+  ),
+  is_given boolean NOT NULL DEFAULT true,
+  given_at timestamptz NOT NULL DEFAULT now(),
+  revoked_at timestamptz,
+  ip_address text,
+  user_agent text,
+  version text NOT NULL DEFAULT '2026-v1.0',
+  CONSTRAINT uq_user_consent UNIQUE (user_id, consent_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_consents_user ON public.user_consents(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_consents_type ON public.user_consents(consent_type);
+
 ALTER TABLE public.user_consents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_consents FORCE ROW LEVEL SECURITY;
 
@@ -958,9 +1013,73 @@ GRANT EXECUTE ON FUNCTION public.get_athlete_public_cv(text) TO anon, authentica
 -- 6. STAGE G: BOOKING CONCURRENCY & SERVER-SIDE PRICING
 -- =============================================================================
 
+-- -----------------------------------------------------------------------------
+-- Step 1: Normalize relative dates ('Today') in historical records to their creation calendar date (IST)
+-- -----------------------------------------------------------------------------
+UPDATE public.venue_bookings
+SET slot_date = to_char(created_at AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD')
+WHERE slot_date = 'Today';
+
+-- -----------------------------------------------------------------------------
+-- Step 2: Deduplicate historical duplicate slots before index creation:
+-- Keeps the newest record active and transitions older duplicates to 'superseded'
+-- Preserves 100% of historical records without deleting any customer data.
+-- -----------------------------------------------------------------------------
+UPDATE public.venue_bookings
+SET status = 'superseded',
+    cancellation_reason = 'Reconciled duplicate automated test run',
+    updated_at = now()
+WHERE id IN (
+  SELECT id
+  FROM (
+    SELECT id,
+           ROW_NUMBER() OVER (
+             PARTITION BY venue_id, slot_date, slot_time, coalesce(court_number, 1)
+             ORDER BY created_at DESC, id DESC
+           ) as rn
+    FROM public.venue_bookings
+    WHERE status IN ('confirmed', 'pending')
+  ) sub
+  WHERE rn > 1
+);
+
+-- Step 3: Transition past historical confirmed bookings to completed
+-- (since match/slot dates on Nov 6 & 7, 2026 have already elapsed)
+UPDATE public.venue_bookings
+SET status = 'completed',
+    updated_at = now()
+WHERE status = 'confirmed'
+  AND slot_date < to_char(now() AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD');
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_venue_slot_concurrency
   ON public.venue_bookings(venue_id, slot_date, slot_time, court_number)
-  WHERE status IN ('confirmed', 'pending', 'reserved');
+  WHERE status IN ('confirmed', 'pending');
+
+-- Explicit database state transition for expiring stale pending venue reservations (> 15 min)
+CREATE OR REPLACE FUNCTION public.expire_stale_venue_reservations()
+RETURNS int
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_expired_count int;
+BEGIN
+  UPDATE public.venue_bookings
+  SET status = 'expired',
+      updated_at = now()
+  WHERE status = 'pending'
+    AND (
+      (expires_at IS NOT NULL AND expires_at < clock_timestamp())
+      OR (expires_at IS NULL AND created_at < clock_timestamp() - interval '15 minutes')
+    );
+  GET DIAGNOSTICS v_expired_count = ROW_COUNT;
+  RETURN v_expired_count;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.expire_stale_venue_reservations() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.expire_stale_venue_reservations() TO anon, authenticated, service_role;
 
 CREATE OR REPLACE FUNCTION public.create_venue_slot_booking(
   p_venue_id text,
@@ -1003,6 +1122,15 @@ BEGIN
   v_clean_date := trim(coalesce(p_slot_date, ''));
   v_clean_time := trim(coalesce(p_slot_time, ''));
 
+  -- Auto-normalize relative dates
+  IF lower(v_clean_date) = 'today' THEN
+    v_clean_date := to_char(now() AT TIME ZONE 'Asia/Kolkata', 'YYYY-MM-DD');
+  ELSIF lower(v_clean_date) = 'tomorrow' THEN
+    v_clean_date := to_char((now() AT TIME ZONE 'Asia/Kolkata') + interval '1 day', 'YYYY-MM-DD');
+  ELSIF lower(v_clean_date) IN ('day after', 'day after tomorrow') THEN
+    v_clean_date := to_char((now() AT TIME ZONE 'Asia/Kolkata') + interval '2 days', 'YYYY-MM-DD');
+  END IF;
+
   -- 1. Input Validation
   IF char_length(v_clean_name) < 2 OR char_length(v_clean_name) > 120 THEN
     RETURN jsonb_build_object('status', 'error', 'error_code', 'INVALID_NAME', 'message', 'Customer name is invalid.');
@@ -1032,19 +1160,30 @@ BEGIN
     v_authoritative_price := p_total_amount;
   END IF;
 
-  -- 3. Release Expired Pending Reservations (> 15 minutes old)
-  UPDATE public.venue_bookings
-  SET status = 'expired'
-  WHERE status = 'pending'
-    AND created_at < (now() - interval '15 minutes')
-    AND venue_id = trim(p_venue_id)
-    AND slot_date = v_clean_date;
+  -- 3. Explicit database state transition: sweep expired pending reservations
+  PERFORM public.expire_stale_venue_reservations();
 
-  -- 4. Generate high-entropy 192-bit voucher token and unique reference
+  -- 4. Concurrency serialization: advisory transaction lock on specific venue slot
+  PERFORM pg_advisory_xact_lock(hashtext(trim(p_venue_id) || ':' || v_clean_date || ':' || v_clean_time || ':' || p_court_number::text));
+
+  -- 5. Check for active reservation (confirmed or pending)
+  SELECT COUNT(*) INTO v_conflict_count
+  FROM public.venue_bookings
+  WHERE venue_id = trim(p_venue_id)
+    AND slot_date = v_clean_date
+    AND slot_time = v_clean_time
+    AND court_number = p_court_number
+    AND status IN ('confirmed', 'pending');
+
+  IF v_conflict_count > 0 THEN
+    RETURN jsonb_build_object('status', 'error', 'error_code', 'SLOT_UNAVAILABLE', 'message', 'The requested slot has already been reserved.');
+  END IF;
+
+  -- 6. Generate high-entropy 192-bit voucher token and unique reference
   v_booking_ref := 'VB-' || upper(substr(md5(random()::text), 1, 4)) || '-' || to_char(now(), 'MMDD') || '-' || substr(md5(clock_timestamp()::text), 1, 4);
   v_voucher_token := encode(gen_random_bytes(24), 'hex');
 
-  -- 5. Atomic Insertion with Exception Handling for Concurrency Conflicts
+  -- 7. Atomic Insertion with Exception Handling for Concurrency Conflicts
   BEGIN
     INSERT INTO public.venue_bookings (
       booking_ref,
@@ -1062,7 +1201,8 @@ BEGIN
       payment_status,
       status,
       voucher_token,
-      user_id
+      user_id,
+      expires_at
     ) VALUES (
       v_booking_ref,
       trim(p_venue_id),
@@ -1079,7 +1219,8 @@ BEGIN
       'pending',
       'pending',
       v_voucher_token,
-      v_user_id
+      v_user_id,
+      clock_timestamp() + interval '15 minutes'
     ) RETURNING id INTO v_inserted_id;
   EXCEPTION WHEN unique_violation THEN
     RETURN jsonb_build_object(

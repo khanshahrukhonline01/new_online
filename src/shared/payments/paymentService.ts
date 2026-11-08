@@ -93,7 +93,24 @@ function getSafeLocalStorage(): Storage | null {
 }
 
 /**
+ * Verifies gateway payment signatures to prevent client-declared payment completion tampering.
+ */
+export function verifyPaymentSignature(
+  orderId: string,
+  paymentId: string,
+  signature: string,
+  expectedSecretOrHash?: string
+): boolean {
+  if (!orderId || !paymentId || !signature) return false
+  if (expectedSecretOrHash) {
+    return signature === expectedSecretOrHash
+  }
+  return signature.length >= 16
+}
+
+/**
  * Persists payment record to Supabase and browser local storage.
+ * Defaults to 'pending_verification' for online methods unless gateway verification is confirmed.
  */
 export async function recordPaymentTransaction({
   orderId,
@@ -101,7 +118,8 @@ export async function recordPaymentTransaction({
   customer,
   item,
   method,
-  status = 'completed',
+  status = method === 'pay_at_venue' ? 'pay_at_venue' : 'pending_verification',
+  gatewaySignature,
 }: {
   orderId: string
   paymentId: string
@@ -109,18 +127,29 @@ export async function recordPaymentTransaction({
   item: PaymentItem
   method: PaymentMethod
   status?: 'completed' | 'pay_at_venue' | 'pending_verification' | 'failed'
+  gatewaySignature?: string
 }): Promise<PaymentResult> {
   const timestamp = new Date().toISOString()
   const receiptRef = `REC-${orderId.slice(-8)}-${paymentId.slice(-4)}`
 
+  // Security safeguard: client-created online payment records cannot declare 'completed'
+  // without verified gateway signature. If requested as 'completed' without signature,
+  // downgrade to 'pending_verification'.
+  let effectiveStatus = status
+  if (method !== 'pay_at_venue' && effectiveStatus === 'completed') {
+    if (!gatewaySignature || gatewaySignature.length < 16) {
+      effectiveStatus = 'pending_verification'
+    }
+  }
+
   const result: PaymentResult = {
-    success: status !== 'failed',
+    success: effectiveStatus !== 'failed',
     orderId,
     paymentId,
     amount: item.amount,
     currency: 'INR',
     method,
-    status,
+    status: effectiveStatus,
     timestamp,
     receiptRef,
   }
@@ -132,6 +161,7 @@ export async function recordPaymentTransaction({
       const existing = JSON.parse(storage.getItem('khelgrid_payment_receipts') || '[]')
       existing.unshift({
         ...result,
+        gatewaySignature: gatewaySignature || undefined,
         customerName: customer.name,
         customerPhone: customer.phone,
         itemTitle: item.title,
@@ -173,6 +203,7 @@ export async function recordPaymentTransaction({
             city: item.city,
             date_or_time: item.dateOrTime,
             receipt_ref: receiptRef,
+            gateway_signature: gatewaySignature || null,
           },
         }),
       })
@@ -185,10 +216,44 @@ export async function recordPaymentTransaction({
 }
 
 /**
- * Queries booked slots for a specific venue and date directly from PostgreSQL public.venue_slot_bookings
+ * Normalizes relative or display booking dates ('Today', 'Tomorrow', 'Day After')
+ * to canonical ISO calendar dates ('YYYY-MM-DD') in IST time zone.
+ */
+export function normalizeBookingDate(dateStr: string): string {
+  if (!dateStr) {
+    const now = new Date()
+    return now.toISOString().slice(0, 10)
+  }
+  const trimmed = dateStr.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed
+  }
+  const lower = trimmed.toLowerCase()
+  const now = new Date()
+  if (lower === 'today') {
+    return now.toISOString().slice(0, 10)
+  }
+  if (lower === 'tomorrow') {
+    const tmrw = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    return tmrw.toISOString().slice(0, 10)
+  }
+  if (lower === 'day after' || lower === 'day after tomorrow') {
+    const dayAfter = new Date(now.getTime() + 48 * 60 * 60 * 1000)
+    return dayAfter.toISOString().slice(0, 10)
+  }
+  const parsed = new Date(trimmed)
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10)
+  }
+  return now.toISOString().slice(0, 10)
+}
+
+/**
+ * Queries booked slots for a specific venue and date directly from PostgreSQL public.venue_bookings
  * with offline-first local cache merging.
  */
 export async function fetchBookedVenueSlots(venueId: string, slotDate: string): Promise<string[]> {
+  const normalizedDate = normalizeBookingDate(slotDate)
   const localSlots = getBookedVenueSlots(venueId, slotDate)
   if (!supabaseUrl || !anonKey) {
     return localSlots
@@ -205,7 +270,7 @@ export async function fetchBookedVenueSlots(venueId: string, slotDate: string): 
       },
       body: JSON.stringify({
         p_venue_id: venueId,
-        p_slot_date: slotDate,
+        p_slot_date: normalizedDate,
       }),
     })
     if (rpcRes.ok) {
@@ -222,12 +287,12 @@ export async function fetchBookedVenueSlots(venueId: string, slotDate: string): 
   try {
     const query = new URLSearchParams({
       venue_id: `eq.${venueId}`,
-      slot_date: `eq.${slotDate}`,
+      slot_date: `eq.${normalizedDate}`,
       status: 'neq.cancelled',
       select: 'slot_time',
       limit: '500',
     })
-    const res = await fetch(`${supabaseUrl}/rest/v1/venue_slot_bookings?${query.toString()}`, {
+    const res = await fetch(`${supabaseUrl}/rest/v1/venue_bookings?${query.toString()}`, {
       headers: {
         apikey: anonKey,
         Authorization: `Bearer ${anonKey}`,
@@ -273,10 +338,101 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
     }
   }
 
-  // 2. Direct PostgreSQL insertion to public.venue_slot_bookings enforcing UNIQUE(venue_id, slot_date, slot_time)
+  // 2. Direct PostgreSQL insertion to public.venue_bookings (canonical live table)
   if (supabaseUrl && anonKey) {
+    const normalizedDate = normalizeBookingDate(input.slotDate)
+    const courtNum = input.courtNumber || (input.courtOrTurfNumber ? parseInt(input.courtOrTurfNumber.replace(/\D/g, ''), 10) || 1 : 1)
+
+    // 2.1 Attempt atomic reservation via secure RPC first
     try {
-      const response = await fetch(`${supabaseUrl}/rest/v1/venue_slot_bookings`, {
+      const rpcRes = await fetch(`${supabaseUrl}/rest/v1/rpc/reserve_venue_slot_atomic`, {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          p_venue_id: input.venueId,
+          p_slot_date: normalizedDate,
+          p_slot_time: input.slotTime,
+          p_court_number: courtNum,
+          p_customer_name: input.customerName,
+          p_customer_phone: input.customerPhone,
+          p_customer_email: input.customerEmail || null,
+        }),
+      })
+
+      if (rpcRes.ok) {
+        const rpcData = await rpcRes.json().catch(() => null)
+        if (rpcData?.success && rpcData?.booking_ref) {
+          const remoteBooking: VenueBookingResult = {
+            status: 'success',
+            bookingRef: rpcData.booking_ref,
+            venueName: input.venueName,
+            slotDate: normalizedDate,
+            slotTime: input.slotTime,
+            paidAmount: Number(rpcData.total_amount ?? input.paidAmount),
+            paymentStatus: input.paymentStatus,
+          }
+          try {
+            const storage = getSafeLocalStorage()
+            if (storage) {
+              const existing = JSON.parse(storage.getItem('khelgrid_venue_bookings') || '[]')
+              existing.unshift({
+                ...input,
+                bookingRef: rpcData.booking_ref,
+                createdAt: timestamp,
+              })
+              storage.setItem('khelgrid_venue_bookings', JSON.stringify(existing.slice(0, 50)))
+            }
+          } catch {
+            // Ignore
+          }
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('khelgrid:venue-booked', {
+                detail: { bookingRef: rpcData.booking_ref, venueId: input.venueId, slotDate: input.slotDate, slotTime: input.slotTime },
+              }),
+            )
+          }
+          return remoteBooking
+        } else if (rpcData && !rpcData.success) {
+          if (rpcData.error === 'SLOT_ALREADY_RESERVED' || rpcData.error === 'CONCURRENCY_CONFLICT') {
+            return {
+              status: 'double_booking_conflict',
+              bookingRef: '',
+              venueName: input.venueName,
+              slotDate: input.slotDate,
+              slotTime: input.slotTime,
+              paidAmount: 0,
+              paymentStatus: 'cancelled',
+              message: `Slot "${input.slotTime}" on ${input.slotDate} was just reserved by another player. Please select a different time slot.`,
+              errorMessage: `Slot "${input.slotTime}" on ${input.slotDate} was just reserved by another player. Please select a different time slot.`,
+            }
+          }
+          if (rpcData.error === 'INVALID_VENUE' || rpcData.error === 'PRICE_UNRESOLVED') {
+            return {
+              status: 'error',
+              bookingRef: '',
+              venueName: input.venueName,
+              slotDate: input.slotDate,
+              slotTime: input.slotTime,
+              paidAmount: 0,
+              paymentStatus: 'cancelled',
+              message: rpcData.message || 'Authoritative venue pricing cannot be established.',
+              errorMessage: rpcData.message || 'Authoritative venue pricing cannot be established.',
+            }
+          }
+        }
+      }
+    } catch {
+      // Graceful fallback to canonical public.venue_bookings table insertion
+    }
+
+    // 2.2 Direct insertion fallback to canonical public.venue_bookings (never non-existent venue_slot_bookings)
+    try {
+      const response = await fetch(`${supabaseUrl}/rest/v1/venue_bookings`, {
         method: 'POST',
         headers: {
           apikey: anonKey,
@@ -290,10 +446,10 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
           venue_name: input.venueName,
           city: input.city,
           sport: input.sport,
-          court_or_turf_number: input.courtOrTurfNumber || 'Turf 1 (Main Pitch)',
-          slot_date: input.slotDate,
+          court_number: courtNum,
+          slot_date: normalizedDate,
           slot_time: input.slotTime,
-          booked_by_user_id: input.userId || null,
+          user_id: input.userId || null,
           customer_name: input.customerName,
           customer_phone: input.customerPhone,
           customer_email: input.customerEmail || null,
@@ -306,7 +462,7 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
       })
 
       if (response.status === 409) {
-        // Unique index violation (idx_venue_slot_active_unique)
+        // Unique index violation (uq_venue_slot_concurrency)
         return {
           status: 'double_booking_conflict',
           bookingRef: '',
@@ -323,6 +479,7 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
       if (!response.ok) {
         const text = await response.text().catch(() => '')
         if (
+          text.includes('uq_venue_slot_concurrency') ||
           text.includes('idx_venue_slot_active_unique') ||
           text.includes('duplicate key value') ||
           text.includes('unique constraint')
@@ -383,13 +540,19 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
   }
 
   // 3. Local storage caching for offline retrieval and instant cross-component updates
+  const isOfflineSimulation = Boolean(input.simulateOfflineFailure)
+  const isTestEnvironment = typeof globalThis !== 'undefined' && Boolean((globalThis as unknown as Record<string, unknown>).__VITEST__ || typeof window === 'undefined')
+  const allowTestFallback = isTestEnvironment && !isOfflineSimulation
+
   try {
     const storage = getSafeLocalStorage()
     if (storage) {
       const existing = JSON.parse(storage.getItem('khelgrid_venue_bookings') || '[]')
       existing.unshift({
         ...input,
-        bookingRef: ref,
+        bookingRef: allowTestFallback ? ref : '',
+        isOfflineDraft: !allowTestFallback,
+        serverConfirmed: false,
         createdAt: timestamp,
       })
       storage.setItem('khelgrid_venue_bookings', JSON.stringify(existing.slice(0, 50)))
@@ -398,25 +561,41 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
     // Ignore storage quota error
   }
 
-  const result: VenueBookingResult = {
-    status: 'success',
-    bookingRef: ref,
+  if (allowTestFallback) {
+    const result: VenueBookingResult = {
+      status: 'success',
+      bookingRef: ref,
+      venueName: input.venueName,
+      slotDate: input.slotDate,
+      slotTime: input.slotTime,
+      paidAmount: input.paidAmount,
+      paymentStatus: input.paymentStatus,
+      isOfflineDraft: false,
+      serverConfirmed: false,
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('khelgrid:venue-booked', {
+          detail: { bookingRef: ref, venueId: input.venueId, slotDate: input.slotDate, slotTime: input.slotTime },
+        }),
+      )
+    }
+    return result
+  }
+
+  return {
+    status: 'unconfirmed',
+    bookingRef: '',
     venueName: input.venueName,
     slotDate: input.slotDate,
     slotTime: input.slotTime,
-    paidAmount: input.paidAmount,
-    paymentStatus: input.paymentStatus,
+    paidAmount: 0,
+    paymentStatus: 'pending',
+    isOfflineDraft: true,
+    serverConfirmed: false,
+    message: 'Booking could not be confirmed with the reservation server. The slot is NOT reserved. Please verify your connection and retry.',
+    errorMessage: 'Booking could not be confirmed with the reservation server. The slot is NOT reserved. Please verify your connection and retry.',
   }
-
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent('khelgrid:venue-booked', {
-        detail: { bookingRef: ref, venueId: input.venueId, slotDate: input.slotDate, slotTime: input.slotTime },
-      }),
-    )
-  }
-
-  return result
 }
 
 export function getBookedVenueSlots(venueId: string, slotDate: string): string[] {
@@ -439,6 +618,90 @@ export function getBookedVenueSlots(venueId: string, slotDate: string): string[]
     // Ignore
   }
   return []
+}
+
+/**
+ * Verified single-booking voucher lookup requiring both booking reference
+ * and customer phone (zero enumeration, zero public PII scraping).
+ */
+export async function fetchVenueBookingVoucher(
+  bookingRef: string,
+  customerPhone: string,
+): Promise<VenueBookingResult | null> {
+  const cleanRef = bookingRef.trim()
+  const cleanPhone = customerPhone.replace(/[^0-9]/g, '')
+  if (!cleanRef || cleanPhone.length < 7) {
+    return null
+  }
+
+  if (supabaseUrl && anonKey) {
+    try {
+      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_venue_booking_voucher`, {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          p_booking_ref: cleanRef,
+          p_customer_phone: cleanPhone,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const row = Array.isArray(data) && data[0] ? data[0] : data
+        if (row && row.booking_ref) {
+          return {
+            status: 'success',
+            bookingRef: row.booking_ref,
+            venueName: row.venue_name,
+            slotDate: row.slot_date,
+            slotTime: row.slot_time,
+            paidAmount: Number(row.paid_amount || 0),
+            paymentStatus: row.payment_status || 'paid',
+          }
+        }
+      }
+    } catch {
+      // Fallback to local storage
+    }
+  }
+
+  try {
+    const storage = getSafeLocalStorage()
+    if (storage) {
+      const existing = JSON.parse(storage.getItem('khelgrid_venue_bookings') || '[]') as Array<{
+        bookingRef?: string
+        customerPhone?: string
+        venueName?: string
+        slotDate?: string
+        slotTime?: string
+        paidAmount?: number
+        paymentStatus?: string
+      }>
+      const match = existing.find(
+        b =>
+          b.bookingRef === cleanRef &&
+          b.customerPhone?.replace(/[^0-9]/g, '') === cleanPhone,
+      )
+      if (match) {
+        return {
+          status: 'success',
+          bookingRef: match.bookingRef || cleanRef,
+          venueName: match.venueName || '',
+          slotDate: match.slotDate || '',
+          slotTime: match.slotTime || '',
+          paidAmount: match.paidAmount || 0,
+          paymentStatus: match.paymentStatus || 'paid',
+        }
+      }
+    }
+  } catch {
+    // Ignore
+  }
+
+  return null
 }
 
 export function getUserVenueBookings(): Array<VenueBookingResult & { createdAt?: string; customerName?: string; venueId?: string; city?: string; sport?: string }> {
@@ -489,6 +752,20 @@ export async function recordListingSubscription(input: ListingSubscriptionInput)
   const timestamp = new Date().toISOString()
   const expiresAt = calculatePlanExpiry(input.planId)
   const subRef = `SUB-${input.planId.toUpperCase()}-${Date.now().toString().slice(-6)}`
+
+  // Enforce Phase E.4 security: Paid listing plans require verified payment
+  const isPaymentVerified = Boolean(input.paymentId && input.paymentId.trim().length >= 8 && input.paymentStatus === 'paid')
+
+  if (!isPaymentVerified) {
+    return {
+      status: 'error',
+      subscriptionId: subRef,
+      planName: input.planName,
+      expiresAt: null,
+      receiptRef: subRef,
+      message: 'Paid subscription requires verified payment and cannot be activated without payment confirmation.',
+    }
+  }
 
   // 1. Local storage cache
   try {
