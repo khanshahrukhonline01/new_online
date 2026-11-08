@@ -868,6 +868,8 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
               setSlotConflictError(res.errorMessage || res.message || 'This slot was just booked by another player. Please select a different slot.')
               const fresh = await fetchBookedVenueSlots(venue.id, selectedDate)
               setBookedSlots(fresh)
+            } else if (res.status === 'unconfirmed' || res.status === 'error') {
+              setSlotConflictError(res.errorMessage || res.message || 'Booking could not be confirmed with the reservation server. The slot is not reserved. Please retry.')
             } else {
               setConfirmedBooking(res)
             }

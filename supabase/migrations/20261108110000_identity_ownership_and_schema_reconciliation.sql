@@ -426,18 +426,22 @@ BEGIN
     AND expires_at IS NOT NULL
     AND expires_at < now();
 
-  -- Authoritative venue pricing lookup (safe uuid/text comparison)
-  SELECT id, name, city, sport, coalesce(plan_price, 500.00) as price
+  -- Authoritative venue resolution and pricing (never fallback to client price or default)
+  SELECT id, slug, name, city, sport, plan_price
   INTO v_venue_record
   FROM public.venues
   WHERE (slug = trim(p_venue_id) OR id::text = trim(p_venue_id))
   LIMIT 1;
 
-  IF NOT FOUND THEN
-    v_authoritative_price := 500.00;
-  ELSE
-    v_authoritative_price := coalesce(v_venue_record.price, 500.00);
+  IF v_venue_record.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'INVALID_VENUE', 'message', 'Requested venue does not exist or is not available for booking.');
   END IF;
+
+  IF v_venue_record.plan_price IS NULL OR v_venue_record.plan_price <= 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'PRICE_UNRESOLVED', 'message', 'Authoritative venue pricing cannot be established. Booking cannot proceed.');
+  END IF;
+
+  v_authoritative_price := v_venue_record.plan_price;
 
   -- Check existing active reservation
   IF EXISTS (
@@ -646,17 +650,21 @@ BEGIN
     RETURN jsonb_build_object('status', 'error', 'error_code', 'INVALID_COURT', 'message', 'Invalid court number.');
   END IF;
 
-  -- Safe uuid/text lookup and pricing fallback
-  SELECT name, coalesce(plan_price, 500.00) as price INTO v_venue 
+  -- Authoritative venue resolution and pricing (never fallback to client price)
+  SELECT id, slug, name, city, sport, plan_price INTO v_venue 
   FROM public.venues 
   WHERE (slug = trim(p_venue_id) OR id::text = trim(p_venue_id)) 
   LIMIT 1;
 
-  IF v_venue.name IS NOT NULL THEN
-    v_authoritative_price := coalesce(v_venue.price, p_total_amount);
-  ELSE
-    v_authoritative_price := p_total_amount;
+  IF v_venue.id IS NULL THEN
+    RETURN jsonb_build_object('status', 'error', 'error_code', 'INVALID_VENUE', 'message', 'Requested venue does not exist or is not available for booking.');
   END IF;
+
+  IF v_venue.plan_price IS NULL OR v_venue.plan_price <= 0 THEN
+    RETURN jsonb_build_object('status', 'error', 'error_code', 'PRICE_UNRESOLVED', 'message', 'Authoritative venue pricing cannot be established. Booking cannot proceed.');
+  END IF;
+
+  v_authoritative_price := v_venue.plan_price;
 
   -- Concurrency serialization: advisory transaction lock on specific venue slot
   PERFORM pg_advisory_xact_lock(hashtext(trim(p_venue_id) || ':' || v_clean_date || ':' || v_clean_time || ':' || p_court_number::text));

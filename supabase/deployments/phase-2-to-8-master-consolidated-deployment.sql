@@ -658,12 +658,14 @@ BEGIN
     RETURN jsonb_build_object('status', 'error', 'error_code', 'INVALID_COURT', 'message', 'Invalid court number.');
   END IF;
 
-  SELECT name, coalesce(plan_price, 500.00) as price INTO v_venue FROM public.venues WHERE (slug = trim(p_venue_id) OR id::text = trim(p_venue_id)) LIMIT 1;
-  IF v_venue.name IS NOT NULL THEN
-    v_authoritative_price := coalesce(v_venue.price, p_total_amount);
-  ELSE
-    v_authoritative_price := p_total_amount;
+  SELECT id, slug, name, city, sport, plan_price INTO v_venue FROM public.venues WHERE (slug = trim(p_venue_id) OR id::text = trim(p_venue_id)) LIMIT 1;
+  IF v_venue.id IS NULL THEN
+    RETURN jsonb_build_object('status', 'error', 'error_code', 'INVALID_VENUE', 'message', 'Requested venue does not exist or is not available for booking.');
   END IF;
+  IF v_venue.plan_price IS NULL OR v_venue.plan_price <= 0 THEN
+    RETURN jsonb_build_object('status', 'error', 'error_code', 'PRICE_UNRESOLVED', 'message', 'Authoritative venue pricing cannot be established. Booking cannot proceed.');
+  END IF;
+  v_authoritative_price := v_venue.plan_price;
 
   -- 1. Explicit database state transition: sweep expired pending reservations
   PERFORM public.expire_stale_venue_reservations();

@@ -66,10 +66,11 @@ export interface VenueSlotBookingInput {
   courtOrTurfNumber?: string
   courtNumber?: number
   gatewaySignature?: string
+  simulateOfflineFailure?: boolean
 }
 
 export interface VenueBookingResult {
-  status: 'success' | 'double_booking_conflict' | 'error'
+  status: 'success' | 'double_booking_conflict' | 'error' | 'unconfirmed'
   bookingRef?: string
   venueName?: string
   slotDate?: string
@@ -78,4 +79,6 @@ export interface VenueBookingResult {
   paymentStatus?: string
   message?: string
   errorMessage?: string
+  isOfflineDraft?: boolean
+  serverConfirmed?: boolean
 }

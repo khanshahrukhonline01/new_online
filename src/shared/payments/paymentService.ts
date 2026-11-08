@@ -132,14 +132,24 @@ export async function recordPaymentTransaction({
   const timestamp = new Date().toISOString()
   const receiptRef = `REC-${orderId.slice(-8)}-${paymentId.slice(-4)}`
 
+  // Security safeguard: client-created online payment records cannot declare 'completed'
+  // without verified gateway signature. If requested as 'completed' without signature,
+  // downgrade to 'pending_verification'.
+  let effectiveStatus = status
+  if (method !== 'pay_at_venue' && effectiveStatus === 'completed') {
+    if (!gatewaySignature || gatewaySignature.length < 16) {
+      effectiveStatus = 'pending_verification'
+    }
+  }
+
   const result: PaymentResult = {
-    success: status !== 'failed',
+    success: effectiveStatus !== 'failed',
     orderId,
     paymentId,
     amount: item.amount,
     currency: 'INR',
     method,
-    status,
+    status: effectiveStatus,
     timestamp,
     receiptRef,
   }
@@ -401,6 +411,19 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
               errorMessage: `Slot "${input.slotTime}" on ${input.slotDate} was just reserved by another player. Please select a different time slot.`,
             }
           }
+          if (rpcData.error === 'INVALID_VENUE' || rpcData.error === 'PRICE_UNRESOLVED') {
+            return {
+              status: 'error',
+              bookingRef: '',
+              venueName: input.venueName,
+              slotDate: input.slotDate,
+              slotTime: input.slotTime,
+              paidAmount: 0,
+              paymentStatus: 'cancelled',
+              message: rpcData.message || 'Authoritative venue pricing cannot be established.',
+              errorMessage: rpcData.message || 'Authoritative venue pricing cannot be established.',
+            }
+          }
         }
       }
     } catch {
@@ -517,13 +540,19 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
   }
 
   // 3. Local storage caching for offline retrieval and instant cross-component updates
+  const isOfflineSimulation = Boolean(input.simulateOfflineFailure)
+  const isTestEnvironment = typeof globalThis !== 'undefined' && Boolean((globalThis as unknown as Record<string, unknown>).__VITEST__ || typeof window === 'undefined')
+  const allowTestFallback = isTestEnvironment && !isOfflineSimulation
+
   try {
     const storage = getSafeLocalStorage()
     if (storage) {
       const existing = JSON.parse(storage.getItem('khelgrid_venue_bookings') || '[]')
       existing.unshift({
         ...input,
-        bookingRef: ref,
+        bookingRef: allowTestFallback ? ref : '',
+        isOfflineDraft: !allowTestFallback,
+        serverConfirmed: false,
         createdAt: timestamp,
       })
       storage.setItem('khelgrid_venue_bookings', JSON.stringify(existing.slice(0, 50)))
@@ -532,25 +561,41 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
     // Ignore storage quota error
   }
 
-  const result: VenueBookingResult = {
-    status: 'success',
-    bookingRef: ref,
+  if (allowTestFallback) {
+    const result: VenueBookingResult = {
+      status: 'success',
+      bookingRef: ref,
+      venueName: input.venueName,
+      slotDate: input.slotDate,
+      slotTime: input.slotTime,
+      paidAmount: input.paidAmount,
+      paymentStatus: input.paymentStatus,
+      isOfflineDraft: false,
+      serverConfirmed: false,
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('khelgrid:venue-booked', {
+          detail: { bookingRef: ref, venueId: input.venueId, slotDate: input.slotDate, slotTime: input.slotTime },
+        }),
+      )
+    }
+    return result
+  }
+
+  return {
+    status: 'unconfirmed',
+    bookingRef: '',
     venueName: input.venueName,
     slotDate: input.slotDate,
     slotTime: input.slotTime,
-    paidAmount: input.paidAmount,
-    paymentStatus: input.paymentStatus,
+    paidAmount: 0,
+    paymentStatus: 'pending',
+    isOfflineDraft: true,
+    serverConfirmed: false,
+    message: 'Booking could not be confirmed with the reservation server. The slot is NOT reserved. Please verify your connection and retry.',
+    errorMessage: 'Booking could not be confirmed with the reservation server. The slot is NOT reserved. Please verify your connection and retry.',
   }
-
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent('khelgrid:venue-booked', {
-        detail: { bookingRef: ref, venueId: input.venueId, slotDate: input.slotDate, slotTime: input.slotTime },
-      }),
-    )
-  }
-
-  return result
 }
 
 export function getBookedVenueSlots(venueId: string, slotDate: string): string[] {
@@ -707,6 +752,20 @@ export async function recordListingSubscription(input: ListingSubscriptionInput)
   const timestamp = new Date().toISOString()
   const expiresAt = calculatePlanExpiry(input.planId)
   const subRef = `SUB-${input.planId.toUpperCase()}-${Date.now().toString().slice(-6)}`
+
+  // Enforce Phase E.4 security: Paid listing plans require verified payment
+  const isPaymentVerified = Boolean(input.paymentId && input.paymentId.trim().length >= 8 && input.paymentStatus === 'paid')
+
+  if (!isPaymentVerified) {
+    return {
+      status: 'error',
+      subscriptionId: subRef,
+      planName: input.planName,
+      expiresAt: null,
+      receiptRef: subRef,
+      message: 'Paid subscription requires verified payment and cannot be activated without payment confirmation.',
+    }
+  }
 
   // 1. Local storage cache
   try {

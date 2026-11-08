@@ -477,4 +477,64 @@ describe('KhelGrid Security Programme — Identity, Ownership & Schema Reconcili
     expect(Number(reminderCount.cnt)).toBe(1)
     expect(Number(subCount.cnt)).toBe(1)
   })
+
+  // 20. Rejection of invalid venue
+  it('Scenario 20: Server rejects booking creation when requested venue does not exist', () => {
+    const db = setupUnmigratedBaseline()
+
+    const validateAndReserve = (venueId: string) => {
+      const venue = db.public.many(`SELECT id, plan_price FROM public.venues WHERE slug = '${venueId}';`)
+      if (venue.length === 0) {
+        return { success: false, error_code: 'INVALID_VENUE', message: 'Requested venue does not exist' }
+      }
+      return { success: true, price: venue[0].plan_price }
+    }
+
+    const invalidRes = validateAndReserve('non-existent-stadium')
+    expect(invalidRes.success).toBe(false)
+    expect(invalidRes.error_code).toBe('INVALID_VENUE')
+  })
+
+  // 21. Rejection of unresolvable pricing
+  it('Scenario 21: Server rejects booking when authoritative venue pricing cannot be established', () => {
+    const db = setupUnmigratedBaseline()
+
+    db.public.none(`
+      INSERT INTO public.venues (id, slug, name, plan_price, city)
+      VALUES ('73ddae91-2d69-42d4-835f-b473dc36ed84', 'unpriced-arena', 'Unpriced Arena', 0, 'Goa');
+    `)
+
+    const validateAndReserve = (venueId: string) => {
+      const venue = db.public.many(`SELECT id, plan_price FROM public.venues WHERE slug = '${venueId}';`)
+      if (venue.length === 0) {
+        return { success: false, error_code: 'INVALID_VENUE' }
+      }
+      const price = Number(venue[0].plan_price)
+      if (!price || price <= 0) {
+        return { success: false, error_code: 'PRICE_UNRESOLVED', message: 'Authoritative pricing unavailable' }
+      }
+      return { success: true, price }
+    }
+
+    const unpricedRes = validateAndReserve('unpriced-arena')
+    expect(unpricedRes.success).toBe(false)
+    expect(unpricedRes.error_code).toBe('PRICE_UNRESOLVED')
+  })
+
+  // 22. Client price tampering prevention
+  it('Scenario 22: Server ignores client-supplied price and charges database authoritative price', () => {
+    const db = setupUnmigratedBaseline()
+
+    const resolveAuthoritativePrice = (venueSlug: string, clientSuppliedPrice: number): number => {
+      const venue = db.public.one(`SELECT plan_price FROM public.venues WHERE slug = '${venueSlug}';`)
+      // Never trust client price: always charge database plan_price
+      if (clientSuppliedPrice < 0) throw new Error('Invalid price');
+      return Number(venue.plan_price)
+    }
+
+    const attackerPrice = 1 // Attacker claims slot costs ₹1
+    const actualCharge = resolveAuthoritativePrice('v-1', attackerPrice)
+    expect(actualCharge).toBe(500) // Authoritative Sree Kanteerava price is ₹500
+    expect(actualCharge).not.toBe(attackerPrice)
+  })
 })

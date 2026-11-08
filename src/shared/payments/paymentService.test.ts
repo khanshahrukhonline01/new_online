@@ -113,6 +113,31 @@ describe('KhelGrid Payment Service', () => {
       expect(receipts[0].orderId).toBe('KG_TEST_101')
       expect(receipts[0].customerName).toBe('Arjun Rao')
     })
+
+    it('downgrades client-declared completed status to pending_verification without verified signature', async () => {
+      const item: PaymentItem = {
+        id: 'venue-1',
+        type: 'venue_booking',
+        title: 'Pitch 1 Slot',
+        amount: 800,
+      }
+      const customer: PaymentCustomer = {
+        name: 'Client User',
+        phone: '9876543210',
+      }
+
+      // Attacker attempts to pass status: 'completed' without gateway signature
+      const res = await recordPaymentTransaction({
+        orderId: 'KG_ORD_TAMPER_01',
+        paymentId: 'PAY_TAMPER_01',
+        customer,
+        item,
+        method: 'upi',
+        status: 'completed',
+      })
+
+      expect(res.status).toBe('pending_verification')
+    })
   })
 
   describe('recordVenueSlotBooking', () => {
@@ -138,6 +163,28 @@ describe('KhelGrid Payment Service', () => {
       const bookings = JSON.parse(globalThis.localStorage.getItem('khelgrid_venue_bookings') || '[]')
       expect(bookings.length).toBeGreaterThan(0)
       expect(bookings[0].venueName).toBe('Sree Kanteerava Stadium')
+    })
+
+    it('returns explicit unconfirmed state and no voucher when server reservation fails offline', async () => {
+      const res = await recordVenueSlotBooking({
+        venueId: 'v-1',
+        venueName: 'Sree Kanteerava Stadium',
+        city: 'Bengaluru',
+        sport: 'Running Track',
+        slotDate: '2026-12-10',
+        slotTime: '6:00 PM – 7:00 PM',
+        customerName: 'Kavita Singh',
+        customerPhone: '9811223344',
+        totalAmount: 500,
+        paidAmount: 0,
+        paymentStatus: 'pay_at_venue',
+        simulateOfflineFailure: true,
+      })
+
+      expect(res.status).toBe('unconfirmed')
+      expect(res.bookingRef).toBe('')
+      expect(res.isOfflineDraft).toBe(true)
+      expect(res.errorMessage).toContain('could not be confirmed')
     })
   })
 
@@ -167,6 +214,27 @@ describe('KhelGrid Payment Service', () => {
       expect(cached.length).toBeGreaterThan(0)
       expect(cached[0].listingName).toBe('Bhaichung Bhutia Football School')
       expect(cached[0].amount).toBe(4499)
+    })
+
+    it('rejects paid listing subscription activation without verified payment status', async () => {
+      const sub = await recordListingSubscription({
+        orderId: 'KG_ORD_SUB_UNVERIFIED',
+        paymentId: '',
+        listingType: 'academy',
+        listingName: 'Unverified Academy',
+        city: 'Delhi',
+        planId: '1_year',
+        planName: '1-Year Listing',
+        amount: 4499,
+        durationDays: 365,
+        customerName: 'Coach Unverified',
+        customerPhone: '9876543210',
+        paymentStatus: 'pay_at_venue',
+      })
+
+      expect(sub.status).toBe('error')
+      expect(sub.expiresAt).toBeNull()
+      expect(sub.message).toContain('verified payment')
     })
 
     it('sets null expiresAt for lifelong subscription plan', async () => {
