@@ -152,12 +152,38 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
       })
 
       expect(res.status).toBe('pending_verification')
+
+      // Assert no gateway signature and phone is masked in local storage display cache
+      const stored = JSON.parse(memoryStorage['khelgrid_payment_receipts'] || '[]')
+      expect(stored[0]?.gatewaySignature).toBeUndefined()
+      expect(stored[0]?.customerPhone).not.toBe('9876543210')
+    })
+
+    it('returns failure if remote transaction registration fails', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ message: 'Rate limit exceeded' }),
+      } as Response)
+
+      const item: PaymentItem = { id: 'venue-1', type: 'venue_booking', title: 'Pitch 1', amount: 800 }
+      const customer: PaymentCustomer = { name: 'Client User', phone: '9876543210' }
+
+      const res = await recordPaymentTransaction({
+        orderId: 'KG_ORD_FAIL_01',
+        paymentId: 'PAY_FAIL_01',
+        customer,
+        item,
+        method: 'upi',
+      })
+
+      expect(res.success).toBe(false)
+      expect(res.status).toBe('failed')
     })
   })
 
   describe('verifyPaymentWithServer', () => {
-    it('calls verify_payment_signature_and_settle RPC and returns completed on server confirmation', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+    it('calls verify-razorpay-payment Edge Function and returns completed on server confirmation', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true, status: 'completed' }),
       } as Response)
@@ -170,9 +196,13 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
 
       expect(result.success).toBe(true)
       expect(result.status).toBe('completed')
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/functions/v1/verify-razorpay-payment'),
+        expect.anything()
+      )
     })
 
-    it('returns pending_verification when server RPC is unavailable or gateway unconfigured', async () => {
+    it('returns pending_verification when Edge Function is unavailable or gateway unconfigured', async () => {
       vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('Network error'))
 
       const result = await verifyPaymentWithServer({
@@ -350,12 +380,42 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
         customerName: 'Coach Unverified',
         customerPhone: '9876543210',
         paymentStatus: 'paid',
-        serverVerified: false, // Not verified by server!
+        serverVerified: false,
       })
 
       expect(sub.status).toBe('pending_verification')
       expect(sub.expiresAt).toBeNull()
-      expect(sub.message).toContain('verified payment')
+      expect(sub.message).toContain('pending verification')
+    })
+
+    it('client passing serverVerified: true cannot activate plan if server returns pending', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          status: 'pending_verification',
+          is_active: false,
+          subscription_id: 'SUB-1_YEAR-1234',
+        }),
+      } as Response)
+
+      const sub = await recordListingSubscription({
+        orderId: 'KG_ORD_SUB_ATTACK',
+        paymentId: 'PAY_FORGED',
+        listingType: 'academy',
+        listingName: 'Attacker Academy',
+        city: 'Delhi',
+        planId: '1_year',
+        planName: '1-Year Listing',
+        amount: 4499,
+        durationDays: 365,
+        customerName: 'Attacker',
+        customerPhone: '9876543210',
+        paymentStatus: 'paid',
+        serverVerified: true, // Attacker claims true!
+      })
+
+      expect(sub.status).toBe('pending_verification')
+      expect(sub.expiresAt).toBeNull()
     })
   })
 

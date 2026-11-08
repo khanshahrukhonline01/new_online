@@ -48,6 +48,10 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  if (req.method !== 'POST') {
+    return new Response('Method Not Allowed', { status: 405, headers: corsHeaders })
+  }
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -55,7 +59,7 @@ serve(async (req) => {
 
     if (!supabaseUrl || !serviceRoleKey) {
       return new Response(
-        JSON.stringify({ error: 'Server configuration error: missing Supabase credentials' }),
+        JSON.stringify({ error: 'SERVER_MISCONFIGURED', message: 'Missing server database configuration' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -75,12 +79,12 @@ serve(async (req) => {
 
     if (!order_id || !payment_id || !gateway_signature) {
       return new Response(
-        JSON.stringify({ error: 'INVALID_PARAMETERS', message: 'Missing order_id, payment_id, or gateway_signature' }),
+        JSON.stringify({ error: 'INVALID_PARAMETERS', message: 'order_id, payment_id, and gateway_signature are required.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Official Razorpay verification: HMAC-SHA256(order_id + "|" + payment_id, secret)
+    // 1. Official Razorpay checkout verification: HMAC-SHA256(order_id + "|" + payment_id, key_secret)
     const payload = `${order_id.trim()}|${payment_id.trim()}`
     const expectedSignature = await generateHmacSha256(payload, keySecret)
 
@@ -96,25 +100,74 @@ serve(async (req) => {
       )
     }
 
-    // Signature verified! Settle the transaction atomically in PostgreSQL using service_role
+    // 2. Fetch authoritative order record from database using service_role
     const adminClient = createClient(supabaseUrl, serviceRoleKey)
-    const { data, error } = await adminClient.rpc('verify_payment_transaction', {
+    const { data: paymentRecord, error: fetchError } = await adminClient
+      .from('khelgrid_payments')
+      .select('id, order_id, amount, currency, status')
+      .eq('order_id', order_id.trim())
+      .single()
+
+    if (fetchError || !paymentRecord) {
+      return new Response(
+        JSON.stringify({ error: 'ORDER_NOT_FOUND', message: 'Order record does not exist.' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Authoritative amount in paise derived strictly from database record
+    const authoritativeAmountPaisa = Math.round(Number(paymentRecord.amount) * 100)
+    const authoritativeCurrency = (paymentRecord.currency || 'INR').toUpperCase()
+
+    if (expected_amount_paisa && expected_amount_paisa !== authoritativeAmountPaisa) {
+      return new Response(
+        JSON.stringify({
+          error: 'AMOUNT_MISMATCH',
+          message: `Supplied amount (${expected_amount_paisa}) does not match authoritative order amount (${authoritativeAmountPaisa}).`
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (expected_currency && expected_currency.toUpperCase() !== authoritativeCurrency) {
+      return new Response(
+        JSON.stringify({ error: 'CURRENCY_MISMATCH', message: 'Currency mismatch.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // 3. Settle transaction atomically in PostgreSQL via canonical procedure
+    const { data: settlementData, error: settleError } = await adminClient.rpc('settle_payment_transaction', {
       p_order_id: order_id.trim(),
       p_payment_id: payment_id.trim(),
+      p_verification_source: 'checkout_hmac',
       p_gateway_signature: gateway_signature.trim(),
-      p_expected_amount_paisa: expected_amount_paisa || 0,
-      p_expected_currency: (expected_currency || 'INR').toUpperCase(),
+      p_expected_amount_paisa: authoritativeAmountPaisa,
+      p_expected_currency: authoritativeCurrency,
     })
 
-    if (error) {
+    if (settleError) {
       return new Response(
-        JSON.stringify({ error: 'DATABASE_SETTLEMENT_ERROR', message: error.message }),
+        JSON.stringify({ error: 'SETTLEMENT_ERROR', message: settleError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    if (settlementData?.status === 'error') {
+      return new Response(
+        JSON.stringify({ error: settlementData.error_code, message: settlementData.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     return new Response(
-      JSON.stringify({ success: true, settlement: data }),
+      JSON.stringify({
+        success: true,
+        status: 'completed',
+        order_id: order_id.trim(),
+        payment_id: payment_id.trim(),
+        settlement: settlementData,
+      }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err: unknown) {
