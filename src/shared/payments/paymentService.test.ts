@@ -214,9 +214,60 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
       expect(result.success).toBe(false)
       expect(result.status).toBe('pending_verification')
     })
+
+    it('returns pending_verification when gateway payment is authorized but not captured (Phase 5.6)', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: false,
+          status: 'pending_verification',
+          error: 'PAYMENT_AUTHORIZED_NOT_CAPTURED',
+          message: 'Payment is authorized by bank but not yet captured by the gateway. Awaiting capture.',
+        }),
+      } as Response)
+
+      const result = await verifyPaymentWithServer({
+        orderId: 'order_auth_only',
+        paymentId: 'pay_auth_only',
+        gatewaySignature: 'sig_valid',
+      })
+
+      expect(result.success).toBe(false)
+      expect(result.status).toBe('pending_verification')
+      expect(result.error).toContain('Awaiting capture')
+    })
   })
 
   describe('recordVenueSlotBooking', () => {
+    it('rejects reservation when authoritative pricing cannot be established (PRICE_UNRESOLVED) (Phase 5.6)', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: false,
+          error: 'PRICE_UNRESOLVED',
+          message: 'No authoritative booking tariff is configured for this venue or court. Please select another facility.',
+        }),
+      } as Response)
+
+      const booking = await recordVenueSlotBooking({
+        venueId: 'v-unpriced',
+        venueName: 'Unpriced Complex',
+        city: 'Goa',
+        sport: 'Football',
+        slotDate: '2026-12-05',
+        slotTime: '6:00 PM – 7:00 PM',
+        customerName: 'Aarav Patel',
+        customerPhone: '9876543210',
+        totalAmount: 800,
+        paidAmount: 0,
+        paymentStatus: 'pending',
+      })
+
+      expect(booking.status).toBe('error')
+      expect(booking.paymentStatus).toBe('cancelled')
+      expect(booking.errorMessage).toContain('No authoritative booking tariff is configured')
+    })
+
     it('confirms booking when atomic server RPC succeeds', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
         ok: true,

@@ -320,6 +320,13 @@ describe('KhelGrid Phase 4: Authentication, Session Security & Stage 0 Closure S
     })
 
     it('SEC-TEST-P4-17: self-role escalation via updateUserProfile is strictly blocked', async () => {
+      const mockUpsert = vi.fn().mockResolvedValue({ data: null, error: null })
+      vi.spyOn(realtimeModule, 'getSupabaseClient').mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          upsert: mockUpsert,
+        }),
+      } as unknown as ReturnType<typeof realtimeModule.getSupabaseClient>)
+
       const user = createTestAuthUserFixture({ id: 'usr-athlete', role: 'athlete', isVerified: false })
       setStoredAuthUser(user)
 
@@ -332,7 +339,13 @@ describe('KhelGrid Phase 4: Authentication, Session Security & Stage 0 Closure S
       expect(updated?.fullName).toBe('New Legitimate Name')
       expect(updated?.role).toBe('athlete') // Must remain athlete
       expect(updated?.isVerified).toBe(false) // Must remain unverified
-    })
+      expect(mockUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'usr-athlete',
+          display_name: 'New Legitimate Name',
+        }),
+      )
+    }, 10000)
 
     it('SEC-TEST-P4-18: user metadata role claim is not trusted over verified database role', () => {
       // If user has 'admin' in user_metadata but 'athlete' in database profile
