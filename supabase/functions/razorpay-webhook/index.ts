@@ -30,6 +30,14 @@ async function generateHmacSha256(payload: string, secret: string): Promise<stri
     .join('')
 }
 
+async function sha256Hex(content: string): Promise<string> {
+  const enc = new TextEncoder()
+  const digest = await crypto.subtle.digest('SHA-256', enc.encode(content))
+  return Array.from(new Uint8Array(digest))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
 serve(async (req) => {
   if (req.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 })
@@ -51,7 +59,7 @@ serve(async (req) => {
     })
   }
 
-  // 1. Read raw request body before JSON parsing to verify HMAC-SHA256
+  // 1. Read raw request body before parsing to verify HMAC-SHA256
   const rawBody = await req.text()
   const expectedSignature = await generateHmacSha256(rawBody, webhookSecret)
 
@@ -72,6 +80,8 @@ serve(async (req) => {
     entity?: string
     account_id?: string
     event: string
+    id?: string
+    event_id?: string
     contains?: string[]
     payload?: {
       payment?: {
@@ -81,6 +91,7 @@ serve(async (req) => {
           amount: number
           currency: string
           status: string
+          captured: boolean
         }
       }
       order?: {
@@ -116,69 +127,153 @@ serve(async (req) => {
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey)
 
-  // 3. Webhook Event Idempotency Check
-  const eventId = req.headers.get('x-razorpay-event-id') || `${event.event}_${event.created_at || Date.now()}`
-  const { data: existingEvent } = await adminClient
-    .from('payment_webhook_events')
-    .select('id, status')
-    .eq('event_id', eventId)
-    .maybeSingle()
+  // 3. Deterministic Event Identification
+  const suppliedEventId = req.headers.get('x-razorpay-event-id') || event.event_id || event.id
+  const eventId = suppliedEventId
+    ? suppliedEventId.trim()
+    : `body_hash_${await sha256Hex(rawBody)}`
 
-  if (existingEvent) {
+  const paymentEntity = event.payload?.payment?.entity
+  const orderId = (paymentEntity?.order_id || event.payload?.order?.entity?.id || '').trim()
+  const paymentId = (paymentEntity?.id || '').trim()
+  const amountPaisa = paymentEntity?.amount || event.payload?.order?.entity?.amount || 0
+  const currency = (paymentEntity?.currency || event.payload?.order?.entity?.currency || 'INR').toUpperCase()
+
+  // 4. Atomic Event Claim (Concurrency and Race Condition Protection)
+  const { data: claimData, error: claimError } = await adminClient.rpc('claim_webhook_event', {
+    p_event_id: eventId,
+    p_event_type: event.event,
+    p_order_id: orderId || null,
+    p_payment_id: paymentId || null,
+    p_payload_summary: {
+      amount: amountPaisa,
+      currency,
+      received_at: new Date().toISOString(),
+    },
+  })
+
+  if (claimError) {
+    // Return 500 so gateway retries delivery on transient database error
+    return new Response(JSON.stringify({ error: 'EVENT_CLAIM_FAILED', details: claimError.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  if (claimData?.status === 'already_processed') {
     return new Response(JSON.stringify({ status: 'already_processed', event_id: eventId }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
   }
 
-  // 4. Process payment capture or order settlement
+  if (claimData?.status === 'ignored') {
+    return new Response(JSON.stringify({ status: 'ignored', event_id: eventId }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  if (claimData?.status === 'processing_in_flight') {
+    return new Response(JSON.stringify({ status: 'processing_in_flight', event_id: eventId }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  // 5. Process Payment Capture or Order Settlement
   if (event.event === 'payment.captured' || event.event === 'order.paid') {
-    const paymentEntity = event.payload?.payment?.entity
-    const orderId = paymentEntity?.order_id || event.payload?.order?.entity?.id
-    const paymentId = paymentEntity?.id
-    const amountPaisa = paymentEntity?.amount || event.payload?.order?.entity?.amount || 0
-    const currency = (paymentEntity?.currency || 'INR').toUpperCase()
     const paymentStatus = paymentEntity?.status
 
     // Verify payment status is captured
     if (event.event === 'payment.captured' && paymentStatus && paymentStatus !== 'captured') {
+      await adminClient.rpc('finalize_webhook_event', {
+        p_event_id: eventId,
+        p_status: 'ignored',
+        p_error_message: `Payment status was ${paymentStatus}, expected captured`,
+      })
       return new Response(JSON.stringify({ error: 'PAYMENT_NOT_CAPTURED', status: paymentStatus }), {
-        status: 400,
+        status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
     }
 
     if (orderId && paymentId) {
-      // Transactional settlement in PostgreSQL via canonical settlement procedure
+      // Authoritative order verification from database
+      const { data: dbOrder, error: orderErr } = await adminClient
+        .from('khelgrid_payments')
+        .select('id, amount, currency, status')
+        .eq('order_id', orderId)
+        .single()
+
+      if (orderErr || !dbOrder) {
+        await adminClient.rpc('finalize_webhook_event', {
+          p_event_id: eventId,
+          p_status: 'failed_retryable',
+          p_error_message: 'Associated order record not found in database',
+        })
+        return new Response(JSON.stringify({ error: 'ORDER_NOT_FOUND', order_id: orderId }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      const authoritativeAmountPaisa = Math.round(Number(dbOrder.amount) * 100)
+      const authoritativeCurrency = (dbOrder.currency || 'INR').toUpperCase()
+
+      // Cross-check payload amount and currency
+      if (amountPaisa > 0 && amountPaisa !== authoritativeAmountPaisa) {
+        await adminClient.rpc('finalize_webhook_event', {
+          p_event_id: eventId,
+          p_status: 'ignored',
+          p_error_message: `Webhook amount (${amountPaisa}) does not match order amount (${authoritativeAmountPaisa})`,
+        })
+        return new Response(JSON.stringify({ error: 'AMOUNT_MISMATCH' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      if (currency !== authoritativeCurrency) {
+        await adminClient.rpc('finalize_webhook_event', {
+          p_event_id: eventId,
+          p_status: 'ignored',
+          p_error_message: `Webhook currency (${currency}) does not match order currency (${authoritativeCurrency})`,
+        })
+        return new Response(JSON.stringify({ error: 'CURRENCY_MISMATCH' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      // Transactional settlement in PostgreSQL via canonical procedure
       const { data: settleData, error: settleError } = await adminClient.rpc('settle_payment_transaction', {
-        p_order_id: orderId.trim(),
-        p_payment_id: paymentId.trim(),
+        p_order_id: orderId,
+        p_payment_id: paymentId,
         p_verification_source: 'webhook_verified',
         p_gateway_signature: null,
-        p_expected_amount_paisa: amountPaisa,
-        p_expected_currency: currency,
+        p_expected_amount_paisa: authoritativeAmountPaisa,
+        p_expected_currency: authoritativeCurrency,
       })
 
       if (settleError) {
-        // Return 500 so Razorpay retries webhook delivery on transient database error
+        await adminClient.rpc('finalize_webhook_event', {
+          p_event_id: eventId,
+          p_status: 'failed_retryable',
+          p_error_message: settleError.message,
+        })
         return new Response(JSON.stringify({ error: 'SETTLEMENT_FAILED', details: settleError.message }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' },
         })
       }
 
-      // Record processed event for idempotency
-      await adminClient.from('payment_webhook_events').insert({
-        event_id: eventId,
-        event_type: event.event,
-        order_id: orderId.trim(),
-        payment_id: paymentId.trim(),
-        status: 'processed',
-        payload: {
-          amount: amountPaisa,
-          currency,
-          settled_at: new Date().toISOString(),
-        },
+      // Check if settlement quarantined payment or succeeded
+      await adminClient.rpc('finalize_webhook_event', {
+        p_event_id: eventId,
+        p_status: 'processed',
+        p_error_message: settleData?.status === 'error' ? settleData.message : null,
+        p_settlement_data: settleData,
       })
 
       return new Response(JSON.stringify({ status: 'settled', data: settleData }), {
@@ -188,14 +283,13 @@ serve(async (req) => {
     }
   }
 
-  // Record non-settlement event
-  await adminClient.from('payment_webhook_events').insert({
-    event_id: eventId,
-    event_type: event.event,
-    status: 'ignored',
+  // Record non-settlement event as ignored
+  await adminClient.rpc('finalize_webhook_event', {
+    p_event_id: eventId,
+    p_status: 'ignored',
+    p_error_message: 'Event type not handled for payment settlement',
   })
 
-  // Acknowledge receipt of other webhook events
   return new Response(JSON.stringify({ received: true, event: event.event }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },

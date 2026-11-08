@@ -139,11 +139,25 @@ CREATE TABLE IF NOT EXISTS public.payment_webhook_events (
   event_type text NOT NULL,
   order_id text,
   payment_id text,
-  status text NOT NULL DEFAULT 'processed',
+  status text NOT NULL DEFAULT 'received',
   payload jsonb DEFAULT '{}'::jsonb,
-  created_at timestamptz NOT NULL DEFAULT now()
+  payload_summary jsonb DEFAULT '{}'::jsonb,
+  retry_count integer NOT NULL DEFAULT 0,
+  error_message text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  processed_at timestamptz
 );
+
+ALTER TABLE public.payment_webhook_events
+  ADD COLUMN IF NOT EXISTS payload_summary jsonb DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS retry_count integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS error_message text,
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS processed_at timestamptz;
+
 CREATE INDEX IF NOT EXISTS idx_payment_webhook_events_lookup ON public.payment_webhook_events(event_id);
+CREATE INDEX IF NOT EXISTS idx_payment_webhook_events_status ON public.payment_webhook_events(status);
 ALTER TABLE public.payment_webhook_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_webhook_events FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "webhook_events_service_all" ON public.payment_webhook_events;
@@ -533,6 +547,128 @@ CREATE POLICY "moderation_logs_service_all" ON public.listing_moderation_audit_l
 -- 5. SECURE PROCEDURES & BUSINESS LOGIC (VOLATILE, STRICT RPCs)
 -- -----------------------------------------------------------------------------
 
+-- 2.0 ATOMIC WEBHOOK EVENT CLAIM & FINALIZATION PROCEDURES (SERVICE_ROLE ONLY)
+CREATE OR REPLACE FUNCTION public.claim_webhook_event(
+  p_event_id text,
+  p_event_type text,
+  p_order_id text DEFAULT NULL,
+  p_payment_id text DEFAULT NULL,
+  p_payload_summary jsonb DEFAULT '{}'::jsonb
+) RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path = public, extensions, auth, pg_temp
+AS $
+DECLARE
+  v_jwt_role text;
+  v_clean_event_id text;
+  v_existing record;
+BEGIN
+  v_jwt_role := COALESCE(
+    NULLIF(current_setting('request.jwt.claim.role', true), ''),
+    auth.role(),
+    current_user
+  );
+  IF v_jwt_role != 'service_role' AND current_user != 'postgres' AND NOT public.is_service_role_or_admin() THEN
+    RETURN jsonb_build_object('success', false, 'status', 'unauthorized', 'message', 'service_role required');
+  END IF;
+
+  v_clean_event_id := trim(coalesce(p_event_id, ''));
+  IF v_clean_event_id = '' THEN
+    RETURN jsonb_build_object('success', false, 'status', 'invalid_parameters', 'message', 'event_id is required');
+  END IF;
+
+  INSERT INTO public.payment_webhook_events (
+    event_id, event_type, order_id, payment_id, status, payload_summary, retry_count, created_at, updated_at
+  ) VALUES (
+    v_clean_event_id, p_event_type, trim(coalesce(p_order_id, '')), trim(coalesce(p_payment_id, '')),
+    'processing', p_payload_summary, 0, now(), now()
+  )
+  ON CONFLICT (event_id) DO NOTHING;
+
+  IF FOUND THEN
+    RETURN jsonb_build_object('success', true, 'status', 'claimed', 'event_id', v_clean_event_id);
+  END IF;
+
+  SELECT id, status, updated_at, retry_count
+  INTO v_existing
+  FROM public.payment_webhook_events
+  WHERE event_id = v_clean_event_id
+  FOR UPDATE;
+
+  IF v_existing.status = 'processed' THEN
+    RETURN jsonb_build_object('success', false, 'status', 'already_processed', 'event_id', v_clean_event_id, 'message', 'Event has already been processed.');
+  ELSIF v_existing.status = 'ignored' THEN
+    RETURN jsonb_build_object('success', false, 'status', 'ignored', 'event_id', v_clean_event_id, 'message', 'Event is ignored.');
+  ELSIF v_existing.status = 'processing' AND v_existing.updated_at > (now() - interval '2 minutes') THEN
+    RETURN jsonb_build_object('success', false, 'status', 'processing_in_flight', 'event_id', v_clean_event_id, 'message', 'Event is currently being processed by another worker.');
+  ELSE
+    UPDATE public.payment_webhook_events
+    SET status = 'processing',
+        retry_count = retry_count + 1,
+        updated_at = now()
+    WHERE event_id = v_clean_event_id;
+
+    RETURN jsonb_build_object('success', true, 'status', 'reclaimed_for_retry', 'event_id', v_clean_event_id, 'retry_count', v_existing.retry_count + 1);
+  END IF;
+END;
+$;
+
+REVOKE EXECUTE ON FUNCTION public.claim_webhook_event(text, text, text, text, jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_webhook_event(text, text, text, text, jsonb) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.finalize_webhook_event(
+  p_event_id text,
+  p_status text,
+  p_error_message text DEFAULT NULL,
+  p_settlement_data jsonb DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path = public, extensions, auth, pg_temp
+AS $
+DECLARE
+  v_jwt_role text;
+  v_clean_event_id text;
+  v_clean_status text;
+BEGIN
+  v_jwt_role := COALESCE(
+    NULLIF(current_setting('request.jwt.claim.role', true), ''),
+    auth.role(),
+    current_user
+  );
+  IF v_jwt_role != 'service_role' AND current_user != 'postgres' AND NOT public.is_service_role_or_admin() THEN
+    RETURN jsonb_build_object('success', false, 'status', 'unauthorized', 'message', 'service_role required');
+  END IF;
+
+  v_clean_event_id := trim(coalesce(p_event_id, ''));
+  v_clean_status := lower(trim(coalesce(p_status, '')));
+
+  IF v_clean_status NOT IN ('processed', 'failed_retryable', 'ignored') THEN
+    RETURN jsonb_build_object('success', false, 'status', 'invalid_status', 'message', 'Invalid status');
+  END IF;
+
+  UPDATE public.payment_webhook_events
+  SET status = v_clean_status,
+      error_message = p_error_message,
+      processed_at = CASE WHEN v_clean_status = 'processed' THEN now() ELSE processed_at END,
+      updated_at = now(),
+      payload_summary = CASE
+        WHEN p_settlement_data IS NOT NULL THEN
+          jsonb_set(coalesce(payload_summary, '{}'::jsonb), '{settlement}', p_settlement_data)
+        ELSE payload_summary
+      END
+  WHERE event_id = v_clean_event_id;
+
+  RETURN jsonb_build_object('success', true, 'status', v_clean_status, 'event_id', v_clean_event_id);
+END;
+$;
+
+REVOKE EXECUTE ON FUNCTION public.finalize_webhook_event(text, text, text, jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.finalize_webhook_event(text, text, text, jsonb) TO service_role;
+
 -- 2. CANONICAL SERVER-SIDE PAYMENT SETTLEMENT RPC (SERVICE_ROLE ONLY)
 -- -----------------------------------------------------------------------------
 
@@ -558,14 +694,18 @@ DECLARE
   v_order_paisa bigint;
   v_clean_order text;
   v_clean_payment text;
+  v_target_booking record;
+  v_target_sub record;
+  v_rows_affected int;
 BEGIN
-  -- 1. Strict caller verification: service_role or admin ONLY
+  -- 1. Strict caller verification: service_role or admin superuser ONLY
   v_jwt_role := COALESCE(
     NULLIF(current_setting('request.jwt.claim.role', true), ''),
-    auth.role()
+    auth.role(),
+    current_user
   );
 
-  IF v_jwt_role != 'service_role' AND NOT public.is_service_role_or_admin() THEN
+  IF v_jwt_role != 'service_role' AND current_user != 'postgres' AND NOT public.is_service_role_or_admin() THEN
     RETURN jsonb_build_object('status', 'error', 'error_code', 'UNAUTHORIZED', 'message', 'Payment settlement requires service_role execution.');
   END IF;
 
@@ -654,23 +794,87 @@ BEGIN
     END IF;
 
   ELSIF p_verification_source IN ('webhook_verified', 'gateway_api') THEN
-    -- Signature verified externally by authorized server Edge Function
+    -- Cryptographic verification performed externally by authorized server Edge Function
     NULL;
   ELSE
     RETURN jsonb_build_object('status', 'error', 'error_code', 'INVALID_SOURCE', 'message', 'Unsupported verification source.');
   END IF;
 
-  -- 7. Transactional Payment Record Settlement
-  UPDATE public.khelgrid_payments
-  SET status = 'completed',
-      payment_id = v_clean_payment,
-      updated_at = now()
-  WHERE id = v_payment.id
-    AND status IN ('pending', 'pending_verification');
-
-  -- 8. Transactional Target Activation
-  -- 8.1 Venue Booking Settlement
+  -- 7. Target Verification & Safe Activation
+  -- 7.1 Venue Booking Settlement
   IF v_payment.target_type IN ('venue', 'venue_booking') OR v_payment.metadata->>'booking_ref' IS NOT NULL THEN
+    SELECT id, status, slot_date, slot_time, court_number, venue_id, expires_at
+    INTO v_target_booking
+    FROM public.venue_bookings
+    WHERE (booking_ref = coalesce(v_payment.metadata->>'booking_ref', v_payment.target_id)
+           OR id::text = v_payment.target_id)
+    FOR UPDATE;
+
+    IF v_target_booking.id IS NULL THEN
+      -- Target booking record does not exist: cannot activate. Quarantine in reconciliation_required.
+      UPDATE public.khelgrid_payments
+      SET status = 'reconciliation_required',
+          payment_id = v_clean_payment,
+          metadata = jsonb_set(coalesce(metadata, '{}'::jsonb), '{reconciliation_reason}', to_jsonb('TARGET_BOOKING_MISSING'::text)),
+          updated_at = now()
+      WHERE id = v_payment.id;
+
+      RETURN jsonb_build_object(
+        'status', 'error',
+        'error_code', 'TARGET_BOOKING_MISSING',
+        'order_id', v_clean_order,
+        'payment_id', v_clean_payment,
+        'message', 'Payment quarantined in reconciliation: target booking record does not exist.'
+      );
+    END IF;
+
+    IF v_target_booking.status = 'cancelled' THEN
+      UPDATE public.khelgrid_payments
+      SET status = 'reconciliation_required',
+          payment_id = v_clean_payment,
+          metadata = jsonb_set(coalesce(metadata, '{}'::jsonb), '{reconciliation_reason}', to_jsonb('BOOKING_ALREADY_CANCELLED'::text)),
+          updated_at = now()
+      WHERE id = v_payment.id;
+
+      RETURN jsonb_build_object(
+        'status', 'error',
+        'error_code', 'BOOKING_ALREADY_CANCELLED',
+        'order_id', v_clean_order,
+        'payment_id', v_clean_payment,
+        'message', 'Payment captured but target booking was previously cancelled. Quarantined in reconciliation.'
+      );
+    END IF;
+
+    -- If booking hold expired, check if another player reserved the slot
+    IF v_target_booking.status = 'expired' OR (v_target_booking.expires_at IS NOT NULL AND v_target_booking.expires_at < now() AND v_target_booking.status != 'confirmed') THEN
+      IF EXISTS (
+        SELECT 1 FROM public.venue_bookings
+        WHERE (venue_id = v_target_booking.venue_id OR venue_name = v_target_booking.venue_id)
+          AND slot_date = v_target_booking.slot_date
+          AND slot_time = v_target_booking.slot_time
+          AND coalesce(court_number, 1) = coalesce(v_target_booking.court_number, 1)
+          AND status = 'confirmed'
+          AND id != v_target_booking.id
+      ) THEN
+        -- Slot was taken by another user during the delay
+        UPDATE public.khelgrid_payments
+        SET status = 'reconciliation_required',
+            payment_id = v_clean_payment,
+            metadata = jsonb_set(coalesce(metadata, '{}'::jsonb), '{reconciliation_reason}', to_jsonb('SLOT_TAKEN_AFTER_EXPIRY'::text)),
+            updated_at = now()
+        WHERE id = v_payment.id;
+
+        RETURN jsonb_build_object(
+          'status', 'error',
+          'error_code', 'SLOT_NO_LONGER_AVAILABLE',
+          'order_id', v_clean_order,
+          'payment_id', v_clean_payment,
+          'message', 'Payment captured but slot was reserved by another user after hold expired. Quarantined in reconciliation.'
+        );
+      END IF;
+    END IF;
+
+    -- Safe target activation
     UPDATE public.venue_bookings
     SET status = 'confirmed',
         payment_status = 'paid',
@@ -678,21 +882,50 @@ BEGIN
         payment_id = v_clean_payment,
         expires_at = NULL,
         updated_at = now()
-    WHERE (booking_ref = coalesce(v_payment.metadata->>'booking_ref', v_payment.target_id)
-           OR id::text = v_payment.target_id)
-      AND status = 'pending';
+    WHERE id = v_target_booking.id;
+
   END IF;
 
-  -- 8.2 Listing Subscription Settlement
+  -- 7.2 Listing Subscription Settlement
   IF v_payment.target_type = 'listing_subscription' OR EXISTS (SELECT 1 FROM public.listing_subscriptions WHERE order_id = v_payment.order_id) THEN
+    SELECT id, is_active, payment_status
+    INTO v_target_sub
+    FROM public.listing_subscriptions
+    WHERE (order_id = v_payment.order_id OR id::text = v_payment.target_id)
+    FOR UPDATE;
+
+    IF v_target_sub.id IS NULL THEN
+      UPDATE public.khelgrid_payments
+      SET status = 'reconciliation_required',
+          payment_id = v_clean_payment,
+          metadata = jsonb_set(coalesce(metadata, '{}'::jsonb), '{reconciliation_reason}', to_jsonb('TARGET_SUBSCRIPTION_MISSING'::text)),
+          updated_at = now()
+      WHERE id = v_payment.id;
+
+      RETURN jsonb_build_object(
+        'status', 'error',
+        'error_code', 'TARGET_SUBSCRIPTION_MISSING',
+        'order_id', v_clean_order,
+        'payment_id', v_clean_payment,
+        'message', 'Payment quarantined in reconciliation: target subscription record does not exist.'
+      );
+    END IF;
+
     UPDATE public.listing_subscriptions
     SET is_active = true,
         payment_status = 'paid',
         payment_id = v_clean_payment,
         updated_at = now()
-    WHERE (order_id = v_payment.order_id OR id::text = v_payment.target_id)
-      AND payment_status = 'pending';
+    WHERE id = v_target_sub.id;
+
   END IF;
+
+  -- 8. Transactional Payment Record Settlement
+  UPDATE public.khelgrid_payments
+  SET status = 'completed',
+      payment_id = v_clean_payment,
+      updated_at = now()
+  WHERE id = v_payment.id;
 
   RETURN jsonb_build_object(
     'status', 'success',
@@ -700,7 +933,7 @@ BEGIN
     'payment_id', v_clean_payment,
     'amount', v_payment.amount,
     'currency', v_payment.currency,
-    'message', 'Payment cryptographically verified and settled transactionally.'
+    'message', 'Payment verified and settled transactionally.'
   );
 END;
 $$;
@@ -910,18 +1143,45 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'INVALID_VENUE', 'message', 'Requested venue does not exist or is not available for booking.');
   END IF;
 
-  -- Authoritative pricing: established from court tariff or venue slot hourly fee (NOT listing plan price)
-  SELECT hourly_price_paise INTO v_court_price_paisa
+  -- Resolve court-specific tariff matching the requested court number
+  SELECT hourly_price_paise
+  INTO v_court_price_paisa
   FROM public.venue_courts
-  WHERE venue_id = v_venue_record.id AND is_bookable = true
+  WHERE venue_id = v_venue_record.id
+    AND is_bookable = true
+    AND (
+      name = 'Court ' || v_court::text
+      OR name = 'Court' || v_court::text
+      OR name = v_court::text
+      OR name ILIKE '%Court ' || v_court::text
+      OR name ILIKE '%Court ' || v_court::text || ' %'
+      OR name ILIKE '%Court ' || v_court::text || ')'
+      OR name ILIKE '% ' || v_court::text
+      OR name ILIKE '%' || v_court::text || '%'
+    )
+  ORDER BY
+    CASE
+      WHEN name = 'Court ' || v_court::text THEN 1
+      WHEN name = 'Court' || v_court::text THEN 2
+      WHEN name = v_court::text THEN 3
+      ELSE 4
+    END
   LIMIT 1;
 
+  -- Pricing Resolution Hierarchy:
+  -- 1. Exact court-specific tariff
+  -- 2. Venue slot hourly fee (if explicitly configured and valid)
+  -- 3. If neither: REJECT with PRICE_UNRESOLVED (no unverified ₹800 fallback)
   IF v_court_price_paisa IS NOT NULL AND v_court_price_paisa > 0 THEN
     v_authoritative_price := round(v_court_price_paisa / 100.0, 2);
   ELSIF v_venue_record.slot_hourly_fee IS NOT NULL AND v_venue_record.slot_hourly_fee > 0 THEN
     v_authoritative_price := v_venue_record.slot_hourly_fee;
   ELSE
-    v_authoritative_price := 800; -- Standard court rate fallback
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', 'PRICE_UNRESOLVED',
+      'message', 'No authoritative booking tariff is configured for this venue or court. Please select another facility.'
+    );
   END IF;
 
   -- In-transaction sweep: expire stale pending reservations for this venue/date
@@ -955,82 +1215,85 @@ BEGIN
     );
   END IF;
 
-  -- Lifecycle initial state
+  -- Determine lifecycle state
   IF v_clean_method = 'pay_at_venue' THEN
     v_initial_status := 'confirmed';
     v_initial_payment_status := 'pay_at_venue';
     v_expires_at := NULL;
   ELSE
-    -- Online gateway payment: Temporary slot hold with 15-minute TTL
     v_initial_status := 'pending';
     v_initial_payment_status := 'pending';
-    v_expires_at := now() + interval '15 minutes';
+    v_expires_at := now() + interval '15 minutes'; -- 15-minute pending hold
   END IF;
 
-  v_booking_ref := 'VB-' || upper(substr(md5(random()::text), 1, 4)) || '-' || to_char(now(), 'MMDD') || '-' || substr(md5(clock_timestamp()::text), 1, 4);
+  -- Generate secure tokens
+  v_booking_ref := 'VB-' || to_char(now(), 'YYYYMMDD') || '-' || upper(substring(encode(gen_random_bytes(4), 'hex') from 1 for 6));
   v_voucher_token := encode(gen_random_bytes(24), 'hex');
+  v_new_id := gen_random_uuid();
 
-  BEGIN
-    INSERT INTO public.venue_bookings (
-      booking_ref,
-      venue_id,
-      venue_name,
-      city,
-      sport,
-      slot_date,
-      slot_time,
-      court_number,
-      customer_name,
-      customer_phone,
-      customer_email,
-      total_amount,
-      paid_amount,
-      status,
-      payment_status,
-      voucher_token,
-      idempotency_key,
-      user_id,
-      expires_at
-    ) VALUES (
-      v_booking_ref,
-      trim(p_venue_id),
-      coalesce(v_venue_record.name, 'KhelGrid Arena'),
-      coalesce(v_venue_record.city, 'India'),
-      coalesce(v_venue_record.sport, 'Multi-Sport'),
-      trim(p_slot_date),
-      trim(p_slot_time),
-      v_court,
-      trim(p_customer_name),
-      regexp_replace(trim(p_customer_phone), '[^0-9]', '', 'g'),
-      nullif(trim(coalesce(p_customer_email, '')), ''),
-      v_authoritative_price,
-      0,
-      v_initial_status,
-      v_initial_payment_status,
-      v_voucher_token,
-      v_clean_idemp,
-      v_user_id,
-      v_expires_at
-    ) RETURNING id INTO v_new_id;
-  EXCEPTION WHEN unique_violation THEN
-    RETURN jsonb_build_object(
-      'success', false,
-      'error', 'CONCURRENCY_CONFLICT',
-      'message', 'The requested slot was reserved by another player while processing. Please choose an alternative slot.'
-    );
-  END;
+  -- Insert reservation atomically
+  INSERT INTO public.venue_bookings (
+    id,
+    booking_ref,
+    venue_id,
+    venue_name,
+    city,
+    sport,
+    slot_date,
+    slot_time,
+    court_number,
+    customer_name,
+    customer_phone,
+    customer_email,
+    total_amount,
+    paid_amount,
+    payment_status,
+    status,
+    user_id,
+    idempotency_key,
+    voucher_token,
+    expires_at,
+    created_at,
+    updated_at
+  ) VALUES (
+    v_new_id,
+    v_booking_ref,
+    trim(p_venue_id),
+    v_venue_record.name,
+    v_venue_record.city,
+    coalesce(v_venue_record.sport, 'Multi-sport'),
+    trim(p_slot_date),
+    trim(p_slot_time),
+    v_court,
+    trim(p_customer_name),
+    trim(p_customer_phone),
+    nullif(trim(coalesce(p_customer_email, '')), ''),
+    v_authoritative_price,
+    0,
+    v_initial_payment_status,
+    v_initial_status,
+    v_user_id,
+    v_clean_idemp,
+    v_voucher_token,
+    v_expires_at,
+    now(),
+    now()
+  );
 
   RETURN jsonb_build_object(
     'success', true,
     'booking_id', v_new_id,
     'booking_ref', v_booking_ref,
     'voucher_token', v_voucher_token,
-    'court_number', v_court,
     'status', v_initial_status,
     'payment_status', v_initial_payment_status,
     'total_amount', v_authoritative_price,
+    'court_number', v_court,
     'expires_at', v_expires_at,
-    'hold_minutes', 15
+    'message', CASE
+      WHEN v_clean_method = 'pay_at_venue' THEN 'Venue slot reserved successfully. Pay at venue upon arrival.'
+      ELSE 'Venue slot held for 15 minutes. Please complete payment to confirm your booking.'
+    END
   );
 END;
 $$;
@@ -1635,24 +1898,81 @@ GRANT EXECUTE ON FUNCTION public.update_pickup_game_details(text, text, text, te
 -- -----------------------------------------------------------------------------
 -- 7. RECORD SCHEMA MIGRATION VERSIONS IN SUPABASE METADATA
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS supabase_migrations.schema_migrations (
-  version text PRIMARY KEY,
-  statements text[],
-  name text
-);
+-- 7. READ-ONLY SECURITY SCHEMA MIGRATION AUDIT PROCEDURE
+CREATE OR REPLACE FUNCTION public.verify_security_schema_migrations()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, information_schema, pg_catalog, pg_temp
+AS $
+DECLARE
+  v_has_webhook_table boolean;
+  v_has_webhook_cols boolean;
+  v_has_claim_rpc boolean;
+  v_has_finalize_rpc boolean;
+  v_has_settle_rpc boolean;
+  v_has_reserve_rpc boolean;
+  v_venue_slot_fee_default text;
+BEGIN
+  -- 1. Check payment_webhook_events table
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'payment_webhook_events'
+  ) INTO v_has_webhook_table;
 
-INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES
-  ('20261108040000', 'phase2_rls_post_merge_remediation'),
-  ('20261108050000', 'phase3_rbac_and_privilege_hardening'),
-  ('20261108053000', 'phase4_authentication_and_session_security'),
-  ('20261108060000', 'phase5_api_rpc_and_backend_hardening'),
-  ('20261108070000', 'phase5_1_rpc_volatility_and_caller_auth_remediation'),
-  ('20261108080000', 'phase6_athlete_privacy_and_minor_protection'),
-  ('20261108090000', 'phase7_and_8_business_logic_and_moderation_security'),
-  ('20261108100000', 'phase5_2_critical_remediation_and_closure'),
-  ('20261108110000', 'identity_ownership_and_schema_reconciliation'),
-  ('20261108120000', 'phase5_4_payment_booking_security'),
-  ('20261108130000', 'phase5_5_payment_gateway_integration')
-ON CONFLICT (version) DO UPDATE SET name = EXCLUDED.name;
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'payment_webhook_events'
+      AND column_name = 'payload_summary'
+  ) INTO v_has_webhook_cols;
+
+  -- 2. Check RPCs
+  SELECT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'claim_webhook_event'
+  ) INTO v_has_claim_rpc;
+
+  SELECT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'finalize_webhook_event'
+  ) INTO v_has_finalize_rpc;
+
+  SELECT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'settle_payment_transaction'
+  ) INTO v_has_settle_rpc;
+
+  SELECT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'reserve_venue_slot_atomic'
+  ) INTO v_has_reserve_rpc;
+
+  -- 3. Check venue column default
+  SELECT column_default INTO v_venue_slot_fee_default
+  FROM information_schema.columns
+  WHERE table_schema = 'public' AND table_name = 'venues' AND column_name = 'slot_hourly_fee';
+
+  RETURN jsonb_build_object(
+    'phase', '5.6',
+    'status', CASE
+      WHEN v_has_webhook_table AND v_has_webhook_cols AND v_has_claim_rpc AND v_has_finalize_rpc AND v_has_settle_rpc AND v_has_reserve_rpc
+      THEN 'OK' ELSE 'INCOMPLETE' END,
+    'checks', jsonb_build_object(
+      'payment_webhook_events_table', v_has_webhook_table,
+      'payment_webhook_events_columns', v_has_webhook_cols,
+      'claim_webhook_event_rpc', v_has_claim_rpc,
+      'finalize_webhook_event_rpc', v_has_finalize_rpc,
+      'settle_payment_transaction_rpc', v_has_settle_rpc,
+      'reserve_venue_slot_atomic_rpc', v_has_reserve_rpc,
+      'slot_hourly_fee_default', v_venue_slot_fee_default
+    ),
+    'verified_at', now()
+  );
+END;
+$;
+
+REVOKE EXECUTE ON FUNCTION public.verify_security_schema_migrations() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.verify_security_schema_migrations() TO anon, authenticated, service_role;
 
 COMMIT;

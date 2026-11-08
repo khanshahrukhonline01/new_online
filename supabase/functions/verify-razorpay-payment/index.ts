@@ -14,6 +14,29 @@ interface VerifyPaymentPayload {
   expected_currency?: string
 }
 
+interface RazorpayPaymentEntity {
+  id: string
+  entity: string
+  amount: number
+  currency: string
+  status: string
+  order_id: string | null
+  invoice_id: string | null
+  international: boolean
+  method: string
+  amount_refunded: number
+  refund_status: string | null
+  captured: boolean
+  description?: string
+  card_id?: string | null
+  bank?: string | null
+  wallet?: string | null
+  vpa?: string | null
+  email?: string
+  contact?: string
+  created_at: number
+}
+
 async function timingSafeEqual(a: string, b: string): Promise<boolean> {
   const enc = new TextEncoder()
   const aBuf = enc.encode(a)
@@ -55,6 +78,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const keyId = Deno.env.get('RAZORPAY_KEY_ID')
     const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET')
 
     if (!supabaseUrl || !serviceRoleKey) {
@@ -68,7 +92,8 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           error: 'GATEWAY_NOT_CONFIGURED',
-          message: 'Razorpay key secret is not configured on the server. Payment remains pending.',
+          status: 'pending_verification',
+          message: 'Razorpay key secret is not configured on the server. Payment remains in pending verification.',
         }),
         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -84,16 +109,20 @@ serve(async (req) => {
       )
     }
 
+    const cleanOrderId = order_id.trim()
+    const cleanPaymentId = payment_id.trim()
+    const cleanSig = gateway_signature.trim()
+
     // 1. Official Razorpay checkout verification: HMAC-SHA256(order_id + "|" + payment_id, key_secret)
-    const payload = `${order_id.trim()}|${payment_id.trim()}`
+    const payload = `${cleanOrderId}|${cleanPaymentId}`
     const expectedSignature = await generateHmacSha256(payload, keySecret)
 
-    const isValid = await timingSafeEqual(
-      gateway_signature.trim().toLowerCase(),
+    const isHmacValid = await timingSafeEqual(
+      cleanSig.toLowerCase(),
       expectedSignature.toLowerCase()
     )
 
-    if (!isValid) {
+    if (!isHmacValid) {
       return new Response(
         JSON.stringify({ error: 'INVALID_SIGNATURE', message: 'Cryptographic payment signature mismatch' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -105,7 +134,7 @@ serve(async (req) => {
     const { data: paymentRecord, error: fetchError } = await adminClient
       .from('khelgrid_payments')
       .select('id, order_id, amount, currency, status')
-      .eq('order_id', order_id.trim())
+      .eq('order_id', cleanOrderId)
       .single()
 
     if (fetchError || !paymentRecord) {
@@ -115,7 +144,6 @@ serve(async (req) => {
       )
     }
 
-    // Authoritative amount in paise derived strictly from database record
     const authoritativeAmountPaisa = Math.round(Number(paymentRecord.amount) * 100)
     const authoritativeCurrency = (paymentRecord.currency || 'INR').toUpperCase()
 
@@ -136,12 +164,127 @@ serve(async (req) => {
       )
     }
 
-    // 3. Settle transaction atomically in PostgreSQL via canonical procedure
+    // 3. Server-side Gateway API Capture Verification (Phase 5.6 Hardening)
+    if (!keyId) {
+      // Gateway key ID missing: cannot perform secondary gateway API capture check
+      return new Response(
+        JSON.stringify({
+          error: 'GATEWAY_CREDENTIALS_MISSING',
+          status: 'pending_verification',
+          message: 'Razorpay key ID is not configured on the server. Payment remains in pending verification.',
+        }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    let rzpPayment: RazorpayPaymentEntity
+    try {
+      const basicAuth = btoa(`${keyId.trim()}:${keySecret.trim()}`)
+      const rzpRes = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(cleanPaymentId)}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Basic ${basicAuth}`,
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(8000), // 8-second timeout
+      })
+
+      if (rzpRes.status === 404) {
+        return new Response(
+          JSON.stringify({ error: 'PAYMENT_NOT_FOUND', status: 'failed', message: 'Payment entity not found in gateway records.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      if (!rzpRes.ok) {
+        return new Response(
+          JSON.stringify({
+            error: 'GATEWAY_API_ERROR',
+            status: 'pending_verification',
+            message: `Gateway API returned status ${rzpRes.status}. Payment remains in pending verification.`,
+          }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      rzpPayment = await rzpRes.json()
+    } catch {
+      // Gateway API timeout or network failure: fail open to truthful pending verification
+      return new Response(
+        JSON.stringify({
+          error: 'GATEWAY_TIMEOUT',
+          status: 'pending_verification',
+          message: 'Gateway verification timed out. Payment remains in pending verification.',
+        }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Assert payment entity belongs to this order
+    if (rzpPayment.order_id !== cleanOrderId) {
+      return new Response(
+        JSON.stringify({
+          error: 'ORDER_MISMATCH',
+          message: `Gateway payment order (${rzpPayment.order_id}) does not match submitted order (${cleanOrderId}).`,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Assert exact amount and currency against gateway response
+    if (rzpPayment.amount !== authoritativeAmountPaisa) {
+      return new Response(
+        JSON.stringify({
+          error: 'AMOUNT_MISMATCH',
+          message: `Gateway payment amount (${rzpPayment.amount} paise) does not match authoritative order amount (${authoritativeAmountPaisa} paise).`,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (rzpPayment.currency.toUpperCase() !== authoritativeCurrency) {
+      return new Response(
+        JSON.stringify({
+          error: 'CURRENCY_MISMATCH',
+          message: `Gateway currency (${rzpPayment.currency}) does not match order currency (${authoritativeCurrency}).`,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Gateway Payment Status Policy:
+    // Only 'captured' status permits activation.
+    // 'authorized' must be retained as pending_verification.
+    if (rzpPayment.status === 'authorized' || !rzpPayment.captured) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          status: 'pending_verification',
+          error: 'PAYMENT_AUTHORIZED_NOT_CAPTURED',
+          message: 'Payment is authorized by bank but not yet captured by the gateway. Awaiting capture.',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (rzpPayment.status !== 'captured') {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          status: 'failed',
+          error: 'PAYMENT_NOT_CAPTURED',
+          message: `Gateway payment status is '${rzpPayment.status}'. Expected 'captured'.`,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // 4. Settle transaction atomically in PostgreSQL via canonical procedure
     const { data: settlementData, error: settleError } = await adminClient.rpc('settle_payment_transaction', {
-      p_order_id: order_id.trim(),
-      p_payment_id: payment_id.trim(),
-      p_verification_source: 'checkout_hmac',
-      p_gateway_signature: gateway_signature.trim(),
+      p_order_id: cleanOrderId,
+      p_payment_id: cleanPaymentId,
+      p_verification_source: 'gateway_api',
+      p_gateway_signature: cleanSig,
       p_expected_amount_paisa: authoritativeAmountPaisa,
       p_expected_currency: authoritativeCurrency,
     })
@@ -164,8 +307,8 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         status: 'completed',
-        order_id: order_id.trim(),
-        payment_id: payment_id.trim(),
+        order_id: cleanOrderId,
+        payment_id: cleanPaymentId,
         settlement: settlementData,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

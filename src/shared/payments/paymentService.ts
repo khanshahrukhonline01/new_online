@@ -154,6 +154,13 @@ export async function verifyPaymentWithServer({
         if (data?.success && data?.status === 'completed') {
           return { success: true, status: 'completed' }
         }
+        if (data?.status === 'pending_verification') {
+          return {
+            success: false,
+            status: 'pending_verification',
+            error: data.message || data.error || 'Payment authorized. Awaiting capture.',
+          }
+        }
         if (data && !data.success) {
           return { success: false, status: 'failed', error: data.message || data.error }
         }
@@ -164,6 +171,13 @@ export async function verifyPaymentWithServer({
             success: false,
             status: 'failed',
             error: errJson?.message || errJson?.error || 'Invalid payment signature or parameters',
+          }
+        }
+        if (res.status === 503 && errJson?.status === 'pending_verification') {
+          return {
+            success: false,
+            status: 'pending_verification',
+            error: errJson?.message || 'Gateway verification pending.',
           }
         }
       }
