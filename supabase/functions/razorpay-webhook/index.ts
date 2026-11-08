@@ -51,7 +51,7 @@ serve(async (req) => {
     })
   }
 
-  // 1. Read raw request body before JSON parsing to calculate HMAC
+  // 1. Read raw request body before JSON parsing to verify HMAC-SHA256
   const rawBody = await req.text()
   const expectedSignature = await generateHmacSha256(rawBody, webhookSecret)
 
@@ -69,7 +69,10 @@ serve(async (req) => {
 
   // 2. Parse verified webhook event payload
   let event: {
+    entity?: string
+    account_id?: string
     event: string
+    contains?: string[]
     payload?: {
       payment?: {
         entity?: {
@@ -89,6 +92,7 @@ serve(async (req) => {
         }
       }
     }
+    created_at?: number
   }
 
   try {
@@ -100,7 +104,6 @@ serve(async (req) => {
     })
   }
 
-  // 3. Process payment capture or order settlement
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
@@ -113,39 +116,86 @@ serve(async (req) => {
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey)
 
+  // 3. Webhook Event Idempotency Check
+  const eventId = req.headers.get('x-razorpay-event-id') || `${event.event}_${event.created_at || Date.now()}`
+  const { data: existingEvent } = await adminClient
+    .from('payment_webhook_events')
+    .select('id, status')
+    .eq('event_id', eventId)
+    .maybeSingle()
+
+  if (existingEvent) {
+    return new Response(JSON.stringify({ status: 'already_processed', event_id: eventId }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  // 4. Process payment capture or order settlement
   if (event.event === 'payment.captured' || event.event === 'order.paid') {
     const paymentEntity = event.payload?.payment?.entity
     const orderId = paymentEntity?.order_id || event.payload?.order?.entity?.id
     const paymentId = paymentEntity?.id
     const amountPaisa = paymentEntity?.amount || event.payload?.order?.entity?.amount || 0
-    const currency = paymentEntity?.currency || 'INR'
+    const currency = (paymentEntity?.currency || 'INR').toUpperCase()
+    const paymentStatus = paymentEntity?.status
+
+    // Verify payment status is captured
+    if (event.event === 'payment.captured' && paymentStatus && paymentStatus !== 'captured') {
+      return new Response(JSON.stringify({ error: 'PAYMENT_NOT_CAPTURED', status: paymentStatus }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
 
     if (orderId && paymentId) {
-      // Transactional settlement in PostgreSQL
-      const { data, error } = await adminClient.rpc('verify_payment_transaction', {
-        p_order_id: orderId,
-        p_payment_id: paymentId,
-        p_gateway_signature: webhookSignature,
+      // Transactional settlement in PostgreSQL via canonical settlement procedure
+      const { data: settleData, error: settleError } = await adminClient.rpc('settle_payment_transaction', {
+        p_order_id: orderId.trim(),
+        p_payment_id: paymentId.trim(),
+        p_verification_source: 'webhook_verified',
+        p_gateway_signature: null,
         p_expected_amount_paisa: amountPaisa,
         p_expected_currency: currency,
       })
 
-      if (error) {
-        console.error('[Razorpay Webhook] Settlement RPC error:', error)
-        return new Response(JSON.stringify({ error: 'SETTLEMENT_FAILED', details: error.message }), {
+      if (settleError) {
+        // Return 500 so Razorpay retries webhook delivery on transient database error
+        return new Response(JSON.stringify({ error: 'SETTLEMENT_FAILED', details: settleError.message }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' },
         })
       }
 
-      return new Response(JSON.stringify({ status: 'settled', data }), {
+      // Record processed event for idempotency
+      await adminClient.from('payment_webhook_events').insert({
+        event_id: eventId,
+        event_type: event.event,
+        order_id: orderId.trim(),
+        payment_id: paymentId.trim(),
+        status: 'processed',
+        payload: {
+          amount: amountPaisa,
+          currency,
+          settled_at: new Date().toISOString(),
+        },
+      })
+
+      return new Response(JSON.stringify({ status: 'settled', data: settleData }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
     }
   }
 
-  // Acknowledge receipt of other webhook event types
+  // Record non-settlement event
+  await adminClient.from('payment_webhook_events').insert({
+    event_id: eventId,
+    event_type: event.event,
+    status: 'ignored',
+  })
+
+  // Acknowledge receipt of other webhook events
   return new Response(JSON.stringify({ received: true, event: event.event }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },

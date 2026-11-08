@@ -8,9 +8,6 @@ import type {
   VenueBookingResult,
   VenueSlotBookingInput,
 } from './paymentTypes'
-import {
-  calculatePlanExpiry,
-} from './listingPricing'
 
 const DEFAULT_UPI_VPA = 'khelgrid@icici'
 const DEFAULT_MERCHANT_NAME = 'KhelGrid Sports'
@@ -114,17 +111,21 @@ export function verifyPaymentSignature(
 
 /**
  * Verifies a Razorpay payment cryptographically with the server backend.
- * Calls the secure RPC verify_payment_signature_and_settle which evaluates
- * HMAC-SHA256 against server-held credentials in private.gateway_credentials.
+ * Routes exclusively through the verify-razorpay-payment Edge Function.
+ * The browser never calls privileged database settlement RPCs directly.
  */
 export async function verifyPaymentWithServer({
   orderId,
   paymentId,
   gatewaySignature,
+  expectedAmountPaisa,
+  expectedCurrency = 'INR',
 }: {
   orderId: string
   paymentId: string
   gatewaySignature: string
+  expectedAmountPaisa?: number
+  expectedCurrency?: string
 }): Promise<{ success: boolean; status: 'completed' | 'pending_verification' | 'failed'; error?: string }> {
   if (!orderId || !paymentId || !gatewaySignature) {
     return { success: false, status: 'failed', error: 'Missing order_id, payment_id, or gateway_signature' }
@@ -132,7 +133,7 @@ export async function verifyPaymentWithServer({
 
   if (supabaseUrl && anonKey) {
     try {
-      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/verify_payment_signature_and_settle`, {
+      const res = await fetch(`${supabaseUrl}/functions/v1/verify-razorpay-payment`, {
         method: 'POST',
         headers: {
           apikey: anonKey,
@@ -140,9 +141,11 @@ export async function verifyPaymentWithServer({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          p_order_id: orderId.trim(),
-          p_payment_id: paymentId.trim(),
-          p_gateway_signature: gatewaySignature.trim(),
+          order_id: orderId.trim(),
+          payment_id: paymentId.trim(),
+          gateway_signature: gatewaySignature.trim(),
+          expected_amount_paisa: expectedAmountPaisa,
+          expected_currency: expectedCurrency,
         }),
       })
 
@@ -153,6 +156,15 @@ export async function verifyPaymentWithServer({
         }
         if (data && !data.success) {
           return { success: false, status: 'failed', error: data.message || data.error }
+        }
+      } else {
+        const errJson = await res.json().catch(() => null)
+        if (res.status === 400) {
+          return {
+            success: false,
+            status: 'failed',
+            error: errJson?.message || errJson?.error || 'Invalid payment signature or parameters',
+          }
         }
       }
     } catch (err) {
@@ -179,7 +191,6 @@ export async function recordPaymentTransaction({
   item,
   method,
   status = method === 'pay_at_venue' ? 'pay_at_venue' : 'pending_verification',
-  gatewaySignature,
 }: {
   orderId: string
   paymentId: string
@@ -192,7 +203,7 @@ export async function recordPaymentTransaction({
   const timestamp = new Date().toISOString()
   const receiptRef = `REC-${orderId.slice(-8)}-${paymentId.slice(-4)}`
 
-  // Security safeguard (Phase 5.4): Browser client cannot declare 'completed' status.
+  // Security safeguard (Phase 5.5): Browser client cannot declare 'completed' status.
   // Online payments must be recorded as 'pending_verification' until server verifies settlement.
   let effectiveStatus = status
   if (method !== 'pay_at_venue') {
@@ -211,31 +222,10 @@ export async function recordPaymentTransaction({
     receiptRef,
   }
 
-  // 1. Persist locally for instant receipt retrieval across sessions
-  try {
-    const storage = getSafeLocalStorage()
-    if (storage) {
-      const existing = JSON.parse(storage.getItem('khelgrid_payment_receipts') || '[]')
-      existing.unshift({
-        ...result,
-        gatewaySignature: gatewaySignature || undefined,
-        customerName: customer.name,
-        customerPhone: customer.phone,
-        itemTitle: item.title,
-        itemType: item.type,
-        venueName: item.venueName,
-        city: item.city,
-      })
-      storage.setItem('khelgrid_payment_receipts', JSON.stringify(existing.slice(0, 50)))
-    }
-  } catch {
-    // Ignore storage quota errors
-  }
-
-  // 2. Persist to Supabase if configured
+  // 1. Remote persistence first: Persist to Supabase if configured
   if (supabaseUrl && anonKey) {
     try {
-      await fetch(`${supabaseUrl}/rest/v1/rpc/record_payment_transaction`, {
+      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/record_payment_transaction`, {
         method: 'POST',
         headers: {
           'apikey': anonKey,
@@ -260,13 +250,51 @@ export async function recordPaymentTransaction({
             city: item.city,
             date_or_time: item.dateOrTime,
             receipt_ref: receiptRef,
-            gateway_signature: gatewaySignature || null,
           },
         }),
       })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null)
+        console.warn('[KhelGrid Payments] Remote transaction persistence failed:', errData)
+        return {
+          ...result,
+          success: false,
+          status: 'failed',
+          errorMessage: errData?.message || 'Remote payment registration failed',
+        }
+      }
     } catch (err) {
-      console.warn('[KhelGrid Payments] Remote transaction sync failed; stored locally in pending state:', err)
+      console.warn('[KhelGrid Payments] Remote transaction sync network error:', err)
+      return {
+        ...result,
+        success: false,
+        status: 'failed',
+        errorMessage: 'Network error persisting payment transaction',
+      }
     }
+  }
+
+  // 2. Persist locally ONLY for display cache after successful remote registration (or local mock)
+  // Security rule (Phase 5.5): Never store gateway signatures or raw customer phone in browser storage!
+  try {
+    const storage = getSafeLocalStorage()
+    if (storage) {
+      const existing = JSON.parse(storage.getItem('khelgrid_payment_receipts') || '[]')
+      existing.unshift({
+        ...result,
+        customerName: customer.name,
+        // Mask customer phone to prevent cleartext PII storage in browser
+        customerPhone: customer.phone ? customer.phone.replace(/(\d{2})\d+(\d{2})/, '$1******$2') : undefined,
+        itemTitle: item.title,
+        itemType: item.type,
+        venueName: item.venueName,
+        city: item.city,
+      })
+      storage.setItem('khelgrid_payment_receipts', JSON.stringify(existing.slice(0, 50)))
+    }
+  } catch {
+    // Ignore storage quota errors
   }
 
   return result
@@ -647,51 +675,18 @@ export function getUserVenueBookings(): Array<VenueBookingResult & { createdAt?:
 /**
  * Records an activated listing subscription (1-Day, 1-Month, 6-Month, 1-Year, Lifelong).
  * Browser clients cannot self-activate paid subscriptions. All online subscriptions require
- * verified backend payment confirmation.
+ * verified backend payment confirmation via Edge Function or Webhook.
  */
 export async function recordListingSubscription(input: ListingSubscriptionInput): Promise<ListingSubscriptionResult> {
   const timestamp = new Date().toISOString()
-  const expiresAt = calculatePlanExpiry(input.planId)
   const subRef = `SUB-${input.planId.toUpperCase()}-${Date.now().toString().slice(-6)}`
+  const isPayAtVenue = input.paymentStatus === 'pay_at_venue'
 
-  // Enforce Phase 5.4 security: Paid listing plans require verified payment settlement
-  const isPaymentVerified = Boolean(
-    input.paymentId &&
-    input.paymentId.trim().length >= 8 &&
-    input.paymentStatus === 'paid' &&
-    input.serverVerified === true
-  )
+  // Security rule (Phase 5.5): Browser client can NEVER self-activate paid subscriptions.
+  // We completely reject client-supplied `serverVerified: true` or `paymentStatus: 'paid'` as authorization.
+  // All online subscriptions must be registered in 'pending_verification' status until the server verifies settlement.
 
-  if (!isPaymentVerified && input.paymentStatus !== 'pay_at_venue') {
-    return {
-      status: 'pending_verification',
-      subscriptionId: subRef,
-      planName: input.planName,
-      expiresAt: null,
-      receiptRef: subRef,
-      message: 'Paid subscription requires verified payment and cannot be activated without server payment confirmation.',
-    }
-  }
-
-  // 1. Local storage cache for display only
-  try {
-    const storage = getSafeLocalStorage()
-    if (storage) {
-      const existing = JSON.parse(storage.getItem('khelgrid_listing_subscriptions') || '[]')
-      existing.unshift({
-        ...input,
-        subscriptionId: subRef,
-        expiresAt: isPaymentVerified ? expiresAt : null,
-        is_active: isPaymentVerified,
-        createdAt: timestamp,
-      })
-      storage.setItem('khelgrid_listing_subscriptions', JSON.stringify(existing.slice(0, 50)))
-    }
-  } catch {
-    // Ignore storage quota
-  }
-
-  // 2. Supabase RPC if available
+  // 1. Supabase RPC registration
   if (supabaseUrl && anonKey) {
     try {
       const res = await fetch(`${supabaseUrl}/rest/v1/rpc/record_listing_subscription`, {
@@ -714,27 +709,30 @@ export async function recordListingSubscription(input: ListingSubscriptionInput)
           p_customer_name: input.customerName,
           p_customer_phone: input.customerPhone,
           p_customer_email: input.customerEmail || null,
-          p_payment_status: isPaymentVerified ? 'paid' : 'pending',
+          p_payment_status: isPayAtVenue ? 'pay_at_venue' : 'pending',
           p_listing_id: input.listingId || null,
+          p_idempotency_key: input.idempotencyKey || null,
           p_metadata: {
-            expires_at: expiresAt,
             subscription_ref: subRef,
           },
         }),
       })
+
       if (res.ok) {
         const data = await res.json()
         if (data && data.status === 'success' && data.is_active) {
+          // Authorized server-side activation (e.g. admin or pre-verified order)
           return {
             status: 'success',
             subscriptionId: data.subscription_id || subRef,
             planName: data.plan_name || input.planName,
-            expiresAt: data.expires_at || expiresAt,
+            expiresAt: data.expires_at,
             receiptRef: subRef,
             accessToken: data.access_token,
           }
         }
-        if (data && data.status === 'pending_verification') {
+        if (data && (data.status === 'pending_verification' || data.status === 'success')) {
+          // Normal secure online path: registered in pending state awaiting gateway settlement
           return {
             status: 'pending_verification',
             subscriptionId: subRef,
@@ -746,19 +744,29 @@ export async function recordListingSubscription(input: ListingSubscriptionInput)
           }
         }
       }
-    } catch {
-      // Fall through to pending
+    } catch (err) {
+      console.warn('[KhelGrid Payments] Remote subscription registration error:', err)
     }
   }
 
-  if (isPaymentVerified) {
-    return {
-      status: 'success',
-      subscriptionId: subRef,
-      planName: input.planName,
-      expiresAt,
-      receiptRef: subRef,
+  // 2. Truthful unconfirmed/pending result on offline or database unconfigured state
+  // Notice: Client NEVER self-activates from local storage or fabricated payment IDs!
+  try {
+    const storage = getSafeLocalStorage()
+    if (storage) {
+      const existing = JSON.parse(storage.getItem('khelgrid_listing_subscriptions') || '[]')
+      existing.unshift({
+        ...input,
+        subscriptionId: subRef,
+        expiresAt: null,
+        is_active: false,
+        paymentStatus: isPayAtVenue ? 'pay_at_venue' : 'pending',
+        createdAt: timestamp,
+      })
+      storage.setItem('khelgrid_listing_subscriptions', JSON.stringify(existing.slice(0, 50)))
     }
+  } catch {
+    // Ignore storage quota
   }
 
   return {
