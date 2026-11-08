@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+import * as realtimeModule from './realtime-client'
 import {
   hasPermission,
   DEFAULT_ROLE_PERMISSIONS,
@@ -118,11 +119,14 @@ describe('Phase 3: Role-Based Access Control (RBAC) & Privilege Hardening Suite'
   })
 
   it('SEC-TEST-P3-03: adminAssignRole delegates to atomic admin RPC with typed response contract', async () => {
+    vi.spyOn(realtimeModule, 'getSupabaseClient').mockReturnValue({
+      rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+    } as unknown as ReturnType<typeof realtimeModule.getSupabaseClient>)
     const res = await adminAssignRole('usr-test-1', 'coach', 'Verified NIS coach credentials')
     expect(res).toBeDefined()
     expect(typeof res.success).toBe('boolean')
     expect(typeof res.message).toBe('string')
-  })
+  }, 10000)
 
   it('SEC-TEST-P3-04: adminRevokeRole prevents revoking the sole remaining administrator', async () => {
     const canRevokeAdmin = (activeAdminCount: number, targetIsAdmin: boolean) => {
@@ -137,10 +141,13 @@ describe('Phase 3: Role-Based Access Control (RBAC) & Privilege Hardening Suite'
     expect(canRevokeAdmin(1, false)).toBe(true)
 
     // Verify adminRevokeRole contract
+    vi.spyOn(realtimeModule, 'getSupabaseClient').mockReturnValue({
+      rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+    } as unknown as ReturnType<typeof realtimeModule.getSupabaseClient>)
     const res = await adminRevokeRole('usr-test-1', 'coach')
     expect(res).toBeDefined()
     expect(typeof res.success).toBe('boolean')
-  })
+  }, 10000)
 
   it('SEC-TEST-P3-05: user_roles decoupled mapping prevents privilege tampering on profiles table', () => {
     // Contract: Even if an attacker manipulates profiles.role locally, server-side

@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import * as realtimeModule from './realtime-client'
 import {
   canAccessResource,
   canManageListing,
@@ -55,12 +56,15 @@ describe('KhelGrid Phase 3: Centralized RBAC & Authorization Controls Test Suite
     })
 
     it('SEC-TEST-P3R-05: admin role assignment and revocation RPC contracts fail gracefully in test environment', async () => {
+      vi.spyOn(realtimeModule, 'getSupabaseClient').mockReturnValue({
+        rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+      } as unknown as ReturnType<typeof realtimeModule.getSupabaseClient>)
       const assignResult = await adminAssignRole('target-user-uuid', 'coach', 'Verified NIS Credential')
       expect(assignResult).toHaveProperty('success')
 
       const revokeResult = await adminRevokeRole('target-user-uuid', 'coach')
       expect(revokeResult).toHaveProperty('success')
-    })
+    }, 10000)
   })
 
   // ============================================================================

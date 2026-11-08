@@ -392,6 +392,13 @@ describe('Supabase Auth Client Architecture & Session Security', () => {
   // ============================================================================
   describe('6. Profile Security & Privilege Tampering Prevention', () => {
     it('updateUserProfile shields role and isVerified from client mutation', async () => {
+      const mockUpsert = vi.fn().mockResolvedValue({ data: null, error: null })
+      vi.spyOn(realtimeModule, 'getSupabaseClient').mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          upsert: mockUpsert,
+        }),
+      } as unknown as ReturnType<typeof realtimeModule.getSupabaseClient>)
+
       const user = createTestAuthUserFixture({ role: 'athlete', isVerified: false })
       setStoredAuthUser(user)
 
@@ -406,7 +413,12 @@ describe('Supabase Auth Client Architecture & Session Security', () => {
       expect(updated?.role).toBe('athlete') // Unchanged!
       expect(updated?.isVerified).toBe(false) // Unchanged!
       expect(getStoredAuthUser()?.role).toBe('athlete')
-    })
+      expect(mockUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          display_name: 'Legit Name Change',
+        }),
+      )
+    }, 10000)
   })
 
   // ============================================================================
