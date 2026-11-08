@@ -101,12 +101,10 @@ export function PaymentCheckoutModal({
         email: email.trim() || undefined,
       }
 
-      const status: 'completed' | 'pay_at_venue' | 'pending_verification' =
+      const status: 'pay_at_venue' | 'pending_verification' =
         method === 'pay_at_venue'
           ? 'pay_at_venue'
-          : method === 'upi'
-            ? 'pending_verification'
-            : 'completed'
+          : 'pending_verification'
 
       const result = await recordPaymentTransaction({
         orderId,

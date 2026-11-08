@@ -59,26 +59,61 @@ export interface VenueSlotBookingInput {
   customerPhone: string
   totalAmount: number
   paidAmount: number
-  paymentStatus: 'paid' | 'pay_at_venue'
+  paymentStatus: 'paid' | 'pay_at_venue' | 'pending'
   paymentId?: string
   userId?: string
   customerEmail?: string
   courtOrTurfNumber?: string
   courtNumber?: number
   gatewaySignature?: string
+  idempotencyKey?: string
+  voucherToken?: string
   simulateOfflineFailure?: boolean
 }
 
 export interface VenueBookingResult {
-  status: 'success' | 'double_booking_conflict' | 'error' | 'unconfirmed'
+  status: 'success' | 'double_booking_conflict' | 'error' | 'unconfirmed' | 'pending' | 'confirmed'
   bookingRef?: string
+  voucherToken?: string
   venueName?: string
   slotDate?: string
   slotTime?: string
+  courtNumber?: number
   paidAmount?: number
+  totalAmount?: number
   paymentStatus?: string
   message?: string
   errorMessage?: string
   isOfflineDraft?: boolean
   serverConfirmed?: boolean
+  customerName?: string
+}
+
+export interface ListingSubscriptionInput {
+  orderId: string
+  paymentId: string
+  listingType: 'academy' | 'venue' | 'opportunity' | 'pickup_game'
+  listingName: string
+  city: string
+  planId: import('./listingPricing').ListingPlanId
+  planName: string
+  amount: number
+  durationDays: number
+  customerName: string
+  customerPhone: string
+  customerEmail?: string
+  paymentStatus?: 'paid' | 'pay_at_venue' | 'pending'
+  listingId?: string
+  serverVerified?: boolean
+  idempotencyKey?: string
+}
+
+export interface ListingSubscriptionResult {
+  status: 'success' | 'error' | 'pending_verification'
+  subscriptionId?: string
+  planName?: string
+  expiresAt?: string | null
+  receiptRef?: string
+  message?: string
+  accessToken?: string
 }

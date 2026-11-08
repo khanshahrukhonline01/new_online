@@ -1,4 +1,6 @@
 import type {
+  ListingSubscriptionInput,
+  ListingSubscriptionResult,
   PaymentCustomer,
   PaymentItem,
   PaymentMethod,
@@ -8,7 +10,6 @@ import type {
 } from './paymentTypes'
 import {
   calculatePlanExpiry,
-  type ListingPlanId,
 } from './listingPricing'
 
 const DEFAULT_UPI_VPA = 'khelgrid@icici'
@@ -62,7 +63,7 @@ export function generateUpiUri({
 }
 
 /**
- * Creates an order ID like KG_ORD_1730892348_a1b2
+ * Creates an order ID like KG_ORD_1730892348_A1B2
  */
 export function generateOrderId(prefix = 'KG_ORD'): string {
   const timestamp = Date.now().toString(36)
@@ -93,7 +94,10 @@ function getSafeLocalStorage(): Storage | null {
 }
 
 /**
- * Verifies gateway payment signatures to prevent client-declared payment completion tampering.
+ * Verifies gateway payment signatures against an expected server-provided hash.
+ * In Phase 5.4, misleading browser signature-length validation is strictly removed.
+ * Client browsers cannot establish cryptographic payment authenticity; genuine verification
+ * must be performed server-side with HMAC-SHA256 and the server-held secret key.
  */
 export function verifyPaymentSignature(
   orderId: string,
@@ -103,14 +107,70 @@ export function verifyPaymentSignature(
 ): boolean {
   if (!orderId || !paymentId || !signature) return false
   if (expectedSecretOrHash) {
-    return signature === expectedSecretOrHash
+    return signature.trim().toLowerCase() === expectedSecretOrHash.trim().toLowerCase()
   }
-  return signature.length >= 16
+  return false
+}
+
+/**
+ * Verifies a Razorpay payment cryptographically with the server backend.
+ * Calls the secure RPC verify_payment_signature_and_settle which evaluates
+ * HMAC-SHA256 against server-held credentials in private.gateway_credentials.
+ */
+export async function verifyPaymentWithServer({
+  orderId,
+  paymentId,
+  gatewaySignature,
+}: {
+  orderId: string
+  paymentId: string
+  gatewaySignature: string
+}): Promise<{ success: boolean; status: 'completed' | 'pending_verification' | 'failed'; error?: string }> {
+  if (!orderId || !paymentId || !gatewaySignature) {
+    return { success: false, status: 'failed', error: 'Missing order_id, payment_id, or gateway_signature' }
+  }
+
+  if (supabaseUrl && anonKey) {
+    try {
+      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/verify_payment_signature_and_settle`, {
+        method: 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          p_order_id: orderId.trim(),
+          p_payment_id: paymentId.trim(),
+          p_gateway_signature: gatewaySignature.trim(),
+        }),
+      })
+
+      if (res.ok) {
+        const data = await res.json().catch(() => null)
+        if (data?.success && data?.status === 'completed') {
+          return { success: true, status: 'completed' }
+        }
+        if (data && !data.success) {
+          return { success: false, status: 'failed', error: data.message || data.error }
+        }
+      }
+    } catch (err) {
+      console.warn('[KhelGrid Payments] Remote payment verification call failed:', err)
+    }
+  }
+
+  return {
+    success: false,
+    status: 'pending_verification',
+    error: 'Payment recorded in pending state. Awaiting gateway settlement.',
+  }
 }
 
 /**
  * Persists payment record to Supabase and browser local storage.
- * Defaults to 'pending_verification' for online methods unless gateway verification is confirmed.
+ * Defaults strictly to 'pending_verification' for online methods.
+ * Browsers cannot declare payments as 'completed' independently.
  */
 export async function recordPaymentTransaction({
   orderId,
@@ -132,14 +192,11 @@ export async function recordPaymentTransaction({
   const timestamp = new Date().toISOString()
   const receiptRef = `REC-${orderId.slice(-8)}-${paymentId.slice(-4)}`
 
-  // Security safeguard: client-created online payment records cannot declare 'completed'
-  // without verified gateway signature. If requested as 'completed' without signature,
-  // downgrade to 'pending_verification'.
+  // Security safeguard (Phase 5.4): Browser client cannot declare 'completed' status.
+  // Online payments must be recorded as 'pending_verification' until server verifies settlement.
   let effectiveStatus = status
-  if (method !== 'pay_at_venue' && effectiveStatus === 'completed') {
-    if (!gatewaySignature || gatewaySignature.length < 16) {
-      effectiveStatus = 'pending_verification'
-    }
+  if (method !== 'pay_at_venue') {
+    effectiveStatus = 'pending_verification'
   }
 
   const result: PaymentResult = {
@@ -197,7 +254,7 @@ export async function recordPaymentTransaction({
           p_item_title: item.title,
           p_payment_gateway: method === 'pay_at_venue' ? 'pay_at_venue' : 'upi_direct',
           p_payment_method: method,
-          p_status: status,
+          p_status: effectiveStatus,
           p_metadata: {
             venue_name: item.venueName,
             city: item.city,
@@ -208,7 +265,7 @@ export async function recordPaymentTransaction({
         }),
       })
     } catch (err) {
-      console.warn('[KhelGrid Payments] Remote transaction sync failed; stored locally:', err)
+      console.warn('[KhelGrid Payments] Remote transaction sync failed; stored locally in pending state:', err)
     }
   }
 
@@ -259,7 +316,7 @@ export async function fetchBookedVenueSlots(venueId: string, slotDate: string): 
     return localSlots
   }
 
-  // 1. Try safe zero-PII RPC first (Phase 2 RLS compliant)
+  // Safe zero-PII RPC with in-transaction expiry sweeper
   try {
     const rpcRes = await fetch(`${supabaseUrl}/rest/v1/rpc/get_booked_slots_for_venue`, {
       method: 'POST',
@@ -281,46 +338,23 @@ export async function fetchBookedVenueSlots(venueId: string, slotDate: string): 
       }
     }
   } catch {
-    // Graceful fallback to table query or local storage
+    // Return local slots on network failure
   }
 
-  try {
-    const query = new URLSearchParams({
-      venue_id: `eq.${venueId}`,
-      slot_date: `eq.${normalizedDate}`,
-      status: 'neq.cancelled',
-      select: 'slot_time',
-      limit: '500',
-    })
-    const res = await fetch(`${supabaseUrl}/rest/v1/venue_bookings?${query.toString()}`, {
-      headers: {
-        apikey: anonKey,
-        Authorization: `Bearer ${anonKey}`,
-        Accept: 'application/json',
-      },
-    })
-    if (res.ok) {
-      const data = (await res.json()) as Array<{ slot_time: string }>
-      if (Array.isArray(data)) {
-        const remoteSlots = data.map(r => r.slot_time).filter(Boolean)
-        const merged = Array.from(new Set([...localSlots, ...remoteSlots]))
-        return merged
-      }
-    }
-  } catch {
-    // Return local slots on network or CORS failure
-  }
   return localSlots
 }
 
 /**
  * Creates and records a venue turf/court booking with PostgreSQL database-level
- * zero double-booking enforcement via UNIQUE(venue_id, slot_date, slot_time).
+ * zero double-booking enforcement via reserve_venue_slot_atomic RPC.
+ * In Phase 5.4, all direct browser table mutation fallbacks are permanently removed.
  */
 export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Promise<VenueBookingResult> {
   const timestamp = new Date().toISOString()
-  const venueCode = input.venueName.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'VEN'
-  const ref = `VB-${venueCode}-${Date.now().toString().slice(-6)}`
+  const isPayAtVenue = input.paymentStatus === 'pay_at_venue'
+  const normalizedDate = normalizeBookingDate(input.slotDate)
+  const courtNum = input.courtNumber || (input.courtOrTurfNumber ? parseInt(input.courtOrTurfNumber.replace(/\D/g, ''), 10) || 1 : 1)
+  const idempotencyKey = input.idempotencyKey || generateOrderId('IDEMP_VB')
 
   // 1. Instant local storage double-booking check
   const localBooked = getBookedVenueSlots(input.venueId, input.slotDate)
@@ -338,12 +372,8 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
     }
   }
 
-  // 2. Direct PostgreSQL insertion to public.venue_bookings (canonical live table)
-  if (supabaseUrl && anonKey) {
-    const normalizedDate = normalizeBookingDate(input.slotDate)
-    const courtNum = input.courtNumber || (input.courtOrTurfNumber ? parseInt(input.courtOrTurfNumber.replace(/\D/g, ''), 10) || 1 : 1)
-
-    // 2.1 Attempt atomic reservation via secure RPC first
+  // 2. Atomic reservation via secure RPC reserve_venue_slot_atomic
+  if (supabaseUrl && anonKey && !input.simulateOfflineFailure) {
     try {
       const rpcRes = await fetch(`${supabaseUrl}/rest/v1/rpc/reserve_venue_slot_atomic`, {
         method: 'POST',
@@ -360,21 +390,30 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
           p_customer_name: input.customerName,
           p_customer_phone: input.customerPhone,
           p_customer_email: input.customerEmail || null,
+          p_payment_method: isPayAtVenue ? 'pay_at_venue' : 'online',
+          p_idempotency_key: idempotencyKey,
         }),
       })
 
       if (rpcRes.ok) {
         const rpcData = await rpcRes.json().catch(() => null)
         if (rpcData?.success && rpcData?.booking_ref) {
+          const isConfirmed = rpcData.status === 'confirmed'
           const remoteBooking: VenueBookingResult = {
-            status: 'success',
+            status: isConfirmed ? 'confirmed' : 'pending',
             bookingRef: rpcData.booking_ref,
+            voucherToken: rpcData.voucher_token,
             venueName: input.venueName,
             slotDate: normalizedDate,
             slotTime: input.slotTime,
-            paidAmount: Number(rpcData.total_amount ?? input.paidAmount),
-            paymentStatus: input.paymentStatus,
+            courtNumber: courtNum,
+            totalAmount: Number(rpcData.total_amount ?? input.totalAmount),
+            paidAmount: isConfirmed && !isPayAtVenue ? Number(rpcData.total_amount) : 0,
+            paymentStatus: rpcData.payment_status || (isPayAtVenue ? 'pay_at_venue' : 'pending'),
+            serverConfirmed: isConfirmed,
+            isOfflineDraft: false,
           }
+
           try {
             const storage = getSafeLocalStorage()
             if (storage) {
@@ -382,20 +421,31 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
               existing.unshift({
                 ...input,
                 bookingRef: rpcData.booking_ref,
+                voucherToken: rpcData.voucher_token,
+                status: remoteBooking.status,
+                serverConfirmed: isConfirmed,
                 createdAt: timestamp,
               })
               storage.setItem('khelgrid_venue_bookings', JSON.stringify(existing.slice(0, 50)))
             }
           } catch {
-            // Ignore
+            // Ignore storage errors
           }
+
           if (typeof window !== 'undefined') {
             window.dispatchEvent(
               new CustomEvent('khelgrid:venue-booked', {
-                detail: { bookingRef: rpcData.booking_ref, venueId: input.venueId, slotDate: input.slotDate, slotTime: input.slotTime },
+                detail: {
+                  bookingRef: rpcData.booking_ref,
+                  venueId: input.venueId,
+                  slotDate: input.slotDate,
+                  slotTime: input.slotTime,
+                  status: remoteBooking.status,
+                },
               }),
             )
           }
+
           return remoteBooking
         } else if (rpcData && !rpcData.success) {
           if (rpcData.error === 'SLOT_ALREADY_RESERVED' || rpcData.error === 'CONCURRENCY_CONFLICT') {
@@ -426,161 +476,29 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
           }
         }
       }
-    } catch {
-      // Graceful fallback to canonical public.venue_bookings table insertion
-    }
-
-    // 2.2 Direct insertion fallback to canonical public.venue_bookings (never non-existent venue_slot_bookings)
-    try {
-      const response = await fetch(`${supabaseUrl}/rest/v1/venue_bookings`, {
-        method: 'POST',
-        headers: {
-          apikey: anonKey,
-          Authorization: `Bearer ${anonKey}`,
-          'Content-Type': 'application/json',
-          Prefer: 'return=representation',
-        },
-        body: JSON.stringify({
-          booking_ref: ref,
-          venue_id: input.venueId,
-          venue_name: input.venueName,
-          city: input.city,
-          sport: input.sport,
-          court_number: courtNum,
-          slot_date: normalizedDate,
-          slot_time: input.slotTime,
-          user_id: input.userId || null,
-          customer_name: input.customerName,
-          customer_phone: input.customerPhone,
-          customer_email: input.customerEmail || null,
-          total_amount: input.totalAmount,
-          paid_amount: input.paidAmount,
-          payment_status: input.paymentStatus,
-          payment_id: input.paymentId || null,
-          status: 'confirmed',
-        }),
-      })
-
-      if (response.status === 409) {
-        // Unique index violation (uq_venue_slot_concurrency)
-        return {
-          status: 'double_booking_conflict',
-          bookingRef: '',
-          venueName: input.venueName,
-          slotDate: input.slotDate,
-          slotTime: input.slotTime,
-          paidAmount: 0,
-          paymentStatus: 'cancelled',
-          message: `Slot "${input.slotTime}" on ${input.slotDate} was just reserved by another player. Please select a different time slot.`,
-          errorMessage: `Slot "${input.slotTime}" on ${input.slotDate} was just reserved by another player. Please select a different time slot.`,
-        }
-      }
-
-      if (!response.ok) {
-        const text = await response.text().catch(() => '')
-        if (
-          text.includes('uq_venue_slot_concurrency') ||
-          text.includes('idx_venue_slot_active_unique') ||
-          text.includes('duplicate key value') ||
-          text.includes('unique constraint')
-        ) {
-          return {
-            status: 'double_booking_conflict',
-            bookingRef: '',
-            venueName: input.venueName,
-            slotDate: input.slotDate,
-            slotTime: input.slotTime,
-            paidAmount: 0,
-            paymentStatus: 'cancelled',
-            message: `Slot "${input.slotTime}" on ${input.slotDate} was just reserved by another player. Please select a different time slot.`,
-            errorMessage: `Slot "${input.slotTime}" on ${input.slotDate} was just reserved by another player. Please select a different time slot.`,
-          }
-        }
-      } else {
-        const data = await response.json().catch(() => null)
-        const row = Array.isArray(data) && data[0] ? data[0] : data
-        if (row && row.booking_ref) {
-          const remoteBooking: VenueBookingResult = {
-            status: 'success',
-            bookingRef: row.booking_ref,
-            venueName: row.venue_name || input.venueName,
-            slotDate: row.slot_date || input.slotDate,
-            slotTime: row.slot_time || input.slotTime,
-            paidAmount: Number(row.paid_amount ?? input.paidAmount),
-            paymentStatus: row.payment_status || input.paymentStatus,
-          }
-          // Persist locally
-          try {
-            const storage = getSafeLocalStorage()
-            if (storage) {
-              const existing = JSON.parse(storage.getItem('khelgrid_venue_bookings') || '[]')
-              existing.unshift({
-                ...input,
-                bookingRef: row.booking_ref,
-                createdAt: timestamp,
-              })
-              storage.setItem('khelgrid_venue_bookings', JSON.stringify(existing.slice(0, 50)))
-            }
-          } catch {
-            // Ignore
-          }
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(
-              new CustomEvent('khelgrid:venue-booked', {
-                detail: { bookingRef: row.booking_ref, venueId: input.venueId, slotDate: input.slotDate, slotTime: input.slotTime },
-              }),
-            )
-          }
-          return remoteBooking
-        }
-      }
     } catch (err) {
-      console.warn('[KhelGrid Payments] Remote slot booking failed, using local offline fallback:', err)
+      console.warn('[KhelGrid Payments] Remote atomic reservation RPC failed:', err)
     }
   }
 
-  // 3. Local storage caching for offline retrieval and instant cross-component updates
-  const isOfflineSimulation = Boolean(input.simulateOfflineFailure)
-  const isTestEnvironment = typeof globalThis !== 'undefined' && Boolean((globalThis as unknown as Record<string, unknown>).__VITEST__ || typeof window === 'undefined')
-  const allowTestFallback = isTestEnvironment && !isOfflineSimulation
-
+  // 3. Truthful unconfirmed result on database failure or offline state
+  // Notice: Direct table insertion fallbacks are completely removed. No fake vouchers issued.
   try {
     const storage = getSafeLocalStorage()
     if (storage) {
       const existing = JSON.parse(storage.getItem('khelgrid_venue_bookings') || '[]')
       existing.unshift({
         ...input,
-        bookingRef: allowTestFallback ? ref : '',
-        isOfflineDraft: !allowTestFallback,
+        bookingRef: '',
+        isOfflineDraft: true,
         serverConfirmed: false,
+        status: 'unconfirmed',
         createdAt: timestamp,
       })
       storage.setItem('khelgrid_venue_bookings', JSON.stringify(existing.slice(0, 50)))
     }
   } catch {
     // Ignore storage quota error
-  }
-
-  if (allowTestFallback) {
-    const result: VenueBookingResult = {
-      status: 'success',
-      bookingRef: ref,
-      venueName: input.venueName,
-      slotDate: input.slotDate,
-      slotTime: input.slotTime,
-      paidAmount: input.paidAmount,
-      paymentStatus: input.paymentStatus,
-      isOfflineDraft: false,
-      serverConfirmed: false,
-    }
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent('khelgrid:venue-booked', {
-          detail: { bookingRef: ref, venueId: input.venueId, slotDate: input.slotDate, slotTime: input.slotTime },
-        }),
-      )
-    }
-    return result
   }
 
   return {
@@ -607,10 +525,11 @@ export function getBookedVenueSlots(venueId: string, slotDate: string): string[]
         venueName?: string
         slotDate?: string
         slotTime?: string
+        status?: string
       }>
       if (Array.isArray(existing)) {
         return existing
-          .filter(b => (b.venueId === venueId || b.venueName === venueId) && b.slotDate === slotDate && b.slotTime)
+          .filter(b => (b.venueId === venueId || b.venueName === venueId) && b.slotDate === slotDate && b.slotTime && b.status !== 'cancelled' && b.status !== 'expired')
           .map(b => b.slotTime as string)
       }
     }
@@ -621,16 +540,16 @@ export function getBookedVenueSlots(venueId: string, slotDate: string): string[]
 }
 
 /**
- * Verified single-booking voucher lookup requiring both booking reference
- * and customer phone (zero enumeration, zero public PII scraping).
+ * Verified single-booking voucher lookup requiring high-entropy voucher token
+ * or authenticated owner context (zero enumeration, zero public PII scraping).
  */
 export async function fetchVenueBookingVoucher(
   bookingRef: string,
-  customerPhone: string,
+  voucherToken?: string,
 ): Promise<VenueBookingResult | null> {
   const cleanRef = bookingRef.trim()
-  const cleanPhone = customerPhone.replace(/[^0-9]/g, '')
-  if (!cleanRef || cleanPhone.length < 7) {
+  const cleanToken = (voucherToken || '').trim()
+  if (!cleanRef) {
     return null
   }
 
@@ -645,7 +564,7 @@ export async function fetchVenueBookingVoucher(
         },
         body: JSON.stringify({
           p_booking_ref: cleanRef,
-          p_customer_phone: cleanPhone,
+          p_voucher_token: cleanToken || null,
         }),
       })
       if (res.ok) {
@@ -653,18 +572,22 @@ export async function fetchVenueBookingVoucher(
         const row = Array.isArray(data) && data[0] ? data[0] : data
         if (row && row.booking_ref) {
           return {
-            status: 'success',
+            status: row.status === 'confirmed' ? 'confirmed' : row.status,
             bookingRef: row.booking_ref,
             venueName: row.venue_name,
             slotDate: row.slot_date,
             slotTime: row.slot_time,
+            courtNumber: row.court_number,
+            totalAmount: Number(row.total_amount || 0),
             paidAmount: Number(row.paid_amount || 0),
-            paymentStatus: row.payment_status || 'paid',
+            paymentStatus: row.payment_status || 'pending',
+            serverConfirmed: row.status === 'confirmed',
+            customerName: row.customer_display_name,
           }
         }
       }
     } catch {
-      // Fallback to local storage
+      // Fallback to local storage for user's own display
     }
   }
 
@@ -673,27 +596,29 @@ export async function fetchVenueBookingVoucher(
     if (storage) {
       const existing = JSON.parse(storage.getItem('khelgrid_venue_bookings') || '[]') as Array<{
         bookingRef?: string
-        customerPhone?: string
+        voucherToken?: string
         venueName?: string
         slotDate?: string
         slotTime?: string
         paidAmount?: number
+        totalAmount?: number
         paymentStatus?: string
+        status?: string
       }>
       const match = existing.find(
-        b =>
-          b.bookingRef === cleanRef &&
-          b.customerPhone?.replace(/[^0-9]/g, '') === cleanPhone,
+        b => b.bookingRef === cleanRef && (!cleanToken || b.voucherToken === cleanToken)
       )
       if (match) {
         return {
-          status: 'success',
+          status: match.status === 'confirmed' ? 'confirmed' : 'pending',
           bookingRef: match.bookingRef || cleanRef,
           venueName: match.venueName || '',
           slotDate: match.slotDate || '',
           slotTime: match.slotTime || '',
+          totalAmount: match.totalAmount || 0,
           paidAmount: match.paidAmount || 0,
-          paymentStatus: match.paymentStatus || 'paid',
+          paymentStatus: match.paymentStatus || 'pending',
+          serverConfirmed: false,
         }
       }
     }
@@ -719,55 +644,36 @@ export function getUserVenueBookings(): Array<VenueBookingResult & { createdAt?:
   return []
 }
 
-export interface ListingSubscriptionInput {
-  orderId: string
-  paymentId: string
-  listingType: 'academy' | 'venue' | 'opportunity' | 'pickup_game'
-  listingName: string
-  city: string
-  planId: ListingPlanId
-  planName: string
-  amount: number
-  durationDays: number
-  customerName: string
-  customerPhone: string
-  customerEmail?: string
-  paymentStatus?: 'paid' | 'pay_at_venue'
-  listingId?: string
-}
-
-export interface ListingSubscriptionResult {
-  status: 'success' | 'error'
-  subscriptionId?: string
-  planName?: string
-  expiresAt?: string | null
-  receiptRef?: string
-  message?: string
-}
-
 /**
  * Records an activated listing subscription (1-Day, 1-Month, 6-Month, 1-Year, Lifelong).
+ * Browser clients cannot self-activate paid subscriptions. All online subscriptions require
+ * verified backend payment confirmation.
  */
 export async function recordListingSubscription(input: ListingSubscriptionInput): Promise<ListingSubscriptionResult> {
   const timestamp = new Date().toISOString()
   const expiresAt = calculatePlanExpiry(input.planId)
   const subRef = `SUB-${input.planId.toUpperCase()}-${Date.now().toString().slice(-6)}`
 
-  // Enforce Phase E.4 security: Paid listing plans require verified payment
-  const isPaymentVerified = Boolean(input.paymentId && input.paymentId.trim().length >= 8 && input.paymentStatus === 'paid')
+  // Enforce Phase 5.4 security: Paid listing plans require verified payment settlement
+  const isPaymentVerified = Boolean(
+    input.paymentId &&
+    input.paymentId.trim().length >= 8 &&
+    input.paymentStatus === 'paid' &&
+    input.serverVerified === true
+  )
 
-  if (!isPaymentVerified) {
+  if (!isPaymentVerified && input.paymentStatus !== 'pay_at_venue') {
     return {
-      status: 'error',
+      status: 'pending_verification',
       subscriptionId: subRef,
       planName: input.planName,
       expiresAt: null,
       receiptRef: subRef,
-      message: 'Paid subscription requires verified payment and cannot be activated without payment confirmation.',
+      message: 'Paid subscription requires verified payment and cannot be activated without server payment confirmation.',
     }
   }
 
-  // 1. Local storage cache
+  // 1. Local storage cache for display only
   try {
     const storage = getSafeLocalStorage()
     if (storage) {
@@ -775,7 +681,8 @@ export async function recordListingSubscription(input: ListingSubscriptionInput)
       existing.unshift({
         ...input,
         subscriptionId: subRef,
-        expiresAt,
+        expiresAt: isPaymentVerified ? expiresAt : null,
+        is_active: isPaymentVerified,
         createdAt: timestamp,
       })
       storage.setItem('khelgrid_listing_subscriptions', JSON.stringify(existing.slice(0, 50)))
@@ -807,7 +714,7 @@ export async function recordListingSubscription(input: ListingSubscriptionInput)
           p_customer_name: input.customerName,
           p_customer_phone: input.customerPhone,
           p_customer_email: input.customerEmail || null,
-          p_payment_status: input.paymentStatus || 'paid',
+          p_payment_status: isPaymentVerified ? 'paid' : 'pending',
           p_listing_id: input.listingId || null,
           p_metadata: {
             expires_at: expiresAt,
@@ -817,26 +724,49 @@ export async function recordListingSubscription(input: ListingSubscriptionInput)
       })
       if (res.ok) {
         const data = await res.json()
-        if (data && data.status === 'success') {
+        if (data && data.status === 'success' && data.is_active) {
           return {
             status: 'success',
             subscriptionId: data.subscription_id || subRef,
             planName: data.plan_name || input.planName,
             expiresAt: data.expires_at || expiresAt,
             receiptRef: subRef,
+            accessToken: data.access_token,
+          }
+        }
+        if (data && data.status === 'pending_verification') {
+          return {
+            status: 'pending_verification',
+            subscriptionId: subRef,
+            planName: input.planName,
+            expiresAt: null,
+            receiptRef: subRef,
+            accessToken: data.access_token,
+            message: data.message || 'Subscription pending payment verification.',
           }
         }
       }
     } catch {
-      // Fall through to local cache
+      // Fall through to pending
+    }
+  }
+
+  if (isPaymentVerified) {
+    return {
+      status: 'success',
+      subscriptionId: subRef,
+      planName: input.planName,
+      expiresAt,
+      receiptRef: subRef,
     }
   }
 
   return {
-    status: 'success',
+    status: 'pending_verification',
     subscriptionId: subRef,
     planName: input.planName,
-    expiresAt,
+    expiresAt: null,
     receiptRef: subRef,
+    message: 'Subscription registered in pending verification state. Awaiting payment settlement.',
   }
 }
