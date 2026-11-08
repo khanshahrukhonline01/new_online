@@ -412,7 +412,7 @@ export function CommunityReviewsSection({
       <div className="reviews-scorecard-grid">
         <div className="scorecard-main-score">
           <div className="scorecard-big-number">
-            {stats.averageRating > 0 ? stats.averageRating.toFixed(1) : '4.9'}
+            {stats.totalReviews > 0 ? stats.averageRating.toFixed(1) : '—'}
           </div>
           <div className="scorecard-stars" aria-label={`${stats.averageRating} out of 5 stars`}>
             {[1, 2, 3, 4, 5].map(i => (
@@ -425,7 +425,7 @@ export function CommunityReviewsSection({
             ))}
           </div>
           <div className="scorecard-reviews-count">
-            Based on {stats.totalReviews || reviews.length} verified player ratings
+            Based on {stats.totalReviews} verified player ratings
           </div>
         </div>
 
@@ -433,7 +433,7 @@ export function CommunityReviewsSection({
         <div className="scorecard-distribution-bars">
           {[5, 4, 3, 2, 1].map(stars => {
             const count = stats.distribution[stars as keyof typeof stats.distribution] || 0
-            const pct = stats.totalReviews > 0 ? (count / stats.totalReviews) * 100 : stars === 5 ? 85 : 15
+            const pct = stats.totalReviews > 0 ? (count / stats.totalReviews) * 100 : 0
             return (
               <div key={stars} className="dist-row">
                 <span className="dist-stars-label">{stars} ★</span>

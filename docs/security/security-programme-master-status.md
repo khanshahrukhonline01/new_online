@@ -5,8 +5,8 @@
 **Programme:** KhelGrid 10-Phase Security & Authorization Programme  
 **Target Development Supabase Project:** `hznsbxvovjxvmnchzzqt`  
 **Production Site:** `https://khelgrid.com/` (Strictly Out-of-Scope / Untouched)  
-**Active Branch:** `security/phase-5-6-payment-capture-webhook-pricing-integrity`  
-**Base Commit:** `f58b143` (PR #183 merged on `main`)  
+**Active Branch:** `security/phase-5-7-hosted-db-reconciliation-legacy-rpc-closure`  
+**Base Commit:** `61e0312` (PR #184 merged on `main`)  
 **Date:** November 8, 2026  
 
 ---
@@ -25,29 +25,30 @@
 | **Phase 5.3**| Integration & Concurrency Remediation | Merged into main (PR #181) | Migration Validated (`20261108110000`); Master SQL ready | Passed (22 tests) | 🔄 **Code Complete / Staged** |
 | **Phase 5.4**| Payment Verification, Lifecycle & RPC Privacy | Merged into main (PR #182) | Migration Validated (`20261108120000`); Master SQL ready | Passed (13 isolated PG + 23 unit tests) | ✅ **Merged to main** |
 | **Phase 5.5**| End-to-End Razorpay Settlement & Integrity | Merged into main (PR #183) | Migration Validated (`20261108130000`); Master SQL ready | Passed (15 isolated PG + 21 unit tests) | ✅ **Merged to main** |
-| **Phase 5.6**| Payment Capture, Webhook Reliability & Tariff Integrity | Implemented on branch | Migration Validated (`20261108140000`); Master SQL ready | Passed (16 isolated PG + 23 unit tests) | 🔄 **Implemented & Validated** |
+| **Phase 5.6**| Payment Capture, Webhook Reliability & Tariff Integrity | Merged into main (PR #184) | Migration Validated (`20261108140000`); Master SQL ready | Passed (16 isolated PG + 23 unit tests) | ✅ **Merged to main** |
+| **Phase 5.7**| Hosted DB Reconciliation & Legacy RPC Closure | Implemented on branch | Migration Validated (`20261108160000`); Master SQL ready | Passed (21 isolated PG + 745 total tests) | 🔄 **Implemented & Validated** |
 | **Phase 6** | Athlete Privacy, Minor Safety & DPDP | Merged (PR #178) + Hardened | Migration Validated (`20261108080000`); Master SQL ready | Passed (11 tests) | 🔄 **Implemented & Validated** |
 | **Phase 7** | Concurrency Locks & Booking Security | Merged (PR #178) + Hardened | Migration Validated (`20261108090000`); Master SQL ready | Passed (11 tests) | 🔄 **Implemented & Validated** |
 | **Phase 8** | Listing Moderation & Anti-Self-Approval | Merged (PR #178) + Hardened | Migration Validated (`20261108090000`); Master SQL ready | Passed (11 tests) | 🔄 **Implemented & Validated** |
-| **Phase 9** | Threat Modeling & Isolated PG Tests | Implemented on branch | Isolated PG17 + Adversarial Suites Verified | 640+ Tests Passing | ✅ **Verified in Code** |
+| **Phase 9** | Threat Modeling & Isolated PG Tests | Implemented on branch | Isolated PG17 + Adversarial Suites Verified | 745 Tests Passing | ✅ **Verified in Code** |
 | **Phase 10**| Continuous Compliance & Operational Runbook | Implemented on branch | Runbooks & Restore Validated in Isolation | Ready for Handover | ✅ **Verified in Code** |
 
 ---
 
 ## 2. Programme Summary & Deliverables
 
-- **Branch**: `security/phase-5-6-payment-capture-webhook-pricing-integrity`
-- **Base Commit**: `f58b143` (PR #183 merged into `main`)
-- **Phase 5.6 Migration**: `supabase/migrations/20261108140000_phase5_6_capture_assurance_and_pricing_integrity.sql`
+- **Branch**: `security/phase-5-7-hosted-db-reconciliation-legacy-rpc-closure`
+- **Base Commit**: `61e0312` (PR #184 merged into `main`)
+- **Phase 5.7 Migration**: `supabase/migrations/20261108160000_phase5_7_hosted_db_reconciliation_legacy_rpc_closure.sql`
 - **Consolidated Master Deployment SQL**: `supabase/deployments/phase-2-to-8-master-consolidated-deployment.sql`
 - **Isolated PostgreSQL Test Suites**:
+  - `src/integrations/supabase/phase5-7-reconciliation-legacy-rpc.test.ts` (21 / 21 passed)
   - `src/integrations/supabase/phase5-6-payment-capture-pricing.test.ts` (16 / 16 passed)
   - `src/integrations/supabase/phase5-5-payment-gateway-integration.test.ts` (15 / 15 passed)
   - `src/integrations/supabase/phase5-4-payment-booking-isolated-postgres.test.ts` (13 / 13 passed)
   - `src/integrations/supabase/identity-ownership-isolated-postgres.test.ts` (22 / 22 passed)
-- **Frontend Unit Test Suites**:
+- **Frontend & Integration Test Suites**:
   - `src/shared/payments/paymentService.test.ts` (23 / 23 passed)
-- **Edge Functions**:
-  - `supabase/functions/verify-razorpay-payment/index.ts`
-  - `supabase/functions/razorpay-webhook/index.ts`
-- **Production Status**: **100% UNTOUCHED**.
+  - `src/integrations/supabase/public-client.test.ts` (28 / 28 passed)
+  - `src/modules/play/PlayPage.test.tsx` (2 / 2 passed)
+  - Full suite: 92 test files, 745 / 745 tests passing (100%)

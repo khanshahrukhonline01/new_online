@@ -865,65 +865,7 @@ export interface DatabasePickupGameParticipant {
   cancellation_token?: string | null
 }
 
-export const INITIAL_BASELINE_PICKUP_GAMES: DatabasePickupGame[] = [
-  {
-    id: 'pg-1',
-    slug: 'pickleball-ferrohub',
-    sport: 'Pickleball',
-    emoji: '🎾',
-    skill_level: 'Intermediate',
-    venue_name: 'FerroHub Sports',
-    city: 'Bengaluru',
-    time_label: 'Today · 7:00 PM',
-    host_name: 'Rahul S.',
-    price_per_player: '₹200/player',
-    spots_open: 1,
-    total_players: 4,
-    confirmed_players: 3,
-    is_featured: true,
-    publication_status: 'published',
-    whatsapp_group_url: 'https://chat.whatsapp.com/sample-ferrohub-pickleball',
-    status: 'open',
-  },
-  {
-    id: 'pg-2',
-    slug: 'football-koramangala',
-    sport: 'Football',
-    emoji: '⚽',
-    skill_level: 'Beginner',
-    venue_name: 'Kicks on Grass Arena',
-    city: 'Bengaluru',
-    time_label: 'Today · 8:30 PM',
-    host_name: 'Aakash M.',
-    price_per_player: '₹250/player',
-    spots_open: 4,
-    total_players: 12,
-    confirmed_players: 8,
-    is_featured: true,
-    publication_status: 'published',
-    whatsapp_group_url: 'https://chat.whatsapp.com/sample-kicks-football',
-    status: 'open',
-  },
-  {
-    id: 'pg-3',
-    slug: 'badminton-whitefield',
-    sport: 'Badminton',
-    emoji: '🏸',
-    skill_level: 'Advanced',
-    venue_name: 'Whitefield Sports Hub',
-    city: 'Bengaluru',
-    time_label: 'Tomorrow · 6:00 AM',
-    host_name: 'Siddharth P.',
-    price_per_player: '₹150/player',
-    spots_open: 2,
-    total_players: 4,
-    confirmed_players: 2,
-    is_featured: false,
-    publication_status: 'published',
-    whatsapp_group_url: 'https://chat.whatsapp.com/sample-whitefield-badminton',
-    status: 'open',
-  },
-]
+export const INITIAL_BASELINE_PICKUP_GAMES: DatabasePickupGame[] = []
 
 export let BASELINE_PICKUP_GAMES: DatabasePickupGame[] = JSON.parse(JSON.stringify(INITIAL_BASELINE_PICKUP_GAMES))
 
@@ -1853,8 +1795,8 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
         if (response.ok) {
           const data = await response.json()
           if (data && typeof data === 'object' && !Array.isArray(data) && 'status' in data) {
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.gameId)
-            if (data.status === 'error' && (data.error_code === 'GAME_NOT_FOUND' || data.error_code === 'PGRST116') && !isUuid) {
+            const isLocalMock = communitySubmissions.pickup_games.some(g => g.id === input.gameId)
+            if (data.status === 'error' && (data.error_code === 'GAME_NOT_FOUND' || data.error_code === 'PGRST116') && isLocalMock) {
               // Non-UUID IDs (e.g. pg-1, mock games) not present in remote DB fall through to local simulation
             } else {
               rpcHandled = true
@@ -1957,26 +1899,11 @@ export async function joinPickupGame(input: JoinPickupGameInput): Promise<JoinPi
     game = BASELINE_PICKUP_GAMES.find(g => g.id === input.gameId)
   }
   if (!game) {
-    game = {
-      id: input.gameId,
-      slug: input.gameId,
-      sport: 'Sports',
-      emoji: '⚽',
-      skill_level: 'Intermediate',
-      venue_name: 'Community Arena',
-      city: 'Bengaluru',
-      time_label: 'Today · 7:00 PM',
-      host_name: 'Community Host',
-      price_per_player: '₹200',
-      spots_open: 1,
-      total_players: 4,
-      confirmed_players: 3,
-      is_featured: false,
-      publication_status: 'published',
-      whatsapp_group_url: 'https://chat.whatsapp.com/sample-match-group',
-      status: 'open',
+    return {
+      status: 'error',
+      errorCode: 'GAME_NOT_FOUND',
+      message: 'The requested pickup match could not be found or has expired.',
     }
-    communitySubmissions.pickup_games.push(game)
   }
 
   if (game.spots_open <= 0 || game.status === 'full') {
@@ -2478,8 +2405,8 @@ export async function createPickupGame(
   if (!time || time.length < 2) {
     return { status: 'error', errorCode: 'INVALID_INPUT', message: 'Time label is required.' }
   }
-  if (!Number.isFinite(total) || total < 2 || total > 100) {
-    return { status: 'error', errorCode: 'INVALID_INPUT', message: 'Total players must be between 2 and 100.' }
+  if (!Number.isFinite(total) || total < 1 || total > 100) {
+    return { status: 'error', errorCode: 'INVALID_INPUT', message: 'Total players must be between 1 and 100.' }
   }
 
   // A configured backend requires a real authenticated session. Never simulate a
@@ -2751,8 +2678,8 @@ export async function updatePickupGameCapacity(
   }
 
   const total = Number(input.totalPlayers)
-  if (!Number.isFinite(total) || total < 2 || total > 100) {
-    return { status: 'error', errorCode: 'INVALID_INPUT', message: 'Total players must be between 2 and 100.' }
+  if (!Number.isFinite(total) || total < 1 || total > 100) {
+    return { status: 'error', errorCode: 'INVALID_INPUT', message: 'Total players must be between 1 and 100.' }
   }
 
   if (total < game.confirmed_players) {
@@ -3230,77 +3157,7 @@ export async function submitVerificationProof(proof: VerificationProofInput): Pr
 // Community Reviews, Ratings & Media Uploads (Supabase Storage)
 // -----------------------------------------------------------------------------
 
-export const INITIAL_CURATED_REVIEWS: ReviewItem[] = [
-  {
-    id: 'rev-curated-1',
-    entity_type: 'venue',
-    entity_id: 'kicks-on-grass-bellandur-bengaluru-914w9',
-    entity_slug: 'kicks-on-grass-bellandur-bengaluru-914w9',
-    user_id: null,
-    author_name: 'Arjun Nair',
-    author_role: 'Turf Player',
-    rating: 5,
-    title: 'Superb FIFA-grade turf and brilliant floodlights',
-    content: 'We play 7v7 football here every Tuesday evening. The turf cushioning is very gentle on knees and the high-lux floodlights ensure zero shadow spots. Booking via KhelGrid was instant.',
-    photos: [
-      'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=800&q=80',
-    ],
-    helpful_count: 14,
-    status: 'published',
-    created_at: '2026-10-28T18:30:00.000Z',
-  },
-  {
-    id: 'rev-curated-2',
-    entity_type: 'venue',
-    entity_id: 'kicks-on-grass-bellandur-bengaluru-914w9',
-    entity_slug: 'kicks-on-grass-bellandur-bengaluru-914w9',
-    user_id: null,
-    author_name: 'Vikram Shenoy',
-    author_role: 'Athlete',
-    rating: 4,
-    title: 'Great pitch, clean changing rooms',
-    content: 'Well maintained grass surface with high netting so balls don’t go outside. Drinking water dispenser and parking are easily accessible.',
-    photos: [],
-    helpful_count: 8,
-    status: 'published',
-    created_at: '2026-10-25T14:15:00.000Z',
-  },
-  {
-    id: 'rev-curated-3',
-    entity_type: 'academy',
-    entity_id: 'pullela-gopichand-badminton-academy-hyderabad-hyderabad-u739x',
-    entity_slug: 'pullela-gopichand-badminton-academy-hyderabad-hyderabad-u739x',
-    user_id: null,
-    author_name: 'Meera Krishnan',
-    author_role: 'Parent',
-    rating: 5,
-    title: 'World-class training discipline and coaches',
-    content: 'My 14-year-old daughter has been in the junior batch for 8 months. The fitness drills, tactical footwork coaching, and psychological mentoring are second to none in India.',
-    photos: [
-      'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=800&q=80',
-    ],
-    helpful_count: 23,
-    status: 'published',
-    created_at: '2026-10-20T10:00:00.000Z',
-  },
-  {
-    id: 'rev-curated-4',
-    entity_type: 'academy',
-    entity_id: 'bhaichung-bhutia-football-schools-delhi-delhi-b7d18',
-    entity_slug: 'bhaichung-bhutia-football-schools-delhi-delhi-b7d18',
-    user_id: null,
-    author_name: 'Kabir Verma',
-    author_role: 'Athlete',
-    rating: 5,
-    title: 'Structured age-group progression and licensed coaches',
-    content: 'Top level coaching methodology. They focus on tactical awareness, first touch, and positioning from day one. Highly recommend for any young footballer.',
-    photos: [],
-    helpful_count: 19,
-    status: 'published',
-    created_at: '2026-10-22T16:45:00.000Z',
-  },
-]
+export const INITIAL_CURATED_REVIEWS: ReviewItem[] = []
 
 export function computeReviewStats(reviews: ReviewItem[]): ReviewStats {
   if (!reviews.length) {

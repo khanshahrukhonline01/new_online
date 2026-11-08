@@ -296,6 +296,14 @@ describe('Pickup Game Host Authorization & Game Management Security (Phase 3)', 
   })
 
   it('10. Public game discovery remains functional without leaking private metadata', async () => {
+    await publicClient.createPickupGame({
+      sport: 'Basketball',
+      venueName: 'Koramangala Indoor Arena',
+      city: 'Bengaluru',
+      timeLabel: 'Sunday · 5:00 PM',
+      totalPlayers: 10,
+    }, { hostUserId: HOST_USER_A })
+
     const gamesRes = await publicClient.getPickupGames()
     expect(gamesRes.status).toBe('ready')
     expect(gamesRes.data.length).toBeGreaterThan(0)

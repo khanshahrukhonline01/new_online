@@ -318,33 +318,46 @@ export async function recordPaymentTransaction({
  * Normalizes relative or display booking dates ('Today', 'Tomorrow', 'Day After')
  * to canonical ISO calendar dates ('YYYY-MM-DD') in IST time zone.
  */
+/**
+ * Formats a Date object into a canonical YYYY-MM-DD date in the Asia/Kolkata (IST) time zone.
+ */
+export function getIndiaCalendarDate(date: Date = new Date(), offsetDays: number = 0): string {
+  const target = offsetDays === 0 ? date : new Date(date.getTime() + offsetDays * 86400000)
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(target)
+}
+
+/**
+ * Normalizes relative or display booking dates ('Today', 'Tomorrow', 'Day After')
+ * to canonical ISO calendar dates ('YYYY-MM-DD') in the India Standard Time (Asia/Kolkata) zone.
+ */
 export function normalizeBookingDate(dateStr: string): string {
   if (!dateStr) {
-    const now = new Date()
-    return now.toISOString().slice(0, 10)
+    return getIndiaCalendarDate()
   }
   const trimmed = dateStr.trim()
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
     return trimmed
   }
   const lower = trimmed.toLowerCase()
-  const now = new Date()
   if (lower === 'today') {
-    return now.toISOString().slice(0, 10)
+    return getIndiaCalendarDate(new Date(), 0)
   }
   if (lower === 'tomorrow') {
-    const tmrw = new Date(now.getTime() + 24 * 60 * 60 * 1000)
-    return tmrw.toISOString().slice(0, 10)
+    return getIndiaCalendarDate(new Date(), 1)
   }
   if (lower === 'day after' || lower === 'day after tomorrow') {
-    const dayAfter = new Date(now.getTime() + 48 * 60 * 60 * 1000)
-    return dayAfter.toISOString().slice(0, 10)
+    return getIndiaCalendarDate(new Date(), 2)
   }
   const parsed = new Date(trimmed)
   if (!isNaN(parsed.getTime())) {
-    return parsed.toISOString().slice(0, 10)
+    return getIndiaCalendarDate(parsed, 0)
   }
-  return now.toISOString().slice(0, 10)
+  return getIndiaCalendarDate()
 }
 
 /**
@@ -375,8 +388,8 @@ export async function fetchBookedVenueSlots(venueId: string, slotDate: string): 
     if (rpcRes.ok) {
       const data = (await rpcRes.json()) as Array<{ slot_time: string }>
       if (Array.isArray(data)) {
-        const remoteSlots = data.map(r => r.slot_time).filter(Boolean)
-        return Array.from(new Set([...localSlots, ...remoteSlots]))
+        // Authoritative server-side truth: Never allow stale local storage to pollute or block slots
+        return Array.from(new Set(data.map(r => r.slot_time).filter(Boolean)))
       }
     }
   } catch {
@@ -398,19 +411,22 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
   const courtNum = input.courtNumber || (input.courtOrTurfNumber ? parseInt(input.courtOrTurfNumber.replace(/\D/g, ''), 10) || 1 : 1)
   const idempotencyKey = input.idempotencyKey || generateOrderId('IDEMP_VB')
 
-  // 1. Instant local storage double-booking check
-  const localBooked = getBookedVenueSlots(input.venueId, input.slotDate)
-  if (localBooked.includes(input.slotTime)) {
-    return {
-      status: 'double_booking_conflict',
-      bookingRef: '',
-      venueName: input.venueName,
-      slotDate: input.slotDate,
-      slotTime: input.slotTime,
-      paidAmount: 0,
-      paymentStatus: 'cancelled',
-      message: `Slot "${input.slotTime}" on ${input.slotDate} is already reserved. Please select a different time slot.`,
-      errorMessage: `Slot "${input.slotTime}" on ${input.slotDate} is already reserved. Please select a different time slot.`,
+  // 1. Local double-booking check applies ONLY in offline/unconfigured demo mode.
+  // In live mode, PostgreSQL reserve_venue_slot_atomic is the sole authoritative barrier.
+  if (!supabaseUrl || !anonKey || input.simulateOfflineFailure) {
+    const localBooked = getBookedVenueSlots(input.venueId, input.slotDate)
+    if (localBooked.includes(input.slotTime)) {
+      return {
+        status: 'double_booking_conflict',
+        bookingRef: '',
+        venueName: input.venueName,
+        slotDate: input.slotDate,
+        slotTime: input.slotTime,
+        paidAmount: 0,
+        paymentStatus: 'cancelled',
+        message: `Slot "${input.slotTime}" on ${input.slotDate} is already reserved. Please select a different time slot.`,
+        errorMessage: `Slot "${input.slotTime}" on ${input.slotDate} is already reserved. Please select a different time slot.`,
+      }
     }
   }
 
@@ -568,10 +584,25 @@ export function getBookedVenueSlots(venueId: string, slotDate: string): string[]
         slotDate?: string
         slotTime?: string
         status?: string
+        createdAt?: string
+        holdExpiresAt?: string
       }>
       if (Array.isArray(existing)) {
+        const now = Date.now()
         return existing
-          .filter(b => (b.venueId === venueId || b.venueName === venueId) && b.slotDate === slotDate && b.slotTime && b.status !== 'cancelled' && b.status !== 'expired')
+          .filter(b => {
+            const matchesVenue = (b.venueId === venueId || b.venueName === venueId)
+            const matchesDate = b.slotDate === slotDate
+            const notCancelled = b.status !== 'cancelled' && b.status !== 'expired'
+            // Filter out expired pending holds (older than 15 mins if holdExpiresAt is set, or if createdAt is > 15 mins)
+            let notExpired = true
+            if (b.holdExpiresAt && new Date(b.holdExpiresAt).getTime() <= now) {
+              notExpired = false
+            } else if (b.createdAt && b.status === 'pending_payment' && (now - new Date(b.createdAt).getTime() > 15 * 60 * 1000)) {
+              notExpired = false
+            }
+            return matchesVenue && matchesDate && b.slotTime && notCancelled && notExpired
+          })
           .map(b => b.slotTime as string)
       }
     }

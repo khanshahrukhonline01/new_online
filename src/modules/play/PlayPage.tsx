@@ -26,9 +26,10 @@ import './PlayPage.css'
 export interface PlayPageProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
   onOpenIntake?: () => void
+  initialGames?: PickupGame[]
 }
 
-export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {}) {
+export default function PlayPage({ onNavigate, onOpenIntake, initialGames }: PlayPageProps = {}) {
   const { t } = useTranslation(['play', 'common', 'navigation'])
   const [result, setResult] = useState<CatalogueResult<DatabasePickupGame> | { status: 'loading'; data: [] }>({
     status: 'loading',
@@ -273,6 +274,9 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
   }
 
   const records = useMemo<PickupGame[]>(() => {
+    if (initialGames && initialGames.length > 0) {
+      return initialGames
+    }
     if (result.status === 'ready' && result.data.length > 0) {
       return result.data.map(g => ({
         id: g.id,
@@ -292,8 +296,8 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
         status: (g.status as 'open' | 'full' | 'completed' | 'cancelled') || (g.spots_open <= 0 ? 'full' : 'open'),
       }))
     }
-    return COMMUNITY_PICKUP_GAMES
-  }, [result])
+    return []
+  }, [result, initialGames])
 
   const sports = useMemo(
     () => [...new Set(records.map(r => r.sport))].sort((a, b) => a.localeCompare(b)),
@@ -589,6 +593,8 @@ export default function PlayPage({ onNavigate, onOpenIntake }: PlayPageProps = {
               </div>
             ) : (
               <CatalogueEmptyState
+                title={!hasActiveFilters && records.length === 0 ? 'No matches found' : undefined}
+                message={!hasActiveFilters && records.length === 0 ? 'No pickup games are currently scheduled. Check back soon or host your own match!' : undefined}
                 onClear={clearAll}
                 hasFilters={hasActiveFilters}
               />

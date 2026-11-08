@@ -1,10 +1,10 @@
 # KhelGrid Security Programme — Master Programme Final Status & Closure Report
 
-> **Document ID:** SEC-FINAL-STATUS-005  
+> **Document ID:** SEC-FINAL-STATUS-006  
 > **Programme:** KhelGrid 10-Phase Security & Authorization Programme  
 > **Repository:** `khelgrid-dotcom/khelgrid-platform`  
-> **Active Branch:** `security/phase-5-6-payment-capture-webhook-pricing-integrity`  
-> **Base Baseline:** PR #183 merged at `f58b143`  
+> **Active Branch:** `security/phase-5-7-hosted-db-reconciliation-legacy-rpc-closure`  
+> **Base Baseline:** PR #184 merged at `61e0312`  
 > **Development Database Ref:** `hznsbxvovjxvmnchzzqt`  
 > **Production Website:** `https://khelgrid.com/` (Strictly Isolated / 100% Untouched)  
 > **Date:** November 8, 2026  
@@ -29,58 +29,36 @@ The KhelGrid 10-Phase Security Programme has audited, remediated, and verified a
 | **Phase 5.3** | Integration & Concurrency Remediation | Merged into main (PR #181) | `20261108110000` | Staged in consolidated SQL package | **READY FOR DB APPLY** |
 | **Phase 5.4** | Payment Verification, Lifecycle & RPC Privacy | Merged into main (PR #182) | `20261108120000` | Staged in consolidated SQL package | **COMPLETE** |
 | **Phase 5.5** | End-to-End Razorpay Settlement & Integrity | Merged into main (PR #183) | `20261108130000` | Staged in consolidated SQL package | **COMPLETE** |
-| **Phase 5.6** | Payment Capture, Webhook Reliability & Tariff Integrity | Implemented on branch | `20261108140000` | Staged in consolidated SQL package | **READY FOR DB APPLY** |
+| **Phase 5.6** | Payment Capture, Webhook Reliability & Tariff Integrity | Merged into main (PR #184) | `20261108140000` | Staged in consolidated SQL package | **COMPLETE** |
+| **Phase 5.7** | Hosted DB Reconciliation & Legacy RPC Closure | Implemented on branch | `20261108160000` | Staged in consolidated SQL package | **READY FOR DB APPLY** |
 | **Phase 6** | Athlete Privacy & Minor Protection | Merged (PR #178) + Hardened | `20261108080000` | Staged in consolidated SQL package | **READY FOR DB APPLY** |
 | **Phase 7** | Concurrency Locks & Booking Security | Merged (PR #178) + Hardened | `20261108090000` | Staged in consolidated SQL package | **READY FOR DB APPLY** |
 | **Phase 8** | Listing Moderation & Anti-Self-Approval | Merged (PR #178) + Hardened | `20261108090000` | Staged in consolidated SQL package | **READY FOR DB APPLY** |
-| **Phase 9** | Threat Modeling & Isolated PG Tests | Implemented on branch | Adversarial + PG-Mem | 83 Isolated PG Tests Passed | **COMPLETE** |
+| **Phase 9** | Threat Modeling & Isolated PG Tests | Implemented on branch | Adversarial + PG-Mem | 745 Tests Passed (92 test files) | **COMPLETE** |
 | **Phase 10** | Operational Runbooks & Disaster Recovery | Implemented on branch | Runbooks & Restore | Restore Validated in Isolation | **COMPLETE** |
 
 ---
 
-## 2. Key Architectural Defect Resolutions in Phase 5.6
+## 2. Key Architectural Defect Resolutions in Phase 5.7
 
-1. **Independent Razorpay Gateway Payment Capture Verification**:
-   - `verify-razorpay-payment` calls authenticated Razorpay API (`GET /v1/payments/{payment_id}`) with Basic Auth.
-   - Enforces status `captured` (`captured == true`). Authorized-only payments remain in `pending_verification` without prematurely confirming bookings or subscriptions.
-2. **Webhook Concurrency Isolation & Deduplication**:
-   - Atomic database claim via `public.claim_webhook_event`: concurrent webhook deliveries for the same event receive `processing_in_flight` and cannot double-settle.
-   - Deterministic event ID fallback (`body_hash_${sha256}`) when gateway headers and payload omit event IDs, preventing retry divergence.
-3. **Venue Tariff Integrity & Elimination of Blanket ₹800 Defaults**:
-   - Dropped `DEFAULT 800` from `venues.slot_hourly_fee`; nullified unverified commercial tariffs on government SAI facilities.
-   - `reserve_venue_slot_atomic` resolves specific court pricing matching `p_court_number`.
-   - Rejects unpriced venues/courts with `PRICE_UNRESOLVED` rather than inventing false prices.
-4. **Target Row Locking & Settlement Reconciliation Quarantine**:
-   - `settle_payment_transaction` locks target booking/subscription with `FOR UPDATE`.
-   - If target row is missing, cancelled, or slot re-booked after hold expiry, payment is quarantined in `reconciliation_required` without corrupting state or double-booking courts.
-5. **Migration History Tooling Compliance**:
-   - Removed manual `INSERT INTO supabase_migrations.schema_migrations` from migration scripts.
-   - Introduced read-only inspection procedure `public.verify_security_schema_migrations()`.
-
----
-
-## 3. Automated Verification & Test Results
-
-- **PostgreSQL 17 Isolated Tests**:
-  - `phase5-6-payment-capture-pricing.test.ts`: 16/16 passed.
-  - `phase5-5-payment-gateway-integration.test.ts`: 15/15 passed.
-  - `phase5-4-payment-booking-isolated-postgres.test.ts`: 13/13 passed.
-  - `identity-ownership-isolated-postgres.test.ts`: 22/22 passed.
-  - `venue-concurrency-isolated-postgres.test.ts`: 12/12 passed.
-  - `database-foundation.test.ts`: 11/11 passed.
-- **Frontend Unit Tests**:
-  - `src/shared/payments/paymentService.test.ts`: 23/23 passed.
-  - `PaymentCheckoutModal.test.tsx`: 4/4 passed.
-- **TypeScript Typecheck**: Clean (`npm run typecheck` / `tsc -b`).
-- **ESLint**: Clean (`npm run lint`).
-- **Vite Production Build**: Clean (`npm run build`).
-
----
-
-## 4. Database Deployment Status & Next Action
-
-- **Live Development Database (`hznsbxvovjxvmnchzzqt`)**:
-  - Staged for execution in Supabase Dashboard SQL Editor upon administrator authorization.
-  - Forward-only migration: `supabase/migrations/20261108140000_phase5_6_capture_assurance_and_pricing_integrity.sql`.
-  - Master consolidated package: `supabase/deployments/phase-2-to-8-master-consolidated-deployment.sql`.
-- **Production (`https://khelgrid.com/`)**: **STRICTLY OUT OF SCOPE / 100% UNTOUCHED**.
+1. **Athlete Profile Ownership & RLS Hardening**:
+   - Dropped permissive policies `athlete_profiles_public_insert` and `athlete_profiles_self_update` which allowed arbitrary `user_id` assignment.
+   - Enforced owner-only insert and update via `auth.uid() = user_id`, protected ownership changes with `prevent_athlete_profile_user_id_change` trigger.
+2. **Legacy SECURITY DEFINER RPC Security Closure**:
+   - Revoked public execute on `record_payment_transaction` (service_role only).
+   - Dropped legacy 15-argument `record_listing_subscription` and legacy `create_venue_slot_booking`.
+   - Dropped legacy single-argument `get_listing_subscription_by_order(text)` and `get_venue_booking_voucher(text)`.
+   - Recreated hardened `get_venue_booking_voucher(text, text)` requiring a 16-character high-entropy voucher token or owner auth, masking customer PII.
+3. **Payment Status Defaults**:
+   - Altered `payment_status DEFAULT 'paid'` to `DEFAULT 'pending'` across `listing_subscriptions`, `venue_bookings`, `venues`, `academies`, `opportunities`, and `pickup_games`.
+4. **Exact Court Matching & Pricing Provenance**:
+   - Enforced exact court number matching (`trim(lower(name)) = 'court ' || v_court::text`) in `reserve_venue_slot_atomic` to eliminate collisions between Court 1 and Court 10.
+   - Added `fee_provenance` and `pricing_status` to `venues`, returning `PRICE_UNRESOLVED` when pricing is unavailable or unverified.
+5. **Truthful Empty States & Misleading Fallback Content Removal**:
+   - Cleared `INITIAL_CURATED_REVIEWS = []` and `INITIAL_BASELINE_PICKUP_GAMES = []`.
+   - Removed fabricated `Community Arena` fallback from `joinPickupGame`.
+   - Rendered truthful empty states in `PlayPage.tsx` and `CommunityReviewsSection.tsx`.
+6. **India Timezone & Stale Cache Resilience**:
+   - Implemented `getIndiaCalendarDate(date, offsetDays)` in `Asia/Kolkata` (`YYYY-MM-DD`).
+   - Normalised dates to IST across UTC/IST midnight boundaries.
+   - Stale local booking holds (>15 minutes) and cancelled bookings filtered out cleanly.
