@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import '../../i18n'
 import PlayPage from './PlayPage'
+import { SAMPLE_TEST_PICKUP_GAMES } from './pickupData'
 
 describe('PlayPage community matches and pickup games directory', () => {
-  it('renders directory heading, host callout, and community pickup cards', () => {
-    const html = renderToStaticMarkup(<PlayPage />)
+  it('renders directory heading, host callout, and community pickup cards when games exist', () => {
+    const html = renderToStaticMarkup(<PlayPage initialGames={SAMPLE_TEST_PICKUP_GAMES} />)
 
     // Breadcrumb navigation matching live site
     expect(html).toContain('aria-label="breadcrumb"')
@@ -42,5 +43,11 @@ describe('PlayPage community matches and pickup games directory', () => {
     expect(html).toContain('Reserve Spot')
     expect(html).toContain('Players Confirmed')
     expect(html).toContain('spots available')
+  })
+
+  it('renders truthful empty state when no pickup matches are currently scheduled', () => {
+    const html = renderToStaticMarkup(<PlayPage initialGames={[]} />)
+    expect(html).toContain('No matches found')
+    expect(html).toContain('Host a match')
   })
 })

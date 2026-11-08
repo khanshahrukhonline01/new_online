@@ -16,7 +16,7 @@ export interface PickupGame {
   status?: 'open' | 'full' | 'completed' | 'cancelled'
 }
 
-export const COMMUNITY_PICKUP_GAMES: PickupGame[] = [
+export const SAMPLE_TEST_PICKUP_GAMES: PickupGame[] = [
   {
     id: 'pg-1',
     sport: 'Pickleball',
@@ -149,3 +149,6 @@ export const COMMUNITY_PICKUP_GAMES: PickupGame[] = [
     status: 'open',
   },
 ]
+
+// In production, no fabricated games exist; real games are fetched from Supabase.
+export const COMMUNITY_PICKUP_GAMES: PickupGame[] = []

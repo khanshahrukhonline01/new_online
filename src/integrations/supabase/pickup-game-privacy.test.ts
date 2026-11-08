@@ -15,8 +15,68 @@ describe('Pickup Game Participant Privacy & Security Architecture (Phase 1 & Pha
     publicClient = await import('./public-client')
   })
 
+  const TEST_ISOLATED_GAMES = [
+    {
+      id: 'pg-1',
+      slug: 'pickleball-ferrohub',
+      sport: 'Pickleball',
+      emoji: '🎾',
+      skill_level: 'Intermediate',
+      venue_name: 'FerroHub Sports',
+      city: 'Bengaluru',
+      time_label: 'Today · 7:00 PM',
+      host_name: 'Rahul S.',
+      price_per_player: '₹200/player',
+      spots_open: 1,
+      total_players: 4,
+      confirmed_players: 3,
+      is_featured: true,
+      publication_status: 'published',
+      whatsapp_group_url: 'https://chat.whatsapp.com/sample-ferrohub-pickleball',
+      status: 'open',
+    },
+    {
+      id: 'pg-test-dup',
+      slug: 'badminton-test-dup',
+      sport: 'Badminton',
+      emoji: '🏸',
+      skill_level: 'Beginner',
+      venue_name: 'DDA Sports Ground',
+      city: 'Delhi',
+      time_label: 'Today · 8:00 PM',
+      host_name: 'Rohan M.',
+      price_per_player: '₹150/player',
+      spots_open: 2,
+      total_players: 4,
+      confirmed_players: 2,
+      is_featured: false,
+      publication_status: 'published',
+      status: 'open',
+    },
+    {
+      id: 'pg-whatsapp-test',
+      slug: 'football-whatsapp-test',
+      sport: 'Football',
+      emoji: '⚽',
+      skill_level: 'Intermediate',
+      venue_name: 'Kicks on Grass Arena',
+      city: 'Bengaluru',
+      time_label: 'Tomorrow · 6:00 PM',
+      host_name: 'Private Host',
+      price_per_player: '₹300/player',
+      spots_open: 2,
+      total_players: 10,
+      confirmed_players: 8,
+      is_featured: false,
+      publication_status: 'published',
+      whatsapp_group_url: 'https://chat.whatsapp.com/private-invite-token-secret',
+      status: 'open',
+    },
+  ]
+
   beforeEach(() => {
     publicClient.resetLocalRsvpSecurityState()
+    publicClient.getCommunitySubmissions().pickup_games.push(...JSON.parse(JSON.stringify(TEST_ISOLATED_GAMES)))
   })
 
   it('ensures public roster endpoint is unavailable on public client', () => {
