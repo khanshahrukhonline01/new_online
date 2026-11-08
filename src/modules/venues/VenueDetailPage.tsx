@@ -635,18 +635,24 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
 
             {confirmedBooking ? (
               <div style={{ textAlign: 'center', padding: '10px 0' }}>
-                <div style={{ fontSize: '44px', marginBottom: '8px' }}>🏟️</div>
-                <h4 style={{ margin: '0 0 6px', fontSize: '19px', fontWeight: 800, color: '#059669' }}>
-                  Court Reserved Successfully!
+                <div style={{ fontSize: '44px', marginBottom: '8px' }}>
+                  {confirmedBooking.status === 'pending' ? '⏳' : '🏟️'}
+                </div>
+                <h4 style={{ margin: '0 0 6px', fontSize: '19px', fontWeight: 800, color: confirmedBooking.status === 'pending' ? '#d97706' : '#059669' }}>
+                  {confirmedBooking.status === 'pending' ? 'Temporary Slot Hold (15 Mins)' : 'Court Reserved Successfully!'}
                 </h4>
                 <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#64748b' }}>
-                  Your slot is locked at <strong>{confirmedBooking.venueName}</strong>.
+                  {confirmedBooking.status === 'pending'
+                    ? `Slot held at ${confirmedBooking.venueName}. Awaiting online payment verification.`
+                    : `Your slot is locked at ${confirmedBooking.venueName}.`}
                 </p>
 
                 <div className="venue-summary-pill" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px', textAlign: 'left' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#64748b' }}>Booking Reference:</span>
-                    <strong style={{ fontFamily: 'monospace', color: '#059669' }}>{confirmedBooking.bookingRef}</strong>
+                    <strong style={{ fontFamily: 'monospace', color: confirmedBooking.status === 'pending' ? '#d97706' : '#059669' }}>
+                      {confirmedBooking.bookingRef}
+                    </strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#64748b' }}>Date &amp; Time:</span>
@@ -658,7 +664,13 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#64748b' }}>Status:</span>
-                    <strong>{confirmedBooking.paymentStatus === 'pay_at_venue' ? 'Pay at Venue' : 'Deposit Paid'} (₹{confirmedBooking.paidAmount})</strong>
+                    <strong>
+                      {confirmedBooking.status === 'pending'
+                        ? 'Pending Verification'
+                        : confirmedBooking.paymentStatus === 'pay_at_venue'
+                          ? 'Pay at Venue'
+                          : `Confirmed Paid (₹${confirmedBooking.paidAmount})`}
+                    </strong>
                   </div>
                 </div>
 
@@ -861,7 +873,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
               customerPhone: bookingPhone,
               totalAmount: slotFee,
               paidAmount: paymentResult.amount,
-              paymentStatus: paymentResult.status === 'pay_at_venue' ? 'pay_at_venue' : 'paid',
+              paymentStatus: paymentResult.status === 'pay_at_venue' ? 'pay_at_venue' : 'pending',
               paymentId: paymentResult.paymentId,
             })
             if (res.status === 'double_booking_conflict') {
@@ -870,6 +882,8 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
               setBookedSlots(fresh)
             } else if (res.status === 'unconfirmed' || res.status === 'error') {
               setSlotConflictError(res.errorMessage || res.message || 'Booking could not be confirmed with the reservation server. The slot is not reserved. Please retry.')
+            } else if (res.status === 'confirmed' || (res.status === 'success' && res.serverConfirmed)) {
+              setConfirmedBooking(res)
             } else {
               setConfirmedBooking(res)
             }

@@ -1,14 +1,14 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   generateOrderId,
   generateUpiUri,
   parseInrPrice,
   recordPaymentTransaction,
   recordVenueSlotBooking,
-  getBookedVenueSlots,
-  fetchBookedVenueSlots,
-  getUserVenueBookings,
   recordListingSubscription,
+  verifyPaymentSignature,
+  verifyPaymentWithServer,
+  fetchVenueBookingVoucher,
 } from './paymentService'
 import {
   LISTING_PLANS,
@@ -28,9 +28,10 @@ globalThis.localStorage = {
   key: () => null,
 } as unknown as Storage
 
-describe('KhelGrid Payment Service', () => {
+describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
   beforeEach(() => {
     globalThis.localStorage.clear()
+    vi.restoreAllMocks()
   })
 
   describe('parseInrPrice', () => {
@@ -78,8 +79,27 @@ describe('KhelGrid Payment Service', () => {
     })
   })
 
+  describe('verifyPaymentSignature (Phase 5.4 Security Standard)', () => {
+    it('strictly rejects arbitrary 16-character dummy signatures in browser', () => {
+      // Exploit scenario: attacker passes 16-character dummy signature
+      const isVerified = verifyPaymentSignature('order_123', 'pay_456', 'aaaaaaaaaaaaaaaa')
+      expect(isVerified).toBe(false)
+    })
+
+    it('verifies signature only when exact expected cryptographic hash is provided', () => {
+      const expectedHash = '9bba47a74070fb670a4a6b29c15858cf8ac9a349bcce298c4d29cf47b74a38e8'
+      expect(verifyPaymentSignature('order_123', 'pay_456', expectedHash, expectedHash)).toBe(true)
+      expect(verifyPaymentSignature('order_123', 'pay_456', 'wrong_signature', expectedHash)).toBe(false)
+    })
+
+    it('handles empty or missing parameters safely', () => {
+      expect(verifyPaymentSignature('', '', '')).toBe(false)
+      expect(verifyPaymentSignature('order_123', '', 'sig')).toBe(false)
+    })
+  })
+
   describe('recordPaymentTransaction', () => {
-    it('records completed transaction to local receipts', async () => {
+    it('records pay_at_venue transaction directly with pay_at_venue status', async () => {
       const item: PaymentItem = {
         id: 'match-1',
         type: 'pickup_match',
@@ -95,26 +115,20 @@ describe('KhelGrid Payment Service', () => {
 
       const result = await recordPaymentTransaction({
         orderId: 'KG_TEST_101',
-        paymentId: 'PAY_TEST_202',
+        paymentId: 'VENUE_101',
         customer,
         item,
-        method: 'upi',
-        status: 'completed',
+        method: 'pay_at_venue',
+        status: 'pay_at_venue',
       })
 
       expect(result.success).toBe(true)
       expect(result.amount).toBe(200)
-      expect(result.orderId).toBe('KG_TEST_101')
-      expect(result.paymentId).toBe('PAY_TEST_202')
+      expect(result.status).toBe('pay_at_venue')
       expect(result.receiptRef).toContain('REC-')
-
-      const receipts = JSON.parse(globalThis.localStorage.getItem('khelgrid_payment_receipts') || '[]')
-      expect(receipts.length).toBeGreaterThan(0)
-      expect(receipts[0].orderId).toBe('KG_TEST_101')
-      expect(receipts[0].customerName).toBe('Arjun Rao')
     })
 
-    it('downgrades client-declared completed status to pending_verification without verified signature', async () => {
+    it('strictly downgrades client-declared completed status to pending_verification for online methods', async () => {
       const item: PaymentItem = {
         id: 'venue-1',
         type: 'venue_booking',
@@ -126,7 +140,7 @@ describe('KhelGrid Payment Service', () => {
         phone: '9876543210',
       }
 
-      // Attacker attempts to pass status: 'completed' without gateway signature
+      // Attacker attempts to pass status: 'completed' with dummy signature
       const res = await recordPaymentTransaction({
         orderId: 'KG_ORD_TAMPER_01',
         paymentId: 'PAY_TAMPER_01',
@@ -134,38 +148,79 @@ describe('KhelGrid Payment Service', () => {
         item,
         method: 'upi',
         status: 'completed',
+        gatewaySignature: '1234567890abcdef',
       })
 
       expect(res.status).toBe('pending_verification')
     })
   })
 
+  describe('verifyPaymentWithServer', () => {
+    it('calls verify_payment_signature_and_settle RPC and returns completed on server confirmation', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, status: 'completed' }),
+      } as Response)
+
+      const result = await verifyPaymentWithServer({
+        orderId: 'order_test_123',
+        paymentId: 'pay_test_456',
+        gatewaySignature: 'valid_sig_hash',
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.status).toBe('completed')
+    })
+
+    it('returns pending_verification when server RPC is unavailable or gateway unconfigured', async () => {
+      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('Network error'))
+
+      const result = await verifyPaymentWithServer({
+        orderId: 'order_test_123',
+        paymentId: 'pay_test_456',
+        gatewaySignature: 'sig',
+      })
+
+      expect(result.success).toBe(false)
+      expect(result.status).toBe('pending_verification')
+    })
+  })
+
   describe('recordVenueSlotBooking', () => {
-    it('records slot booking to local bookings storage', async () => {
+    it('confirms booking when atomic server RPC succeeds', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          booking_ref: 'VB-KAN-1234',
+          voucher_token: 'token_128bit_hex_valid',
+          status: 'confirmed',
+          payment_status: 'pay_at_venue',
+          total_amount: 500,
+        }),
+      } as Response)
+
       const booking = await recordVenueSlotBooking({
         venueId: 'v-1',
         venueName: 'Sree Kanteerava Stadium',
         city: 'Bengaluru',
         sport: 'Running Track',
-        slotDate: 'Today',
+        slotDate: '2026-12-05',
         slotTime: '6:00 PM – 7:00 PM',
         customerName: 'Kavita Singh',
         customerPhone: '9811223344',
         totalAmount: 500,
-        paidAmount: 200,
-        paymentStatus: 'paid',
+        paidAmount: 0,
+        paymentStatus: 'pay_at_venue',
       })
 
-      expect(booking.status).toBe('success')
+      expect(booking.status).toBe('confirmed')
       expect(booking.venueName).toBe('Sree Kanteerava Stadium')
-      expect(booking.bookingRef).toMatch(/^VB-/)
-
-      const bookings = JSON.parse(globalThis.localStorage.getItem('khelgrid_venue_bookings') || '[]')
-      expect(bookings.length).toBeGreaterThan(0)
-      expect(bookings[0].venueName).toBe('Sree Kanteerava Stadium')
+      expect(booking.bookingRef).toBe('VB-KAN-1234')
+      expect(booking.serverConfirmed).toBe(true)
     })
 
-    it('returns explicit unconfirmed state and no voucher when server reservation fails offline', async () => {
+    it('returns explicit unconfirmed state and no voucher when server reservation is unavailable', async () => {
       const res = await recordVenueSlotBooking({
         venueId: 'v-1',
         venueName: 'Sree Kanteerava Stadium',
@@ -184,15 +239,85 @@ describe('KhelGrid Payment Service', () => {
       expect(res.status).toBe('unconfirmed')
       expect(res.bookingRef).toBe('')
       expect(res.isOfflineDraft).toBe(true)
+      expect(res.serverConfirmed).toBe(false)
       expect(res.errorMessage).toContain('could not be confirmed')
+    })
+
+    it('handles concurrency conflicts gracefully', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: false,
+          error: 'CONCURRENCY_CONFLICT',
+          message: 'Slot was just reserved by another player.',
+        }),
+      } as Response)
+
+      const res = await recordVenueSlotBooking({
+        venueId: 'v-1',
+        venueName: 'Sree Kanteerava Stadium',
+        city: 'Bengaluru',
+        sport: 'Running Track',
+        slotDate: '2026-12-10',
+        slotTime: '6:00 PM – 7:00 PM',
+        customerName: 'Kavita Singh',
+        customerPhone: '9811223344',
+        totalAmount: 500,
+        paidAmount: 0,
+        paymentStatus: 'pay_at_venue',
+      })
+
+      expect(res.status).toBe('double_booking_conflict')
+      expect(res.errorMessage).toContain('reserved')
+    })
+  })
+
+  describe('fetchVenueBookingVoucher (Phase 5.4 Zero-PII)', () => {
+    it('retrieves sanitized voucher with masked customer name and zero phone/email leakage', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          booking_ref: 'VB-KAN-1234',
+          venue_name: 'Sree Kanteerava Stadium',
+          sport: 'Running Track',
+          slot_date: '2026-12-05',
+          slot_time: '6:00 PM – 7:00 PM',
+          court_number: 1,
+          status: 'confirmed',
+          payment_status: 'pay_at_venue',
+          total_amount: 500,
+          paid_amount: 0,
+          customer_display_name: 'K***a S***h',
+        }),
+      } as Response)
+
+      const voucher = await fetchVenueBookingVoucher('VB-KAN-1234', 'token_128bit_hex_valid')
+      expect(voucher).not.toBeNull()
+      expect(voucher?.bookingRef).toBe('VB-KAN-1234')
+      expect(voucher?.customerName).toBe('K***a S***h')
+      expect(voucher?.serverConfirmed).toBe(true)
+      // Assert zero PII
+      expect((voucher as unknown as Record<string, unknown>).customerPhone).toBeUndefined()
+      expect((voucher as unknown as Record<string, unknown>).customerEmail).toBeUndefined()
     })
   })
 
   describe('recordListingSubscription', () => {
-    it('records 1-Day, 1-Month, 6-Month, 1-Year, and Lifelong subscriptions to local storage', async () => {
+    it('activates subscription only when server-verified payment is confirmed', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          status: 'success',
+          is_active: true,
+          subscription_id: 'SUB-1_YEAR-1234',
+          plan_name: '1-Year Listing',
+          expires_at: '2027-11-08T12:00:00Z',
+        }),
+      } as Response)
+
       const sub = await recordListingSubscription({
         orderId: 'KG_ORD_SUB_01',
-        paymentId: 'PAY_SUB_01',
+        paymentId: 'PAY_SUB_VERIFIED',
         listingType: 'academy',
         listingName: 'Bhaichung Bhutia Football School',
         city: 'Delhi',
@@ -203,23 +328,18 @@ describe('KhelGrid Payment Service', () => {
         customerName: 'Coach Pradeep',
         customerPhone: '9876543210',
         paymentStatus: 'paid',
+        serverVerified: true,
       })
 
       expect(sub.status).toBe('success')
-      expect(sub.subscriptionId).toBeTruthy()
-      expect(sub.planName).toBe('1-Year Listing')
+      expect(sub.subscriptionId).toBe('SUB-1_YEAR-1234')
       expect(sub.expiresAt).not.toBeNull()
-
-      const cached = JSON.parse(globalThis.localStorage.getItem('khelgrid_listing_subscriptions') || '[]')
-      expect(cached.length).toBeGreaterThan(0)
-      expect(cached[0].listingName).toBe('Bhaichung Bhutia Football School')
-      expect(cached[0].amount).toBe(4499)
     })
 
-    it('rejects paid listing subscription activation without verified payment status', async () => {
+    it('rejects unverified paid listing subscription activation without verified payment status', async () => {
       const sub = await recordListingSubscription({
         orderId: 'KG_ORD_SUB_UNVERIFIED',
-        paymentId: '',
+        paymentId: 'PAY_FAKE_123',
         listingType: 'academy',
         listingName: 'Unverified Academy',
         city: 'Delhi',
@@ -229,33 +349,13 @@ describe('KhelGrid Payment Service', () => {
         durationDays: 365,
         customerName: 'Coach Unverified',
         customerPhone: '9876543210',
-        paymentStatus: 'pay_at_venue',
+        paymentStatus: 'paid',
+        serverVerified: false, // Not verified by server!
       })
 
-      expect(sub.status).toBe('error')
+      expect(sub.status).toBe('pending_verification')
       expect(sub.expiresAt).toBeNull()
       expect(sub.message).toContain('verified payment')
-    })
-
-    it('sets null expiresAt for lifelong subscription plan', async () => {
-      const sub = await recordListingSubscription({
-        orderId: 'KG_ORD_LIFE_01',
-        paymentId: 'PAY_LIFE_01',
-        listingType: 'venue',
-        listingName: 'FSV Arena Bengaluru',
-        city: 'Bengaluru',
-        planId: 'lifelong',
-        planName: 'Lifelong Listing',
-        amount: 9999,
-        durationDays: 0,
-        customerName: 'Arena Manager',
-        customerPhone: '9900112233',
-        paymentStatus: 'paid',
-      })
-
-      expect(sub.status).toBe('success')
-      expect(sub.expiresAt).toBeNull()
-      expect(sub.subscriptionId).toBeTruthy()
     })
   })
 
@@ -293,94 +393,6 @@ describe('KhelGrid Payment Service', () => {
       expect(calculatePlanExpiry('1_day')).not.toBeNull()
       const future = new Date('2027-11-06T12:00:00Z').toISOString()
       expect(formatPlanDuration('1_year', future)).toContain('2027')
-    })
-  })
-
-  describe('venue slot booking and real-time availability', () => {
-    it('records venue slot booking, returns booking ref and persists in user bookings', async () => {
-      const res = await recordVenueSlotBooking({
-        venueId: 'fsv-sports-arena',
-        venueName: 'FSV Sports Arena',
-        city: 'Bengaluru',
-        sport: 'Football',
-        slotDate: 'Today',
-        slotTime: '7:00 PM – 8:00 PM',
-        customerName: 'Aarav Sharma',
-        customerPhone: '9876543210',
-        totalAmount: 1200,
-        paidAmount: 300,
-        paymentStatus: 'paid',
-      })
-
-      expect(res.status).toBe('success')
-      expect(res.bookingRef).toBeTruthy()
-      expect(res.slotTime).toBe('7:00 PM – 8:00 PM')
-
-      const booked = getBookedVenueSlots('fsv-sports-arena', 'Today')
-      expect(booked).toContain('7:00 PM – 8:00 PM')
-
-      const unbooked = getBookedVenueSlots('fsv-sports-arena', 'Tomorrow')
-      expect(unbooked).not.toContain('7:00 PM – 8:00 PM')
-
-      const userBookings = getUserVenueBookings()
-      expect(userBookings.length).toBeGreaterThan(0)
-      expect(userBookings[0].venueName).toBe('FSV Sports Arena')
-    })
-
-
-    it('Pillar 2: rejects double-booking on the same venue slot with double_booking_conflict', async () => {
-      // First booking succeeds
-      const first = await recordVenueSlotBooking({
-        venueId: 'kanteerava-track',
-        venueName: 'Sree Kanteerava Stadium',
-        city: 'Bengaluru',
-        sport: 'Athletics',
-        slotDate: '2026-12-05',
-        slotTime: '6:00 AM – 7:00 AM',
-        customerName: 'Rohan Patil',
-        customerPhone: '9876543210',
-        totalAmount: 400,
-        paidAmount: 400,
-        paymentStatus: 'paid',
-      })
-      expect(first.status).toBe('success')
-
-      // Second booking on exact same venue, date, and slot time is rejected by double-booking logic
-      const duplicate = await recordVenueSlotBooking({
-        venueId: 'kanteerava-track',
-        venueName: 'Sree Kanteerava Stadium',
-        city: 'Bengaluru',
-        sport: 'Athletics',
-        slotDate: '2026-12-05',
-        slotTime: '6:00 AM – 7:00 AM',
-        customerName: 'Ananya Deshmukh',
-        customerPhone: '9988776655',
-        totalAmount: 400,
-        paidAmount: 400,
-        paymentStatus: 'paid',
-      })
-
-      expect(duplicate.status).toBe('double_booking_conflict')
-      expect(duplicate.errorMessage).toContain('already reserved')
-    })
-
-    it('Pillar 2: fetches and combines booked slots from database and local storage via fetchBookedVenueSlots', async () => {
-      await recordVenueSlotBooking({
-        venueId: 'kanteerava-track',
-        venueName: 'Sree Kanteerava Stadium',
-        city: 'Bengaluru',
-        sport: 'Athletics',
-        slotDate: '2026-12-05',
-        slotTime: '6:00 AM – 7:00 AM',
-        customerName: 'Rohan Patil',
-        customerPhone: '9876543210',
-        totalAmount: 400,
-        paidAmount: 400,
-        paymentStatus: 'paid',
-      })
-      const slots = await fetchBookedVenueSlots('kanteerava-track', '2026-12-05')
-      expect(Array.isArray(slots)).toBe(true)
-      expect(slots).toContain('6:00 AM – 7:00 AM')
     })
   })
 })

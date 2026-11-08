@@ -378,7 +378,7 @@ export default function CommunityListingModal({
         customerName: currentUser?.name || contactName || 'Host',
         customerPhone: currentUser?.phone || currentUser?.email || contactPhone || '9999999999',
         customerEmail: currentUser?.email,
-        paymentStatus: result.status === 'pay_at_venue' ? 'pay_at_venue' : 'paid',
+        paymentStatus: result.status === 'pay_at_venue' ? 'pay_at_venue' : (result.status === 'completed' ? 'paid' : 'pending'),
       })
 
       // 2. Submit listing with plan metadata & payment ID
@@ -390,7 +390,7 @@ export default function CommunityListingModal({
         plan_expires_at: expiry,
         payment_id: result.paymentId,
         payment_order_id: result.orderId,
-        payment_status: result.status === 'pay_at_venue' ? 'pay_at_venue' : 'paid',
+        payment_status: result.status === 'pay_at_venue' ? 'pay_at_venue' : (result.status === 'completed' ? 'paid' : 'unpaid'),
       }
 
       const subResult = await submitCommunityListing(fullInput)
