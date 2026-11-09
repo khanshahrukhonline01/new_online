@@ -42,7 +42,7 @@ CREATE TABLE public.athlete_profiles (
   video_clips jsonb NOT NULL DEFAULT '[]'::jsonb,
   fitness_benchmarks jsonb NOT NULL DEFAULT '{}'::jsonb,
   player_card_stats jsonb NOT NULL DEFAULT '{}'::jsonb,
-  verification_status text NOT NULL DEFAULT 'community',
+  verification_status text NOT NULL DEFAULT 'community' CHECK (verification_status IN ('community','verified','pro')),
   publication_status text NOT NULL DEFAULT 'published',
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
