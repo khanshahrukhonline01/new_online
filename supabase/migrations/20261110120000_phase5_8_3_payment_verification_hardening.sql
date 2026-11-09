@@ -11,7 +11,7 @@ DECLARE
   v_payment record;
 BEGIN
   v_role := COALESCE(NULLIF(current_setting('request.jwt.claim.role', true), ''), '');
-  IF v_role <> 'service_role' AND NOT public.is_service_role_or_admin() THEN
+  IF v_role <> 'service_role' THEN
     RETURN jsonb_build_object('status','error','error_code','UNAUTHORIZED','message','Service role required.');
   END IF;
   IF nullif(trim(coalesce(p_order_id,'')),'') IS NULL OR nullif(trim(coalesce(p_provider_order_id,'')),'') IS NULL
