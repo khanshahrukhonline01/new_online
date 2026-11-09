@@ -110,7 +110,7 @@ serve(async (req) => {
   if (action === 'register_listing_subscription') {
     const orderId = String(body.order_id || '').trim()
     const planId = String(body.plan_id || '')
-    const plan = listingPlan(planId)
+    const plan = getCanonicalListingPlan(planId)
     const listingType = String(body.listing_type || '')
     const listingName = String(body.listing_name || '').trim()
     const city = String(body.city || '').trim()
