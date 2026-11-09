@@ -86,6 +86,8 @@ jobs:
         run: deno check supabase/functions/razorpay-webhook/index.ts
       - name: Typecheck Razorpay sandbox order Edge Function
         run: deno check supabase/functions/create-razorpay-order/index.ts
+      - name: Typecheck Razorpay payment verification Edge Function
+        run: deno check supabase/functions/verify-razorpay-payment/index.ts
       - name: Test webhook settlement outcome classification
         run: deno test supabase/functions/_shared/webhookSettlement.deno.ts
       - run: npm install
