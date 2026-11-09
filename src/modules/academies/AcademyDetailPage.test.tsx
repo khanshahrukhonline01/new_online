@@ -85,29 +85,27 @@ describe('AcademyDetailPage — Dedicated Academy Hub & Rich Content', () => {
     expect(html).toContain('Browse All Academies')
   })
 
-  it('renders anti-scam safety advisory banner and pending verification badge on unverified community academy', async () => {
+  it('keeps community academies out of the public detail route until moderation', async () => {
     const { submitCommunityListing } = await import('../../integrations/supabase/public-client')
-    const subResult = await submitCommunityListing({
+    const result = await submitCommunityListing({
       category: 'academy',
       name: 'Shimla High Altitude Football Club',
       city: 'Shimla',
       sport: 'Football',
-      is_verified_user: false,
     })
-
-    expect(subResult.status).toBe('submitted')
-    const slug = (subResult as unknown as { record: { slug: string } }).record.slug
-
-    const html = renderToStaticMarkup(
-      <AcademyDetailPage slug={slug} onNavigate={vi.fn()} />
-    )
-
-    expect(html).toContain('Pending Verification')
-    expect(html).toContain('Athlete &amp; Parent Safety Advisory — Unverified Community Listing')
-    expect(html).toContain('Do not transfer advance admission fees')
-    expect(html).toContain('Official Academy Staff? Verify this Listing')
-    expect(html).toContain('Report Suspicious Listing')
+    expect(result.status).toBe('submitted')
+    if (result.status === 'submitted') {
+      expect(result.mode).toBe('moderation_queue')
+      expect(result.record.publication_status).toBe('pending_review')
+      expect(result.detailPath).toBeUndefined()
+    }
+    const [url] = vi.mocked(fetch).mock.calls[0]
+    expect(String(url)).toContain('/rest/v1/listing_submissions')
+    expect(String(url)).not.toContain('/rest/v1/academies')
+    const html = renderToStaticMarkup(<AcademyDetailPage slug="shimla-high-altitude-football-club" onNavigate={vi.fn()} />)
+    expect(html).toContain('Academy Record Not Found')
   })
+
 
   it('renders Apply for Admission / Free Trial Class button and enrolment modal when requested', () => {
     const htmlNormal = renderToStaticMarkup(
