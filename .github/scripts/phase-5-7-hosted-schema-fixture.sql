@@ -124,6 +124,25 @@ CREATE TABLE public.venues (
   slot_hourly_fee numeric DEFAULT 800,
   payment_status text DEFAULT 'paid'
 );
+CREATE TABLE public.sports (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug text UNIQUE,
+  name text NOT NULL,
+  is_published boolean NOT NULL DEFAULT true
+);
+CREATE TABLE public.coaches (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug text,
+  display_name text,
+  city text,
+  publication_status text NOT NULL DEFAULT 'published'
+);
+CREATE TABLE public.events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug text,
+  title text,
+  publication_status text NOT NULL DEFAULT 'published'
+);
 CREATE TABLE public.academies (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), slug text, name text, payment_status text DEFAULT 'paid');
 CREATE TABLE public.opportunities (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), slug text, title text, payment_status text DEFAULT 'paid');
 CREATE TABLE public.pickup_games (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), slug text, sport text, payment_status text DEFAULT 'paid');
