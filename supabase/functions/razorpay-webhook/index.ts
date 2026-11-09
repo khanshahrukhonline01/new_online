@@ -358,11 +358,46 @@ serve(async (req) => {
     }
   }
 
+  // Record definitive provider failure and refund events without ever settling them.
+  if (event.event === 'payment.failed' && providerOrderId && paymentId) {
+    const { error: updateError } = await adminClient.from('khelgrid_payments')
+      .update({ status: 'failed', updated_at: new Date().toISOString() })
+      .eq('provider_order_id', providerOrderId)
+      .in('status', ['pending', 'pending_verification']);
+    const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+      p_event_id: eventId,
+      p_status: updateError ? 'failed_retryable' : 'processed',
+      p_error_message: updateError?.message || null,
+    });
+    if (updateError || finalizeError) return new Response(JSON.stringify({ error: 'PAYMENT_FAILURE_RECORDING_FAILED' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ status: 'failed_recorded', event_id: eventId }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  if (event.event === 'payment.refunded' && providerOrderId && paymentId && paymentEntity) {
+    const fullyRefunded = Number(paymentEntity.amount_refunded) === Number(paymentEntity.amount)
+    const targetStatus = fullyRefunded && paymentEntity.refund_status === 'processed' ? 'refunded' : 'reconciliation_required'
+    const { error: updateError } = await adminClient.from('khelgrid_payments')
+      .update({ status: targetStatus, updated_at: new Date().toISOString() })
+      .eq('provider_order_id', providerOrderId)
+      .eq('payment_id', paymentId)
+      .eq('status', 'completed');
+    const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+      p_event_id: eventId,
+      p_status: updateError ? 'failed_retryable' : 'processed',
+      p_error_message: updateError?.message || (fullyRefunded ? null : 'Partial or unconfirmed refund requires manual reconciliation'),
+    });
+    if (updateError || finalizeError) return new Response(JSON.stringify({ error: 'REFUND_RECORDING_FAILED' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ status: targetStatus, event_id: eventId }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+
   // Record non-settlement event as ignored
-  await adminClient.rpc('finalize_webhook_event', {
+  const { error: ignoredFinalizeError } = await adminClient.rpc('finalize_webhook_event', {
     p_event_id: eventId,
     p_status: 'ignored',
     p_error_message: 'Event type not handled for payment settlement',
+  })
+  if (ignoredFinalizeError) return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED' }), {
+    status: 500, headers: { 'Content-Type': 'application/json' },
   })
 
   return new Response(JSON.stringify({ received: true, event: event.event }), {
