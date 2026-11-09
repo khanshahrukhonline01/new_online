@@ -376,7 +376,7 @@ export default function CommunityListingModal({
         amount: currentPlan.price,
         durationDays: currentPlan.durationDays,
         customerName: currentUser?.name || contactName || 'Host',
-        customerPhone: currentUser?.phone || currentUser?.email || contactPhone || '9999999999',
+        customerPhone: currentUser?.phone || contactPhone || '',
         customerEmail: currentUser?.email,
         paymentStatus: result.status === 'pay_at_venue' ? 'pay_at_venue' : (result.status === 'completed' ? 'paid' : 'pending'),
       })
