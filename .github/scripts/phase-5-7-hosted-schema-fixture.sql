@@ -135,8 +135,7 @@ CREATE OR REPLACE FUNCTION public.reserve_venue_slot_atomic(
 CREATE OR REPLACE FUNCTION public.get_listing_subscription_by_order(text)
 RETURNS SETOF public.listing_subscriptions LANGUAGE sql AS $$ SELECT * FROM public.listing_subscriptions WHERE false $$;
 
-CREATE OR REPLACE FUNCTION public.get_venue_booking_voucher(text)
-RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
+-- Hosted project has only the legacy two-text-argument TABLE overload.
 CREATE OR REPLACE FUNCTION public.get_venue_booking_voucher(
   p_booking_ref text, p_customer_phone text
 ) RETURNS TABLE (
