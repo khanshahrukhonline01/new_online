@@ -99,6 +99,7 @@ CREATE TABLE public.khelgrid_payments (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+GRANT ALL ON public.khelgrid_payments TO service_role;
 CREATE TABLE public.venues (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   slug text NOT NULL UNIQUE,
