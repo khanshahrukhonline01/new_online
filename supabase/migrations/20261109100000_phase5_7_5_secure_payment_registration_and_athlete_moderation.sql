@@ -452,8 +452,10 @@ BEGIN
   IF v_actor IS NULL OR NOT public.is_service_role_or_admin() THEN
     RETURN jsonb_build_object('status','error','error_code','UNAUTHORIZED');
   END IF;
-  IF trim(coalesce(p_order_id,'')) !~ '^KG_ORD_[A-Z0-9]+_[A-Z0-9]{4,16}
-     OR v_reference !~ '^[A-Za-z0-9-]{6,64}
+  IF left(trim(coalesce(p_order_id,'')), 7) <> 'KG_ORD_'
+     OR array_length(string_to_array(trim(p_order_id), '_'), 1) <> 4
+     OR length(v_reference) < 6 OR length(v_reference) > 64
+     OR v_reference ~ '[^A-Za-z0-9-]'
      OR p_expected_amount_paisa IS NULL OR p_expected_amount_paisa <= 0
      OR length(v_note) < 10 OR length(v_note) > 1000 THEN
     RETURN jsonb_build_object('status','error','error_code','INVALID_VERIFICATION_INPUT');
