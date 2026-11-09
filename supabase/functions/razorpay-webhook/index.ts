@@ -195,11 +195,11 @@ serve(async (req) => {
     const paymentStatus = paymentEntity?.status
 
     // Verify payment status is captured
-    if (event.event === 'payment.captured' && paymentStatus && paymentStatus !== 'captured') {
+    if (event.event === 'payment.captured' && (paymentStatus !== 'captured' || paymentEntity?.captured !== true)) {
       await adminClient.rpc('finalize_webhook_event', {
         p_event_id: eventId,
-        p_status: 'ignored',
-        p_error_message: `Payment status was ${paymentStatus}, expected captured`,
+        p_status: 'failed_terminal',
+        p_error_message: `Payment status was ${paymentStatus || 'missing'}, expected captured`,
       })
       return new Response(JSON.stringify({ error: 'PAYMENT_NOT_CAPTURED', status: paymentStatus }), {
         status: 200,
@@ -249,10 +249,10 @@ serve(async (req) => {
       const authoritativeCurrency = (dbOrder.currency || 'INR').toUpperCase()
 
       // Cross-check payload amount and currency
-      if (amountPaisa > 0 && amountPaisa !== authoritativeAmountPaisa) {
+      if (!Number.isSafeInteger(amountPaisa) || amountPaisa <= 0 || amountPaisa !== authoritativeAmountPaisa) {
         await adminClient.rpc('finalize_webhook_event', {
           p_event_id: eventId,
-          p_status: 'ignored',
+          p_status: 'failed_terminal',
           p_error_message: `Webhook amount (${amountPaisa}) does not match order amount (${authoritativeAmountPaisa})`,
         })
         return new Response(JSON.stringify({ error: 'AMOUNT_MISMATCH' }), {
@@ -264,7 +264,7 @@ serve(async (req) => {
       if (currency !== authoritativeCurrency) {
         await adminClient.rpc('finalize_webhook_event', {
           p_event_id: eventId,
-          p_status: 'ignored',
+          p_status: 'failed_terminal',
           p_error_message: `Webhook currency (${currency}) does not match order currency (${authoritativeCurrency})`,
         })
         return new Response(JSON.stringify({ error: 'CURRENCY_MISMATCH' }), {
