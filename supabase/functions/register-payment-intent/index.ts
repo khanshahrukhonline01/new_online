@@ -109,7 +109,8 @@ serve(async (req) => {
       .eq('id', bookingId).eq('booking_ref', bookingRef).single()
     if (paymentError || !payment || bookingError || !booking) return json({ error: 'PAYMENT_OR_BOOKING_NOT_FOUND' }, 404)
     if (payment.item_type !== 'venue_booking' || payment.status !== 'pending_verification') return json({ error: 'PAYMENT_NOT_LINKABLE' }, 409)
-    if (payment.item_id !== booking.venue_id || payment.customer_phone !== booking.customer_phone ||
+    const { data: venue } = await admin.from('venues').select('id,slug').eq('id', payment.item_id).single()
+    if (!venue || venue.slug !== booking.venue_id || payment.customer_phone !== booking.customer_phone ||
         Number(payment.amount) > Number(booking.total_amount)) return json({ error: 'BOOKING_PAYMENT_MISMATCH' }, 409)
     const metadata = { ...(payment.metadata || {}), booking_ref: booking.booking_ref }
     const { error: updateError } = await admin.from('khelgrid_payments')
