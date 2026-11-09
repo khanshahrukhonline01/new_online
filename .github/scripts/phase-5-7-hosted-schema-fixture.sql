@@ -1,6 +1,7 @@
 \set ON_ERROR_STOP on
 CREATE SCHEMA IF NOT EXISTS auth;
 CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE SCHEMA IF NOT EXISTS private;
 CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY);
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 
@@ -231,3 +232,22 @@ CREATE OR REPLACE FUNCTION public.get_venue_booking_voucher(
   slot_time text, court_number integer, customer_name text, payment_status text,
   total_amount numeric, paid_amount numeric, status text, created_at timestamptz
 ) LANGUAGE sql AS $$ SELECT NULL::text,NULL::text,NULL::text,NULL::text,NULL::text,NULL::text,NULL::integer,NULL::text,NULL::text,NULL::numeric,NULL::numeric,NULL::text,NULL::timestamptz WHERE false $$;
+
+
+-- Payment webhook ledger exists in the hosted development schema. Keep this
+-- fixture aligned so Phase 5.8.1.4 can be applied in isolated PostgreSQL CI.
+CREATE TABLE public.payment_webhook_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id text NOT NULL UNIQUE,
+  event_type text NOT NULL,
+  order_id text,
+  payment_id text,
+  status text NOT NULL DEFAULT 'processed',
+  payload jsonb DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.payment_webhook_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payment_webhook_events FORCE ROW LEVEL SECURITY;
+CREATE POLICY webhook_events_service_all ON public.payment_webhook_events
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+GRANT ALL ON public.payment_webhook_events TO service_role;
