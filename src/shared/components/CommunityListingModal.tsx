@@ -771,7 +771,7 @@ export default function CommunityListingModal({
                 </div>
               )}
 
-              {/* Contact Information (for guest verification and player coordination) */}
+              {/* Submitter contact information */}
                 <div className="community-form-section community-contact-section">
                   <div className="community-section-label">
                     <span>Organizer / Host Contact (For player coordination &amp; verification)</span>
@@ -818,11 +818,6 @@ export default function CommunityListingModal({
                     <>
                       <SiteIcon name="loader" size={16} />
                       <span>Submitting for review…</span>
-                    </>
-                  ) : (!currentUser && (category === 'opportunity' || category === 'academy')) ? (
-                    <>
-                      <SiteIcon name="shield-check" size={16} />
-                      <span>Submit for moderator review</span>
                     </>
                   ) : (
                     <>
