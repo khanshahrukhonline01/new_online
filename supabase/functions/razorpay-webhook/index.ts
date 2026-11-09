@@ -70,6 +70,14 @@ serve(async (req) => {
           status: string
         }
       }
+      refund?: {
+        entity?: {
+          id: string
+          payment_id: string
+          amount: number
+          status: string
+        }
+      }
     }
     created_at?: number
   }
@@ -104,7 +112,8 @@ serve(async (req) => {
   const paymentEntity = event.payload?.payment?.entity
   // Razorpay's order_id is the provider ID; the internal KhelGrid order ID is stored separately.
   const providerOrderId = (paymentEntity?.order_id || event.payload?.order?.entity?.id || '').trim()
-  const paymentId = (paymentEntity?.id || '').trim()
+  const refundEntity = event.payload?.refund?.entity
+  const paymentId = (paymentEntity?.id || refundEntity?.payment_id || '').trim()
   const amountPaisa = paymentEntity?.amount ?? event.payload?.order?.entity?.amount ?? 0
   const currency = (paymentEntity?.currency || event.payload?.order?.entity?.currency || 'INR').toUpperCase()
 
@@ -339,18 +348,47 @@ serve(async (req) => {
     return new Response(JSON.stringify({ status: 'failed_recorded', event_id: eventId }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
 
-  if (event.event === 'payment.refunded' && providerOrderId && paymentId && paymentEntity) {
-    const fullyRefunded = Number(paymentEntity.amount_refunded) === Number(paymentEntity.amount)
-    const targetStatus = fullyRefunded && paymentEntity.refund_status === 'processed' ? 'refunded' : 'reconciliation_required'
+  if (event.event === 'refund.processed' && paymentId && refundEntity) {
+    const keyId = Deno.env.get('RAZORPAY_KEY_ID')
+    const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET')
+    if (!keyId || !keySecret) {
+      const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+        p_event_id: eventId, p_status: 'failed_retryable',
+        p_error_message: 'Razorpay API credentials unavailable while reconciling refund',
+      })
+      if (finalizeError) return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED' }), { status: 500 })
+      return new Response(JSON.stringify({ error: 'REFUND_VERIFICATION_UNAVAILABLE' }), { status: 503 })
+    }
+    let providerPayment: RazorpayPayment
+    try {
+      providerPayment = await fetchRazorpayPayment(paymentId, keyId, keySecret)
+    } catch (error) {
+      const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+        p_event_id: eventId, p_status: 'failed_retryable',
+        p_error_message: error instanceof Error ? error.message.slice(0, 1000) : 'Razorpay payment lookup failed during refund',
+      })
+      if (finalizeError) return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED' }), { status: 500 })
+      return new Response(JSON.stringify({ error: 'REFUND_VERIFICATION_RETRY_REQUIRED' }), { status: 503 })
+    }
+    const refundOrderId = providerPayment.order_id
+    if (!refundOrderId || providerPayment.id !== paymentId) {
+      const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+        p_event_id: eventId, p_status: 'failed_terminal', p_error_message: 'Refund payment identifier could not be matched to a provider order',
+      })
+      if (finalizeError) return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED' }), { status: 500 })
+      return new Response(JSON.stringify({ status: 'quarantined', error: 'REFUND_PAYMENT_MISMATCH' }), { status: 200 })
+    }
+    const fullyRefunded = Number(providerPayment.amount_refunded) === Number(providerPayment.amount) &&
+      refundEntity.status === 'processed'
+    const targetStatus = fullyRefunded ? 'refunded' : 'reconciliation_required'
     const { error: updateError } = await adminClient.from('khelgrid_payments')
       .update({ status: targetStatus, updated_at: new Date().toISOString() })
-      .eq('provider_order_id', providerOrderId)
+      .eq('provider_order_id', refundOrderId)
       .eq('payment_id', paymentId)
       .eq('status', 'completed');
     const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
-      p_event_id: eventId,
-      p_status: updateError ? 'failed_retryable' : 'processed',
-      p_error_message: updateError?.message || (fullyRefunded ? null : 'Partial or unconfirmed refund requires manual reconciliation'),
+      p_event_id: eventId, p_status: updateError ? 'failed_retryable' : 'processed',
+      p_error_message: updateError?.message || (fullyRefunded ? null : 'Partial refund or provider refund not yet fully processed; manual reconciliation required'),
     });
     if (updateError || finalizeError) return new Response(JSON.stringify({ error: 'REFUND_RECORDING_FAILED' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     return new Response(JSON.stringify({ status: targetStatus, event_id: eventId }), { status: 200, headers: { 'Content-Type': 'application/json' } });
