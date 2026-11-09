@@ -43,6 +43,7 @@ export default function GoProModal({
       title: `KhelGrid Pro · ${selectedTier.name} (${billingCycle === 'annual' ? 'Annual Plan' : 'Monthly Plan'})`,
       amount: currentPrice,
       currency: 'INR',
+      metadata: { tierId: selectedTier.id, billingCycle },
     }
 
     setCheckoutItem(item)
