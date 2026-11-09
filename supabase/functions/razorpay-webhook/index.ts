@@ -1,36 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { classifySettlementResult } from '../_shared/webhookSettlement.ts'
-import { classifyProviderPayment, fetchRazorpayPayment } from '../_shared/razorpayVerification.ts'
-
-async function timingSafeEqual(a: string, b: string): Promise<boolean> {
-  const enc = new TextEncoder()
-  const aBuf = enc.encode(a)
-  const bBuf = enc.encode(b)
-  if (aBuf.byteLength !== bBuf.byteLength) {
-    return false
-  }
-  let diff = 0
-  for (let i = 0; i < aBuf.byteLength; i++) {
-    diff |= aBuf[i] ^ bBuf[i]
-  }
-  return diff === 0
-}
-
-async function generateHmacSha256(payload: string, secret: string): Promise<string> {
-  const enc = new TextEncoder()
-  const key = await crypto.subtle.importKey(
-    'raw',
-    enc.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  )
-  const signatureBuffer = await crypto.subtle.sign('HMAC', key, enc.encode(payload))
-  return Array.from(new Uint8Array(signatureBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
-}
+import { classifyProviderPayment, fetchRazorpayPayment, verifyHmacSha256 } from '../_shared/razorpayVerification.ts'
 
 async function sha256Hex(content: string): Promise<string> {
   const enc = new TextEncoder()
@@ -63,12 +34,7 @@ serve(async (req) => {
 
   // 1. Read raw request body before parsing to verify HMAC-SHA256
   const rawBody = await req.text()
-  const expectedSignature = await generateHmacSha256(rawBody, webhookSecret)
-
-  const isValid = await timingSafeEqual(
-    webhookSignature.trim().toLowerCase(),
-    expectedSignature.toLowerCase()
-  )
+  const isValid = await verifyHmacSha256(rawBody, webhookSecret, webhookSignature)
 
   if (!isValid) {
     return new Response(JSON.stringify({ error: 'INVALID_WEBHOOK_SIGNATURE' }), {
