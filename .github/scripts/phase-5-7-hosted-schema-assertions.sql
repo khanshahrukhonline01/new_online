@@ -43,6 +43,22 @@ BEGIN
       AND policyname IN ('athlete_profiles_public_insert','athlete_profiles_self_update')
   ) THEN RAISE EXCEPTION 'permissive athlete profile policies remain'; END IF;
 
+  IF has_column_privilege('authenticated','public.athlete_profiles','publication_status','INSERT')
+     OR has_column_privilege('authenticated','public.athlete_profiles','publication_status','UPDATE')
+     OR has_column_privilege('authenticated','public.athlete_profiles','verification_status','INSERT')
+     OR has_column_privilege('authenticated','public.athlete_profiles','verification_status','UPDATE')
+     OR has_column_privilege('authenticated','public.athlete_profiles','user_id','UPDATE') THEN
+    RAISE EXCEPTION 'authenticated users retain direct privileges on moderation/ownership columns';
+  END IF;
+  IF NOT has_column_privilege('authenticated','public.athlete_profiles','full_name','INSERT')
+     OR NOT has_column_privilege('authenticated','public.athlete_profiles','summary','UPDATE') THEN
+    RAISE EXCEPTION 'athlete profile owner field privileges were not granted';
+  END IF;
+  IF (SELECT column_default FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='athlete_profiles' AND column_name='publication_status') NOT LIKE '%draft%' THEN
+    RAISE EXCEPTION 'new athlete profiles do not default to draft';
+  END IF;
+
   IF has_function_privilege('anon','public.record_payment_transaction(text,text,text,text,text,numeric,text,text,text,text,text,text,jsonb)','EXECUTE') THEN
     RAISE EXCEPTION 'anon can still execute record_payment_transaction';
   END IF;
