@@ -51,10 +51,30 @@ DROP POLICY IF EXISTS "athlete_profiles_service_all" ON public.athlete_profiles;
 ALTER TABLE public.athlete_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.athlete_profiles FORCE ROW LEVEL SECURITY;
 
--- Revoke dangerous direct write grants from anon
-REVOKE INSERT, UPDATE, DELETE ON public.athlete_profiles FROM PUBLIC, anon;
+-- Enforce publication/moderation fields at the privilege layer as well as RLS.
+-- RLS restricts rows, not individual columns; a broad UPDATE grant would still let
+-- an owner set publication_status='published' or verification_status='verified'.
+REVOKE INSERT, UPDATE, DELETE ON public.athlete_profiles FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.athlete_profiles TO anon, authenticated;
-GRANT INSERT, UPDATE ON public.athlete_profiles TO authenticated;
+
+ALTER TABLE public.athlete_profiles
+  ALTER COLUMN publication_status SET DEFAULT 'draft';
+
+GRANT INSERT (
+  username, full_name, sport, playing_position, city, state, date_of_birth,
+  team_or_academy, coach, experience_years, primary_foot_or_hand,
+  height_cm, weight_kg, summary, achievements, video_clips,
+  fitness_benchmarks, player_card_stats, user_id, is_public_cv,
+  consent_scout_sharing
+) ON public.athlete_profiles TO authenticated;
+
+GRANT UPDATE (
+  username, full_name, sport, playing_position, city, state, date_of_birth,
+  team_or_academy, coach, experience_years, primary_foot_or_hand,
+  height_cm, weight_kg, summary, achievements, video_clips,
+  fitness_benchmarks, player_card_stats, is_public_cv, consent_scout_sharing
+) ON public.athlete_profiles TO authenticated;
+
 GRANT ALL ON public.athlete_profiles TO service_role;
 
 -- 1.1 Public read for published profiles only
