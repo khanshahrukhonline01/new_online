@@ -19,15 +19,35 @@ CREATE OR REPLACE FUNCTION auth.jwt()
 RETURNS jsonb LANGUAGE sql STABLE
 AS $$ SELECT coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb) $$;
 
+-- Mirror the hosted development athlete_profiles column contract.
+-- Keep the unsafe historical publication default so the migration must change it.
 CREATE TABLE public.athlete_profiles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid,
   username text NOT NULL UNIQUE,
   full_name text NOT NULL,
   sport text NOT NULL,
+  playing_position text NOT NULL DEFAULT 'Athlete',
   city text NOT NULL DEFAULT 'India',
+  state text,
+  date_of_birth date,
+  team_or_academy text,
+  coach text,
+  experience_years text,
+  primary_foot_or_hand text,
+  height_cm integer,
+  weight_kg integer,
+  summary text,
+  achievements jsonb NOT NULL DEFAULT '[]'::jsonb,
+  video_clips jsonb NOT NULL DEFAULT '[]'::jsonb,
+  fitness_benchmarks jsonb NOT NULL DEFAULT '{}'::jsonb,
+  player_card_stats jsonb NOT NULL DEFAULT '{}'::jsonb,
+  verification_status text NOT NULL DEFAULT 'community',
   publication_status text NOT NULL DEFAULT 'published',
-  verification_status text NOT NULL DEFAULT 'unverified'
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  user_id uuid,
+  is_public_cv boolean DEFAULT false,
+  consent_scout_sharing boolean DEFAULT false
 );
 ALTER TABLE public.athlete_profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY athlete_profiles_public_insert ON public.athlete_profiles FOR INSERT TO anon, authenticated WITH CHECK (true);
