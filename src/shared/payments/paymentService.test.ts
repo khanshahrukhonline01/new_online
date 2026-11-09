@@ -62,7 +62,7 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
       })
 
       expect(uri).toContain('upi://pay?')
-      expect(uri).toContain('pa=khelgrid%40icici')
+      expect(uri).toContain('pa=merchant%40bank')
       expect(uri).toContain('am=250.00')
       expect(uri).toContain('cu=INR')
       expect(uri).toContain('tr=KG_ORD_123')
