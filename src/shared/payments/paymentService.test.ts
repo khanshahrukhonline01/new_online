@@ -134,7 +134,7 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
     })
 
     it('strictly downgrades client-declared completed status to pending_verification for online methods', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: true, status: 'pending_verification' }),
       } as Response)
@@ -162,6 +162,13 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
       })
 
       expect(res.status).toBe('pending_verification')
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/functions/v1/register-payment-intent'),
+        expect.objectContaining({ method: 'POST' }),
+      )
+      const registrationBody = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))
+      expect(registrationBody.action).toBe('register_payment')
+      expect(registrationBody.p_status).toBeUndefined()
 
       // Assert no gateway signature and phone is masked in local storage display cache
       const stored = JSON.parse(memoryStorage['khelgrid_payment_receipts'] || '[]')
