@@ -19,7 +19,7 @@ AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$
 
 CREATE OR REPLACE FUNCTION auth.jwt()
 RETURNS jsonb LANGUAGE sql STABLE
-AS $ SELECT coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb) $;
+AS $body$ SELECT coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb) $body$;
 
 -- Match the standard Supabase API role access to auth identity helpers.
 GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
