@@ -1057,7 +1057,7 @@ export async function getAnnouncements(): Promise<CatalogueResult<DatabaseAnnoun
 }
 
 export type ListingSubmissionInput = {
-  listing_type: 'opportunity' | 'venue' | 'coach' | 'academy' | 'event' | 'pickup_game'
+  listing_type: 'opportunity' | 'venue' | 'coach' | 'academy' | 'event' | 'pickup_game' | 'sport'
   title: string
   city?: string
   source_url?: string
