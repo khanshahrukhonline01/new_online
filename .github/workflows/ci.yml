@@ -37,6 +37,14 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Seed isolated hosted-schema PostgreSQL fixture
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-7-hosted-schema-fixture.sql
+      - name: Create private listing submission queue
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261029180725_listing_submission_queue.sql
+      - name: Install allowlisted listing moderation RPCs
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261029182618_allowlisted_listing_moderation.sql
+      - name: Harden listing moderator access
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261029182712_harden_listing_moderation_access.sql
+      - name: Enforce invoker-RLS listing moderation
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261029182749_moderation_invoker_rls.sql
       - name: Apply Phase 5.7 migration in isolated PostgreSQL
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261108160000_phase5_7_hosted_db_reconciliation_legacy_rpc_closure.sql
       - name: Verify Phase 5.7 migration signatures, grants and booking behavior
@@ -57,6 +65,10 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110120000_phase5_8_3_payment_verification_hardening.sql
       - name: Verify Phase 5.8.3 strict settlement grants and invariants
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-8-3-payment-verification-assertions.sql
+      - name: Apply core catalogue and listing integrity hardening
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110143000_phase_core_catalogue_listing_integrity.sql
+      - name: Verify core catalogue and listing integrity
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-core-catalogue-listing-integrity-assertions.sql
       - name: Validate SQL migration safety
         shell: bash
         run: |
