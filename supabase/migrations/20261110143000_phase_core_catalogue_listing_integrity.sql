@@ -71,9 +71,12 @@ revoke insert, update, delete on public.opportunities from public, anon, authent
 revoke insert, update, delete on public.pickup_games from public, anon, authenticated;
 revoke insert, update, delete on public.coaches from public, anon, authenticated;
 revoke insert, update, delete on public.events from public, anon, authenticated;
+revoke insert, update, delete on public.academy_sports from public, anon, authenticated;
+revoke insert, update, delete on public.coach_academies from public, anon, authenticated;
+revoke insert, update, delete on public.coach_sports from public, anon, authenticated;
 
 -- Trusted server-side catalogue publication remains available to service_role.
-grant insert, update, delete on public.academies, public.venues, public.opportunities, public.pickup_games, public.coaches, public.events, public.sports to service_role;
+grant insert, update, delete on public.academies, public.venues, public.opportunities, public.pickup_games, public.coaches, public.events, public.sports, public.academy_sports, public.coach_academies, public.coach_sports to service_role;
 
 -- The queue's existing RLS policies and transition trigger continue to enforce
 -- pending-only public submissions and allowlisted moderator review.
