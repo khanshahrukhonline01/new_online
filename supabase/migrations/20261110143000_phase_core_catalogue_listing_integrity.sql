@@ -11,7 +11,7 @@ alter table public.listing_submissions
   drop constraint if exists listing_submissions_listing_type_check;
 alter table public.listing_submissions
   add constraint listing_submissions_listing_type_check
-  check (listing_type in ('opportunity', 'venue', 'coach', 'academy', 'event', 'pickup_game'));
+  check (listing_type in ('opportunity', 'venue', 'coach', 'academy', 'event', 'pickup_game', 'sport'));
 
 -- Restore the deliberately narrow column-level INSERT grant for the public queue.
 revoke all on public.listing_submissions from public, anon, authenticated;
@@ -62,14 +62,18 @@ drop policy if exists academies_insert_community on public.academies;
 drop policy if exists venues_insert_community on public.venues;
 drop policy if exists opportunities_insert_community on public.opportunities;
 drop policy if exists pickup_games_insert_community on public.pickup_games;
+drop policy if exists coaches_insert_community on public.coaches;
+drop policy if exists events_insert_community on public.events;
 
 revoke insert, update, delete on public.academies from public, anon, authenticated;
 revoke insert, update, delete on public.venues from public, anon, authenticated;
 revoke insert, update, delete on public.opportunities from public, anon, authenticated;
 revoke insert, update, delete on public.pickup_games from public, anon, authenticated;
+revoke insert, update, delete on public.coaches from public, anon, authenticated;
+revoke insert, update, delete on public.events from public, anon, authenticated;
 
 -- Trusted server-side catalogue publication remains available to service_role.
-grant insert, update, delete on public.academies, public.venues, public.opportunities, public.pickup_games to service_role;
+grant insert, update, delete on public.academies, public.venues, public.opportunities, public.pickup_games, public.coaches, public.events, public.sports to service_role;
 
 -- The queue's existing RLS policies and transition trigger continue to enforce
 -- pending-only public submissions and allowlisted moderator review.
