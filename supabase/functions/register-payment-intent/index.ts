@@ -45,13 +45,26 @@ function listingPlan(planId: string): { amount: number; days: number; name: stri
   return plans[planId] || null
 }
 
-function membershipPrice(tierId: string, cycle: string): number | null {
-  const prices: Record<string, { monthly: number; annual: number }> = {
+function membershipPrice(meta: Record<string, unknown>): number | null {
+  const planId = String(meta.planId || '')
+  const cycle = String(meta.billingCycle || '')
+  const pricingPlans: Record<string, { monthly: number; annual: number }> = {
+    athlete_pro: { monthly: 249, annual: 1499 },
+    athlete_elite: { monthly: 499, annual: 2999 },
+    academy_starter: { monthly: 799, annual: 4999 },
+    academy_pro: { monthly: 1999, annual: 12999 },
+    academy_enterprise: { monthly: 3999, annual: 24999 },
+    venue_pro: { monthly: 1499, annual: 8999 },
+    boost_7d: { monthly: 1500, annual: 1500 },
+    boost_30d: { monthly: 4499, annual: 4499 },
+  }
+  const proTiers: Record<string, { monthly: number; annual: number }> = {
     athlete: { monthly: 199, annual: 1999 },
     coach: { monthly: 499, annual: 4999 },
     academy: { monthly: 1499, annual: 14999 },
   }
-  return prices[tierId]?.[cycle as 'monthly' | 'annual'] ?? null
+  const prices = pricingPlans[planId] || proTiers[String(meta.tierId || '')]
+  return prices?.[cycle as 'monthly' | 'annual'] ?? null
 }
 
 serve(async (req) => {
@@ -228,10 +241,12 @@ serve(async (req) => {
     metadata.plan_id = String((body.metadata as Record<string, unknown>).planId)
   } else if (itemType === 'membership') {
     const meta = (body.metadata || {}) as Record<string, unknown>
-    expectedAmount = membershipPrice(String(meta.tierId || ''), String(meta.billingCycle || ''))
+    expectedAmount = membershipPrice(meta)
     if (expectedAmount === null) return json({ error: 'INVALID_MEMBERSHIP_PLAN' }, 400)
-    itemTitle = `KhelGrid Pro ${String(meta.tierId)}`
-    metadata.tier_id = String(meta.tierId)
+    itemTitle = `KhelGrid Membership ${String(meta.planId || meta.tierId)}`
+    metadata.plan_id = String(meta.planId || meta.tierId)
+    metadata.tier_id = meta.tierId ? String(meta.tierId) : null
+    metadata.audience = meta.audience ? String(meta.audience) : null
     metadata.billing_cycle = String(meta.billingCycle)
   } else if (itemType === 'trial_registration') {
     const { data, error } = await admin.from('opportunities')
