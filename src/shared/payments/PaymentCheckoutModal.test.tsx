@@ -66,6 +66,29 @@ describe('PaymentCheckoutModal Component', () => {
     expect(html).toContain('Total Payable')
   })
 
+  it('labels venue checkout as an advance deposit and shows the venue balance', () => {
+    const venueItem: PaymentItem = {
+      id: 'venue-1',
+      type: 'venue_booking',
+      title: 'Court 1 Advance Deposit',
+      amount: 300,
+      metadata: { bookingTotalAmount: 800, balancePayableAtVenue: 500 },
+    }
+    const html = renderToStaticMarkup(
+      <PaymentCheckoutModal
+        isOpen={true}
+        onClose={() => {}}
+        item={venueItem}
+        onSuccess={() => {}}
+      />
+    )
+
+    expect(html).toContain('Advance Deposit')
+    expect(html).toContain('Full slot value: ₹800')
+    expect(html).toContain('balance at venue: ₹500')
+    expect(html).not.toContain('Total Payable')
+  })
+
   it('omits Pay at Ground when allowPayAtVenue is false', () => {
     const html = renderToStaticMarkup(
       <PaymentCheckoutModal
