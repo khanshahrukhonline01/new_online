@@ -133,8 +133,8 @@ serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey)
     const { data: paymentRecord, error: fetchError } = await adminClient
       .from('khelgrid_payments')
-      .select('id, order_id, amount, currency, status')
-      .eq('order_id', cleanOrderId)
+      .select('id, order_id, provider_order_id, amount_paise, currency, status')
+      .eq('provider_order_id', cleanOrderId)
       .single()
 
     if (fetchError || !paymentRecord) {
@@ -144,7 +144,7 @@ serve(async (req) => {
       )
     }
 
-    const authoritativeAmountPaisa = Math.round(Number(paymentRecord.amount) * 100)
+    const authoritativeAmountPaisa = Number(paymentRecord.amount_paise)
     const authoritativeCurrency = (paymentRecord.currency || 'INR').toUpperCase()
 
     if (expected_amount_paisa && expected_amount_paisa !== authoritativeAmountPaisa) {
@@ -281,7 +281,7 @@ serve(async (req) => {
 
     // 4. Settle transaction atomically in PostgreSQL via canonical procedure
     const { data: settlementData, error: settleError } = await adminClient.rpc('settle_payment_transaction', {
-      p_order_id: cleanOrderId,
+      p_order_id: paymentRecord.order_id,
       p_payment_id: cleanPaymentId,
       p_verification_source: 'gateway_api',
       p_gateway_signature: cleanSig,
@@ -307,7 +307,8 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         status: 'completed',
-        order_id: cleanOrderId,
+        order_id: paymentRecord.order_id,
+        provider_order_id: cleanOrderId,
         payment_id: cleanPaymentId,
         settlement: settlementData,
       }),
