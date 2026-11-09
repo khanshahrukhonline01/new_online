@@ -224,18 +224,7 @@ export default function CommunityListingModal({
 
               <div className="community-intake-review-note">
                 <span>💡 All community submissions require moderator review. A locally stored profile or verification badge does not bypass this process.</span>
-                {!currentUser && (
-                  <button
-                    type="button"
-                    className="community-auth-mini-btn"
-                    onClick={() => {
-                      setSuccessResult(null)
-                      setShowAuthBox(true)
-                    }}
-                  >
-                    ⚡ Register as Community Account
-                  </button>
-                )}
+
               </div>
 
               <div className="community-intake-success-actions">
