@@ -115,13 +115,14 @@ serve(async (req) => {
       return json({ error: 'INVALID_LINK_PARAMETERS' }, 400)
     }
     const { data: payment, error: paymentError } = await admin.from('khelgrid_payments')
-      .select('id,item_type,item_id,amount,customer_phone,user_id,status,metadata')
+      .select('id,item_type,item_id,amount,customer_phone,user_id,status,metadata,target_id')
       .eq('order_id', orderId).single()
     const { data: booking, error: bookingError } = await admin.from('venue_bookings')
       .select('id,booking_ref,venue_id,total_amount,customer_phone,status,payment_status')
       .eq('id', bookingId).eq('booking_ref', bookingRef).single()
     if (paymentError || !payment || bookingError || !booking) return json({ error: 'PAYMENT_OR_BOOKING_NOT_FOUND' }, 404)
-    if (payment.item_type !== 'venue_booking' || payment.status !== 'pending_verification' || (payment.user_id && payment.user_id !== userId)) return json({ error: 'PAYMENT_NOT_LINKABLE' }, 409)
+    if (payment.item_type !== 'venue_booking' || payment.status !== 'pending_verification' || (payment.user_id && payment.user_id !== userId) ||
+        (payment.metadata?.booking_ref && payment.metadata.booking_ref !== bookingRef)) return json({ error: 'PAYMENT_NOT_LINKABLE' }, 409)
     const { data: venue } = await admin.from('venues').select('id,slug').eq('id', payment.item_id).single()
     if (!venue || venue.slug !== booking.venue_id || booking.status !== 'pending' || booking.payment_status !== 'pending' ||
         payment.customer_phone !== booking.customer_phone || Number(payment.amount) > Number(booking.total_amount)) return json({ error: 'BOOKING_PAYMENT_MISMATCH' }, 409)
@@ -301,7 +302,7 @@ serve(async (req) => {
   }
 
   const { data: existingByOrder, error: existingError } = await admin.from('khelgrid_payments')
-    .select('id,order_id,amount,item_type,item_id,status,customer_phone,user_id')
+    .select('id,order_id,amount,item_type,item_id,status,customer_phone,user_id,metadata')
     .eq('order_id', orderId).maybeSingle()
   if (existingError) return json({ error: 'PAYMENT_LOOKUP_FAILED' }, 500)
   const { data: existingByKey, error: keyLookupError } = existingByOrder ? { data: null, error: null } : await admin.from('khelgrid_payments')
@@ -311,7 +312,8 @@ serve(async (req) => {
   const existing = existingByOrder || existingByKey
   if (existing) {
     if (existing.order_id !== orderId || Number(existing.amount) !== expectedAmount || existing.item_type !== itemType ||
-        existing.item_id !== itemId || existing.customer_phone !== customerPhone || (existing.user_id || null) !== userId) {
+        existing.item_id !== itemId || existing.customer_phone !== customerPhone || (existing.user_id || null) !== userId ||
+        (existing.metadata?.submitted_reference || null) !== (method === 'upi' ? submittedReference : null)) {
       return json({ error: 'ORDER_CONFLICT' }, 409)
     }
     return json({ success: true, status: existing.status, order_id: orderId, idempotent: true })
