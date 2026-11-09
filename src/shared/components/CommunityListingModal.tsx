@@ -3,10 +3,6 @@ import { SiteIcon } from './SiteIcon'
 import { SmartSchedulePicker } from './SmartSchedulePicker'
 import {
   submitCommunityListing,
-  getStoredUser,
-  quickSignInUser,
-  signOutUser,
-  type KhelGridUser,
   type CommunityListingCategory,
   type CommunityListingInput,
 } from '../../integrations/supabase/public-client'
@@ -95,10 +91,6 @@ export default function CommunityListingModal({
   const [whatsappGroupUrl, setWhatsappGroupUrl] = useState('')
 
   // Hybrid Auth & Contact State
-  const [currentUser, setCurrentUser] = useState<KhelGridUser | null>(getStoredUser())
-  const [showAuthBox, setShowAuthBox] = useState(false)
-  const [authName, setAuthName] = useState('')
-  const [authContact, setAuthContact] = useState('')
   const [contactName, setContactName] = useState('')
   const [contactPhone, setContactPhone] = useState('')
 
@@ -117,16 +109,6 @@ export default function CommunityListingModal({
   } | null>(null)
 
   const modalRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    setCurrentUser(getStoredUser())
-    const handleAuth = (e: Event) => {
-      const user = (e as CustomEvent<{ user: KhelGridUser | null }>).detail?.user
-      setCurrentUser(user ?? getStoredUser())
-    }
-    window.addEventListener('khelgrid:auth-changed', handleAuth)
-    return () => window.removeEventListener('khelgrid:auth-changed', handleAuth)
-  }, [])
 
   useEffect(() => {
     if (defaultCategory) setCategory(defaultCategory)
@@ -169,7 +151,6 @@ export default function CommunityListingModal({
     setTotalPlayers(undefined)
     setContactName('')
     setContactPhone('')
-    setShowAuthBox(false)
     setError('')
     setSuccessResult(null)
   }
@@ -182,18 +163,18 @@ export default function CommunityListingModal({
     let input: CommunityListingInput
     if (category === 'academy') {
       if (academyName.trim().length < 2) { setError('Academy name must be at least 2 characters.'); return }
-      input = { category: 'academy', name: academyName.trim(), city: cleanCity, sport: sport || undefined, state: state || undefined, description: description || undefined, website_url: websiteUrl || undefined, contact_name: currentUser?.name || contactName || undefined, contact_phone: currentUser?.phone || contactPhone || undefined }
+      input = { category: 'academy', name: academyName.trim(), city: cleanCity, sport: sport || undefined, state: state || undefined, description: description || undefined, website_url: websiteUrl || undefined, contact_name: contactName.trim(), contact_phone: contactPhone.trim() }
     } else if (category === 'venue') {
       if (venueName.trim().length < 2) { setError('Venue / arena name must be at least 2 characters.'); return }
-      input = { category: 'venue', name: venueName.trim(), city: cleanCity, sport: sport || undefined, address: address || undefined, description: description || undefined, contact_name: currentUser?.name || contactName || undefined, contact_phone: currentUser?.phone || contactPhone || undefined }
+      input = { category: 'venue', name: venueName.trim(), city: cleanCity, sport: sport || undefined, address: address || undefined, description: description || undefined, contact_name: contactName.trim(), contact_phone: contactPhone.trim() }
     } else if (category === 'opportunity') {
       if (oppTitle.trim().length < 2) { setError('Title must be at least 2 characters.'); return }
-      input = { category: 'opportunity', title: oppTitle.trim(), opportunity_type: oppType, sport: sport || undefined, city: cleanCity, venue_name: oppVenue || undefined, organizer_name: organizer || currentUser?.name || contactName || undefined, starts_at: oppStartsAt || undefined, registration_fee: regFee || undefined, age_category: ageCategory || undefined, source_url: sourceUrl || undefined, contact_name: currentUser?.name || contactName || undefined, contact_phone: currentUser?.phone || contactPhone || undefined }
+      input = { category: 'opportunity', title: oppTitle.trim(), opportunity_type: oppType, sport: sport || undefined, city: cleanCity, venue_name: oppVenue || undefined, organizer_name: organizer || contactName.trim(), starts_at: oppStartsAt || undefined, registration_fee: regFee || undefined, age_category: ageCategory || undefined, source_url: sourceUrl || undefined, contact_name: contactName.trim(), contact_phone: contactPhone.trim() }
     } else {
       if (sport.trim().length < 2 || pickupVenue.trim().length < 2 || timeLabel.trim().length < 2) { setError('Enter a sport, venue and schedule to submit a pickup game.'); return }
-      input = { category: 'pickup_game', sport: sport.trim(), emoji, venue_name: pickupVenue.trim(), city: cleanCity, time_label: timeLabel.trim(), skill_level: skillLevel || undefined, host_name: hostName || currentUser?.name || contactName || undefined, contact_name: currentUser?.name || contactName || undefined, contact_phone: currentUser?.phone || contactPhone || undefined, price_per_player: pricePerPlayer || undefined, spots_open: spotsOpen, total_players: totalPlayers, whatsapp_group_url: whatsappGroupUrl.trim() || undefined }
+      input = { category: 'pickup_game', sport: sport.trim(), emoji, venue_name: pickupVenue.trim(), city: cleanCity, time_label: timeLabel.trim(), skill_level: skillLevel || undefined, host_name: hostName || contactName.trim(), contact_name: contactName.trim(), contact_phone: contactPhone.trim(), price_per_player: pricePerPlayer || undefined, spots_open: spotsOpen, total_players: totalPlayers, whatsapp_group_url: whatsappGroupUrl.trim() || undefined }
     }
-    if (!currentUser && (!contactName.trim() || !contactPhone.trim())) { setError('Organizer contact name and WhatsApp/phone number are required.'); return }
+    if (contactName.trim().length < 2 || contactPhone.trim().length < 6) { setError('Organizer name and a valid contact number are required.'); return }
     setIsSubmitting(true)
     try {
       const result = await submitCommunityListing(input)
@@ -346,93 +327,6 @@ export default function CommunityListingModal({
                 Suggest a sports academy, turf arena, selection trial, or pickup match for moderator review.
               </p>
             </div>
-
-            {/* Account information (moderator review still required) */}
-            <div className={`community-auth-bar ${currentUser ? 'is-verified' : 'is-guest'}`}>
-              {currentUser ? (
-                <div className="community-auth-bar-inner">
-                  <div className="community-auth-info">
-                    <SiteIcon name="check-circle" size={15} />
-                    <span>
-                      Signed in as <strong>{currentUser.name}</strong> · Moderator review required
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="community-auth-signout-btn"
-                    onClick={() => signOutUser()}
-                    title="Sign out"
-                  >
-                    Sign out
-                  </button>
-                </div>
-              ) : (
-                <div className="community-auth-bar-inner">
-                  <div className="community-auth-info">
-                    <SiteIcon name="shield-check" size={15} />
-                    <span>
-                      <strong>Guest Mode:</strong> Pickup games publish live with contact phone. Trials &amp; academies undergo 2-4hr verification.
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="community-auth-toggle-btn"
-                    onClick={() => setShowAuthBox(prev => !prev)}
-                  >
-                    ⚡ {showAuthBox ? 'Close' : 'Sign In for Instant Publishing'}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Inline Quick Auth Drawer */}
-            {showAuthBox && !currentUser && (
-              <div className="community-inline-auth-box">
-                <div className="community-inline-auth-header">
-                  <strong>⚡ Quick Sign In / Host Registration</strong>
-                  <p>Get instant live publishing on all selection trials, turfs, and academies with a Verified Host badge.</p>
-                </div>
-                <div className="community-inline-auth-fields">
-                  <input
-                    type="text"
-                    placeholder="Your Full Name / Academy (e.g. Coach Rajesh Sharma)"
-                    value={authName}
-                    onChange={e => setAuthName(e.target.value)}
-                    className="community-inline-auth-input"
-                  />
-                  <input
-                    type="text"
-                    placeholder="WhatsApp / Mobile Number or Email (e.g. +91 98765 43210)"
-                    value={authContact}
-                    onChange={e => setAuthContact(e.target.value)}
-                    className="community-inline-auth-input"
-                  />
-                  <div className="community-inline-auth-actions">
-                    <button
-                      type="button"
-                      className="community-inline-auth-submit"
-                      onClick={() => {
-                        if (authName.trim().length >= 2 && authContact.trim().length >= 6) {
-                          quickSignInUser(authName, authContact, 'host')
-                          setShowAuthBox(false)
-                        } else {
-                          setError('Please enter your name (min 2 chars) and contact phone or email.')
-                        }
-                      }}
-                    >
-                      Verify &amp; Continue as Host
-                    </button>
-                    <button
-                      type="button"
-                      className="community-inline-auth-cancel"
-                      onClick={() => setShowAuthBox(false)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Category Switcher Tabs */}
             <div className="community-intake-tabs" role="tablist" aria-label="Listing categories">
@@ -889,7 +783,6 @@ export default function CommunityListingModal({
               )}
 
               {/* Contact Information (for guest verification and player coordination) */}
-              {!currentUser && (
                 <div className="community-form-section community-contact-section">
                   <div className="community-section-label">
                     <span>Organizer / Host Contact (For player coordination &amp; verification)</span>
@@ -917,7 +810,6 @@ export default function CommunityListingModal({
                     </label>
                   </div>
                 </div>
-              )}
 
               <div className="community-intake-actions">
                 <button
@@ -936,7 +828,7 @@ export default function CommunityListingModal({
                   {isSubmitting ? (
                     <>
                       <SiteIcon name="loader" size={16} />
-                      <span>{(!currentUser && (category === 'opportunity' || category === 'academy')) ? 'Submitting for Verification…' : 'Submitting for review…'}</span>
+                      <span>Submitting for review…</span>
                     </>
                   ) : (!currentUser && (category === 'opportunity' || category === 'academy')) ? (
                     <>
