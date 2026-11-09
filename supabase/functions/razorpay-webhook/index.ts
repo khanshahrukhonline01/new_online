@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { classifySettlementResult } from '../_shared/webhookSettlement.ts'
 
 async function timingSafeEqual(a: string, b: string): Promise<boolean> {
   const enc = new TextEncoder()
@@ -134,16 +135,17 @@ serve(async (req) => {
     : `body_hash_${await sha256Hex(rawBody)}`
 
   const paymentEntity = event.payload?.payment?.entity
-  const orderId = (paymentEntity?.order_id || event.payload?.order?.entity?.id || '').trim()
+  // Razorpay's order_id is the provider ID; the internal KhelGrid order ID is stored separately.
+  const providerOrderId = (paymentEntity?.order_id || event.payload?.order?.entity?.id || '').trim()
   const paymentId = (paymentEntity?.id || '').trim()
-  const amountPaisa = paymentEntity?.amount || event.payload?.order?.entity?.amount || 0
+  const amountPaisa = paymentEntity?.amount ?? event.payload?.order?.entity?.amount ?? 0
   const currency = (paymentEntity?.currency || event.payload?.order?.entity?.currency || 'INR').toUpperCase()
 
   // 4. Atomic Event Claim (Concurrency and Race Condition Protection)
   const { data: claimData, error: claimError } = await adminClient.rpc('claim_webhook_event', {
     p_event_id: eventId,
     p_event_type: event.event,
-    p_order_id: orderId || null,
+    p_order_id: providerOrderId || null,
     p_payment_id: paymentId || null,
     p_payload_summary: {
       amount: amountPaisa,
@@ -181,6 +183,13 @@ serve(async (req) => {
     })
   }
 
+  if (claimData?.status !== 'claimed') {
+    return new Response(JSON.stringify({ error: 'EVENT_CLAIM_NOT_CONFIRMED', status: claimData?.status || 'unknown' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
   // 5. Process Payment Capture or Order Settlement
   if (event.event === 'payment.captured' || event.event === 'order.paid') {
     const paymentStatus = paymentEntity?.status
@@ -198,27 +207,45 @@ serve(async (req) => {
       })
     }
 
-    if (orderId && paymentId) {
+    if (!providerOrderId || !paymentId) {
+      const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+        p_event_id: eventId,
+        p_status: 'failed_terminal',
+        p_error_message: 'Captured payment event is missing provider order ID or payment ID',
+      })
+      if (finalizeError) {
+        return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED', details: finalizeError.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return new Response(JSON.stringify({ status: 'quarantined', error: 'MISSING_PAYMENT_IDENTIFIERS' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    {
       // Authoritative order verification from database
       const { data: dbOrder, error: orderErr } = await adminClient
         .from('khelgrid_payments')
-        .select('id, amount, currency, status')
-        .eq('order_id', orderId)
+        .select('id, order_id, amount_paise, currency, status')
+        .eq('provider_order_id', providerOrderId)
         .single()
 
       if (orderErr || !dbOrder) {
         await adminClient.rpc('finalize_webhook_event', {
           p_event_id: eventId,
           p_status: 'failed_retryable',
-          p_error_message: 'Associated order record not found in database',
+          p_error_message: 'No KhelGrid payment matches this Razorpay provider order ID',
         })
-        return new Response(JSON.stringify({ error: 'ORDER_NOT_FOUND', order_id: orderId }), {
+        return new Response(JSON.stringify({ error: 'ORDER_NOT_FOUND', provider_order_id: providerOrderId }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' },
         })
       }
 
-      const authoritativeAmountPaisa = Math.round(Number(dbOrder.amount) * 100)
+      const authoritativeAmountPaisa = Number(dbOrder.amount_paise)
       const authoritativeCurrency = (dbOrder.currency || 'INR').toUpperCase()
 
       // Cross-check payload amount and currency
@@ -248,7 +275,7 @@ serve(async (req) => {
 
       // Transactional settlement in PostgreSQL via canonical procedure
       const { data: settleData, error: settleError } = await adminClient.rpc('settle_payment_transaction', {
-        p_order_id: orderId,
+        p_order_id: dbOrder.order_id,
         p_payment_id: paymentId,
         p_verification_source: 'webhook_verified',
         p_gateway_signature: null,
@@ -256,25 +283,37 @@ serve(async (req) => {
         p_expected_currency: authoritativeCurrency,
       })
 
-      if (settleError) {
-        await adminClient.rpc('finalize_webhook_event', {
-          p_event_id: eventId,
-          p_status: 'failed_retryable',
-          p_error_message: settleError.message,
-        })
-        return new Response(JSON.stringify({ error: 'SETTLEMENT_FAILED', details: settleError.message }), {
+      const settlement = classifySettlementResult(settleData, settleError)
+      const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+        p_event_id: eventId,
+        p_status: settlement.disposition,
+        p_error_message: settlement.reason || null,
+        p_settlement_data: settleData ?? null,
+      })
+
+      if (finalizeError) {
+        // Do not acknowledge to Razorpay: event remains recoverable and can be retried.
+        return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED', details: finalizeError.message }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' },
         })
       }
 
-      // Check if settlement quarantined payment or succeeded
-      await adminClient.rpc('finalize_webhook_event', {
-        p_event_id: eventId,
-        p_status: 'processed',
-        p_error_message: settleData?.status === 'error' ? settleData.message : null,
-        p_settlement_data: settleData,
-      })
+      if (settlement.disposition === 'failed_retryable') {
+        return new Response(JSON.stringify({ error: 'SETTLEMENT_RETRY_REQUIRED', details: settlement.reason }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      if (settlement.disposition === 'failed_terminal') {
+        // Business rejection is quarantined for operator review; a blind gateway retry
+        // cannot fix an amount/order/payment-ID mismatch.
+        return new Response(JSON.stringify({ status: 'quarantined', reason: settlement.reason }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
 
       return new Response(JSON.stringify({ status: 'settled', data: settleData }), {
         status: 200,
