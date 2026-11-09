@@ -449,6 +449,7 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
                     </nav>
                   )}
                 </>
+              ) : (
                 <CatalogueEmptyState
                   title={records.length ? 'No matching opportunities' : 'No published opportunities'}
                   message={
