@@ -4,13 +4,13 @@ CREATE OR REPLACE FUNCTION public.settle_razorpay_payment_verified(
   p_expected_amount_paisa bigint, p_expected_currency text, p_verification_source text
 ) RETURNS jsonb
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
-SET search_path = public, auth, pg_temp
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_role text;
   v_payment record;
 BEGIN
-  v_role := COALESCE(NULLIF(current_setting('request.jwt.claim.role', true), ''), auth.role());
+  v_role := COALESCE(NULLIF(current_setting('request.jwt.claim.role', true), ''), '');
   IF v_role <> 'service_role' AND NOT public.is_service_role_or_admin() THEN
     RETURN jsonb_build_object('status','error','error_code','UNAUTHORIZED','message','Service role required.');
   END IF;
