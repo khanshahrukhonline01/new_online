@@ -1187,7 +1187,6 @@ export interface CommunityVenueInput {
   description?: string
   contact_name?: string
   contact_phone?: string
-  is_verified_user?: boolean
 }
 
 export interface CommunityOpportunityInput {
@@ -1205,7 +1204,6 @@ export interface CommunityOpportunityInput {
   age_category?: string
   contact_name?: string
   contact_phone?: string
-  is_verified_user?: boolean
 }
 
 export interface CommunityPickupGameInput {
@@ -1223,7 +1221,6 @@ export interface CommunityPickupGameInput {
   contact_name?: string
   contact_phone?: string
   whatsapp_group_url?: string
-  is_verified_user?: boolean
 }
 
 export type CommunityListingInput =
