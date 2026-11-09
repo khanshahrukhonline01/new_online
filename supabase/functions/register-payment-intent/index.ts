@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('PAYMENT_ALLOWED_ORIGIN') || 'https://khelgrid.com',
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Vary': 'Origin',
@@ -115,13 +115,13 @@ serve(async (req) => {
       return json({ error: 'INVALID_LINK_PARAMETERS' }, 400)
     }
     const { data: payment, error: paymentError } = await admin.from('khelgrid_payments')
-      .select('id,item_type,item_id,amount,customer_phone,status,metadata')
+      .select('id,item_type,item_id,amount,customer_phone,user_id,status,metadata')
       .eq('order_id', orderId).single()
     const { data: booking, error: bookingError } = await admin.from('venue_bookings')
       .select('id,booking_ref,venue_id,total_amount,customer_phone,status')
       .eq('id', bookingId).eq('booking_ref', bookingRef).single()
     if (paymentError || !payment || bookingError || !booking) return json({ error: 'PAYMENT_OR_BOOKING_NOT_FOUND' }, 404)
-    if (payment.item_type !== 'venue_booking' || payment.status !== 'pending_verification') return json({ error: 'PAYMENT_NOT_LINKABLE' }, 409)
+    if (payment.item_type !== 'venue_booking' || payment.status !== 'pending_verification' || (payment.user_id && payment.user_id !== userId)) return json({ error: 'PAYMENT_NOT_LINKABLE' }, 409)
     const { data: venue } = await admin.from('venues').select('id,slug').eq('id', payment.item_id).single()
     if (!venue || venue.slug !== booking.venue_id || payment.customer_phone !== booking.customer_phone ||
         Number(payment.amount) > Number(booking.total_amount)) return json({ error: 'BOOKING_PAYMENT_MISMATCH' }, 409)
@@ -148,9 +148,13 @@ serve(async (req) => {
         listingName.length < 2 || city.length < 2 || customerName.length < 2 || phone.length < 10 ||
         !idempotencyKey || idempotencyKey.length > 128) return json({ error: 'INVALID_SUBSCRIPTION' }, 400)
 
-    const { data: existing } = await admin.from('listing_subscriptions')
+    const { data: existingByOrder } = await admin.from('listing_subscriptions')
       .select('id,order_id,plan_id,amount,payment_status,is_active,access_token')
       .eq('order_id', orderId).maybeSingle()
+    const { data: existingByKey } = existingByOrder ? { data: null } : await admin.from('listing_subscriptions')
+      .select('id,order_id,plan_id,amount,payment_status,is_active,access_token')
+      .eq('idempotency_key', idempotencyKey).maybeSingle()
+    const existing = existingByOrder || existingByKey
     if (existing) {
       if (existing.plan_id !== planId || Number(existing.amount) !== plan.amount || existing.is_active) {
         return json({ error: 'ORDER_CONFLICT' }, 409)
