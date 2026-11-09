@@ -90,6 +90,11 @@ export function PaymentCheckoutModal({
       return
     }
 
+    if (method === 'pay_at_venue' && !supportsPayAtVenue) {
+      setErrorMsg('Pay-at-venue is not supported for this item.')
+      return
+    }
+
     if (method === 'card') {
       setErrorMsg('Card and NetBanking checkout is not enabled yet. Please use UPI and submit the UTR for manual verification, or choose Pay at Ground where available.')
       return
