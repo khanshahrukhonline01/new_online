@@ -84,9 +84,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_listing_subscriptions_idempotency_key
 -- format and are protected by the partial unique index above.
 -- Close the unsafe 15-argument overload, which can set is_active=true from client
 -- supplied p_payment_status='paid'.
-REVOKE EXECUTE ON FUNCTION public.record_listing_subscription(text, text, text, text, text, text, text, numeric, integer, text, text, text, text, text, jsonb)
-  FROM PUBLIC, anon, authenticated;
-DROP FUNCTION IF EXISTS public.record_listing_subscription(text, text, text, text, text, text, text, numeric, integer, text, text, text, text, text, jsonb);
+DO $legacy_subscription$
+BEGIN
+  IF to_regprocedure('public.record_listing_subscription(text,text,text,text,text,text,text,numeric,integer,text,text,text,text,text,jsonb)') IS NOT NULL THEN
+    REVOKE EXECUTE ON FUNCTION public.record_listing_subscription(text, text, text, text, text, text, text, numeric, integer, text, text, text, text, text, jsonb)
+      FROM PUBLIC, anon, authenticated;
+    DROP FUNCTION public.record_listing_subscription(text, text, text, text, text, text, text, numeric, integer, text, text, text, text, text, jsonb);
+  END IF;
+END;
+$legacy_subscription$;
 
 -- Public SELECT on listing_subscriptions exposes customer PII and access tokens.
 DROP POLICY IF EXISTS listing_subscriptions_read ON public.listing_subscriptions;
