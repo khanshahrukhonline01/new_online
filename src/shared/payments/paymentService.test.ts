@@ -56,6 +56,7 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
   describe('generateUpiUri', () => {
     it('generates standard NPCI UPI URI', () => {
       const uri = generateUpiUri({
+        vpa: 'merchant@bank',
         amount: 250,
         transactionNote: 'Football Turf Spot',
         orderId: 'KG_ORD_123',
