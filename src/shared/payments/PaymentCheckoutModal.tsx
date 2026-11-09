@@ -376,8 +376,12 @@ export function PaymentCheckoutModal({
         {step === 'processing' && (
           <div className="kg-checkout-processing">
             <div className="kg-spinner-box">₹</div>
-            <h4>Verifying Payment with NPCI &amp; Bank...</h4>
-            <p>Please do not close or refresh this window.</p>
+            <h4>{method === 'upi' ? 'Submitting UPI reference securely…' : 'Recording pay-at-venue request…'}</h4>
+            <p>
+              {method === 'upi'
+                ? 'Your UTR is being recorded for independent verification. This step does not verify bank settlement or confirm a booking.'
+                : 'No online payment is being collected. Your request is being recorded for server-side confirmation.'}
+            </p>
           </div>
         )}
 
