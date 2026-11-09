@@ -1153,7 +1153,7 @@ export function quickSignInUser(
   phoneOrEmail: string,
   role: 'host' | 'athlete' | 'scout' | 'academy' = 'host',
 ): KhelGridUser {
-  const cleanName = name.trim() || 'Verified Host'
+  const cleanName = name.trim() || 'Community User'
   const isEmail = phoneOrEmail.includes('@')
   const user: KhelGridUser = {
     id: `user-${Math.random().toString(36).substring(2, 9)}`,
@@ -1161,7 +1161,7 @@ export function quickSignInUser(
     email: isEmail ? phoneOrEmail.trim() : undefined,
     phone: !isEmail ? phoneOrEmail.trim() : undefined,
     role,
-    isVerified: true,
+    isVerified: false,
     createdAt: new Date().toISOString(),
   }
   setStoredUser(user)
