@@ -506,7 +506,7 @@ BEGIN
     trim(p_order_id), v_reference, 'gateway_api', NULL,
     p_expected_amount_paisa, 'INR'
   );
-  IF v_settlement->>'status' <> 'success' THEN
+  IF v_settlement->>'status' IS DISTINCT FROM 'success' THEN
     RETURN v_settlement;
   END IF;
 
