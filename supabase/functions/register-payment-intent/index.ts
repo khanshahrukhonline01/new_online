@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getCanonicalListingPlan, getCanonicalMembershipPrice, resolveVenueSlotPrice } from '../_shared/paymentPricing.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,38 +35,6 @@ async function sha256(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest)).map(v => v.toString(16).padStart(2, '0')).join('')
 }
 
-function listingPlan(planId: string): { amount: number; days: number; name: string } | null {
-  const plans: Record<string, { amount: number; days: number; name: string }> = {
-    '1_day': { amount: 99, days: 1, name: '1-Day Listing' },
-    '1_month': { amount: 499, days: 30, name: '1-Month Listing' },
-    '6_months': { amount: 2499, days: 180, name: '6-Month Listing' },
-    '1_year': { amount: 4499, days: 365, name: '1-Year Listing' },
-    lifelong: { amount: 9999, days: 0, name: 'Lifelong Listing' },
-  }
-  return plans[planId] || null
-}
-
-function membershipPrice(meta: Record<string, unknown>): number | null {
-  const planId = String(meta.planId || '')
-  const cycle = String(meta.billingCycle || '')
-  const pricingPlans: Record<string, { monthly: number; annual: number }> = {
-    athlete_pro: { monthly: 249, annual: 1499 },
-    athlete_elite: { monthly: 499, annual: 2999 },
-    academy_starter: { monthly: 799, annual: 4999 },
-    academy_pro: { monthly: 1999, annual: 12999 },
-    academy_enterprise: { monthly: 3999, annual: 24999 },
-    venue_pro: { monthly: 1499, annual: 8999 },
-    boost_7d: { monthly: 1500, annual: 1500 },
-    boost_30d: { monthly: 4499, annual: 4499 },
-  }
-  const proTiers: Record<string, { monthly: number; annual: number }> = {
-    athlete: { monthly: 199, annual: 1999 },
-    coach: { monthly: 499, annual: 4999 },
-    academy: { monthly: 1499, annual: 14999 },
-  }
-  const prices = pricingPlans[planId] || proTiers[String(meta.tierId || '')]
-  return prices?.[cycle as 'monthly' | 'annual'] ?? null
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -118,14 +87,14 @@ serve(async (req) => {
       .select('id,item_type,item_id,amount,customer_phone,user_id,status,metadata,target_id')
       .eq('order_id', orderId).single()
     const { data: booking, error: bookingError } = await admin.from('venue_bookings')
-      .select('id,booking_ref,venue_id,total_amount,customer_phone,status,payment_status')
+      .select('id,booking_ref,venue_id,court_number,total_amount,customer_phone,status,payment_status')
       .eq('id', bookingId).eq('booking_ref', bookingRef).single()
     if (paymentError || !payment || bookingError || !booking) return json({ error: 'PAYMENT_OR_BOOKING_NOT_FOUND' }, 404)
     if (payment.item_type !== 'venue_booking' || payment.status !== 'pending_verification' || (payment.user_id && payment.user_id !== userId) ||
         (payment.metadata?.booking_ref && payment.metadata.booking_ref !== bookingRef)) return json({ error: 'PAYMENT_NOT_LINKABLE' }, 409)
     const { data: venue } = await admin.from('venues').select('id,slug').eq('id', payment.item_id).single()
     if (!venue || venue.slug !== booking.venue_id || booking.status !== 'pending' || booking.payment_status !== 'pending' ||
-        payment.customer_phone !== booking.customer_phone || Number(payment.amount) > Number(booking.total_amount)) return json({ error: 'BOOKING_PAYMENT_MISMATCH' }, 409)
+        payment.customer_phone !== booking.customer_phone || Number(payment.amount) !== Number(booking.total_amount) || Number(payment.metadata?.court_number) !== Number(booking.court_number || 1)) return json({ error: 'BOOKING_PAYMENT_MISMATCH' }, 409)
     const metadata = { ...(payment.metadata || {}), booking_ref: booking.booking_ref }
     const { error: updateError } = await admin.from('khelgrid_payments')
       .update({ target_type: 'venue_booking', target_id: booking.id, metadata })
@@ -141,7 +110,7 @@ serve(async (req) => {
   if (action === 'register_listing_subscription') {
     const orderId = String(body.order_id || '').trim()
     const planId = String(body.plan_id || '')
-    const plan = listingPlan(planId)
+    const plan = getCanonicalListingPlan(planId)
     const listingType = String(body.listing_type || '')
     const listingName = String(body.listing_name || '').trim()
     const city = String(body.city || '').trim()
@@ -161,7 +130,7 @@ serve(async (req) => {
       .eq('idempotency_key', idempotencyKey).maybeSingle()
     const existing = existingByOrder || existingByKey
     if (existing) {
-      if (existing.order_id !== orderId || existing.plan_id !== planId || Number(existing.amount) !== plan.amount ||
+      if (existing.order_id !== orderId || existing.plan_id !== planId || Number(existing.amount) !== plan.amountRupees ||
           existing.customer_phone !== phone || existing.listing_type !== listingType || existing.listing_name !== listingName ||
           existing.city !== city || (existing.user_id || null) !== userId || existing.is_active) {
         return json({ error: 'ORDER_CONFLICT' }, 409)
@@ -176,7 +145,7 @@ serve(async (req) => {
       .select('id,amount,item_type,customer_phone,user_id,status')
       .eq('order_id', orderId).single()
     if (paymentLookupError || !paymentIntent || paymentIntent.item_type !== 'listing_plan' ||
-        Number(paymentIntent.amount) !== plan.amount || paymentIntent.customer_phone !== phone ||
+        Number(paymentIntent.amount) !== plan.amountRupees || paymentIntent.customer_phone !== phone ||
         (paymentIntent.user_id || null) !== userId || paymentIntent.status !== 'pending_verification') {
       return json({ error: 'PAYMENT_INTENT_MISMATCH' }, 409)
     }
@@ -191,8 +160,8 @@ serve(async (req) => {
       city,
       plan_id: planId,
       plan_name: plan.name,
-      amount: plan.amount,
-      duration_days: plan.days,
+      amount: plan.amountRupees,
+      duration_days: plan.durationDays,
       customer_name: customerName,
       customer_phone: phone,
       customer_email: body.customer_email ? String(body.customer_email).trim().toLowerCase() : null,
@@ -257,14 +226,14 @@ serve(async (req) => {
   const metadata: Record<string, unknown> = {}
 
   if (itemType === 'listing_plan') {
-    const plan = listingPlan(String((body.metadata as Record<string, unknown> | undefined)?.planId || ''))
+    const plan = getCanonicalListingPlan(String((body.metadata as Record<string, unknown> | undefined)?.planId || ''))
     if (!plan) return json({ error: 'INVALID_PLAN' }, 400)
-    expectedAmount = plan.amount
+    expectedAmount = plan.amountRupees
     itemTitle = plan.name
     metadata.plan_id = String((body.metadata as Record<string, unknown>).planId)
   } else if (itemType === 'membership') {
     const meta = (body.metadata || {}) as Record<string, unknown>
-    expectedAmount = membershipPrice(meta)
+    expectedAmount = getCanonicalMembershipPrice(meta)
     if (expectedAmount === null) return json({ error: 'INVALID_MEMBERSHIP_PLAN' }, 400)
     itemTitle = `KhelGrid Membership ${String(meta.planId || meta.tierId)}`
     metadata.plan_id = String(meta.planId || meta.tierId)
@@ -285,16 +254,32 @@ serve(async (req) => {
     if (expectedAmount === null) return json({ error: 'PRICE_UNRESOLVED' }, 409)
     itemTitle = `${data.sport} Match Spot`
   } else if (itemType === 'venue_booking') {
-    const { data, error } = await admin.from('venues')
-      .select('id,name,slot_hourly_fee,fee_provenance,pricing_status,publication_status')
-      .eq('id', itemId).single()
-    if (error || !data || data.publication_status !== 'published') return json({ error: 'VENUE_NOT_AVAILABLE' }, 404)
-    if (data.fee_provenance !== 'verified' || data.pricing_status !== 'verified' || !data.slot_hourly_fee || data.slot_hourly_fee <= 0) {
-      return json({ error: 'PRICE_UNRESOLVED' }, 409)
+    const rawCourtNumber = (body.metadata as Record<string, unknown> | undefined)?.courtNumber
+    const courtNumber = Number(rawCourtNumber)
+    if (rawCourtNumber === undefined || rawCourtNumber === null || rawCourtNumber === '' || !Number.isInteger(courtNumber) || courtNumber < 1 || courtNumber > 50) {
+      return json({ error: 'INVALID_COURT' }, 400)
     }
-    expectedAmount = Math.min(300, Number(data.slot_hourly_fee))
+    const venueQuery = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(itemId)
+      ? admin.from('venues').select('id,slug,name,slot_hourly_fee,fee_provenance,pricing_status,publication_status').eq('id', itemId)
+      : admin.from('venues').select('id,slug,name,slot_hourly_fee,fee_provenance,pricing_status,publication_status').eq('slug', itemId)
+    const { data, error } = await venueQuery.maybeSingle()
+    if (error || !data || data.publication_status !== 'published') return json({ error: 'VENUE_NOT_AVAILABLE' }, 404)
+    const { data: courts, error: courtError } = await admin.from('venue_courts')
+      .select('name,hourly_price_paise,is_bookable')
+      .eq('venue_id', data.id)
+    if (courtError) return json({ error: 'VENUE_PRICING_LOOKUP_FAILED' }, 500)
+    const resolved = resolveVenueSlotPrice({
+      venue: data,
+      courts: courts || [],
+      courtNumber,
+    })
+    if (!resolved) return json({ error: 'PRICE_UNRESOLVED' }, 409)
+    expectedAmount = resolved.amountRupees
     itemTitle = `${data.name} Court Slot`
     metadata.venue_id = data.id
+    metadata.venue_slug = data.slug
+    metadata.court_number = courtNumber
+    metadata.amount_paise = resolved.amountPaise
   }
 
   if (expectedAmount === null || !Number.isFinite(expectedAmount) || expectedAmount <= 0 ||
