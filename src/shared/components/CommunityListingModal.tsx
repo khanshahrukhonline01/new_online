@@ -86,11 +86,11 @@ export default function CommunityListingModal({
   // Pickup game fields
   const [pickupVenue, setPickupVenue] = useState('')
   const [timeLabel, setTimeLabel] = useState('')
-  const [skillLevel, setSkillLevel] = useState<'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels'>('Intermediate')
+  const [skillLevel, setSkillLevel] = useState<'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels' | ''>('')
   const [hostName, setHostName] = useState('')
-  const [pricePerPlayer, setPricePerPlayer] = useState('₹200/player')
-  const [spotsOpen, setSpotsOpen] = useState(4)
-  const [totalPlayers, setTotalPlayers] = useState(10)
+  const [pricePerPlayer, setPricePerPlayer] = useState('')
+  const [spotsOpen, setSpotsOpen] = useState<number | undefined>(undefined)
+  const [totalPlayers, setTotalPlayers] = useState<number | undefined>(undefined)
   const [emoji, setEmoji] = useState('⚽')
   const [whatsappGroupUrl, setWhatsappGroupUrl] = useState('')
 
@@ -164,9 +164,9 @@ export default function CommunityListingModal({
     setPickupVenue('')
     setTimeLabel('')
     setHostName('')
-    setPricePerPlayer('₹200/player')
-    setSpotsOpen(4)
-    setTotalPlayers(10)
+    setPricePerPlayer('')
+    setSpotsOpen(undefined)
+    setTotalPlayers(undefined)
     setContactName('')
     setContactPhone('')
     setShowAuthBox(false)
@@ -252,7 +252,7 @@ export default function CommunityListingModal({
                       setShowAuthBox(true)
                     }}
                   >
-                    ⚡ Register as Verified Host
+                    ⚡ Register as Community Account
                   </button>
                 )}
               </div>
@@ -354,7 +354,7 @@ export default function CommunityListingModal({
                   <div className="community-auth-info">
                     <SiteIcon name="check-circle" size={15} />
                     <span>
-                      Signed in as <strong>{currentUser.name}</strong> · <span className="community-verified-pill">Verified Host</span>
+                      Signed in as <strong>{currentUser.name}</strong> · Moderator review required
                     </span>
                   </div>
                   <button
@@ -565,7 +565,8 @@ export default function CommunityListingModal({
                         }
                       >
                         <option value="All Levels">All Levels</option>
-                        <option value="Beginner">Beginner</option>
+                        <option value="">Not specified</option>
+                    <option value="Beginner">Beginner</option>
                         <option value="Intermediate">Intermediate</option>
                         <option value="Advanced">Advanced</option>
                       </select>
