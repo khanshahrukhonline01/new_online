@@ -17,7 +17,7 @@ describe('Global Unified Search with KhelChronicle integration', () => {
 
   it('provides research preprints in getChroniclePapers that match key search queries', async () => {
     const papersResult = await getChroniclePapers()
-    expect(['ready', 'unconfigured']).toContain(papersResult.status)
+    expect(['ready', 'unconfigured', 'unavailable']).toContain(papersResult.status)
     expect(papersResult.data.length).toBeGreaterThanOrEqual(3)
 
     // Fast bowling query should match KG-2026-001

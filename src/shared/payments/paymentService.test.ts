@@ -100,6 +100,11 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
 
   describe('recordPaymentTransaction', () => {
     it('records pay_at_venue transaction directly with pay_at_venue status', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true }),
+      } as Response)
+
       const item: PaymentItem = {
         id: 'match-1',
         type: 'pickup_match',
@@ -129,6 +134,11 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
     })
 
     it('strictly downgrades client-declared completed status to pending_verification for online methods', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true }),
+      } as Response)
+
       const item: PaymentItem = {
         id: 'venue-1',
         type: 'venue_booking',

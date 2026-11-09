@@ -9,9 +9,23 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: khelgrid_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d khelgrid_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
-      VITE_SUPABASE_URL: https://hznsbxvovjxvmnchzzqt.supabase.co
-      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bnNieHZvdmp4dm1uY2h6enF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MDU2NzIsImV4cCI6MjEwODQ4MTY3Mn0.CGMlJ8sM5yDPE1gd9Eydhmwf-bBCoxDJIaSTh133OpQ
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/khelgrid_test
+      VITE_SUPABASE_URL: https://example.invalid
+      VITE_SUPABASE_ANON_KEY: test-anon-key
     steps:
       - uses: actions/checkout@v4
         with:
@@ -19,6 +33,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Seed isolated hosted-schema PostgreSQL fixture
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-7-hosted-schema-fixture.sql
+      - name: Apply Phase 5.7 migration in isolated PostgreSQL
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261108160000_phase5_7_hosted_db_reconciliation_legacy_rpc_closure.sql
+      - name: Verify Phase 5.7 migration signatures, grants and booking behavior
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-7-hosted-schema-assertions.sql
       - name: Validate SQL migration safety
         shell: bash
         run: |
@@ -39,7 +61,6 @@ jobs:
               echo "Potentially destructive statement in $base; require explicit review and an approved exception"; exit 1
             fi
           done
-          # Ensure required checks are present in the workflow; fail closed if removed.
           for check in "npm run typecheck" "npm run lint" "npm run test" "npm run build"; do
             grep -Fq "$check" .github/workflows/ci.yml || { echo "Required CI check missing: $check"; exit 1; }
           done

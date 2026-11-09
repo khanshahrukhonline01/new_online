@@ -643,9 +643,11 @@ export async function fetchVenueBookingVoucher(
       if (res.ok) {
         const data = await res.json()
         const row = Array.isArray(data) && data[0] ? data[0] : data
+        if (row?.success === false) return null
+        const bookingStatus = row?.status ?? row?.booking_status
         if (row && row.booking_ref) {
           return {
-            status: row.status === 'confirmed' ? 'confirmed' : row.status,
+            status: bookingStatus === 'confirmed' ? 'confirmed' : bookingStatus,
             bookingRef: row.booking_ref,
             venueName: row.venue_name,
             slotDate: row.slot_date,
@@ -654,8 +656,8 @@ export async function fetchVenueBookingVoucher(
             totalAmount: Number(row.total_amount || 0),
             paidAmount: Number(row.paid_amount || 0),
             paymentStatus: row.payment_status || 'pending',
-            serverConfirmed: row.status === 'confirmed',
-            customerName: row.customer_display_name,
+            serverConfirmed: bookingStatus === 'confirmed',
+            customerName: row.customer_display_name ?? row.customer_name,
           }
         }
       }
