@@ -61,6 +61,7 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
   const [fromDate, setFromDate] = useState(initial.get('from') ?? '')
   const [toDate, setToDate] = useState(initial.get('to') ?? '')
   const [checkoutItem, setCheckoutItem] = useState<PaymentItem | null>(null)
+  const [paymentNotice, setPaymentNotice] = useState('')
   const [admitPass, setAdmitPass] = useState<{
     item: Opportunity
     passRef: string
@@ -504,6 +505,8 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
         </div>
       )}
 
+      {paymentNotice && <div role="status" className="state-panel">{paymentNotice}</div>}
+
       {/* Checkout Modal for Paid Trials */}
       {checkoutItem && (
         <PaymentCheckoutModal
@@ -513,6 +516,10 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
           onSuccess={paymentResult => {
             const currentItem = records.find(r => r.id === checkoutItem.id)
             setCheckoutItem(null)
+            if (paymentResult.status !== 'completed') {
+              setPaymentNotice('Your payment reference is pending independent verification. No trial admission pass has been issued yet.')
+              return
+            }
             if (currentItem) {
               setAdmitPass({
                 item: currentItem,
