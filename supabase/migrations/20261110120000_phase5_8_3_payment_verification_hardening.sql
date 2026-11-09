@@ -16,7 +16,7 @@ BEGIN
   END IF;
   IF nullif(trim(coalesce(p_order_id,'')),'') IS NULL OR nullif(trim(coalesce(p_provider_order_id,'')),'') IS NULL
      OR nullif(trim(coalesce(p_payment_id,'')),'') IS NULL OR p_expected_amount_paisa IS NULL OR p_expected_amount_paisa <= 0
-     OR upper(trim(coalesce(p_expected_currency,''))) = '' OR p_verification_source NOT IN ('gateway_api','webhook_verified') THEN
+     OR upper(trim(coalesce(p_expected_currency,''))) = '' OR coalesce(p_verification_source,'') NOT IN ('gateway_api','webhook_verified') THEN
     RETURN jsonb_build_object('status','error','error_code','INVALID_PARAMETERS','message','All provider identifiers, positive paise amount, currency and trusted verification source are required.');
   END IF;
   SELECT id, order_id, payment_id, provider_order_id, amount_paise, round(amount * 100)::bigint AS amount_from_rupees, currency, status
