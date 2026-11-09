@@ -304,7 +304,7 @@ export function PaymentCheckoutModal({
                     <span>Pay in Person at the Ground</span>
                   </div>
                   <p className="kg-venue-pay-body">
-                    Your spot will be instantly reserved without making an online transaction today.
+                    This records a pay-at-venue request without taking an online payment. The related booking or listing is subject to server confirmation.
                     You can pay the match host or facility reception in cash or via their personal UPI QR when you arrive.
                   </p>
                   <ul className="kg-venue-pay-guidelines">
@@ -355,16 +355,16 @@ export function PaymentCheckoutModal({
             <div>
               <h4 style={{ margin: '0 0 6px', fontSize: '20px', fontWeight: 800 }}>
                 {completedResult.status === 'pay_at_venue'
-                  ? 'Spot Reserved Successfully!'
+                  ? 'Pay-at-Venue Request Recorded'
                   : completedResult.status === 'pending_verification'
                     ? 'UPI Reference Submitted!'
                     : 'Payment Confirmed!'}
               </h4>
               <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
                 {completedResult.status === 'pay_at_venue'
-                  ? `Please pay ₹${item.amount} directly to the match host at the venue.`
+                  ? `No online payment has been collected. Any booking or listing remains subject to server confirmation and the applicable venue/organizer terms.`
                   : completedResult.status === 'pending_verification'
-                    ? `Reference ${completedResult.paymentId} recorded. Our match desk will verify your UTR within 15 minutes.`
+                    ? `Reference ${completedResult.paymentId} recorded as pending. This is not a confirmed payment or reservation until KhelGrid independently verifies it.`
                     : `₹${item.amount} received via ${completedResult.method.toUpperCase()}. Your pass is ready.`}
               </p>
             </div>
