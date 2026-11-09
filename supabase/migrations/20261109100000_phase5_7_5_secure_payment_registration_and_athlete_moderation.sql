@@ -493,7 +493,7 @@ BEGIN
      OR length(v_reference) < 6 OR length(v_reference) > 64
      OR v_reference ~ '[^A-Za-z0-9-]'
      OR p_expected_amount_paisa IS NULL OR p_expected_amount_paisa <= 0
-     OR length(v_note) < 10 OR length(v_note) > 1000 THEN
+     OR v_note IS NULL OR length(v_note) < 10 OR length(v_note) > 1000 THEN
     RETURN jsonb_build_object('status','error','error_code','INVALID_VERIFICATION_INPUT');
   END IF;
 
