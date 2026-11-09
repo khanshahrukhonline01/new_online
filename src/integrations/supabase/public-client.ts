@@ -166,7 +166,7 @@ async function fetchCatalogueRemote<T>(
       offset += CATALOGUE_PAGE_SIZE
     }
     if (hasMore && offset >= CATALOGUE_MAX_ROWS) {
-      return { status: 'unavailable', data: [], message: `This catalogue contains more than ${CATALOGUE_MAX_ROWS} records. Please narrow your filters.` }
+      return { status: 'unavailable', data: [], message: `This catalogue reached the ${CATALOGUE_MAX_ROWS}-record safety cap. Narrow your filters to avoid incomplete results.` }
     }
     const result: CatalogueResult<T> = { status: 'ready', data: rows }
     catalogueMemoryCache.set(cacheKey, { timestamp: Date.now(), result })
