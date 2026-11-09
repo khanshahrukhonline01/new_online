@@ -1,6 +1,7 @@
 \set ON_ERROR_STOP on
 CREATE SCHEMA IF NOT EXISTS auth;
 CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY);
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 
 DO $$
@@ -58,7 +59,45 @@ CREATE POLICY athlete_profiles_owner_update ON public.athlete_profiles FOR UPDAT
 CREATE TABLE public.listing_subscriptions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id text NOT NULL,
-  payment_status text DEFAULT 'paid'
+  payment_id text,
+  user_id uuid,
+  listing_type text NOT NULL DEFAULT 'academy',
+  listing_id text,
+  listing_name text NOT NULL DEFAULT 'Fixture Listing',
+  city text NOT NULL DEFAULT 'Delhi',
+  plan_id text NOT NULL DEFAULT '1_month',
+  plan_name text NOT NULL DEFAULT '1-Month Listing',
+  amount numeric(10,2) NOT NULL DEFAULT 499,
+  duration_days integer NOT NULL DEFAULT 30,
+  customer_name text NOT NULL DEFAULT 'Fixture Host',
+  customer_phone text NOT NULL DEFAULT '9876543210',
+  customer_email text,
+  starts_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz,
+  is_active boolean NOT NULL DEFAULT true,
+  payment_status text NOT NULL DEFAULT 'paid' CHECK (payment_status IN ('paid','pay_at_venue','pending','cancelled')),
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE public.khelgrid_payments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id text NOT NULL UNIQUE,
+  payment_id text,
+  user_id uuid,
+  customer_name text NOT NULL DEFAULT 'Fixture Customer',
+  customer_phone text NOT NULL DEFAULT '9876543210',
+  customer_email text,
+  amount numeric(10,2) NOT NULL DEFAULT 100,
+  currency text NOT NULL DEFAULT 'INR',
+  item_type text NOT NULL CHECK (item_type IN ('pickup_match','venue_booking','trial_registration','athlete_verification','listing_plan')),
+  item_id text NOT NULL DEFAULT 'fixture-item',
+  item_title text NOT NULL DEFAULT 'Fixture Item',
+  payment_gateway text NOT NULL DEFAULT 'razorpay',
+  payment_method text NOT NULL DEFAULT 'upi' CHECK (payment_method IN ('upi','card','netbanking','wallet','cash_at_venue')),
+  status text NOT NULL DEFAULT 'completed' CHECK (status IN ('pending','completed','failed','refunded')),
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE TABLE public.venues (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -128,6 +167,10 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
 AS $function$ SELECT false $function$;
 REVOKE ALL ON FUNCTION public.is_pickup_game_admin() FROM PUBLIC, anon, authenticated;
 
+CREATE OR REPLACE FUNCTION public.is_service_role_or_admin()
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
+AS $function$ SELECT false $function$;
+
 CREATE OR REPLACE FUNCTION public.record_payment_transaction(
   text,text,text,text,text,numeric,text,text,text,text,text,text,jsonb
 ) RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
@@ -136,8 +179,23 @@ CREATE OR REPLACE FUNCTION public.record_listing_subscription(
   text,text,text,text,text,text,text,numeric,integer,text,text,text,text,text,jsonb
 ) RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
 CREATE OR REPLACE FUNCTION public.record_listing_subscription(
-  text,text,text,text,text,text,text,numeric,integer,text,text,text,text,text,jsonb,text
-) RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
+  p_order_id text,
+  p_payment_id text,
+  p_listing_type text,
+  p_listing_name text,
+  p_city text,
+  p_plan_id text,
+  p_plan_name text,
+  p_amount numeric,
+  p_duration_days integer,
+  p_customer_name text,
+  p_customer_phone text,
+  p_customer_email text DEFAULT NULL,
+  p_payment_status text DEFAULT 'pending',
+  p_listing_id text DEFAULT NULL,
+  p_metadata jsonb DEFAULT '{}'::jsonb,
+  p_idempotency_key text DEFAULT NULL
+) RETURNS jsonb LANGUAGE sql AS $ SELECT '{}'::jsonb $;
 
 CREATE OR REPLACE FUNCTION public.create_venue_slot_booking(
   text,text,text,text,text,text,text,text,numeric,numeric,text,text
