@@ -3,6 +3,8 @@ import { SiteIcon } from '../components/SiteIcon'
 import {
   generateOrderId,
   generateUpiUri,
+  getMerchantUpiVpa,
+  isMerchantUpiConfigured,
   recordPaymentTransaction,
 } from './paymentService'
 import type { PaymentCustomer, PaymentItem, PaymentMethod, PaymentResult } from './paymentTypes'
@@ -25,7 +27,7 @@ export function PaymentCheckoutModal({
   onSuccess,
   allowPayAtVenue = true,
 }: PaymentCheckoutModalProps) {
-  const supportsOnlinePayment = item.type === 'venue_booking' || item.type === 'listing_plan'
+  const supportsOnlinePayment = (item.type === 'venue_booking' || item.type === 'listing_plan') && isMerchantUpiConfigured()
   const [method, setMethod] = useState<PaymentMethod>(supportsOnlinePayment ? 'upi' : allowPayAtVenue ? 'pay_at_venue' : 'upi')
   const [orderId, setOrderId] = useState(() => generateOrderId())
   const [name, setName] = useState(initialCustomer?.name || '')
@@ -55,7 +57,7 @@ export function PaymentCheckoutModal({
   })
 
   const handleCopyVpa = () => {
-    navigator.clipboard?.writeText('khelgrid@icici')
+    navigator.clipboard?.writeText(getMerchantUpiVpa())
     setCopiedVpa(true)
     setTimeout(() => setCopiedVpa(false), 2000)
   }
@@ -187,7 +189,7 @@ export function PaymentCheckoutModal({
           <form onSubmit={handleSubmit}>
             {!supportsOnlinePayment && !allowPayAtVenue && (
               <div role="status" style={{ padding: '12px', border: '1px solid #f59e0b', borderRadius: '10px', background: '#fffbeb', color: '#92400e', fontSize: '13px', marginBottom: '12px' }}>
-                Secure online payment is not available for this item yet. Do not transfer money. This checkout is temporarily disabled until its server-side settlement workflow is ready.
+                Secure UPI payment is unavailable. Do not transfer money. Confirm the merchant UPI ID with KhelGrid and configure VITE_KHELGRID_UPI_VPA before enabling online payments.
               </div>
             )}
             {/* Method Tabs */}
@@ -277,7 +279,7 @@ export function PaymentCheckoutModal({
 
                   <div className="kg-upi-vpa-copy">
                     <span>UPI ID:</span>
-                    <strong>khelgrid@icici</strong>
+                    <strong>{getMerchantUpiVpa()}</strong>
                     <button type="button" className="kg-copy-btn" onClick={handleCopyVpa}>
                       {copiedVpa ? 'Copied!' : 'Copy'}
                     </button>
