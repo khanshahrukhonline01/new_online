@@ -53,6 +53,10 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110100000_phase5_8_2_razorpay_order_creation.sql
       - name: Verify Phase 5.8.2 checkout capability and provider order lifecycle
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-8-2-payment-order-assertions.sql
+      - name: Apply Phase 5.8.3 payment verification hardening
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110120000_phase5_8_3_payment_verification_hardening.sql
+      - name: Verify Phase 5.8.3 strict settlement grants and invariants
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-8-3-payment-verification-assertions.sql
       - name: Validate SQL migration safety
         shell: bash
         run: |
