@@ -1,35 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { classifySettlementResult } from '../_shared/webhookSettlement.ts'
-
-async function timingSafeEqual(a: string, b: string): Promise<boolean> {
-  const enc = new TextEncoder()
-  const aBuf = enc.encode(a)
-  const bBuf = enc.encode(b)
-  if (aBuf.byteLength !== bBuf.byteLength) {
-    return false
-  }
-  let diff = 0
-  for (let i = 0; i < aBuf.byteLength; i++) {
-    diff |= aBuf[i] ^ bBuf[i]
-  }
-  return diff === 0
-}
-
-async function generateHmacSha256(payload: string, secret: string): Promise<string> {
-  const enc = new TextEncoder()
-  const key = await crypto.subtle.importKey(
-    'raw',
-    enc.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  )
-  const signatureBuffer = await crypto.subtle.sign('HMAC', key, enc.encode(payload))
-  return Array.from(new Uint8Array(signatureBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
-}
+import { classifyProviderPayment, fetchRazorpayPayment, verifyHmacSha256, type RazorpayPayment } from '../_shared/razorpayVerification.ts'
 
 async function sha256Hex(content: string): Promise<string> {
   const enc = new TextEncoder()
@@ -62,12 +34,7 @@ serve(async (req) => {
 
   // 1. Read raw request body before parsing to verify HMAC-SHA256
   const rawBody = await req.text()
-  const expectedSignature = await generateHmacSha256(rawBody, webhookSecret)
-
-  const isValid = await timingSafeEqual(
-    webhookSignature.trim().toLowerCase(),
-    expectedSignature.toLowerCase()
-  )
+  const isValid = await verifyHmacSha256(rawBody, webhookSecret, webhookSignature)
 
   if (!isValid) {
     return new Response(JSON.stringify({ error: 'INVALID_WEBHOOK_SIGNATURE' }), {
@@ -100,6 +67,14 @@ serve(async (req) => {
           id: string
           amount: number
           currency: string
+          status: string
+        }
+      }
+      refund?: {
+        entity?: {
+          id: string
+          payment_id: string
+          amount: number
           status: string
         }
       }
@@ -137,7 +112,8 @@ serve(async (req) => {
   const paymentEntity = event.payload?.payment?.entity
   // Razorpay's order_id is the provider ID; the internal KhelGrid order ID is stored separately.
   const providerOrderId = (paymentEntity?.order_id || event.payload?.order?.entity?.id || '').trim()
-  const paymentId = (paymentEntity?.id || '').trim()
+  const refundEntity = event.payload?.refund?.entity
+  const paymentId = (paymentEntity?.id || refundEntity?.payment_id || '').trim()
   const amountPaisa = paymentEntity?.amount ?? event.payload?.order?.entity?.amount ?? 0
   const currency = (paymentEntity?.currency || event.payload?.order?.entity?.currency || 'INR').toUpperCase()
 
@@ -247,8 +223,43 @@ serve(async (req) => {
 
       const authoritativeAmountPaisa = Number(dbOrder.amount_paise)
       const authoritativeCurrency = (dbOrder.currency || 'INR').toUpperCase()
+      const keyId = Deno.env.get('RAZORPAY_KEY_ID')
+      const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET')
+      if (!keyId || !keySecret) {
+        const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+          p_event_id: eventId, p_status: 'failed_retryable',
+          p_error_message: 'Razorpay API credentials are unavailable for independent payment verification',
+        })
+        if (finalizeError) return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED' }), { status: 500 })
+        return new Response(JSON.stringify({ error: 'PROVIDER_VERIFICATION_UNAVAILABLE' }), { status: 503 })
+      }
 
-      // Cross-check payload amount and currency
+      let providerPayment: RazorpayPayment
+      try {
+        providerPayment = await fetchRazorpayPayment(paymentId, keyId, keySecret)
+      } catch (error) {
+        const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+          p_event_id: eventId, p_status: 'failed_retryable',
+          p_error_message: error instanceof Error ? error.message.slice(0, 1000) : 'Razorpay API unavailable',
+        })
+        if (finalizeError) return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED' }), { status: 500 })
+        return new Response(JSON.stringify({ error: 'PROVIDER_VERIFICATION_RETRY_REQUIRED' }), { status: 503 })
+      }
+
+      const providerCheck = classifyProviderPayment(providerPayment, {
+        paymentId, providerOrderId, amountPaise: authoritativeAmountPaisa, currency: authoritativeCurrency,
+      })
+      if (providerCheck.disposition !== 'captured') {
+        const terminal = providerCheck.disposition !== 'authorized'
+        const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+          p_event_id: eventId, p_status: terminal ? 'failed_terminal' : 'failed_retryable',
+          p_error_message: providerCheck.reason,
+        })
+        if (finalizeError) return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED' }), { status: 500 })
+        return new Response(JSON.stringify({ error: 'PROVIDER_PAYMENT_NOT_SETTLEABLE', status: providerCheck.disposition }), { status: terminal ? 200 : 503 })
+      }
+
+      // Cross-check signed webhook amount and currency against the authoritative ledger.
       if (!Number.isSafeInteger(amountPaisa) || amountPaisa <= 0 || amountPaisa !== authoritativeAmountPaisa) {
         await adminClient.rpc('finalize_webhook_event', {
           p_event_id: eventId,
@@ -274,13 +285,13 @@ serve(async (req) => {
       }
 
       // Transactional settlement in PostgreSQL via canonical procedure
-      const { data: settleData, error: settleError } = await adminClient.rpc('settle_payment_transaction', {
+      const { data: settleData, error: settleError } = await adminClient.rpc('settle_razorpay_payment_verified', {
         p_order_id: dbOrder.order_id,
+        p_provider_order_id: providerOrderId,
         p_payment_id: paymentId,
-        p_verification_source: 'webhook_verified',
-        p_gateway_signature: null,
         p_expected_amount_paisa: authoritativeAmountPaisa,
         p_expected_currency: authoritativeCurrency,
+        p_verification_source: 'webhook_verified',
       })
 
       const settlement = classifySettlementResult(settleData, settleError)
@@ -322,11 +333,75 @@ serve(async (req) => {
     }
   }
 
+  // Record definitive provider failure and refund events without ever settling them.
+  if (event.event === 'payment.failed' && providerOrderId && paymentId) {
+    const { error: updateError } = await adminClient.from('khelgrid_payments')
+      .update({ status: 'failed', updated_at: new Date().toISOString() })
+      .eq('provider_order_id', providerOrderId)
+      .in('status', ['pending', 'pending_verification']);
+    const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+      p_event_id: eventId,
+      p_status: updateError ? 'failed_retryable' : 'processed',
+      p_error_message: updateError?.message || null,
+    });
+    if (updateError || finalizeError) return new Response(JSON.stringify({ error: 'PAYMENT_FAILURE_RECORDING_FAILED' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ status: 'failed_recorded', event_id: eventId }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  if (event.event === 'refund.processed' && paymentId && refundEntity) {
+    const keyId = Deno.env.get('RAZORPAY_KEY_ID')
+    const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET')
+    if (!keyId || !keySecret) {
+      const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+        p_event_id: eventId, p_status: 'failed_retryable',
+        p_error_message: 'Razorpay API credentials unavailable while reconciling refund',
+      })
+      if (finalizeError) return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED' }), { status: 500 })
+      return new Response(JSON.stringify({ error: 'REFUND_VERIFICATION_UNAVAILABLE' }), { status: 503 })
+    }
+    let providerPayment: RazorpayPayment
+    try {
+      providerPayment = await fetchRazorpayPayment(paymentId, keyId, keySecret)
+    } catch (error) {
+      const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+        p_event_id: eventId, p_status: 'failed_retryable',
+        p_error_message: error instanceof Error ? error.message.slice(0, 1000) : 'Razorpay payment lookup failed during refund',
+      })
+      if (finalizeError) return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED' }), { status: 500 })
+      return new Response(JSON.stringify({ error: 'REFUND_VERIFICATION_RETRY_REQUIRED' }), { status: 503 })
+    }
+    const refundOrderId = providerPayment.order_id
+    if (!refundOrderId || providerPayment.id !== paymentId) {
+      const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+        p_event_id: eventId, p_status: 'failed_terminal', p_error_message: 'Refund payment identifier could not be matched to a provider order',
+      })
+      if (finalizeError) return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED' }), { status: 500 })
+      return new Response(JSON.stringify({ status: 'quarantined', error: 'REFUND_PAYMENT_MISMATCH' }), { status: 200 })
+    }
+    const fullyRefunded = Number(providerPayment.amount_refunded) === Number(providerPayment.amount) &&
+      refundEntity.status === 'processed'
+    const targetStatus = fullyRefunded ? 'refunded' : 'reconciliation_required'
+    const { error: updateError } = await adminClient.from('khelgrid_payments')
+      .update({ status: targetStatus, updated_at: new Date().toISOString() })
+      .eq('provider_order_id', refundOrderId)
+      .eq('payment_id', paymentId)
+      .eq('status', 'completed');
+    const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+      p_event_id: eventId, p_status: updateError ? 'failed_retryable' : 'processed',
+      p_error_message: updateError?.message || (fullyRefunded ? null : 'Partial refund or provider refund not yet fully processed; manual reconciliation required'),
+    });
+    if (updateError || finalizeError) return new Response(JSON.stringify({ error: 'REFUND_RECORDING_FAILED' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ status: targetStatus, event_id: eventId }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+
   // Record non-settlement event as ignored
-  await adminClient.rpc('finalize_webhook_event', {
+  const { error: ignoredFinalizeError } = await adminClient.rpc('finalize_webhook_event', {
     p_event_id: eventId,
     p_status: 'ignored',
     p_error_message: 'Event type not handled for payment settlement',
+  })
+  if (ignoredFinalizeError) return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED' }), {
+    status: 500, headers: { 'Content-Type': 'application/json' },
   })
 
   return new Response(JSON.stringify({ received: true, event: event.event }), {
