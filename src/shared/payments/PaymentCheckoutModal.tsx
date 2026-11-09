@@ -29,7 +29,8 @@ export function PaymentCheckoutModal({
 }: PaymentCheckoutModalProps) {
   const supportsOnlinePaymentTarget = item.type === 'venue_booking' || item.type === 'listing_plan'
   const supportsOnlinePayment = supportsOnlinePaymentTarget && isMerchantUpiConfigured()
-  const [method, setMethod] = useState<PaymentMethod>(supportsOnlinePayment ? 'upi' : allowPayAtVenue ? 'pay_at_venue' : 'upi')
+  const supportsPayAtVenue = allowPayAtVenue && (item.type === 'venue_booking' || item.type === 'pickup_match')
+  const [method, setMethod] = useState<PaymentMethod>(supportsOnlinePayment ? 'upi' : supportsPayAtVenue ? 'pay_at_venue' : 'upi')
   const [orderId, setOrderId] = useState(() => generateOrderId())
   const [name, setName] = useState(initialCustomer?.name || '')
   const [phone, setPhone] = useState(initialCustomer?.phone || '')
@@ -43,12 +44,12 @@ export function PaymentCheckoutModal({
   useEffect(() => {
     if (isOpen) {
       setOrderId(generateOrderId())
-      setMethod(supportsOnlinePayment ? 'upi' : allowPayAtVenue ? 'pay_at_venue' : 'upi')
+      setMethod(supportsOnlinePayment ? 'upi' : supportsPayAtVenue ? 'pay_at_venue' : 'upi')
       setUpiRef('')
       setErrorMsg('')
       setStep('input')
     }
-  }, [isOpen, item.id, supportsOnlinePayment, allowPayAtVenue])
+  }, [isOpen, item.id, supportsOnlinePayment, supportsPayAtVenue])
 
   if (!isOpen) return null
   const upiUri = generateUpiUri({
@@ -188,7 +189,7 @@ export function PaymentCheckoutModal({
         {/* Step 1: Input & Payment Method */}
         {step === 'input' && (
           <form onSubmit={handleSubmit}>
-            {!supportsOnlinePaymentTarget && !allowPayAtVenue && (
+            {!supportsOnlinePaymentTarget && !supportsPayAtVenue && (
               <div role="status" style={{ padding: '12px', border: '1px solid #f59e0b', borderRadius: '10px', background: '#fffbeb', color: '#92400e', fontSize: '13px', marginBottom: '12px' }}>
                 Secure online payment is not enabled for this item yet. Do not transfer money; its server-side settlement workflow is not ready.
               </div>
@@ -217,7 +218,7 @@ export function PaymentCheckoutModal({
                 <SiteIcon name="credit-card" size={15} />
                 <span>Cards / NetBanking</span>
               </button>
-              {allowPayAtVenue && (
+              {supportsPayAtVenue && (
                 <button
                   type="button"
                   className={`kg-method-btn ${method === 'pay_at_venue' ? 'active' : ''}`}
@@ -356,7 +357,7 @@ export function PaymentCheckoutModal({
               <button type="button" className="kg-btn-cancel" onClick={onClose}>
                 Cancel
               </button>
-              <button type="submit" className="kg-btn-pay" disabled={!((supportsOnlinePayment && method === 'upi') || (allowPayAtVenue && method === 'pay_at_venue'))}>
+              <button type="submit" className="kg-btn-pay" disabled={!((supportsOnlinePayment && method === 'upi') || (supportsPayAtVenue && method === 'pay_at_venue'))}>
                 <SiteIcon name={method === 'pay_at_venue' ? 'check' : 'lock'} size={16} />
                 <span>
                   {method === 'pay_at_venue' ? 'Request Spot (Pay at Ground)' : 'Submit UTR for Verification'}
