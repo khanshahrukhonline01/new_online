@@ -187,7 +187,7 @@ export function CatalogueFilterPanel({
     const nextUrl = window.location.pathname + (queryString ? '?' + queryString : '') + window.location.hash
     const currentUrl = window.location.pathname + window.location.search + window.location.hash
     if (currentUrl !== nextUrl) {
-      window.history.replaceState({}, '', nextUrl)
+      window.history.pushState({}, '', nextUrl)
     }
   }, [search, fields, sort, defaultSort, sortKey])
 
