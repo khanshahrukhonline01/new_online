@@ -251,3 +251,12 @@ ALTER TABLE public.payment_webhook_events FORCE ROW LEVEL SECURITY;
 CREATE POLICY webhook_events_service_all ON public.payment_webhook_events
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 GRANT ALL ON public.payment_webhook_events TO service_role;
+
+INSERT INTO public.khelgrid_payments (
+  order_id, customer_name, customer_phone, amount, currency,
+  item_type, item_id, item_title, payment_gateway, payment_method, status, metadata
+) VALUES
+  ('KG_ORD_PHASE5814_BACKFILL_01', 'Legacy Fixture', '9999999999', 499.00, 'INR',
+   'venue_booking', 'fixture-venue-1', 'Legacy completed payment', 'mock', 'upi', 'completed', '{}'::jsonb),
+  ('KG_ORD_PHASE5814_BACKFILL_02', 'Legacy Fixture', '9999999998', 123.45, 'INR',
+   'venue_booking', 'fixture-venue-2', 'Legacy pending payment', 'mock', 'upi', 'pending', '{}'::jsonb);
