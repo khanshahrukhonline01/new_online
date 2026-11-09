@@ -25,9 +25,6 @@ export function AdminModerationPage() {
   }, [])
   useEffect(() => {
     void loadQueue()
-    const handleAuthChange = () => { void loadQueue() }
-    window.addEventListener('khelgrid:auth-changed', handleAuthChange)
-    return () => window.removeEventListener('khelgrid:auth-changed', handleAuthChange)
   }, [loadQueue])
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
