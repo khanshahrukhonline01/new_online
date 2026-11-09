@@ -268,7 +268,7 @@ export function PaymentCheckoutModal({
                   </button>
 
                   <div className="kg-field-group" style={{ width: '100%', textAlign: 'left' }}>
-                    <label htmlFor="kg-utr">UPI UTR / Reference No. (Optional for manual bank transfers)</label>
+                    <label htmlFor="kg-utr">UPI UTR / Reference No. (Required for manual verification)</label>
                     <input
                       id="kg-utr"
                       type="text"
