@@ -300,7 +300,7 @@ END;
 $function$;
 
 REVOKE ALL ON FUNCTION public.record_listing_subscription(text, text, text, text, text, text, text, numeric, integer, text, text, text, text, text, jsonb, text)
-  FROM PUBLIC;
+  FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.record_listing_subscription(text, text, text, text, text, text, text, numeric, integer, text, text, text, text, text, jsonb, text)
   TO service_role;
 
