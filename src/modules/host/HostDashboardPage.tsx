@@ -1208,7 +1208,7 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
           item={checkoutItem}
           initialCustomer={{
             name: currentUser?.name || 'Partner Host',
-            phone: currentUser?.phone || '9876543210',
+            phone: currentUser?.phone || '',
             email: currentUser?.email || '',
           }}
           onSuccess={handlePaymentSuccess}
