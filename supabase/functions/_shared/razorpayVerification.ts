@@ -26,3 +26,15 @@ export async function fetchRazorpayPayment(paymentId: string, keyId: string, key
   if (!response.ok) throw new Error(`RAZORPAY_API_${response.status}`)
   return await response.json() as RazorpayPayment
 }
+
+export async function verifyHmacSha256(payload: string, secret: string, supplied: string): Promise<boolean> {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  const signature = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload)))
+  const expected = Array.from(signature).map(v => v.toString(16).padStart(2, '0')).join('')
+  const a = new TextEncoder().encode(expected.toLowerCase())
+  const b = new TextEncoder().encode(supplied.trim().toLowerCase())
+  if (a.length !== b.length) return false
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i]
+  return diff === 0
+}
