@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { classifyProviderPayment, fetchRazorpayPayment } from '../_shared/razorpayVerification.ts'
+import { classifyProviderPayment, fetchRazorpayPayment, verifyHmacSha256 } from '../_shared/razorpayVerification.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,35 +36,6 @@ interface RazorpayPaymentEntity {
   email?: string
   contact?: string
   created_at: number
-}
-
-async function timingSafeEqual(a: string, b: string): Promise<boolean> {
-  const enc = new TextEncoder()
-  const aBuf = enc.encode(a)
-  const bBuf = enc.encode(b)
-  if (aBuf.byteLength !== bBuf.byteLength) {
-    return false
-  }
-  let diff = 0
-  for (let i = 0; i < aBuf.byteLength; i++) {
-    diff |= aBuf[i] ^ bBuf[i]
-  }
-  return diff === 0
-}
-
-async function generateHmacSha256(payload: string, secret: string): Promise<string> {
-  const enc = new TextEncoder()
-  const key = await crypto.subtle.importKey(
-    'raw',
-    enc.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  )
-  const signatureBuffer = await crypto.subtle.sign('HMAC', key, enc.encode(payload))
-  return Array.from(new Uint8Array(signatureBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
 }
 
 serve(async (req) => {
@@ -116,12 +87,7 @@ serve(async (req) => {
 
     // 1. Official Razorpay checkout verification: HMAC-SHA256(order_id + "|" + payment_id, key_secret)
     const payload = `${cleanOrderId}|${cleanPaymentId}`
-    const expectedSignature = await generateHmacSha256(payload, keySecret)
-
-    const isHmacValid = await timingSafeEqual(
-      cleanSig.toLowerCase(),
-      expectedSignature.toLowerCase()
-    )
+    const isHmacValid = await verifyHmacSha256(payload, keySecret, cleanSig)
 
     if (!isHmacValid) {
       return new Response(
