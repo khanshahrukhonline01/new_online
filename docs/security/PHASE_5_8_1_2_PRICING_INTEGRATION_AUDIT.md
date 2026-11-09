@@ -48,6 +48,7 @@ The payment registration function continues to calculate membership amounts from
 - GoPro tiers are checked against the canonical catalogue.
 - Venue advance deposit tests cover amounts below and above ₹300 and invalid amounts.
 - Payment service test asserts that court number, full booking amount, advance deposit and balance metadata are passed to the registration Edge Function.
+- Checkout modal test asserts venue payments are labelled as advance deposits and clearly display the full slot value and remaining venue balance.
 - Existing court tariff, venue fallback, paise conversion and listing plan tests remain.
 
 ## Branch reconciliation
