@@ -715,7 +715,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                   const courtNumber = 1
                   const depositAmount = Math.min(300, slotFee)
                   setCheckoutItem({
-                    id: venue.slug || venue.id,
+                    id: venue.id,
                     type: 'venue_booking',
                     title: `${venue.name} Court Slot`,
                     subtitle: `${selectedSport || sportName} · ${selectedDate} · ${selectedSlot}`,
