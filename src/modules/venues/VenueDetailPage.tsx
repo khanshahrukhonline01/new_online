@@ -718,7 +718,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                     id: venue.id,
                     type: 'venue_booking',
                     title: `${venue.name} Court Slot`,
-                    subtitle: `${selectedSport || sportName} · ${selectedDate} · ${selectedSlot}`,
+                    subtitle: `Court 1 · ${selectedSport || sportName} · ${selectedDate} · ${selectedSlot}`,
                     amount: depositAmount,
                     emoji: '🏟️',
                     venueName: venue.name,
