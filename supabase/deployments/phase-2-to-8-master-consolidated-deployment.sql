@@ -2265,8 +2265,8 @@ REVOKE EXECUTE ON FUNCTION public.get_listing_subscription_by_order(text) FROM P
 DROP FUNCTION IF EXISTS public.get_listing_subscription_by_order(text);
 
 -- 4.6 Legacy single-argument get_venue_booking_voucher: Revoke and drop
-REVOKE EXECUTE ON FUNCTION public.get_venue_booking_voucher(text) FROM PUBLIC, anon, authenticated;
-DROP FUNCTION IF EXISTS public.get_venue_booking_voucher(text);
+-- The hosted database has no single-argument voucher overload; do not
+-- issue a non-IF-EXISTS REVOKE against a nonexistent signature.
 
 -- 4.7 Replace the legacy two-argument phone-based TABLE RPC with the token-based JSONB RPC.
 -- PostgreSQL cannot rename input parameters or change a function return type via CREATE OR REPLACE.
