@@ -163,12 +163,13 @@ serve(async (req) => {
     }
 
     const accessToken = Array.from(crypto.getRandomValues(new Uint8Array(24))).map(v => v.toString(16).padStart(2, '0')).join('')
+    const requestedSubscriptionStatus = body.payment_status === 'pay_at_venue' ? 'pay_at_venue' : 'pending'
     const { data: paymentIntent, error: paymentLookupError } = await admin.from('khelgrid_payments')
       .select('id,amount,item_type,customer_phone,status')
       .eq('order_id', orderId).single()
     if (paymentLookupError || !paymentIntent || paymentIntent.item_type !== 'listing_plan' ||
         Number(paymentIntent.amount) !== plan.amount || paymentIntent.customer_phone !== phone ||
-        paymentIntent.status !== 'pending_verification') {
+        paymentIntent.status !== (requestedSubscriptionStatus === 'pay_at_venue' ? 'pay_at_venue' : 'pending_verification')) {
       return json({ error: 'PAYMENT_INTENT_MISMATCH' }, 409)
     }
 
@@ -190,7 +191,7 @@ serve(async (req) => {
       starts_at: new Date().toISOString(),
       expires_at: null,
       is_active: false,
-      payment_status: 'pending',
+      payment_status: requestedSubscriptionStatus,
       metadata: { source: 'register-payment-intent' },
       access_token: accessToken,
       idempotency_key: idempotencyKey,
@@ -204,7 +205,7 @@ serve(async (req) => {
         metadata: { subscription_id: subscription.id, plan_id: planId },
       })
       .eq('id', paymentIntent.id)
-      .eq('status', 'pending_verification')
+      .in('status', ['pending_verification','pay_at_venue'])
     if (linkError) {
       await admin.from('listing_subscriptions').delete().eq('id', subscription.id)
       return json({ error: 'SUBSCRIPTION_PAYMENT_LINK_FAILED' }, 500)
