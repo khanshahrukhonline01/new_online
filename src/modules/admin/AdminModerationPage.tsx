@@ -19,7 +19,12 @@ export function AdminModerationPage() {
       setError(cause instanceof Error ? cause.message : 'You are not authorized to access the moderation queue.')
     } finally { setLoading(false) }
   }
-  useEffect(() => { void loadQueue() }, [])
+  useEffect(() => {
+    void loadQueue()
+    const handleAuthChange = () => { void loadQueue() }
+    window.addEventListener('khelgrid:auth-changed', handleAuthChange)
+    return () => window.removeEventListener('khelgrid:auth-changed', handleAuthChange)
+  }, [])
 
   const review = async (id: string, decision: 'approved' | 'rejected') => {
     setBusyId(id)
