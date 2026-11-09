@@ -151,16 +151,20 @@ END;
 $$;
 
 -- Confirm invalid paise amounts are rejected.
-DO $$
+DO $
+DECLARE
+  v_rejected boolean := false;
 BEGIN
   BEGIN
     UPDATE public.khelgrid_payments SET amount_paise=0
     WHERE order_id='KG_ORD_PHASE5814_LEGACY_01';
-    RAISE EXCEPTION 'zero paise update unexpectedly succeeded';
-  EXCEPTION WHEN check_violation THEN
-    NULL;
+  EXCEPTION WHEN OTHERS THEN
+    v_rejected := true;
   END;
+  IF NOT v_rejected THEN
+    RAISE EXCEPTION 'zero paise update unexpectedly succeeded';
+  END IF;
 END;
-$$;
+$;
 
 SELECT 'Phase 5.8.1.4 payment schema assertions passed' AS result;
