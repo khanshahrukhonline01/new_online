@@ -44,8 +44,8 @@ BEGIN
         provider_order_status='created',
         provider_order_created_at=now()
     WHERE order_id='KG_ORD_PHASE582_TEST01' AND provider_order_status='creating';
-  GET DIAGNOSTICS v = ROW_COUNT;
-  IF v <> 1 THEN RAISE EXCEPTION 'provider order created transition failed'; END IF;
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  IF v_count <> 1 THEN RAISE EXCEPTION 'provider order created transition failed'; END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM public.khelgrid_payments
