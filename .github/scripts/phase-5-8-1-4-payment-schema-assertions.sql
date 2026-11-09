@@ -151,7 +151,7 @@ END;
 $$;
 
 -- Confirm invalid paise amounts are rejected.
-DO $
+DO $phase5814$
 DECLARE
   v_rejected boolean := false;
 BEGIN
@@ -165,6 +165,6 @@ BEGIN
     RAISE EXCEPTION 'zero paise update unexpectedly succeeded';
   END IF;
 END;
-$;
+$phase5814$;
 
 SELECT 'Phase 5.8.1.4 payment schema assertions passed' AS result;
