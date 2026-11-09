@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MEMBERSHIP_PLAN_PRICES } from '../../shared/payments/listingPricing'
-import { PRICING_PLANS } from './pricingPlansData'
+import { ATHLETE_PLANS, ACADEMY_PLANS, VENUE_PLANS, ORGANIZER_BOOST_PLANS } from './pricingPlansData'
 import { PRO_TIERS } from '../../shared/components/goProTypes'
 
 describe('membership pricing catalogue consistency', () => {
@@ -15,7 +15,8 @@ describe('membership pricing catalogue consistency', () => {
       boost_7d: MEMBERSHIP_PLAN_PRICES.boost_7d,
       boost_30d: MEMBERSHIP_PLAN_PRICES.boost_30d,
     }
-    for (const plan of PRICING_PLANS) {
+    const plans = [...ATHLETE_PLANS, ...ACADEMY_PLANS, ...VENUE_PLANS, ...ORGANIZER_BOOST_PLANS]
+    for (const plan of plans) {
       const canonical = expected[plan.id]
       if (!canonical) continue
       expect(plan.monthlyPrice, plan.id + ' monthly').toBe(canonical.monthly)
