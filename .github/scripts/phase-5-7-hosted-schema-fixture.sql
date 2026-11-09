@@ -26,7 +26,7 @@ CREATE TABLE public.athlete_profiles (
   full_name text NOT NULL,
   sport text NOT NULL,
   city text NOT NULL DEFAULT 'India',
-  publication_status text NOT NULL DEFAULT 'draft',
+  publication_status text NOT NULL DEFAULT 'published',
   verification_status text NOT NULL DEFAULT 'unverified'
 );
 ALTER TABLE public.athlete_profiles ENABLE ROW LEVEL SECURITY;
