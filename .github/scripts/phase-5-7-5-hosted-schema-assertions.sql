@@ -38,6 +38,16 @@ BEGIN
   IF NOT has_function_privilege('authenticated','public.moderate_athlete_profile(uuid,text,text,text)','EXECUTE') THEN
     RAISE EXCEPTION 'authenticated role cannot call guarded athlete moderation RPC';
   END IF;
+  IF has_function_privilege('anon','public.admin_verify_manual_payment(text,text,bigint,text)','EXECUTE') THEN
+    RAISE EXCEPTION 'anonymous users can invoke manual payment settlement';
+  END IF;
+  IF NOT has_function_privilege('authenticated','public.admin_verify_manual_payment(text,text,bigint,text)','EXECUTE') THEN
+    RAISE EXCEPTION 'authenticated role cannot call admin-guarded manual settlement RPC';
+  END IF;
+  IF has_table_privilege('anon','public.payment_manual_verification_audit','SELECT')
+     OR has_table_privilege('authenticated','public.payment_manual_verification_audit','SELECT') THEN
+    RAISE EXCEPTION 'payment manual verification audit is exposed to browser roles';
+  END IF;
   IF has_table_privilege('anon','public.listing_subscriptions','SELECT') THEN
     RAISE EXCEPTION 'anonymous users can read subscription PII';
   END IF;
