@@ -57,6 +57,24 @@ describe('public catalogue client', () => {
     expect(fetch).toHaveBeenCalledOnce()
   })
 
+  it('loads catalogue data in bounded server pages', async () => {
+    const firstPage = Array.from({ length: 500 }, (_, index) => ({ id: `opp-${index}`, title: `Opportunity ${index}` }))
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(firstPage))
+      .mockResolvedValueOnce(jsonResponse([{ id: 'opp-500', title: 'Opportunity 500' }]))
+    const client = await loadClient()
+    const result = await client.getOpportunities()
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') expect(result.data).toHaveLength(501)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    const first = new Headers(vi.mocked(fetch).mock.calls[0][1]?.headers)
+    const second = new Headers(vi.mocked(fetch).mock.calls[1][1]?.headers)
+    expect(first.get('Range')).toBe('0-499')
+    expect(second.get('Range')).toBe('500-999')
+    const firstUrl = new URL(String(vi.mocked(fetch).mock.calls[0][0]))
+    expect(firstUrl.searchParams.get('select')).toContain('sport:sports(id,slug,name)')
+  })
+
   it.each([
     ['sports', 'is_published', 'eq.true'],
     ['opportunities', 'publication_status', 'eq.published'],
