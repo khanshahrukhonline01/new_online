@@ -170,7 +170,8 @@ serve(async (req) => {
     }
 
     const accessToken = Array.from(crypto.getRandomValues(new Uint8Array(24))).map(v => v.toString(16).padStart(2, '0')).join('')
-    const requestedSubscriptionStatus = body.payment_status === 'pay_at_venue' ? 'pay_at_venue' : 'pending'
+    if (body.payment_status === 'pay_at_venue') return json({ error: 'LISTING_SUBSCRIPTION_REQUIRES_ONLINE_VERIFICATION' }, 409)
+    const requestedSubscriptionStatus = 'pending'
     const { data: paymentIntent, error: paymentLookupError } = await admin.from('khelgrid_payments')
       .select('id,amount,item_type,customer_phone,user_id,status')
       .eq('order_id', orderId).single()
@@ -245,7 +246,7 @@ serve(async (req) => {
   if (method === 'upi' && !['venue_booking','listing_plan'].includes(itemType)) {
     return json({ error: 'PAYMENT_TARGET_NOT_SUPPORTED', message: 'Online payment is not enabled for this item until its settlement workflow is available.' }, 409)
   }
-  if (method === 'pay_at_venue' && !['venue_booking','listing_plan','pickup_match'].includes(itemType)) {
+  if (method === 'pay_at_venue' && !['venue_booking','pickup_match'].includes(itemType)) {
     return json({ error: 'PAY_AT_VENUE_NOT_SUPPORTED' }, 409)
   }
 
