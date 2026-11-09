@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { SiteIcon } from '../components/SiteIcon'
 import {
   generateOrderId,
@@ -25,7 +25,9 @@ export function PaymentCheckoutModal({
   onSuccess,
   allowPayAtVenue = true,
 }: PaymentCheckoutModalProps) {
-  const [method, setMethod] = useState<PaymentMethod>('upi')
+  const supportsOnlinePayment = item.type === 'venue_booking' || item.type === 'listing_plan'
+  const [method, setMethod] = useState<PaymentMethod>(supportsOnlinePayment ? 'upi' : allowPayAtVenue ? 'pay_at_venue' : 'upi')
+  const [orderId, setOrderId] = useState(() => generateOrderId())
   const [name, setName] = useState(initialCustomer?.name || '')
   const [phone, setPhone] = useState(initialCustomer?.phone || '')
   const [email, setEmail] = useState(initialCustomer?.email || '')
@@ -35,9 +37,17 @@ export function PaymentCheckoutModal({
   const [errorMsg, setErrorMsg] = useState('')
   const [completedResult, setCompletedResult] = useState<PaymentResult | null>(null)
 
-  if (!isOpen) return null
+  useEffect(() => {
+    if (isOpen) {
+      setOrderId(generateOrderId())
+      setMethod(supportsOnlinePayment ? 'upi' : allowPayAtVenue ? 'pay_at_venue' : 'upi')
+      setUpiRef('')
+      setErrorMsg('')
+      setStep('input')
+    }
+  }, [isOpen, item.id, supportsOnlinePayment, allowPayAtVenue])
 
-  const orderId = generateOrderId()
+  if (!isOpen) return null
   const upiUri = generateUpiUri({
     amount: item.amount,
     transactionNote: `KhelGrid ${item.title}`.slice(0, 40),
@@ -68,6 +78,11 @@ export function PaymentCheckoutModal({
 
     if (cleanPhone.length < 10) {
       setErrorMsg('Please enter a valid 10-digit mobile number for confirmation.')
+      return
+    }
+
+    if (!supportsOnlinePayment && method === 'upi') {
+      setErrorMsg('Online payment is not enabled for this item. No money should be transferred. Please use an available pay-at-venue option or contact KhelGrid.')
       return
     }
 
@@ -170,12 +185,18 @@ export function PaymentCheckoutModal({
         {/* Step 1: Input & Payment Method */}
         {step === 'input' && (
           <form onSubmit={handleSubmit}>
+            {!supportsOnlinePayment && !allowPayAtVenue && (
+              <div role="status" style={{ padding: '12px', border: '1px solid #f59e0b', borderRadius: '10px', background: '#fffbeb', color: '#92400e', fontSize: '13px', marginBottom: '12px' }}>
+                Secure online payment is not available for this item yet. Do not transfer money. This checkout is temporarily disabled until its server-side settlement workflow is ready.
+              </div>
+            )}
             {/* Method Tabs */}
             <div className="kg-checkout-methods">
               <button
                 type="button"
                 className={`kg-method-btn ${method === 'upi' ? 'active' : ''}`}
                 onClick={() => setMethod('upi')}
+                disabled={!supportsOnlinePayment}
               >
                 <SiteIcon name="smartphone" size={15} />
                 <span>UPI (GPay / PhonePe)</span>
@@ -327,7 +348,7 @@ export function PaymentCheckoutModal({
               <button type="button" className="kg-btn-cancel" onClick={onClose}>
                 Cancel
               </button>
-              <button type="submit" className="kg-btn-pay">
+              <button type="submit" className="kg-btn-pay" disabled={!((supportsOnlinePayment && method === 'upi') || (allowPayAtVenue && method === 'pay_at_venue'))}>
                 <SiteIcon name={method === 'pay_at_venue' ? 'check' : 'lock'} size={16} />
                 <span>
                   {method === 'pay_at_venue' ? 'Request Spot (Pay at Ground)' : 'Submit UTR for Verification'}
