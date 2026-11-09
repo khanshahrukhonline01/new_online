@@ -82,7 +82,7 @@ BEGIN
   -- An untrusted "paid" request must be rejected. The function is service-role
   -- only; direct privilege assertions above prove browser clients cannot invoke it.
   v_result := public.record_listing_subscription(
-    'KG_ORD_FIXTURE_PAID_12345678', NULL, 'academy', 'Fixture Academy', 'Delhi',
+    'KG_ORD_FIXTUREPAID_12345678', NULL, 'academy', 'Fixture Academy', 'Delhi',
     '1_month', '1-Month Listing', 499, 30, 'Test Host', '9876543210',
     NULL, 'paid', NULL, '{}'::jsonb, 'fixture-paid-idem'
   );
@@ -91,7 +91,7 @@ BEGIN
   END IF;
 
   v_result := public.record_listing_subscription(
-    'KG_ORD_FIXTURE_PENDING_12345678', NULL, 'academy', 'Fixture Academy', 'Delhi',
+    'KG_ORD_FIXTUREPENDING_12345678', NULL, 'academy', 'Fixture Academy', 'Delhi',
     '1_month', '1-Month Listing', 499, 30, 'Test Host', '9876543210',
     NULL, 'pending', NULL, '{}'::jsonb, 'fixture-pending-idem'
   );
