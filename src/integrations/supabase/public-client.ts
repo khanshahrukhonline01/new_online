@@ -7,7 +7,8 @@ import {
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-const CATALOGUE_PAGE_SIZE = 1000
+const CATALOGUE_PAGE_SIZE = 500
+const CATALOGUE_MAX_ROWS = 5000
 
 export type CatalogueResult<T> =
   | { status: 'ready'; data: T[] }
@@ -124,49 +125,57 @@ async function fetchCatalogueRemote<T>(
     return { status: 'unavailable', data: [], message: 'The catalogue URL must use HTTPS outside local development.' }
   }
 
-  const query = new URLSearchParams({ select, order, ...filters, limit: String(CATALOGUE_PAGE_SIZE) })
   try {
-    const response = await fetch(
-      `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/${table}?${query.toString()}`,
-      {
-        headers: {
-          apikey: anonKey,
-          Authorization: `Bearer ${anonKey}`,
-          Accept: 'application/json',
+    const rows: T[] = []
+    let offset = 0
+    let hasMore = false
+    while (offset < CATALOGUE_MAX_ROWS) {
+      const query = new URLSearchParams({ select, order, ...filters, limit: String(CATALOGUE_PAGE_SIZE) })
+      const response = await fetch(
+        `${baseUrl.origin}${baseUrl.pathname.replace(/\\/$/, '')}/rest/v1/${table}?${query.toString()}`,
+        {
+          headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+            Accept: 'application/json',
+            Range: `${offset}-${offset + CATALOGUE_PAGE_SIZE - 1}`,
+          },
         },
-      },
-    )
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 404) {
-        unavailableTables.set(table, Date.now() + TABLE_BACKOFF_MS)
-      }
-      if (typeof window !== 'undefined') {
-        try {
-          const stored = sessionStorage.getItem(sessionKey)
-          if (stored) {
-            const parsed = JSON.parse(stored) as { timestamp: number; result: CatalogueResult<T> }
-            if (parsed?.result?.status === 'ready') return parsed.result
-          }
-        } catch {
-          // ignore
+      )
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 404) unavailableTables.set(table, Date.now() + TABLE_BACKOFF_MS)
+        if (typeof window !== 'undefined') {
+          try {
+            const stored = sessionStorage.getItem(sessionKey)
+            if (stored) {
+              const parsed = JSON.parse(stored) as { timestamp: number; result: CatalogueResult<T> }
+              if (parsed?.result?.status === 'ready') return parsed.result
+            }
+          } catch { /* ignore stale-cache parse errors */ }
         }
+        return { status: 'unavailable', data: [], message: `Catalogue data for ${table} is temporarily unavailable. Please try again later.` }
       }
-      return { status: 'unavailable', data: [], message: 'Catalogue data is temporarily unavailable. Please try again later.' }
+      const data: unknown = await response.json()
+      if (!Array.isArray(data)) return { status: 'unavailable', data: [], message: 'The catalogue returned an unexpected response.' }
+      rows.push(...data as T[])
+      if (data.length < CATALOGUE_PAGE_SIZE) {
+        hasMore = false
+        break
+      }
+      hasMore = true
+      offset += CATALOGUE_PAGE_SIZE
     }
-    const data: unknown = await response.json()
-    if (!Array.isArray(data)) {
-      return { status: 'unavailable', data: [], message: 'The catalogue returned an unexpected response.' }
+    if (hasMore && offset >= CATALOGUE_MAX_ROWS) {
+      return { status: 'unavailable', data: [], message: `This catalogue contains more than ${CATALOGUE_MAX_ROWS} records. Please narrow your filters.` }
     }
-    const result: CatalogueResult<T> = { status: 'ready', data: data as T[] }
+    const result: CatalogueResult<T> = { status: 'ready', data: rows }
     catalogueMemoryCache.set(cacheKey, { timestamp: Date.now(), result })
     if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.setItem(sessionKey, JSON.stringify({ timestamp: Date.now(), result }))
-      } catch {
-        // ignore
-      }
+      try { sessionStorage.setItem(sessionKey, JSON.stringify({ timestamp: Date.now(), result })) }
+      catch { /* ignore storage quota errors */ }
     }
     return result
+
   } catch {
     if (typeof window !== 'undefined') {
       try {
@@ -193,7 +202,7 @@ export function getSports() {
 }
 
 const OPPORTUNITY_FEATURED_SELECT =
-  'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status,registration_fee,available_spots,age_category,gender,eligibility_criteria,required_documents,metadata,is_featured'
+  'id,slug,title,sport_id,sport:sports(id,slug,name),opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status,registration_fee,available_spots,age_category,gender,eligibility_criteria,required_documents,metadata,is_featured'
 
 const OPPORTUNITY_RICH_SELECT =
   'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status,registration_fee,available_spots,age_category,gender,eligibility_criteria,required_documents,metadata'
