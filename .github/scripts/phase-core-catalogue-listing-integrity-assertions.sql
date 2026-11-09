@@ -25,7 +25,7 @@ begin
   end if;
 
   foreach role_name in array array['anon', 'authenticated'] loop
-    foreach table_name in array array['academies', 'venues', 'opportunities', 'pickup_games'] loop
+    foreach table_name in array array['academies', 'venues', 'opportunities', 'pickup_games', 'coaches', 'events', 'sports'] loop
       if has_table_privilege(role_name, format('public.%I', table_name), 'INSERT') then
         raise exception 'Role % still has direct INSERT on catalogue table %', role_name, table_name;
       end if;
