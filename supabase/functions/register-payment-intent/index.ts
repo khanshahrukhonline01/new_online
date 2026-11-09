@@ -231,6 +231,9 @@ serve(async (req) => {
       !['upi','pay_at_venue'].includes(method) || !idempotencyKey || idempotencyKey.length > 128) {
     return json({ error: 'INVALID_PAYMENT_INTENT' }, 400)
   }
+  if (method === 'upi' && !['venue_booking','listing_plan'].includes(itemType)) {
+    return json({ error: 'PAYMENT_TARGET_NOT_SUPPORTED', message: 'Online payment is not enabled for this item until its settlement workflow is available.' }, 409)
+  }
 
   let expectedAmount: number | null = null
   let itemTitle = ''
