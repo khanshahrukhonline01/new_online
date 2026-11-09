@@ -269,6 +269,22 @@ describe('public catalogue client', () => {
     expect(body.verification_status).toBeUndefined()
   })
 
+  it('routes a new sport suggestion through the same private queue', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([]))
+    const client = await loadClient()
+    const result = await client.submitListingSuggestion({
+      listing_type: 'sport',
+      title: 'Sepak Takraw',
+      city: 'Kochi',
+      details: 'Request to add a sport category',
+    })
+    expect(result.status).toBe('submitted')
+    const [, options] = vi.mocked(fetch).mock.calls[0]
+    const body = JSON.parse(String(options?.body))
+    expect(body.listing_type).toBe('sport')
+    expect(body.status).toBeUndefined()
+  })
+
   it('accepts a missing source link without inventing one', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([]))
     const client = await loadClient()
