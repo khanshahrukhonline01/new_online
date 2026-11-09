@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { classifySettlementResult } from '../_shared/webhookSettlement.ts'
+import { classifyProviderPayment, fetchRazorpayPayment } from '../_shared/razorpayVerification.ts'
 
 async function timingSafeEqual(a: string, b: string): Promise<boolean> {
   const enc = new TextEncoder()
@@ -247,8 +248,43 @@ serve(async (req) => {
 
       const authoritativeAmountPaisa = Number(dbOrder.amount_paise)
       const authoritativeCurrency = (dbOrder.currency || 'INR').toUpperCase()
+      const keyId = Deno.env.get('RAZORPAY_KEY_ID')
+      const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET')
+      if (!keyId || !keySecret) {
+        const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+          p_event_id: eventId, p_status: 'failed_retryable',
+          p_error_message: 'Razorpay API credentials are unavailable for independent payment verification',
+        })
+        if (finalizeError) return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED' }), { status: 500 })
+        return new Response(JSON.stringify({ error: 'PROVIDER_VERIFICATION_UNAVAILABLE' }), { status: 503 })
+      }
 
-      // Cross-check payload amount and currency
+      let providerPayment
+      try {
+        providerPayment = await fetchRazorpayPayment(paymentId, keyId, keySecret)
+      } catch (error) {
+        const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+          p_event_id: eventId, p_status: 'failed_retryable',
+          p_error_message: error instanceof Error ? error.message.slice(0, 1000) : 'Razorpay API unavailable',
+        })
+        if (finalizeError) return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED' }), { status: 500 })
+        return new Response(JSON.stringify({ error: 'PROVIDER_VERIFICATION_RETRY_REQUIRED' }), { status: 503 })
+      }
+
+      const providerCheck = classifyProviderPayment(providerPayment, {
+        paymentId, providerOrderId, amountPaise: authoritativeAmountPaisa, currency: authoritativeCurrency,
+      })
+      if (providerCheck.disposition !== 'captured') {
+        const terminal = providerCheck.disposition !== 'authorized'
+        const { error: finalizeError } = await adminClient.rpc('finalize_webhook_event', {
+          p_event_id: eventId, p_status: terminal ? 'failed_terminal' : 'failed_retryable',
+          p_error_message: providerCheck.reason,
+        })
+        if (finalizeError) return new Response(JSON.stringify({ error: 'EVENT_FINALIZATION_FAILED' }), { status: 500 })
+        return new Response(JSON.stringify({ error: 'PROVIDER_PAYMENT_NOT_SETTLEABLE', status: providerCheck.disposition }), { status: terminal ? 200 : 503 })
+      }
+
+      // Cross-check signed webhook amount and currency against the authoritative ledger.
       if (!Number.isSafeInteger(amountPaisa) || amountPaisa <= 0 || amountPaisa !== authoritativeAmountPaisa) {
         await adminClient.rpc('finalize_webhook_event', {
           p_event_id: eventId,
@@ -274,13 +310,13 @@ serve(async (req) => {
       }
 
       // Transactional settlement in PostgreSQL via canonical procedure
-      const { data: settleData, error: settleError } = await adminClient.rpc('settle_payment_transaction', {
+      const { data: settleData, error: settleError } = await adminClient.rpc('settle_razorpay_payment_verified', {
         p_order_id: dbOrder.order_id,
+        p_provider_order_id: providerOrderId,
         p_payment_id: paymentId,
-        p_verification_source: 'webhook_verified',
-        p_gateway_signature: null,
         p_expected_amount_paisa: authoritativeAmountPaisa,
         p_expected_currency: authoritativeCurrency,
+        p_verification_source: 'webhook_verified',
       })
 
       const settlement = classifySettlementResult(settleData, settleError)
