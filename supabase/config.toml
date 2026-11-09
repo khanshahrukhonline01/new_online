@@ -1,0 +1,2 @@
+[functions.register-payment-intent]
+verify_jwt = true
