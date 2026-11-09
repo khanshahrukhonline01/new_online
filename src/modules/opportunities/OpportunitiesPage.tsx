@@ -29,6 +29,7 @@ function formatDate(value: string | null) {
 }
 
 const EMPTY_OPPORTUNITIES: Opportunity[] = []
+const OPPORTUNITY_PAGE_SIZE = 20
 
 const AGE_OPTIONS = [
   { value: 'u14', label: 'Under-14 (U-14)' },
@@ -58,6 +59,7 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
   const [verification, setVerification] = useState(initial.get('status') ?? '')
   const [feeFilter, setFeeFilter] = useState(initial.get('free') === 'true' ? 'free' : (initial.get('fee') ?? ''))
   const [sort, setSort] = useState(initial.get('sort') ?? 'newest')
+  const [currentPage, setCurrentPage] = useState(1)
   const [fromDate, setFromDate] = useState(initial.get('from') ?? '')
   const [toDate, setToDate] = useState(initial.get('to') ?? '')
   const [checkoutItem, setCheckoutItem] = useState<PaymentItem | null>(null)
@@ -138,7 +140,7 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
                 value?.toLocaleLowerCase().includes(q),
               )) &&
             (!city || (item.city ? (item.city.toLowerCase() === city.toLowerCase() || item.city.toLowerCase().includes(city.toLowerCase()) || city.toLowerCase().includes(item.city.toLowerCase())) : false)) &&
-            (!sport || (item.sport?.name?.toLowerCase() === sport.toLowerCase() || item.title.toLowerCase().includes(sport.toLowerCase()) || (item.opportunity_type && item.opportunity_type.toLowerCase().includes(sport.toLowerCase())))) &&
+            (!sport || item.sport?.name?.toLowerCase() === sport.toLowerCase()) &&
             (!ageCategory || (
               (item.age_category && item.age_category.toLowerCase().includes(ageCategory.toLowerCase())) ||
               (ageCategory === 'u14' && (item.title.toLowerCase().includes('u-14') || item.title.toLowerCase().includes('u14') || item.title.toLowerCase().includes('under 14'))) ||
@@ -149,7 +151,7 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
             )) &&
             (!type || item.opportunity_type === type) &&
             (!verification || item.verification_status === verification) &&
-            (!feeFilter || (feeFilter === 'free' ? (item.registration_fee === 0 || item.registration_fee === undefined) : true)) &&
+            (!feeFilter || (feeFilter === 'free' ? item.registration_fee === 0 : true)) &&
             (!fromDate || (Number.isFinite(start) && start >= after)) &&
             (!toDate || (Number.isFinite(start) && start <= before))
           )
@@ -165,6 +167,13 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
         ),
     [records, query, city, sport, ageCategory, type, verification, feeFilter, fromDate, toDate, sort],
   )
+
+  const totalPages = Math.max(1, Math.ceil(visible.length / OPPORTUNITY_PAGE_SIZE))
+  const pageItems = visible.slice((currentPage - 1) * OPPORTUNITY_PAGE_SIZE, currentPage * OPPORTUNITY_PAGE_SIZE)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [query, city, sport, ageCategory, type, verification, feeFilter, fromDate, toDate, sort])
 
   const clearAll = () => {
     setQuery('')
@@ -285,7 +294,7 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
                     {visible.length} of {records.length} opportunities
                   </p>
                   <div className="listing-stack">
-                    {visible.map(item => (
+                    {pageItems.map(item => (
                       <article className="listing-card" key={item.id}>
                         {item.slug.startsWith('test-only-') && (
                           <span className="test-only-label">TEST ONLY — NOT A REAL LISTING</span>
@@ -432,8 +441,14 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
                       </article>
                     ))}
                   </div>
+                  {totalPages > 1 && (
+                    <nav className="kg-pagination" aria-label="Opportunity result pages">
+                      <button type="button" className="admin-btn admin-btn-secondary" disabled={currentPage === 1} onClick={() => setCurrentPage(page => Math.max(1, page - 1))}>Previous</button>
+                      <span aria-live="polite">Page {currentPage} of {totalPages}</span>
+                      <button type="button" className="admin-btn admin-btn-secondary" disabled={currentPage === totalPages} onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}>Next</button>
+                    </nav>
+                  )}
                 </>
-              ) : (
                 <CatalogueEmptyState
                   title={records.length ? 'No matching opportunities' : 'No published opportunities'}
                   message={
