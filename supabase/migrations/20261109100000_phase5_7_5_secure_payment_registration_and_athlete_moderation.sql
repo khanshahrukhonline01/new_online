@@ -320,6 +320,32 @@ BEGIN
 END;
 $block$;
 
+-- Start the paid listing term at settlement, not at intent creation.
+CREATE OR REPLACE FUNCTION public.set_listing_subscription_activation_window()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+BEGIN
+  IF OLD.payment_status = 'pending' AND NEW.payment_status = 'paid' THEN
+    NEW.starts_at := now();
+    NEW.expires_at := CASE
+      WHEN NEW.duration_days = 0 THEN NULL
+      ELSE now() + make_interval(days => NEW.duration_days)
+    END;
+    NEW.updated_at := now();
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS trg_listing_subscription_activation_window ON public.listing_subscriptions;
+CREATE TRIGGER trg_listing_subscription_activation_window
+BEFORE UPDATE OF payment_status ON public.listing_subscriptions
+FOR EACH ROW
+EXECUTE FUNCTION public.set_listing_subscription_activation_window();
+
 -- 5. Athlete moderation: add explicit rejection state and immutable audit history.
 ALTER TABLE public.athlete_profiles
   DROP CONSTRAINT IF EXISTS athlete_profiles_verification_status_check;
