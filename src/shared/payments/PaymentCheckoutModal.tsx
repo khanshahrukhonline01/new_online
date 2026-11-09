@@ -252,40 +252,7 @@ export function PaymentCheckoutModal({
                     <span className="kg-upi-badge">BHIM</span>
                   </div>
 
-                  {/* High contrast SVG QR visual */}
-                  <div className="kg-upi-qr-wrapper" title="Scan with GPay, PhonePe, Paytm, or BHIM">
-                    <svg width="140" height="140" viewBox="0 0 140 140" fill="none">
-                      <rect width="140" height="140" rx="8" fill="#ffffff" />
-                      {/* Top Left Marker */}
-                      <rect x="10" y="10" width="36" height="36" rx="4" fill="#0f172a" />
-                      <rect x="16" y="16" width="24" height="24" rx="2" fill="#ffffff" />
-                      <rect x="22" y="22" width="12" height="12" fill="#059669" />
-                      {/* Top Right Marker */}
-                      <rect x="94" y="10" width="36" height="36" rx="4" fill="#0f172a" />
-                      <rect x="100" y="16" width="24" height="24" rx="2" fill="#ffffff" />
-                      <rect x="106" y="22" width="12" height="12" fill="#059669" />
-                      {/* Bottom Left Marker */}
-                      <rect x="10" y="94" width="36" height="36" rx="4" fill="#0f172a" />
-                      <rect x="16" y="100" width="24" height="24" rx="2" fill="#ffffff" />
-                      <rect x="22" y="106" width="12" height="12" fill="#059669" />
-                      {/* Simulated QR Pattern Dots */}
-                      <rect x="52" y="12" width="8" height="8" fill="#0f172a" />
-                      <rect x="68" y="12" width="8" height="8" fill="#0f172a" />
-                      <rect x="52" y="28" width="8" height="8" fill="#0f172a" />
-                      <rect x="76" y="28" width="8" height="8" fill="#0f172a" />
-                      <rect x="12" y="52" width="8" height="8" fill="#0f172a" />
-                      <rect x="28" y="60" width="8" height="8" fill="#0f172a" />
-                      <rect x="52" y="52" width="36" height="36" rx="6" fill="#059669" />
-                      <text x="70" y="76" fill="#ffffff" fontSize="18" fontWeight="bold" textAnchor="middle">₹</text>
-                      <rect x="96" y="56" width="8" height="8" fill="#0f172a" />
-                      <rect x="112" y="64" width="8" height="8" fill="#0f172a" />
-                      <rect x="52" y="96" width="8" height="8" fill="#0f172a" />
-                      <rect x="68" y="104" width="8" height="8" fill="#0f172a" />
-                      <rect x="84" y="96" width="8" height="8" fill="#0f172a" />
-                      <rect x="104" y="112" width="8" height="8" fill="#0f172a" />
-                      <rect x="120" y="96" width="8" height="8" fill="#0f172a" />
-                    </svg>
-                  </div>
+                  <p className="kg-venue-pay-body">Use the UPI ID below in your payment app. KhelGrid does not display a scannable QR code here.</p>
 
                   <div className="kg-upi-vpa-copy">
                     <span>UPI ID:</span>
@@ -342,7 +309,7 @@ export function PaymentCheckoutModal({
                   </p>
                   <ul className="kg-venue-pay-guidelines">
                     <li>Arrive 15 minutes before the match start time.</li>
-                    <li>Carry the exact amount (₹{item.amount}) in cash or via your UPI app.</li>
+                    <li>Pay ₹{item.amount} directly to the host or facility when you arrive.</li>
                     <li>If you cannot attend, please cancel your spot so waitlisted players can join.</li>
                   </ul>
                 </div>
@@ -363,7 +330,7 @@ export function PaymentCheckoutModal({
               <button type="submit" className="kg-btn-pay">
                 <SiteIcon name={method === 'pay_at_venue' ? 'check' : 'lock'} size={16} />
                 <span>
-                  {method === 'pay_at_venue' ? 'Lock Spot (Pay at Ground)' : `Pay ₹${item.amount} & Confirm`}
+                  {method === 'pay_at_venue' ? 'Request Spot (Pay at Ground)' : 'Submit UTR for Verification'}
                 </span>
               </button>
             </div>
