@@ -43,6 +43,7 @@ export default function GoProModal({
       title: `KhelGrid Pro · ${selectedTier.name} (${billingCycle === 'annual' ? 'Annual Plan' : 'Monthly Plan'})`,
       amount: currentPrice,
       currency: 'INR',
+      metadata: { tierId: selectedTier.id, billingCycle },
     }
 
     setCheckoutItem(item)
@@ -51,6 +52,7 @@ export default function GoProModal({
 
   const handlePaymentSuccess = (result: PaymentResult) => {
     setIsCheckoutOpen(false)
+    const pending = result.status !== 'completed'
     if (typeof window !== 'undefined') {
       try {
         const payload = {
@@ -58,14 +60,19 @@ export default function GoProModal({
           tierName: selectedTier.name,
           billingCycle,
           transactionId: result.paymentId,
-          active: true,
+          orderId: result.orderId,
+          active: false,
+          paymentStatus: result.status,
           purchasedAt: new Date().toISOString(),
         }
-        localStorage.setItem('khelgrid_pro_membership', JSON.stringify(payload))
-        window.dispatchEvent(new CustomEvent('khelgrid:pro-activated', { detail: payload }))
+        localStorage.setItem('khelgrid_pro_membership_pending', JSON.stringify(payload))
       } catch {
-        // ignore quota
+        // Ignore storage quota errors.
       }
+    }
+    if (pending) {
+      setCelebrationToast(false)
+      return
     }
     setCelebrationToast(true)
     setTimeout(() => {

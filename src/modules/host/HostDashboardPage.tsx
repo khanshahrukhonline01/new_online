@@ -351,7 +351,7 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
     if (!upgradingListing) return
 
     const plan = getListingPlan(selectedUpgradePlanId)
-    await recordListingSubscription({
+    const subscription = await recordListingSubscription({
       orderId: result.orderId,
       paymentId: result.paymentId,
       listingType: upgradingListing.category,
@@ -362,25 +362,20 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
       amount: plan.price,
       durationDays: plan.durationDays,
       customerName: currentUser?.name || 'Partner Host',
-      customerPhone: currentUser?.phone || '9876543210',
-      paymentStatus: 'paid',
+      customerPhone: currentUser?.phone || '',
+      paymentStatus: result.status === 'pay_at_venue' ? 'pay_at_venue' : 'pending',
     })
 
-    // Update local state
-    setUserListings(prev =>
-      prev.map(item =>
-        item.id === upgradingListing.id
-          ? {
-              ...item,
-              planId: selectedUpgradePlanId,
-              planExpiresAt: plan.durationDays === 0 ? null : new Date(Date.now() + 86400000 * plan.durationDays).toISOString(),
-              status: 'active',
-            }
-          : item
-      )
-    )
+    if (subscription.status !== 'success') {
+      setRenewalNotice(`Payment/renewal request is pending verification. "${upgradingListing.name}" has not been upgraded yet. Reference: ${result.orderId}.`)
+      setUpgradingListing(null)
+      return
+    }
 
-    setRenewalNotice(`🎉 Plan successfully renewed for "${upgradingListing.name}" with ${plan.name} (Receipt: ${result.receiptRef}).`)
+    setUserListings(prev => prev.map(item => item.id === upgradingListing.id
+      ? { ...item, planId: selectedUpgradePlanId, planExpiresAt: plan.durationDays === 0 ? null : new Date(Date.now() + 86400000 * plan.durationDays).toISOString(), status: 'active' }
+      : item))
+    setRenewalNotice(`Plan successfully renewed for "${upgradingListing.name}" with ${plan.name}.`)
     setUpgradingListing(null)
   }
 
@@ -1213,7 +1208,7 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
           item={checkoutItem}
           initialCustomer={{
             name: currentUser?.name || 'Partner Host',
-            phone: currentUser?.phone || '9876543210',
+            phone: currentUser?.phone || '',
             email: currentUser?.email || '',
           }}
           onSuccess={handlePaymentSuccess}

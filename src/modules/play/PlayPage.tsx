@@ -18,7 +18,7 @@ import { createBannerSvg } from '../home/homeSvgBanners'
 import { COMMUNITY_PICKUP_GAMES, type PickupGame } from './pickupData'
 import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
 import { parseInrPrice } from '../../shared/payments/paymentService'
-import type { PaymentItem } from '../../shared/payments/paymentTypes'
+import type { PaymentItem, PaymentResult } from '../../shared/payments/paymentTypes'
 import { BookmarkButton } from '../../shared/components/BookmarkButton'
 import { createPickupGameSavedItem } from '../../shared/services/savedService'
 import './PlayPage.css'
@@ -268,9 +268,13 @@ export default function PlayPage({ onNavigate, onOpenIntake, initialGames }: Pla
     await executeBooking(name, rsvpPhone.trim() || undefined)
   }
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = (paymentResult: PaymentResult) => {
     setCheckoutItem(null)
-    executeBooking(rsvpName.trim(), rsvpPhone.trim() || undefined)
+    if (paymentResult.status === 'pay_at_venue') {
+      executeBooking(rsvpName.trim(), rsvpPhone.trim() || undefined)
+      return
+    }
+    setRsvpError('Your UPI reference has been submitted for manual verification. Your match spot is not reserved until payment is verified.')
   }
 
   const records = useMemo<PickupGame[]>(() => {

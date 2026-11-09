@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { SiteIcon } from '../components/SiteIcon'
 import {
   generateOrderId,
   generateUpiUri,
-  getRazorpayKey,
+  getMerchantUpiVpa,
+  isMerchantUpiConfigured,
   recordPaymentTransaction,
 } from './paymentService'
 import type { PaymentCustomer, PaymentItem, PaymentMethod, PaymentResult } from './paymentTypes'
@@ -26,7 +27,11 @@ export function PaymentCheckoutModal({
   onSuccess,
   allowPayAtVenue = true,
 }: PaymentCheckoutModalProps) {
-  const [method, setMethod] = useState<PaymentMethod>('upi')
+  const supportsOnlinePaymentTarget = item.type === 'venue_booking' || item.type === 'listing_plan'
+  const supportsOnlinePayment = supportsOnlinePaymentTarget && isMerchantUpiConfigured()
+  const supportsPayAtVenue = allowPayAtVenue && (item.type === 'venue_booking' || item.type === 'pickup_match')
+  const [method, setMethod] = useState<PaymentMethod>(supportsOnlinePayment ? 'upi' : supportsPayAtVenue ? 'pay_at_venue' : 'upi')
+  const [orderId, setOrderId] = useState(() => generateOrderId())
   const [name, setName] = useState(initialCustomer?.name || '')
   const [phone, setPhone] = useState(initialCustomer?.phone || '')
   const [email, setEmail] = useState(initialCustomer?.email || '')
@@ -36,9 +41,17 @@ export function PaymentCheckoutModal({
   const [errorMsg, setErrorMsg] = useState('')
   const [completedResult, setCompletedResult] = useState<PaymentResult | null>(null)
 
-  if (!isOpen) return null
+  useEffect(() => {
+    if (isOpen) {
+      setOrderId(generateOrderId())
+      setMethod(supportsOnlinePayment ? 'upi' : supportsPayAtVenue ? 'pay_at_venue' : 'upi')
+      setUpiRef('')
+      setErrorMsg('')
+      setStep('input')
+    }
+  }, [isOpen, item.id, supportsOnlinePayment, supportsPayAtVenue])
 
-  const orderId = generateOrderId()
+  if (!isOpen) return null
   const upiUri = generateUpiUri({
     amount: item.amount,
     transactionNote: `KhelGrid ${item.title}`.slice(0, 40),
@@ -46,7 +59,7 @@ export function PaymentCheckoutModal({
   })
 
   const handleCopyVpa = () => {
-    navigator.clipboard?.writeText('khelgrid@icici')
+    navigator.clipboard?.writeText(getMerchantUpiVpa())
     setCopiedVpa(true)
     setTimeout(() => setCopiedVpa(false), 2000)
   }
@@ -72,12 +85,19 @@ export function PaymentCheckoutModal({
       return
     }
 
+    if (!supportsOnlinePayment && method === 'upi') {
+      setErrorMsg('Online payment is not enabled for this item. No money should be transferred. Please use an available pay-at-venue option or contact KhelGrid.')
+      return
+    }
+
+    if (method === 'pay_at_venue' && !supportsPayAtVenue) {
+      setErrorMsg('Pay-at-venue is not supported for this item.')
+      return
+    }
+
     if (method === 'card') {
-      const razorpayKey = getRazorpayKey()
-      if (!razorpayKey) {
-        setErrorMsg('Direct card payment gateway is undergoing bank verification. Please pay via UPI (GPay / PhonePe) or select Pay at Ground.')
-        return
-      }
+      setErrorMsg('Card and NetBanking checkout is not enabled yet. Please use UPI and submit the UTR for manual verification, or choose Pay at Ground where available.')
+      return
     }
 
     if (method === 'upi' && upiRef.trim().length < 6) {
@@ -115,6 +135,11 @@ export function PaymentCheckoutModal({
         status,
       })
 
+      if (!result.success) {
+        setErrorMsg(result.errorMessage || 'The payment intent could not be registered. No booking or pass has been confirmed.')
+        setStep('input')
+        return
+      }
       setCompletedResult(result)
       setStep('success')
       onSuccess(result)
@@ -169,12 +194,23 @@ export function PaymentCheckoutModal({
         {/* Step 1: Input & Payment Method */}
         {step === 'input' && (
           <form onSubmit={handleSubmit}>
+            {!supportsOnlinePaymentTarget && !supportsPayAtVenue && (
+              <div role="status" style={{ padding: '12px', border: '1px solid #f59e0b', borderRadius: '10px', background: '#fffbeb', color: '#92400e', fontSize: '13px', marginBottom: '12px' }}>
+                Secure online payment is not enabled for this item yet. Do not transfer money; its server-side settlement workflow is not ready.
+              </div>
+            )}
+            {supportsOnlinePaymentTarget && !isMerchantUpiConfigured() && (
+              <div role="status" style={{ padding: '12px', border: '1px solid #f59e0b', borderRadius: '10px', background: '#fffbeb', color: '#92400e', fontSize: '13px', marginBottom: '12px' }}>
+                UPI is disabled until KhelGrid configures and independently confirms its merchant UPI ID through VITE_KHELGRID_UPI_VPA. Do not transfer money to an unverified payee.
+              </div>
+            )}
             {/* Method Tabs */}
             <div className="kg-checkout-methods">
               <button
                 type="button"
                 className={`kg-method-btn ${method === 'upi' ? 'active' : ''}`}
                 onClick={() => setMethod('upi')}
+                disabled={!supportsOnlinePayment}
               >
                 <SiteIcon name="smartphone" size={15} />
                 <span>UPI (GPay / PhonePe)</span>
@@ -187,7 +223,7 @@ export function PaymentCheckoutModal({
                 <SiteIcon name="credit-card" size={15} />
                 <span>Cards / NetBanking</span>
               </button>
-              {allowPayAtVenue && (
+              {supportsPayAtVenue && (
                 <button
                   type="button"
                   className={`kg-method-btn ${method === 'pay_at_venue' ? 'active' : ''}`}
@@ -241,7 +277,7 @@ export function PaymentCheckoutModal({
               </div>
 
               {/* UPI Tab */}
-              {method === 'upi' && (
+              {method === 'upi' && supportsOnlinePayment && (
                 <div className="kg-upi-card">
                   <div className="kg-upi-apps-row">
                     <span className="kg-upi-badge">Google Pay</span>
@@ -251,44 +287,11 @@ export function PaymentCheckoutModal({
                     <span className="kg-upi-badge">BHIM</span>
                   </div>
 
-                  {/* High contrast SVG QR visual */}
-                  <div className="kg-upi-qr-wrapper" title="Scan with GPay, PhonePe, Paytm, or BHIM">
-                    <svg width="140" height="140" viewBox="0 0 140 140" fill="none">
-                      <rect width="140" height="140" rx="8" fill="#ffffff" />
-                      {/* Top Left Marker */}
-                      <rect x="10" y="10" width="36" height="36" rx="4" fill="#0f172a" />
-                      <rect x="16" y="16" width="24" height="24" rx="2" fill="#ffffff" />
-                      <rect x="22" y="22" width="12" height="12" fill="#059669" />
-                      {/* Top Right Marker */}
-                      <rect x="94" y="10" width="36" height="36" rx="4" fill="#0f172a" />
-                      <rect x="100" y="16" width="24" height="24" rx="2" fill="#ffffff" />
-                      <rect x="106" y="22" width="12" height="12" fill="#059669" />
-                      {/* Bottom Left Marker */}
-                      <rect x="10" y="94" width="36" height="36" rx="4" fill="#0f172a" />
-                      <rect x="16" y="100" width="24" height="24" rx="2" fill="#ffffff" />
-                      <rect x="22" y="106" width="12" height="12" fill="#059669" />
-                      {/* Simulated QR Pattern Dots */}
-                      <rect x="52" y="12" width="8" height="8" fill="#0f172a" />
-                      <rect x="68" y="12" width="8" height="8" fill="#0f172a" />
-                      <rect x="52" y="28" width="8" height="8" fill="#0f172a" />
-                      <rect x="76" y="28" width="8" height="8" fill="#0f172a" />
-                      <rect x="12" y="52" width="8" height="8" fill="#0f172a" />
-                      <rect x="28" y="60" width="8" height="8" fill="#0f172a" />
-                      <rect x="52" y="52" width="36" height="36" rx="6" fill="#059669" />
-                      <text x="70" y="76" fill="#ffffff" fontSize="18" fontWeight="bold" textAnchor="middle">₹</text>
-                      <rect x="96" y="56" width="8" height="8" fill="#0f172a" />
-                      <rect x="112" y="64" width="8" height="8" fill="#0f172a" />
-                      <rect x="52" y="96" width="8" height="8" fill="#0f172a" />
-                      <rect x="68" y="104" width="8" height="8" fill="#0f172a" />
-                      <rect x="84" y="96" width="8" height="8" fill="#0f172a" />
-                      <rect x="104" y="112" width="8" height="8" fill="#0f172a" />
-                      <rect x="120" y="96" width="8" height="8" fill="#0f172a" />
-                    </svg>
-                  </div>
+                  <p className="kg-venue-pay-body">Use the UPI ID below in your payment app. KhelGrid does not display a scannable QR code here.</p>
 
                   <div className="kg-upi-vpa-copy">
                     <span>UPI ID:</span>
-                    <strong>khelgrid@icici</strong>
+                    <strong>{getMerchantUpiVpa()}</strong>
                     <button type="button" className="kg-copy-btn" onClick={handleCopyVpa}>
                       {copiedVpa ? 'Copied!' : 'Copy'}
                     </button>
@@ -300,7 +303,7 @@ export function PaymentCheckoutModal({
                   </button>
 
                   <div className="kg-field-group" style={{ width: '100%', textAlign: 'left' }}>
-                    <label htmlFor="kg-utr">UPI UTR / Reference No. (Optional for manual bank transfers)</label>
+                    <label htmlFor="kg-utr">UPI UTR / Reference No. (Required for manual verification)</label>
                     <input
                       id="kg-utr"
                       type="text"
@@ -316,28 +319,15 @@ export function PaymentCheckoutModal({
               {/* Card / NetBanking Tab */}
               {method === 'card' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {getRazorpayKey() ? (
-                    <div className="kg-venue-pay-card">
-                      <div className="kg-venue-pay-header">
-                        <SiteIcon name="credit-card" size={20} />
-                        <span>Razorpay Instant Payment Gateway</span>
-                      </div>
-                      <p className="kg-venue-pay-body">
-                        You will be redirected to the secure PCI-DSS Level 1 Razorpay gateway supporting all major Indian Debit &amp; Credit Cards, NetBanking, and UPI.
-                      </p>
+                  <div style={{ padding: '14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: 750, fontSize: '13px', marginBottom: '6px' }}>
+                      <SiteIcon name="lock" size={16} />
+                      <span>Card / NetBanking Not Available Yet</span>
                     </div>
-                  ) : (
-                    <div style={{ padding: '14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: 750, fontSize: '13px', marginBottom: '6px' }}>
-                        <SiteIcon name="lock" size={16} />
-                        <span>Direct Card Gateway Verification in Progress</span>
-                      </div>
-                      <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: 1.5 }}>
-                        Online card processing is temporarily restricted while bank merchant verification is being completed.
-                        Please use <strong>UPI (GPay / PhonePe)</strong> or <strong>Pay at Ground</strong> to complete your reservation without delay.
-                      </p>
-                    </div>
-                  )}
+                    <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: 1.5 }}>
+                      Card processing is disabled until a server-created Razorpay order and verified checkout flow are connected. Use UPI with a UTR for manual verification instead.
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -349,12 +339,12 @@ export function PaymentCheckoutModal({
                     <span>Pay in Person at the Ground</span>
                   </div>
                   <p className="kg-venue-pay-body">
-                    Your spot will be instantly reserved without making an online transaction today.
+                    This records a pay-at-venue request without taking an online payment. The related booking or listing is subject to server confirmation.
                     You can pay the match host or facility reception in cash or via their personal UPI QR when you arrive.
                   </p>
                   <ul className="kg-venue-pay-guidelines">
                     <li>Arrive 15 minutes before the match start time.</li>
-                    <li>Carry the exact amount (₹{item.amount}) in cash or via your UPI app.</li>
+                    <li>Pay ₹{item.amount} directly to the host or facility when you arrive.</li>
                     <li>If you cannot attend, please cancel your spot so waitlisted players can join.</li>
                   </ul>
                 </div>
@@ -372,10 +362,10 @@ export function PaymentCheckoutModal({
               <button type="button" className="kg-btn-cancel" onClick={onClose}>
                 Cancel
               </button>
-              <button type="submit" className="kg-btn-pay">
+              <button type="submit" className="kg-btn-pay" disabled={!((supportsOnlinePayment && method === 'upi') || (supportsPayAtVenue && method === 'pay_at_venue'))}>
                 <SiteIcon name={method === 'pay_at_venue' ? 'check' : 'lock'} size={16} />
                 <span>
-                  {method === 'pay_at_venue' ? 'Lock Spot (Pay at Ground)' : `Pay ₹${item.amount} & Confirm`}
+                  {method === 'pay_at_venue' ? 'Request Spot (Pay at Ground)' : 'Submit UTR for Verification'}
                 </span>
               </button>
             </div>
@@ -400,16 +390,16 @@ export function PaymentCheckoutModal({
             <div>
               <h4 style={{ margin: '0 0 6px', fontSize: '20px', fontWeight: 800 }}>
                 {completedResult.status === 'pay_at_venue'
-                  ? 'Spot Reserved Successfully!'
+                  ? 'Pay-at-Venue Request Recorded'
                   : completedResult.status === 'pending_verification'
                     ? 'UPI Reference Submitted!'
                     : 'Payment Confirmed!'}
               </h4>
               <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
                 {completedResult.status === 'pay_at_venue'
-                  ? `Please pay ₹${item.amount} directly to the match host at the venue.`
+                  ? `No online payment has been collected. Any booking or listing remains subject to server confirmation and the applicable venue/organizer terms.`
                   : completedResult.status === 'pending_verification'
-                    ? `Reference ${completedResult.paymentId} recorded. Our match desk will verify your UTR within 15 minutes.`
+                    ? `Reference ${completedResult.paymentId} recorded as pending. This is not a confirmed payment or reservation until KhelGrid independently verifies it.`
                     : `₹${item.amount} received via ${completedResult.method.toUpperCase()}. Your pass is ready.`}
               </p>
             </div>
@@ -433,7 +423,7 @@ export function PaymentCheckoutModal({
               </div>
               <div className="kg-receipt-row">
                 <span>Total Amount:</span>
-                <strong>₹{completedResult.amount} ({completedResult.method === 'pay_at_venue' ? 'Pay at Ground' : 'Paid'})</strong>
+                <strong>₹{completedResult.amount} ({completedResult.status === 'pay_at_venue' ? 'Pay at Ground' : completedResult.status === 'pending_verification' ? 'Awaiting verification' : 'Paid'})</strong>
               </div>
             </div>
 

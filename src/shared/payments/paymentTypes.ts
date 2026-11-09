@@ -61,6 +61,7 @@ export interface VenueSlotBookingInput {
   paidAmount: number
   paymentStatus: 'paid' | 'pay_at_venue' | 'pending'
   paymentId?: string
+  paymentOrderId?: string
   userId?: string
   customerEmail?: string
   courtOrTurfNumber?: string
@@ -73,6 +74,7 @@ export interface VenueSlotBookingInput {
 
 export interface VenueBookingResult {
   status: 'success' | 'double_booking_conflict' | 'error' | 'unconfirmed' | 'pending' | 'confirmed'
+  bookingId?: string
   bookingRef?: string
   voucherToken?: string
   venueName?: string

@@ -56,13 +56,14 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
   describe('generateUpiUri', () => {
     it('generates standard NPCI UPI URI', () => {
       const uri = generateUpiUri({
+        vpa: 'merchant@bank',
         amount: 250,
         transactionNote: 'Football Turf Spot',
         orderId: 'KG_ORD_123',
       })
 
       expect(uri).toContain('upi://pay?')
-      expect(uri).toContain('pa=khelgrid%40icici')
+      expect(uri).toContain('pa=merchant%40bank')
       expect(uri).toContain('am=250.00')
       expect(uri).toContain('cu=INR')
       expect(uri).toContain('tr=KG_ORD_123')
@@ -102,7 +103,7 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
     it('records pay_at_venue transaction directly with pay_at_venue status', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ success: true }),
+        json: async () => ({ success: true, status: 'pay_at_venue' }),
       } as Response)
 
       const item: PaymentItem = {
@@ -134,9 +135,9 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
     })
 
     it('strictly downgrades client-declared completed status to pending_verification for online methods', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ success: true }),
+        json: async () => ({ success: true, status: 'pending_verification' }),
       } as Response)
 
       const item: PaymentItem = {
@@ -162,6 +163,13 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
       })
 
       expect(res.status).toBe('pending_verification')
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/functions/v1/register-payment-intent'),
+        expect.objectContaining({ method: 'POST' }),
+      )
+      const registrationBody = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))
+      expect(registrationBody.action).toBe('register_payment')
+      expect(registrationBody.p_status).toBeUndefined()
 
       // Assert no gateway signature and phone is masked in local storage display cache
       const stored = JSON.parse(memoryStorage['khelgrid_payment_receipts'] || '[]')
@@ -394,21 +402,21 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
   })
 
   describe('recordListingSubscription', () => {
-    it('activates subscription only when server-verified payment is confirmed', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+    it('always registers a pending subscription even when the client claims serverVerified', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          status: 'success',
-          is_active: true,
+          success: true,
+          status: 'pending_verification',
+          is_active: false,
           subscription_id: 'SUB-1_YEAR-1234',
-          plan_name: '1-Year Listing',
-          expires_at: '2027-11-08T12:00:00Z',
+          access_token: 'server-token',
         }),
       } as Response)
 
       const sub = await recordListingSubscription({
-        orderId: 'KG_ORD_SUB_01',
-        paymentId: 'PAY_SUB_VERIFIED',
+        orderId: 'KG_ORD_SUB_01_ABCD1234',
+        paymentId: 'UPI_UTR_123456',
         listingType: 'academy',
         listingName: 'Bhaichung Bhutia Football School',
         city: 'Delhi',
@@ -422,15 +430,23 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
         serverVerified: true,
       })
 
-      expect(sub.status).toBe('success')
-      expect(sub.subscriptionId).toBe('SUB-1_YEAR-1234')
-      expect(sub.expiresAt).not.toBeNull()
+      expect(sub.status).toBe('pending_verification')
+      expect(sub.expiresAt).toBeNull()
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/functions/v1/register-payment-intent'),
+        expect.objectContaining({ method: 'POST' }),
+      )
+      const body = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))
+      expect(body.action).toBe('register_listing_subscription')
+      expect(body.p_payment_status).toBeUndefined()
+      expect(body.serverVerified).toBeUndefined()
     })
 
-    it('rejects unverified paid listing subscription activation without verified payment status', async () => {
+    it('returns an error rather than a locally fabricated subscription when the server is unavailable', async () => {
+      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('Network unavailable'))
       const sub = await recordListingSubscription({
-        orderId: 'KG_ORD_SUB_UNVERIFIED',
-        paymentId: 'PAY_FAKE_123',
+        orderId: 'KG_ORD_SUB_FAIL_ABCD1234',
+        paymentId: 'UPI_UTR_123456',
         listingType: 'academy',
         listingName: 'Unverified Academy',
         city: 'Delhi',
@@ -440,43 +456,8 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
         durationDays: 365,
         customerName: 'Coach Unverified',
         customerPhone: '9876543210',
-        paymentStatus: 'paid',
-        serverVerified: false,
       })
-
-      expect(sub.status).toBe('pending_verification')
-      expect(sub.expiresAt).toBeNull()
-      expect(sub.message).toContain('pending verification')
-    })
-
-    it('client passing serverVerified: true cannot activate plan if server returns pending', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          status: 'pending_verification',
-          is_active: false,
-          subscription_id: 'SUB-1_YEAR-1234',
-        }),
-      } as Response)
-
-      const sub = await recordListingSubscription({
-        orderId: 'KG_ORD_SUB_ATTACK',
-        paymentId: 'PAY_FORGED',
-        listingType: 'academy',
-        listingName: 'Attacker Academy',
-        city: 'Delhi',
-        planId: '1_year',
-        planName: '1-Year Listing',
-        amount: 4499,
-        durationDays: 365,
-        customerName: 'Attacker',
-        customerPhone: '9876543210',
-        paymentStatus: 'paid',
-        serverVerified: true, // Attacker claims true!
-      })
-
-      expect(sub.status).toBe('pending_verification')
-      expect(sub.expiresAt).toBeNull()
+      expect(sub.status).toBe('error')
     })
   })
 

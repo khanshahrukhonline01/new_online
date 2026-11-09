@@ -42,12 +42,13 @@ describe('PaymentCheckoutModal Component', () => {
     expect(html).toContain('₹250')
     expect(html).toContain('Kicks on Grass Arena')
     expect(html).toContain('UPI (GPay / PhonePe)')
+    expect(html).toContain('disabled')
     expect(html).toContain('Cards / NetBanking')
     expect(html).toContain('Pay at Ground')
     expect(html).toContain('Total Payable')
   })
 
-  it('renders customer name and phone inputs with UPI VPA', () => {
+  it('renders customer inputs without exposing an unconfigured merchant VPA', () => {
     const html = renderToStaticMarkup(
       <PaymentCheckoutModal
         isOpen={true}
@@ -60,8 +61,9 @@ describe('PaymentCheckoutModal Component', () => {
 
     expect(html).toContain('Vikram Rao')
     expect(html).toContain('9876543210')
-    expect(html).toContain('khelgrid@icici')
-    expect(html).toContain('Pay ₹250 &amp; Confirm')
+    expect(html).not.toContain('khelgrid@icici')
+    expect(html).toContain('Request Spot (Pay at Ground)')
+    expect(html).toContain('Total Payable')
   })
 
   it('omits Pay at Ground when allowPayAtVenue is false', () => {

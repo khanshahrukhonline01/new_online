@@ -233,7 +233,8 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
   const timingsText = curated.timings || '6:00 AM – 11:00 PM (Open 7 Days)'
   const surfaceText = curated.surface_type || 'Professional Playing Surface'
   const courtText = curated.court_count || 'Standard Multi-Sport Playing Ground'
-  const pricingText = curated.pricing || 'Hourly rates starting from ₹800/hr'
+  const pricingText = curated.pricing || 'Contact venue for current pricing'
+  const displaySlotFee = parseInrPrice(pricingText)
 
   const faqs = curated.faqs || [
     {
@@ -706,7 +707,11 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                     setBookingError('Please enter a valid 10-digit mobile number.')
                     return
                   }
-                  const slotFee = parseInrPrice(pricingText) || 800
+                  const slotFee = parseInrPrice(pricingText)
+                  if (!slotFee || slotFee <= 0) {
+                    setBookingError('This venue does not have a verified booking tariff. Please contact the venue directly; no payment has been requested.')
+                    return
+                  }
                   const depositAmount = Math.min(300, slotFee)
                   setCheckoutItem({
                     id: venue.id,
@@ -824,10 +829,10 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                   <div>
                     <div style={{ fontSize: '12px', color: '#64748b' }}>Slot Advance Deposit</div>
                     <strong style={{ fontSize: '16px', color: '#059669' }}>
-                      ₹{Math.min(300, parseInrPrice(pricingText) || 800)}
+                      ₹{Math.min(300, parseInrPrice(pricingText))}
                     </strong>
                     <small style={{ display: 'block', fontSize: '11px', color: '#64748b' }}>
-                      (Total estimated: ₹{parseInrPrice(pricingText) || 800}/hr · remainder at venue)
+                      (Total estimated: ₹{parseInrPrice(pricingText)}/hr · remainder at venue)
                     </small>
                   </div>
                   <SiteIcon name="shield-check" size={24} style={{ color: '#059669' }} />
@@ -841,9 +846,9 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="venue-btn venue-btn-book">
+                  <button type="submit" className="venue-btn venue-btn-book" disabled={displaySlotFee <= 0}>
                     <SiteIcon name="lock" size={15} />
-                    <span>Proceed to Payment (₹{Math.min(300, parseInrPrice(pricingText) || 800)}) →</span>
+                    <span>{displaySlotFee > 0 ? `Proceed to Payment (₹${Math.min(300, displaySlotFee)}) →` : 'Pricing unavailable — contact venue'}</span>
                   </button>
                 </div>
               </form>
@@ -861,7 +866,11 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
           initialCustomer={{ name: bookingName, phone: bookingPhone }}
           onSuccess={async paymentResult => {
             setCheckoutItem(null)
-            const slotFee = parseInrPrice(pricingText) || 800
+            const slotFee = parseInrPrice(pricingText)
+            if (!slotFee || slotFee <= 0) {
+              setSlotConflictError('The venue has no verified booking tariff. No booking was confirmed.')
+              return
+            }
             const res = await recordVenueSlotBooking({
               venueId: venue.id,
               venueName: venue.name,
@@ -875,6 +884,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
               paidAmount: paymentResult.amount,
               paymentStatus: paymentResult.status === 'pay_at_venue' ? 'pay_at_venue' : 'pending',
               paymentId: paymentResult.paymentId,
+              paymentOrderId: paymentResult.orderId,
             })
             if (res.status === 'double_booking_conflict') {
               setSlotConflictError(res.errorMessage || res.message || 'This slot was just booked by another player. Please select a different slot.')

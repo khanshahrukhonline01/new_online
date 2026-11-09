@@ -364,8 +364,9 @@ export default function CommunityListingModal({
     const expiry = calculatePlanExpiry(selectedPlanId)
 
     try {
-      // 1. Audit log subscription
-      await recordListingSubscription({
+      // 1. Register the subscription intent on the server. A failed registration
+      // must stop the listing workflow; a pending one may continue as an unpublished listing.
+      const subscriptionResult = await recordListingSubscription({
         orderId: result.orderId,
         paymentId: result.paymentId,
         listingType: pendingSubmission.input.category,
@@ -376,10 +377,13 @@ export default function CommunityListingModal({
         amount: currentPlan.price,
         durationDays: currentPlan.durationDays,
         customerName: currentUser?.name || contactName || 'Host',
-        customerPhone: currentUser?.phone || currentUser?.email || contactPhone || '9999999999',
+        customerPhone: currentUser?.phone || contactPhone || '',
         customerEmail: currentUser?.email,
-        paymentStatus: result.status === 'pay_at_venue' ? 'pay_at_venue' : (result.status === 'completed' ? 'paid' : 'pending'),
+        paymentStatus: result.status === 'pay_at_venue' ? 'pay_at_venue' : 'pending',
       })
+      if (subscriptionResult.status === 'error') {
+        throw new Error(subscriptionResult.message || 'The subscription could not be registered. The listing has not been submitted.')
+      }
 
       // 2. Submit listing with plan metadata & payment ID
       const fullInput: CommunityListingInput = {
