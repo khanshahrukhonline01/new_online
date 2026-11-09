@@ -156,7 +156,7 @@ serve(async (req) => {
       .eq('idempotency_key', idempotencyKey).maybeSingle()
     const existing = existingByOrder || existingByKey
     if (existing) {
-      if (existing.plan_id !== planId || Number(existing.amount) !== plan.amount || existing.is_active) {
+      if (existing.order_id !== orderId || existing.plan_id !== planId || Number(existing.amount) !== plan.amount || existing.is_active) {
         return json({ error: 'ORDER_CONFLICT' }, 409)
       }
       return json({ success: true, status: 'pending_verification', is_active: false, subscription_id: existing.id, access_token: existing.access_token })
@@ -284,12 +284,17 @@ serve(async (req) => {
     return json({ error: 'AMOUNT_MISMATCH', message: 'The submitted amount does not match the authoritative server price.' }, 409)
   }
 
-  const { data: existing, error: existingError } = await admin.from('khelgrid_payments')
-    .select('id,amount,item_type,item_id,status,customer_phone')
+  const { data: existingByOrder, error: existingError } = await admin.from('khelgrid_payments')
+    .select('id,order_id,amount,item_type,item_id,status,customer_phone')
     .eq('order_id', orderId).maybeSingle()
   if (existingError) return json({ error: 'PAYMENT_LOOKUP_FAILED' }, 500)
+  const { data: existingByKey, error: keyLookupError } = existingByOrder ? { data: null, error: null } : await admin.from('khelgrid_payments')
+    .select('id,order_id,amount,item_type,item_id,status,customer_phone')
+    .eq('idempotency_key', idempotencyKey).maybeSingle()
+  if (keyLookupError) return json({ error: 'PAYMENT_IDEMPOTENCY_LOOKUP_FAILED' }, 500)
+  const existing = existingByOrder || existingByKey
   if (existing) {
-    if (Number(existing.amount) !== expectedAmount || existing.item_type !== itemType ||
+    if (existing.order_id !== orderId || Number(existing.amount) !== expectedAmount || existing.item_type !== itemType ||
         existing.item_id !== itemId || existing.customer_phone !== customerPhone) {
       return json({ error: 'ORDER_CONFLICT' }, 409)
     }
