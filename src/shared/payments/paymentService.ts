@@ -27,7 +27,7 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
  */
 export function parseInrPrice(price: string | number | undefined | null): number {
   if (price === undefined || price === null) return 0
-  if (typeof price === 'number') return Math.max(0, price)
+  if (typeof price === 'number') return Math.max(0, Math.round(price * 100) / 100)
 
   const clean = price.trim().toLowerCase()
   if (clean === 'free' || clean === '₹0' || clean === '0') return 0
@@ -36,7 +36,7 @@ export function parseInrPrice(price: string | number | undefined | null): number
   const matches = clean.replace(/,/g, '').match(/\d+(\.\d+)?/)
   if (!matches) return 0
   const parsed = parseFloat(matches[0])
-  return Number.isNaN(parsed) ? 0 : Math.max(0, Math.round(parsed))
+  return Number.isNaN(parsed) ? 0 : Math.max(0, Math.round(parsed * 100) / 100)
 }
 
 /**
