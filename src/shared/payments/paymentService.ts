@@ -9,8 +9,15 @@ import type {
   VenueSlotBookingInput,
 } from './paymentTypes'
 
-const DEFAULT_UPI_VPA = 'khelgrid@icici'
 const DEFAULT_MERCHANT_NAME = 'KhelGrid Sports'
+
+export function getMerchantUpiVpa(): string {
+  return (import.meta.env.VITE_KHELGRID_UPI_VPA || '').trim()
+}
+
+export function isMerchantUpiConfigured(): boolean {
+  return /^[A-Za-z0-9._-]{2,256}@[A-Za-z0-9.-]{2,64}$/.test(getMerchantUpiVpa())
+}
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -36,7 +43,7 @@ export function parseInrPrice(price: string | number | undefined | null): number
  * Generates an NPCI compliant UPI Intent URI for mobile app deep-linking (GPay, PhonePe, Paytm, BHIM).
  */
 export function generateUpiUri({
-  vpa = DEFAULT_UPI_VPA,
+  vpa = getMerchantUpiVpa(),
   name = DEFAULT_MERCHANT_NAME,
   amount,
   transactionNote,
