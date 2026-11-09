@@ -307,14 +307,34 @@ serve(async (req) => {
         (existing.metadata?.submitted_reference || null) !== (method === 'upi' ? submittedReference : null)) {
       return json({ error: 'ORDER_CONFLICT' }, 409)
     }
-    return json({ success: true, status: existing.status, order_id: orderId, idempotent: true })
+    // Rotate the guest checkout capability only while no provider order exists.
+    // The raw token is returned once; only its SHA-256 digest is stored.
+    const checkoutToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map(v => v.toString(16).padStart(2, '0')).join('')
+    const checkoutTokenHash = await sha256(checkoutToken)
+    if (existing.status !== 'pending_verification') {
+      return json({ success: true, status: existing.status, order_id: orderId, idempotent: true })
+    }
+    const { data: refreshed, error: refreshError } = await admin.from('khelgrid_payments')
+      .update({ checkout_token_hash: checkoutTokenHash })
+      .eq('id', existing.id)
+      .is('provider_order_id', null)
+      .eq('provider_order_status', 'not_created')
+      .select('id')
+      .maybeSingle()
+    if (refreshError || !refreshed) return json({ error: 'CHECKOUT_CAPABILITY_UNAVAILABLE' }, 409)
+    return json({ success: true, status: existing.status, order_id: orderId, checkout_token: checkoutToken, idempotent: true })
   }
 
   const online = method !== 'pay_at_venue'
   const status = online ? 'pending_verification' : 'pay_at_venue'
   const gateway = online ? 'upi_direct' : 'pay_at_venue'
+  const checkoutToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map(v => v.toString(16).padStart(2, '0')).join('')
+  const checkoutTokenHash = await sha256(checkoutToken)
   const { data: payment, error: paymentError } = await admin.from('khelgrid_payments').insert({
     order_id: orderId,
+    checkout_token_hash: checkoutTokenHash,
     payment_id: null,
     user_id: userId,
     customer_name: customerName,
@@ -335,5 +355,12 @@ serve(async (req) => {
   }).select('id,order_id,amount,status').single()
 
   if (paymentError || !payment) return json({ error: 'PAYMENT_REGISTRATION_FAILED' }, 500)
-  return json({ success: true, status, order_id: payment.order_id, amount: payment.amount, message: online ? 'Payment reference received. Awaiting independent verification.' : 'Pay-at-venue intent registered; no online payment has been collected.' })
+  return json({
+    success: true,
+    status,
+    order_id: payment.order_id,
+    amount: payment.amount,
+    checkout_token: online ? checkoutToken : undefined,
+    message: online ? 'Payment intent registered. A server-issued checkout capability is available for the next payment step.' : 'Pay-at-venue intent registered; no online payment has been collected.',
+  })
 })
