@@ -25,6 +25,7 @@ import {
 } from './venueGeoUtils'
 
 const EMPTY_VENUES: Venue[] = []
+const VENUE_PAGE_SIZE = 20
 
 export interface VenuesPageProps {
   onOpenIntake?: () => void
@@ -44,6 +45,7 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
   const [sport, setSport] = useState(initial.get('sport') ?? '')
   const [facility, setFacility] = useState(initial.get('facility') ?? '')
   const [sort, setSort] = useState(initial.get('sort') ?? 'name')
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Geolocation & Map States
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
@@ -129,6 +131,13 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
         }),
     [venuesWithDistance, city, sport, query, facility, sort, radiusKm, userLocation],
   )
+
+  const totalPages = Math.max(1, Math.ceil(visible.length / VENUE_PAGE_SIZE))
+  const pageItems = visible.slice((currentPage - 1) * VENUE_PAGE_SIZE, currentPage * VENUE_PAGE_SIZE)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [query, city, sport, facility, sort, radiusKm])
 
   // 1-Tap "Near Me" GPS Handler
   const handleLocateNearMe = async () => {
@@ -369,7 +378,7 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
                       {visible.length} of {records.length} venues
                     </p>
                     <div className="catalogue-grid">
-                      {visible.map(venue => (
+                      {pageItems.map(venue => (
                         <article className="catalogue-card venue-card" key={venue.id}>
                           {venue.slug.startsWith('test-only-') && (
                             <span className="test-only-label">TEST ONLY — NOT A REAL LISTING</span>
@@ -412,6 +421,13 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
                         </article>
                       ))}
                     </div>
+                    {totalPages > 1 && (
+                      <nav className="kg-pagination" aria-label="Venue result pages">
+                        <button type="button" className="admin-btn admin-btn-secondary" disabled={currentPage === 1} onClick={() => setCurrentPage(page => Math.max(1, page - 1))}>Previous</button>
+                        <span aria-live="polite">Page {currentPage} of {totalPages}</span>
+                        <button type="button" className="admin-btn admin-btn-secondary" disabled={currentPage === totalPages} onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}>Next</button>
+                      </nav>
+                    )}
                   </>
                 )
               ) : (
