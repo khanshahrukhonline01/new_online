@@ -38,7 +38,7 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
       </div>
 
       <div className="host-dashboard-empty-state">
-        <SiteIcon name="pause-circle" size={34} />
+        <SiteIcon name="pause" size={34} />
         <h2>Listing payments and host payouts are paused</h2>
         <p>
           Listing plans, renewals, checkout, payment history, balances and payouts are unavailable while payment
