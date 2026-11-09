@@ -39,6 +39,8 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
       expect(parseInrPrice('₹200/player')).toBe(200)
       expect(parseInrPrice('₹250')).toBe(250)
       expect(parseInrPrice('₹1,200/hr')).toBe(1200)
+      expect(parseInrPrice('₹475.50/hr')).toBe(475.5)
+      expect(parseInrPrice(199.99)).toBe(199.99)
       expect(parseInrPrice('500')).toBe(500)
       expect(parseInrPrice(350)).toBe(350)
     })
