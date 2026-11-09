@@ -234,6 +234,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
   const surfaceText = curated.surface_type || 'Professional Playing Surface'
   const courtText = curated.court_count || 'Standard Multi-Sport Playing Ground'
   const pricingText = curated.pricing || 'Contact venue for current pricing'
+  const displaySlotFee = parseInrPrice(pricingText)
 
   const faqs = curated.faqs || [
     {
@@ -845,9 +846,9 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="venue-btn venue-btn-book">
+                  <button type="submit" className="venue-btn venue-btn-book" disabled={displaySlotFee <= 0}>
                     <SiteIcon name="lock" size={15} />
-                    <span>Proceed to Payment (₹{Math.min(300, parseInrPrice(pricingText) || 800)}) →</span>
+                    <span>{displaySlotFee > 0 ? `Proceed to Payment (₹${Math.min(300, displaySlotFee)}) →` : 'Pricing unavailable — contact venue'}</span>
                   </button>
                 </div>
               </form>
