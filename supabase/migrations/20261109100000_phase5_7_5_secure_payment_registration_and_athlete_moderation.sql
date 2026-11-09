@@ -411,4 +411,126 @@ REVOKE ALL ON FUNCTION public.moderate_athlete_profile(uuid, text, text, text)
 GRANT EXECUTE ON FUNCTION public.moderate_athlete_profile(uuid, text, text, text)
   TO authenticated;
 
+
+-- 6. Admin-reviewed UPI settlement. UTR text is never accepted as proof by itself:
+-- an authorized admin must compare the reference and exact amount against the
+-- merchant bank statement before calling this function.
+CREATE TABLE IF NOT EXISTS public.payment_manual_verification_audit (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  payment_record_id uuid NOT NULL REFERENCES public.khelgrid_payments(id) ON DELETE RESTRICT,
+  actor_user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  order_id text NOT NULL,
+  payment_reference text NOT NULL,
+  amount_paisa bigint NOT NULL CHECK (amount_paisa > 0),
+  verification_note text NOT NULL CHECK (char_length(verification_note) BETWEEN 10 AND 1000),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_payment_manual_verification_order_created
+  ON public.payment_manual_verification_audit (order_id, created_at DESC);
+ALTER TABLE public.payment_manual_verification_audit ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.payment_manual_verification_audit FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.payment_manual_verification_audit TO service_role;
+
+CREATE OR REPLACE FUNCTION public.admin_verify_manual_payment(
+  p_order_id text,
+  p_payment_reference text,
+  p_expected_amount_paisa bigint,
+  p_verification_note text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+DECLARE
+  v_actor uuid := auth.uid();
+  v_payment public.khelgrid_payments%ROWTYPE;
+  v_reference text := trim(coalesce(p_payment_reference, ''));
+  v_note text := trim(coalesce(p_verification_note, ''));
+  v_settlement jsonb;
+BEGIN
+  IF v_actor IS NULL OR NOT public.is_service_role_or_admin() THEN
+    RETURN jsonb_build_object('status','error','error_code','UNAUTHORIZED');
+  END IF;
+  IF trim(coalesce(p_order_id,'')) !~ '^KG_ORD_[A-Z0-9]+_[A-Z0-9]{4,16}
+     OR v_reference !~ '^[A-Za-z0-9-]{6,64}
+     OR p_expected_amount_paisa IS NULL OR p_expected_amount_paisa <= 0
+     OR length(v_note) < 10 OR length(v_note) > 1000 THEN
+    RETURN jsonb_build_object('status','error','error_code','INVALID_VERIFICATION_INPUT');
+  END IF;
+
+  SELECT * INTO v_payment
+  FROM public.khelgrid_payments
+  WHERE order_id = trim(p_order_id)
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('status','error','error_code','PAYMENT_NOT_FOUND');
+  END IF;
+  IF v_payment.status <> 'pending_verification'
+     OR v_payment.payment_method <> 'upi'
+     OR v_payment.payment_gateway <> 'upi_direct' THEN
+    RETURN jsonb_build_object('status','error','error_code','NOT_A_PENDING_UPI_PAYMENT');
+  END IF;
+  IF v_payment.metadata->>'submitted_reference' IS DISTINCT FROM v_reference THEN
+    RETURN jsonb_build_object('status','error','error_code','REFERENCE_MISMATCH');
+  END IF;
+  IF round(v_payment.amount * 100)::bigint <> p_expected_amount_paisa THEN
+    RETURN jsonb_build_object('status','error','error_code','AMOUNT_MISMATCH');
+  END IF;
+
+  IF v_payment.target_type = 'venue_booking' THEN
+    IF nullif(v_payment.metadata->>'booking_ref','') IS NULL
+       OR NOT EXISTS (
+         SELECT 1 FROM public.venue_bookings
+         WHERE booking_ref = v_payment.metadata->>'booking_ref'
+           AND status = 'pending'
+           AND payment_status = 'pending'
+       ) THEN
+      RETURN jsonb_build_object('status','error','error_code','PENDING_BOOKING_NOT_FOUND');
+    END IF;
+  ELSIF v_payment.target_type = 'listing_subscription' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.listing_subscriptions
+      WHERE id::text = v_payment.target_id
+        AND is_active = false
+        AND payment_status = 'pending'
+    ) THEN
+      RETURN jsonb_build_object('status','error','error_code','PENDING_SUBSCRIPTION_NOT_FOUND');
+    END IF;
+  ELSE
+    RETURN jsonb_build_object('status','error','error_code','MANUAL_SETTLEMENT_NOT_SUPPORTED_FOR_TARGET');
+  END IF;
+
+  v_settlement := public.settle_payment_transaction(
+    trim(p_order_id), v_reference, 'gateway_api', NULL,
+    p_expected_amount_paisa, 'INR'
+  );
+  IF v_settlement->>'status' <> 'success' THEN
+    RETURN v_settlement;
+  END IF;
+
+  INSERT INTO public.payment_manual_verification_audit (
+    payment_record_id, actor_user_id, order_id, payment_reference,
+    amount_paisa, verification_note
+  ) VALUES (
+    v_payment.id, v_actor, v_payment.order_id, v_reference,
+    p_expected_amount_paisa, v_note
+  );
+
+  RETURN jsonb_build_object(
+    'status','success',
+    'order_id',v_payment.order_id,
+    'payment_reference',v_reference,
+    'amount',v_payment.amount,
+    'message','UPI reference manually verified by an authorized administrator and settled.'
+  );
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.admin_verify_manual_payment(text, text, bigint, text)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_verify_manual_payment(text, text, bigint, text)
+  TO authenticated;
+
 COMMIT;
