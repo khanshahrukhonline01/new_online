@@ -112,6 +112,15 @@ BEGIN
     RAISE EXCEPTION 'subscription retry was not idempotent: %', v_retry;
   END IF;
 
+  UPDATE public.listing_subscriptions
+  SET is_active = true, payment_status = 'paid'
+  WHERE order_id='KG_ORD_FIXTURE_PENDING_12345678';
+  SELECT * INTO v_subscription FROM public.listing_subscriptions WHERE order_id='KG_ORD_FIXTURE_PENDING_12345678';
+  IF v_subscription.starts_at IS NULL OR v_subscription.expires_at IS NULL
+     OR v_subscription.expires_at <= now() THEN
+    RAISE EXCEPTION 'subscription term was not initialized at payment settlement';
+  END IF;
+
   IF (SELECT column_default FROM information_schema.columns
       WHERE table_schema='public' AND table_name='khelgrid_payments' AND column_name='status') NOT LIKE '%pending%' THEN
     RAISE EXCEPTION 'payment default regressed';
