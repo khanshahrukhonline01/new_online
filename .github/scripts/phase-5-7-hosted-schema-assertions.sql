@@ -59,6 +59,13 @@ BEGIN
     RAISE EXCEPTION 'new athlete profiles do not default to draft';
   END IF;
 
+  IF NOT has_function_privilege('authenticated','public.is_pickup_game_admin()','EXECUTE') THEN
+    RAISE EXCEPTION 'authenticated cannot execute athlete admin RLS predicate';
+  END IF;
+  IF has_function_privilege('anon','public.is_pickup_game_admin()','EXECUTE') THEN
+    RAISE EXCEPTION 'anon can execute athlete admin RLS predicate';
+  END IF;
+
   IF has_function_privilege('anon','public.record_payment_transaction(text,text,text,text,text,numeric,text,text,text,text,text,text,jsonb)','EXECUTE') THEN
     RAISE EXCEPTION 'anon can still execute record_payment_transaction';
   END IF;

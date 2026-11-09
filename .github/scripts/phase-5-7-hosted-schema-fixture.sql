@@ -125,7 +125,8 @@ CREATE TABLE public.pickup_game_rsvp_rate_limits (
 
 CREATE OR REPLACE FUNCTION public.is_pickup_game_admin()
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=''
-AS $$ SELECT false $$;
+AS $function$ SELECT false $function$;
+REVOKE ALL ON FUNCTION public.is_pickup_game_admin() FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.record_payment_transaction(
   text,text,text,text,text,numeric,text,text,text,text,text,text,jsonb
