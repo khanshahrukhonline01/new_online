@@ -15,28 +15,6 @@ interface VerifyPaymentPayload {
   expected_currency?: string
 }
 
-interface RazorpayPaymentEntity {
-  id: string
-  entity: string
-  amount: number
-  currency: string
-  status: string
-  order_id: string | null
-  invoice_id: string | null
-  international: boolean
-  method: string
-  amount_refunded: number
-  refund_status: string | null
-  captured: boolean
-  description?: string
-  card_id?: string | null
-  bank?: string | null
-  wallet?: string | null
-  vpa?: string | null
-  email?: string
-  contact?: string
-  created_at: number
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
