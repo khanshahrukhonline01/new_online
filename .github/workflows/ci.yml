@@ -49,6 +49,10 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261109193312_phase5_8_1_4_payment_schema_compatibility.sql
       - name: Verify Phase 5.8.1.4 paise and webhook lifecycle
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-8-1-4-payment-schema-assertions.sql
+      - name: Apply Phase 5.8.2 Razorpay order creation schema
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110100000_phase5_8_2_razorpay_order_creation.sql
+      - name: Verify Phase 5.8.2 checkout capability and provider order lifecycle
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-8-2-payment-order-assertions.sql
       - name: Validate SQL migration safety
         shell: bash
         run: |
@@ -80,6 +84,8 @@ jobs:
         run: deno check supabase/functions/register-payment-intent/index.ts
       - name: Typecheck Razorpay webhook Edge Function
         run: deno check supabase/functions/razorpay-webhook/index.ts
+      - name: Typecheck Razorpay sandbox order Edge Function
+        run: deno check supabase/functions/create-razorpay-order/index.ts
       - name: Test webhook settlement outcome classification
         run: deno test supabase/functions/_shared/webhookSettlement.deno.ts
       - run: npm install
