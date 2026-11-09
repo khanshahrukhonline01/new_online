@@ -205,10 +205,10 @@ const OPPORTUNITY_FEATURED_SELECT =
   'id,slug,title,sport_id,sport:sports(id,slug,name),opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status,registration_fee,available_spots,age_category,gender,eligibility_criteria,required_documents,metadata,is_featured'
 
 const OPPORTUNITY_RICH_SELECT =
-  'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status,registration_fee,available_spots,age_category,gender,eligibility_criteria,required_documents,metadata'
+  'id,slug,title,sport_id,sport:sports(id,slug,name),opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status,registration_fee,available_spots,age_category,gender,eligibility_criteria,required_documents,metadata'
 
 const OPPORTUNITY_CORE_SELECT =
-  'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status'
+  'id,slug,title,sport_id,sport:sports(id,slug,name),opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status'
 
 export type AuthorRole = 'Athlete' | 'Parent' | 'Coach' | 'Turf Player' | 'Verified Player'
 
