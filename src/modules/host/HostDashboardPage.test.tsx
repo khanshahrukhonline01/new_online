@@ -1,51 +1,22 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
-import '../../i18n'
 import HostDashboardPage from './HostDashboardPage'
 
-describe('HostDashboardPage Partner & Host Hub', () => {
-  it('renders partner hero banner, verified badge, and quick actions', () => {
+describe('HostDashboardPage', () => {
+  it('does not show sample host records or accept listing-plan payments while paused', () => {
     const html = renderToStaticMarkup(<HostDashboardPage />)
-
-    // Eyebrow and header
-    expect(html).toContain('PARTNER HUB · SPORTS HOST PORTAL')
-    expect(html).toContain('Verified Partner')
-    expect(html).toContain('Bengaluru, Karnataka')
-    expect(html).toContain('Partner Support')
+    expect(html).toContain('Host tools are being prepared')
+    expect(html).toContain('Listing payments and host payouts are paused')
+    expect(html).not.toContain('FSV Arena Bengaluru')
+    expect(html).not.toContain('KG_ORD_')
+    expect(html).not.toContain('Proceed to Pay')
+    expect(html).not.toContain('Lifelong VIP Plan')
   })
 
-  it('renders all 4 tabs and primary metrics cards', () => {
-    const html = renderToStaticMarkup(<HostDashboardPage />)
-
-    // Tab buttons
-    expect(html).toContain('Overview')
-    expect(html).toContain('My Listings &amp; Plans')
-    expect(html).toContain('Slot Bookings')
-    expect(html).toContain('Earnings &amp; Payouts')
-
-    // Metric cards
-    expect(html).toContain('Active Listings')
-    expect(html).toContain('Total Booking Volume')
-    expect(html).toContain('Search Impressions')
-    expect(html).toContain('WhatsApp Inquiries')
-    expect(html).toContain('All listings verified &amp; live')
-  })
-
-  it('renders published listings with tier badges and renewal triggers', () => {
-    const html = renderToStaticMarkup(<HostDashboardPage />)
-
-    // Sample listings
-    expect(html).toContain('FSV Arena Bengaluru')
-    expect(html).toContain('Bengaluru Youth Sports Academy')
-    expect(html).toContain('State U-17 Open Selection Trials')
-
-    // Plan pills
-    expect(html).toContain('1-Year')
-    expect(html).toContain('Lifelong Listing')
-    expect(html).toContain('1-Month')
-
-    // Actions
-    expect(html).toContain('Renew / Upgrade')
-    expect(html).toContain('View Page')
+  it('offers community intake without claiming publication', () => {
+    const onOpenIntake = vi.fn()
+    const html = renderToStaticMarkup(<HostDashboardPage onOpenIntake={onOpenIntake} />)
+    expect(html).toContain('Submit a listing for review')
+    expect(html).toContain('A submission is not published or verified')
   })
 })
