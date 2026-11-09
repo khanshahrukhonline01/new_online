@@ -73,11 +73,8 @@ export function PaymentCheckoutModal({
     }
 
     if (method === 'card') {
-      const razorpayKey = getRazorpayKey()
-      if (!razorpayKey) {
-        setErrorMsg('Direct card payment gateway is undergoing bank verification. Please pay via UPI (GPay / PhonePe) or select Pay at Ground.')
-        return
-      }
+      setErrorMsg('Card and NetBanking checkout is not enabled yet. Please use UPI and submit the UTR for manual verification, or choose Pay at Ground where available.')
+      return
     }
 
     if (method === 'upi' && upiRef.trim().length < 6) {
@@ -115,6 +112,11 @@ export function PaymentCheckoutModal({
         status,
       })
 
+      if (!result.success) {
+        setErrorMsg(result.errorMessage || 'The payment intent could not be registered. No booking or pass has been confirmed.')
+        setStep('input')
+        return
+      }
       setCompletedResult(result)
       setStep('success')
       onSuccess(result)
@@ -316,7 +318,7 @@ export function PaymentCheckoutModal({
               {/* Card / NetBanking Tab */}
               {method === 'card' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {getRazorpayKey() ? (
+                  {false ? (
                     <div className="kg-venue-pay-card">
                       <div className="kg-venue-pay-header">
                         <SiteIcon name="credit-card" size={20} />
@@ -433,7 +435,7 @@ export function PaymentCheckoutModal({
               </div>
               <div className="kg-receipt-row">
                 <span>Total Amount:</span>
-                <strong>₹{completedResult.amount} ({completedResult.method === 'pay_at_venue' ? 'Pay at Ground' : 'Paid'})</strong>
+                <strong>₹{completedResult.amount} ({completedResult.status === 'pay_at_venue' ? 'Pay at Ground' : completedResult.status === 'pending_verification' ? 'Awaiting verification' : 'Paid'})</strong>
               </div>
             </div>
 
