@@ -302,7 +302,7 @@ $function$;
 REVOKE ALL ON FUNCTION public.record_listing_subscription(text, text, text, text, text, text, text, numeric, integer, text, text, text, text, text, jsonb, text)
   FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.record_listing_subscription(text, text, text, text, text, text, text, numeric, integer, text, text, text, text, text, jsonb, text)
-  TO anon, authenticated, service_role;
+  TO service_role;
 
 -- Close the legacy one-argument lookup that returns full table rows (including PII).
 DO $block$
