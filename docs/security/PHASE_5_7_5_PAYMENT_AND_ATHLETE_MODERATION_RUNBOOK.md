@@ -4,7 +4,7 @@
 
 ## Payment registration behavior
 
-The browser calls the `register-payment-intent` Edge Function. The function uses the server-side `SUPABASE_SERVICE_ROLE_KEY`; this key must never be copied into frontend variables, browser storage, GitHub source, or client requests.
+The browser calls the `register-payment-intent` Edge Function. UPI checkout remains disabled until `VITE_KHELGRID_UPI_VPA` is set to the merchant's independently verified UPI ID in the development Vercel environment. Verify the bank-app payee name before enabling it. The function uses the server-side `SUPABASE_SERVICE_ROLE_KEY`; this key must never be copied into frontend variables, browser storage, GitHub source, or client requests.
 
 Accepted payment intent behavior:
 
@@ -43,7 +43,7 @@ The repository includes `verify-razorpay-payment` and `razorpay-webhook`. Their 
 
 Before enabling Razorpay checkout:
 
-1. Configure `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` as Supabase Edge Function secrets for the development project.
+1. Confirm the merchant UPI ID and configure `VITE_KHELGRID_UPI_VPA` in the development Vercel environment. Configure `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` as Supabase Edge Function secrets for the development project.
 2. Implement and verify server-side Razorpay order creation. Do not create gateway orders using a client-supplied amount.
 3. Deploy `verify-razorpay-payment` with JWT verification enabled.
 4. Deploy `razorpay-webhook` with JWT verification disabled only because it validates Razorpay's webhook HMAC itself.
