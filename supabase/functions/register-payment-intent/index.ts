@@ -145,6 +145,15 @@ serve(async (req) => {
     }
 
     const accessToken = Array.from(crypto.getRandomValues(new Uint8Array(24))).map(v => v.toString(16).padStart(2, '0')).join('')
+    const { data: paymentIntent, error: paymentLookupError } = await admin.from('khelgrid_payments')
+      .select('id,amount,item_type,customer_phone,status')
+      .eq('order_id', orderId).single()
+    if (paymentLookupError || !paymentIntent || paymentIntent.item_type !== 'listing_plan' ||
+        Number(paymentIntent.amount) !== plan.amount || paymentIntent.customer_phone !== phone ||
+        paymentIntent.status !== 'pending_verification') {
+      return json({ error: 'PAYMENT_INTENT_MISMATCH' }, 409)
+    }
+
     const { data: subscription, error: insertError } = await admin.from('listing_subscriptions').insert({
       order_id: orderId,
       payment_id: null,
@@ -170,6 +179,18 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     }).select('id,plan_id,plan_name,is_active,payment_status,access_token').single()
     if (insertError || !subscription) return json({ error: 'SUBSCRIPTION_REGISTRATION_FAILED' }, 500)
+    const { error: linkError } = await admin.from('khelgrid_payments')
+      .update({
+        target_type: 'listing_subscription',
+        target_id: subscription.id,
+        metadata: { subscription_id: subscription.id, plan_id: planId },
+      })
+      .eq('id', paymentIntent.id)
+      .eq('status', 'pending_verification')
+    if (linkError) {
+      await admin.from('listing_subscriptions').delete().eq('id', subscription.id)
+      return json({ error: 'SUBSCRIPTION_PAYMENT_LINK_FAILED' }, 500)
+    }
     return json({ success: true, status: 'pending_verification', is_active: false, subscription_id: subscription.id, plan_id: subscription.plan_id, plan_name: subscription.plan_name, payment_status: subscription.payment_status, access_token: subscription.access_token })
   }
 
