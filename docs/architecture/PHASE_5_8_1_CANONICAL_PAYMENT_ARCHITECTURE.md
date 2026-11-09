@@ -42,7 +42,7 @@ The existing status check currently permits only `pending`, `pending_verificatio
 
 The existing `payment_webhook_events` table has a unique event ID and basic event metadata, but its current shape is not a complete operational event ledger (for example, it does not expose dedicated attempt counts, processing/processed timestamps, or a structured retry/error history).
 
-The development project has migrations through Phase 5.7.5. The latest payment-related schema work is Phase 5.5 plus Phase 5.7.5 registration hardening.
+The development project has migrations through Phase 5.7.5. The latest payment-related schema work is Phase 5.5 plus Phase 5.7.5 registration hardening.\n\n### Confirmed P0 pricing defect\n\nThe venue branch in `register-payment-intent` currently calculates `expectedAmount = Math.min(300, Number(data.slot_hourly_fee))`. This hard-caps the authoritative venue payment at ₹300, regardless of the verified hourly tariff. Do not simply remove the cap in isolation: first inspect the complete `reserve_venue_slot_atomic` implementation and make the quote/order amount use exactly the same tariff, duration, court and fee rules. Until then, paid venue checkout must remain disabled for any case where the amount cannot be reconciled exactly.\n\n### Confirmed database privilege concern for follow-up\n\nThe development RPC inventory shows `set_listing_subscription_activation_window()` is SECURITY DEFINER and has EXECUTE granted to PUBLIC/anon/authenticated. This must be reviewed against its body and trigger dependencies before changing privileges. Do not revoke it blindly in this phase; add it to the payment-adjacent privileged-function audit and prove whether it can affect subscription activation or payment state.
 
 ## 3. Canonical architecture decisions
 
@@ -76,7 +76,7 @@ Pricing sources to reconcile:
 
 - Listing plans: frontend `listingPricing.ts` and server-side `listingPlan()` currently duplicate the same plan catalogue.
 - Membership tiers: server-side membership catalogue and any frontend plan catalogue must be reconciled.
-- Venue bookings: price must be derived from the authoritative venue tariff and the exact slot/duration/court rules used by the reservation workflow.
+- Venue bookings: price must be derived from the authoritative venue tariff and the exact slot/duration/court rules used by the reservation workflow. The current ₹300 cap in `register-payment-intent` is a confirmed P0 defect and must not be carried into the new pricing module.
 - Trials, athlete verification, pickup matches, and future products remain non-payable until a documented price source and settlement/fulfilment workflow exist.
 
 A price displayed by the browser is informational. The create-order endpoint must recompute the price server-side immediately before creating the internal order and provider order.
@@ -198,12 +198,12 @@ Before Phase 5.8.1 can be marked complete:
 
 ## 8. Immediate implementation sequence
 
-1. Finish dependency inventory for all payment tables, RPCs, triggers, and frontend call sites.
-2. Reconcile listing, membership, and venue pricing into a single server-side pricing module.
-3. Define the canonical order contract and status transition matrix in shared types and database constraints.
-4. Produce an additive development migration with compatibility and rollback/recovery notes.
-5. Add tests for pricing, idempotency, guest access, and status transitions.
-6. Only after those pass, implement the server-side Razorpay order-creation function and wire sandbox checkout.
+1. Finish dependency inventory for all payment tables, RPCs, triggers, and frontend call sites, including the body and trigger dependencies of `set_listing_subscription_activation_window()`.\n2. Inspect `reserve_venue_slot_atomic` and remove the venue price divergence through one shared server-authoritative quote calculation; add regression tests for hourly fee, slot duration, court count, and the existing ₹300 cap defect.
+3. Reconcile listing, membership, and venue pricing into a single server-side pricing module.
+4. Define the canonical order contract and status transition matrix in shared types and database constraints.
+5. Produce an additive development migration with compatibility and rollback/recovery notes.
+6. Add tests for pricing, idempotency, guest access, and status transitions.
+7. Only after those pass, implement the server-side Razorpay order-creation function and wire sandbox checkout.
 
 ## 9. Exit criteria
 
