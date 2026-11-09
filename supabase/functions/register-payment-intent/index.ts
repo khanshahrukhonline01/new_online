@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { getCanonicalListingPlan, getCanonicalMembershipPrice, resolveVenueSlotPrice } from '../_shared/paymentPricing.ts'
+import { calculateVenueAdvanceDeposit, getCanonicalListingPlan, getCanonicalMembershipPrice, resolveVenueSlotPrice } from '../_shared/paymentPricing.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -94,7 +94,7 @@ serve(async (req) => {
         (payment.metadata?.booking_ref && payment.metadata.booking_ref !== bookingRef)) return json({ error: 'PAYMENT_NOT_LINKABLE' }, 409)
     const { data: venue } = await admin.from('venues').select('id,slug').eq('id', payment.item_id).single()
     if (!venue || venue.slug !== booking.venue_id || booking.status !== 'pending' || booking.payment_status !== 'pending' ||
-        payment.customer_phone !== booking.customer_phone || Number(payment.amount) !== Number(booking.total_amount) || Number(payment.metadata?.court_number) !== Number(booking.court_number || 1)) return json({ error: 'BOOKING_PAYMENT_MISMATCH' }, 409)
+        payment.customer_phone !== booking.customer_phone || Number(payment.amount) !== Math.min(300, Number(booking.total_amount)) || Number(payment.metadata?.booking_total_amount) !== Number(booking.total_amount) || Number(payment.metadata?.court_number) !== Number(booking.court_number || 1)) return json({ error: 'BOOKING_PAYMENT_MISMATCH' }, 409)
     const metadata = { ...(payment.metadata || {}), booking_ref: booking.booking_ref }
     const { error: updateError } = await admin.from('khelgrid_payments')
       .update({ target_type: 'venue_booking', target_id: booking.id, metadata })
@@ -274,12 +274,17 @@ serve(async (req) => {
       courtNumber,
     })
     if (!resolved) return json({ error: 'PRICE_UNRESOLVED' }, 409)
-    expectedAmount = resolved.amountRupees
-    itemTitle = `${data.name} Court Slot`
+    const depositPaise = calculateVenueAdvanceDeposit(resolved.amountPaise)
+    if (depositPaise === null) return json({ error: 'PRICE_UNRESOLVED' }, 409)
+    expectedAmount = depositPaise / 100
+    itemTitle = `${data.name} Court Slot Advance Deposit`
     metadata.venue_id = data.id
     metadata.venue_slug = data.slug
     metadata.court_number = courtNumber
-    metadata.amount_paise = resolved.amountPaise
+    metadata.booking_total_amount = resolved.amountRupees
+    metadata.booking_total_paise = resolved.amountPaise
+    metadata.advance_deposit_paise = depositPaise
+    metadata.balance_payable_at_venue = Math.max(0, resolved.amountRupees - expectedAmount)
   }
 
   if (expectedAmount === null || !Number.isFinite(expectedAmount) || expectedAmount <= 0 ||
