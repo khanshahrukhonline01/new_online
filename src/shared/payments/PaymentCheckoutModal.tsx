@@ -27,7 +27,8 @@ export function PaymentCheckoutModal({
   onSuccess,
   allowPayAtVenue = true,
 }: PaymentCheckoutModalProps) {
-  const supportsOnlinePayment = (item.type === 'venue_booking' || item.type === 'listing_plan') && isMerchantUpiConfigured()
+  const supportsOnlinePaymentTarget = item.type === 'venue_booking' || item.type === 'listing_plan'
+  const supportsOnlinePayment = supportsOnlinePaymentTarget && isMerchantUpiConfigured()
   const [method, setMethod] = useState<PaymentMethod>(supportsOnlinePayment ? 'upi' : allowPayAtVenue ? 'pay_at_venue' : 'upi')
   const [orderId, setOrderId] = useState(() => generateOrderId())
   const [name, setName] = useState(initialCustomer?.name || '')
@@ -187,9 +188,14 @@ export function PaymentCheckoutModal({
         {/* Step 1: Input & Payment Method */}
         {step === 'input' && (
           <form onSubmit={handleSubmit}>
-            {!supportsOnlinePayment && !allowPayAtVenue && (
+            {!supportsOnlinePaymentTarget && !allowPayAtVenue && (
               <div role="status" style={{ padding: '12px', border: '1px solid #f59e0b', borderRadius: '10px', background: '#fffbeb', color: '#92400e', fontSize: '13px', marginBottom: '12px' }}>
-                Secure UPI payment is unavailable. Do not transfer money. Confirm the merchant UPI ID with KhelGrid and configure VITE_KHELGRID_UPI_VPA before enabling online payments.
+                Secure online payment is not enabled for this item yet. Do not transfer money; its server-side settlement workflow is not ready.
+              </div>
+            )}
+            {supportsOnlinePaymentTarget && !isMerchantUpiConfigured() && (
+              <div role="status" style={{ padding: '12px', border: '1px solid #f59e0b', borderRadius: '10px', background: '#fffbeb', color: '#92400e', fontSize: '13px', marginBottom: '12px' }}>
+                UPI is disabled until KhelGrid configures and independently confirms its merchant UPI ID through VITE_KHELGRID_UPI_VPA. Do not transfer money to an unverified payee.
               </div>
             )}
             {/* Method Tabs */}
