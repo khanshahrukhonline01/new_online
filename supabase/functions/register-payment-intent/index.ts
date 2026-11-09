@@ -10,7 +10,7 @@ const corsHeaders = {
 }
 
 type PaymentType = 'pickup_match' | 'venue_booking' | 'trial_registration' | 'listing_plan' | 'membership'
-type PaymentMethod = 'upi' | 'card' | 'netbanking' | 'wallet' | 'pay_at_venue'
+type PaymentMethod = 'upi' | 'razorpay' | 'card' | 'netbanking' | 'wallet' | 'pay_at_venue'
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -205,7 +205,7 @@ serve(async (req) => {
       customerName.length < 2 || customerPhone.length < 10 ||
       !Number.isFinite(requestedAmount) || requestedAmount <= 0 ||
       !['pickup_match','venue_booking','trial_registration','listing_plan','membership'].includes(itemType) ||
-      !['upi','pay_at_venue'].includes(method) || !idempotencyKey || idempotencyKey.length > 128) {
+      !['upi','razorpay','pay_at_venue'].includes(method) || !idempotencyKey || idempotencyKey.length > 128) {
     return json({ error: 'INVALID_PAYMENT_INTENT' }, 400)
   }
   const submittedReference = paymentId.startsWith('UPI_UTR_') ? paymentId.slice(8) : paymentId
@@ -328,7 +328,7 @@ serve(async (req) => {
 
   const online = method !== 'pay_at_venue'
   const status = online ? 'pending_verification' : 'pay_at_venue'
-  const gateway = online ? 'upi_direct' : 'pay_at_venue'
+  const gateway = method === 'razorpay' ? 'razorpay' : online ? 'upi_direct' : 'pay_at_venue'
   const checkoutToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
     .map(v => v.toString(16).padStart(2, '0')).join('')
   const checkoutTokenHash = await sha256(checkoutToken)
@@ -346,7 +346,7 @@ serve(async (req) => {
     item_id: itemId,
     item_title: itemTitle,
     payment_gateway: gateway,
-    payment_method: online ? 'upi' : 'pay_at_venue',
+    payment_method: method === 'razorpay' ? 'razorpay' : online ? 'upi' : 'pay_at_venue',
     status,
     target_type: targetType,
     target_id: targetId,
@@ -361,6 +361,6 @@ serve(async (req) => {
     order_id: payment.order_id,
     amount: payment.amount,
     checkout_token: online ? checkoutToken : undefined,
-    message: online ? 'Payment intent registered. A server-issued checkout capability is available for the next payment step.' : 'Pay-at-venue intent registered; no online payment has been collected.',
+    message: method === 'razorpay' ? 'Payment intent registered. Razorpay sandbox order creation is a separate server-side step.' : online ? 'Payment reference received. Awaiting independent verification.' : 'Pay-at-venue intent registered; no online payment has been collected.',
   })
 })
