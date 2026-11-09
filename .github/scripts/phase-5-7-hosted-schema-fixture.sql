@@ -79,6 +79,10 @@ CREATE TABLE public.listing_subscriptions (
   metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE public.listing_subscriptions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY listing_subscriptions_owner_select ON public.listing_subscriptions
+  FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL AND user_id = auth.uid());
+GRANT SELECT ON public.listing_subscriptions TO PUBLIC;
 CREATE TABLE public.khelgrid_payments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id text NOT NULL UNIQUE,
@@ -99,6 +103,10 @@ CREATE TABLE public.khelgrid_payments (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE public.khelgrid_payments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY payments_user_read ON public.khelgrid_payments
+  FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL AND user_id = auth.uid());
+GRANT SELECT ON public.khelgrid_payments TO PUBLIC;
 GRANT ALL ON public.khelgrid_payments TO service_role;
 CREATE TABLE public.venues (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
