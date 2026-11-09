@@ -68,7 +68,7 @@ export default function ListingSubmissionPage() {
   return <section className="content-page listing-submission-page">
     <p className="eyebrow">KHELGRID · LISTING INTAKE</p>
     <h1>Suggest a sports listing.</h1>
-    <p className="page-intro">Share an official source for a sports opportunity, venue, coach, academy or event. Every suggestion enters a private review queue and remains unpublished unless approved.</p>
+    <p className="page-intro">Share an official source link when available for an opportunity, venue, coach, academy, event, pickup game or new sport. Every suggestion enters a private review queue and remains unpublished unless approved.</p>
     
     <div className="cv-privacy-note" role="note"><SiteIcon name="shield-check" size={18} /><span><strong>Review first.</strong> We collect only the listing details below. Do not include passwords, identity documents or sensitive personal information. A successful submission is not an endorsement or publication.</span></div>
     <form className="sports-cv-form" onSubmit={submit}>
