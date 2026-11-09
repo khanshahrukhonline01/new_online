@@ -90,6 +90,8 @@ jobs:
         run: deno check supabase/functions/verify-razorpay-payment/index.ts
       - name: Test webhook settlement outcome classification
         run: deno test supabase/functions/_shared/webhookSettlement.deno.ts
+      - name: Test strict Razorpay provider verification
+        run: deno test supabase/functions/_shared/razorpayVerification.deno.ts
       - run: npm install
       - run: npm run typecheck
       - run: npm run lint
