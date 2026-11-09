@@ -23,6 +23,16 @@ BEGIN
       AND conname='khelgrid_payments_provider_order_status_check'
   ) THEN RAISE EXCEPTION 'provider order status constraint missing'; END IF;
 
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    WHERE c.conrelid='public.khelgrid_payments'::regclass
+      AND c.conname='khelgrid_payments_payment_method_check'
+      AND pg_get_constraintdef(c.oid) ILIKE '%razorpay%'
+      AND pg_get_constraintdef(c.oid) ILIKE '%upi%'
+      AND pg_get_constraintdef(c.oid) ILIKE '%pay_at_venue%'
+  ) THEN RAISE EXCEPTION 'payment method constraint must preserve existing methods and allow razorpay'; END IF;
+
   INSERT INTO public.khelgrid_payments (
     order_id, customer_name, customer_phone, amount, amount_paise, currency,
     item_type, item_id, item_title, payment_gateway, payment_method, status,
