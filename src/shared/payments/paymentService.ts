@@ -761,6 +761,7 @@ export async function recordListingSubscription(input: ListingSubscriptionInput)
         customer_name: input.customerName,
         customer_phone: input.customerPhone,
         customer_email: input.customerEmail || null,
+        payment_status: input.paymentStatus === 'pay_at_venue' ? 'pay_at_venue' : 'pending',
         idempotency_key: input.idempotencyKey || input.orderId,
       }),
     })
