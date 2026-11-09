@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { classifySettlementResult } from '../_shared/webhookSettlement.ts'
-import { classifyProviderPayment, fetchRazorpayPayment, verifyHmacSha256 } from '../_shared/razorpayVerification.ts'
+import { classifyProviderPayment, fetchRazorpayPayment, verifyHmacSha256, type RazorpayPayment } from '../_shared/razorpayVerification.ts'
 
 async function sha256Hex(content: string): Promise<string> {
   const enc = new TextEncoder()
@@ -225,7 +225,7 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: 'PROVIDER_VERIFICATION_UNAVAILABLE' }), { status: 503 })
       }
 
-      let providerPayment
+      let providerPayment: RazorpayPayment
       try {
         providerPayment = await fetchRazorpayPayment(paymentId, keyId, keySecret)
       } catch (error) {
