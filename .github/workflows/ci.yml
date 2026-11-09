@@ -81,7 +81,7 @@ jobs:
       - name: Typecheck Razorpay webhook Edge Function
         run: deno check supabase/functions/razorpay-webhook/index.ts
       - name: Test webhook settlement outcome classification
-        run: deno test supabase/functions/_shared/webhookSettlement.test.ts
+        run: deno test supabase/functions/_shared/webhookSettlement.deno.ts
       - run: npm install
       - run: npm run typecheck
       - run: npm run lint
