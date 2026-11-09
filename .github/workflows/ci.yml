@@ -78,6 +78,10 @@ jobs:
           deno-version: v2.x
       - name: Typecheck secure payment registration Edge Function
         run: deno check supabase/functions/register-payment-intent/index.ts
+      - name: Typecheck Razorpay webhook Edge Function
+        run: deno check supabase/functions/razorpay-webhook/index.ts
+      - name: Test webhook settlement outcome classification
+        run: deno test supabase/functions/_shared/webhookSettlement.test.ts
       - run: npm install
       - run: npm run typecheck
       - run: npm run lint
