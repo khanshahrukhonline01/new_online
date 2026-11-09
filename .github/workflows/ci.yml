@@ -69,6 +69,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110143000_phase_core_catalogue_listing_integrity.sql
       - name: Verify core catalogue and listing integrity
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-core-catalogue-listing-integrity-assertions.sql
+      - name: Test anonymous, authenticated, moderator and service-role listing boundaries
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-core-catalogue-listing-moderator-flow.sql
       - name: Validate SQL migration safety
         shell: bash
         run: |
