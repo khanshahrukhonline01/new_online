@@ -16,6 +16,13 @@ ALTER TABLE public.khelgrid_payments
   ADD COLUMN IF NOT EXISTS target_id text,
   ADD COLUMN IF NOT EXISTS idempotency_key text;
 
+-- Payment records contain customer PII and gateway references. Keep reads
+-- owner-scoped for authenticated users and deny all browser writes.
+ALTER TABLE public.khelgrid_payments ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.khelgrid_payments FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON TABLE public.khelgrid_payments TO authenticated;
+GRANT ALL ON TABLE public.khelgrid_payments TO service_role;
+
 ALTER TABLE public.khelgrid_payments
   ALTER COLUMN status SET DEFAULT 'pending';
 
@@ -95,10 +102,13 @@ END;
 $legacy_subscription$;
 
 -- Public SELECT on listing_subscriptions exposes customer PII and access tokens.
+ALTER TABLE public.listing_subscriptions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS listing_subscriptions_read ON public.listing_subscriptions;
 DROP POLICY IF EXISTS listing_subscriptions_owner_read ON public.listing_subscriptions;
-REVOKE SELECT ON public.listing_subscriptions FROM PUBLIC, anon;
-GRANT SELECT ON public.listing_subscriptions TO authenticated;
+DROP POLICY IF EXISTS listing_subscriptions_owner_select ON public.listing_subscriptions;
+REVOKE ALL ON TABLE public.listing_subscriptions FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON TABLE public.listing_subscriptions TO authenticated;
+GRANT ALL ON TABLE public.listing_subscriptions TO service_role;
 CREATE POLICY listing_subscriptions_owner_read
   ON public.listing_subscriptions
   FOR SELECT TO authenticated
