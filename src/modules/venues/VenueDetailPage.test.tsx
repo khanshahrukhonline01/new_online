@@ -89,27 +89,25 @@ describe('VenueDetailPage — Dedicated Venue Hub & Court Specifications', () =>
     expect(html).toContain('Browse All Venues')
   })
 
-  it('renders anti-scam safety advisory banner and pending verification badge on unverified community venue', async () => {
+  it('keeps community venues out of the public detail route until moderation', async () => {
     const { submitCommunityListing } = await import('../../integrations/supabase/public-client')
-    const subResult = await submitCommunityListing({
+    const result = await submitCommunityListing({
       category: 'venue',
       name: 'Ranchi Sector 4 Community Box Turf',
       city: 'Ranchi',
       sport: 'Football',
-      is_verified_user: false,
     })
-
-    expect(subResult.status).toBe('submitted')
-    const slug = (subResult as unknown as { record: { slug: string } }).record.slug
-
-    const html = renderToStaticMarkup(
-      <VenueDetailPage slug={slug} onNavigate={vi.fn()} />
-    )
-
-    expect(html).toContain('Pending Verification')
-    expect(html).toContain('Player &amp; Team Safety Advisory — Unverified Sports Facility')
-    expect(html).toContain('Do not transfer UPI slot advance fees')
-    expect(html).toContain('Turf Manager / Owner? Verify this Facility')
-    expect(html).toContain('Report Suspicious Venue')
+    expect(result.status).toBe('submitted')
+    if (result.status === 'submitted') {
+      expect(result.mode).toBe('moderation_queue')
+      expect(result.record.publication_status).toBe('pending_review')
+      expect(result.detailPath).toBeUndefined()
+    }
+    const [url] = vi.mocked(fetch).mock.calls[0]
+    expect(String(url)).toContain('/rest/v1/listing_submissions')
+    expect(String(url)).not.toContain('/rest/v1/venues')
+    const html = renderToStaticMarkup(<VenueDetailPage slug="ranchi-sector-4-community-box-turf" onNavigate={vi.fn()} />)
+    expect(html).toContain('Venue Record Not Found')
   })
+
 })
