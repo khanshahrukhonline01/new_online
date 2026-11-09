@@ -251,8 +251,8 @@ serve(async (req) => {
 
   let expectedAmount: number | null = null
   let itemTitle = ''
-  let targetType = itemType
-  let targetId = itemId
+  const targetType = itemType
+  const targetId = itemId
   const metadata: Record<string, unknown> = {}
 
   if (itemType === 'listing_plan') {
