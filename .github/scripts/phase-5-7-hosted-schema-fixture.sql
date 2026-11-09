@@ -130,6 +130,18 @@ CREATE TABLE public.sports (
   name text NOT NULL,
   is_published boolean NOT NULL DEFAULT true
 );
+CREATE TABLE public.academy_sports (
+  academy_id uuid NOT NULL,
+  sport_id uuid NOT NULL
+);
+CREATE TABLE public.coach_academies (
+  coach_id uuid NOT NULL,
+  academy_id uuid NOT NULL
+);
+CREATE TABLE public.coach_sports (
+  coach_id uuid NOT NULL,
+  sport_id uuid NOT NULL
+);
 CREATE TABLE public.coaches (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   slug text,
