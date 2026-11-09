@@ -87,14 +87,14 @@ serve(async (req) => {
       .select('id,item_type,item_id,amount,customer_phone,user_id,status,metadata,target_id')
       .eq('order_id', orderId).single()
     const { data: booking, error: bookingError } = await admin.from('venue_bookings')
-      .select('id,booking_ref,venue_id,total_amount,customer_phone,status,payment_status')
+      .select('id,booking_ref,venue_id,court_number,total_amount,customer_phone,status,payment_status')
       .eq('id', bookingId).eq('booking_ref', bookingRef).single()
     if (paymentError || !payment || bookingError || !booking) return json({ error: 'PAYMENT_OR_BOOKING_NOT_FOUND' }, 404)
     if (payment.item_type !== 'venue_booking' || payment.status !== 'pending_verification' || (payment.user_id && payment.user_id !== userId) ||
         (payment.metadata?.booking_ref && payment.metadata.booking_ref !== bookingRef)) return json({ error: 'PAYMENT_NOT_LINKABLE' }, 409)
     const { data: venue } = await admin.from('venues').select('id,slug').eq('id', payment.item_id).single()
     if (!venue || venue.slug !== booking.venue_id || booking.status !== 'pending' || booking.payment_status !== 'pending' ||
-        payment.customer_phone !== booking.customer_phone || Number(payment.amount) > Number(booking.total_amount)) return json({ error: 'BOOKING_PAYMENT_MISMATCH' }, 409)
+        payment.customer_phone !== booking.customer_phone || Number(payment.amount) !== Number(booking.total_amount) || Number(payment.metadata?.court_number) !== Number(booking.court_number || 1)) return json({ error: 'BOOKING_PAYMENT_MISMATCH' }, 409)
     const metadata = { ...(payment.metadata || {}), booking_ref: booking.booking_ref }
     const { error: updateError } = await admin.from('khelgrid_payments')
       .update({ target_type: 'venue_booking', target_id: booking.id, metadata })
@@ -254,8 +254,9 @@ serve(async (req) => {
     if (expectedAmount === null) return json({ error: 'PRICE_UNRESOLVED' }, 409)
     itemTitle = `${data.sport} Match Spot`
   } else if (itemType === 'venue_booking') {
-    const courtNumber = Number((body.metadata as Record<string, unknown> | undefined)?.courtNumber ?? 1)
-    if (!Number.isInteger(courtNumber) || courtNumber < 1 || courtNumber > 50) {
+    const rawCourtNumber = (body.metadata as Record<string, unknown> | undefined)?.courtNumber
+    const courtNumber = Number(rawCourtNumber)
+    if (rawCourtNumber === undefined || rawCourtNumber === null || rawCourtNumber === '' || !Number.isInteger(courtNumber) || courtNumber < 1 || courtNumber > 50) {
       return json({ error: 'INVALID_COURT' }, 400)
     }
     const venueQuery = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(itemId)
