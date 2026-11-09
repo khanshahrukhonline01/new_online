@@ -114,6 +114,7 @@ export default function SportsPage() {
                     <span aria-live="polite">Page {currentPage} of {totalPages}</span>
                     <button type="button" className="admin-btn admin-btn-secondary" disabled={currentPage === totalPages} onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}>Next</button>
                   </nav>
+                )}
               ) : (
                 <CatalogueEmptyState
                   title={records.length ? 'No matching sports' : 'No published sports'}
