@@ -66,6 +66,19 @@ BEGIN
     RAISE EXCEPTION 'subscription idempotency index missing';
   END IF;
 
+  v_result := public.moderate_athlete_profile(
+    '00000000-0000-0000-0000-000000000001'::uuid, 'published', 'verified', 'Fixture moderation attempt'
+  );
+  IF v_result->>'error_code' <> 'UNAUTHORIZED' THEN
+    RAISE EXCEPTION 'non-admin athlete moderation was not denied: %', v_result;
+  END IF;
+  v_result := public.admin_verify_manual_payment(
+    'KG_ORD_FIXTURE_MANUAL_12345678', 'UTR1234567890', 49900, 'Fixture unauthorized settlement test'
+  );
+  IF v_result->>'error_code' <> 'UNAUTHORIZED' THEN
+    RAISE EXCEPTION 'non-admin manual payment settlement was not denied: %', v_result;
+  END IF;
+
   -- An untrusted "paid" request must be rejected. The function is service-role
   -- only; direct privilege assertions above prove browser clients cannot invoke it.
   v_result := public.record_listing_subscription(
