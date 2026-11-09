@@ -231,8 +231,8 @@ REVOKE EXECUTE ON FUNCTION public.get_listing_subscription_by_order(text) FROM P
 DROP FUNCTION IF EXISTS public.get_listing_subscription_by_order(text);
 
 -- 4.6 Legacy single-argument get_venue_booking_voucher: Revoke and drop
-REVOKE EXECUTE ON FUNCTION public.get_venue_booking_voucher(text) FROM PUBLIC, anon, authenticated;
-DROP FUNCTION IF EXISTS public.get_venue_booking_voucher(text);
+-- The hosted database has no single-argument voucher overload; do not
+-- issue a non-IF-EXISTS REVOKE against a nonexistent signature.
 
 -- 4.7 Replace the legacy phone-based TABLE RPC with a token-based JSONB RPC.
 -- The response retains the frontend's status/customer_display_name fields.
