@@ -88,6 +88,9 @@ serve(async (req) => {
   if (lookupError) return json({ error: 'PAYMENT_LOOKUP_FAILED' }, 500)
   if (!payment) return json({ error: 'CHECKOUT_NOT_FOUND' }, 404)
   if (payment.status !== 'pending_verification') return json({ error: 'PAYMENT_NOT_ELIGIBLE', status: payment.status }, 409)
+  if (payment.payment_gateway !== 'razorpay' || payment.payment_method !== 'razorpay') {
+    return json({ error: 'PAYMENT_GATEWAY_MISMATCH' }, 409)
+  }
 
   // Safe idempotent replay: return the existing provider order, never create another.
   if (payment.provider_order_status === 'created' && payment.provider_order_id) {
