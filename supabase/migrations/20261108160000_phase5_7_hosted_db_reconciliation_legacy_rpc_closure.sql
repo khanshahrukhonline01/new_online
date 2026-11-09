@@ -653,7 +653,7 @@ CREATE POLICY "pickup_game_participants_owner_read"
   ON public.pickup_game_participants
   FOR SELECT
   TO authenticated
-  USING (auth.uid() IS NOT NULL AND user_id = auth.uid());
+  USING (auth.uid() IS NOT NULL AND user_id = (auth.uid())::text);
 
 CREATE POLICY "pickup_game_participants_service_all"
   ON public.pickup_game_participants
