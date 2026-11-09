@@ -47,7 +47,7 @@ describe('canonical payment pricing', () => {
     })).toEqual({ amountRupees: 475.5, amountPaise: 47550 })
   })
 
-  it('rejects unverified venue prices, invalid courts and unbookable courts', () => {
+  it('rejects unverified prices and invalid court numbers while matching RPC fallback behavior', () => {
     expect(resolveVenueSlotPrice({
       venue: { slot_hourly_fee: 500, fee_provenance: 'unverified', pricing_status: 'verified' },
       courts: [], courtNumber: 1,
@@ -56,7 +56,7 @@ describe('canonical payment pricing', () => {
       venue: { slot_hourly_fee: 500, fee_provenance: 'verified', pricing_status: 'verified' },
       courts: [{ name: 'Court 2', hourly_price_paise: 80000, is_bookable: false }],
       courtNumber: 2,
-    })).toBeNull()
+    })).toEqual({ amountRupees: 500, amountPaise: 50000 })
     expect(resolveVenueSlotPrice({
       venue: { slot_hourly_fee: 500, fee_provenance: 'verified', pricing_status: 'verified' },
       courts: [], courtNumber: 0,
