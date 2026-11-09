@@ -157,7 +157,7 @@ serve(async (req) => {
       .select('id,order_id,plan_id,amount,payment_status,is_active,access_token,customer_phone,listing_type,listing_name,city,user_id')
       .eq('order_id', orderId).maybeSingle()
     const { data: existingByKey } = existingByOrder ? { data: null } : await admin.from('listing_subscriptions')
-      .select('id,order_id,plan_id,amount,payment_status,is_active,access_token')
+      .select('id,order_id,plan_id,amount,payment_status,is_active,access_token,customer_phone,listing_type,listing_name,city,user_id')
       .eq('idempotency_key', idempotencyKey).maybeSingle()
     const existing = existingByOrder || existingByKey
     if (existing) {
@@ -177,7 +177,7 @@ serve(async (req) => {
       .eq('order_id', orderId).single()
     if (paymentLookupError || !paymentIntent || paymentIntent.item_type !== 'listing_plan' ||
         Number(paymentIntent.amount) !== plan.amount || paymentIntent.customer_phone !== phone ||
-        (paymentIntent.user_id || null) !== userId || paymentIntent.status !== (requestedSubscriptionStatus === 'pay_at_venue' ? 'pay_at_venue' : 'pending_verification')) {
+        (paymentIntent.user_id || null) !== userId || paymentIntent.status !== 'pending_verification') {
       return json({ error: 'PAYMENT_INTENT_MISMATCH' }, 409)
     }
 
@@ -307,7 +307,7 @@ serve(async (req) => {
     .eq('order_id', orderId).maybeSingle()
   if (existingError) return json({ error: 'PAYMENT_LOOKUP_FAILED' }, 500)
   const { data: existingByKey, error: keyLookupError } = existingByOrder ? { data: null, error: null } : await admin.from('khelgrid_payments')
-    .select('id,order_id,amount,item_type,item_id,status,customer_phone')
+    .select('id,order_id,amount,item_type,item_id,status,customer_phone,user_id,metadata')
     .eq('idempotency_key', idempotencyKey).maybeSingle()
   if (keyLookupError) return json({ error: 'PAYMENT_IDEMPOTENCY_LOOKUP_FAILED' }, 500)
   const existing = existingByOrder || existingByKey
