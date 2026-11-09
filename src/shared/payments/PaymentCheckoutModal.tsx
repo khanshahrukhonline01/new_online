@@ -3,7 +3,6 @@ import { SiteIcon } from '../components/SiteIcon'
 import {
   generateOrderId,
   generateUpiUri,
-  getRazorpayKey,
   recordPaymentTransaction,
 } from './paymentService'
 import type { PaymentCustomer, PaymentItem, PaymentMethod, PaymentResult } from './paymentTypes'
@@ -318,28 +317,15 @@ export function PaymentCheckoutModal({
               {/* Card / NetBanking Tab */}
               {method === 'card' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {false ? (
-                    <div className="kg-venue-pay-card">
-                      <div className="kg-venue-pay-header">
-                        <SiteIcon name="credit-card" size={20} />
-                        <span>Razorpay Instant Payment Gateway</span>
-                      </div>
-                      <p className="kg-venue-pay-body">
-                        You will be redirected to the secure PCI-DSS Level 1 Razorpay gateway supporting all major Indian Debit &amp; Credit Cards, NetBanking, and UPI.
-                      </p>
+                  <div style={{ padding: '14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: 750, fontSize: '13px', marginBottom: '6px' }}>
+                      <SiteIcon name="lock" size={16} />
+                      <span>Card / NetBanking Not Available Yet</span>
                     </div>
-                  ) : (
-                    <div style={{ padding: '14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: 750, fontSize: '13px', marginBottom: '6px' }}>
-                        <SiteIcon name="lock" size={16} />
-                        <span>Direct Card Gateway Verification in Progress</span>
-                      </div>
-                      <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: 1.5 }}>
-                        Online card processing is temporarily restricted while bank merchant verification is being completed.
-                        Please use <strong>UPI (GPay / PhonePe)</strong> or <strong>Pay at Ground</strong> to complete your reservation without delay.
-                      </p>
-                    </div>
-                  )}
+                    <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: 1.5 }}>
+                      Card processing is disabled until a server-created Razorpay order and verified checkout flow are connected. Use UPI with a UTR for manual verification instead.
+                    </p>
+                  </div>
                 </div>
               )}
 
