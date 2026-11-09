@@ -1165,17 +1165,7 @@ export function signOutUser(): void {
 
 export type CommunityListingCategory = 'academy' | 'venue' | 'opportunity' | 'pickup_game'
 
-export interface CommunityListingPlanMeta {
-  listing_plan?: '1_day' | '1_month' | '6_months' | '1_year' | 'lifelong'
-  plan_price?: number
-  plan_duration_days?: number
-  plan_expires_at?: string | null
-  payment_id?: string
-  payment_order_id?: string
-  payment_status?: 'paid' | 'pay_at_venue' | 'unpaid'
-}
-
-export interface CommunityAcademyInput extends CommunityListingPlanMeta {
+export interface CommunityAcademyInput {
   category: 'academy'
   name: string
   city: string
@@ -1186,10 +1176,9 @@ export interface CommunityAcademyInput extends CommunityListingPlanMeta {
   public_contact_url?: string
   contact_name?: string
   contact_phone?: string
-  is_verified_user?: boolean
 }
 
-export interface CommunityVenueInput extends CommunityListingPlanMeta {
+export interface CommunityVenueInput {
   category: 'venue'
   name: string
   city: string
@@ -1201,7 +1190,7 @@ export interface CommunityVenueInput extends CommunityListingPlanMeta {
   is_verified_user?: boolean
 }
 
-export interface CommunityOpportunityInput extends CommunityListingPlanMeta {
+export interface CommunityOpportunityInput {
   category: 'opportunity'
   title: string
   opportunity_type?: 'trial' | 'combine' | 'scholarship' | 'camp' | 'job' | 'other'
@@ -1219,7 +1208,7 @@ export interface CommunityOpportunityInput extends CommunityListingPlanMeta {
   is_verified_user?: boolean
 }
 
-export interface CommunityPickupGameInput extends CommunityListingPlanMeta {
+export interface CommunityPickupGameInput {
   category: 'pickup_game'
   sport: string
   emoji?: string
@@ -1246,7 +1235,7 @@ export type CommunityListingInput =
 export type CommunityListingResult =
   | {
       status: 'submitted'
-      mode: 'instant_live' | 'moderation_queue'
+      mode: 'moderation_queue'
       category: CommunityListingCategory
       record: Record<string, unknown>
       message: string
@@ -1254,14 +1243,6 @@ export type CommunityListingResult =
       detailPath?: string
     }
   | { status: 'unavailable'; message: string }
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'listing'
-}
 
 export async function submitCommunityListing(input: CommunityListingInput): Promise<CommunityListingResult> {
   const city = input.city?.trim()
@@ -3283,7 +3264,7 @@ export interface AdminModerationQueue {
     listing_type: string
     title: string
     city: string | null
-    source_url: string
+    source_url: string | null
     details: string | null
     status: string
     created_at: string
