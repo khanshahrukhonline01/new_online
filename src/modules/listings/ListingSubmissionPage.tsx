@@ -3,7 +3,7 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 import { submitListingSuggestion, type ListingSubmissionInput } from '../../integrations/supabase/public-client'
 
 const listingTypes: ListingSubmissionInput['listing_type'][] = [
-  'opportunity', 'venue', 'coach', 'academy', 'event', 'pickup_game',
+  'opportunity', 'venue', 'coach', 'academy', 'event', 'pickup_game', 'sport',
 ]
 
 export default function ListingSubmissionPage() {
@@ -74,7 +74,7 @@ export default function ListingSubmissionPage() {
     <form className="sports-cv-form" onSubmit={submit}>
       <fieldset disabled={submitting}><legend>Listing details</legend>
         <div className="cv-field-grid">
-          <label>Listing type *<select required value={kind} onChange={e => setKind(e.target.value as ListingSubmissionInput['listing_type'])}><option value="opportunity">Trial / opportunity</option><option value="venue">Sports venue</option><option value="coach">Coach</option><option value="academy">Academy</option><option value="event">Event / tournament</option><option value="pickup_game">Pickup game</option></select></label>
+          <label>Listing type *<select required value={kind} onChange={e => setKind(e.target.value as ListingSubmissionInput['listing_type'])}><option value="opportunity">Trial / opportunity</option><option value="venue">Sports venue</option><option value="coach">Coach</option><option value="academy">Academy</option><option value="event">Event / tournament</option><option value="pickup_game">Pickup game</option><option value="sport">New sport suggestion</option></select></label>
           <label>Listing title *<input required minLength={2} maxLength={150} value={title} onChange={e => setTitle(e.target.value)} /></label>
           <label>City / state<input maxLength={100} value={city} onChange={e => setCity(e.target.value)} /></label>
           <label>Official source URL (if available)<input type="url" maxLength={1000} value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} placeholder="https://…" /></label>
