@@ -98,13 +98,13 @@ BEGIN
   IF v_result->>'status' <> 'pending_verification' OR (v_result->>'is_active')::boolean IS DISTINCT FROM false THEN
     RAISE EXCEPTION 'valid subscription did not remain pending: %', v_result;
   END IF;
-  SELECT * INTO v_subscription FROM public.listing_subscriptions WHERE order_id='KG_ORD_FIXTURE_PENDING_12345678';
+  SELECT * INTO v_subscription FROM public.listing_subscriptions WHERE order_id='KG_ORD_FIXTUREPENDING_12345678';
   IF v_subscription.is_active IS DISTINCT FROM false OR v_subscription.payment_status <> 'pending' THEN
     RAISE EXCEPTION 'database subscription row was prematurely activated';
   END IF;
 
   v_retry := public.record_listing_subscription(
-    'KG_ORD_FIXTURE_PENDING_12345678', NULL, 'academy', 'Fixture Academy', 'Delhi',
+    'KG_ORD_FIXTUREPENDING_12345678', NULL, 'academy', 'Fixture Academy', 'Delhi',
     '1_month', '1-Month Listing', 499, 30, 'Test Host', '9876543210',
     NULL, 'pending', NULL, '{}'::jsonb, 'fixture-pending-idem'
   );
@@ -114,8 +114,8 @@ BEGIN
 
   UPDATE public.listing_subscriptions
   SET is_active = true, payment_status = 'paid'
-  WHERE order_id='KG_ORD_FIXTURE_PENDING_12345678';
-  SELECT * INTO v_subscription FROM public.listing_subscriptions WHERE order_id='KG_ORD_FIXTURE_PENDING_12345678';
+  WHERE order_id='KG_ORD_FIXTUREPENDING_12345678';
+  SELECT * INTO v_subscription FROM public.listing_subscriptions WHERE order_id='KG_ORD_FIXTUREPENDING_12345678';
   IF v_subscription.starts_at IS NULL OR v_subscription.expires_at IS NULL
      OR v_subscription.expires_at <= now() THEN
     RAISE EXCEPTION 'subscription term was not initialized at payment settlement';
