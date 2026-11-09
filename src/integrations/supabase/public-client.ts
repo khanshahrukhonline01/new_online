@@ -132,7 +132,7 @@ async function fetchCatalogueRemote<T>(
     while (offset < CATALOGUE_MAX_ROWS) {
       const query = new URLSearchParams({ select, order, ...filters, limit: String(CATALOGUE_PAGE_SIZE) })
       const response = await fetch(
-        `${baseUrl.origin}${baseUrl.pathname.replace(/\\/$/, '')}/rest/v1/${table}?${query.toString()}`,
+        `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/${table}?${query.toString()}`,
         {
           headers: {
             apikey: anonKey,
