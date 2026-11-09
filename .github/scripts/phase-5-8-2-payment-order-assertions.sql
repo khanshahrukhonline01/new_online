@@ -1,7 +1,9 @@
 \set ON_ERROR_STOP on
+BEGIN;
+
 DO $phase582$
 DECLARE
-  v record;
+  v_count integer;
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
@@ -34,8 +36,8 @@ BEGIN
   UPDATE public.khelgrid_payments
     SET provider_order_status='creating'
     WHERE order_id='KG_ORD_PHASE582_TEST_01';
-  GET DIAGNOSTICS v = ROW_COUNT;
-  IF v <> 1 THEN RAISE EXCEPTION 'provider order creating transition failed'; END IF;
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  IF v_count <> 1 THEN RAISE EXCEPTION 'provider order creating transition failed'; END IF;
 
   UPDATE public.khelgrid_payments
     SET provider_order_id='order_sandbox_fixture_01',
