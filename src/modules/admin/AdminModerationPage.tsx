@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { getAdminModerationQueue, moderateListingSubmission, type AdminModerationQueue } from '../../integrations/supabase/public-client'
 import './AdminModerationPage.css'
@@ -10,7 +10,7 @@ export function AdminModerationPage() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
 
-  const loadQueue = async () => {
+  const loadQueue = useCallback(async () => {
     setLoading(true)
     setError('')
     try { setQueue(await getAdminModerationQueue()) }
@@ -18,13 +18,13 @@ export function AdminModerationPage() {
       setQueue(null)
       setError(cause instanceof Error ? cause.message : 'You are not authorized to access the moderation queue.')
     } finally { setLoading(false) }
-  }
+  }, [])
   useEffect(() => {
     void loadQueue()
     const handleAuthChange = () => { void loadQueue() }
     window.addEventListener('khelgrid:auth-changed', handleAuthChange)
     return () => window.removeEventListener('khelgrid:auth-changed', handleAuthChange)
-  }, [])
+  }, [loadQueue])
 
   const review = async (id: string, decision: 'approved' | 'rejected') => {
     setBusyId(id)
