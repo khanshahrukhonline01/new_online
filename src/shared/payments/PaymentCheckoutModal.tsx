@@ -185,8 +185,12 @@ export function PaymentCheckoutModal({
         {/* Price Bar */}
         <div className="kg-checkout-price-bar">
           <div>
-            <div className="kg-checkout-price-label">Total Payable</div>
-            <small style={{ opacity: 0.85, fontSize: '11px' }}>Inclusive of sports ground reservation fee</small>
+            <div className="kg-checkout-price-label">{item.type === 'venue_booking' ? 'Advance Deposit' : 'Total Payable'}</div>
+            <small style={{ opacity: 0.85, fontSize: '11px' }}>
+              {item.type === 'venue_booking'
+                ? `Full slot value: ₹${Number(item.metadata?.bookingTotalAmount || item.amount)} · balance at venue: ₹${Number(item.metadata?.balancePayableAtVenue || 0)}`
+                : 'Inclusive of applicable fees'}
+            </small>
           </div>
           <div className="kg-checkout-amount">₹{item.amount}</div>
         </div>

@@ -12,7 +12,14 @@ export const LISTING_PLAN_PRICES = {
 
 export type CanonicalListingPlanId = keyof typeof LISTING_PLAN_PRICES
 
-const MEMBERSHIP_PRICES: Record<string, { monthly: number; annual: number }> = {
+export const VENUE_ADVANCE_DEPOSIT_CAP_PAISE = 30_000
+
+export function calculateVenueAdvanceDeposit(totalSlotAmountPaise: number): number | null {
+  if (!Number.isSafeInteger(totalSlotAmountPaise) || totalSlotAmountPaise <= 0) return null
+  return Math.min(VENUE_ADVANCE_DEPOSIT_CAP_PAISE, totalSlotAmountPaise)
+}
+
+export const MEMBERSHIP_PRICES: Record<string, { monthly: number; annual: number }> = {
   athlete_pro: { monthly: 249, annual: 1499 },
   athlete_elite: { monthly: 499, annual: 2999 },
   academy_starter: { monthly: 799, annual: 4999 },

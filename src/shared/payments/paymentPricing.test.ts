@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  calculateVenueAdvanceDeposit,
   getCanonicalListingPlan,
+  MEMBERSHIP_PRICES,
   getCanonicalMembershipPrice,
   paiseToRupees,
   resolveVenueSlotPrice,
@@ -20,6 +22,20 @@ describe('canonical payment pricing', () => {
     expect(getCanonicalMembershipPrice({ tierId: 'coach', billingCycle: 'annual' })).toBe(4999)
     expect(getCanonicalMembershipPrice({ planId: 'unknown', billingCycle: 'monthly' })).toBeNull()
     expect(getCanonicalMembershipPrice({ planId: 'athlete_pro', billingCycle: 'weekly' })).toBeNull()
+  })
+
+  it('matches the complete membership catalogue across all plan IDs and billing cycles', () => {
+    for (const [planId, prices] of Object.entries(MEMBERSHIP_PRICES)) {
+      expect(getCanonicalMembershipPrice({ planId, billingCycle: 'monthly' })).toBe(prices.monthly)
+      expect(getCanonicalMembershipPrice({ planId, billingCycle: 'annual' })).toBe(prices.annual)
+    }
+  })
+
+  it('caps venue advance deposit at ₹300 while preserving the full slot tariff', () => {
+    expect(calculateVenueAdvanceDeposit(82500)).toBe(30000)
+    expect(calculateVenueAdvanceDeposit(15000)).toBe(15000)
+    expect(calculateVenueAdvanceDeposit(0)).toBeNull()
+    expect(calculateVenueAdvanceDeposit(-1)).toBeNull()
   })
 
   it('converts INR and paise without floating point drift', () => {

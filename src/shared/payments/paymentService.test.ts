@@ -39,6 +39,8 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
       expect(parseInrPrice('₹200/player')).toBe(200)
       expect(parseInrPrice('₹250')).toBe(250)
       expect(parseInrPrice('₹1,200/hr')).toBe(1200)
+      expect(parseInrPrice('₹475.50/hr')).toBe(475.5)
+      expect(parseInrPrice(199.99)).toBe(199.99)
       expect(parseInrPrice('500')).toBe(500)
       expect(parseInrPrice(350)).toBe(350)
     })
@@ -143,8 +145,9 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
       const item: PaymentItem = {
         id: 'venue-1',
         type: 'venue_booking',
-        title: 'Pitch 1 Slot',
-        amount: 800,
+        title: 'Pitch 1 Slot Advance Deposit',
+        amount: 300,
+        metadata: { courtNumber: 1, bookingTotalAmount: 800, advanceDepositAmount: 300, balancePayableAtVenue: 500 },
       }
       const customer: PaymentCustomer = {
         name: 'Client User',
@@ -169,6 +172,8 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
       )
       const registrationBody = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))
       expect(registrationBody.action).toBe('register_payment')
+      expect(registrationBody.amount).toBe(300)
+      expect(registrationBody.metadata).toEqual({ courtNumber: 1, bookingTotalAmount: 800, advanceDepositAmount: 300, balancePayableAtVenue: 500 })
       expect(registrationBody.p_status).toBeUndefined()
 
       // Assert no gateway signature and phone is masked in local storage display cache

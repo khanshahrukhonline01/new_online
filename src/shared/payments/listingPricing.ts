@@ -1,4 +1,4 @@
-import { LISTING_PLAN_PRICES } from '../../../supabase/functions/_shared/paymentPricing'
+import { LISTING_PLAN_PRICES, MEMBERSHIP_PRICES } from '../../../supabase/functions/_shared/paymentPricing'
 
 export type ListingPlanId = '1_day' | '1_month' | '6_months' | '1_year' | 'lifelong'
 
@@ -131,3 +131,6 @@ export function formatPlanDuration(planId: ListingPlanId, expiryDate?: string | 
     return 'Active'
   }
 }
+
+/** Pricing display data is derived from the same catalogue enforced by the payment server. */
+export const MEMBERSHIP_PLAN_PRICES = MEMBERSHIP_PRICES

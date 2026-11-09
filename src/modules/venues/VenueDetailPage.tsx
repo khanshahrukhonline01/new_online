@@ -712,17 +712,24 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                     setBookingError('This venue does not have a verified booking tariff. Please contact the venue directly; no payment has been requested.')
                     return
                   }
+                  const courtNumber = 1
                   const depositAmount = Math.min(300, slotFee)
                   setCheckoutItem({
                     id: venue.id,
                     type: 'venue_booking',
                     title: `${venue.name} Court Slot`,
-                    subtitle: `${selectedSport || sportName} · ${selectedDate} · ${selectedSlot}`,
+                    subtitle: `Court 1 · ${selectedSport || sportName} · ${selectedDate} · ${selectedSlot}`,
                     amount: depositAmount,
                     emoji: '🏟️',
                     venueName: venue.name,
                     city: venue.city,
                     dateOrTime: `${selectedDate} · ${selectedSlot}`,
+                    metadata: {
+                      courtNumber,
+                      bookingTotalAmount: slotFee,
+                      advanceDepositAmount: depositAmount,
+                      balancePayableAtVenue: Math.max(0, slotFee - depositAmount),
+                    },
                   })
                 }}
               >
@@ -878,6 +885,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
               sport: selectedSport || sportName,
               slotDate: selectedDate,
               slotTime: selectedSlot,
+              courtNumber: Number(checkoutItem?.metadata?.courtNumber || 1),
               customerName: bookingName,
               customerPhone: bookingPhone,
               totalAmount: slotFee,

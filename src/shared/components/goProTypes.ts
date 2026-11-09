@@ -1,3 +1,5 @@
+import { MEMBERSHIP_PLAN_PRICES } from '../payments/listingPricing'
+
 export type ProBillingPeriod = 'monthly' | 'annual'
 
 export interface ProTierOption {
@@ -16,8 +18,8 @@ export const PRO_TIERS: ProTierOption[] = [
     id: 'athlete',
     name: 'Athlete Pro',
     tag: 'For Players & Rising Stars',
-    monthlyPrice: 199,
-    annualPrice: 1999,
+    monthlyPrice: MEMBERSHIP_PLAN_PRICES.athlete.monthly,
+    annualPrice: MEMBERSHIP_PLAN_PRICES.athlete.annual,
     saveText: 'Save ₹389/yr',
     features: [
       'Golden Verified Athlete Badge',
@@ -32,8 +34,8 @@ export const PRO_TIERS: ProTierOption[] = [
     name: 'Coach & Scout Pro',
     tag: 'For Mentors, Coaches & Scouts',
     isPopular: true,
-    monthlyPrice: 499,
-    annualPrice: 4999,
+    monthlyPrice: MEMBERSHIP_PLAN_PRICES.coach.monthly,
+    annualPrice: MEMBERSHIP_PLAN_PRICES.coach.annual,
     saveText: 'Save ₹989/yr',
     features: [
       'Unlimited Talent Scanner Searches (53 Cities)',
@@ -47,8 +49,8 @@ export const PRO_TIERS: ProTierOption[] = [
     id: 'academy',
     name: 'Academy & Turf Suite',
     tag: 'For Academies, Turfs & Clubs',
-    monthlyPrice: 1499,
-    annualPrice: 14999,
+    monthlyPrice: MEMBERSHIP_PLAN_PRICES.academy.monthly,
+    annualPrice: MEMBERSHIP_PLAN_PRICES.academy.annual,
     saveText: 'Save ₹2,989/yr',
     features: [
       '0% Commission on First ₹50k Monthly Bookings',
