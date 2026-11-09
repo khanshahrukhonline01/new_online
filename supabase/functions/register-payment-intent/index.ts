@@ -292,9 +292,29 @@ serve(async (req) => {
     if (data.fee_provenance !== 'verified' || data.pricing_status !== 'verified' || !data.slot_hourly_fee || data.slot_hourly_fee <= 0) {
       return json({ error: 'PRICE_UNRESOLVED' }, 409)
     }
-    expectedAmount = Math.min(300, Number(data.slot_hourly_fee))
+    // Match reserve_venue_slot_atomic: use the selected bookable court's
+    // verified hourly price (stored in paise) when available, otherwise the
+    // venue's verified slot_hourly_fee. Never apply an arbitrary price cap.
+    const rawCourtNumber = Number((body.metadata as Record<string, unknown> | undefined)?.courtNumber ?? 1)
+    const courtNumber = Number.isInteger(rawCourtNumber) && rawCourtNumber >= 1 && rawCourtNumber <= 50
+      ? rawCourtNumber
+      : 1
+    const { data: courts, error: courtsError } = await admin.from('venue_courts')
+      .select('name,hourly_price_paise,is_bookable')
+      .eq('venue_id', data.id)
+      .eq('is_bookable', true)
+    if (courtsError) return json({ error: 'VENUE_PRICE_LOOKUP_FAILED' }, 500)
+    const selectedCourt = (courts || []).find((court: { name: string }) => {
+      const normalized = court.name.trim().toLowerCase()
+      return normalized === `court ${courtNumber}` || normalized === `court${courtNumber}` || normalized === String(courtNumber)
+    })
+    const courtPricePaisa = Number(selectedCourt?.hourly_price_paise || 0)
+    expectedAmount = courtPricePaisa > 0
+      ? Math.round(courtPricePaisa) / 100
+      : Number(data.slot_hourly_fee)
     itemTitle = `${data.name} Court Slot`
     metadata.venue_id = data.id
+    metadata.court_number = courtNumber
   }
 
   if (expectedAmount === null || !Number.isFinite(expectedAmount) || expectedAmount <= 0 ||
