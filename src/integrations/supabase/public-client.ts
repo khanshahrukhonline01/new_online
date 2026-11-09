@@ -1072,7 +1072,18 @@ export type ListingSubmissionResult =
 /** Submit a user-provided suggestion to the private review queue. */
 export async function submitListingSuggestion(input: ListingSubmissionInput): Promise<ListingSubmissionResult> {
   if (!supabaseUrl || !anonKey) return { status: 'unconfigured' }
-  if (input.title.trim().length < 2) return { status: 'unavailable', message: 'Listing title must contain at least two characters.' }
+  if (input.title.trim().length < 2 || input.title.trim().length > 150) {
+    return { status: 'unavailable', message: 'Listing title must contain between 2 and 150 characters.' }
+  }
+  if ((input.city?.trim().length ?? 0) > 100) {
+    return { status: 'unavailable', message: 'City must be 100 characters or fewer.' }
+  }
+  if ((input.details?.trim().length ?? 0) > 2000) {
+    return { status: 'unavailable', message: 'Listing details must be 2,000 characters or fewer.' }
+  }
+  if ((input.source_url?.trim().length ?? 0) > 1000) {
+    return { status: 'unavailable', message: 'Source links must be 1,000 characters or fewer.' }
+  }
   if (input.source_url?.trim()) {
     try {
       if (new URL(input.source_url).protocol !== 'https:') throw new Error('HTTPS required')
