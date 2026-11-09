@@ -80,8 +80,8 @@ begin
     raise exception 'authenticated role must be able to invoke the allowlist-protected review RPC';
   end if;
 
-  if (select is_nullable from information_schema.columns
-      where table_schema='public' and table_name='listing_submissions' and column_name='source_url') <> 'YES' then
+  if (select columns.is_nullable from information_schema.columns as columns
+      where columns.table_schema='public' and columns.table_name='listing_submissions' and columns.column_name='source_url') <> 'YES' then
     raise exception 'listing_submissions.source_url must be optional';
   end if;
 end
