@@ -9,12 +9,14 @@ import { CatalogueEmptyState, CatalogueFilterPanel } from '../../shared/componen
 import { ALL_SPORTS_DATA } from './data/sportsData'
 
 const EMPTY_SPORTS: Sport[] = []
+const SPORTS_PAGE_SIZE = 20
 
 export default function SportsPage() {
   const [result, setResult] = useState<CatalogueResult<Sport> | { status: 'loading'; data: [] }>({ status: 'loading', data: [] })
   const initial = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
   const [query, setQuery] = useState(initial.get('q') ?? '')
   const [sort, setSort] = useState(initial.get('sort') ?? 'name')
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     let active = true
@@ -45,6 +47,13 @@ export default function SportsPage() {
         .sort((a, b) => (sort === 'reverse' ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name))),
     [records, query, sort],
   )
+
+  const totalPages = Math.max(1, Math.ceil(visible.length / SPORTS_PAGE_SIZE))
+  const pageItems = visible.slice((currentPage - 1) * SPORTS_PAGE_SIZE, currentPage * SPORTS_PAGE_SIZE)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [query, sort])
 
   const clearAll = () => {
     setQuery('')
@@ -86,7 +95,7 @@ export default function SportsPage() {
               </div>
               {visible.length ? (
                 <div className="catalogue-grid">
-                  {visible.map(sport => (
+                  {pageItems.map(sport => (
                     <a className="catalogue-card" key={sport.id} href={`/sports/${sport.slug}`}>
                       <span className="sport-card-icon">
                         <SportIcon name={sport.name} size={48} />
@@ -99,6 +108,12 @@ export default function SportsPage() {
                     </a>
                   ))}
                 </div>
+                {totalPages > 1 && (
+                  <nav className="kg-pagination" aria-label="Sports result pages">
+                    <button type="button" className="admin-btn admin-btn-secondary" disabled={currentPage === 1} onClick={() => setCurrentPage(page => Math.max(1, page - 1))}>Previous</button>
+                    <span aria-live="polite">Page {currentPage} of {totalPages}</span>
+                    <button type="button" className="admin-btn admin-btn-secondary" disabled={currentPage === totalPages} onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}>Next</button>
+                  </nav>
               ) : (
                 <CatalogueEmptyState
                   title={records.length ? 'No matching sports' : 'No published sports'}
