@@ -244,6 +244,9 @@ serve(async (req) => {
   if (method === 'upi' && !['venue_booking','listing_plan'].includes(itemType)) {
     return json({ error: 'PAYMENT_TARGET_NOT_SUPPORTED', message: 'Online payment is not enabled for this item until its settlement workflow is available.' }, 409)
   }
+  if (method === 'pay_at_venue' && !['venue_booking','listing_plan','pickup_match'].includes(itemType)) {
+    return json({ error: 'PAY_AT_VENUE_NOT_SUPPORTED' }, 409)
+  }
 
   let expectedAmount: number | null = null
   let itemTitle = ''
