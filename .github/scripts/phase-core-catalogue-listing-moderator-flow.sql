@@ -31,10 +31,12 @@ set local role authenticated;
 do $non_moderator$
 declare visible_count integer;
 begin
-  select count(*) into visible_count from public.get_listing_submissions();
-  if visible_count <> 0 then
-    raise exception 'Non-moderator account can read private submissions';
-  end if;
+  begin
+    select count(*) into visible_count from public.get_listing_submissions();
+    raise exception 'Non-moderator unexpectedly read the private queue (% rows)', visible_count;
+  exception when insufficient_privilege then
+    null;
+  end;
 
   begin
     perform public.review_listing_submission(
