@@ -195,7 +195,7 @@ CREATE OR REPLACE FUNCTION public.record_listing_subscription(
   p_listing_id text DEFAULT NULL,
   p_metadata jsonb DEFAULT '{}'::jsonb,
   p_idempotency_key text DEFAULT NULL
-) RETURNS jsonb LANGUAGE sql AS $ SELECT '{}'::jsonb $;
+) RETURNS jsonb LANGUAGE sql AS $function$ SELECT '{}'::jsonb $function$;
 
 CREATE OR REPLACE FUNCTION public.create_venue_slot_booking(
   text,text,text,text,text,text,text,text,numeric,numeric,text,text
