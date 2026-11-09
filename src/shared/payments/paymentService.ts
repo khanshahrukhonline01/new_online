@@ -236,57 +236,39 @@ export async function recordPaymentTransaction({
     receiptRef,
   }
 
-  // 1. Remote persistence first: Persist to Supabase if configured
-  if (supabaseUrl && anonKey) {
-    try {
-      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/record_payment_transaction`, {
-        method: 'POST',
-        headers: {
-          'apikey': anonKey,
-          'Authorization': `Bearer ${anonKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          p_order_id: orderId,
-          p_payment_id: paymentId,
-          p_customer_name: customer.name,
-          p_customer_phone: customer.phone,
-          p_customer_email: customer.email || null,
-          p_amount: item.amount,
-          p_item_type: item.type,
-          p_item_id: item.id,
-          p_item_title: item.title,
-          p_payment_gateway: method === 'pay_at_venue' ? 'pay_at_venue' : 'upi_direct',
-          p_payment_method: method,
-          p_status: effectiveStatus,
-          p_metadata: {
-            venue_name: item.venueName,
-            city: item.city,
-            date_or_time: item.dateOrTime,
-            receipt_ref: receiptRef,
-          },
-        }),
-      })
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null)
-        console.warn('[KhelGrid Payments] Remote transaction persistence failed:', errData)
-        return {
-          ...result,
-          success: false,
-          status: 'failed',
-          errorMessage: errData?.message || 'Remote payment registration failed',
-        }
-      }
-    } catch (err) {
-      console.warn('[KhelGrid Payments] Remote transaction sync network error:', err)
-      return {
-        ...result,
-        success: false,
-        status: 'failed',
-        errorMessage: 'Network error persisting payment transaction',
-      }
+  // Secure server-side registration; never call the SECURITY DEFINER write RPC
+  // from the browser and never accept client-side settlement status.
+  if (!supabaseUrl || !anonKey) {
+    return { ...result, success: false, status: 'failed', errorMessage: 'Secure payment registration is unavailable.' }
+  }
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/register-payment-intent`, {
+      method: 'POST',
+      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'register_payment',
+        order_id: orderId,
+        payment_id: paymentId,
+        customer_name: customer.name,
+        customer_phone: customer.phone,
+        customer_email: customer.email || null,
+        amount: item.amount,
+        item_type: item.type,
+        item_id: item.id,
+        payment_method: method,
+        metadata: item.metadata || {},
+      }),
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok || data?.success !== true) {
+      return { ...result, success: false, status: 'failed', errorMessage: data?.message || data?.error || 'Secure payment registration failed.' }
     }
+    effectiveStatus = data.status === 'pay_at_venue' ? 'pay_at_venue' : 'pending_verification'
+    result.status = effectiveStatus
+    result.success = true
+  } catch (err) {
+    console.warn('[KhelGrid Payments] Secure payment registration failed:', err)
+    return { ...result, success: false, status: 'failed', errorMessage: 'Network error registering payment intent.' }
   }
 
   // 2. Persist locally ONLY for display cache after successful remote registration (or local mock)
@@ -725,103 +707,44 @@ export function getUserVenueBookings(): Array<VenueBookingResult & { createdAt?:
  * verified backend payment confirmation via Edge Function or Webhook.
  */
 export async function recordListingSubscription(input: ListingSubscriptionInput): Promise<ListingSubscriptionResult> {
-  const timestamp = new Date().toISOString()
   const subRef = `SUB-${input.planId.toUpperCase()}-${Date.now().toString().slice(-6)}`
-  const isPayAtVenue = input.paymentStatus === 'pay_at_venue'
-
-  // Security rule (Phase 5.5): Browser client can NEVER self-activate paid subscriptions.
-  // We completely reject client-supplied `serverVerified: true` or `paymentStatus: 'paid'` as authorization.
-  // All online subscriptions must be registered in 'pending_verification' status until the server verifies settlement.
-
-  // 1. Supabase RPC registration
-  if (supabaseUrl && anonKey) {
-    try {
-      const res = await fetch(`${supabaseUrl}/rest/v1/rpc/record_listing_subscription`, {
-        method: 'POST',
-        headers: {
-          'apikey': anonKey,
-          'Authorization': `Bearer ${anonKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          p_order_id: input.orderId,
-          p_payment_id: input.paymentId,
-          p_listing_type: input.listingType,
-          p_listing_name: input.listingName,
-          p_city: input.city,
-          p_plan_id: input.planId,
-          p_plan_name: input.planName,
-          p_amount: input.amount,
-          p_duration_days: input.durationDays,
-          p_customer_name: input.customerName,
-          p_customer_phone: input.customerPhone,
-          p_customer_email: input.customerEmail || null,
-          p_payment_status: isPayAtVenue ? 'pay_at_venue' : 'pending',
-          p_listing_id: input.listingId || null,
-          p_idempotency_key: input.idempotencyKey || null,
-          p_metadata: {
-            subscription_ref: subRef,
-          },
-        }),
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        if (data && data.status === 'success' && data.is_active) {
-          // Authorized server-side activation (e.g. admin or pre-verified order)
-          return {
-            status: 'success',
-            subscriptionId: data.subscription_id || subRef,
-            planName: data.plan_name || input.planName,
-            expiresAt: data.expires_at,
-            receiptRef: subRef,
-            accessToken: data.access_token,
-          }
-        }
-        if (data && (data.status === 'pending_verification' || data.status === 'success')) {
-          // Normal secure online path: registered in pending state awaiting gateway settlement
-          return {
-            status: 'pending_verification',
-            subscriptionId: subRef,
-            planName: input.planName,
-            expiresAt: null,
-            receiptRef: subRef,
-            accessToken: data.access_token,
-            message: data.message || 'Subscription pending payment verification.',
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('[KhelGrid Payments] Remote subscription registration error:', err)
-    }
+  if (!supabaseUrl || !anonKey) {
+    return { status: 'error', message: 'Secure subscription registration is unavailable.' }
   }
 
-  // 2. Truthful unconfirmed/pending result on offline or database unconfigured state
-  // Notice: Client NEVER self-activates from local storage or fabricated payment IDs!
   try {
-    const storage = getSafeLocalStorage()
-    if (storage) {
-      const existing = JSON.parse(storage.getItem('khelgrid_listing_subscriptions') || '[]')
-      existing.unshift({
-        ...input,
-        subscriptionId: subRef,
-        expiresAt: null,
-        is_active: false,
-        paymentStatus: isPayAtVenue ? 'pay_at_venue' : 'pending',
-        createdAt: timestamp,
-      })
-      storage.setItem('khelgrid_listing_subscriptions', JSON.stringify(existing.slice(0, 50)))
+    const res = await fetch(`${supabaseUrl}/functions/v1/register-payment-intent`, {
+      method: 'POST',
+      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'register_listing_subscription',
+        order_id: input.orderId,
+        listing_type: input.listingType,
+        listing_id: input.listingId || null,
+        listing_name: input.listingName,
+        city: input.city,
+        plan_id: input.planId,
+        customer_name: input.customerName,
+        customer_phone: input.customerPhone,
+        customer_email: input.customerEmail || null,
+        idempotency_key: input.idempotencyKey || input.orderId,
+      }),
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok || data?.success !== true) {
+      return { status: 'error', message: data?.message || data?.error || 'Subscription registration failed.' }
     }
-  } catch {
-    // Ignore storage quota
-  }
-
-  return {
-    status: 'pending_verification',
-    subscriptionId: subRef,
-    planName: input.planName,
-    expiresAt: null,
-    receiptRef: subRef,
-    message: 'Subscription registered in pending verification state. Awaiting payment settlement.',
+    return {
+      status: 'pending_verification',
+      subscriptionId: data.subscription_id || subRef,
+      planName: data.plan_name || input.planName,
+      expiresAt: null,
+      receiptRef: subRef,
+      accessToken: data.access_token,
+      message: 'Subscription is pending. It activates only after independent payment settlement.',
+    }
+  } catch (err) {
+    console.warn('[KhelGrid Payments] Secure subscription registration failed:', err)
+    return { status: 'error', message: 'Network error registering subscription.' }
   }
 }
