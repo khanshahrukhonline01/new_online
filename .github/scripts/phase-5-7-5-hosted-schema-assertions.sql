@@ -51,6 +51,21 @@ BEGIN
   IF has_table_privilege('anon','public.listing_subscriptions','SELECT') THEN
     RAISE EXCEPTION 'anonymous users can read subscription PII';
   END IF;
+  IF has_table_privilege('anon','public.khelgrid_payments','SELECT')
+     OR has_table_privilege('anon','public.khelgrid_payments','INSERT')
+     OR has_table_privilege('authenticated','public.khelgrid_payments','INSERT')
+     OR has_table_privilege('authenticated','public.khelgrid_payments','UPDATE')
+     OR has_table_privilege('authenticated','public.khelgrid_payments','DELETE') THEN
+    RAISE EXCEPTION 'browser roles retain direct access to payment writes or anonymous payment reads';
+  END IF;
+  IF NOT has_table_privilege('authenticated','public.khelgrid_payments','SELECT') THEN
+    RAISE EXCEPTION 'authenticated owner payment history read privilege was removed';
+  END IF;
+  IF has_table_privilege('authenticated','public.listing_subscriptions','INSERT')
+     OR has_table_privilege('authenticated','public.listing_subscriptions','UPDATE')
+     OR has_table_privilege('authenticated','public.listing_subscriptions','DELETE') THEN
+    RAISE EXCEPTION 'authenticated users retain direct subscription write privileges';
+  END IF;
   IF (SELECT column_default FROM information_schema.columns
       WHERE table_schema='public' AND table_name='listing_subscriptions' AND column_name='is_active') NOT LIKE '%false%' THEN
     RAISE EXCEPTION 'new subscriptions default active';
