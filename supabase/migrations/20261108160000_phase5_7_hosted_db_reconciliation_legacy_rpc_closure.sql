@@ -230,24 +230,13 @@ GRANT EXECUTE ON FUNCTION public.record_payment_transaction(text, text, text, te
 REVOKE EXECUTE ON FUNCTION public.record_listing_subscription(text, text, text, text, text, text, text, numeric, integer, text, text, text, text, text, jsonb) FROM PUBLIC, anon, authenticated;
 DROP FUNCTION IF EXISTS public.record_listing_subscription(text, text, text, text, text, text, text, numeric, integer, text, text, text, text, text, jsonb);
 
--- 4.3 Legacy create_venue_slot_booking: Revoke and drop
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid
-    WHERE n.nspname = 'public' AND p.proname = 'create_venue_slot_booking'
-  ) THEN
-    REVOKE EXECUTE ON FUNCTION public.create_venue_slot_booking(text, text, text, text, text, text, text, text, numeric, numeric, text, text) FROM PUBLIC, anon, authenticated;
-    DROP FUNCTION IF EXISTS public.create_venue_slot_booking(text, text, text, text, text, text, text, text, numeric, numeric, text, text);
-    DROP FUNCTION IF EXISTS public.create_venue_slot_booking(text, text, text, text, text, int, text, text, text, numeric);
-  END IF;
-EXCEPTION WHEN OTHERS THEN
-  NULL;
-END;
-$$;
+-- 4.3 Legacy create_venue_slot_booking: revoke and drop the verified hosted signature.
+-- Do not swallow errors: dependent objects or an unexpected schema must abort this transaction.
+REVOKE EXECUTE ON FUNCTION public.create_venue_slot_booking(text, text, text, text, text, text, text, text, numeric, numeric, text, text) FROM PUBLIC, anon, authenticated;
+DROP FUNCTION IF EXISTS public.create_venue_slot_booking(text, text, text, text, text, text, text, text, numeric, numeric, text, text);
 
--- 4.4 Legacy reserve_venue_slot_atomic (7-arg overload): Drop
-DROP FUNCTION IF EXISTS public.reserve_venue_slot_atomic(text, text, text, text, text, text, text);
+-- 4.4 Legacy seven-argument reserve overload uses an INTEGER court number.
+DROP FUNCTION IF EXISTS public.reserve_venue_slot_atomic(text, text, text, integer, text, text, text);
 
 -- 4.5 Legacy single-argument get_listing_subscription_by_order: Revoke and drop
 REVOKE EXECUTE ON FUNCTION public.get_listing_subscription_by_order(text) FROM PUBLIC, anon, authenticated;
@@ -257,8 +246,12 @@ DROP FUNCTION IF EXISTS public.get_listing_subscription_by_order(text);
 REVOKE EXECUTE ON FUNCTION public.get_venue_booking_voucher(text) FROM PUBLIC, anon, authenticated;
 DROP FUNCTION IF EXISTS public.get_venue_booking_voucher(text);
 
--- 4.7 Recreate hardened get_venue_booking_voucher(text, text)
-CREATE OR REPLACE FUNCTION public.get_venue_booking_voucher(
+-- 4.7 Replace the legacy two-argument phone-based TABLE RPC with the token-based JSONB RPC.
+-- PostgreSQL cannot rename input parameters or change a function return type via CREATE OR REPLACE.
+REVOKE EXECUTE ON FUNCTION public.get_venue_booking_voucher(text, text) FROM PUBLIC, anon, authenticated;
+DROP FUNCTION IF EXISTS public.get_venue_booking_voucher(text, text);
+
+CREATE FUNCTION public.get_venue_booking_voucher(
   p_booking_ref text,
   p_voucher_token text
 )
@@ -331,7 +324,7 @@ CREATE OR REPLACE FUNCTION public.reserve_venue_slot_atomic(
   p_customer_name text,
   p_customer_phone text,
   p_customer_email text,
-  p_payment_mode text,
+  p_payment_method text,
   p_idempotency_key text
 )
 RETURNS jsonb
@@ -361,7 +354,7 @@ BEGIN
   p_customer_email := trim(coalesce(p_customer_email, ''));
   p_idempotency_key := trim(p_idempotency_key);
   v_court := coalesce(p_court_number, 1);
-  v_is_pay_at_venue := (lower(trim(coalesce(p_payment_mode, 'online'))) = 'pay_at_venue');
+  v_is_pay_at_venue := (lower(trim(coalesce(p_payment_method, 'online'))) = 'pay_at_venue');
 
   IF p_venue_id = '' OR p_customer_name = '' OR p_customer_phone = '' THEN
     RETURN jsonb_build_object('success', false, 'error', 'INVALID_INPUT', 'message', 'Venue, customer name, and customer phone are required.');
