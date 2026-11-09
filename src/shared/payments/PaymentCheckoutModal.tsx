@@ -263,7 +263,7 @@ export function PaymentCheckoutModal({
               </div>
 
               {/* UPI Tab */}
-              {method === 'upi' && (
+              {method === 'upi' && supportsOnlinePayment && (
                 <div className="kg-upi-card">
                   <div className="kg-upi-apps-row">
                     <span className="kg-upi-badge">Google Pay</span>
