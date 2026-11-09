@@ -19,7 +19,12 @@ AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$
 
 CREATE OR REPLACE FUNCTION auth.jwt()
 RETURNS jsonb LANGUAGE sql STABLE
-AS $$ SELECT coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb) $$;
+AS $ SELECT coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb) $;
+
+-- Match the standard Supabase API role access to auth identity helpers.
+GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION auth.jwt() TO anon, authenticated, service_role;
 
 -- Mirror the hosted development athlete_profiles column contract.
 -- Keep the unsafe historical publication default so the migration must change it.
