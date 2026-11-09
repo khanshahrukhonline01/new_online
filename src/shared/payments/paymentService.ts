@@ -64,7 +64,9 @@ export function generateUpiUri({
  */
 export function generateOrderId(prefix = 'KG_ORD'): string {
   const timestamp = Date.now().toString(36)
-  const randomPart = Math.random().toString(36).substring(2, 6)
+  const randomPart = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+    : Array.from({ length: 12 }, () => Math.floor(Math.random() * 36).toString(36)).join('')
   return `${prefix}_${timestamp}_${randomPart}`.toUpperCase()
 }
 
@@ -441,6 +443,7 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
           const isConfirmed = rpcData.status === 'confirmed'
           const remoteBooking: VenueBookingResult = {
             status: isConfirmed ? 'confirmed' : 'pending',
+            bookingId: rpcData.booking_id,
             bookingRef: rpcData.booking_ref,
             voucherToken: rpcData.voucher_token,
             venueName: input.venueName,
@@ -452,6 +455,37 @@ export async function recordVenueSlotBooking(input: VenueSlotBookingInput): Prom
             paymentStatus: rpcData.payment_status || (isPayAtVenue ? 'pay_at_venue' : 'pending'),
             serverConfirmed: isConfirmed,
             isOfflineDraft: false,
+          }
+
+          if (input.paymentOrderId && rpcData.booking_id && rpcData.booking_ref && !isPayAtVenue) {
+            try {
+              const linkRes = await fetch(`${supabaseUrl}/functions/v1/register-payment-intent`, {
+                method: 'POST',
+                headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'link_booking',
+                  order_id: input.paymentOrderId,
+                  booking_id: rpcData.booking_id,
+                  booking_ref: rpcData.booking_ref,
+                }),
+              })
+              const linkData = await linkRes.json().catch(() => null)
+              if (!linkRes.ok || linkData?.linked !== true) {
+                return {
+                  ...remoteBooking,
+                  status: 'error',
+                  serverConfirmed: false,
+                  errorMessage: 'The reservation was created but could not be linked to its pending payment. Contact support before retrying payment.',
+                }
+              }
+            } catch {
+              return {
+                ...remoteBooking,
+                status: 'error',
+                serverConfirmed: false,
+                errorMessage: 'The reservation was created but payment linkage could not be confirmed. Contact support before retrying payment.',
+              }
+            }
           }
 
           try {
