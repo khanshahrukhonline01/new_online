@@ -10,8 +10,9 @@ begin
   if not has_column_privilege('anon', 'public.listing_submissions', 'listing_type', 'INSERT') then
     raise exception 'anon must be able to submit listing_type to the private queue';
   end if;
-  if has_column_privilege('anon', 'public.listing_submissions', 'status', 'INSERT') then
-    raise exception 'anon must not control listing submission status';
+  if has_column_privilege('anon', 'public.listing_submissions', 'status', 'INSERT')
+     or has_column_privilege('authenticated', 'public.listing_submissions', 'status', 'INSERT') then
+    raise exception 'public roles must not control listing submission status';
   end if;
   if has_column_privilege('anon', 'public.listing_submissions', 'reviewed_by', 'INSERT') then
     raise exception 'anon must not control listing reviewer identity';
@@ -36,6 +37,38 @@ begin
       end if;
     end loop;
   end loop;
+
+  foreach table_name in array array['academies', 'venues', 'opportunities', 'pickup_games'] loop
+    if not has_table_privilege('service_role', format('public.%I', table_name), 'INSERT')
+       or not has_table_privilege('service_role', format('public.%I', table_name), 'UPDATE')
+       or not has_table_privilege('service_role', format('public.%I', table_name), 'DELETE') then
+      raise exception 'service_role must retain trusted catalogue DML on %', table_name;
+    end if;
+  end loop;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='listing_submissions'
+      and policyname='listing_submissions_moderator_read'
+      and cmd='SELECT' and roles @> array['authenticated']::name[]
+  ) then
+    raise exception 'The authenticated moderator-only queue read policy is missing';
+  end if;
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='listing_submissions'
+      and policyname='listing_submissions_moderator_update'
+      and cmd='UPDATE' and roles @> array['authenticated']::name[]
+  ) then
+    raise exception 'The authenticated moderator-only queue update policy is missing';
+  end if;
+  if exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='listing_submissions'
+      and cmd='SELECT' and roles && array['anon']::name[]
+  ) then
+    raise exception 'anon must not have a queue read policy';
+  end if;
 
   if has_function_privilege('anon', 'public.get_listing_submissions()', 'EXECUTE') then
     raise exception 'anon must not execute the protected queue RPC';
