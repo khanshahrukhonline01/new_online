@@ -2111,6 +2111,9 @@ GRANT UPDATE (
 
 GRANT ALL ON public.athlete_profiles TO service_role;
 
+-- The authenticated athlete admin RLS policy invokes this SECURITY DEFINER predicate.
+GRANT EXECUTE ON FUNCTION public.is_pickup_game_admin() TO authenticated;
+
 -- 1.1 Public read for published profiles only
 CREATE POLICY "athlete_profiles_public_published_read"
   ON public.athlete_profiles
