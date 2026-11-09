@@ -111,7 +111,7 @@ export default function CommunityListingModal({
     city: string
     directoryPath: string
     detailPath?: string
-    mode: 'instant_live' | 'moderation_queue'
+    mode: 'moderation_queue'
     requiresReview: boolean
     message: string
   } | null>(null)
@@ -191,7 +191,7 @@ export default function CommunityListingModal({
       input = { category: 'opportunity', title: oppTitle.trim(), opportunity_type: oppType, sport: sport || undefined, city: cleanCity, venue_name: oppVenue || undefined, organizer_name: organizer || currentUser?.name || contactName || undefined, starts_at: oppStartsAt || undefined, registration_fee: regFee || undefined, age_category: ageCategory || undefined, source_url: sourceUrl || undefined, contact_name: currentUser?.name || contactName || undefined, contact_phone: currentUser?.phone || contactPhone || undefined }
     } else {
       if (sport.trim().length < 2 || pickupVenue.trim().length < 2 || timeLabel.trim().length < 2) { setError('Enter a sport, venue and schedule to submit a pickup game.'); return }
-      input = { category: 'pickup_game', sport: sport.trim(), emoji, venue_name: pickupVenue.trim(), city: cleanCity, time_label: timeLabel.trim(), skill_level: skillLevel, host_name: hostName || currentUser?.name || contactName || undefined, contact_name: currentUser?.name || contactName || undefined, contact_phone: currentUser?.phone || contactPhone || undefined, price_per_player: pricePerPlayer || undefined, spots_open: spotsOpen, total_players: totalPlayers, whatsapp_group_url: whatsappGroupUrl.trim() || undefined }
+      input = { category: 'pickup_game', sport: sport.trim(), emoji, venue_name: pickupVenue.trim(), city: cleanCity, time_label: timeLabel.trim(), skill_level: skillLevel || undefined, host_name: hostName || currentUser?.name || contactName || undefined, contact_name: currentUser?.name || contactName || undefined, contact_phone: currentUser?.phone || contactPhone || undefined, price_per_player: pricePerPlayer || undefined, spots_open: spotsOpen, total_players: totalPlayers, whatsapp_group_url: whatsappGroupUrl.trim() || undefined }
     }
     if (!currentUser && (!contactName.trim() || !contactPhone.trim())) { setError('Organizer contact name and WhatsApp/phone number are required.'); return }
     setIsSubmitting(true)
@@ -347,7 +347,7 @@ export default function CommunityListingModal({
               </p>
             </div>
 
-            {/* Top Auth / Verified Host Bar */}
+            {/* Account information (moderator review still required) */}
             <div className={`community-auth-bar ${currentUser ? 'is-verified' : 'is-guest'}`}>
               {currentUser ? (
                 <div className="community-auth-bar-inner">
