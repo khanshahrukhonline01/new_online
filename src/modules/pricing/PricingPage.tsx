@@ -231,12 +231,14 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
       {paymentSuccessResult && (
         <section className="payment-success-banner" aria-live="polite">
           <div className="success-banner-inner">
-            <SiteIcon name="check-circle" size={24} className="success-check-icon" />
+            <SiteIcon name={paymentSuccessResult.status === 'completed' ? 'check-circle' : 'clock'} size={24} className="success-check-icon" />
             <div>
-              <h3>Membership Activated Successfully!</h3>
+              <h3>{paymentSuccessResult.status === 'completed' ? 'Membership Activated Successfully!' : 'Payment Reference Submitted — Verification Pending'}</h3>
               <p>
-                Receipt ID: <strong>{paymentSuccessResult.receiptRef}</strong> · Amount Paid: ₹{paymentSuccessResult.amount.toLocaleString('en-IN')}.
-                Your verified credentials and pro privileges have been unlocked across KhelGrid.
+                Order reference: <strong>{paymentSuccessResult.orderId}</strong> · Amount: ₹{paymentSuccessResult.amount.toLocaleString('en-IN')}.
+                {paymentSuccessResult.status === 'completed'
+                  ? ' Your verified membership is active.'
+                  : ' Membership privileges remain locked until the payment is independently verified.'}
               </p>
             </div>
             <button
