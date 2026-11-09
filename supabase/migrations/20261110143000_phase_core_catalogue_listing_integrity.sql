@@ -21,6 +21,41 @@ grant select on public.listing_submissions to authenticated;
 grant update (status, moderator_notes, reviewed_at, reviewed_by)
   on public.listing_submissions to authenticated;
 
+-- Make unauthorized moderator access explicit instead of returning a misleading empty queue.
+create or replace function public.get_listing_submissions()
+returns table (
+  id uuid,
+  listing_type text,
+  title text,
+  city text,
+  source_url text,
+  details text,
+  status text,
+  moderator_notes text,
+  created_at timestamptz,
+  reviewed_at timestamptz,
+  reviewed_by uuid
+)
+language plpgsql
+stable
+security invoker
+set search_path = pg_catalog
+as $function$
+begin
+  if auth.uid() is null or not public.is_listing_moderator() then
+    raise exception 'Not authorized to moderate listings' using errcode = '42501';
+  end if;
+
+  return query
+    select s.id, s.listing_type, s.title, s.city, s.source_url, s.details,
+           s.status, s.moderator_notes, s.created_at, s.reviewed_at, s.reviewed_by
+    from public.listing_submissions s
+    order by (s.status = 'pending_review') desc, s.created_at asc;
+end;
+$function$;
+revoke all on function public.get_listing_submissions() from public, anon, service_role;
+grant execute on function public.get_listing_submissions() to authenticated;
+
 -- Catalogue records are curated/published by trusted staff only.
 -- Remove broad community INSERT policies and direct public DML privileges.
 drop policy if exists academies_insert_community on public.academies;
