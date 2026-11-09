@@ -23,6 +23,7 @@ export interface AcademiesPageProps {
 export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPageProps) {
   const [academies, setAcademies] = useState<Academy[]>(CURATED_ACADEMIES)
   const [loading, setLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const initial = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
   const [query, setQuery] = useState(initial.get('q') ?? '')
@@ -86,6 +87,14 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
         ),
     [academies, city, sport, query, sort],
   )
+
+  const pageSize = 20
+  const totalPages = Math.max(1, Math.ceil(visible.length / pageSize))
+  const pageItems = visible.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [query, city, sport, sort])
 
   const clearAll = () => {
     setQuery('')
@@ -162,7 +171,7 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
             <div className="loading-state">Loading certified academies…</div>
           ) : visible.length > 0 ? (
             <div className="academies-grid">
-              {visible.map(academy => {
+              {pageItems.map(academy => {
                 const academySlug = academy.slug || academy.id
                 return (
                   <article className="academy-card" key={academy.id}>
@@ -203,6 +212,12 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
                 )
               })}
             </div>
+            {totalPages > 1 && (
+              <nav className="kg-pagination" aria-label="Academy result pages">
+                <button type="button" className="admin-btn admin-btn-secondary" disabled={currentPage === 1} onClick={() => setCurrentPage(page => Math.max(1, page - 1))}>Previous</button>
+                <span aria-live="polite">Page {currentPage} of {totalPages}</span>
+                <button type="button" className="admin-btn admin-btn-secondary" disabled={currentPage === totalPages} onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}>Next</button>
+              </nav>
           ) : (
             <CatalogueEmptyState
               title={academies.length ? 'No matching academies' : 'No academies listed yet'}
