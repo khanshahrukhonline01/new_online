@@ -443,10 +443,11 @@ export default function CommunityListingModal({
                         value={skillLevel}
                         onChange={e =>
                           setSkillLevel(
-                            e.target.value as 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels',
+                            e.target.value as 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels' | '',
                           )
                         }
                       >
+                        <option value="">Not specified</option>
                         <option value="All Levels">All Levels</option>
                         <option value="">Not specified</option>
                     <option value="Beginner">Beginner</option>
@@ -472,8 +473,8 @@ export default function CommunityListingModal({
                         type="number"
                         min="1"
                         max="50"
-                        value={spotsOpen}
-                        onChange={e => setSpotsOpen(Number(e.target.value))}
+                        value={spotsOpen ?? ''}
+                        onChange={e => setSpotsOpen(e.target.value ? Number(e.target.value) : undefined)}
                       />
                     </label>
                     <label className="community-field-group">
@@ -482,8 +483,8 @@ export default function CommunityListingModal({
                         type="number"
                         min="2"
                         max="50"
-                        value={totalPlayers}
-                        onChange={e => setTotalPlayers(Number(e.target.value))}
+                        value={totalPlayers ?? ''}
+                        onChange={e => setTotalPlayers(e.target.value ? Number(e.target.value) : undefined)}
                       />
                     </label>
                   </div>
