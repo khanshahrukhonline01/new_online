@@ -161,7 +161,7 @@ CREATE UNIQUE INDEX uq_venue_slot_concurrency
 CREATE TABLE public.pickup_game_participants (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   game_id text NOT NULL,
-  user_id uuid,
+  user_id text,
   status text NOT NULL DEFAULT 'confirmed'
 );
 CREATE TABLE public.pickup_game_rsvp_rate_limits (
