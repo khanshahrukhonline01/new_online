@@ -706,7 +706,11 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                     setBookingError('Please enter a valid 10-digit mobile number.')
                     return
                   }
-                  const slotFee = parseInrPrice(pricingText) || 800
+                  const slotFee = parseInrPrice(pricingText)
+                  if (!slotFee || slotFee <= 0) {
+                    setBookingError('This venue does not have a verified booking tariff. Please contact the venue directly; no payment has been requested.')
+                    return
+                  }
                   const depositAmount = Math.min(300, slotFee)
                   setCheckoutItem({
                     id: venue.id,
@@ -861,7 +865,11 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
           initialCustomer={{ name: bookingName, phone: bookingPhone }}
           onSuccess={async paymentResult => {
             setCheckoutItem(null)
-            const slotFee = parseInrPrice(pricingText) || 800
+            const slotFee = parseInrPrice(pricingText)
+            if (!slotFee || slotFee <= 0) {
+              setSlotConflictError('The venue has no verified booking tariff. No booking was confirmed.')
+              return
+            }
             const res = await recordVenueSlotBooking({
               venueId: venue.id,
               venueName: venue.name,
@@ -875,6 +883,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
               paidAmount: paymentResult.amount,
               paymentStatus: paymentResult.status === 'pay_at_venue' ? 'pay_at_venue' : 'pending',
               paymentId: paymentResult.paymentId,
+              paymentOrderId: paymentResult.orderId,
             })
             if (res.status === 'double_booking_conflict') {
               setSlotConflictError(res.errorMessage || res.message || 'This slot was just booked by another player. Please select a different slot.')
