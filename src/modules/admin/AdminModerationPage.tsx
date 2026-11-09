@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { signInWithEmail, signOut } from '../../integrations/supabase/auth-client'
 import { getAdminModerationQueue, moderateListingSubmission, type AdminModerationQueue } from '../../integrations/supabase/public-client'
 import './AdminModerationPage.css'
 
@@ -9,6 +10,9 @@ export function AdminModerationPage() {
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [signingIn, setSigningIn] = useState(false)
 
   const loadQueue = useCallback(async () => {
     setLoading(true)
@@ -25,6 +29,32 @@ export function AdminModerationPage() {
     window.addEventListener('khelgrid:auth-changed', handleAuthChange)
     return () => window.removeEventListener('khelgrid:auth-changed', handleAuthChange)
   }, [loadQueue])
+
+  const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError('')
+    setNotice('')
+    setSigningIn(true)
+    try {
+      const result = await signInWithEmail({ email, password })
+      if (!result.success) {
+        setError(result.message || 'Sign-in failed.')
+        return
+      }
+      setPassword('')
+      await loadQueue()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Sign-in failed.')
+    } finally {
+      setSigningIn(false)
+    }
+  }
+
+  const handleSignOut = async () => {
+    await signOut()
+    setQueue(null)
+    setNotice('Signed out of the moderation desk.')
+  }
 
   const review = async (id: string, decision: 'approved' | 'rejected') => {
     setBusyId(id)
@@ -80,9 +110,20 @@ export function AdminModerationPage() {
               ))}
             </div>
           )}
-          <button type="button" className="admin-btn admin-btn-secondary" onClick={() => void loadQueue()}>Refresh queue</button>
+          <div className="admin-mod-card-actions">
+            <button type="button" className="admin-btn admin-btn-secondary" onClick={() => void loadQueue()}>Refresh queue</button>
+            <button type="button" className="admin-btn admin-btn-secondary" onClick={() => void handleSignOut()}>Sign out</button>
+          </div>
         </>
-      ) : <p>Sign in with an authorized moderator account to access the private queue.</p>}
+      ) : (
+        <form className="admin-restricted-box" onSubmit={handleSignIn}>
+          <h2>Moderator sign-in</h2>
+          <p>Use an existing Supabase account. Only accounts allowlisted in the development database can open this queue; public registration does not grant moderator access.</p>
+          <label>Email address<input type="email" autoComplete="username" required value={email} onChange={event => setEmail(event.target.value)} /></label>
+          <label>Password<input type="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} /></label>
+          <button type="submit" className="admin-btn admin-btn-approve" disabled={signingIn}>{signingIn ? 'Signing in…' : 'Sign in to moderation desk'}</button>
+        </form>
+      )}
     </section>
   )
 }
