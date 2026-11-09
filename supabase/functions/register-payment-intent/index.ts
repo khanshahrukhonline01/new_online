@@ -130,7 +130,7 @@ serve(async (req) => {
       .eq('idempotency_key', idempotencyKey).maybeSingle()
     const existing = existingByOrder || existingByKey
     if (existing) {
-      if (existing.order_id !== orderId || existing.plan_id !== planId || Number(existing.amount) !== plan.amount ||
+      if (existing.order_id !== orderId || existing.plan_id !== planId || Number(existing.amount) !== plan.amountRupees ||
           existing.customer_phone !== phone || existing.listing_type !== listingType || existing.listing_name !== listingName ||
           existing.city !== city || (existing.user_id || null) !== userId || existing.is_active) {
         return json({ error: 'ORDER_CONFLICT' }, 409)
@@ -145,7 +145,7 @@ serve(async (req) => {
       .select('id,amount,item_type,customer_phone,user_id,status')
       .eq('order_id', orderId).single()
     if (paymentLookupError || !paymentIntent || paymentIntent.item_type !== 'listing_plan' ||
-        Number(paymentIntent.amount) !== plan.amount || paymentIntent.customer_phone !== phone ||
+        Number(paymentIntent.amount) !== plan.amountRupees || paymentIntent.customer_phone !== phone ||
         (paymentIntent.user_id || null) !== userId || paymentIntent.status !== 'pending_verification') {
       return json({ error: 'PAYMENT_INTENT_MISMATCH' }, 409)
     }
@@ -160,8 +160,8 @@ serve(async (req) => {
       city,
       plan_id: planId,
       plan_name: plan.name,
-      amount: plan.amount,
-      duration_days: plan.days,
+      amount: plan.amountRupees,
+      duration_days: plan.durationDays,
       customer_name: customerName,
       customer_phone: phone,
       customer_email: body.customer_email ? String(body.customer_email).trim().toLowerCase() : null,
@@ -258,10 +258,10 @@ serve(async (req) => {
     if (!Number.isInteger(courtNumber) || courtNumber < 1 || courtNumber > 50) {
       return json({ error: 'INVALID_COURT' }, 400)
     }
-    const { data, error } = await admin.from('venues')
-      .select('id,slug,name,slot_hourly_fee,fee_provenance,pricing_status,publication_status')
-      .or(`id.eq.${itemId},slug.eq.${itemId}`)
-      .maybeSingle()
+    const venueQuery = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(itemId)
+      ? admin.from('venues').select('id,slug,name,slot_hourly_fee,fee_provenance,pricing_status,publication_status').eq('id', itemId)
+      : admin.from('venues').select('id,slug,name,slot_hourly_fee,fee_provenance,pricing_status,publication_status').eq('slug', itemId)
+    const { data, error } = await venueQuery.maybeSingle()
     if (error || !data || data.publication_status !== 'published') return json({ error: 'VENUE_NOT_AVAILABLE' }, 404)
     const { data: courts, error: courtError } = await admin.from('venue_courts')
       .select('name,hourly_price_paise,is_bookable')
