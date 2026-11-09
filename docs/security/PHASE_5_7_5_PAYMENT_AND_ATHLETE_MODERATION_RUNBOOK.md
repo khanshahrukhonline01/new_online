@@ -9,7 +9,8 @@ The browser calls the `register-payment-intent` Edge Function. UPI checkout rema
 Accepted payment intent behavior:
 
 - Online UPI for verified-price venue bookings and listing plans: `pending_verification`.
-- Pay at venue: `pay_at_venue`, never marked settled by the browser.
+- Pay at venue for venue bookings and pickup matches: `pay_at_venue`, never marked settled by the browser.
+- Listing plans require verifiable online UPI settlement; pay-at-venue is not offered for subscriptions.
 - Pickup matches: pay-at-venue only.
 - Paid trial and membership checkout are intentionally disabled until their target registration/settlement workflows exist.
 - Card/NetBanking is disabled until a server-created Razorpay order and complete checkout flow are implemented.
