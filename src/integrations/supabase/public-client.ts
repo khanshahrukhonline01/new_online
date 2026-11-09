@@ -3275,40 +3275,12 @@ export interface AdminModerationQueue {
     status: string
     created_at: string
   }>
-  pendingClaims: Array<{
-    id: string
-    entity_type: string
-    entity_slug: string
-    entity_name: string
-    contact_name: string
-    contact_phone: string
-    contact_email?: string | null
-    claimant_role?: string | null
-    document_type: string
-    proof_details: string
-    status: string
-    created_at: string
-  }>
-  pendingReports: Array<{
-    id: string
-    entity_type: string
-    entity_slug: string
-    entity_name: string
-    reason: string
-    details: string
-    reporter_email?: string | null
-    reporter_phone?: string | null
-    status: string
-    created_at: string
-  }>
   stats: {
     totalAcademies: number
     totalVenues: number
     totalCoaches: number
     totalEvents: number
     pendingSubmissionsCount: number
-    pendingClaimsCount: number
-    pendingReportsCount: number
   }
 }
 
@@ -3323,16 +3295,12 @@ export async function getAdminModerationQueue(): Promise<AdminModerationQueue> {
   const rows = Array.isArray(submissions) ? submissions as AdminModerationQueue['pendingSubmissions'] : []
   return {
     pendingSubmissions: rows,
-    pendingClaims: [],
-    pendingReports: [],
     stats: {
       totalAcademies: academiesRes.status === 'ready' ? academiesRes.data.length : 0,
       totalVenues: venuesRes.status === 'ready' ? venuesRes.data.length : 0,
       totalCoaches: coachesRes.status === 'ready' ? coachesRes.data.length : 0,
       totalEvents: eventsRes.status === 'ready' ? eventsRes.data.length : 0,
       pendingSubmissionsCount: rows.filter(s => s.status === 'pending_review').length,
-      pendingClaimsCount: 0,
-      pendingReportsCount: 0,
     },
   }
 }
@@ -3350,66 +3318,4 @@ export async function moderateListingSubmission(id: string, status: 'approved' |
   if (error) throw new Error(error.message || 'The listing review could not be saved.')
   return true
 }
-
-export async function moderateVerificationClaim(
-  id: string,
-  status: 'verified' | 'rejected' | 'more_info_needed',
-  notes?: string,
-): Promise<boolean> {
-  const client = getSupabaseClient()
-  if (client) {
-    try {
-      await client
-        .from('verification_claims')
-        .update({ status, proof_details: notes ? `Moderator note: ${notes}` : undefined, updated_at: new Date().toISOString() })
-        .eq('id', id)
-    } catch {
-      // ignore
-    }
-  }
-
-  if (typeof window !== 'undefined') {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_ADMIN_CLAIMS_KEY)
-      const overrides = raw ? (JSON.parse(raw) as Record<string, string>) : {}
-      overrides[id] = status
-      window.localStorage.setItem(STORAGE_ADMIN_CLAIMS_KEY, JSON.stringify(overrides))
-    } catch {
-      // ignore
-    }
-  }
-  return true
-}
-
-export async function moderateListingReport(
-  id: string,
-  status: 'investigating' | 'resolved' | 'dismissed',
-  notes?: string,
-): Promise<boolean> {
-  const client = getSupabaseClient()
-  if (client) {
-    try {
-      await client
-        .from('listing_reports')
-        .update({ status, details: notes ? `Resolution note: ${notes}` : undefined, updated_at: new Date().toISOString() })
-        .eq('id', id)
-    } catch {
-      // ignore
-    }
-  }
-
-  if (typeof window !== 'undefined') {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_ADMIN_REPORTS_KEY)
-      const overrides = raw ? (JSON.parse(raw) as Record<string, string>) : {}
-      overrides[id] = status
-      window.localStorage.setItem(STORAGE_ADMIN_REPORTS_KEY, JSON.stringify(overrides))
-    } catch {
-      // ignore
-    }
-  }
-  return true
-}
-
-
 
