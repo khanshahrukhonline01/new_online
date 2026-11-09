@@ -133,6 +133,10 @@ serve(async (req) => {
     return json({ success: true, linked: true })
   }
 
+  if (action !== 'register_payment' && action !== 'register_listing_subscription') {
+    return json({ error: 'UNKNOWN_ACTION' }, 400)
+  }
+
   if (action === 'register_listing_subscription') {
     const orderId = String(body.order_id || '').trim()
     const planId = String(body.plan_id || '')
@@ -233,6 +237,10 @@ serve(async (req) => {
       !['upi','pay_at_venue'].includes(method) || !idempotencyKey || idempotencyKey.length > 128) {
     return json({ error: 'INVALID_PAYMENT_INTENT' }, 400)
   }
+  const submittedReference = paymentId.startsWith('UPI_UTR_') ? paymentId.slice(8) : paymentId
+  if (method === 'upi' && (!/^[A-Za-z0-9-]{6,64}$/.test(submittedReference))) {
+    return json({ error: 'INVALID_PAYMENT_REFERENCE' }, 400)
+  }
   if (method === 'upi' && !['venue_booking','listing_plan'].includes(itemType)) {
     return json({ error: 'PAYMENT_TARGET_NOT_SUPPORTED', message: 'Online payment is not enabled for this item until its settlement workflow is available.' }, 409)
   }
@@ -327,7 +335,7 @@ serve(async (req) => {
     target_type: targetType,
     target_id: targetId,
     idempotency_key: idempotencyKey,
-    metadata: { ...metadata, submitted_reference: paymentId || null, registered_at: new Date().toISOString() },
+    metadata: { ...metadata, submitted_reference: method === 'upi' ? submittedReference : null, registered_at: new Date().toISOString() },
   }).select('id,order_id,amount,status').single()
 
   if (paymentError || !payment) return json({ error: 'PAYMENT_REGISTRATION_FAILED' }, 500)
