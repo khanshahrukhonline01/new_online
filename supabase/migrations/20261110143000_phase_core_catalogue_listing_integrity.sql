@@ -33,6 +33,9 @@ revoke insert, update, delete on public.venues from public, anon, authenticated;
 revoke insert, update, delete on public.opportunities from public, anon, authenticated;
 revoke insert, update, delete on public.pickup_games from public, anon, authenticated;
 
+-- Trusted server-side catalogue publication remains available to service_role.
+grant insert, update, delete on public.academies, public.venues, public.opportunities, public.pickup_games to service_role;
+
 -- The queue's existing RLS policies and transition trigger continue to enforce
 -- pending-only public submissions and allowlisted moderator review.
 commit;
