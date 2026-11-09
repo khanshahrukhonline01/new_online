@@ -70,6 +70,15 @@ serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   })
   const tokenHash = await sha256(checkoutToken)
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const rateKey = await sha256(`razorpay-order:${clientIp}:${orderId}`)
+  const { data: allowed, error: rateError } = await admin.rpc('consume_payment_registration_rate_limit', {
+    p_identifier: rateKey,
+    p_limit: 5,
+    p_window_seconds: 600,
+  })
+  if (rateError || allowed !== true) return json({ error: 'RATE_LIMITED' }, 429)
+
   const { data: payment, error: lookupError } = await admin.from('khelgrid_payments')
     .select('id,order_id,amount_paise,currency,status,payment_gateway,payment_method,provider_order_id,provider_order_status,checkout_token_hash')
     .eq('order_id', orderId)
