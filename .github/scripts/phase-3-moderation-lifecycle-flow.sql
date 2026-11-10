@@ -94,9 +94,9 @@ begin
   end if;
 
   -- Store context in session settings so subsequent role-restricted steps can reference this submission
-  perform set_config('khelgrid_test.sub_id', v_sub.id::text, true);
-  perform set_config('khelgrid_test.sub_ref', v_sub.reference_number, true);
-  perform set_config('khelgrid_test.sub_key', v_sub.tracking_key, true);
+  perform set_config('khelgrid_test.sub_id', v_sub.id::text, false);
+  perform set_config('khelgrid_test.sub_ref', v_sub.reference_number, false);
+  perform set_config('khelgrid_test.sub_key', v_sub.tracking_key, false);
 end;
 $verify_step1$;
 RESET ROLE;
@@ -400,7 +400,7 @@ begin
   end if;
 
   -- Store published venue ID for visibility assertions
-  perform set_config('khelgrid_test.venue_id', v_sub.published_record_id::text, true);
+  perform set_config('khelgrid_test.venue_id', v_sub.published_record_id::text, false);
 
   -- Verify public catalogue row exists and is published
   select count(*) into v_venue_count from public.venues
