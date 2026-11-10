@@ -291,7 +291,7 @@ export default function App() {
       else if (match.canonicalPath === '/events') page = <EventsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/scout-portal') page = <ScoutPortalPage onNavigate={navigate} />
       else if (match.canonicalPath === '/verification') page = <AthleteVerificationPage onNavigate={navigate} />
-      else if (match.canonicalPath === '/admin' || match.canonicalPath === '/moderation') page = <AdminModerationPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/admin' || match.canonicalPath === '/moderation') page = <AdminModerationPage />
       else if (match.canonicalPath === '/calendar') page = <SportsCalendarPage onNavigate={navigate} />
       else if (match.canonicalPath === '/tools' || match.canonicalPath === '/sports-tools' || match.canonicalPath.startsWith('/tools/')) page = <SportsToolsPage onNavigate={navigate} initialToolSlug={match.canonicalPath.startsWith('/tools/') ? match.canonicalPath.slice('/tools/'.length) : undefined} />
       else if (match.canonicalPath === '/live' || match.canonicalPath === '/live-scores') page = <LiveScoresPage onNavigate={navigate} />
