@@ -251,8 +251,8 @@ begin
       raise exception 'Rejection requires an explanation' using errcode = '22023';
     end if;
 
-    if new.status = 'changes_requested' and coalesce(btrim(new.correction_request), '') = '' then
-      raise exception 'Requesting corrections requires a clear message' using errcode = '22023';
+    if new.status = 'changes_requested' and (new.correction_request is null or char_length(btrim(new.correction_request)) < 10) then
+      raise exception 'Requesting corrections requires a clear message (at least 10 characters)' using errcode = '22023';
     end if;
 
     if new.status = 'unpublished' and coalesce(btrim(new.unpublish_reason), btrim(new.moderator_notes)) is null then
@@ -707,8 +707,8 @@ begin
     raise exception 'Not authorized to moderate listings' using errcode = '42501';
   end if;
 
-  if p_message is null or char_length(btrim(p_message)) < 5 then
-    raise exception 'Correction message must be at least 5 characters' using errcode = '22023';
+  if p_message is null or char_length(btrim(p_message)) < 10 then
+    raise exception 'Correction message must be at least 10 characters' using errcode = '22023';
   end if;
 
   select * into v_sub

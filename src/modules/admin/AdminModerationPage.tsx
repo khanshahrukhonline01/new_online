@@ -179,8 +179,8 @@ export function AdminModerationPage({ initialQueue }: AdminModerationPageProps =
         await rejectListingSubmission(selectedItem.id, actionMessage.trim(), actionNotes.trim() || undefined, selectedItem.version)
         setNotice(`Submission "${selectedItem.title}" rejected.`)
       } else if (actionDialog === 'request_corrections') {
-        if (!actionMessage.trim()) {
-          setError('A correction message for the submitter is required.')
+        if (!actionMessage.trim() || actionMessage.trim().length < 10) {
+          setError('A clear correction message for the submitter is required (at least 10 characters).')
           setBusyId(null)
           return
         }
