@@ -92,6 +92,13 @@ begin
     raise exception 'authenticated role must be able to invoke the allowlist-protected review RPC';
   end if;
 
+  if has_function_privilege('anon', 'public.is_listing_moderator()', 'EXECUTE') then
+    raise exception 'anon must not execute the moderator helper';
+  end if;
+  if not has_function_privilege('authenticated', 'public.is_listing_moderator()', 'EXECUTE') then
+    raise exception 'authenticated role must execute the moderator helper used by RLS';
+  end if;
+
   if (select c.is_nullable from information_schema.columns as c
       where c.table_schema='public' and c.table_name='listing_submissions' and c.column_name='source_url') <> 'YES' then
     raise exception 'listing_submissions.source_url must be optional';
