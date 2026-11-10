@@ -170,7 +170,8 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
           {loading ? (
             <div className="loading-state">Loading certified academies…</div>
           ) : visible.length > 0 ? (
-            <div className="academies-grid">
+            <>
+              <div className="academies-grid">
               {pageItems.map(academy => {
                 const academySlug = academy.slug || academy.id
                 return (
@@ -218,7 +219,8 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
                 <span aria-live="polite">Page {currentPage} of {totalPages}</span>
                 <button type="button" className="admin-btn admin-btn-secondary" disabled={currentPage === totalPages} onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}>Next</button>
               </nav>
-            )}
+              )}
+            </>
           ) : (
             <CatalogueEmptyState
               title={academies.length ? 'No matching academies' : 'No academies listed yet'}
