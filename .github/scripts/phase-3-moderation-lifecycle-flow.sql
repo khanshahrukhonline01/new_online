@@ -48,9 +48,9 @@ select public.submit_listing_intake(
   'https://example.org/public-intake-test',
   'Created through public intake RPC', null
 ) as phase3_intake_response
-\\gset
+\gset
 
-\\echo 'Anonymous submit_listing_intake response: ' :phase3_intake_response
+\echo 'Anonymous submit_listing_intake response: ' :phase3_intake_response
 
 -- Validate the response outcome and all identifiers independently. The full JSON above
 -- remains in the log if any assertion fails, making status/shape problems diagnosable.
