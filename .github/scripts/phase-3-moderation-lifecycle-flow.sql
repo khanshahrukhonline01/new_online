@@ -27,6 +27,9 @@ insert into public.listing_submissions (
 );
 reset role;
 
+-- Run internal assertions with the CI database owner, never the simulated client role.
+SET LOCAL ROLE postgres;
+
 -- Privileged verification of Step 1:
 do $verify_step1$
 declare
@@ -41,6 +44,7 @@ begin
   end if;
 end;
 $verify_step1$;
+RESET ROLE;
 
 -- Step 2: Submitter tracking lookup (tested under anon role)
 do $track_test$
@@ -141,6 +145,9 @@ $mod_start_review$;
 
 reset role;
 
+-- Run internal assertions with the CI database owner, never the simulated client role.
+SET LOCAL ROLE postgres;
+
 -- Privileged verification of 4A:
 do $verify_start_review$
 declare
@@ -155,6 +162,7 @@ begin
   end if;
 end;
 $verify_start_review$;
+RESET ROLE;
 
 -- Step 4B: Moderator requests corrections
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000030', true);
@@ -184,6 +192,9 @@ $mod_request_corrections$;
 
 reset role;
 
+-- Run internal assertions with the CI database owner, never the simulated client role.
+SET LOCAL ROLE postgres;
+
 -- Privileged verification of 4B:
 do $verify_corrections$
 declare
@@ -198,6 +209,7 @@ begin
   end if;
 end;
 $verify_corrections$;
+RESET ROLE;
 
 -- Step 4C: Submitter updates and resubmits
 do $submitter_resubmit$
@@ -231,6 +243,9 @@ begin
 end;
 $submitter_resubmit$;
 
+-- Run internal assertions with the CI database owner, never the simulated client role.
+SET LOCAL ROLE postgres;
+
 -- Privileged verification of 4C:
 do $verify_resubmit$
 declare
@@ -251,6 +266,7 @@ begin
   end if;
 end;
 $verify_resubmit$;
+RESET ROLE;
 
 -- Step 4D: Moderator approves resubmitted listing
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000030', true);
@@ -269,6 +285,9 @@ end;
 $mod_approve$;
 
 reset role;
+
+-- Run internal assertions with the CI database owner, never the simulated client role.
+SET LOCAL ROLE postgres;
 
 -- Privileged verification of 4D:
 do $verify_approve$
@@ -291,6 +310,7 @@ begin
   end if;
 end;
 $verify_approve$;
+RESET ROLE;
 
 -- Step 4E: Moderator explicitly publishes the listing
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000030', true);
@@ -321,6 +341,9 @@ $mod_publish$;
 
 reset role;
 
+-- Run internal assertions with the CI database owner, never the simulated client role.
+SET LOCAL ROLE postgres;
+
 -- Privileged verification of 4E:
 do $verify_publish$
 declare
@@ -344,6 +367,7 @@ begin
   end if;
 end;
 $verify_publish$;
+RESET ROLE;
 
 -- Step 4G: Test anonymous public visibility of published record
 set local role anon;
@@ -380,6 +404,9 @@ $mod_unpublish$;
 
 reset role;
 
+-- Run internal assertions with the CI database owner, never the simulated client role.
+SET LOCAL ROLE postgres;
+
 -- Privileged verification of 4H:
 do $verify_unpublish$
 declare
@@ -402,6 +429,7 @@ begin
   end if;
 end;
 $verify_unpublish$;
+RESET ROLE;
 
 -- Step 4I: Verify catalogue record is NOT visible to anonymous users after unpublishing
 set local role anon;
