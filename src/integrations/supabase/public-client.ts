@@ -1,5 +1,5 @@
 import type { Academy, Coach, EventItem, Opportunity, Sport, Venue } from '../../shared/domain'
-import { broadcastRealtimeEvent, getSupabaseClient, type RealtimeTable } from './realtime-client'
+import { broadcastRealtimeEvent, getSupabaseClient } from './realtime-client'
 import {
   getCuratedAcademyBySlug,
   getCuratedVenueBySlug,
@@ -1280,7 +1280,8 @@ export async function submitCommunityListing(input: CommunityListingInput): Prom
     input.category === 'academy' || input.category === 'venue' ? input.description?.trim() : '',
     input.category === 'opportunity' ? [input.organizer_name, input.venue_name, input.starts_at, input.age_category, input.registration_fee].filter(Boolean).join(' · ') : '',
     input.category === 'pickup_game' ? [input.time_label, input.skill_level, input.price_per_player, input.spots_open !== undefined ? `Spots stated: ${input.spots_open}` : ''].filter(Boolean).join(' · ') : '',
-    input.category === 'academy' || input.category === 'venue' ? [input.sport, input.state, input.address, input.website_url, input.public_contact_url, input.contact_phone].filter(Boolean).join(' · ') : '',
+    input.category === 'academy' ? [input.sport, input.state, input.website_url, input.public_contact_url, input.contact_phone].filter(Boolean).join(' · ') : '',
+    input.category === 'venue' ? [input.sport, input.address, input.contact_phone].filter(Boolean).join(' · ') : '',
     input.contact_name, input.contact_phone,
   ].filter(Boolean).join('\n').slice(0, 2000)
 
