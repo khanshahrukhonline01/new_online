@@ -313,7 +313,7 @@ export default function CommunityListingModal({
               </span>
               <h2 id="community-intake-title">+ List on KhelGrid</h2>
               <p className="community-intake-subtitle">
-                Suggest a sports academy, turf arena, selection trial, or pickup match for moderator review.
+                Suggest an academy, venue, trial, tournament, or pickup game. Every submission is reviewed before publication.
               </p>
             </div>
 
@@ -772,6 +772,11 @@ export default function CommunityListingModal({
                 </div>
               )}
 
+              <div className="community-intake-review-note" role="note">
+                <strong>Guest Mode</strong>
+                <span>No account is required. Your suggestion stays unpublished until a moderator reviews it.</span>
+              </div>
+
               {/* Submitter contact information */}
                 <div className="community-form-section community-contact-section">
                   <div className="community-section-label">
@@ -801,6 +806,9 @@ export default function CommunityListingModal({
                   </div>
                 </div>
 
+              <p className="community-intake-payment-note" role="note">
+                Listing suggestions are currently free. Paid listing plans and checkout are disabled while payment features are being developed.
+              </p>
               <div className="community-intake-actions">
                 <button
                   type="button"
