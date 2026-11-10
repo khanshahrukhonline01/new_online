@@ -42,6 +42,8 @@ order by p.oid::regprocedure::text;
 
 -- Capture and print the complete anonymous RPC response before asserting its shape.
 -- A raised SQL error from inside the RPC is intentionally allowed to surface unchanged.
+select set_config('request.jwt.claim.sub', '', false);
+select set_config('request.jwt.claims', '{"role":"anon"}', false);
 set local role anon;
 select public.submit_listing_intake(
   'venue', 'Public Intake RPC Test', 'Bengaluru',
@@ -103,6 +105,8 @@ where id = '00000000-0000-4000-8000-000000000040'
 \echo 'Tracking fixture reference: ' :phase3_tracking_ref
 RESET ROLE;
 
+select set_config('request.jwt.claim.sub', '', false);
+select set_config('request.jwt.claims', '{"role":"anon"}', false);
 set local role anon;
 -- The RPC must return exactly the seeded row for the valid reference/key pair.
 select id::text as phase3_tracking_result_id,
@@ -133,6 +137,19 @@ select (
   \echo 'PASS: valid tracking credentials returned the exact seeded submission.'
 \else
   \echo 'FAIL: valid tracking credentials returned a different submission.'
+  \quit 3
+\endif
+
+select (
+  count(*) = 0
+) as phase3_wrong_key_rejected
+from public.get_submission_tracking_status(:'phase3_tracking_ref', 'wrong-key')
+\gset
+
+\if :phase3_wrong_key_rejected
+  \echo 'PASS: invalid tracking key returned zero rows as expected.'
+\else
+  \echo 'FAIL: invalid tracking key unexpectedly returned rows.'
   \quit 3
 \endif
 
@@ -282,6 +299,8 @@ $verify_corrections$;
 RESET ROLE;
 
 -- Step 4C: Submitter resubmits through the public RPC under anon.
+select set_config('request.jwt.claim.sub', '', false);
+select set_config('request.jwt.claims', '{"role":"anon"}', false);
 set local role anon;
 select case
   when (public.resubmit_listing_submission(
@@ -440,6 +459,8 @@ where id = '00000000-0000-4000-8000-000000000040'
 RESET ROLE;
 
 -- Step 4G: Test anonymous public visibility of published record
+select set_config('request.jwt.claim.sub', '', false);
+select set_config('request.jwt.claims', '{"role":"anon"}', false);
 set local role anon;
 
 select case
@@ -501,6 +522,8 @@ $verify_unpublish$;
 RESET ROLE;
 
 -- Step 4I: Verify catalogue record is NOT visible to anonymous users after unpublishing
+select set_config('request.jwt.claim.sub', '', false);
+select set_config('request.jwt.claims', '{"role":"anon"}', false);
 set local role anon;
 
 select case

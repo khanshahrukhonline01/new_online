@@ -382,9 +382,12 @@ begin
     from public.listing_submissions s
     where s.reference_number = btrim(p_reference_number)
       and (
-        (p_tracking_key is not null and s.tracking_key = btrim(p_tracking_key))
-        or (auth.uid() is not null and s.submitter_id = auth.uid())
-        or (auth.uid() is not null and public.is_listing_moderator())
+        (p_tracking_key is not null and btrim(p_tracking_key) <> '' and s.tracking_key = btrim(p_tracking_key))
+        or (
+          (p_tracking_key is null or btrim(p_tracking_key) = '')
+          and auth.uid() is not null
+          and (s.submitter_id = auth.uid() or public.is_listing_moderator())
+        )
       );
 end;
 $function$;
