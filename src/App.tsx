@@ -61,7 +61,7 @@ const CoachesPage = lazy(() => import('./modules/coaches/CoachesPage'))
 const EventsPage = lazy(() => import('./modules/events/EventsPage'))
 const ScoutPortalPage = lazy(() => import('./modules/scouting/ScoutPortalPage'))
 const AthleteVerificationPage = lazy(() => import('./modules/verification/AthleteVerificationPage'))
-const AdminModerationPage = lazy(() => import('./modules/admin/AdminModerationPage'))
+const AdminModerationPage = lazy(() => import('./modules/admin/AdminModerationPage').then(module => ({ default: module.AdminModerationPage })))
 
 // Code-split heavyweight modal dialogs
 const CommunityListingModal = lazy(() => import('./shared/components/CommunityListingModal'))
