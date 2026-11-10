@@ -152,12 +152,6 @@ from public.get_submission_tracking_status(:'phase3_tracking_ref', 'wrong-key')
   \echo 'FAIL: invalid tracking key unexpectedly returned rows.'
   \quit 3
 \endif
-
-select case
-  when not exists (
-    select 1 from public.get_submission_tracking_status(:'phase3_tracking_ref', 'wrong-key')
-  ) then 1 else 1 / 0
-end as invalid_tracking_key_assertion;
 reset role;
 
 -- Step 3: Non-moderator unauthorized attempts (tested under authenticated user 20)
@@ -302,17 +296,24 @@ RESET ROLE;
 select set_config('request.jwt.claim.sub', '', false);
 select set_config('request.jwt.claims', '{"role":"anon"}', false);
 set local role anon;
-select case
-  when (public.resubmit_listing_submission(
+select (
+  (public.resubmit_listing_submission(
     :'phase3_tracking_ref',
     :'phase3_tracking_key',
     'Grand Sports Arena Koramangala',
     'Bengaluru',
     'https://example.org/arena',
     '8 indoor badminton courts and 2 turf pitches at 80ft Road Koramangala'
-  )->>'success')::boolean is true then 1
-  else 1 / 0
-end as submitter_resubmission_assertion;
+  )->>'success')::boolean
+) as phase3_resubmission_success
+\gset
+
+\if :phase3_resubmission_success
+  \echo 'PASS: submitter resubmission succeeded.'
+\else
+  \echo 'FAIL: submitter resubmission failed.'
+  \quit 3
+\endif
 reset role;
 
 -- Run internal assertions with the CI database owner, never the simulated client role.
@@ -463,12 +464,18 @@ select set_config('request.jwt.claim.sub', '', false);
 select set_config('request.jwt.claims', '{"role":"anon"}', false);
 set local role anon;
 
-select case
-  when exists (
-    select 1 from public.venues
-    where id = :'phase3_venue_id'::uuid and publication_status = 'published'
-  ) then 1 else 1 / 0
-end as anon_published_venue_visible_assertion;
+select exists (
+  select 1 from public.venues
+  where id = :'phase3_venue_id'::uuid and publication_status = 'published'
+) as phase3_published_venue_visible
+\gset
+
+\if :phase3_published_venue_visible
+  \echo 'PASS: published venue is visible to anonymous users.'
+\else
+  \echo 'FAIL: published venue is not visible to anonymous users.'
+  \quit 3
+\endif
 
 reset role;
 
@@ -526,12 +533,18 @@ select set_config('request.jwt.claim.sub', '', false);
 select set_config('request.jwt.claims', '{"role":"anon"}', false);
 set local role anon;
 
-select case
-  when not exists (
-    select 1 from public.venues
-    where id = :'phase3_venue_id'::uuid and publication_status = 'published'
-  ) then 1 else 1 / 0
-end as anon_unpublished_venue_hidden_assertion;
+select not exists (
+  select 1 from public.venues
+  where id = :'phase3_venue_id'::uuid and publication_status = 'published'
+) as phase3_unpublished_venue_hidden
+\gset
+
+\if :phase3_unpublished_venue_hidden
+  \echo 'PASS: unpublished venue is hidden from anonymous users.'
+\else
+  \echo 'FAIL: unpublished venue is still visible to anonymous users.'
+  \quit 3
+\endif
 
 reset role;
 
