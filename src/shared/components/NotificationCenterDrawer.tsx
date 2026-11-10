@@ -5,7 +5,10 @@ import {
   getOpportunities,
   getPickupGames,
   getVenues,
+  getUserNotifications,
+  markNotificationAsRead,
 } from '../../integrations/supabase/public-client'
+import { getStoredUser } from '../../integrations/supabase/auth-client'
 import { getStoredUser } from '../../integrations/supabase/auth-client'
 import { liveSportsEngine } from '../../modules/live/services/liveSportsEngine'
 import {
@@ -69,10 +72,28 @@ export default function NotificationCenterDrawer({
       getPickupGames(),
       getAnnouncements(),
       liveSportsEngine.getScores().catch(() => ({ matches: [] })),
-    ]).then(([oppRes, venueRes, gameRes, annRes, scoreRes]) => {
+      user ? getUserNotifications(user.id).catch(() => []) : Promise.resolve([]),
+    ]).then(([oppRes, venueRes, gameRes, annRes, scoreRes, userNotifs]) => {
       if (!active) return
 
       const dynamicList: KhelNotification[] = []
+
+      // Authenticated personal notifications are fetched through the user's RLS-scoped inbox.
+      if (Array.isArray(userNotifs)) {
+        userNotifs.forEach(un => {
+          dynamicList.push({
+            id: `un-${un.id}`,
+            category: un.category === 'opportunity' ? 'trials' : un.category === 'pickup_game' ? 'matches' : 'community',
+            title: un.title,
+            message: un.message,
+            timeAgo: 'Personal Alert',
+            icon: un.category === 'verification' ? 'badge-check' : un.category === 'booking' ? 'calendar-check' : 'bell',
+            link: un.action_url || '/notifications',
+            actionLabel: un.action_url ? 'View' : undefined,
+            priority: 'high',
+          })
+        })
+      }
 
       // 1. Announcements
       if (annRes.status === 'ready' && annRes.data.length > 0) {
@@ -264,6 +285,9 @@ export default function NotificationCenterDrawer({
   }
 
   function handleCardClick(e: MouseEvent<HTMLAnchorElement>, notif: KhelNotification) {
+    if (notif.id.startsWith('un-')) {
+      void markNotificationAsRead(notif.id.replace('un-', '')).catch(() => undefined)
+    }
     // Mark as read
     setReadIds(prev => {
       const next = new Set(prev)
