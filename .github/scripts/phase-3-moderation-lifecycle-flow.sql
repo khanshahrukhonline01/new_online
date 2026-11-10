@@ -106,9 +106,9 @@ SET LOCAL ROLE postgres;
 select reference_number as phase3_tracking_ref, tracking_key as phase3_tracking_key
 from public.listing_submissions
 where id = '00000000-0000-4000-8000-000000000040'
-\\gset
-\\echo 'Tracking fixture reference: ' :phase3_tracking_ref
-\\echo 'Tracking fixture key: ' :phase3_tracking_key
+\gset
+\echo 'Tracking fixture reference: ' :phase3_tracking_ref
+\echo 'Tracking fixture key: ' :phase3_tracking_key
 RESET ROLE;
 
 set local role anon;
