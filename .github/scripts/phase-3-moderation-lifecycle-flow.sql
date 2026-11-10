@@ -26,14 +26,40 @@ insert into public.listing_submissions (
   'venue', 'Grand Sports Arena', 'Bengaluru', 'https://example.org/arena', 'Multi-sport turf'
 );
 
--- Separately verify anonymous intake through the SECURITY DEFINER public RPC.
+-- Diagnose the exact RPC implementation installed in this CI database before invoking it.
+-- Include every overload so stale or unexpected signatures are visible in the job log.
+select
+  p.oid::regprocedure as function_signature,
+  pg_get_userbyid(p.proowner) as function_owner,
+  p.prosecdef as security_definer,
+  md5(p.prosrc) as function_body_md5,
+  pg_get_functiondef(p.oid) as installed_function_definition
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.proname = 'submit_listing_intake'
+order by p.oid::regprocedure::text;
+
+-- Capture and print the complete anonymous RPC response before asserting its shape.
+-- A raised SQL error from inside the RPC is intentionally allowed to surface unchanged.
 set local role anon;
+select public.submit_listing_intake(
+  'venue', 'Public Intake RPC Test', 'Bengaluru',
+  'https://example.org/public-intake-test',
+  'Created through public intake RPC', null
+) as phase3_intake_response
+\\gset
+
+\\echo 'Anonymous submit_listing_intake response: ' :phase3_intake_response
+
+-- Validate the response outcome and all identifiers independently. The full JSON above
+-- remains in the log if any assertion fails, making status/shape problems diagnosable.
 select case
-  when public.submit_listing_intake(
-    'venue', 'Public Intake RPC Test', 'Bengaluru',
-    'https://example.org/public-intake-test',
-    'Created through public intake RPC', null
-  )->>'status' = 'submitted' then 1
+  when (:'phase3_intake_response'::jsonb->>'status') = 'submitted'
+   and nullif(:'phase3_intake_response'::jsonb->>'id', '') is not null
+   and nullif(:'phase3_intake_response'::jsonb->>'reference_number', '') is not null
+   and nullif(:'phase3_intake_response'::jsonb->>'tracking_key', '') is not null
+  then 1
   else 1 / 0
 end as anonymous_intake_rpc_assertion;
 reset role;
