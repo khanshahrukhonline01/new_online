@@ -112,18 +112,39 @@ where id = '00000000-0000-4000-8000-000000000040'
 RESET ROLE;
 
 set local role anon;
-select count(*) as tracking_match_count
-from public.get_submission_tracking_status(:'phase3_tracking_ref', :'phase3_tracking_key');
-select case
-  when exists (
-    select 1 from public.get_submission_tracking_status(:'phase3_tracking_ref', :'phase3_tracking_key')
-    where status = 'pending_review' and title = 'Grand Sports Arena'
-  ) then 1 else 1 / 0
-end as valid_tracking_key_assertion;
+-- Print the exact row returned by the public tracking RPC before checking its contents.
+select
+  id::text as phase3_tracking_result_id,
+  reference_number as phase3_tracking_result_reference,
+  title as phase3_tracking_result_title,
+  status as phase3_tracking_result_status
+from public.get_submission_tracking_status(:'phase3_tracking_ref', :'phase3_tracking_key')
+\gset
+
+\echo 'Tracking RPC returned ID: ' :phase3_tracking_result_id
+\echo 'Tracking RPC returned reference: ' :phase3_tracking_result_reference
+\echo 'Tracking RPC returned title: ' :phase3_tracking_result_title
+\echo 'Tracking RPC returned status: ' :phase3_tracking_result_status
+
+select (
+  :'phase3_tracking_result_reference' = :'phase3_tracking_ref'
+  and :'phase3_tracking_result_status' = 'pending_review'
+  and :'phase3_tracking_result_title' = 'Grand Sports Arena'
+) as phase3_valid_tracking_result
+\gset
+
+\if :phase3_valid_tracking_result
+  \echo 'PASS: valid tracking credentials returned the expected pending submission.'
+\else
+  \echo 'FAIL: tracking RPC returned an unexpected reference, title, or status.'
+  \quit 3
+\endif
 
 select case
   when not exists (
-    select 1 from public.get_submission_tracking_status(:'phase3_tracking_ref', 'wrong-key')
+    select 1 from public.get_submission_tracking_status(
+      :'phase3_tracking_ref', 'wrong-key'
+    )
   ) then 1 else 1 / 0
 end as invalid_tracking_key_assertion;
 reset role;
