@@ -17,7 +17,7 @@ describe('CommunityListingModal', () => {
     expect(html).toContain('role="dialog"')
     expect(html).toContain('+ List on KhelGrid')
     expect(html).toContain('KHELGRID · COMMUNITY INTAKE')
-    expect(html).toContain('Publish a new sports academy, turf arena, selection trial, or pickup match')
+    expect(html).toContain('Suggest an academy, venue, trial, tournament, or pickup game. Every submission is reviewed before publication.')
 
     // Category switcher tabs
     expect(html).toContain('Pickup Game')
@@ -32,7 +32,7 @@ describe('CommunityListingModal', () => {
     expect(html).toContain('Date &amp; Time *')
     expect(html).toContain('Price / Player')
     expect(html).toContain('Open Spots')
-    expect(html).toContain('Publish Listing Now')
+    expect(html).toContain('Submit for moderator review')
   })
 
   it('renders Academy specific fields when defaultCategory is academy', () => {
@@ -64,7 +64,7 @@ describe('CommunityListingModal', () => {
     expect(html).toContain('Opportunity Type')
     expect(html).toContain('Selection Trial')
     expect(html).toContain('Tournament')
-    expect(html).toContain('Submit for Verification (2-4 hrs)')
+    expect(html).toContain('Submit for moderator review')
   })
 
   it('renders Guest Mode bar and contact fields for unauthenticated visitors', () => {
@@ -72,45 +72,20 @@ describe('CommunityListingModal', () => {
       <CommunityListingModal isOpen={true} onClose={vi.fn()} defaultCategory="pickup_game" />
     )
 
-    expect(html).toContain('Guest Mode:')
-    expect(html).toContain('Sign In for Instant Publishing')
+    expect(html).toContain('Guest Mode')
+    expect(html).toContain('No account is required. Your suggestion stays unpublished until a moderator reviews it.')
     expect(html).toContain('Organizer / Host Contact')
     expect(html).toContain('Your Name / Organizer *')
     expect(html).toContain('Contact WhatsApp / Phone *')
   })
 
-  it('renders all 5 listing payment plans with durations and pricing in INR', () => {
+  it('clearly states that listing suggestions are free and paid plans are disabled', () => {
     const html = renderToStaticMarkup(
       <CommunityListingModal isOpen={true} onClose={vi.fn()} defaultCategory="venue" />
     )
-
-    // Plans Section Heading
-    expect(html).toContain('Select Listing Plan &amp; Duration *')
-
-    // 1-Day Flash / Single-day Pass (₹99)
-    expect(html).toContain('1-Day Listing')
-    expect(html).toContain('24 Hours (1 Day)')
-    expect(html).toContain('₹99')
-
-    // 1-Month Plan (₹499)
-    expect(html).toContain('1-Month Listing')
-    expect(html).toContain('30 Days (Monthly)')
-    expect(html).toContain('₹499')
-
-    // 6-Month Semi-Annual Plan (₹2,499)
-    expect(html).toContain('6-Month Listing')
-    expect(html).toContain('180 Days (Semi-Annual)')
-    expect(html).toContain('₹2,499')
-
-    // 1-Year Annual Plan (₹4,499)
-    expect(html).toContain('1-Year Listing')
-    expect(html).toContain('365 Days (Annual)')
-    expect(html).toContain('₹4,499')
-
-    // Lifelong / Lifetime Plan (₹9,999)
-    expect(html).toContain('Lifelong Listing')
-    expect(html).toContain('Lifetime (Never Expires)')
-    expect(html).toContain('₹9,999')
-    expect(html).toContain('VIP Lifetime')
+    expect(html).toContain('Listing suggestions are currently free.')
+    expect(html).toContain('Paid listing plans and checkout are disabled')
+    expect(html).not.toContain('₹99')
+    expect(html).not.toContain('VIP Lifetime')
   })
 })

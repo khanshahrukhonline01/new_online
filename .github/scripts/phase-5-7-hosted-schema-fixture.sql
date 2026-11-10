@@ -19,7 +19,12 @@ AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$
 
 CREATE OR REPLACE FUNCTION auth.jwt()
 RETURNS jsonb LANGUAGE sql STABLE
-AS $$ SELECT coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb) $$;
+AS $body$ SELECT coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb) $body$;
+
+-- Match the standard Supabase API role access to auth identity helpers.
+GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION auth.jwt() TO anon, authenticated, service_role;
 
 -- Mirror the hosted development athlete_profiles column contract.
 -- Keep the unsafe historical publication default so the migration must change it.
@@ -118,6 +123,37 @@ CREATE TABLE public.venues (
   government_facility boolean NOT NULL DEFAULT false,
   slot_hourly_fee numeric DEFAULT 800,
   payment_status text DEFAULT 'paid'
+);
+CREATE TABLE public.sports (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug text UNIQUE,
+  name text NOT NULL,
+  is_published boolean NOT NULL DEFAULT true
+);
+CREATE TABLE public.academy_sports (
+  academy_id uuid NOT NULL,
+  sport_id uuid NOT NULL
+);
+CREATE TABLE public.coach_academies (
+  coach_id uuid NOT NULL,
+  academy_id uuid NOT NULL
+);
+CREATE TABLE public.coach_sports (
+  coach_id uuid NOT NULL,
+  sport_id uuid NOT NULL
+);
+CREATE TABLE public.coaches (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug text,
+  display_name text,
+  city text,
+  publication_status text NOT NULL DEFAULT 'published'
+);
+CREATE TABLE public.events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug text,
+  title text,
+  publication_status text NOT NULL DEFAULT 'published'
 );
 CREATE TABLE public.academies (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), slug text, name text, payment_status text DEFAULT 'paid');
 CREATE TABLE public.opportunities (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), slug text, title text, payment_status text DEFAULT 'paid');

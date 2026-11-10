@@ -8,6 +8,7 @@ export interface Opportunity {
   id: string
   slug: string
   title: string
+  sport_id?: string | null
   opportunity_type: 'trial' | 'combine' | 'scholarship' | 'camp' | 'job' | 'other'
   organizer_name: string | null
   city: string | null

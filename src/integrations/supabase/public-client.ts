@@ -1,5 +1,5 @@
 import type { Academy, Coach, EventItem, Opportunity, Sport, Venue } from '../../shared/domain'
-import { broadcastRealtimeEvent, getSupabaseClient, type RealtimeTable } from './realtime-client'
+import { broadcastRealtimeEvent, getSupabaseClient } from './realtime-client'
 import {
   getCuratedAcademyBySlug,
   getCuratedVenueBySlug,
@@ -7,7 +7,8 @@ import {
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-const CATALOGUE_PAGE_SIZE = 1000
+const CATALOGUE_PAGE_SIZE = 500
+const CATALOGUE_MAX_ROWS = 5000
 
 export type CatalogueResult<T> =
   | { status: 'ready'; data: T[] }
@@ -124,49 +125,57 @@ async function fetchCatalogueRemote<T>(
     return { status: 'unavailable', data: [], message: 'The catalogue URL must use HTTPS outside local development.' }
   }
 
-  const query = new URLSearchParams({ select, order, ...filters, limit: String(CATALOGUE_PAGE_SIZE) })
   try {
-    const response = await fetch(
-      `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/${table}?${query.toString()}`,
-      {
-        headers: {
-          apikey: anonKey,
-          Authorization: `Bearer ${anonKey}`,
-          Accept: 'application/json',
+    const rows: T[] = []
+    let offset = 0
+    let hasMore = false
+    while (offset < CATALOGUE_MAX_ROWS) {
+      const query = new URLSearchParams({ select, order, ...filters, limit: String(CATALOGUE_PAGE_SIZE) })
+      const response = await fetch(
+        `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/${table}?${query.toString()}`,
+        {
+          headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
+            Accept: 'application/json',
+            Range: `${offset}-${offset + CATALOGUE_PAGE_SIZE - 1}`,
+          },
         },
-      },
-    )
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 404) {
-        unavailableTables.set(table, Date.now() + TABLE_BACKOFF_MS)
-      }
-      if (typeof window !== 'undefined') {
-        try {
-          const stored = sessionStorage.getItem(sessionKey)
-          if (stored) {
-            const parsed = JSON.parse(stored) as { timestamp: number; result: CatalogueResult<T> }
-            if (parsed?.result?.status === 'ready') return parsed.result
-          }
-        } catch {
-          // ignore
+      )
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 404) unavailableTables.set(table, Date.now() + TABLE_BACKOFF_MS)
+        if (typeof window !== 'undefined') {
+          try {
+            const stored = sessionStorage.getItem(sessionKey)
+            if (stored) {
+              const parsed = JSON.parse(stored) as { timestamp: number; result: CatalogueResult<T> }
+              if (parsed?.result?.status === 'ready') return parsed.result
+            }
+          } catch { /* ignore stale-cache parse errors */ }
         }
+        return { status: 'unavailable', data: [], message: `Catalogue data for ${table} is temporarily unavailable. Please try again later.` }
       }
-      return { status: 'unavailable', data: [], message: 'Catalogue data is temporarily unavailable. Please try again later.' }
+      const data: unknown = await response.json()
+      if (!Array.isArray(data)) return { status: 'unavailable', data: [], message: 'The catalogue returned an unexpected response.' }
+      rows.push(...data as T[])
+      if (data.length < CATALOGUE_PAGE_SIZE) {
+        hasMore = false
+        break
+      }
+      hasMore = true
+      offset += CATALOGUE_PAGE_SIZE
     }
-    const data: unknown = await response.json()
-    if (!Array.isArray(data)) {
-      return { status: 'unavailable', data: [], message: 'The catalogue returned an unexpected response.' }
+    if (hasMore && offset >= CATALOGUE_MAX_ROWS) {
+      return { status: 'unavailable', data: [], message: `This catalogue reached the ${CATALOGUE_MAX_ROWS}-record safety cap. Narrow your filters to avoid incomplete results.` }
     }
-    const result: CatalogueResult<T> = { status: 'ready', data: data as T[] }
+    const result: CatalogueResult<T> = { status: 'ready', data: rows }
     catalogueMemoryCache.set(cacheKey, { timestamp: Date.now(), result })
     if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.setItem(sessionKey, JSON.stringify({ timestamp: Date.now(), result }))
-      } catch {
-        // ignore
-      }
+      try { sessionStorage.setItem(sessionKey, JSON.stringify({ timestamp: Date.now(), result })) }
+      catch { /* ignore storage quota errors */ }
     }
     return result
+
   } catch {
     if (typeof window !== 'undefined') {
       try {
@@ -193,13 +202,13 @@ export function getSports() {
 }
 
 const OPPORTUNITY_FEATURED_SELECT =
-  'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status,registration_fee,available_spots,age_category,gender,eligibility_criteria,required_documents,metadata,is_featured'
+  'id,slug,title,sport_id,sport:sports(id,slug,name),opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status,registration_fee,available_spots,age_category,gender,eligibility_criteria,required_documents,metadata,is_featured'
 
 const OPPORTUNITY_RICH_SELECT =
-  'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status,registration_fee,available_spots,age_category,gender,eligibility_criteria,required_documents,metadata'
+  'id,slug,title,sport_id,sport:sports(id,slug,name),opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status,registration_fee,available_spots,age_category,gender,eligibility_criteria,required_documents,metadata'
 
 const OPPORTUNITY_CORE_SELECT =
-  'id,slug,title,opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status'
+  'id,slug,title,sport_id,sport:sports(id,slug,name),opportunity_type,organizer_name,city,venue_name,starts_at,ends_at,application_deadline,source_url,source_name,verification_status'
 
 export type AuthorRole = 'Athlete' | 'Parent' | 'Coach' | 'Turf Player' | 'Verified Player'
 
@@ -1048,10 +1057,10 @@ export async function getAnnouncements(): Promise<CatalogueResult<DatabaseAnnoun
 }
 
 export type ListingSubmissionInput = {
-  listing_type: 'opportunity' | 'venue' | 'coach' | 'academy' | 'event'
+  listing_type: 'opportunity' | 'venue' | 'coach' | 'academy' | 'event' | 'pickup_game' | 'sport'
   title: string
   city?: string
-  source_url: string
+  source_url?: string
   details?: string
 }
 
@@ -1060,67 +1069,56 @@ export type ListingSubmissionResult =
   | { status: 'unconfigured' }
   | { status: 'unavailable'; message: string }
 
-/**
- * Creates a private moderation-queue item. The database grants public roles
- * INSERT on user-supplied columns only; status and review metadata are server-controlled.
- */
-export async function submitListingSuggestion(
-  input: ListingSubmissionInput,
-): Promise<ListingSubmissionResult> {
+/** Submit a user-provided suggestion to the private review queue. */
+export async function submitListingSuggestion(input: ListingSubmissionInput): Promise<ListingSubmissionResult> {
   if (!supabaseUrl || !anonKey) return { status: 'unconfigured' }
-
-  let baseUrl: URL
+  if (input.title.trim().length < 2 || input.title.trim().length > 150) {
+    return { status: 'unavailable', message: 'Listing title must contain between 2 and 150 characters.' }
+  }
+  if ((input.city?.trim().length ?? 0) > 100) {
+    return { status: 'unavailable', message: 'City must be 100 characters or fewer.' }
+  }
+  if ((input.details?.trim().length ?? 0) > 2000) {
+    return { status: 'unavailable', message: 'Listing details must be 2,000 characters or fewer.' }
+  }
+  if ((input.source_url?.trim().length ?? 0) > 1000) {
+    return { status: 'unavailable', message: 'Source links must be 1,000 characters or fewer.' }
+  }
+  if (input.source_url?.trim()) {
+    try {
+      if (new URL(input.source_url).protocol !== 'https:') throw new Error('HTTPS required')
+    } catch {
+      return { status: 'unavailable', message: 'Please provide a valid HTTPS source link, or leave it blank if unavailable.' }
+    }
+  }
   try {
-    baseUrl = new URL(supabaseUrl)
-  } catch {
-    return { status: 'unavailable', message: 'The submission service is not configured correctly.' }
-  }
-  if (baseUrl.protocol !== 'https:' && baseUrl.hostname !== 'localhost' && baseUrl.hostname !== '127.0.0.1') {
-    return { status: 'unavailable', message: 'The submission service must use HTTPS.' }
-  }
-
-  let sourceUrl: URL
-  try {
-    sourceUrl = new URL(input.source_url)
-  } catch {
-    return { status: 'unavailable', message: 'Please provide a valid official HTTPS source link.' }
-  }
-  if (sourceUrl.protocol !== 'https:') {
-    return { status: 'unavailable', message: 'Please provide an official HTTPS source link.' }
-  }
-
-  try {
-    const response = await fetch(
-      `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/listing_submissions`,
-      {
-        method: 'POST',
-        headers: {
-          apikey: anonKey,
-          Authorization: `Bearer ${anonKey}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          Prefer: 'return=minimal',
-        },
-        body: JSON.stringify({
-          listing_type: input.listing_type,
-          title: input.title.trim(),
-          city: input.city?.trim() || null,
-          source_url: sourceUrl.href,
-          details: input.details?.trim() || null,
-        }),
-      },
-    )
+    const baseUrl = new URL(supabaseUrl)
+    if (baseUrl.protocol !== 'https:' && baseUrl.hostname !== 'localhost' && baseUrl.hostname !== '127.0.0.1') {
+      return { status: 'unavailable', message: 'The submission service must use HTTPS.' }
+    }
+    const response = await fetch(`${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/listing_submissions`, {
+      method: 'POST',
+      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json', Accept: 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        listing_type: input.listing_type,
+        title: input.title.trim(),
+        city: input.city?.trim() || null,
+        source_url: input.source_url?.trim() || null,
+        details: input.details?.trim() || null,
+      }),
+    })
     if (!response.ok) {
-      return {
-        status: 'unavailable',
-        message: response.status === 404
-          ? 'The submission queue is not installed in this database yet.'
-          : 'We could not submit this suggestion. Please try again later.',
+      if (response.status === 404) {
+        return { status: 'unavailable', message: 'The listing submission queue is not installed on this database yet. No listing was submitted.' }
       }
+      if (response.status >= 500) {
+        return { status: 'unavailable', message: 'We could not submit this suggestion. Please try again later.' }
+      }
+      return { status: 'unavailable', message: `Submission could not be accepted (HTTP ${response.status}). Please check your details and try again.` }
     }
     return { status: 'submitted' }
-  } catch {
-    return { status: 'unavailable', message: 'Could not connect to the submission service. Check your connection and try again.' }
+  } catch (error) {
+    return { status: 'unavailable', message: error instanceof Error ? error.message : 'Could not connect to the submission service.' }
   }
 }
 
@@ -1171,7 +1169,7 @@ export function quickSignInUser(
   phoneOrEmail: string,
   role: 'host' | 'athlete' | 'scout' | 'academy' = 'host',
 ): KhelGridUser {
-  const cleanName = name.trim() || 'Verified Host'
+  const cleanName = name.trim() || 'Community User'
   const isEmail = phoneOrEmail.includes('@')
   const user: KhelGridUser = {
     id: `user-${Math.random().toString(36).substring(2, 9)}`,
@@ -1179,7 +1177,7 @@ export function quickSignInUser(
     email: isEmail ? phoneOrEmail.trim() : undefined,
     phone: !isEmail ? phoneOrEmail.trim() : undefined,
     role,
-    isVerified: true,
+    isVerified: false,
     createdAt: new Date().toISOString(),
   }
   setStoredUser(user)
@@ -1192,17 +1190,7 @@ export function signOutUser(): void {
 
 export type CommunityListingCategory = 'academy' | 'venue' | 'opportunity' | 'pickup_game'
 
-export interface CommunityListingPlanMeta {
-  listing_plan?: '1_day' | '1_month' | '6_months' | '1_year' | 'lifelong'
-  plan_price?: number
-  plan_duration_days?: number
-  plan_expires_at?: string | null
-  payment_id?: string
-  payment_order_id?: string
-  payment_status?: 'paid' | 'pay_at_venue' | 'unpaid'
-}
-
-export interface CommunityAcademyInput extends CommunityListingPlanMeta {
+export interface CommunityAcademyInput {
   category: 'academy'
   name: string
   city: string
@@ -1213,10 +1201,9 @@ export interface CommunityAcademyInput extends CommunityListingPlanMeta {
   public_contact_url?: string
   contact_name?: string
   contact_phone?: string
-  is_verified_user?: boolean
 }
 
-export interface CommunityVenueInput extends CommunityListingPlanMeta {
+export interface CommunityVenueInput {
   category: 'venue'
   name: string
   city: string
@@ -1225,10 +1212,9 @@ export interface CommunityVenueInput extends CommunityListingPlanMeta {
   description?: string
   contact_name?: string
   contact_phone?: string
-  is_verified_user?: boolean
 }
 
-export interface CommunityOpportunityInput extends CommunityListingPlanMeta {
+export interface CommunityOpportunityInput {
   category: 'opportunity'
   title: string
   opportunity_type?: 'trial' | 'combine' | 'scholarship' | 'camp' | 'job' | 'other'
@@ -1243,10 +1229,9 @@ export interface CommunityOpportunityInput extends CommunityListingPlanMeta {
   age_category?: string
   contact_name?: string
   contact_phone?: string
-  is_verified_user?: boolean
 }
 
-export interface CommunityPickupGameInput extends CommunityListingPlanMeta {
+export interface CommunityPickupGameInput {
   category: 'pickup_game'
   sport: string
   emoji?: string
@@ -1261,7 +1246,6 @@ export interface CommunityPickupGameInput extends CommunityListingPlanMeta {
   contact_name?: string
   contact_phone?: string
   whatsapp_group_url?: string
-  is_verified_user?: boolean
 }
 
 export type CommunityListingInput =
@@ -1273,7 +1257,7 @@ export type CommunityListingInput =
 export type CommunityListingResult =
   | {
       status: 'submitted'
-      mode: 'instant_live' | 'moderation_queue'
+      mode: 'moderation_queue'
       category: CommunityListingCategory
       record: Record<string, unknown>
       message: string
@@ -1282,285 +1266,43 @@ export type CommunityListingResult =
     }
   | { status: 'unavailable'; message: string }
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'listing'
-}
-
-export async function submitCommunityListing(
-  input: CommunityListingInput,
-): Promise<CommunityListingResult> {
+export async function submitCommunityListing(input: CommunityListingInput): Promise<CommunityListingResult> {
   const city = input.city?.trim()
-  if (!city) {
-    return { status: 'unavailable', message: 'City is required for all listings.' }
-  }
+  if (!city) return { status: 'unavailable', message: 'City is required for all listings.' }
 
-  const currentUser = getStoredUser()
-  const isVerified = Boolean(input.is_verified_user || currentUser?.isVerified)
-
-  // Hybrid Verification Rules:
-  // - Selection trials and academies submitted by unverified guests require moderation
-  //   to protect athletes and parents from fake trial notices and unauthorized cash fees.
-  // - Pickup games and venues submit live with contact details so local players can coordinate immediately.
-  const requiresReview = !isVerified && (input.category === 'opportunity' || input.category === 'academy')
-  const mode: 'instant_live' | 'moderation_queue' = requiresReview ? 'moderation_queue' : 'instant_live'
-
-  const randomSuffix = Math.random().toString(36).substring(2, 7)
-  let targetTable: 'academies' | 'venues' | 'opportunities' | 'pickup_games'
-  let record: Record<string, unknown>
-
-  const defaultPlan = input.category === 'pickup_game' ? '1_day' : '1_month'
-  const planId = input.listing_plan || defaultPlan
-  const planPrice = input.plan_price !== undefined
-    ? input.plan_price
-    : (planId === '1_day' ? 99 : planId === '1_month' ? 499 : planId === '6_months' ? 2499 : planId === '1_year' ? 4499 : 9999)
-  const durationDays = input.plan_duration_days !== undefined
-    ? input.plan_duration_days
-    : (planId === '1_day' ? 1 : planId === '1_month' ? 30 : planId === '6_months' ? 180 : planId === '1_year' ? 365 : 0)
-  const planExpiresAt = input.plan_expires_at !== undefined
-    ? input.plan_expires_at
-    : (durationDays > 0 ? new Date(Date.now() + 86400000 * durationDays).toISOString() : null)
-
-  const planMetadata = {
-    listing_plan: planId,
-    plan_price: planPrice,
-    plan_expires_at: planExpiresAt,
-    payment_id: input.payment_id || null,
-    payment_status: input.payment_status || 'paid',
-  }
-
+  let title = ''
+  let listingType: ListingSubmissionInput['listing_type']
   switch (input.category) {
-    case 'academy': {
-      if (!input.name || input.name.trim().length < 2) {
-        return { status: 'unavailable', message: 'Academy name must be at least 2 characters.' }
-      }
-      targetTable = 'academies'
-      record = {
-        id: `acad-${randomSuffix}`,
-        slug: `${slugify(input.name)}-${slugify(city)}-${randomSuffix}`,
-        name: input.name.trim(),
-        sport: input.sport?.trim() || 'Multi-Sport',
-        description: input.description?.trim() || (input.sport ? `Premier training academy and athlete development for ${input.sport} in ${city}.` : 'Premier sports training academy.'),
-        city,
-        state: input.state?.trim() || null,
-        address: input.state?.trim() ? `${input.name.trim()}, ${city}, ${input.state.trim()}` : `${input.name.trim()}, ${city}`,
-        website_url: input.website_url?.trim() || null,
-        public_contact_url: input.public_contact_url?.trim() || input.contact_phone?.trim() || null,
-        phone: input.contact_phone?.trim() || null,
-        facilities: ['Professional Training Ground', 'Floodlights', 'Certified Coaching Staff', 'First Aid Support', 'Changing Rooms'],
-        age_groups: ['Under-12', 'Under-16', 'Open Senior'],
-        timings: 'Morning: 6:00 AM – 9:00 AM | Evening: 4:30 PM – 7:30 PM',
-        fee_structure: 'Contact academy for current fee & trial batch details',
-        admission_open: true,
-        publication_status: requiresReview ? 'pending_review' : 'published',
-        verification_status: isVerified ? 'verified' : 'pending_review',
-        is_featured: false,
-        ...planMetadata,
-      }
-      break
-    }
-    case 'venue': {
-      if (!input.name || input.name.trim().length < 2) {
-        return { status: 'unavailable', message: 'Venue / arena name must be at least 2 characters.' }
-      }
-      targetTable = 'venues'
-      record = {
-        id: `venue-${randomSuffix}`,
-        slug: `${slugify(input.name)}-${slugify(city)}-${randomSuffix}`,
-        name: input.name.trim(),
-        sport: input.sport?.trim() || 'Multi-Sport',
-        description: input.description?.trim() || (input.sport ? `Multi-sport arena and play facility for ${input.sport} in ${city}.` : 'Sports venue with professional playing surfaces.'),
-        city,
-        address: input.address?.trim() || `${input.name.trim()}, ${city}`,
-        phone: input.contact_phone?.trim() || null,
-        timezone: 'Asia/Kolkata',
-        timings: '6:00 AM – 11:00 PM (Daily)',
-        surface_type: input.sport === 'Football' ? '50mm FIFA Standard Artificial Turf' : input.sport === 'Badminton' ? 'BWF Approved Wooden Courts' : 'Standard Playing Surface',
-        court_count: 'Multiple Playing Courts & Turfs',
-        pricing: 'Hourly rates starting from ₹800/hr',
-        facilities: ['Floodlights / LED Lighting', 'Drinking Water', 'Washrooms & Changing Rooms', 'Free Parking', 'Equipment Available'],
-        rules: ['Proper athletic / turf shoes required', 'Arrive 10 minutes prior to booked slot', 'Follow facility safety guidelines'],
-        publication_status: 'published',
-        verification_status: isVerified ? 'verified' : 'pending_review',
-        is_featured: false,
-        ...planMetadata,
-      }
-      break
-    }
-    case 'opportunity': {
-      if (!input.title || input.title.trim().length < 2) {
-        return { status: 'unavailable', message: 'Title must be at least 2 characters.' }
-      }
-      targetTable = 'opportunities'
-      record = {
-        id: `opp-${randomSuffix}`,
-        slug: `${slugify(input.title)}-${slugify(city)}-${randomSuffix}`,
-        title: input.title.trim(),
-        opportunity_type: input.opportunity_type || 'trial',
-        organizer_name: input.organizer_name?.trim() || (isVerified && currentUser ? currentUser.name : 'Community Sports Organizer'),
-        city,
-        venue_name: input.venue_name?.trim() || 'Local Sports Complex',
-        starts_at: input.starts_at || new Date(Date.now() + 86400000 * 7).toISOString(),
-        ends_at: input.ends_at || null,
-        application_deadline: null,
-        source_url: input.source_url?.trim() || null,
-        source_name: isVerified ? 'Verified Organizer' : 'Community Submission',
-        verification_status: isVerified ? 'verified' : 'pending_review',
-        publication_status: requiresReview ? 'pending_review' : 'published',
-        registration_fee: input.registration_fee?.trim() || 'Free',
-        available_spots: 50,
-        age_category: input.age_category?.trim() || 'Open Age',
-        gender: 'All',
-        is_featured: false,
-        ...planMetadata,
-      }
-      break
-    }
-    case 'pickup_game': {
-      if (!input.sport || input.sport.trim().length < 2) {
-        return { status: 'unavailable', message: 'Sport name must be at least 2 characters.' }
-      }
-      if (!input.venue_name || input.venue_name.trim().length < 2) {
-        return { status: 'unavailable', message: 'Venue / arena name must be at least 2 characters.' }
-      }
-      if (!input.time_label || input.time_label.trim().length < 2) {
-        return { status: 'unavailable', message: 'Time / schedule label is required.' }
-      }
-      targetTable = 'pickup_games'
-      const total = Number(input.total_players) || 10
-      const spots = Number(input.spots_open) || 4
-      record = {
-        id: `pg-${randomSuffix}`,
-        slug: `${slugify(input.sport)}-${slugify(input.venue_name)}-${slugify(city)}-${randomSuffix}`,
-        sport: input.sport.trim(),
-        emoji: input.emoji || '⚽',
-        skill_level: input.skill_level || 'Intermediate',
-        venue_name: input.venue_name.trim(),
-        city,
-        time_label: input.time_label.trim(),
-        host_name: input.host_name?.trim() || (isVerified && currentUser ? currentUser.name : (input.contact_name?.trim() || 'Community Host')),
-        price_per_player: input.price_per_player?.trim() || 'Free',
-        spots_open: spots,
-        total_players: total,
-        confirmed_players: Math.max(0, total - spots),
-        whatsapp_group_url: input.whatsapp_group_url?.trim() || null,
-        status: spots > 0 ? 'open' : 'full',
-        is_featured: false,
-        publication_status: 'published',
-        ...planMetadata,
-      }
-      break
-    }
+    case 'academy': listingType = 'academy'; title = input.name.trim(); break
+    case 'venue': listingType = 'venue'; title = input.name.trim(); break
+    case 'opportunity': listingType = 'opportunity'; title = input.title.trim(); break
+    case 'pickup_game': listingType = 'pickup_game'; title = `${input.sport.trim()} · ${input.venue_name.trim()}`; break
   }
+  if (title.length < 2) return { status: 'unavailable', message: 'Please provide a listing title with at least 2 characters.' }
 
-  // If Supabase credentials are configured, persist row via REST API
-  if (supabaseUrl && anonKey) {
-    try {
-      const baseUrl = new URL(supabaseUrl)
-      if (baseUrl.protocol === 'https:' || baseUrl.hostname === 'localhost' || baseUrl.hostname === '127.0.0.1') {
-        const postPayload = { ...record }
-        if (
-          typeof postPayload.id === 'string' &&
-          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postPayload.id as string)
-        ) {
-          delete postPayload.id
-        }
+  const sourceUrl = input.category === 'opportunity' ? input.source_url?.trim() : undefined
+  const details = [
+    input.category === 'academy' || input.category === 'venue' ? input.description?.trim() : '',
+    input.category === 'opportunity' ? [input.organizer_name, input.venue_name, input.starts_at, input.age_category, input.registration_fee].filter(Boolean).join(' · ') : '',
+    input.category === 'pickup_game' ? [input.time_label, input.skill_level, input.price_per_player, input.spots_open !== undefined ? `Spots stated: ${input.spots_open}` : ''].filter(Boolean).join(' · ') : '',
+    input.category === 'academy' ? [input.sport, input.state, input.website_url, input.public_contact_url, input.contact_phone].filter(Boolean).join(' · ') : '',
+    input.category === 'venue' ? [input.sport, input.address, input.contact_phone].filter(Boolean).join(' · ') : '',
+    input.contact_name, input.contact_phone,
+  ].filter(Boolean).join('\n').slice(0, 2000)
 
-        const response = await fetch(
-          `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/${targetTable}`,
-          {
-            method: 'POST',
-            headers: {
-              apikey: anonKey,
-              Authorization: `Bearer ${anonKey}`,
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
-              Prefer: 'return=representation',
-            },
-            body: JSON.stringify(postPayload),
-          },
-        )
-        if (response.ok) {
-          const inserted = await response.json()
-          if (Array.isArray(inserted) && inserted[0]) {
-            record = inserted[0] as Record<string, unknown>
-          }
-        }
-      }
-    } catch {
-      // Offline fallback: keep in local session cache
-    }
+  const submitted = await submitListingSuggestion({ listing_type: listingType, title, city, source_url: sourceUrl, details })
+  if (submitted.status !== 'submitted') {
+    return { status: 'unavailable', message: submitted.status === 'unconfigured'
+      ? 'The listing submission service is not configured. No listing was submitted.'
+      : submitted.message }
   }
-
-  // Always cache in communitySubmissions so the newly generated detail page (/academies/:slug or /venues/:slug)
-  // is immediately viewable by the submitter with its appropriate verification badge / safety advisory banner.
-  switch (input.category) {
-    case 'academy':
-      communitySubmissions.academies = [record as unknown as Academy, ...communitySubmissions.academies]
-      break
-    case 'venue':
-      communitySubmissions.venues = [record as unknown as Venue, ...communitySubmissions.venues]
-      break
-    case 'opportunity':
-      communitySubmissions.opportunities = [record as unknown as Opportunity, ...communitySubmissions.opportunities]
-      break
-    case 'pickup_game':
-      communitySubmissions.pickup_games = [record as unknown as DatabasePickupGame, ...communitySubmissions.pickup_games]
-      break
-  }
-
-  // Broadcast realtime events for approved / instant listings
-  if (!requiresReview) {
-    const tableMap: Record<CommunityListingCategory, RealtimeTable> = {
-      pickup_game: 'pickup_games',
-      opportunity: 'opportunities',
-      venue: 'venues',
-      academy: 'academies',
-    }
-    broadcastRealtimeEvent(tableMap[input.category], 'INSERT', record)
-
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent('khelgrid:listing-added', {
-          detail: { category: input.category, record },
-        }),
-      )
-    }
-  }
-
-  const categoryName = input.category === 'pickup_game'
-    ? 'Pickup Game'
-    : input.category === 'opportunity'
-      ? 'Selection Trial / Tournament'
-      : input.category === 'venue'
-        ? 'Turf / Arena'
-        : 'Sports Academy'
-
-  const message = requiresReview
-    ? `${categoryName} submitted for verification! Our sports desk reviews notices within 2–4 hours to protect Indian athletes from unauthorized combines and scams.`
-    : isVerified
-      ? `${categoryName} has been published instantly with your Verified Host credentials!`
-      : `${categoryName} has been published and is now live on KhelGrid!`
-
-  const detailPath = input.category === 'academy'
-    ? `/academies/${record.slug}`
-    : input.category === 'venue'
-      ? `/venues/${record.slug}`
-      : input.category === 'opportunity'
-        ? `/opportunities/${record.slug}`
-        : '/play'
-
   return {
     status: 'submitted',
-    mode,
+    mode: 'moderation_queue',
     category: input.category,
-    record,
-    message,
-    requiresReview,
-    detailPath,
+    record: { title, city, publication_status: 'pending_review', verification_status: 'unverified' },
+    message: 'Your suggestion has been received in the private review queue. It is not published or verified. A moderator must review it before it can appear in the catalogue.',
+    requiresReview: true,
   }
 }
 
@@ -3539,40 +3281,45 @@ export interface UserDatabaseNotification {
   metadata?: Record<string, unknown>
 }
 
+export async function getUserNotifications(userId: string): Promise<UserDatabaseNotification[]> {
+  const client = getSupabaseClient()
+  if (!client) return []
+  const { data: authData, error: authError } = await client.auth.getUser()
+  if (authError || !authData.user || authData.user.id !== userId) return []
+  const { data, error } = await client
+    .from('user_notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(30)
+  if (error) throw new Error(error.message || 'Could not load your notifications.')
+  return Array.isArray(data) ? data as UserDatabaseNotification[] : []
+}
+
+export async function markNotificationAsRead(notificationId: string): Promise<boolean> {
+  const client = getSupabaseClient()
+  if (!client) return false
+  const { data: authData, error: authError } = await client.auth.getUser()
+  if (authError || !authData.user) return false
+  const { data, error } = await client
+    .from('user_notifications')
+    .update({ is_read: true })
+    .eq('id', notificationId)
+    .eq('user_id', authData.user.id)
+    .select('id')
+    .maybeSingle()
+  if (error) throw new Error(error.message || 'Could not update the notification.')
+  return Boolean(data?.id)
+}
+
 export interface AdminModerationQueue {
   pendingSubmissions: Array<{
     id: string
     listing_type: string
     title: string
     city: string | null
-    source_url: string
+    source_url: string | null
     details: string | null
-    status: string
-    created_at: string
-  }>
-  pendingClaims: Array<{
-    id: string
-    entity_type: string
-    entity_slug: string
-    entity_name: string
-    contact_name: string
-    contact_phone: string
-    contact_email?: string | null
-    claimant_role?: string | null
-    document_type: string
-    proof_details: string
-    status: string
-    created_at: string
-  }>
-  pendingReports: Array<{
-    id: string
-    entity_type: string
-    entity_slug: string
-    entity_name: string
-    reason: string
-    details: string
-    reporter_email?: string | null
-    reporter_phone?: string | null
     status: string
     created_at: string
   }>
@@ -3582,361 +3329,41 @@ export interface AdminModerationQueue {
     totalCoaches: number
     totalEvents: number
     pendingSubmissionsCount: number
-    pendingClaimsCount: number
-    pendingReportsCount: number
   }
-}
-
-const STORAGE_ADMIN_SUBMISSIONS_KEY = 'khelgrid_admin_moderated_submissions'
-const STORAGE_ADMIN_CLAIMS_KEY = 'khelgrid_admin_moderated_claims'
-const STORAGE_ADMIN_REPORTS_KEY = 'khelgrid_admin_moderated_reports'
-
-const BASELINE_PENDING_SUBMISSIONS = [
-  {
-    id: 'sub-001',
-    listing_type: 'venue',
-    title: 'Decathlon Sportplex Sarjapur Artificial Turfs',
-    city: 'Bengaluru',
-    source_url: 'https://playo.co/venues/decathlon-sarjapur',
-    details: '2x 5v5 FIFA AstroTurf pitches, LED floodlights, locker rooms, public parking. ₹1,400/hr.',
-    status: 'pending_review',
-    created_at: new Date(Date.now() - 3600000 * 4).toISOString(),
-  },
-  {
-    id: 'sub-002',
-    listing_type: 'academy',
-    title: 'Garhwal Heroes Football Academy (Youth Wing)',
-    city: 'Delhi',
-    source_url: 'https://garhwalheroesfc.com/academy',
-    details: 'AIFF 2-star certified residential academy. U-13, U-15, U-17 competitive age categories with daily training.',
-    status: 'pending_review',
-    created_at: new Date(Date.now() - 3600000 * 12).toISOString(),
-  },
-  {
-    id: 'sub-003',
-    listing_type: 'opportunity',
-    title: 'Goa Football Association (GFA) State U-17 Open Scouting Trials',
-    city: 'Panaji',
-    source_url: 'https://the-gfa.com/trials-2026',
-    details: 'Selection combine for Santosh Junior Trophy state squad. Open to all registered Goa players born after Jan 2009.',
-    status: 'pending_review',
-    created_at: new Date(Date.now() - 3600000 * 20).toISOString(),
-  },
-]
-
-const BASELINE_PENDING_CLAIMS = [
-  {
-    id: 'clm-001',
-    entity_type: 'academy',
-    entity_slug: 'pullela-gopichand-badminton-academy',
-    entity_name: 'Pullela Gopichand Badminton Academy',
-    contact_name: 'Rajendra Prasad (Admin Director)',
-    contact_phone: '+91 98490 11223',
-    contact_email: 'admin@pgba.in',
-    claimant_role: 'Operations Director',
-    document_type: 'affiliation_certificate',
-    proof_details: 'Attached official BAI Affiliation Certificate & SATS Ground Allotment agreement for Gachibowli facility.',
-    status: 'pending_review',
-    created_at: new Date(Date.now() - 3600000 * 8).toISOString(),
-  },
-  {
-    id: 'clm-002',
-    entity_type: 'venue',
-    entity_slug: 'cooperage-football-ground',
-    entity_name: 'Cooperage Football Ground',
-    contact_name: 'Dinesh Nair (WIFA General Manager)',
-    contact_phone: '+91 98200 44556',
-    contact_email: 'dinesh.nair@wifa.in',
-    claimant_role: 'General Manager',
-    document_type: 'municipal_trade_license',
-    proof_details: 'Official WIFA registration documentation and BMC sports lease certificate for Cooperage stadium.',
-    status: 'pending_review',
-    created_at: new Date(Date.now() - 3600000 * 28).toISOString(),
-  },
-]
-
-const BASELINE_PENDING_REPORTS = [
-  {
-    id: 'rep-001',
-    entity_type: 'opportunity',
-    entity_slug: 'fake-isl-club-trial-scam',
-    entity_name: 'Alleged Mumbai City FC Grassroots Selection Camp',
-    reason: 'unauthorized_fee',
-    details: 'An unauthorized agent on WhatsApp is asking athletes for ₹2,500 registration fee via UPI. Mumbai City FC confirmed trials are strictly free.',
-    reporter_email: 'vikram.parent@gmail.com',
-    reporter_phone: '+91 98210 99887',
-    status: 'pending',
-    created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
-  },
-]
-
-export async function getUserNotifications(userId: string): Promise<UserDatabaseNotification[]> {
-  const client = getSupabaseClient()
-  if (client) {
-    try {
-      const { data, error } = await client
-        .from('user_notifications')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(30)
-      if (!error && Array.isArray(data) && data.length > 0) {
-        return data as UserDatabaseNotification[]
-      }
-    } catch {
-      // Fall through to local fallback
-    }
-  }
-
-  // Local storage fallback for user notifications
-  if (typeof window !== 'undefined') {
-    try {
-      const raw = window.localStorage.getItem(`khelgrid_user_notifs_${userId}`)
-      if (raw) return JSON.parse(raw) as UserDatabaseNotification[]
-    } catch {
-      // ignore
-    }
-  }
-
-  // Seed baseline personalized notifications for demonstration
-  const sampleNotifs: UserDatabaseNotification[] = [
-    {
-      id: `notif-sys-welcome-${userId.slice(0, 8)}`,
-      user_id: userId,
-      category: 'system',
-      title: 'Welcome to KhelGrid Verified Network',
-      message: 'Your athlete account has been provisioned. Build your Sports CV to unlock scout inquiries and trial combines.',
-      action_url: '/sports-cv',
-      is_read: false,
-      created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
-    },
-    {
-      id: `notif-trial-upcoming-${userId.slice(0, 8)}`,
-      user_id: userId,
-      category: 'opportunity',
-      title: 'Reminder: Khelo India Youth Games Nominations',
-      message: 'State athlete qualification cutoff closes in 14 days. Review eligibility standards in the Events calendar.',
-      action_url: '/events',
-      is_read: false,
-      created_at: new Date(Date.now() - 3600000 * 3).toISOString(),
-    },
-  ]
-
-  return sampleNotifs
-}
-
-export async function markNotificationAsRead(notificationId: string): Promise<boolean> {
-  const client = getSupabaseClient()
-  if (client) {
-    try {
-      const { error } = await client
-        .from('user_notifications')
-        .update({ is_read: true })
-        .eq('id', notificationId)
-      if (!error) return true
-    } catch {
-      // Fall through to local storage
-    }
-  }
-
-  if (typeof window !== 'undefined') {
-    try {
-      for (let i = 0; i < window.localStorage.length; i++) {
-        const key = window.localStorage.key(i)
-        if (key && key.startsWith('khelgrid_user_notifs_')) {
-          const raw = window.localStorage.getItem(key)
-          if (raw) {
-            const list = JSON.parse(raw) as UserDatabaseNotification[]
-            const updated = list.map(item => (item.id === notificationId ? { ...item, is_read: true } : item))
-            window.localStorage.setItem(key, JSON.stringify(updated))
-          }
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }
-  return true
 }
 
 export async function getAdminModerationQueue(): Promise<AdminModerationQueue> {
   const client = getSupabaseClient()
-  let submissions = [...BASELINE_PENDING_SUBMISSIONS]
-  let claims = [...BASELINE_PENDING_CLAIMS]
-  let reports = [...BASELINE_PENDING_REPORTS]
-
-  if (client) {
-    try {
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Moderation queue timeout')), 4000)
-      )
-      const [subRes, clmRes, repRes] = await Promise.race([
-        Promise.all([
-          client.from('listing_submissions').select('*').order('created_at', { ascending: false }).limit(50),
-          client.from('verification_claims').select('*').order('created_at', { ascending: false }).limit(50),
-          client.from('listing_reports').select('*').order('created_at', { ascending: false }).limit(50),
-        ]),
-        timeoutPromise,
-      ])
-      if (subRes.data && Array.isArray(subRes.data) && subRes.data.length > 0) {
-        submissions = subRes.data as typeof submissions
-      }
-      if (clmRes.data && Array.isArray(clmRes.data) && clmRes.data.length > 0) {
-        claims = clmRes.data as typeof claims
-      }
-      if (repRes.data && Array.isArray(repRes.data) && repRes.data.length > 0) {
-        reports = repRes.data as typeof reports
-      }
-    } catch {
-      // Use in-memory / local storage
-    }
-  }
-
-  // Merge local overrides
-  if (typeof window !== 'undefined') {
-    try {
-      const storedSubs = window.localStorage.getItem(STORAGE_ADMIN_SUBMISSIONS_KEY)
-      if (storedSubs) {
-        const overrides = JSON.parse(storedSubs) as Record<string, string>
-        submissions = submissions.map(s => (overrides[s.id] ? { ...s, status: overrides[s.id] } : s))
-      }
-
-      const storedClaims = window.localStorage.getItem(STORAGE_ADMIN_CLAIMS_KEY)
-      if (storedClaims) {
-        const overrides = JSON.parse(storedClaims) as Record<string, string>
-        claims = claims.map(c => (overrides[c.id] ? { ...c, status: overrides[c.id] } : c))
-      }
-
-      const storedReps = window.localStorage.getItem(STORAGE_ADMIN_REPORTS_KEY)
-      if (storedReps) {
-        const overrides = JSON.parse(storedReps) as Record<string, string>
-        reports = reports.map(r => (overrides[r.id] ? { ...r, status: overrides[r.id] } : r))
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  // Count summary metrics
-  const [academiesRes, venuesRes, coachesRes, eventsRes] = await Promise.all([
-    getAcademies(),
-    getVenues(),
-    getCoaches(),
-    getEvents(),
-  ])
-
+  if (!client) throw new Error('Moderation service is not configured.')
+  const { data: authData, error: authError } = await client.auth.getUser()
+  if (authError || !authData.user) throw new Error('Please sign in with an authorized moderator account.')
+  const { data: submissions, error } = await client.rpc('get_listing_submissions')
+  if (error) throw new Error(error.message || 'Could not load the protected listing review queue.')
+  const [academiesRes, venuesRes, coachesRes, eventsRes] = await Promise.all([getAcademies(), getVenues(), getCoaches(), getEvents()])
+  const rows = Array.isArray(submissions) ? submissions as AdminModerationQueue['pendingSubmissions'] : []
   return {
-    pendingSubmissions: submissions,
-    pendingClaims: claims,
-    pendingReports: reports,
+    pendingSubmissions: rows,
     stats: {
-      totalAcademies: academiesRes.status === 'ready' ? academiesRes.data.length : 276,
-      totalVenues: venuesRes.status === 'ready' ? venuesRes.data.length : 19,
-      totalCoaches: coachesRes.status === 'ready' ? coachesRes.data.length : 10,
-      totalEvents: eventsRes.status === 'ready' ? eventsRes.data.length : 12,
-      pendingSubmissionsCount: submissions.filter(s => s.status === 'pending_review').length,
-      pendingClaimsCount: claims.filter(c => c.status === 'pending_review').length,
-      pendingReportsCount: reports.filter(r => r.status === 'pending' || r.status === 'investigating').length,
+      totalAcademies: academiesRes.status === 'ready' ? academiesRes.data.length : 0,
+      totalVenues: venuesRes.status === 'ready' ? venuesRes.data.length : 0,
+      totalCoaches: coachesRes.status === 'ready' ? coachesRes.data.length : 0,
+      totalEvents: eventsRes.status === 'ready' ? eventsRes.data.length : 0,
+      pendingSubmissionsCount: rows.filter(s => s.status === 'pending_review').length,
     },
   }
 }
 
-export async function moderateListingSubmission(
-  id: string,
-  status: 'approved' | 'rejected',
-  notes?: string,
-): Promise<boolean> {
+export async function moderateListingSubmission(id: string, status: 'approved' | 'rejected', notes?: string): Promise<boolean> {
   const client = getSupabaseClient()
-  if (client) {
-    try {
-      await client
-        .from('listing_submissions')
-        .update({
-          status,
-          moderator_notes: notes || null,
-          reviewed_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-    } catch {
-      // ignore
-    }
-  }
-
-  if (typeof window !== 'undefined') {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_ADMIN_SUBMISSIONS_KEY)
-      const overrides = raw ? (JSON.parse(raw) as Record<string, string>) : {}
-      overrides[id] = status
-      window.localStorage.setItem(STORAGE_ADMIN_SUBMISSIONS_KEY, JSON.stringify(overrides))
-      if (status === 'approved') {
-        window.dispatchEvent(new CustomEvent('khelgrid:listing-added', { detail: { id, status } }))
-      }
-    } catch {
-      // ignore
-    }
-  }
+  if (!client) throw new Error('Moderation service is not configured.')
+  const { data: authData, error: authError } = await client.auth.getUser()
+  if (authError || !authData.user) throw new Error('Please sign in with an authorized moderator account.')
+  const { error } = await client.rpc('review_listing_submission', {
+    p_submission_id: id,
+    p_decision: status,
+    p_notes: notes || null,
+  })
+  if (error) throw new Error(error.message || 'The listing review could not be saved.')
   return true
 }
-
-export async function moderateVerificationClaim(
-  id: string,
-  status: 'verified' | 'rejected' | 'more_info_needed',
-  notes?: string,
-): Promise<boolean> {
-  const client = getSupabaseClient()
-  if (client) {
-    try {
-      await client
-        .from('verification_claims')
-        .update({ status, proof_details: notes ? `Moderator note: ${notes}` : undefined, updated_at: new Date().toISOString() })
-        .eq('id', id)
-    } catch {
-      // ignore
-    }
-  }
-
-  if (typeof window !== 'undefined') {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_ADMIN_CLAIMS_KEY)
-      const overrides = raw ? (JSON.parse(raw) as Record<string, string>) : {}
-      overrides[id] = status
-      window.localStorage.setItem(STORAGE_ADMIN_CLAIMS_KEY, JSON.stringify(overrides))
-    } catch {
-      // ignore
-    }
-  }
-  return true
-}
-
-export async function moderateListingReport(
-  id: string,
-  status: 'investigating' | 'resolved' | 'dismissed',
-  notes?: string,
-): Promise<boolean> {
-  const client = getSupabaseClient()
-  if (client) {
-    try {
-      await client
-        .from('listing_reports')
-        .update({ status, details: notes ? `Resolution note: ${notes}` : undefined, updated_at: new Date().toISOString() })
-        .eq('id', id)
-    } catch {
-      // ignore
-    }
-  }
-
-  if (typeof window !== 'undefined') {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_ADMIN_REPORTS_KEY)
-      const overrides = raw ? (JSON.parse(raw) as Record<string, string>) : {}
-      overrides[id] = status
-      window.localStorage.setItem(STORAGE_ADMIN_REPORTS_KEY, JSON.stringify(overrides))
-    } catch {
-      // ignore
-    }
-  }
-  return true
-}
-
-
 

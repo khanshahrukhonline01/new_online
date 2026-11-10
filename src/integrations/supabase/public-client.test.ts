@@ -57,6 +57,24 @@ describe('public catalogue client', () => {
     expect(fetch).toHaveBeenCalledOnce()
   })
 
+  it('loads catalogue data in bounded server pages', async () => {
+    const firstPage = Array.from({ length: 500 }, (_, index) => ({ id: `opp-${index}`, title: `Opportunity ${index}` }))
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(firstPage))
+      .mockResolvedValueOnce(jsonResponse([{ id: 'opp-500', title: 'Opportunity 500' }]))
+    const client = await loadClient()
+    const result = await client.getOpportunities()
+    expect(result.status).toBe('ready')
+    if (result.status === 'ready') expect(result.data).toHaveLength(501)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    const first = new Headers(vi.mocked(fetch).mock.calls[0][1]?.headers)
+    const second = new Headers(vi.mocked(fetch).mock.calls[1][1]?.headers)
+    expect(first.get('Range')).toBe('0-499')
+    expect(second.get('Range')).toBe('500-999')
+    const firstUrl = new URL(String(vi.mocked(fetch).mock.calls[0][0]))
+    expect(firstUrl.searchParams.get('select')).toContain('sport:sports(id,slug,name)')
+  })
+
   it.each([
     ['sports', 'is_published', 'eq.true'],
     ['opportunities', 'publication_status', 'eq.published'],
@@ -84,7 +102,7 @@ describe('public catalogue client', () => {
     const url = new URL(String(requestUrl))
     expect(url.pathname).toBe(`/rest/v1/${table}`)
     expect(url.searchParams.get(filterKey)).toBe(filterValue)
-    expect(url.searchParams.get('limit')).toBe('1000')
+    expect(url.searchParams.get('limit')).toBe('500')
     expect(options?.headers).toMatchObject({
       apikey: anonKey,
       Authorization: `Bearer ${anonKey}`,
@@ -114,7 +132,7 @@ describe('public catalogue client', () => {
     const [requestUrl] = vi.mocked(fetch).mock.calls[0]
     const url = new URL(String(requestUrl))
     expect(url.pathname).toBe('/rest/v1/cities')
-    expect(url.searchParams.get('limit')).toBe('1000')
+    expect(url.searchParams.get('limit')).toBe('500')
   })
 
   it('returns unavailable when Supabase rejects the request', async () => {
@@ -221,72 +239,75 @@ describe('public catalogue client', () => {
     expect(shortName.message).toContain('at least 2 characters')
   })
 
-  it('submits a community listing and optimistically prepends to catalogue queries', async () => {
+  it('routes every community listing type to the private review queue', async () => {
     vi.mocked(fetch).mockResolvedValue(jsonResponse([]))
     const client = await loadClient()
-
-    const submitResult = await client.submitCommunityListing({
-      category: 'pickup_game',
-      sport: 'Basketball',
-      venue_name: 'Cubbon Park Court',
-      city: 'Bengaluru',
-      time_label: 'Tonight · 8:00 PM',
-      skill_level: 'Intermediate',
-      spots_open: 2,
-      total_players: 10,
-    })
-
-    expect(submitResult.status).toBe('submitted')
-    if (submitResult.status === 'submitted') {
-      expect(submitResult.record.sport).toBe('Basketball')
-      expect(submitResult.record.city).toBe('Bengaluru')
-      expect(submitResult.record.spots_open).toBe(2)
-    }
-
-    // Verify it is prepended in getPickupGames
-    const games = await client.getPickupGames()
-    expect(games.status).toBe('ready')
-    expect(games.data.length).toBeGreaterThan(0)
-    expect(games.data[0].sport).toBe('Basketball')
-    expect(games.data[0].venue_name).toBe('Cubbon Park Court')
-  })
-
-  it('routes guest trials to moderation queue while verified users publish live instantly', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse([]))
-    const client = await loadClient()
-
-    // 1. Guest trial submission -> moderation queue
-    const guestResult = await client.submitCommunityListing({
+    const result = await client.submitCommunityListing({
       category: 'opportunity',
       title: 'Delhi State U-17 Open Football Trials',
       city: 'Delhi',
+      source_url: 'https://example.org/trials',
       contact_name: 'Coach Rakesh',
       contact_phone: '+91 98765 43210',
-      is_verified_user: false,
     })
 
-    expect(guestResult.status).toBe('submitted')
-    if (guestResult.status === 'submitted') {
-      expect(guestResult.mode).toBe('moderation_queue')
-      expect(guestResult.requiresReview).toBe(true)
-      expect(guestResult.record.publication_status).toBe('pending_review')
+    expect(result.status).toBe('submitted')
+    if (result.status === 'submitted') {
+      expect(result.mode).toBe('moderation_queue')
+      expect(result.requiresReview).toBe(true)
+      expect(result.record.publication_status).toBe('pending_review')
+      expect(result.record.verification_status).toBe('unverified')
     }
+    const [requestUrl, options] = vi.mocked(fetch).mock.calls[0]
+    expect(String(requestUrl)).toContain('/rest/v1/listing_submissions')
+    expect(options?.method).toBe('POST')
+    const body = JSON.parse(String(options?.body))
+    expect(body.listing_type).toBe('opportunity')
+    expect(body.title).toBe('Delhi State U-17 Open Football Trials')
+    expect(body.status).toBeUndefined()
+    expect(body.publication_status).toBeUndefined()
+    expect(body.verification_status).toBeUndefined()
+  })
 
-    // 2. Verified user trial submission -> instant live
-    const verifiedResult = await client.submitCommunityListing({
-      category: 'opportunity',
-      title: 'Karnataka State Badminton Ranking Tourney',
-      city: 'Bengaluru',
-      is_verified_user: true,
+  it('routes a new sport suggestion through the same private queue', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([]))
+    const client = await loadClient()
+    const result = await client.submitListingSuggestion({
+      listing_type: 'sport',
+      title: 'Sepak Takraw',
+      city: 'Kochi',
+      details: 'Request to add a sport category',
     })
+    expect(result.status).toBe('submitted')
+    const [, options] = vi.mocked(fetch).mock.calls[0]
+    const body = JSON.parse(String(options?.body))
+    expect(body.listing_type).toBe('sport')
+    expect(body.status).toBeUndefined()
+  })
 
-    expect(verifiedResult.status).toBe('submitted')
-    if (verifiedResult.status === 'submitted') {
-      expect(verifiedResult.mode).toBe('instant_live')
-      expect(verifiedResult.requiresReview).toBe(false)
-      expect(verifiedResult.record.publication_status).toBe('published')
-      expect(verifiedResult.record.verification_status).toBe('verified')
-    }
+  it('accepts a missing source link without inventing one', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([]))
+    const client = await loadClient()
+    const result = await client.submitListingSuggestion({
+      listing_type: 'academy',
+      title: 'Community Academy',
+      city: 'Pune',
+    })
+    expect(result.status).toBe('submitted')
+    const [, options] = vi.mocked(fetch).mock.calls[0]
+    expect(JSON.parse(String(options?.body)).source_url).toBeNull()
+  })
+
+  it('does not report success when the review queue rejects a submission', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ message: 'permission denied' }, 403))
+    const client = await loadClient()
+    const result = await client.submitListingSuggestion({
+      listing_type: 'venue',
+      title: 'Test Venue',
+      city: 'Delhi',
+    })
+    expect(result.status).toBe('unavailable')
+    if (result.status === 'unavailable') expect(result.message).toContain('403')
   })
 
   it('handles pickup game RSVP spot reservations, WhatsApp group link retrieval, and match locking', async () => {

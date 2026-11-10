@@ -71,14 +71,14 @@ export default function NotificationCenterDrawer({
       getPickupGames(),
       getAnnouncements(),
       liveSportsEngine.getScores().catch(() => ({ matches: [] })),
-      user ? getUserNotifications(user.id) : Promise.resolve([]),
+      user ? getUserNotifications(user.id).catch(() => []) : Promise.resolve([]),
     ]).then(([oppRes, venueRes, gameRes, annRes, scoreRes, userNotifs]) => {
       if (!active) return
 
       const dynamicList: KhelNotification[] = []
 
-      // 0. Authenticated Personal User Notifications
-      if (Array.isArray(userNotifs) && userNotifs.length > 0) {
+      // Authenticated personal notifications are fetched through the user's RLS-scoped inbox.
+      if (Array.isArray(userNotifs)) {
         userNotifs.forEach(un => {
           dynamicList.push({
             id: `un-${un.id}`,
@@ -285,7 +285,7 @@ export default function NotificationCenterDrawer({
 
   function handleCardClick(e: MouseEvent<HTMLAnchorElement>, notif: KhelNotification) {
     if (notif.id.startsWith('un-')) {
-      void markNotificationAsRead(notif.id.replace('un-', ''))
+      void markNotificationAsRead(notif.id.replace('un-', '')).catch(() => undefined)
     }
     // Mark as read
     setReadIds(prev => {
