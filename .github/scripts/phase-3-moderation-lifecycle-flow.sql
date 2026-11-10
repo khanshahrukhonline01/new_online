@@ -52,16 +52,21 @@ select public.submit_listing_intake(
 
 \echo 'Anonymous submit_listing_intake response: ' :phase3_intake_response
 
--- Validate the response outcome and all identifiers independently. The full JSON above
--- remains in the log if any assertion fails, making status/shape problems diagnosable.
-select case
-  when (:'phase3_intake_response'::jsonb->>'status') = 'submitted'
-   and nullif(:'phase3_intake_response'::jsonb->>'id', '') is not null
-   and nullif(:'phase3_intake_response'::jsonb->>'reference_number', '') is not null
-   and nullif(:'phase3_intake_response'::jsonb->>'tracking_key', '') is not null
-  then 1
-  else 1 / 0
-end as anonymous_intake_rpc_assertion;
+-- Validate status and each required identifier independently without masking the response.
+select (
+  (:'phase3_intake_response'::jsonb->>'status') = 'submitted'
+  and nullif(:'phase3_intake_response'::jsonb->>'id', '') is not null
+  and nullif(:'phase3_intake_response'::jsonb->>'reference_number', '') is not null
+  and nullif(:'phase3_intake_response'::jsonb->>'tracking_key', '') is not null
+) as phase3_intake_response_valid
+\gset
+
+\if :phase3_intake_response_valid
+  \echo 'PASS: anonymous intake returned submitted status and all required identifiers.'
+\else
+  \echo 'FAIL: anonymous intake response has an unexpected status or is missing id/reference_number/tracking_key.'
+  \quit 3
+\endif
 reset role;
 
 -- Run internal assertions with the CI database owner, never the simulated client role.
