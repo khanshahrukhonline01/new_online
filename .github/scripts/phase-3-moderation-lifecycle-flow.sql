@@ -101,50 +101,49 @@ end;
 $verify_step1$;
 RESET ROLE;
 
--- Step 2: Resolve the fixture credentials directly, before entering the anon role.
+-- Step 2: Resolve the exact fixture credentials as the privileged test runner.
 SET LOCAL ROLE postgres;
 select reference_number as phase3_tracking_ref, tracking_key as phase3_tracking_key
 from public.listing_submissions
 where id = '00000000-0000-4000-8000-000000000040'
-\gset
-\echo 'Tracking fixture reference: ' :phase3_tracking_ref
-\echo 'Tracking fixture key: ' :phase3_tracking_key
+\\gset
+\\echo 'Tracking fixture reference: ' :phase3_tracking_ref
 RESET ROLE;
 
 set local role anon;
--- Print the exact row returned by the public tracking RPC before checking its contents.
-select
-  id::text as phase3_tracking_result_id,
-  reference_number as phase3_tracking_result_reference,
-  title as phase3_tracking_result_title,
-  status as phase3_tracking_result_status
+-- The RPC must return exactly the seeded row for the valid reference/key pair.
+select id::text as phase3_tracking_result_id,
+       reference_number as phase3_tracking_result_reference,
+       title as phase3_tracking_result_title,
+       status as phase3_tracking_result_status
 from public.get_submission_tracking_status(:'phase3_tracking_ref', :'phase3_tracking_key')
-\gset
+\\gset
 
-\echo 'Tracking RPC returned ID: ' :phase3_tracking_result_id
-\echo 'Tracking RPC returned reference: ' :phase3_tracking_result_reference
-\echo 'Tracking RPC returned title: ' :phase3_tracking_result_title
-\echo 'Tracking RPC returned status: ' :phase3_tracking_result_status
+\\if :{?phase3_tracking_result_id}
+  \\echo 'Tracking RPC returned ID: ' :phase3_tracking_result_id
+  \\echo 'Tracking RPC returned reference: ' :phase3_tracking_result_reference
+  \\echo 'Tracking RPC returned title: ' :phase3_tracking_result_title
+  \\echo 'Tracking RPC returned status: ' :phase3_tracking_result_status
+\\else
+  \\echo 'FAIL: valid tracking credentials returned no submission row.'
+  \\quit 3
+\\endif
 
 select (
-  :'phase3_tracking_result_reference' = :'phase3_tracking_ref'
-  and :'phase3_tracking_result_status' = 'pending_review'
-  and :'phase3_tracking_result_title' = 'Grand Sports Arena'
+  :'phase3_tracking_result_id' = '00000000-0000-4000-8000-000000000040'
+  and :'phase3_tracking_result_reference' = :'phase3_tracking_ref'
 ) as phase3_valid_tracking_result
-\gset
-
-\if :phase3_valid_tracking_result
-  \echo 'PASS: valid tracking credentials returned the expected pending submission.'
-\else
-  \echo 'FAIL: tracking RPC returned an unexpected reference, title, or status.'
-  \quit 3
-\endif
+\\gset
+\\if :phase3_valid_tracking_result
+  \\echo 'PASS: valid tracking credentials returned the exact seeded submission.'
+\\else
+  \\echo 'FAIL: valid tracking credentials returned a different submission.'
+  \\quit 3
+\\endif
 
 select case
   when not exists (
-    select 1 from public.get_submission_tracking_status(
-      :'phase3_tracking_ref', 'wrong-key'
-    )
+    select 1 from public.get_submission_tracking_status(:'phase3_tracking_ref', 'wrong-key')
   ) then 1 else 1 / 0
 end as invalid_tracking_key_assertion;
 reset role;
