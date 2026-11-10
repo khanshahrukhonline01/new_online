@@ -65,15 +65,15 @@ drop policy if exists pickup_games_insert_community on public.pickup_games;
 drop policy if exists coaches_insert_community on public.coaches;
 drop policy if exists events_insert_community on public.events;
 
-revoke insert, update, delete on public.academies from public, anon, authenticated;
-revoke insert, update, delete on public.venues from public, anon, authenticated;
-revoke insert, update, delete on public.opportunities from public, anon, authenticated;
-revoke insert, update, delete on public.pickup_games from public, anon, authenticated;
-revoke insert, update, delete on public.coaches from public, anon, authenticated;
-revoke insert, update, delete on public.events from public, anon, authenticated;
-revoke insert, update, delete on public.academy_sports from public, anon, authenticated;
-revoke insert, update, delete on public.coach_academies from public, anon, authenticated;
-revoke insert, update, delete on public.coach_sports from public, anon, authenticated;
+revoke all on public.academies, public.venues, public.opportunities, public.pickup_games,
+  public.coaches, public.events, public.sports, public.academy_sports,
+  public.coach_academies, public.coach_sports
+  from public, anon, authenticated;
+
+-- Public catalogue reads remain available; row-level policies expose published rows only.
+grant select on public.academies, public.venues, public.opportunities, public.pickup_games,
+  public.coaches, public.events, public.sports
+  to anon, authenticated;
 
 -- Trusted server-side catalogue publication remains available to service_role.
 grant insert, update, delete on public.academies, public.venues, public.opportunities, public.pickup_games, public.coaches, public.events, public.sports, public.academy_sports, public.coach_academies, public.coach_sports to service_role;

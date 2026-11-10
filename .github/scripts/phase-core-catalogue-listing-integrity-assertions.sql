@@ -35,7 +35,19 @@ begin
       if has_table_privilege(role_name, format('public.%I', table_name), 'DELETE') then
         raise exception 'Role % still has direct DELETE on catalogue table %', role_name, table_name;
       end if;
+      if has_table_privilege(role_name, format('public.%I', table_name), 'TRUNCATE')
+         or has_table_privilege(role_name, format('public.%I', table_name), 'REFERENCES')
+         or has_table_privilege(role_name, format('public.%I', table_name), 'TRIGGER') then
+        raise exception 'Role % retains non-DML table privileges on catalogue table %', role_name, table_name;
+      end if;
     end loop;
+  end loop;
+
+  foreach table_name in array array['academies', 'venues', 'opportunities', 'pickup_games', 'coaches', 'events', 'sports'] loop
+    if not has_table_privilege('anon', format('public.%I', table_name), 'SELECT')
+       or not has_table_privilege('authenticated', format('public.%I', table_name), 'SELECT') then
+      raise exception 'Public catalogue SELECT must remain available on %', table_name;
+    end if;
   end loop;
 
   foreach table_name in array array['academies', 'venues', 'opportunities', 'pickup_games'] loop
