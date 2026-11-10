@@ -2,6 +2,38 @@
 \set ON_ERROR_STOP on
 begin;
 
+-- Create temporary privileged verification functions for this test session
+create or replace function pg_temp.get_submission(p_id uuid)
+returns public.listing_submissions
+language sql
+security definer
+as $$
+  select * from public.listing_submissions where id = p_id;
+$$;
+
+create or replace function pg_temp.get_submission_by_title(p_title text)
+returns public.listing_submissions
+language sql
+security definer
+as $$
+  select * from public.listing_submissions where title = p_title limit 1;
+$$;
+
+create or replace function pg_temp.version_exists(p_submission_id uuid, p_title text)
+returns boolean
+language sql
+security definer
+as $$
+  select exists (
+    select 1 from public.listing_submission_versions
+    where submission_id = p_submission_id and title = p_title
+  );
+$$;
+
+grant execute on function pg_temp.get_submission(uuid) to authenticated, anon;
+grant execute on function pg_temp.get_submission_by_title(text) to authenticated, anon;
+grant execute on function pg_temp.version_exists(uuid, text) to authenticated, anon;
+
 -- Create test auth users
 insert into auth.users (id) values
   ('00000000-0000-4000-8000-000000000010'),
@@ -29,8 +61,7 @@ declare
   v_title text;
 begin
   select reference_number, tracking_key into v_ref, v_key
-  from public.listing_submissions
-  where title = 'Grand Sports Arena' and status = 'pending_review';
+  from pg_temp.get_submission_by_title('Grand Sports Arena');
 
   if v_ref is null or v_key is null then
     raise exception 'Reference number and tracking key were not generated automatically';
@@ -62,7 +93,7 @@ do $non_mod_test$
 declare
   v_sub_id uuid;
 begin
-  select id into v_sub_id from public.listing_submissions where title = 'Grand Sports Arena';
+  select id into v_sub_id from pg_temp.get_submission_by_title('Grand Sports Arena');
 
   begin
     perform public.start_listing_review(v_sub_id);
@@ -101,7 +132,7 @@ declare
   v_venue_id uuid;
   v_venue_count integer;
 begin
-  select * into v_sub from public.listing_submissions where title = 'Grand Sports Arena';
+  select * into v_sub from pg_temp.get_submission_by_title('Grand Sports Arena');
 
   -- Check v2 queue returns submission
   select count(*) into v_queue_count from public.get_listing_submissions_v2('pending_review');
@@ -112,12 +143,12 @@ begin
   -- 4A: Start review
   perform public.start_listing_review(v_sub.id, v_sub.version);
 
-  select * into v_sub from public.listing_submissions where id = v_sub.id;
+  select * into v_sub from pg_temp.get_submission(v_sub.id);
   if v_sub.status <> 'under_review' or v_sub.assigned_moderator_id <> '00000000-0000-4000-8000-000000000030' then
     raise exception 'start_listing_review did not set under_review or assigned moderator';
   end if;
 
-  -- 4B: Request corrections (must reject empty message)
+  -- 4B: Request corrections (must reject empty / too-short message)
   begin
     perform public.request_listing_corrections(v_sub.id, 'short');
     raise exception 'request_listing_corrections unexpectedly accepted too-short message';
@@ -127,7 +158,7 @@ begin
 
   perform public.request_listing_corrections(v_sub.id, 'Please provide the exact postal address and confirmed court count.', 'Internal check note', v_sub.version);
 
-  select * into v_sub from public.listing_submissions where id = v_sub.id;
+  select * into v_sub from pg_temp.get_submission(v_sub.id);
   if v_sub.status <> 'changes_requested' or v_sub.correction_request is null then
     raise exception 'request_listing_corrections did not persist changes_requested state';
   end if;
@@ -149,16 +180,13 @@ begin
     raise exception 'resubmit_listing_submission failed: %', v_resubmit_res;
   end if;
 
-  select * into v_sub from public.listing_submissions where id = v_sub.id;
+  select * into v_sub from pg_temp.get_submission(v_sub.id);
   if v_sub.status <> 'resubmitted' or v_sub.version <= 1 then
     raise exception 'resubmission did not update status to resubmitted or increment version';
   end if;
 
   -- Verify version history was archived
-  if not exists (
-    select 1 from public.listing_submission_versions
-    where submission_id = v_sub.id and title = 'Grand Sports Arena'
-  ) then
+  if not pg_temp.version_exists(v_sub.id, 'Grand Sports Arena') then
     raise exception 'Previous submission version was not archived in listing_submission_versions';
   end if;
 
@@ -168,7 +196,7 @@ begin
 
   perform public.approve_listing_submission(v_sub.id, 'Verified via official website and sports authority directory', v_sub.version);
 
-  select * into v_sub from public.listing_submissions where id = v_sub.id;
+  select * into v_sub from pg_temp.get_submission(v_sub.id);
   if v_sub.status <> 'approved' or v_sub.reviewed_by <> '00000000-0000-4000-8000-000000000030' then
     raise exception 'approve_listing_submission failed to update approved state';
   end if;
@@ -188,7 +216,7 @@ begin
     raise exception 'publish_listing_submission failed: %', v_pub_res;
   end if;
 
-  select * into v_sub from public.listing_submissions where id = v_sub.id;
+  select * into v_sub from pg_temp.get_submission(v_sub.id);
   if v_sub.status <> 'published' or v_sub.published_record_id <> v_venue_id then
     raise exception 'submission state not marked published with published_record_id';
   end if;
@@ -229,7 +257,7 @@ begin
     v_sub.version
   );
 
-  select * into v_sub from public.listing_submissions where id = v_sub.id;
+  select * into v_sub from pg_temp.get_submission(v_sub.id);
   if v_sub.status <> 'unpublished' or v_sub.unpublished_at is null then
     raise exception 'unpublish_listing_submission did not set unpublished status';
   end if;
