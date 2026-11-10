@@ -47,6 +47,69 @@ alter table public.listing_submissions
   add column if not exists published_table text,
   add column if not exists version integer not null default 1;
 
+-- 2b. Ensure destination catalogue tables support moderation publication lifecycle
+alter table public.venues
+  add column if not exists address text,
+  add column if not exists description text,
+  add column if not exists publication_status text not null default 'draft';
+
+alter table public.venues alter column sport drop not null;
+alter table public.venues alter column sport set default 'Multi-sport';
+
+alter table public.venues enable row level security;
+drop policy if exists venues_read_published on public.venues;
+create policy venues_read_published on public.venues
+  for select to anon, authenticated using (publication_status = 'published');
+
+alter table public.opportunities
+  add column if not exists city text,
+  add column if not exists source_url text,
+  add column if not exists source_name text,
+  add column if not exists opportunity_type text default 'trial',
+  add column if not exists sport_id uuid,
+  add column if not exists verification_status text default 'unverified',
+  add column if not exists publication_status text not null default 'draft',
+  add column if not exists organizer_name text,
+  add column if not exists venue_name text;
+
+alter table public.opportunities enable row level security;
+drop policy if exists opportunities_read_published on public.opportunities;
+create policy opportunities_read_published on public.opportunities
+  for select to anon, authenticated using (publication_status = 'published');
+
+alter table public.academies
+  add column if not exists city text default 'India',
+  add column if not exists state text,
+  add column if not exists description text,
+  add column if not exists website_url text,
+  add column if not exists publication_status text not null default 'draft',
+  add column if not exists verification_status text not null default 'unverified';
+
+alter table public.academies enable row level security;
+drop policy if exists academies_read_published on public.academies;
+create policy academies_read_published on public.academies
+  for select to anon, authenticated using (publication_status = 'published');
+
+alter table public.coaches
+  add column if not exists state text,
+  add column if not exists bio text,
+  add column if not exists website_url text,
+  add column if not exists verification_status text not null default 'unverified';
+
+alter table public.events
+  add column if not exists city text,
+  add column if not exists event_type text default 'tournament',
+  add column if not exists starts_at timestamptz default (now() + interval '14 days'),
+  add column if not exists source_url text,
+  add column if not exists verification_status text not null default 'unverified';
+
+alter table public.pickup_games
+  add column if not exists venue_name text,
+  add column if not exists city text default 'India',
+  add column if not exists time_label text default 'Weekend Morning',
+  add column if not exists host_name text default 'KhelGrid Host',
+  add column if not exists publication_status text not null default 'draft';
+
 -- Backfill reference numbers and tracking keys for any existing rows
 update public.listing_submissions
 set reference_number = coalesce(reference_number, 'KHL-' || to_char(created_at, 'YYYYMMDD') || '-' || upper(substr(md5(id::text), 1, 6))),
@@ -853,9 +916,9 @@ begin
       end if;
 
       insert into public.venues (
-        slug, name, city, address, description, publication_status
+        slug, name, city, address, description, publication_status, sport
       ) values (
-        v_slug, v_sub.title, coalesce(v_sub.city, 'India'), v_sub.city, coalesce(v_sub.details, v_sub.title), 'published'
+        v_slug, v_sub.title, coalesce(v_sub.city, 'India'), coalesce(v_sub.city, 'India'), coalesce(v_sub.details, v_sub.title), 'published', 'Multi-sport'
       ) returning id into v_target_id;
 
     elsif v_sub.listing_type = 'academy' then
