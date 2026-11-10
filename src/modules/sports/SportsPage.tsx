@@ -94,7 +94,8 @@ export default function SportsPage() {
                 </label>
               </div>
               {visible.length ? (
-                <div className="catalogue-grid">
+                <>
+                  <div className="catalogue-grid">
                   {pageItems.map(sport => (
                     <a className="catalogue-card" key={sport.id} href={`/sports/${sport.slug}`}>
                       <span className="sport-card-icon">
@@ -115,6 +116,8 @@ export default function SportsPage() {
                     <button type="button" className="admin-btn admin-btn-secondary" disabled={currentPage === totalPages} onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}>Next</button>
                   </nav>
                 )}
+                  )}
+                </>
               ) : (
                 <CatalogueEmptyState
                   title={records.length ? 'No matching sports' : 'No published sports'}
