@@ -3276,6 +3276,37 @@ export interface UserDatabaseNotification {
   metadata?: Record<string, unknown>
 }
 
+export async function getUserNotifications(userId: string): Promise<UserDatabaseNotification[]> {
+  const client = getSupabaseClient()
+  if (!client) return []
+  const { data: authData, error: authError } = await client.auth.getUser()
+  if (authError || !authData.user || authData.user.id !== userId) return []
+  const { data, error } = await client
+    .from('user_notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(30)
+  if (error) throw new Error(error.message || 'Could not load your notifications.')
+  return Array.isArray(data) ? data as UserDatabaseNotification[] : []
+}
+
+export async function markNotificationAsRead(notificationId: string): Promise<boolean> {
+  const client = getSupabaseClient()
+  if (!client) return false
+  const { data: authData, error: authError } = await client.auth.getUser()
+  if (authError || !authData.user) return false
+  const { data, error } = await client
+    .from('user_notifications')
+    .update({ is_read: true })
+    .eq('id', notificationId)
+    .eq('user_id', authData.user.id)
+    .select('id')
+    .maybeSingle()
+  if (error) throw new Error(error.message || 'Could not update the notification.')
+  return Boolean(data?.id)
+}
+
 export interface AdminModerationQueue {
   pendingSubmissions: Array<{
     id: string
