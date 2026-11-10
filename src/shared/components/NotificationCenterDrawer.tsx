@@ -9,7 +9,6 @@ import {
   markNotificationAsRead,
 } from '../../integrations/supabase/public-client'
 import { getStoredUser } from '../../integrations/supabase/auth-client'
-import { getStoredUser } from '../../integrations/supabase/auth-client'
 import { liveSportsEngine } from '../../modules/live/services/liveSportsEngine'
 import {
   BASELINE_NOTIFICATIONS,
