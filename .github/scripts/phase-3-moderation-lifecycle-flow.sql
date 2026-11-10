@@ -101,23 +101,29 @@ end;
 $verify_step1$;
 RESET ROLE;
 
--- Step 2: Submitter tracking lookup under anon. Role changes occur outside DO blocks.
+-- Step 2: Resolve the fixture credentials directly, before entering the anon role.
+SET LOCAL ROLE postgres;
+select reference_number as phase3_tracking_ref, tracking_key as phase3_tracking_key
+from public.listing_submissions
+where id = '00000000-0000-4000-8000-000000000040'
+\\gset
+\\echo 'Tracking fixture reference: ' :phase3_tracking_ref
+\\echo 'Tracking fixture key: ' :phase3_tracking_key
+RESET ROLE;
+
 set local role anon;
+select count(*) as tracking_match_count
+from public.get_submission_tracking_status(:'phase3_tracking_ref', :'phase3_tracking_key');
 select case
   when exists (
-    select 1 from public.get_submission_tracking_status(
-      current_setting('khelgrid_test.sub_ref', true),
-      current_setting('khelgrid_test.sub_key', true)
-    )
+    select 1 from public.get_submission_tracking_status(:'phase3_tracking_ref', :'phase3_tracking_key')
     where status = 'pending_review' and title = 'Grand Sports Arena'
   ) then 1 else 1 / 0
 end as valid_tracking_key_assertion;
 
 select case
   when not exists (
-    select 1 from public.get_submission_tracking_status(
-      current_setting('khelgrid_test.sub_ref', true), 'wrong-key'
-    )
+    select 1 from public.get_submission_tracking_status(:'phase3_tracking_ref', 'wrong-key')
   ) then 1 else 1 / 0
 end as invalid_tracking_key_assertion;
 reset role;
