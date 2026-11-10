@@ -132,7 +132,7 @@ describe('public catalogue client', () => {
     const [requestUrl] = vi.mocked(fetch).mock.calls[0]
     const url = new URL(String(requestUrl))
     expect(url.pathname).toBe('/rest/v1/cities')
-    expect(url.searchParams.get('limit')).toBe('1000')
+    expect(url.searchParams.get('limit')).toBe('500')
   })
 
   it('returns unavailable when Supabase rejects the request', async () => {
