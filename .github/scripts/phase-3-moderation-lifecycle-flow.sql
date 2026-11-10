@@ -72,16 +72,14 @@ reset role;
 -- Run internal assertions with the CI database owner, never the simulated client role.
 SET LOCAL ROLE postgres;
 
--- Privileged verification of Step 1 & saving test context:
+-- Privileged verification of Step 1:
 do $verify_step1$
 declare
   v_sub public.listing_submissions%rowtype;
 begin
   select * into v_sub
   from public.listing_submissions
-  where title = 'Grand Sports Arena'
-  order by created_at desc
-  limit 1;
+  where id = '00000000-0000-4000-8000-000000000040'::uuid;
 
   if v_sub.id is null then
     raise exception 'Listing submission was not created';
@@ -92,11 +90,6 @@ begin
   if v_sub.status <> 'pending_review' then
     raise exception 'Initial status must be pending_review, got %', v_sub.status;
   end if;
-
-  -- Store context in session settings so subsequent role-restricted steps can reference this submission
-  perform set_config('khelgrid_test.sub_id', v_sub.id::text, false);
-  perform set_config('khelgrid_test.sub_ref', v_sub.reference_number, false);
-  perform set_config('khelgrid_test.sub_key', v_sub.tracking_key, false);
 end;
 $verify_step1$;
 RESET ROLE;
@@ -106,8 +99,8 @@ SET LOCAL ROLE postgres;
 select reference_number as phase3_tracking_ref, tracking_key as phase3_tracking_key
 from public.listing_submissions
 where id = '00000000-0000-4000-8000-000000000040'
-\\gset
-\\echo 'Tracking fixture reference: ' :phase3_tracking_ref
+\gset
+\echo 'Tracking fixture reference: ' :phase3_tracking_ref
 RESET ROLE;
 
 set local role anon;
@@ -117,29 +110,31 @@ select id::text as phase3_tracking_result_id,
        title as phase3_tracking_result_title,
        status as phase3_tracking_result_status
 from public.get_submission_tracking_status(:'phase3_tracking_ref', :'phase3_tracking_key')
-\\gset
+\gset
 
-\\if :{?phase3_tracking_result_id}
-  \\echo 'Tracking RPC returned ID: ' :phase3_tracking_result_id
-  \\echo 'Tracking RPC returned reference: ' :phase3_tracking_result_reference
-  \\echo 'Tracking RPC returned title: ' :phase3_tracking_result_title
-  \\echo 'Tracking RPC returned status: ' :phase3_tracking_result_status
-\\else
-  \\echo 'FAIL: valid tracking credentials returned no submission row.'
-  \\quit 3
-\\endif
+\if :{?phase3_tracking_result_id}
+  \echo 'Tracking RPC returned ID: ' :phase3_tracking_result_id
+  \echo 'Tracking RPC returned reference: ' :phase3_tracking_result_reference
+  \echo 'Tracking RPC returned title: ' :phase3_tracking_result_title
+  \echo 'Tracking RPC returned status: ' :phase3_tracking_result_status
+\else
+  \echo 'FAIL: valid tracking credentials returned no submission row.'
+  \quit 3
+\endif
 
 select (
   :'phase3_tracking_result_id' = '00000000-0000-4000-8000-000000000040'
   and :'phase3_tracking_result_reference' = :'phase3_tracking_ref'
+  and :'phase3_tracking_result_status' = 'pending_review'
 ) as phase3_valid_tracking_result
-\\gset
-\\if :phase3_valid_tracking_result
-  \\echo 'PASS: valid tracking credentials returned the exact seeded submission.'
-\\else
-  \\echo 'FAIL: valid tracking credentials returned a different submission.'
-  \\quit 3
-\\endif
+\gset
+
+\if :phase3_valid_tracking_result
+  \echo 'PASS: valid tracking credentials returned the exact seeded submission.'
+\else
+  \echo 'FAIL: valid tracking credentials returned a different submission.'
+  \quit 3
+\endif
 
 select case
   when not exists (
@@ -154,7 +149,7 @@ set local role authenticated;
 
 do $non_mod_test$
 declare
-  v_sub_id constant uuid := current_setting('khelgrid_test.sub_id', true)::uuid;
+  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040'::uuid;
 begin
   -- 3A: Non-moderator cannot call start_listing_review
   begin
@@ -198,7 +193,7 @@ set local role authenticated;
 
 do $mod_start_review$
 declare
-  v_sub_id constant uuid := current_setting('khelgrid_test.sub_id', true)::uuid;
+  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040'::uuid;
   v_queue_count integer;
 begin
   -- Check v2 queue returns pending submission to authorized moderator
@@ -224,7 +219,7 @@ declare
 begin
   select * into v_sub
   from public.listing_submissions
-  where id = current_setting('khelgrid_test.sub_id', true)::uuid;
+  where id = '00000000-0000-4000-8000-000000000040'::uuid;
 
   if v_sub.status <> 'under_review' or v_sub.assigned_moderator_id <> '00000000-0000-4000-8000-000000000030' then
     raise exception 'start_listing_review did not set under_review or assigned moderator';
@@ -242,7 +237,7 @@ set local role authenticated;
 
 do $mod_request_corrections$
 declare
-  v_sub_id constant uuid := current_setting('khelgrid_test.sub_id', true)::uuid;
+  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040'::uuid;
 begin
   -- Must reject too-short message (< 10 characters)
   begin
@@ -274,7 +269,7 @@ declare
 begin
   select * into v_sub
   from public.listing_submissions
-  where id = current_setting('khelgrid_test.sub_id', true)::uuid;
+  where id = '00000000-0000-4000-8000-000000000040'::uuid;
 
   if v_sub.status <> 'changes_requested' or v_sub.correction_request is null then
     raise exception 'request_listing_corrections did not persist changes_requested state';
@@ -290,8 +285,8 @@ RESET ROLE;
 set local role anon;
 select case
   when (public.resubmit_listing_submission(
-    current_setting('khelgrid_test.sub_ref', true),
-    current_setting('khelgrid_test.sub_key', true),
+    :'phase3_tracking_ref',
+    :'phase3_tracking_key',
     'Grand Sports Arena Koramangala',
     'Bengaluru',
     'https://example.org/arena',
@@ -311,7 +306,7 @@ declare
 begin
   select * into v_sub
   from public.listing_submissions
-  where id = current_setting('khelgrid_test.sub_id', true)::uuid;
+  where id = '00000000-0000-4000-8000-000000000040'::uuid;
 
   if v_sub.status <> 'resubmitted' or v_sub.version <> 4 then
     raise exception 'resubmission did not update status to resubmitted or increment version; status=%, version=%', v_sub.status, v_sub.version;
@@ -335,7 +330,7 @@ set local role authenticated;
 
 do $mod_approve$
 declare
-  v_sub_id constant uuid := current_setting('khelgrid_test.sub_id', true)::uuid;
+  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040'::uuid;
 begin
   perform public.approve_listing_submission(
     v_sub_id,
@@ -357,7 +352,7 @@ declare
 begin
   select * into v_sub
   from public.listing_submissions
-  where id = current_setting('khelgrid_test.sub_id', true)::uuid;
+  where id = '00000000-0000-4000-8000-000000000040'::uuid;
 
   if v_sub.status <> 'approved' or v_sub.reviewed_by <> '00000000-0000-4000-8000-000000000030' then
     raise exception 'approve_listing_submission failed to update approved state';
@@ -382,7 +377,7 @@ set local role authenticated;
 
 do $mod_publish$
 declare
-  v_sub_id constant uuid := current_setting('khelgrid_test.sub_id', true)::uuid;
+  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040'::uuid;
   v_pub_res jsonb;
   v_target_id uuid;
 begin
@@ -416,7 +411,7 @@ declare
 begin
   select * into v_sub
   from public.listing_submissions
-  where id = current_setting('khelgrid_test.sub_id', true)::uuid;
+  where id = '00000000-0000-4000-8000-000000000040'::uuid;
 
   if v_sub.status <> 'published' or v_sub.published_record_id is null or v_sub.published_table <> 'venues' then
     raise exception 'submission state not marked published with published_record_id';
@@ -424,9 +419,6 @@ begin
   if v_sub.version <> 6 then
     raise exception 'publish_listing_submission expected version 6, found %', v_sub.version;
   end if;
-
-  -- Store published venue ID for visibility assertions
-  perform set_config('khelgrid_test.venue_id', v_sub.published_record_id::text, false);
 
   -- Verify public catalogue row exists and is published
   select count(*) into v_venue_count from public.venues
@@ -437,23 +429,25 @@ begin
   end if;
 end;
 $verify_publish$;
+
+-- Capture published venue ID for visibility assertions
+select published_record_id as phase3_venue_id
+from public.listing_submissions
+where id = '00000000-0000-4000-8000-000000000040'
+\gset
+
+\echo 'Phase 3 published venue id: ' :phase3_venue_id
 RESET ROLE;
 
 -- Step 4G: Test anonymous public visibility of published record
 set local role anon;
 
-do $anon_visibility_test$
-declare
-  v_venue_id uuid := current_setting('khelgrid_test.venue_id', true)::uuid;
-begin
-  if not exists (
+select case
+  when exists (
     select 1 from public.venues
-    where id = v_venue_id and publication_status = 'published'
-  ) then
-    raise exception 'Published venue is not visible to anonymous users';
-  end if;
-end;
-$anon_visibility_test$;
+    where id = :'phase3_venue_id'::uuid and publication_status = 'published'
+  ) then 1 else 1 / 0
+end as anon_published_venue_visible_assertion;
 
 reset role;
 
@@ -463,7 +457,7 @@ set local role authenticated;
 
 do $mod_unpublish$
 declare
-  v_sub_id constant uuid := current_setting('khelgrid_test.sub_id', true)::uuid;
+  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040'::uuid;
 begin
   perform public.unpublish_listing_submission(
     v_sub_id,
@@ -486,7 +480,7 @@ declare
 begin
   select * into v_sub
   from public.listing_submissions
-  where id = current_setting('khelgrid_test.sub_id', true)::uuid;
+  where id = '00000000-0000-4000-8000-000000000040'::uuid;
 
   if v_sub.status <> 'unpublished' or v_sub.unpublished_at is null or v_sub.unpublish_reason is null then
     raise exception 'unpublish_listing_submission did not set unpublished status or reason';
@@ -509,18 +503,12 @@ RESET ROLE;
 -- Step 4I: Verify catalogue record is NOT visible to anonymous users after unpublishing
 set local role anon;
 
-do $anon_unpublish_visibility$
-declare
-  v_venue_id uuid := current_setting('khelgrid_test.venue_id', true)::uuid;
-begin
-  if exists (
+select case
+  when not exists (
     select 1 from public.venues
-    where id = v_venue_id and publication_status = 'published'
-  ) then
-    raise exception 'Unpublished venue is still published and visible to anon!';
-  end if;
-end;
-$anon_unpublish_visibility$;
+    where id = :'phase3_venue_id'::uuid and publication_status = 'published'
+  ) then 1 else 1 / 0
+end as anon_unpublished_venue_hidden_assertion;
 
 reset role;
 
@@ -530,7 +518,7 @@ set local role authenticated;
 
 do $mod_audit_check$
 declare
-  v_sub_id constant uuid := current_setting('khelgrid_test.sub_id', true)::uuid;
+  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040'::uuid;
 begin
   if not exists (
     select 1 from public.get_listing_submission_audit_trail(v_sub_id) where action = 'published'
