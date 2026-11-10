@@ -1108,8 +1108,13 @@ export async function submitListingSuggestion(input: ListingSubmissionInput): Pr
       }),
     })
     if (!response.ok) {
-      const detail = await response.text().catch(() => '')
-      return { status: 'unavailable', message: detail ? `Submission failed (${response.status}): ${detail.slice(0, 240)}` : `Submission failed with HTTP ${response.status}. Please try again.` }
+      if (response.status === 404) {
+        return { status: 'unavailable', message: 'The listing submission queue is not installed on this database yet. No listing was submitted.' }
+      }
+      if (response.status >= 500) {
+        return { status: 'unavailable', message: 'We could not submit this suggestion. Please try again later.' }
+      }
+      return { status: 'unavailable', message: `Submission could not be accepted (HTTP ${response.status}). Please check your details and try again.` }
     }
     return { status: 'submitted' }
   } catch (error) {
@@ -1273,7 +1278,7 @@ export async function submitCommunityListing(input: CommunityListingInput): Prom
     case 'opportunity': listingType = 'opportunity'; title = input.title.trim(); break
     case 'pickup_game': listingType = 'pickup_game'; title = `${input.sport.trim()} · ${input.venue_name.trim()}`; break
   }
-  if (title.length < 2) return { status: 'unavailable', message: 'Please provide a listing title with at least two characters.' }
+  if (title.length < 2) return { status: 'unavailable', message: 'Please provide a listing title with at least 2 characters.' }
 
   const sourceUrl = input.category === 'opportunity' ? input.source_url?.trim() : undefined
   const details = [
