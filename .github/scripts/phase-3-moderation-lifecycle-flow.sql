@@ -17,14 +17,25 @@ insert into public.listing_moderators (user_id, is_active)
 values ('00000000-0000-4000-8000-000000000030', true)
 on conflict (user_id) do update set is_active = true;
 
--- Step 1: Anonymous submission intake
--- Anonymous users only have column-level insert on user-owned submission fields.
-set local role anon;
+-- Seed a deterministic lifecycle fixture using the privileged CI connection.
+-- The public client is not permitted to insert directly into this private table.
 insert into public.listing_submissions (
-  listing_type, title, city, source_url, details
+  id, listing_type, title, city, source_url, details
 ) values (
+  '00000000-0000-4000-8000-000000000040',
   'venue', 'Grand Sports Arena', 'Bengaluru', 'https://example.org/arena', 'Multi-sport turf'
 );
+
+-- Separately verify anonymous intake through the SECURITY DEFINER public RPC.
+set local role anon;
+select case
+  when public.submit_listing_intake(
+    'venue', 'Public Intake RPC Test', 'Bengaluru',
+    'https://example.org/public-intake-test',
+    'Created through public intake RPC', null
+  )->>'status' = 'submitted' then 1
+  else 1 / 0
+end as anonymous_intake_rpc_assertion;
 reset role;
 
 -- Run internal assertions with the CI database owner, never the simulated client role.
@@ -59,33 +70,26 @@ end;
 $verify_step1$;
 RESET ROLE;
 
--- Step 2: Submitter tracking lookup (tested under anon role)
-do $track_test$
-declare
-  v_ref text := current_setting('khelgrid_test.sub_ref', true);
-  v_key text := current_setting('khelgrid_test.sub_key', true);
-  v_status text;
-  v_title text;
-begin
-  -- Switch to anon to test public tracking RPC
-  set local role anon;
-  select status, title into v_status, v_title
-  from public.get_submission_tracking_status(v_ref, v_key);
+-- Step 2: Submitter tracking lookup under anon. Role changes occur outside DO blocks.
+set local role anon;
+select case
+  when exists (
+    select 1 from public.get_submission_tracking_status(
+      current_setting('khelgrid_test.sub_ref', true),
+      current_setting('khelgrid_test.sub_key', true)
+    )
+    where status = 'pending_review' and title = 'Grand Sports Arena'
+  ) then 1 else 1 / 0
+end as valid_tracking_key_assertion;
 
-  if v_status <> 'pending_review' or v_title <> 'Grand Sports Arena' then
-    raise exception 'Anonymous submitter tracking failed: status=%, title=%', v_status, v_title;
-  end if;
-
-  -- Invalid key should return no rows
-  if exists (
-    select 1 from public.get_submission_tracking_status(v_ref, 'wrong-key')
-  ) then
-    raise exception 'Invalid tracking key unexpectedly returned submission details';
-  end if;
-
-  reset role;
-end;
-$track_test$;
+select case
+  when not exists (
+    select 1 from public.get_submission_tracking_status(
+      current_setting('khelgrid_test.sub_ref', true), 'wrong-key'
+    )
+  ) then 1 else 1 / 0
+end as invalid_tracking_key_assertion;
+reset role;
 
 -- Step 3: Non-moderator unauthorized attempts (tested under authenticated user 20)
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000020', true);
@@ -225,32 +229,20 @@ end;
 $verify_corrections$;
 RESET ROLE;
 
--- Step 4C: Submitter updates and resubmits
-do $submitter_resubmit$
-declare
-  v_ref text := current_setting('khelgrid_test.sub_ref', true);
-  v_key text := current_setting('khelgrid_test.sub_key', true);
-  v_res jsonb;
-begin
-  -- Switch to anon to simulate submitter calling resubmit_listing_submission
-  set local role anon;
-
-  select public.resubmit_listing_submission(
-    v_ref,
-    v_key,
+-- Step 4C: Submitter resubmits through the public RPC under anon.
+set local role anon;
+select case
+  when (public.resubmit_listing_submission(
+    current_setting('khelgrid_test.sub_ref', true),
+    current_setting('khelgrid_test.sub_key', true),
     'Grand Sports Arena Koramangala',
     'Bengaluru',
     'https://example.org/arena',
     '8 indoor badminton courts and 2 turf pitches at 80ft Road Koramangala'
-  ) into v_res;
-
-  if (v_res->>'success')::boolean is not true then
-    raise exception 'resubmit_listing_submission failed: %', v_res;
-  end if;
-
-  reset role;
-end;
-$submitter_resubmit$;
+  )->>'success')::boolean is true then 1
+  else 1 / 0
+end as submitter_resubmission_assertion;
+reset role;
 
 -- Run internal assertions with the CI database owner, never the simulated client role.
 SET LOCAL ROLE postgres;
