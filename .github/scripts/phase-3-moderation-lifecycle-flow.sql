@@ -18,11 +18,11 @@ values ('00000000-0000-4000-8000-000000000030', true)
 on conflict (user_id) do update set is_active = true;
 
 -- Step 1: Anonymous submission intake
+-- Anonymous users only have column-level insert on user-owned submission fields.
 set local role anon;
 insert into public.listing_submissions (
-  id, listing_type, title, city, source_url, details
+  listing_type, title, city, source_url, details
 ) values (
-  '00000000-0000-4000-8000-000000000040',
   'venue', 'Grand Sports Arena', 'Bengaluru', 'https://example.org/arena', 'Multi-sport turf'
 );
 reset role;
@@ -30,18 +30,31 @@ reset role;
 -- Run internal assertions with the CI database owner, never the simulated client role.
 SET LOCAL ROLE postgres;
 
--- Privileged verification of Step 1:
+-- Privileged verification of Step 1 & saving test context:
 do $verify_step1$
 declare
   v_sub public.listing_submissions%rowtype;
 begin
-  select * into v_sub from public.listing_submissions where id = '00000000-0000-4000-8000-000000000040';
+  select * into v_sub
+  from public.listing_submissions
+  where title = 'Grand Sports Arena'
+  order by created_at desc
+  limit 1;
+
+  if v_sub.id is null then
+    raise exception 'Listing submission was not created';
+  end if;
   if v_sub.reference_number is null or v_sub.tracking_key is null then
     raise exception 'Reference number and tracking key were not generated automatically';
   end if;
   if v_sub.status <> 'pending_review' then
     raise exception 'Initial status must be pending_review, got %', v_sub.status;
   end if;
+
+  -- Store context in session settings so subsequent role-restricted steps can reference this submission
+  perform set_config('khelgrid_test.sub_id', v_sub.id::text, true);
+  perform set_config('khelgrid_test.sub_ref', v_sub.reference_number, true);
+  perform set_config('khelgrid_test.sub_key', v_sub.tracking_key, true);
 end;
 $verify_step1$;
 RESET ROLE;
@@ -49,16 +62,11 @@ RESET ROLE;
 -- Step 2: Submitter tracking lookup (tested under anon role)
 do $track_test$
 declare
-  v_ref text;
-  v_key text;
+  v_ref text := current_setting('khelgrid_test.sub_ref', true);
+  v_key text := current_setting('khelgrid_test.sub_key', true);
   v_status text;
   v_title text;
 begin
-  -- Retrieve reference number and tracking key as privileged test runner
-  select reference_number, tracking_key into v_ref, v_key
-  from public.listing_submissions
-  where id = '00000000-0000-4000-8000-000000000040';
-
   -- Switch to anon to test public tracking RPC
   set local role anon;
   select status, title into v_status, v_title
@@ -85,7 +93,7 @@ set local role authenticated;
 
 do $non_mod_test$
 declare
-  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040';
+  v_sub_id constant uuid := current_setting('khelgrid_test.sub_id', true)::uuid;
 begin
   -- 3A: Non-moderator cannot call start_listing_review
   begin
@@ -129,7 +137,7 @@ set local role authenticated;
 
 do $mod_start_review$
 declare
-  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040';
+  v_sub_id constant uuid := current_setting('khelgrid_test.sub_id', true)::uuid;
   v_queue_count integer;
 begin
   -- Check v2 queue returns pending submission to authorized moderator
@@ -153,7 +161,10 @@ do $verify_start_review$
 declare
   v_sub public.listing_submissions%rowtype;
 begin
-  select * into v_sub from public.listing_submissions where id = '00000000-0000-4000-8000-000000000040';
+  select * into v_sub
+  from public.listing_submissions
+  where id = current_setting('khelgrid_test.sub_id', true)::uuid;
+
   if v_sub.status <> 'under_review' or v_sub.assigned_moderator_id <> '00000000-0000-4000-8000-000000000030' then
     raise exception 'start_listing_review did not set under_review or assigned moderator';
   end if;
@@ -170,7 +181,7 @@ set local role authenticated;
 
 do $mod_request_corrections$
 declare
-  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040';
+  v_sub_id constant uuid := current_setting('khelgrid_test.sub_id', true)::uuid;
 begin
   -- Must reject too-short message (< 10 characters)
   begin
@@ -200,7 +211,10 @@ do $verify_corrections$
 declare
   v_sub public.listing_submissions%rowtype;
 begin
-  select * into v_sub from public.listing_submissions where id = '00000000-0000-4000-8000-000000000040';
+  select * into v_sub
+  from public.listing_submissions
+  where id = current_setting('khelgrid_test.sub_id', true)::uuid;
+
   if v_sub.status <> 'changes_requested' or v_sub.correction_request is null then
     raise exception 'request_listing_corrections did not persist changes_requested state';
   end if;
@@ -214,15 +228,10 @@ RESET ROLE;
 -- Step 4C: Submitter updates and resubmits
 do $submitter_resubmit$
 declare
-  v_ref text;
-  v_key text;
+  v_ref text := current_setting('khelgrid_test.sub_ref', true);
+  v_key text := current_setting('khelgrid_test.sub_key', true);
   v_res jsonb;
 begin
-  -- Read tracking credentials as privileged test runner
-  select reference_number, tracking_key into v_ref, v_key
-  from public.listing_submissions
-  where id = '00000000-0000-4000-8000-000000000040';
-
   -- Switch to anon to simulate submitter calling resubmit_listing_submission
   set local role anon;
 
@@ -251,7 +260,10 @@ do $verify_resubmit$
 declare
   v_sub public.listing_submissions%rowtype;
 begin
-  select * into v_sub from public.listing_submissions where id = '00000000-0000-4000-8000-000000000040';
+  select * into v_sub
+  from public.listing_submissions
+  where id = current_setting('khelgrid_test.sub_id', true)::uuid;
+
   if v_sub.status <> 'resubmitted' or v_sub.version <> 4 then
     raise exception 'resubmission did not update status to resubmitted or increment version; status=%, version=%', v_sub.status, v_sub.version;
   end if;
@@ -259,7 +271,7 @@ begin
   -- Verify version history was archived
   if not exists (
     select 1 from public.listing_submission_versions
-    where submission_id = '00000000-0000-4000-8000-000000000040'
+    where submission_id = v_sub.id
       and title = 'Grand Sports Arena'
   ) then
     raise exception 'Previous submission version was not archived in listing_submission_versions';
@@ -274,7 +286,7 @@ set local role authenticated;
 
 do $mod_approve$
 declare
-  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040';
+  v_sub_id constant uuid := current_setting('khelgrid_test.sub_id', true)::uuid;
 begin
   perform public.approve_listing_submission(
     v_sub_id,
@@ -294,7 +306,10 @@ do $verify_approve$
 declare
   v_sub public.listing_submissions%rowtype;
 begin
-  select * into v_sub from public.listing_submissions where id = '00000000-0000-4000-8000-000000000040';
+  select * into v_sub
+  from public.listing_submissions
+  where id = current_setting('khelgrid_test.sub_id', true)::uuid;
+
   if v_sub.status <> 'approved' or v_sub.reviewed_by <> '00000000-0000-4000-8000-000000000030' then
     raise exception 'approve_listing_submission failed to update approved state';
   end if;
@@ -318,7 +333,7 @@ set local role authenticated;
 
 do $mod_publish$
 declare
-  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040';
+  v_sub_id constant uuid := current_setting('khelgrid_test.sub_id', true)::uuid;
   v_pub_res jsonb;
   v_target_id uuid;
 begin
@@ -350,13 +365,19 @@ declare
   v_sub public.listing_submissions%rowtype;
   v_venue_count integer;
 begin
-  select * into v_sub from public.listing_submissions where id = '00000000-0000-4000-8000-000000000040';
+  select * into v_sub
+  from public.listing_submissions
+  where id = current_setting('khelgrid_test.sub_id', true)::uuid;
+
   if v_sub.status <> 'published' or v_sub.published_record_id is null or v_sub.published_table <> 'venues' then
     raise exception 'submission state not marked published with published_record_id';
   end if;
   if v_sub.version <> 6 then
     raise exception 'publish_listing_submission expected version 6, found %', v_sub.version;
   end if;
+
+  -- Store published venue ID for visibility assertions
+  perform set_config('khelgrid_test.venue_id', v_sub.published_record_id::text, true);
 
   -- Verify public catalogue row exists and is published
   select count(*) into v_venue_count from public.venues
@@ -373,10 +394,12 @@ RESET ROLE;
 set local role anon;
 
 do $anon_visibility_test$
+declare
+  v_venue_id uuid := current_setting('khelgrid_test.venue_id', true)::uuid;
 begin
   if not exists (
     select 1 from public.venues
-    where name ilike '%Grand Sports Arena%' and publication_status = 'published'
+    where id = v_venue_id and publication_status = 'published'
   ) then
     raise exception 'Published venue is not visible to anonymous users';
   end if;
@@ -391,7 +414,7 @@ set local role authenticated;
 
 do $mod_unpublish$
 declare
-  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040';
+  v_sub_id constant uuid := current_setting('khelgrid_test.sub_id', true)::uuid;
 begin
   perform public.unpublish_listing_submission(
     v_sub_id,
@@ -412,7 +435,10 @@ do $verify_unpublish$
 declare
   v_sub public.listing_submissions%rowtype;
 begin
-  select * into v_sub from public.listing_submissions where id = '00000000-0000-4000-8000-000000000040';
+  select * into v_sub
+  from public.listing_submissions
+  where id = current_setting('khelgrid_test.sub_id', true)::uuid;
+
   if v_sub.status <> 'unpublished' or v_sub.unpublished_at is null or v_sub.unpublish_reason is null then
     raise exception 'unpublish_listing_submission did not set unpublished status or reason';
   end if;
@@ -435,10 +461,12 @@ RESET ROLE;
 set local role anon;
 
 do $anon_unpublish_visibility$
+declare
+  v_venue_id uuid := current_setting('khelgrid_test.venue_id', true)::uuid;
 begin
   if exists (
     select 1 from public.venues
-    where name ilike '%Grand Sports Arena%' and publication_status = 'published'
+    where id = v_venue_id and publication_status = 'published'
   ) then
     raise exception 'Unpublished venue is still published and visible to anon!';
   end if;
@@ -453,7 +481,7 @@ set local role authenticated;
 
 do $mod_audit_check$
 declare
-  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040';
+  v_sub_id constant uuid := current_setting('khelgrid_test.sub_id', true)::uuid;
 begin
   if not exists (
     select 1 from public.get_listing_submission_audit_trail(v_sub_id) where action = 'published'
