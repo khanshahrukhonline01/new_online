@@ -527,7 +527,7 @@ begin
   end if;
 
   if p_expected_version is not null and v_sub.version <> p_expected_version then
-    raise exception 'Submission modified by another moderator (expected v%, found v%)' using errcode = '40001';
+    raise exception 'Submission modified by another moderator (expected v%, found v%)', p_expected_version, v_sub.version using errcode = '40001';
   end if;
 
   if v_sub.status not in ('pending_review', 'resubmitted') then
@@ -580,7 +580,7 @@ begin
   end if;
 
   if p_expected_version is not null and v_sub.version <> p_expected_version then
-    raise exception 'Submission modified by another moderator (expected v%, found v%)' using errcode = '40001';
+    raise exception 'Submission modified by another moderator (expected v%, found v%)', p_expected_version, v_sub.version using errcode = '40001';
   end if;
 
   if v_sub.status not in ('pending_review', 'under_review', 'resubmitted', 'unpublished') then
@@ -650,7 +650,7 @@ begin
   end if;
 
   if p_expected_version is not null and v_sub.version <> p_expected_version then
-    raise exception 'Submission modified by another moderator (expected v%, found v%)' using errcode = '40001';
+    raise exception 'Submission modified by another moderator (expected v%, found v%)', p_expected_version, v_sub.version using errcode = '40001';
   end if;
 
   if v_sub.status in ('published') then
@@ -721,7 +721,7 @@ begin
   end if;
 
   if p_expected_version is not null and v_sub.version <> p_expected_version then
-    raise exception 'Submission modified by another moderator (expected v%, found v%)' using errcode = '40001';
+    raise exception 'Submission modified by another moderator (expected v%, found v%)', p_expected_version, v_sub.version using errcode = '40001';
   end if;
 
   if v_sub.status not in ('pending_review', 'under_review', 'resubmitted') then
@@ -792,7 +792,7 @@ begin
   end if;
 
   if p_expected_version is not null and v_sub.version <> p_expected_version then
-    raise exception 'Submission modified by another moderator (expected v%, found v%)' using errcode = '40001';
+    raise exception 'Submission modified by another moderator (expected v%, found v%)', p_expected_version, v_sub.version using errcode = '40001';
   end if;
 
   if v_sub.status = 'published' then
@@ -1001,7 +1001,7 @@ begin
   end if;
 
   if p_expected_version is not null and v_sub.version <> p_expected_version then
-    raise exception 'Submission modified by another moderator (expected v%, found v%)' using errcode = '40001';
+    raise exception 'Submission modified by another moderator (expected v%, found v%)', p_expected_version, v_sub.version using errcode = '40001';
   end if;
 
   if v_sub.status <> 'published' then
