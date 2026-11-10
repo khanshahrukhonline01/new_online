@@ -116,7 +116,6 @@ export default function SportsPage() {
                     <button type="button" className="admin-btn admin-btn-secondary" disabled={currentPage === totalPages} onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}>Next</button>
                   </nav>
                 )}
-                  )}
                 </>
               ) : (
                 <CatalogueEmptyState
