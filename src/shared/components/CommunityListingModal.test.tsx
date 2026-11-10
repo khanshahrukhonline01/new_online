@@ -32,7 +32,7 @@ describe('CommunityListingModal', () => {
     expect(html).toContain('Date &amp; Time *')
     expect(html).toContain('Price / Player')
     expect(html).toContain('Open Spots')
-    expect(html).toContain('Publish Listing Now')
+    expect(html).toContain('Submit for moderator review')
   })
 
   it('renders Academy specific fields when defaultCategory is academy', () => {
