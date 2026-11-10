@@ -102,7 +102,7 @@ describe('public catalogue client', () => {
     const url = new URL(String(requestUrl))
     expect(url.pathname).toBe(`/rest/v1/${table}`)
     expect(url.searchParams.get(filterKey)).toBe(filterValue)
-    expect(url.searchParams.get('limit')).toBe('1000')
+    expect(url.searchParams.get('limit')).toBe('500')
     expect(options?.headers).toMatchObject({
       apikey: anonKey,
       Authorization: `Bearer ${anonKey}`,
