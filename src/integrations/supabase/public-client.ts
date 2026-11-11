@@ -3501,22 +3501,13 @@ export async function getAdminModerationQueue(filters?: ModerationQueueFilters):
     p_sort_dir: filters?.sortDir || 'desc',
   })
 
-  if (!v2Error && Array.isArray(v2Data)) {
-    rows = v2Data as ModeratorQueueItem[]
-    totalCount = rows.length > 0 && 'total_count' in (rows[0] as unknown as { total_count: number })
-      ? Number((rows[0] as unknown as { total_count: number }).total_count)
-      : rows.length
-  } else {
-    // Fallback to legacy v1 RPC
-    const { data: v1Data, error: v1Error } = await client.rpc('get_listing_submissions')
-    if (v1Error) throw new Error(v1Error.message || 'Could not load the protected listing review queue.')
-    rows = (Array.isArray(v1Data) ? v1Data : []).map(r => ({
-      ...r,
-      reference_number: r.reference_number || `KHL-${(r.id || '').slice(0, 8).toUpperCase()}`,
-      version: r.version || 1,
-    })) as ModeratorQueueItem[]
-    totalCount = rows.length
+  if (v2Error) {
+    throw new Error(v2Error.message || 'Could not load the protected listing review queue.')
   }
+  rows = (Array.isArray(v2Data) ? v2Data : []) as ModeratorQueueItem[]
+  totalCount = rows.length > 0 && 'total_count' in (rows[0] as unknown as { total_count: number })
+    ? Number((rows[0] as unknown as { total_count: number }).total_count)
+    : rows.length
 
   const [academiesRes, venuesRes, coachesRes, eventsRes] = await Promise.all([
     getAcademies(),
