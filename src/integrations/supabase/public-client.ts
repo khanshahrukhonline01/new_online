@@ -3859,4 +3859,23 @@ export async function setListingModeratorAccess(input: {
   })
   if (error) throw new Error(error.message || 'Could not update moderator access.')
 }
+export interface ListingModeratorAccessAudit {
+  id: string
+  target_user_id: string
+  actor_id: string | null
+  action: string
+  old_role: string | null
+  new_role: string | null
+  old_is_active: boolean | null
+  new_is_active: boolean | null
+  notes: string | null
+  created_at: string
+}
+
+export async function getListingModeratorAccessAudit(limit = 100): Promise<ListingModeratorAccessAudit[]> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_listing_moderator_access_audit', { p_limit: limit })
+  if (error) throw new Error(error.message || 'Could not load moderator access audit history.')
+  return Array.isArray(data) ? data as ListingModeratorAccessAudit[] : []
+}
 
