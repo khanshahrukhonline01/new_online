@@ -70,14 +70,18 @@ begin
       r.id, 'verified', 'Category evidence criteria satisfied.'
     );
 
-    -- A verified submission must still fail publication when category fields are absent.
+    -- A verified submission must still fail publication when its category requires
+    -- structured facts that have not been supplied (venue, organizer, qualifications,
+    -- event schedule, or pickup-game host/schedule).
     perform public.save_listing_publication_details(r.id, '{}'::jsonb, 6);
-    begin
-      perform public.publish_listing_submission(r.id, null, null, 7);
-      raise exception 'Incomplete % listing unexpectedly published', r.listing_type;
-    exception when invalid_parameter_value then
-      null;
-    end;
+    if r.listing_type in ('venue', 'opportunity', 'coach', 'event', 'pickup_game') then
+      begin
+        perform public.publish_listing_submission(r.id, null, null, 7);
+        raise exception 'Incomplete % listing unexpectedly published', r.listing_type;
+      exception when invalid_parameter_value then
+        null;
+      end;
+    end if;
 
     perform public.save_listing_publication_details(r.id, r.structured_data, 7);
     select public.publish_listing_submission(r.id, null, null, 8) into v_pub;
