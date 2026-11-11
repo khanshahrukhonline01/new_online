@@ -8,6 +8,7 @@ import {
   startListingReview,
   getAdminModerationQueue,
   getListingEvidence,
+  getListingPublicationDetails,
   getListingModeratorAccessAudit,
   getListingVerificationQueue,
   getModerationAccessProfile,
@@ -113,12 +114,24 @@ export function AdminControlPanelPage() {
     setSelected(item)
     setError('')
     setNotice('')
-    setStructured({})
     try {
-      setEvidence(await getListingEvidence(item.id))
+      const [evidenceRows, publicationDetails] = await Promise.all([
+        getListingEvidence(item.id),
+        getListingPublicationDetails(item.id),
+      ])
+      setEvidence(evidenceRows)
+      setStructured(Object.fromEntries(
+        Object.entries(publicationDetails.structured_data).map(([key, value]) => [
+          key,
+          value == null ? '' : typeof value === 'string' ? value : String(value),
+        ]),
+      ))
+      setSelected({ ...item, version: publicationDetails.version })
+      setVerificationStates(prev => ({ ...prev, [item.id]: publicationDetails.verification_status }))
     } catch (cause) {
       setEvidence([])
-      setError(cause instanceof Error ? cause.message : 'Could not load evidence.')
+      setStructured({})
+      setError(cause instanceof Error ? cause.message : 'Could not load evidence and publication details.')
     }
   }
 
