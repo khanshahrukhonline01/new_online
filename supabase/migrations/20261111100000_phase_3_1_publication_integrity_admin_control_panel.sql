@@ -263,6 +263,33 @@ $function$;
 revoke all on function public.set_listing_moderator_access(uuid, text, boolean, text) from public, anon;
 grant execute on function public.set_listing_moderator_access(uuid, text, boolean, text) to authenticated, service_role;
 
+create or replace function public.get_listing_moderator_access_audit(p_limit integer default 100)
+returns table (
+  id uuid, target_user_id uuid, actor_id uuid, action text,
+  old_role text, new_role text, old_is_active boolean, new_is_active boolean,
+  notes text, created_at timestamptz
+)
+language plpgsql
+stable
+security definer
+set search_path = pg_catalog, public
+as $function$
+begin
+  if auth.uid() is null or not public.is_listing_super_admin() then
+    raise exception 'Super-admin access required' using errcode = '42501';
+  end if;
+  return query
+    select a.id, a.target_user_id, a.actor_id, a.action,
+           a.old_role, a.new_role, a.old_is_active, a.new_is_active,
+           a.notes, a.created_at
+    from public.listing_moderator_access_audits a
+    order by a.created_at desc
+    limit least(greatest(coalesce(p_limit, 100), 1), 250);
+end;
+$function$;
+revoke all on function public.get_listing_moderator_access_audit(integer) from public, anon;
+grant execute on function public.get_listing_moderator_access_audit(integer) to authenticated, service_role;
+
 -- 5. Private evidence and verification RPCs.
 create or replace function public.add_listing_submission_evidence(
   p_submission_id uuid,
