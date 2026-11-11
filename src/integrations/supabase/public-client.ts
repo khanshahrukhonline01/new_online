@@ -3878,4 +3878,22 @@ export async function getListingModeratorAccessAudit(limit = 100): Promise<Listi
   if (error) throw new Error(error.message || 'Could not load moderator access audit history.')
   return Array.isArray(data) ? data as ListingModeratorAccessAudit[] : []
 }
+export async function getListingPublicationDetails(submissionId: string): Promise<{
+  structured_data: Record<string, unknown>
+  version: number
+  verification_status: string
+}> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_listing_submission_publication_details', {
+    p_submission_id: submissionId,
+  })
+  if (error) throw new Error(error.message || 'Could not load saved publication details.')
+  const row = Array.isArray(data) ? data[0] : null
+  if (!row) throw new Error('Submission publication details were not found.')
+  return {
+    structured_data: (row.structured_data || {}) as Record<string, unknown>,
+    version: Number(row.version),
+    verification_status: String(row.verification_status || 'unverified'),
+  }
+}
 
