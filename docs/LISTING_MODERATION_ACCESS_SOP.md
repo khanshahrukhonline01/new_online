@@ -8,7 +8,7 @@
 
 ## 1. Security Architecture & Authorization Model
 
-Access to the KhelGrid Moderation Desk (`/admin/moderation`) and all associated review, approval, publication, and unpublication capabilities is governed strictly by the database authorization allowlist: `public.listing_moderators`.
+Access to the KhelGrid Moderation Desk (`/admin`) and all associated review, approval, publication, and unpublication capabilities is governed strictly by the database authorization allowlist: `public.listing_moderators`.
 
 ### Key Security Invariants
 - **Authentication Pause Maintained:** Public user self-registration and generic sign-ins remain globally paused. General visitors cannot create accounts or sign in.
@@ -49,14 +49,13 @@ values (
   'Initial authorized listing moderator for Phase 3'
 )
 on conflict (user_id) do update
-set is_active = true,
-    updated_at = clock_timestamp();
+set is_active = true;
 
 commit;
 ```
 
 ### Step 3: Verify Moderator Capabilities
-1. The moderator logs in at `http://localhost:5173/admin/moderation` (or the Vercel development deployment).
+1. The moderator logs in at `http://localhost:5173/admin` (or the Vercel development deployment).
 2. The UI will authenticate the session against Supabase Auth, verify allowlist status, and render the Protected Moderation Desk with live counters and status queues.
 
 ---
@@ -72,8 +71,7 @@ To revoke moderation access immediately:
 begin;
 
 update public.listing_moderators
-set is_active = false,
-    updated_at = clock_timestamp()
+set is_active = false
 where user_id = '00000000-0000-0000-0000-000000000000'; -- TARGET USER UID
 
 commit;
@@ -95,16 +93,16 @@ commit;
    - Ensure the submission contains zero unsolicited personally identifiable information (PII) such as personal mobile numbers, home addresses, or private emails of individuals.
 
 ### 4.2 Handling Decisions
-- **Approve:** If the submission is verified and complete, click **Approve Listing**. Note that this does **not** publish the listing to the public catalogue.
+- **Approve:** After claiming the item with **Start Review**, record the editorial decision with **Approve Listing**. This does **not** mean the evidence is verified and does **not** publish the listing.
 - **Request Corrections:** If minor information is missing (e.g. unclear age limit, missing official link), click **Request Corrections**. Specify clear, polite instructions for the submitter. The submitter will receive this instruction via their tracking key.
 - **Reject:** If the submission is fraudulent, spam, duplicate, or outside KhelGrid's scope, click **Reject Submission**. Select or provide an appropriate rejection reason. Internal notes remain private to KhelGrid and are never shown to submitters.
 
 ### 4.3 Publication to Catalogue
 1. Navigate to the **Approved** tab.
-2. Open the approved submission and click **Publish to Catalogue**.
-3. Verify or enter the desired URL slug (e.g., `delhi-badminton-academy`).
-4. Click **Confirm Publication**.
-5. The system performs an atomic insertion into the appropriate catalogue table (`opportunities`, `venues`, `academies`, `coaches`, `events`, `pickup_games`, or `sports`), sets `is_published = true`, and links the published entity ID back to the submission record.
+2. Open the approved submission in `/admin/control`.
+3. Record category-specific HTTPS evidence, review its outcome, and mark the submission verified only when the evidence rules pass.
+4. Enter and save the genuine category-specific publication fields; missing addresses, organizer names, qualifications, hosts, venues, or event times cannot be fabricated.
+5. Publish only after editorial approval and evidence verification. The database atomically creates or reuses the correct catalogue record and links it to the submission.
 
 ### 4.4 Unpublishing a Catalogue Entity
 1. In the **Published** tab, click **Unpublish Listing**.
