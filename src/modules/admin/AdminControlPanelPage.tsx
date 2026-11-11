@@ -188,8 +188,7 @@ export function AdminControlPanelPage() {
       await verifyListingSubmission(selected.id, decision, verificationNotes)
       setNotice(`Verification status updated to ${decision}. Approval and publication remain separate decisions.`)
       await refresh()
-      const updated = queue?.pendingSubmissions.find(item => item.id === selected.id)
-      if (updated) setSelected({ ...updated, version: updated.version + 1 })
+      setSelected(prev => prev ? { ...prev, version: prev.version + 1 } : prev)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Verification decision failed.')
     } finally { setBusy(false) }
@@ -204,6 +203,7 @@ export function AdminControlPanelPage() {
       await saveListingPublicationDetails(selected.id, clean, selected.version)
       setNotice('Category-specific publication details saved.')
       await refresh()
+      setSelected(prev => prev ? { ...prev, version: prev.version + 1 } : prev)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not save publication details.')
     } finally { setBusy(false) }
