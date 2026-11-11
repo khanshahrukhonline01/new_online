@@ -22,10 +22,11 @@ on conflict (user_id) do update set is_active = excluded.is_active, role = exclu
 -- Seed a deterministic lifecycle fixture using the privileged CI connection.
 -- The public client is not permitted to insert directly into this private table.
 insert into public.listing_submissions (
-  id, listing_type, title, city, source_url, details
+  id, listing_type, title, city, source_url, details, submitter_id
 ) values (
   '00000000-0000-4000-8000-000000000040',
-  'venue', 'Grand Sports Arena', 'Bengaluru', 'https://example.org/arena', 'Multi-sport turf'
+  'venue', 'Grand Sports Arena', 'Bengaluru', 'https://example.org/arena', 'Multi-sport turf',
+  '00000000-0000-4000-8000-000000000010'
 );
 
 -- Diagnose the exact RPC implementation installed in this CI database before invoking it.
@@ -215,6 +216,14 @@ do $super_admin_control$
 declare
   v_count integer;
 begin
+  begin
+    perform public.start_listing_review(
+      '00000000-0000-4000-8000-000000000040', 1
+    );
+    raise exception 'A submitter who is a super-admin unexpectedly reviewed their own listing';
+  exception when insufficient_privilege then
+    null;
+  end;
   select count(*) into v_count from public.list_listing_moderator_accounts();
   if v_count < 2 then
     raise exception 'Super-admin did not receive the authorized moderator account list';
