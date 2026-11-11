@@ -58,6 +58,7 @@ begin
     'public.is_listing_super_admin()'::regprocedure,
     'public.get_moderation_access_profile()'::regprocedure,
     'public.list_listing_moderator_accounts()'::regprocedure,
+    'public.get_listing_moderator_access_audit(integer)'::regprocedure,
     'public.set_listing_moderator_access(uuid,text,boolean,text)'::regprocedure,
     'public.add_listing_submission_evidence(uuid,text,text,text)'::regprocedure,
     'public.review_listing_submission_evidence(uuid,text,text)'::regprocedure,
