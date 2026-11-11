@@ -5,6 +5,7 @@ begin;
 do $phase31_assertions$
 declare
   v_publish_def text;
+  v_access_def text;
   v_col_default text;
   v_fn regprocedure;
 begin
@@ -79,6 +80,11 @@ begin
   if to_regprocedure('public.review_listing_submission(uuid,text,text)') is not null
      and has_function_privilege('authenticated', 'public.review_listing_submission(uuid,text,text)', 'EXECUTE') then
     raise exception 'Authenticated clients must not execute the legacy one-step listing review RPC';
+  end if;
+
+  v_access_def := pg_get_functiondef('public.set_listing_moderator_access(uuid,text,boolean,text)'::regprocedure);
+  if position('pg_advisory_xact_lock' in v_access_def) = 0 then
+    raise exception 'Moderator access updates must serialize last-super-admin checks';
   end if;
 
   v_publish_def := pg_get_functiondef('public.publish_listing_submission(uuid,text,uuid,integer)'::regprocedure);
