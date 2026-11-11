@@ -88,7 +88,7 @@ create table if not exists public.listing_submission_evidence (
   description text not null check (char_length(btrim(description)) between 10 and 2000),
   outcome text not null default 'pending'
     check (outcome in ('pending', 'supports', 'contradicts', 'insufficient')),
-  created_by uuid not null references auth.users(id) on delete restrict,
+  created_by uuid not null,
   reviewed_by uuid references auth.users(id) on delete set null,
   reviewer_notes text,
   reviewed_at timestamptz,
@@ -104,7 +104,7 @@ grant all on public.listing_submission_evidence to service_role;
 -- 3. Append-only access-control audit trail.
 create table if not exists public.listing_moderator_access_audits (
   id uuid primary key default gen_random_uuid(),
-  target_user_id uuid not null references auth.users(id) on delete restrict,
+  target_user_id uuid not null,
   actor_id uuid references auth.users(id) on delete set null,
   action text not null check (action in ('granted', 'role_changed', 'activated', 'deactivated')),
   old_role text,
