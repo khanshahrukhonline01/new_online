@@ -1,5 +1,5 @@
 -- Runtime category-specific publication validation for Phase 3.1.
-\\set ON_ERROR_STOP on
+\set ON_ERROR_STOP on
 begin;
 
 insert into auth.users (id) values
