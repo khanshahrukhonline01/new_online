@@ -255,7 +255,7 @@ export function AdminControlPanelPage() {
     <section className="content-page admin-control">
       <header className="admin-control-header">
         <div><p className="eyebrow">KHELGRID · RESTRICTED OPERATIONS</p><h1>Moderation Control Panel</h1><p>Review submissions, record evidence, verify claims and manage authorized moderators.</p></div>
-        <div className="admin-control-identity"><strong>{profile.role.replace('_', ' ')}</strong><button type="button" onClick={async () => { await signOut(); setProfile(null); setQueue(null) }}>Sign out</button></div>
+        <div className="admin-control-identity"><strong>{profile.role.replace('_', ' ')}</strong><a href="/admin">Listing review desk</a><button type="button" onClick={async () => { await signOut(); setProfile(null); setQueue(null) }}>Sign out</button></div>
       </header>
       {error && <p role="alert" className="admin-control-error">{error}</p>}
       {notice && <p role="status" className="admin-control-notice">{notice}</p>}
