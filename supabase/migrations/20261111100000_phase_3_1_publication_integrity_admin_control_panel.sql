@@ -739,6 +739,18 @@ $function$;
 revoke all on function public.get_listing_submission_publication_details(uuid) from public, anon;
 grant execute on function public.get_listing_submission_publication_details(uuid) to authenticated, service_role;
 
+-- Retire the legacy one-step review RPC so clients cannot bypass claimed-review/versioned actions.
+do $legacy_review_rpc$
+begin
+  if to_regprocedure('public.review_listing_submission(uuid,text,text)') is not null then
+    revoke all on function public.review_listing_submission(uuid, text, text)
+      from public, anon, authenticated;
+    grant execute on function public.review_listing_submission(uuid, text, text)
+      to service_role;
+  end if;
+end;
+$legacy_review_rpc$;
+
 -- 7. Publication function now refuses invented fallback data and only publishes after
 -- a distinct evidence verification decision. Re-publication reuses the same catalogue row.
 create or replace function public.publish_listing_submission(
