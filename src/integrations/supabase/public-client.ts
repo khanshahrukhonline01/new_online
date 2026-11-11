@@ -3711,3 +3711,152 @@ export async function moderateListingSubmission(
   return false
 }
 
+// ============================================================================
+// Phase 3.1: Evidence verification and super-admin control panel RPC clients.
+// Every mutation is authorized again by PostgreSQL; frontend role checks are UX only.
+// ============================================================================
+export interface ModerationAccessProfile {
+  user_id: string
+  role: 'moderator' | 'super_admin'
+  is_active: boolean
+}
+
+export interface ListingEvidenceItem {
+  id: string
+  evidence_type: string
+  evidence_url: string
+  description: string
+  outcome: 'pending' | 'supports' | 'contradicts' | 'insufficient'
+  reviewer_notes: string | null
+  reviewed_at: string | null
+  created_at: string
+}
+
+export interface ListingModeratorAccount {
+  user_id: string
+  role: 'moderator' | 'super_admin'
+  is_active: boolean
+  notes: string | null
+  created_at: string
+  created_by: string | null
+}
+
+async function requireModerationSession() {
+  const client = getSupabaseClient()
+  if (!client) throw new Error('Moderation service is not configured.')
+  const { data, error } = await client.auth.getUser()
+  if (error || !data.user) throw new Error('Please sign in with an authorized KhelGrid moderation account.')
+  return client
+}
+
+export async function getModerationAccessProfile(): Promise<ModerationAccessProfile | null> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_moderation_access_profile')
+  if (error) throw new Error(error.message || 'Could not verify moderation access.')
+  const rows = Array.isArray(data) ? data : []
+  return (rows[0] as ModerationAccessProfile | undefined) ?? null
+}
+
+export async function getListingEvidence(submissionId: string): Promise<ListingEvidenceItem[]> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_listing_submission_evidence', { p_submission_id: submissionId })
+  if (error) throw new Error(error.message || 'Could not load verification evidence.')
+  return Array.isArray(data) ? data as ListingEvidenceItem[] : []
+}
+
+export async function addListingEvidence(input: {
+  submissionId: string
+  evidenceType: string
+  evidenceUrl: string
+  description: string
+}): Promise<string> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('add_listing_submission_evidence', {
+    p_submission_id: input.submissionId,
+    p_evidence_type: input.evidenceType,
+    p_evidence_url: input.evidenceUrl.trim(),
+    p_description: input.description.trim(),
+  })
+  if (error) throw new Error(error.message || 'Could not add evidence.')
+  return String(data)
+}
+
+export async function reviewListingEvidence(evidenceId: string, outcome: 'supports' | 'contradicts' | 'insufficient', notes?: string): Promise<void> {
+  const client = await requireModerationSession()
+  const { error } = await client.rpc('review_listing_submission_evidence', {
+    p_evidence_id: evidenceId,
+    p_outcome: outcome,
+    p_reviewer_notes: notes?.trim() || null,
+  })
+  if (error) throw new Error(error.message || 'Could not save evidence review.')
+}
+
+export async function verifyListingSubmission(submissionId: string, decision: 'verified' | 'rejected' | 'unverified', notes?: string): Promise<void> {
+  const client = await requireModerationSession()
+  const { error } = await client.rpc('verify_listing_submission', {
+    p_submission_id: submissionId,
+    p_decision: decision,
+    p_notes: notes?.trim() || null,
+  })
+  if (error) throw new Error(error.message || 'Could not save verification decision.')
+}
+
+export async function saveListingPublicationDetails(submissionId: string, structuredData: Record<string, unknown>, expectedVersion?: number): Promise<number> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('save_listing_publication_details', {
+    p_submission_id: submissionId,
+    p_structured_data: structuredData,
+    p_expected_version: expectedVersion ?? null,
+  })
+  if (error) throw new Error(error.message || 'Could not save category-specific publication details.')
+  return Number(data)
+}
+
+export async function getListingVerificationQueue(status = 'unverified'): Promise<Array<{
+  id: string
+  reference_number: string
+  listing_type: string
+  title: string
+  city: string | null
+  status: string
+  verification_status: string
+  version: number
+  created_at: string
+}>> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_listing_verification_queue', {
+    p_status: status,
+    p_limit: 100,
+    p_offset: 0,
+  })
+  if (error) throw new Error(error.message || 'Could not load verification queue.')
+  return Array.isArray(data) ? data as Array<{
+    id: string; reference_number: string; listing_type: string; title: string;
+    city: string | null; status: string; verification_status: string;
+    version: number; created_at: string
+  }> : []
+}
+
+export async function listListingModeratorAccounts(): Promise<ListingModeratorAccount[]> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('list_listing_moderator_accounts')
+  if (error) throw new Error(error.message || 'Could not load moderator accounts.')
+  return Array.isArray(data) ? data as ListingModeratorAccount[] : []
+}
+
+export async function setListingModeratorAccess(input: {
+  userId: string
+  role: 'moderator' | 'super_admin'
+  isActive: boolean
+  notes?: string
+}): Promise<void> {
+  const client = await requireModerationSession()
+  const { error } = await client.rpc('set_listing_moderator_access', {
+    p_user_id: input.userId,
+    p_role: input.role,
+    p_is_active: input.isActive,
+    p_notes: input.notes?.trim() || null,
+  })
+  if (error) throw new Error(error.message || 'Could not update moderator access.')
+}
+
