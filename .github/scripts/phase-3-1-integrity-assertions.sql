@@ -77,6 +77,11 @@ begin
     end if;
   end loop;
 
+  if to_regprocedure('public.get_listing_submissions()') is not null
+     and has_function_privilege('authenticated', 'public.get_listing_submissions()', 'EXECUTE') then
+    raise exception 'Authenticated clients must use the versioned v2 listing moderation queue';
+  end if;
+
   if to_regprocedure('public.review_listing_submission(uuid,text,text)') is not null
      and has_function_privilege('authenticated', 'public.review_listing_submission(uuid,text,text)', 'EXECUTE') then
     raise exception 'Authenticated clients must not execute the legacy one-step listing review RPC';
