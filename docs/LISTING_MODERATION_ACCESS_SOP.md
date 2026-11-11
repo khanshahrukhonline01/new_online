@@ -12,7 +12,7 @@ Access to the KhelGrid Moderation Desk (`/admin`) and all associated review, app
 
 ### Key Security Invariants
 - **Authentication Pause Maintained:** Public user self-registration and generic sign-ins remain globally paused. General visitors cannot create accounts or sign in.
-- **Server-Side Allowlist Verification:** Moderation privileges are verified in PostgreSQL via `is_listing_moderator(auth.uid())` which checks that the calling user has `is_active = true` in `public.listing_moderators`.
+- **Server-Side Allowlist Verification:** Moderation privileges are verified in PostgreSQL via `is_listing_moderator()` which checks that the calling user has `is_active = true` in `public.listing_moderators`.
 - **Zero Client-Side Trust:** Client-side roles, localStorage items, query parameters, or JWT metadata claims are NEVER trusted for moderation authorization.
 - **Least-Privilege RPC Boundaries:**
   - `anon` and unauthenticated visitors cannot view or call moderator RPCs.
@@ -21,9 +21,9 @@ Access to the KhelGrid Moderation Desk (`/admin`) and all associated review, app
 
 ---
 
-## 2. Procedure for Authorizing the First Moderator Account
+## 2. Procedure for Authorizing the First Super-Admin Account
 
-Because there are no active moderators in the development database by default, an administrator must authorize the initial moderator using the secure procedure below.
+Because there are no active moderators in the development database by default, a trusted database operator must authorize the first super-admin using the secure procedure below. The super-admin can then grant individual moderator accounts through `/admin/control`.
 
 > [!CAUTION]
 > **NEVER** expose the Supabase `service_role` key to client browsers, code repositories, shell histories, or frontend configuration files. All administrative grant commands must be executed strictly from the Supabase Dashboard SQL Editor or via secure server-side administrative CLI.
@@ -42,20 +42,22 @@ Because there are no active moderators in the development database by default, a
 ```sql
 begin;
 
-insert into public.listing_moderators (user_id, is_active, notes)
+insert into public.listing_moderators (user_id, is_active, role, notes)
 values (
   '00000000-0000-0000-0000-000000000000', -- REPLACE WITH ACTUAL USER UID
   true,
-  'Initial authorized listing moderator for Phase 3'
+  'super_admin',
+  'Initial authorized super-admin for Phase 3.1'
 )
 on conflict (user_id) do update
-set is_active = true;
+set is_active = true,
+    role = 'super_admin';
 
 commit;
 ```
 
 ### Step 3: Verify Moderator Capabilities
-1. The moderator logs in at `http://localhost:5173/admin` (or the Vercel development deployment).
+1. The super-admin logs in at `http://localhost:5173/admin` and opens `/admin/control` (or the Vercel development deployment).
 2. The UI will authenticate the session against Supabase Auth, verify allowlist status, and render the Protected Moderation Desk with live counters and status queues.
 
 ---
