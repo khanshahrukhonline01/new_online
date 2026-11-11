@@ -463,7 +463,7 @@ $publication_requires_verification$;
 -- Add and review real HTTPS evidence in the test fixture, then make the separate verification decision.
 select public.add_listing_submission_evidence(
   '00000000-0000-4000-8000-000000000040',
-  'official_source',
+  'venue_address',
   'https://example.org/arena-verification',
   'Official venue source confirms the facility identity and submitted location.'
 ) as phase3_evidence_id
@@ -482,7 +482,7 @@ select public.verify_listing_submission(
 select public.save_listing_publication_details(
   '00000000-0000-4000-8000-000000000040',
   '{"address":"12 Stadium Road, Koramangala, Bengaluru","sport":"Multi-sport"}'::jsonb,
-  6
+  8
 ) as phase3_details_version
 \gset
 
@@ -493,14 +493,14 @@ declare
   v_pub_res jsonb;
   v_target_id uuid;
 begin
-  select public.publish_listing_submission(v_sub_id, null, null, 7) into v_pub_res;
+  select public.publish_listing_submission(v_sub_id, null, null, 9) into v_pub_res;
   v_target_id := (v_pub_res->>'published_record_id')::uuid;
   if v_target_id is null or (v_pub_res->>'published_table') <> 'venues' then
     raise exception 'publish_listing_submission failed: %', v_pub_res;
   end if;
 
   begin
-    perform public.publish_listing_submission(v_sub_id, null, null, 8);
+    perform public.publish_listing_submission(v_sub_id, null, null, 12);
     raise exception 'Repeated publication unexpectedly succeeded';
   exception when invalid_parameter_value then
     null;
@@ -526,8 +526,8 @@ begin
   if v_sub.status <> 'published' or v_sub.published_record_id is null or v_sub.published_table <> 'venues' then
     raise exception 'submission state not marked published with published_record_id';
   end if;
-  if v_sub.version <> 8 then
-    raise exception 'publish_listing_submission expected version 8, found %', v_sub.version;
+  if v_sub.version <> 10 then
+    raise exception 'publish_listing_submission expected version 10, found %', v_sub.version;
   end if;
 
   -- Verify public catalogue row exists and is published
@@ -581,7 +581,7 @@ begin
     v_sub_id,
     'Facility temporarily closed for maintenance works',
     'Unpublished per venue notification',
-    8
+    10
   );
 end;
 $mod_unpublish$;
@@ -603,8 +603,8 @@ begin
   if v_sub.status <> 'unpublished' or v_sub.unpublished_at is null or v_sub.unpublish_reason is null then
     raise exception 'unpublish_listing_submission did not set unpublished status or reason';
   end if;
-  if v_sub.version <> 9 then
-    raise exception 'unpublish_listing_submission expected version 9, found %', v_sub.version;
+  if v_sub.version <> 11 then
+    raise exception 'unpublish_listing_submission expected version 11, found %', v_sub.version;
   end if;
 
   -- Verify catalogue record is NO LONGER published
@@ -649,7 +649,7 @@ declare
   v_count integer;
 begin
   select published_record_id into v_before from public.listing_submissions where id = v_sub_id;
-  perform public.approve_listing_submission(v_sub_id, 'Re-approved after maintenance confirmation', 9);
+  perform public.approve_listing_submission(v_sub_id, 'Re-approved after maintenance confirmation', 11);
   select (public.publish_listing_submission(v_sub_id, null, null, 10)->>'published_record_id')::uuid into v_after;
   if v_after is distinct from v_before then
     raise exception 'Republishing created a different catalogue record instead of reusing the original';
@@ -669,8 +669,8 @@ declare
 begin
   select * into v_sub from public.listing_submissions
   where id = '00000000-0000-4000-8000-000000000040'::uuid;
-  if v_sub.status <> 'published' or v_sub.version <> 11 then
-    raise exception 'Republishing did not restore published state at expected version 11';
+  if v_sub.status <> 'published' or v_sub.version <> 13 then
+    raise exception 'Republishing did not restore published state at expected version 13';
   end if;
 end;
 $verify_republished$;
