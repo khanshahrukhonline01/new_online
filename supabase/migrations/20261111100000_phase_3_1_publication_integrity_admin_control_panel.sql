@@ -211,6 +211,8 @@ begin
   if auth.uid() is null or not public.is_listing_super_admin() then
     raise exception 'Super-admin access required' using errcode = '42501';
   end if;
+  -- Serialize role changes so concurrent demotions cannot remove the final active super-admin.
+  perform pg_advisory_xact_lock(hashtextextended('khelgrid-listing-super-admin-access', 0));
   if p_user_id is null or p_role is null or p_role not in ('moderator', 'super_admin') or p_is_active is null then
     raise exception 'A valid user, role and active state are required' using errcode = '22023';
   end if;
