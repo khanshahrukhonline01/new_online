@@ -1,5 +1,5 @@
 -- Static schema, permission and publication-integrity assertions for Phase 3.1.
-\\set ON_ERROR_STOP on
+\set ON_ERROR_STOP on
 begin;
 
 do $phase31_assertions$
