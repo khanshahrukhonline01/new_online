@@ -640,7 +640,7 @@ export function AdminModerationPage({ initialQueue }: AdminModerationPageProps =
                     <div className="admin-dialog-box">
                       <h3>Approve Submission for Catalogue Publication</h3>
                       <p>
-                        Approval marks this intake suggestion as verified. It does NOT automatically publish a public record. Catalogue publication remains a separate explicit step.
+                        Approval is an editorial decision only. Evidence verification is a separate step in the protected control panel, and publication is a third explicit action.
                       </p>
                       <label>
                         Internal moderator notes (optional, private to staff):
