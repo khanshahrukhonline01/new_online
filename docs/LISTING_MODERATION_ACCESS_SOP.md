@@ -138,3 +138,63 @@ order by a.created_at desc;
 3. **Revert Unauthorized Changes:**
    - For mistakenly published items, execute `unpublish_listing_submission(submission_id, 'Security rollback')`.
    - For corrupted submission content, retrieve the clean version from `public.listing_submission_versions`.
+
+## 6. Phase 3.1 Moderator & Super-Admin Control Panel
+
+The development control panel is available at `/admin/control`. It is a protected application route, not a public admin endpoint. The browser UI is only an interface; every read and mutation is re-authorized inside PostgreSQL.
+
+### Roles
+
+- **Moderator:** review submissions, record evidence, review evidence outcomes, make editorial approval/rejection decisions, and set an evidence-verification decision.
+- **Super admin:** all moderator capabilities plus inspect the moderator allowlist and grant, change, activate, or revoke moderator access.
+- A super admin cannot demote or deactivate the last active super-admin account.
+- No role is granted from localStorage, frontend state, URL parameters, or user-editable metadata.
+
+### Bootstrap the first super-admin
+
+The first super-admin must be provisioned by a trusted database operator in the intended development project. This is intentionally not self-service and cannot be done by the control panel before a super-admin exists.
+
+1. Create/invite the operator's account in Supabase Authentication.
+2. Copy the exact Auth user UUID.
+3. Run this in the development project's SQL Editor, replacing the UUID with the verified Auth user ID:
+
+```sql
+begin;
+insert into public.listing_moderators (user_id, is_active, role, notes)
+values (
+  '00000000-0000-0000-0000-000000000000',
+  true,
+  'super_admin',
+  'Initial Phase 3.1 super-admin provisioned by trusted database operator'
+)
+on conflict (user_id) do update
+set is_active = true,
+    role = 'super_admin',
+    notes = excluded.notes;
+commit;
+```
+
+This is a privileged bootstrap operation. Never expose the service-role key or grant roles through a public form.
+
+### Evidence verification workflow
+
+1. Start review and claim the submission.
+2. Add one or more HTTPS evidence records with an evidence type and a description of what the source establishes.
+3. Open each source and record whether it supports, contradicts, or is insufficient for the claim.
+4. Mark the submission verified only when at least one item supports the claim, no item contradicts it, and no evidence review remains pending.
+5. Record editorial approval separately. Approval alone does not verify identity and does not publish a listing.
+6. Enter genuine category-specific publication data. The database rejects missing venue addresses, organizer/venue/date details for events, and sport/venue/host/date details for pickup games.
+7. Publish only after both editorial approval and evidence verification. Publication is a separate audited action.
+8. Unpublish with a reason. Republishing reuses the linked catalogue row rather than inserting a duplicate.
+
+### Access management
+
+A super admin can use the Super-admin access management section at `/admin/control` to grant or revoke access for an existing Auth user UUID. Every access change is recorded in `listing_moderator_access_audits`. The database blocks removal of the final active super-admin. Moderator access is immediately checked by the RPC on every protected operation.
+
+### Verification and publication are different labels
+
+- `approved` means an editorial moderator accepted the submission for publication consideration.
+- `verified` means the evidence workflow met the database's supporting-evidence rules.
+- `published` means the record was explicitly copied/activated in the public catalogue after both conditions and category-specific data requirements were satisfied.
+
+A published listing can remain labelled unverified only in legacy data predating Phase 3.1; review and reconcile legacy rows before making verification claims.
