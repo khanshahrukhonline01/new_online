@@ -391,26 +391,64 @@ end;
 $verify_approve$;
 RESET ROLE;
 
--- Step 4E: Moderator explicitly publishes the listing
+-- Step 4E: Approval alone must not permit publication before evidence verification.
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000030', true);
 set local role authenticated;
 
+do $publication_requires_verification$
+declare
+  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040'::uuid;
+begin
+  begin
+    perform public.publish_listing_submission(v_sub_id, null, null, 5);
+    raise exception 'Publication unexpectedly succeeded without evidence verification';
+  exception when check_violation then
+    null;
+  end;
+end;
+$publication_requires_verification$;
+
+-- Add and review real HTTPS evidence in the test fixture, then make the separate verification decision.
+select public.add_listing_submission_evidence(
+  '00000000-0000-4000-8000-000000000040',
+  'official_source',
+  'https://example.org/arena-verification',
+  'Official venue source confirms the facility identity and submitted location.'
+) as phase3_evidence_id
+\gset
+
+select public.review_listing_submission_evidence(
+  :'phase3_evidence_id'::uuid,
+  'supports',
+  'Evidence supports the venue identity and submitted location.'
+);
+select public.verify_listing_submission(
+  '00000000-0000-4000-8000-000000000040',
+  'verified',
+  'Independent evidence review completed.'
+);
+select public.save_listing_publication_details(
+  '00000000-0000-4000-8000-000000000040',
+  '{"address":"12 Stadium Road, Koramangala, Bengaluru","sport":"Multi-sport"}'::jsonb,
+  6
+) as phase3_details_version
+\gset
+
+-- 4F: Publish only after approval, evidence verification and complete category data.
 do $mod_publish$
 declare
   v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040'::uuid;
   v_pub_res jsonb;
   v_target_id uuid;
 begin
-  select public.publish_listing_submission(v_sub_id, null, null, 5) into v_pub_res;
+  select public.publish_listing_submission(v_sub_id, null, null, 7) into v_pub_res;
   v_target_id := (v_pub_res->>'published_record_id')::uuid;
-
   if v_target_id is null or (v_pub_res->>'published_table') <> 'venues' then
     raise exception 'publish_listing_submission failed: %', v_pub_res;
   end if;
 
-  -- 4F: Test idempotent repeated publication prevention (under authenticated moderator role)
   begin
-    perform public.publish_listing_submission(v_sub_id, null, null, 6);
+    perform public.publish_listing_submission(v_sub_id, null, null, 8);
     raise exception 'Repeated publication unexpectedly succeeded';
   exception when invalid_parameter_value then
     null;
@@ -436,8 +474,8 @@ begin
   if v_sub.status <> 'published' or v_sub.published_record_id is null or v_sub.published_table <> 'venues' then
     raise exception 'submission state not marked published with published_record_id';
   end if;
-  if v_sub.version <> 6 then
-    raise exception 'publish_listing_submission expected version 6, found %', v_sub.version;
+  if v_sub.version <> 8 then
+    raise exception 'publish_listing_submission expected version 8, found %', v_sub.version;
   end if;
 
   -- Verify public catalogue row exists and is published
@@ -491,7 +529,7 @@ begin
     v_sub_id,
     'Facility temporarily closed for maintenance works',
     'Unpublished per venue notification',
-    6
+    8
   );
 end;
 $mod_unpublish$;
@@ -513,8 +551,8 @@ begin
   if v_sub.status <> 'unpublished' or v_sub.unpublished_at is null or v_sub.unpublish_reason is null then
     raise exception 'unpublish_listing_submission did not set unpublished status or reason';
   end if;
-  if v_sub.version <> 7 then
-    raise exception 'unpublish_listing_submission expected version 7, found %', v_sub.version;
+  if v_sub.version <> 9 then
+    raise exception 'unpublish_listing_submission expected version 9, found %', v_sub.version;
   end if;
 
   -- Verify catalogue record is NO LONGER published
