@@ -8,6 +8,7 @@ import {
   startListingReview,
   getAdminModerationQueue,
   getListingEvidence,
+  getListingModeratorAccessAudit,
   getListingVerificationQueue,
   getModerationAccessProfile,
   listListingModeratorAccounts,
@@ -18,6 +19,7 @@ import {
   type AdminModerationQueue,
   type ListingEvidenceItem,
   type ListingModeratorAccount,
+  type ListingModeratorAccessAudit,
   type ModerationAccessProfile,
   type ModeratorQueueItem,
 } from '../../integrations/supabase/public-client'
@@ -49,6 +51,7 @@ export function AdminControlPanelPage() {
   const [selected, setSelected] = useState<ModeratorQueueItem | null>(null)
   const [evidence, setEvidence] = useState<ListingEvidenceItem[]>([])
   const [accounts, setAccounts] = useState<ListingModeratorAccount[]>([])
+  const [accessAudits, setAccessAudits] = useState<ListingModeratorAccessAudit[]>([])
   const [verificationStates, setVerificationStates] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -85,7 +88,17 @@ export function AdminControlPanelPage() {
       ])
       setQueue(data)
       setVerificationStates(Object.fromEntries(verificationRows.map(row => [row.id, row.verification_status])))
-      if (current.role === 'super_admin') setAccounts(await listListingModeratorAccounts())
+      if (current.role === 'super_admin') {
+        const [authorizedAccounts, auditRows] = await Promise.all([
+          listListingModeratorAccounts(),
+          getListingModeratorAccessAudit(100),
+        ])
+        setAccounts(authorizedAccounts)
+        setAccessAudits(auditRows)
+      } else {
+        setAccounts([])
+        setAccessAudits([])
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not load the protected control panel.')
       setProfile(null)
@@ -229,7 +242,12 @@ export function AdminControlPanelPage() {
       await setListingModeratorAccess({ userId: targetUserId.trim(), role: targetRole, isActive: targetActive, notes: accessNotes })
       setNotice('Moderator access updated and recorded in the access audit log.')
       setTargetUserId(''); setAccessNotes('')
-      setAccounts(await listListingModeratorAccounts())
+      const [authorizedAccounts, auditRows] = await Promise.all([
+        listListingModeratorAccounts(),
+        getListingModeratorAccessAudit(100),
+      ])
+      setAccounts(authorizedAccounts)
+      setAccessAudits(auditRows)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not update moderator access.')
     } finally { setBusy(false) }
@@ -330,6 +348,11 @@ export function AdminControlPanelPage() {
             </form>
             <h4>Authorized accounts</h4>
             {accounts.map(account => <p key={account.user_id}><code>{account.user_id}</code> · {account.role} · {account.is_active ? 'Active' : 'Inactive'}</p>)}
+            <h4>Moderator access audit history</h4>
+            {accessAudits.length === 0 ? <p>No access changes recorded yet.</p> : accessAudits.map(audit => <p key={audit.id}>
+              {audit.action} · <code>{audit.target_user_id}</code> · {audit.old_role || 'none'} → {audit.new_role} · {new Date(audit.created_at).toLocaleString('en-IN')}
+              {audit.notes ? <small> · {audit.notes}</small> : null}
+            </p>)}
           </div>}
         </div>
       </div>
