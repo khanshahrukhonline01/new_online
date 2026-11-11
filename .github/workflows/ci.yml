@@ -87,6 +87,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-moderation-publication-assertions.sql
       - name: Test Phase 3 end-to-end moderation lifecycle and publication flow
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-moderation-lifecycle-flow.sql
+      - name: Test Phase 3.1 category-specific publication integrity
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-1-publication-category-flow.sql
       - name: Validate SQL migration safety
         shell: bash
         run: |
