@@ -244,6 +244,9 @@ export function AdminModerationPage({ initialQueue }: AdminModerationPageProps =
               <span className="admin-role-badge">
                 <SiteIcon name="check-circle" size={14} /> Authorized Moderator
               </span>
+              <a className="admin-btn admin-btn-secondary" href="/admin/control">
+                Evidence &amp; Admin Control
+              </a>
               <button type="button" className="admin-btn admin-btn-secondary" onClick={() => void handleSignOut()}>
                 Sign out
               </button>
