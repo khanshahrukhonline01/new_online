@@ -1242,4 +1242,11 @@ $function$;
 revoke all on function public.submit_listing_intake(text, text, text, text, text, text) from public;
 grant execute on function public.submit_listing_intake(text, text, text, text, text, text) to anon, authenticated, service_role;
 
+-- Public clients must use the validated SECURITY DEFINER intake RPC.
+-- The earlier catalogue foundation granted column-level INSERT for a temporary
+-- intake path; revoke both table-level and column-level INSERT after Phase 3.
+revoke insert on public.listing_submissions from public, anon, authenticated;
+revoke insert (listing_type, title, city, source_url, details)
+  on public.listing_submissions from public, anon, authenticated;
+
 commit;
