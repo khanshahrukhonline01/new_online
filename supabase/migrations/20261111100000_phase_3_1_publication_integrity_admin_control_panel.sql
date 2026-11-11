@@ -760,6 +760,12 @@ begin
     grant execute on function public.review_listing_submission(uuid, text, text)
       to service_role;
   end if;
+  if to_regprocedure('public.get_listing_submissions()') is not null then
+    revoke all on function public.get_listing_submissions()
+      from public, anon, authenticated;
+    grant execute on function public.get_listing_submissions()
+      to service_role;
+  end if;
 end;
 $legacy_review_rpc$;
 
