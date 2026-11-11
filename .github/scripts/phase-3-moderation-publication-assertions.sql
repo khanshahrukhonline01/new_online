@@ -69,7 +69,23 @@ begin
     end if;
   end loop;
 
-  -- 5. Submitter public RPCs must be callable by anon and authenticated
+  -- 5. Public clients must not bypass validation through direct table INSERT.
+  if has_table_privilege('anon', 'public.listing_submissions', 'INSERT') then
+    raise exception 'anon must not have direct INSERT privilege on public.listing_submissions';
+  end if;
+  if has_table_privilege('authenticated', 'public.listing_submissions', 'INSERT') then
+    raise exception 'authenticated must not have direct INSERT privilege on public.listing_submissions';
+  end if;
+  foreach col_name in array array['listing_type', 'title', 'city', 'source_url', 'details'] loop
+    if has_column_privilege('anon', 'public.listing_submissions', col_name, 'INSERT') then
+      raise exception 'anon must not have column INSERT privilege on listing_submissions.%', col_name;
+    end if;
+    if has_column_privilege('authenticated', 'public.listing_submissions', col_name, 'INSERT') then
+      raise exception 'authenticated must not have column INSERT privilege on listing_submissions.%', col_name;
+    end if;
+  end loop;
+
+  -- 6. Submitter public RPCs must be callable by anon and authenticated
   if not has_function_privilege('anon', 'public.get_submission_tracking_status(text,text)', 'EXECUTE') then
     raise exception 'anon must have execute privilege on get_submission_tracking_status';
   end if;
