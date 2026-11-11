@@ -79,6 +79,10 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-core-catalogue-listing-moderator-flow.sql
       - name: Apply Phase 3 complete listing moderation and publication migration
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110160000_phase_3_listing_moderation_publication_system.sql
+      - name: Apply Phase 3.1 publication integrity and admin control panel
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261111100000_phase_3_1_publication_integrity_admin_control_panel.sql
+      - name: Verify Phase 3.1 evidence, role and publication integrity
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-1-integrity-assertions.sql
       - name: Verify Phase 3 moderation and publication assertions
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-moderation-publication-assertions.sql
       - name: Test Phase 3 end-to-end moderation lifecycle and publication flow
