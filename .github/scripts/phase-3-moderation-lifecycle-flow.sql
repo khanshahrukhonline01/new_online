@@ -263,6 +263,14 @@ end;
 $new_moderator_profile$;
 reset role;
 
+-- Keep the self-review guard fixture separate from submitter-notification integration;
+-- this isolated PostgreSQL harness does not provision the application notifications table.
+SET LOCAL ROLE postgres;
+update public.listing_submissions
+set submitter_id = null
+where id = '00000000-0000-4000-8000-000000000040';
+RESET ROLE;
+
 -- Step 4A: Allowlisted moderator claims and starts review
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000030', true);
 set local role authenticated;
