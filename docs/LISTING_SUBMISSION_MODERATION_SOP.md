@@ -17,10 +17,10 @@ The public `/submit-listing` page inserts suggestions into `public.listing_submi
 
 ## Database access model
 
-- `anon` and `authenticated`: INSERT on the five submitted fields only, constrained by an RLS check requiring `pending_review` and empty review metadata.
-- `anon` and `authenticated`: no SELECT, UPDATE, or DELETE policy for submissions.
+- `anon` and `authenticated`: no direct table INSERT, SELECT, UPDATE, or DELETE privileges on `listing_submissions`. New public suggestions must use the validated `submit_listing_intake()` SECURITY DEFINER RPC, which creates a private `pending_review` row.
+- `anon` and ordinary `authenticated` users: no direct access to submission rows, evidence records, moderator access records, or audit/version tables.
 - `service_role`: trusted server-side processing only. Never expose this key in Vite variables, source control, client bundles, logs, or support messages.
-- Moderation is intentionally performed by a trusted operator in the Supabase Dashboard for this phase. Login is paused, so this release does not add an unauthenticated moderator UI or claim to have a fully automated approval console.
+- Moderation is performed through the protected `/admin` review desk and the Phase 3.1 `/admin/control` evidence and access-control panel. Authenticated moderator/super-admin allowlisting is required in PostgreSQL; public registration does not grant access.
 - Public catalogue rows remain visible only through the existing published-only RLS policies.
 
 ## Operational safeguards
