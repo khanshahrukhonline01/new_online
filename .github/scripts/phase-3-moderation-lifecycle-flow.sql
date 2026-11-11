@@ -13,9 +13,11 @@ insert into auth.users (id) values
 on conflict (id) do nothing;
 
 -- User 3 is an allowlisted active moderator
-insert into public.listing_moderators (user_id, is_active)
-values ('00000000-0000-4000-8000-000000000030', true)
-on conflict (user_id) do update set is_active = true;
+insert into public.listing_moderators (user_id, is_active, role)
+values
+  ('00000000-0000-4000-8000-000000000010', true, 'super_admin'),
+  ('00000000-0000-4000-8000-000000000030', true, 'moderator')
+on conflict (user_id) do update set is_active = excluded.is_active, role = excluded.role;
 
 -- Seed a deterministic lifecycle fixture using the privileged CI connection.
 -- The public client is not permitted to insert directly into this private table.
@@ -193,9 +195,59 @@ begin
   exception when insufficient_privilege then
     null;
   end;
+
+  -- 3E: Non-moderator cannot manage moderator accounts.
+  begin
+    perform public.list_listing_moderator_accounts();
+    raise exception 'Non-moderator unexpectedly accessed moderator accounts';
+  exception when insufficient_privilege then
+    null;
+  end;
 end;
 $non_mod_test$;
 
+reset role;
+
+-- Step 3F: Super-admin control plane can inspect access but cannot remove the last super-admin.
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000010', true);
+set local role authenticated;
+do $super_admin_control$
+declare
+  v_count integer;
+begin
+  select count(*) into v_count from public.list_listing_moderator_accounts();
+  if v_count < 2 then
+    raise exception 'Super-admin did not receive the authorized moderator account list';
+  end if;
+  begin
+    perform public.set_listing_moderator_access(
+      '00000000-0000-4000-8000-000000000010', 'moderator', true,
+      'Must not remove the final active super-admin'
+    );
+    raise exception 'The last active super-admin was unexpectedly demoted';
+  exception when check_violation then
+    null;
+  end;
+  perform public.set_listing_moderator_access(
+    '00000000-0000-4000-8000-000000000020', 'moderator', true,
+    'CI fixture moderator grant'
+  );
+end;
+$super_admin_control$;
+reset role;
+
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000020', true);
+set local role authenticated;
+do $new_moderator_profile$
+declare
+  v_role text;
+begin
+  select role into v_role from public.get_moderation_access_profile();
+  if v_role is distinct from 'moderator' then
+    raise exception 'Newly granted moderator did not receive the expected access profile';
+  end if;
+end;
+$new_moderator_profile$;
 reset role;
 
 -- Step 4A: Allowlisted moderator claims and starts review
@@ -586,7 +638,45 @@ select not exists (
 
 reset role;
 
--- Step 4J: Audit trail verification via authorized moderator RPC
+-- Step 4J: Re-approve and republish the same catalogue row without duplication.
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000030', true);
+set local role authenticated;
+do $republish_existing$
+declare
+  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040'::uuid;
+  v_before uuid;
+  v_after uuid;
+  v_count integer;
+begin
+  select published_record_id into v_before from public.listing_submissions where id = v_sub_id;
+  perform public.approve_listing_submission(v_sub_id, 'Re-approved after maintenance confirmation', 9);
+  select (public.publish_listing_submission(v_sub_id, null, null, 10)->>'published_record_id')::uuid into v_after;
+  if v_after is distinct from v_before then
+    raise exception 'Republishing created a different catalogue record instead of reusing the original';
+  end if;
+  select count(*) into v_count from public.venues where id = v_before;
+  if v_count <> 1 then
+    raise exception 'Republishing produced duplicate venue catalogue records';
+  end if;
+end;
+$republish_existing$;
+reset role;
+
+SET LOCAL ROLE postgres;
+do $verify_republished$
+declare
+  v_sub public.listing_submissions%rowtype;
+begin
+  select * into v_sub from public.listing_submissions
+  where id = '00000000-0000-4000-8000-000000000040'::uuid;
+  if v_sub.status <> 'published' or v_sub.version <> 11 then
+    raise exception 'Republishing did not restore published state at expected version 11';
+  end if;
+end;
+$verify_republished$;
+RESET ROLE;
+
+-- Step 4K: Audit trail verification via authorized moderator RPC
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000030', true);
 set local role authenticated;
 
