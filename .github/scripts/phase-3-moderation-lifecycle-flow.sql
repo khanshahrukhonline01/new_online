@@ -232,6 +232,10 @@ begin
     '00000000-0000-4000-8000-000000000020', 'moderator', true,
     'CI fixture moderator grant'
   );
+  select count(*) into v_count from public.get_listing_moderator_access_audit(50);
+  if v_count < 1 then
+    raise exception 'Super-admin access audit history did not record the moderator grant';
+  end if;
 end;
 $super_admin_control$;
 reset role;
