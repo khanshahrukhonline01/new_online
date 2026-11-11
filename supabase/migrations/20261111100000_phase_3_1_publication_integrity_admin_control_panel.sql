@@ -353,6 +353,12 @@ begin
   if not found then
     raise exception 'Evidence record not found' using errcode = 'P0002';
   end if;
+  if exists (
+    select 1 from public.listing_submissions s
+    where s.id = v_evidence.submission_id and s.status = 'published'
+  ) then
+    raise exception 'Unpublish the listing before changing evidence on a published record' using errcode = '23514';
+  end if;
   update public.listing_submission_evidence
   set outcome = p_outcome,
       reviewed_by = auth.uid(),
