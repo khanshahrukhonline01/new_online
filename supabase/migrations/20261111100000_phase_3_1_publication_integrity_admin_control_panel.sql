@@ -719,6 +719,26 @@ $function$;
 revoke all on function public.approve_listing_submission(uuid, text, integer) from public, anon;
 grant execute on function public.approve_listing_submission(uuid, text, integer) to authenticated, service_role;
 
+create or replace function public.get_listing_submission_publication_details(p_submission_id uuid)
+returns table (structured_data jsonb, version integer, verification_status text)
+language plpgsql
+stable
+security definer
+set search_path = pg_catalog, public
+as $function$
+begin
+  if auth.uid() is null or not public.is_listing_moderator() then
+    raise exception 'Moderator access required' using errcode = '42501';
+  end if;
+  return query
+    select s.structured_data, s.version, s.verification_status
+    from public.listing_submissions s
+    where s.id = p_submission_id;
+end;
+$function$;
+revoke all on function public.get_listing_submission_publication_details(uuid) from public, anon;
+grant execute on function public.get_listing_submission_publication_details(uuid) to authenticated, service_role;
+
 -- 7. Publication function now refuses invented fallback data and only publishes after
 -- a distinct evidence verification decision. Re-publication reuses the same catalogue row.
 create or replace function public.publish_listing_submission(
