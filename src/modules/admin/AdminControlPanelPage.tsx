@@ -279,8 +279,8 @@ export function AdminControlPanelPage() {
             <div className="admin-control-card">
               <h3>Editorial decision &amp; publication</h3>
               <p>Editorial approval, evidence verification and public publication are three separate recorded decisions.</p>
-              {(selected.status === 'pending_review' || selected.status === 'resubmitted') && <button disabled={busy} onClick={() => void handleStartReview()}>Start review &amp; assign to me</button>}
-              {(selected.status === 'under_review' || selected.status === 'pending_review' || selected.status === 'resubmitted' || selected.status === 'unpublished') && <div className="admin-control-actions"><button disabled={busy} onClick={() => void handleApproval('approve')}>Approve listing</button><button disabled={busy} onClick={() => void handleApproval('reject')}>Reject listing</button></div>}
+              {(selected.status === 'pending_review' || selected.status === 'resubmitted' || selected.status === 'unpublished') && <button disabled={busy} onClick={() => void handleStartReview()}>Start review &amp; assign to me</button>}
+              {(selected.status === 'under_review') && <div className="admin-control-actions"><button disabled={busy} onClick={() => void handleApproval('approve')}>Approve listing</button><button disabled={busy} onClick={() => void handleApproval('reject')}>Reject listing</button></div>}
               {selected.status !== 'rejected' && selected.status !== 'published' && <label className="admin-control-full">Rejection reason (required only to reject)<textarea value={decisionReason} onChange={e => setDecisionReason(e.target.value)} maxLength={2000} /></label>}
               {selected.status === 'approved' && <div className="admin-control-form"><label>Publication slug (optional)<input value={publishSlug} onChange={e => setPublishSlug(e.target.value)} placeholder="Auto-generated if blank" /></label><button disabled={busy} onClick={() => void handlePublish()}>Publish verified listing</button></div>}
             </div>
