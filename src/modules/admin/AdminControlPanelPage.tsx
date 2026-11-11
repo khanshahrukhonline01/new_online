@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { signInWithEmail, signOut } from '../../integrations/supabase/auth-client'
 import {
   addListingEvidence,
+  approveListingSubmission,
+  rejectListingSubmission,
+  publishListingSubmission,
+  startListingReview,
   getAdminModerationQueue,
   getListingEvidence,
   getModerationAccessProfile,
@@ -54,6 +58,8 @@ export function AdminControlPanelPage() {
   const [evidenceUrl, setEvidenceUrl] = useState('')
   const [evidenceDescription, setEvidenceDescription] = useState('')
   const [verificationNotes, setVerificationNotes] = useState('')
+  const [decisionReason, setDecisionReason] = useState('')
+  const [publishSlug, setPublishSlug] = useState('')
   const [structured, setStructured] = useState<Record<string, string>>({})
   const [targetUserId, setTargetUserId] = useState('')
   const [targetRole, setTargetRole] = useState<'moderator' | 'super_admin'>('moderator')
@@ -138,6 +144,43 @@ export function AdminControlPanelPage() {
     } finally { setBusy(false) }
   }
 
+  const handleStartReview = async () => {
+    if (!selected) return
+    setBusy(true); setError(''); setNotice('')
+    try {
+      await startListingReview(selected.id, selected.version)
+      setNotice('Submission assigned to your review queue.')
+      await refresh()
+      setSelected(prev => prev ? { ...prev, status: 'under_review', version: prev.version + 1 } : prev)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not start review.') }
+    finally { setBusy(false) }
+  }
+
+  const handleApproval = async (decision: 'approve' | 'reject') => {
+    if (!selected) return
+    if (decision === 'reject' && decisionReason.trim().length < 3) { setError('A clear rejection reason of at least 3 characters is required.'); return }
+    setBusy(true); setError(''); setNotice('')
+    try {
+      if (decision === 'approve') await approveListingSubmission(selected.id, verificationNotes, selected.version)
+      else await rejectListingSubmission(selected.id, decisionReason.trim(), verificationNotes, selected.version)
+      setNotice(decision === 'approve' ? 'Editorial approval recorded. Evidence verification and publication remain separate.' : 'Submission rejected. The reason has been recorded.')
+      await refresh()
+      setSelected(prev => prev ? { ...prev, status: decision === 'approve' ? 'approved' : 'rejected', version: prev.version + 1 } : prev)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save the moderation decision.') }
+    finally { setBusy(false) }
+  }
+
+  const handlePublish = async () => {
+    if (!selected) return
+    setBusy(true); setError(''); setNotice('')
+    try {
+      const result = await publishListingSubmission(selected.id, publishSlug.trim() || undefined, undefined, selected.version)
+      setNotice('Published ' + result.publishedTable + ' record ' + result.slug + '.')
+      await refresh()
+      setSelected(prev => prev ? { ...prev, status: 'published', version: prev.version + 1 } : prev)
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Publication failed.') }
+    finally { setBusy(false) }
+  }
   const handleVerification = async (decision: 'verified' | 'rejected' | 'unverified') => {
     if (!selected) return
     setBusy(true); setError(''); setNotice('')
@@ -219,6 +262,14 @@ export function AdminControlPanelPage() {
               <h2>{selected.title}</h2><p>{selected.city || 'City not supplied'} · Status: {selected.status.replace(/_/g, ' ')}</p>
               <p>{selected.details || 'No additional details supplied.'}</p>
               {selected.source_url && <a href={selected.source_url} target="_blank" rel="noreferrer">Open submitted source ↗</a>}
+            </div>
+            <div className="admin-control-card">
+              <h3>Editorial decision &amp; publication</h3>
+              <p>Editorial approval, evidence verification and public publication are three separate recorded decisions.</p>
+              {(selected.status === 'pending_review' || selected.status === 'resubmitted') && <button disabled={busy} onClick={() => void handleStartReview()}>Start review &amp; assign to me</button>}
+              {(selected.status === 'under_review' || selected.status === 'pending_review' || selected.status === 'resubmitted' || selected.status === 'unpublished') && <div className="admin-control-actions"><button disabled={busy} onClick={() => void handleApproval('approve')}>Approve listing</button><button disabled={busy} onClick={() => void handleApproval('reject')}>Reject listing</button></div>}
+              {selected.status !== 'rejected' && selected.status !== 'published' && <label className="admin-control-full">Rejection reason (required only to reject)<textarea value={decisionReason} onChange={e => setDecisionReason(e.target.value)} maxLength={2000} /></label>}
+              {selected.status === 'approved' && <div className="admin-control-form"><label>Publication slug (optional)<input value={publishSlug} onChange={e => setPublishSlug(e.target.value)} placeholder="Auto-generated if blank" /></label><button disabled={busy} onClick={() => void handlePublish()}>Publish verified listing</button></div>}
             </div>
             <div className="admin-control-card">
               <h3>Evidence register</h3>
