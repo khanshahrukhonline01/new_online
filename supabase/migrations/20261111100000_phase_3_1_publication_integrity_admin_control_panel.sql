@@ -565,6 +565,9 @@ begin
   select * into v_sub from public.listing_submissions
   where id = p_submission_id for update;
   if not found then raise exception 'Submission not found' using errcode = 'P0002'; end if;
+  if v_sub.submitter_id = auth.uid() then
+    raise exception 'Submitters cannot review their own listing submissions' using errcode = '42501';
+  end if;
   if p_expected_version is not null and v_sub.version <> p_expected_version then
     raise exception 'Submission version conflict' using errcode = '40001';
   end if;
@@ -685,6 +688,9 @@ begin
   select * into v_sub from public.listing_submissions
   where id = p_submission_id for update;
   if not found then raise exception 'Submission not found' using errcode = 'P0002'; end if;
+  if v_sub.submitter_id = auth.uid() then
+    raise exception 'Submitters cannot approve their own listing submissions' using errcode = '42501';
+  end if;
   if p_expected_version is not null and v_sub.version <> p_expected_version then
     raise exception 'Submission version conflict' using errcode = '40001';
   end if;
