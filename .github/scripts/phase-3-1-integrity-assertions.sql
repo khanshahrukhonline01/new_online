@@ -76,6 +76,11 @@ begin
     end if;
   end loop;
 
+  if to_regprocedure('public.review_listing_submission(uuid,text,text)') is not null
+     and has_function_privilege('authenticated', 'public.review_listing_submission(uuid,text,text)', 'EXECUTE') then
+    raise exception 'Authenticated clients must not execute the legacy one-step listing review RPC';
+  end if;
+
   v_publish_def := pg_get_functiondef('public.publish_listing_submission(uuid,text,uuid,integer)'::regprocedure);
   if position('verification_status' in v_publish_def) = 0
      or position('verified' in v_publish_def) = 0 then
