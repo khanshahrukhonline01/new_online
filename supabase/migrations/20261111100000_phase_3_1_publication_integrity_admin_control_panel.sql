@@ -211,7 +211,7 @@ begin
   if auth.uid() is null or not public.is_listing_super_admin() then
     raise exception 'Super-admin access required' using errcode = '42501';
   end if;
-  if p_user_id is null or p_role not in ('moderator', 'super_admin') or p_is_active is null then
+  if p_user_id is null or p_role is null or p_role not in ('moderator', 'super_admin') or p_is_active is null then
     raise exception 'A valid user, role and active state are required' using errcode = '22023';
   end if;
   if p_notes is not null and char_length(p_notes) > 1000 then
@@ -294,8 +294,11 @@ begin
      or char_length(p_description) > 2000 then
     raise exception 'Evidence description must contain 10 to 2000 characters' using errcode = '22023';
   end if;
-  if not exists (select 1 from public.listing_submissions s where s.id = p_submission_id) then
-    raise exception 'Submission not found' using errcode = 'P0002';
+  if not exists (
+    select 1 from public.listing_submissions s
+    where s.id = p_submission_id and s.status in ('pending_review', 'under_review', 'approved', 'unpublished')
+  ) then
+    raise exception 'Submission not found or not eligible for evidence review' using errcode = 'P0002';
   end if;
 
   insert into public.listing_submission_evidence (
@@ -303,6 +306,14 @@ begin
   ) values (
     p_submission_id, p_evidence_type, btrim(p_evidence_url), btrim(p_description), auth.uid()
   ) returning id into v_id;
+
+  update public.listing_submissions
+  set verification_status = 'unverified',
+      verified_at = null,
+      verified_by = null,
+      version = version + 1,
+      updated_at = clock_timestamp()
+  where id = p_submission_id and verification_status = 'verified';
 
   insert into public.listing_submission_audits (
     submission_id, action, actor_id, notes, metadata
@@ -349,6 +360,14 @@ begin
       reviewed_at = clock_timestamp(),
       updated_at = clock_timestamp()
   where id = p_evidence_id;
+
+  update public.listing_submissions
+  set verification_status = 'unverified',
+      verified_at = null,
+      verified_by = null,
+      version = version + 1,
+      updated_at = clock_timestamp()
+  where id = v_evidence.submission_id and verification_status = 'verified';
 
   insert into public.listing_submission_audits (
     submission_id, action, actor_id, notes, metadata
@@ -422,8 +441,41 @@ begin
   from public.listing_submission_evidence
   where submission_id = p_submission_id;
 
+  if v_sub.status = 'published' and p_decision <> 'verified' then
+    raise exception 'Unpublish the catalogue record before changing a published listing verification decision' using errcode = '23514';
+  end if;
   if p_decision = 'verified' and (v_supporting < 1 or v_contradicting > 0 or v_pending > 0) then
     raise exception 'Verification requires at least one supporting evidence item, no contradictory evidence, and no pending evidence reviews' using errcode = '23514';
+  end if;
+  if p_decision = 'verified' then
+    if v_sub.listing_type = 'venue' and not exists (
+      select 1 from public.listing_submission_evidence
+      where submission_id = p_submission_id and evidence_type = 'venue_address' and outcome = 'supports'
+    ) then raise exception 'Venue verification requires supporting venue-address evidence' using errcode = '23514'; end if;
+    if v_sub.listing_type = 'opportunity' and not exists (
+      select 1 from public.listing_submission_evidence
+      where submission_id = p_submission_id and evidence_type = 'official_source' and outcome = 'supports'
+    ) then raise exception 'Opportunity verification requires a supporting official source' using errcode = '23514'; end if;
+    if v_sub.listing_type = 'academy' and not exists (
+      select 1 from public.listing_submission_evidence
+      where submission_id = p_submission_id and evidence_type = 'academy_identity' and outcome = 'supports'
+    ) then raise exception 'Academy verification requires supporting academy-identity evidence' using errcode = '23514'; end if;
+    if v_sub.listing_type = 'coach' and not exists (
+      select 1 from public.listing_submission_evidence
+      where submission_id = p_submission_id and evidence_type = 'coach_qualification' and outcome = 'supports'
+    ) then raise exception 'Coach verification requires supporting qualification evidence' using errcode = '23514'; end if;
+    if v_sub.listing_type = 'event' and not exists (
+      select 1 from public.listing_submission_evidence
+      where submission_id = p_submission_id and evidence_type = 'event_details' and outcome = 'supports'
+    ) then raise exception 'Event verification requires supporting event-details evidence' using errcode = '23514'; end if;
+    if v_sub.listing_type = 'pickup_game' and not exists (
+      select 1 from public.listing_submission_evidence
+      where submission_id = p_submission_id and evidence_type = 'venue_address' and outcome = 'supports'
+    ) then raise exception 'Pickup-game verification requires supporting venue evidence' using errcode = '23514'; end if;
+    if v_sub.listing_type = 'sport' and not exists (
+      select 1 from public.listing_submission_evidence
+      where submission_id = p_submission_id and evidence_type = 'official_source' and outcome = 'supports'
+    ) then raise exception 'Sport verification requires a supporting official source' using errcode = '23514'; end if;
   end if;
   if p_decision = 'rejected' and v_contradicting < 1 then
     raise exception 'A rejected verification requires at least one reviewed contradictory evidence item' using errcode = '23514';
@@ -494,7 +546,7 @@ begin
   ) values (
     p_submission_id, 'publication_details_updated', auth.uid(),
     'Category-specific publication details updated',
-    jsonb_build_object('listing_type', v_sub.listing_type, 'keys', (select jsonb_agg(key) from jsonb_object_keys(p_structured_data) as key))
+    jsonb_build_object('listing_type', v_sub.listing_type, 'keys', (select jsonb_agg(keys.key) from jsonb_object_keys(p_structured_data) as keys(key)))
   );
   return v_sub.version + 1;
 end;
