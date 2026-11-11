@@ -475,7 +475,7 @@ export function AdminModerationPage({ initialQueue }: AdminModerationPageProps =
                       <SiteIcon name="search" size={14} /> Inspect & History
                     </button>
 
-                    {(sub.status === 'pending_review' || sub.status === 'resubmitted') && (
+                    {(sub.status === 'pending_review' || sub.status === 'resubmitted' || sub.status === 'unpublished') && (
                       <button
                         type="button"
                         className="admin-btn admin-btn-secondary"
@@ -486,7 +486,7 @@ export function AdminModerationPage({ initialQueue }: AdminModerationPageProps =
                       </button>
                     )}
 
-                    {sub.status !== 'approved' && sub.status !== 'published' && (
+                    {sub.status === 'under_review' && (
                       <button
                         type="button"
                         className="admin-btn admin-btn-approve"
