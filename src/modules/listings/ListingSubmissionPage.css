@@ -1,0 +1,209 @@
+/* Listing Submission and Status Tracker Page Styles */
+.listing-tabs-nav {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid var(--border-subtle, #e2e8f0);
+  margin: 1.5rem 0 2rem;
+}
+
+.listing-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.25rem;
+  border: none;
+  background: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s ease;
+}
+
+.listing-tab-btn:hover {
+  color: var(--text-primary, #0f172a);
+}
+
+.listing-tab-btn.active {
+  color: #10b981;
+  border-bottom-color: #10b981;
+}
+
+/* Submission Confirmation Box */
+.listing-success-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 1.75rem;
+  margin: 1.5rem 0 2rem;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
+}
+
+.listing-ref-highlight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: #ffffff;
+  border: 1px dashed #86efac;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin: 1rem 0;
+}
+
+.listing-ref-val {
+  font-family: monospace;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #047857;
+  letter-spacing: 0.05em;
+}
+
+.listing-tracker-card {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  margin-top: 1.5rem;
+}
+
+/* Stepper Timeline */
+.listing-stepper {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  margin: 2rem 0;
+  padding: 0 1rem;
+}
+
+.listing-stepper::before {
+  content: '';
+  position: absolute;
+  top: 18px;
+  left: 2rem;
+  right: 2rem;
+  height: 3px;
+  background: #e2e8f0;
+  z-index: 1;
+}
+
+.listing-step {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  flex: 1;
+}
+
+.listing-step-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid #cbd5e1;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.listing-step.completed .listing-step-circle {
+  border-color: #10b981;
+  background: #10b981;
+  color: #ffffff;
+}
+
+.listing-step.active .listing-step-circle {
+  border-color: #0284c7;
+  background: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.2);
+}
+
+.listing-step.rejected .listing-step-circle {
+  border-color: #ef4444;
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.listing-step.changes_requested .listing-step-circle {
+  border-color: #ea580c;
+  background: #ea580c;
+  color: #ffffff;
+}
+
+.listing-step-lbl {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+/* Tracking Details Section */
+.listing-tracker-details {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.listing-status-banner {
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 1.25rem 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.listing-status-banner.pending {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.listing-status-banner.approved {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.listing-status-banner.published {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #166534;
+}
+
+.listing-status-banner.changes_requested {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #9f1239;
+}
+
+.listing-status-banner.rejected {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+}
+
+.listing-resubmit-form {
+  background: #ffffff;
+  border: 2px solid #ea580c;
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}

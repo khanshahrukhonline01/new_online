@@ -1,32 +1,52 @@
-# Listing submission and moderation SOP
+# Listing Submission and Moderation SOP
 
-## Current scope
+## Scope and route ownership
 
-The public `/submit-listing` page inserts suggestions into `public.listing_submissions`. New records default to `pending_review`; they are not public catalogue records. Public and authenticated client roles may insert only the submitted listing fields and cannot read, update, approve, reject, or delete queue records.
+The public /submit-listing page sends suggestions through the validated submit_listing_intake() RPC. The database creates a private pending_review row. Public visitors never insert directly into the private submissions table and cannot read or change the moderation queue.
 
-## Required review process
+Moderators use /admin for the editorial review desk and /admin/control for evidence verification, category publication data, publication, and access management. Both routes require an authenticated user who is explicitly allowlisted in public.listing_moderators. The browser UI is not the authorization boundary; PostgreSQL checks every protected RPC.
 
-1. Open the Supabase Dashboard for the intended development project using an individually authorized operator account.
-2. Review `listing_submissions` in the Table Editor or SQL Editor. Do not expose the queue through a public page or browser API.
-3. Check the official HTTPS source, organiser identity, title, city, event dates, eligibility, fees, and whether the information is current. Do not mark identity or venue details as verified without evidence.
-4. Reject duplicate, misleading, expired, unsupported, suspicious, or privacy-invasive suggestions.
-5. For an approved suggestion, create/update the appropriate catalogue row (`sports`, `opportunities`, or `venues`; coach/academy/event records require their own approved schema). Use a unique valid slug and retain source provenance. Never copy a suggestion directly into public content without review.
-6. Set `publication_status = 'published'` only after source review. For opportunities, use `verification_status = 'verified'` only when evidence supports that label. Approval in the intake queue alone does not publish anything.
-7. Update the queue status and review metadata in the same controlled operator transaction. Record concise moderation notes without collecting unnecessary personal information.
-8. Verify the new row is returned by the public catalogue client and that a draft/rejected record remains invisible. Re-check RLS after policy changes.
+## Required moderation workflow
+
+1. Sign in using an individually authorized moderator account.
+2. Open /admin and select a pending or resubmitted listing.
+3. Click Start Review. The database assigns the review to the current moderator. Submitters cannot review their own submissions.
+4. Inspect the submitted title, category, city, details and source URL. Treat all submitted text and URLs as untrusted; inspect official sources manually and do not enter credentials on third-party pages.
+5. Open /admin/control. Add HTTPS evidence with a clear description and the correct evidence type. Review each evidence item as supporting, contradicting, or insufficient.
+6. Record the evidence-verification decision separately. A verified decision requires at least one supporting evidence item, no contradictory evidence, and no pending evidence reviews. Category-specific evidence requirements also apply.
+7. Enter and save the actual category-specific publication data. Do not invent venue addresses, organizer or host names, coach qualifications, event dates, or schedules.
+8. Return to /admin and record the editorial decision. Approval is separate from evidence verification and does not publish a catalogue record.
+9. Publish from /admin/control only when editorial status is approved, evidence status is verified, and all category-specific publication requirements are satisfied.
+10. If a published record must be withdrawn, use the unpublish workflow in /admin and provide a reason. Republishing reuses the linked catalogue row rather than creating a duplicate.
+
+## Category requirements
+
+| Listing type | Required publication details | Supporting evidence |
+|---|---|---|
+| Venue | City, genuine street/locality address, description | Venue address |
+| Opportunity / trial | City, verified organizer name | Official source |
+| Academy | City and submitted description | Academy identity |
+| Coach | City and reviewed qualifications | Coach qualification |
+| Event | City, organizer, venue, actual start time; valid optional end time | Event details |
+| Pickup game | City, sport, venue, host and actual start time; valid optional end time | Venue address and host identity |
+| Sport | City and title | Official source |
 
 ## Database access model
 
-- `anon` and `authenticated`: INSERT on the five submitted fields only, constrained by an RLS check requiring `pending_review` and empty review metadata.
-- `anon` and `authenticated`: no SELECT, UPDATE, or DELETE policy for submissions.
-- `service_role`: trusted server-side processing only. Never expose this key in Vite variables, source control, client bundles, logs, or support messages.
-- Moderation is intentionally performed by a trusted operator in the Supabase Dashboard for this phase. Login is paused, so this release does not add an unauthenticated moderator UI or claim to have a fully automated approval console.
-- Public catalogue rows remain visible only through the existing published-only RLS policies.
+- anon and authenticated have no direct INSERT, SELECT, UPDATE, or DELETE privileges on listing_submissions. Public submissions use submit_listing_intake().
+- anon and ordinary authenticated users cannot directly access submission rows, evidence records, moderator access records, or audit/version tables.
+- service_role is trusted server-side only. Never expose its key in Vite variables, source control, client bundles, logs, or support messages.
+- Moderation RPCs enforce allowlisted roles, expected versions, review state, and publication requirements in PostgreSQL.
+- The legacy one-step review RPC and legacy queue RPC are disabled for authenticated clients. The protected versioned v2 queue and distinct lifecycle RPCs are the supported workflow.
+
+## Super-admin access
+
+The first super-admin must be provisioned by a trusted database operator in the intended development Supabase project. There is no public bootstrap or self-promotion route. After bootstrap, super admins can grant or revoke roles for existing Auth users in /admin/control. The database protects the last active super-admin and records access changes in listing_moderator_access_audits.
 
 ## Operational safeguards
 
-- Treat all submitted text and URLs as untrusted. Verify links manually; do not automatically fetch arbitrary URLs from the server.
-- The form validates HTTPS and field lengths, but client validation is not a security boundary; database constraints and grants are authoritative.
-- Monitor abuse and use a CAPTCHA or server-side rate limit before promoting this public intake endpoint broadly. Do not introduce paid services without approval.
-- Keep audit/backup practices aligned with the project’s existing migration and backup SOP.
-- Before production rollout, obtain owner approval, test with anon/authenticated roles, review Supabase security advisors, and verify the Vercel preview.
+- Do not mark a listing verified without the required evidence type and reviewed supporting evidence.
+- Do not treat approval, verification, and publication as interchangeable labels.
+- Keep submitter personal information out of public catalogue records and internal notes unless it is strictly necessary.
+- Monitor abuse and use a CAPTCHA or server-side rate limit before promoting public intake broadly. Do not introduce paid services without approval.
+- Apply migrations only to the intended development project after confirming the project reference and taking a backup. Do not apply these migrations to production without a separate approved rollout.

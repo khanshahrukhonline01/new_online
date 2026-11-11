@@ -1065,7 +1065,7 @@ export type ListingSubmissionInput = {
 }
 
 export type ListingSubmissionResult =
-  | { status: 'submitted' }
+  | { status: 'submitted'; reference_number?: string; tracking_key?: string }
   | { status: 'unconfigured' }
   | { status: 'unavailable'; message: string }
 
@@ -1120,6 +1120,36 @@ export async function submitListingSuggestion(input: ListingSubmissionInput): Pr
   } catch (error) {
     return { status: 'unavailable', message: error instanceof Error ? error.message : 'Could not connect to the submission service.' }
   }
+}
+
+/** Submit a user-provided suggestion with tracking metadata returned where supported. */
+export async function submitListingIntake(input: ListingSubmissionInput & { submitter_email?: string }): Promise<ListingSubmissionResult> {
+  const client = getSupabaseClient()
+  if (client) {
+    try {
+      const { data, error } = await client.rpc('submit_listing_intake', {
+        p_listing_type: input.listing_type,
+        p_title: input.title.trim(),
+        p_city: input.city?.trim() || null,
+        p_source_url: input.source_url?.trim() || null,
+        p_details: input.details?.trim() || null,
+        p_submitter_email: input.submitter_email?.trim() || null,
+      })
+      if (!error && data && typeof data === 'object') {
+        const res = data as { status?: string; reference_number?: string; tracking_key?: string }
+        if (res.status === 'submitted') {
+          return {
+            status: 'submitted',
+            reference_number: res.reference_number,
+            tracking_key: res.tracking_key,
+          }
+        }
+      }
+    } catch {
+      // Fallback to standard submission
+    }
+  }
+  return submitListingSuggestion(input)
 }
 
 // -----------------------------------------------------------------------------
@@ -3312,58 +3342,534 @@ export async function markNotificationAsRead(notificationId: string): Promise<bo
   return Boolean(data?.id)
 }
 
+export interface ModeratorQueueItem {
+  id: string
+  reference_number: string
+  listing_type: string
+  title: string
+  city: string | null
+  source_url: string | null
+  details: string | null
+  status: string
+  rejection_reason?: string | null
+  correction_request?: string | null
+  unpublish_reason?: string | null
+  moderator_notes?: string | null
+  assigned_moderator_id?: string | null
+  review_started_at?: string | null
+  reviewed_at?: string | null
+  reviewed_by?: string | null
+  published_at?: string | null
+  published_by?: string | null
+  unpublished_at?: string | null
+  unpublished_by?: string | null
+  published_record_id?: string | null
+  published_table?: string | null
+  version: number
+  created_at: string
+  updated_at?: string
+}
+
+export interface SubmissionAuditItem {
+  id: string
+  action: string
+  actor_id: string | null
+  from_status: string | null
+  to_status: string | null
+  notes: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface SubmissionVersionItem {
+  id: string
+  version: number
+  listing_type: string
+  title: string
+  city: string | null
+  source_url: string | null
+  details: string | null
+  created_at: string
+}
+
+export interface SubmissionTrackingDetails {
+  id: string
+  reference_number: string
+  listing_type: string
+  title: string
+  city: string | null
+  source_url: string | null
+  details: string | null
+  status: string
+  rejection_reason?: string | null
+  correction_request?: string | null
+  created_at: string
+  updated_at: string
+  version: number
+}
+
 export interface AdminModerationQueue {
-  pendingSubmissions: Array<{
-    id: string
-    listing_type: string
-    title: string
-    city: string | null
-    source_url: string | null
-    details: string | null
-    status: string
-    created_at: string
-  }>
+  pendingSubmissions: ModeratorQueueItem[]
+  totalCount?: number
   stats: {
     totalAcademies: number
     totalVenues: number
     totalCoaches: number
     totalEvents: number
     pendingSubmissionsCount: number
+    underReviewCount?: number
+    changesRequestedCount?: number
+    approvedCount?: number
+    publishedCount?: number
+    rejectedCount?: number
+    unpublishedCount?: number
   }
 }
 
-export async function getAdminModerationQueue(): Promise<AdminModerationQueue> {
+export interface ModerationQueueFilters {
+  status?: string
+  category?: string
+  search?: string
+  limit?: number
+  offset?: number
+  sortBy?: string
+  sortDir?: string
+}
+
+export async function getSubmissionTrackingStatus(
+  referenceNumber: string,
+  trackingKey?: string
+): Promise<{ status: 'found'; data: SubmissionTrackingDetails } | { status: 'not_found'; message: string } | { status: 'error'; message: string }> {
+  const client = getSupabaseClient()
+  if (!client) return { status: 'error', message: 'Tracking service is not configured.' }
+  try {
+    const { data, error } = await client.rpc('get_submission_tracking_status', {
+      p_reference_number: referenceNumber.trim(),
+      p_tracking_key: trackingKey?.trim() || null,
+    })
+    if (error) return { status: 'error', message: error.message || 'Could not look up submission status.' }
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return { status: 'not_found', message: 'No submission found with this reference number and tracking key.' }
+    }
+    return { status: 'found', data: data[0] as SubmissionTrackingDetails }
+  } catch (err) {
+    return { status: 'error', message: err instanceof Error ? err.message : 'Error retrieving status.' }
+  }
+}
+
+export async function resubmitListingSubmission(
+  referenceNumber: string,
+  trackingKey: string,
+  updates: { title: string; city?: string; source_url?: string; details?: string }
+): Promise<{ success: boolean; version?: number; message?: string }> {
+  const client = getSupabaseClient()
+  if (!client) return { success: false, message: 'Submission service is not configured.' }
+  try {
+    const { data, error } = await client.rpc('resubmit_listing_submission', {
+      p_reference_number: referenceNumber.trim(),
+      p_tracking_key: trackingKey.trim(),
+      p_title: updates.title.trim(),
+      p_city: updates.city?.trim() || null,
+      p_source_url: updates.source_url?.trim() || null,
+      p_details: updates.details?.trim() || null,
+    })
+    if (error) return { success: false, message: error.message || 'Could not resubmit listing.' }
+    const result = data as { success?: boolean; version?: number; message?: string }
+    return { success: !!result?.success, version: result?.version }
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : 'Error resubmitting listing.' }
+  }
+}
+
+export async function getAdminModerationQueue(filters?: ModerationQueueFilters): Promise<AdminModerationQueue> {
   const client = getSupabaseClient()
   if (!client) throw new Error('Moderation service is not configured.')
   const { data: authData, error: authError } = await client.auth.getUser()
   if (authError || !authData.user) throw new Error('Please sign in with an authorized moderator account.')
-  const { data: submissions, error } = await client.rpc('get_listing_submissions')
-  if (error) throw new Error(error.message || 'Could not load the protected listing review queue.')
-  const [academiesRes, venuesRes, coachesRes, eventsRes] = await Promise.all([getAcademies(), getVenues(), getCoaches(), getEvents()])
-  const rows = Array.isArray(submissions) ? submissions as AdminModerationQueue['pendingSubmissions'] : []
+
+  let rows: ModeratorQueueItem[] = []
+  let totalCount = 0
+
+  // Try v2 RPC with server-side filters & pagination
+  const { data: v2Data, error: v2Error } = await client.rpc('get_listing_submissions_v2', {
+    p_status: filters?.status && filters.status !== 'all' ? filters.status : null,
+    p_listing_type: filters?.category && filters.category !== 'all' ? filters.category : null,
+    p_search: filters?.search?.trim() || null,
+    p_limit: filters?.limit || 50,
+    p_offset: filters?.offset || 0,
+    p_sort_by: filters?.sortBy || 'created_at',
+    p_sort_dir: filters?.sortDir || 'desc',
+  })
+
+  if (v2Error) {
+    throw new Error(v2Error.message || 'Could not load the protected listing review queue.')
+  }
+  rows = (Array.isArray(v2Data) ? v2Data : []) as ModeratorQueueItem[]
+  totalCount = rows.length > 0 && 'total_count' in (rows[0] as unknown as { total_count: number })
+    ? Number((rows[0] as unknown as { total_count: number }).total_count)
+    : rows.length
+
+  const [academiesRes, venuesRes, coachesRes, eventsRes] = await Promise.all([
+    getAcademies(),
+    getVenues(),
+    getCoaches(),
+    getEvents(),
+  ])
+
   return {
     pendingSubmissions: rows,
+    totalCount,
     stats: {
       totalAcademies: academiesRes.status === 'ready' ? academiesRes.data.length : 0,
       totalVenues: venuesRes.status === 'ready' ? venuesRes.data.length : 0,
       totalCoaches: coachesRes.status === 'ready' ? coachesRes.data.length : 0,
       totalEvents: eventsRes.status === 'ready' ? eventsRes.data.length : 0,
       pendingSubmissionsCount: rows.filter(s => s.status === 'pending_review').length,
+      underReviewCount: rows.filter(s => s.status === 'under_review').length,
+      changesRequestedCount: rows.filter(s => s.status === 'changes_requested').length,
+      approvedCount: rows.filter(s => s.status === 'approved').length,
+      publishedCount: rows.filter(s => s.status === 'published').length,
+      rejectedCount: rows.filter(s => s.status === 'rejected').length,
+      unpublishedCount: rows.filter(s => s.status === 'unpublished').length,
     },
   }
 }
 
-export async function moderateListingSubmission(id: string, status: 'approved' | 'rejected', notes?: string): Promise<boolean> {
+export async function startListingReview(id: string, expectedVersion?: number): Promise<boolean> {
   const client = getSupabaseClient()
   if (!client) throw new Error('Moderation service is not configured.')
   const { data: authData, error: authError } = await client.auth.getUser()
   if (authError || !authData.user) throw new Error('Please sign in with an authorized moderator account.')
-  const { error } = await client.rpc('review_listing_submission', {
+  const { error } = await client.rpc('start_listing_review', {
     p_submission_id: id,
-    p_decision: status,
-    p_notes: notes || null,
+    p_expected_version: expectedVersion || null,
   })
-  if (error) throw new Error(error.message || 'The listing review could not be saved.')
+  if (error) throw new Error(error.message || 'Could not start review.')
   return true
+}
+
+export async function approveListingSubmission(id: string, notes?: string, expectedVersion?: number): Promise<boolean> {
+  const client = getSupabaseClient()
+  if (!client) throw new Error('Moderation service is not configured.')
+  const { data: authData, error: authError } = await client.auth.getUser()
+  if (authError || !authData.user) throw new Error('Please sign in with an authorized moderator account.')
+  const { error } = await client.rpc('approve_listing_submission', {
+    p_submission_id: id,
+    p_notes: notes || null,
+    p_expected_version: expectedVersion || null,
+  })
+  if (error) throw new Error(error.message || 'The listing approval could not be saved.')
+  return true
+}
+
+export async function rejectListingSubmission(id: string, reason: string, notes?: string, expectedVersion?: number): Promise<boolean> {
+  const client = getSupabaseClient()
+  if (!client) throw new Error('Moderation service is not configured.')
+  const { data: authData, error: authError } = await client.auth.getUser()
+  if (authError || !authData.user) throw new Error('Please sign in with an authorized moderator account.')
+  const { error } = await client.rpc('reject_listing_submission', {
+    p_submission_id: id,
+    p_reason: reason.trim(),
+    p_notes: notes || null,
+    p_expected_version: expectedVersion || null,
+  })
+  if (error) throw new Error(error.message || 'The listing rejection could not be saved.')
+  return true
+}
+
+export async function requestListingCorrections(id: string, message: string, notes?: string, expectedVersion?: number): Promise<boolean> {
+  const client = getSupabaseClient()
+  if (!client) throw new Error('Moderation service is not configured.')
+  const { data: authData, error: authError } = await client.auth.getUser()
+  if (authError || !authData.user) throw new Error('Please sign in with an authorized moderator account.')
+  const { error } = await client.rpc('request_listing_corrections', {
+    p_submission_id: id,
+    p_message: message.trim(),
+    p_notes: notes || null,
+    p_expected_version: expectedVersion || null,
+  })
+  if (error) throw new Error(error.message || 'Could not request corrections.')
+  return true
+}
+
+export async function publishListingSubmission(
+  id: string,
+  targetSlug?: string,
+  sportId?: string,
+  expectedVersion?: number
+): Promise<{ success: boolean; publishedRecordId: string; publishedTable: string; slug: string }> {
+  const client = getSupabaseClient()
+  if (!client) throw new Error('Moderation service is not configured.')
+  const { data: authData, error: authError } = await client.auth.getUser()
+  if (authError || !authData.user) throw new Error('Please sign in with an authorized moderator account.')
+  const { data, error } = await client.rpc('publish_listing_submission', {
+    p_submission_id: id,
+    p_target_slug: targetSlug?.trim() || null,
+    p_sport_id: sportId || null,
+    p_expected_version: expectedVersion || null,
+  })
+  if (error) throw new Error(error.message || 'Could not publish listing.')
+  const res = data as { success: boolean; published_record_id: string; published_table: string; slug: string }
+  return {
+    success: res.success,
+    publishedRecordId: res.published_record_id,
+    publishedTable: res.published_table,
+    slug: res.slug,
+  }
+}
+
+export async function unpublishListingSubmission(
+  id: string,
+  reason: string,
+  notes?: string,
+  expectedVersion?: number
+): Promise<boolean> {
+  const client = getSupabaseClient()
+  if (!client) throw new Error('Moderation service is not configured.')
+  const { data: authData, error: authError } = await client.auth.getUser()
+  if (authError || !authData.user) throw new Error('Please sign in with an authorized moderator account.')
+  const { error } = await client.rpc('unpublish_listing_submission', {
+    p_submission_id: id,
+    p_reason: reason.trim(),
+    p_notes: notes || null,
+    p_expected_version: expectedVersion || null,
+  })
+  if (error) throw new Error(error.message || 'Could not unpublish listing.')
+  return true
+}
+
+export async function getListingSubmissionAuditTrail(id: string): Promise<SubmissionAuditItem[]> {
+  const client = getSupabaseClient()
+  if (!client) throw new Error('Moderation service is not configured.')
+  const { data: authData, error: authError } = await client.auth.getUser()
+  if (authError || !authData.user) throw new Error('Please sign in with an authorized moderator account.')
+  const { data, error } = await client.rpc('get_listing_submission_audit_trail', { p_submission_id: id })
+  if (error) throw new Error(error.message || 'Could not load audit trail.')
+  return Array.isArray(data) ? (data as SubmissionAuditItem[]) : []
+}
+
+export async function getListingSubmissionVersions(id: string): Promise<SubmissionVersionItem[]> {
+  const client = getSupabaseClient()
+  if (!client) throw new Error('Moderation service is not configured.')
+  const { data: authData, error: authError } = await client.auth.getUser()
+  if (authError || !authData.user) throw new Error('Please sign in with an authorized moderator account.')
+  const { data, error } = await client.rpc('get_listing_submission_versions', { p_submission_id: id })
+  if (error) throw new Error(error.message || 'Could not load version history.')
+  return Array.isArray(data) ? (data as SubmissionVersionItem[]) : []
+}
+
+export async function moderateListingSubmission(
+  id: string,
+  status: 'approved' | 'rejected' | 'changes_requested' | 'start_review' | 'publish' | 'unpublish',
+  notes?: string,
+  expectedVersion?: number,
+  extraParams?: { slug?: string; sportId?: string }
+): Promise<boolean> {
+  if (status === 'start_review') {
+    return startListingReview(id, expectedVersion)
+  }
+  if (status === 'changes_requested') {
+    return requestListingCorrections(id, notes || 'Please review requested fields.', undefined, expectedVersion)
+  }
+  if (status === 'publish') {
+    const res = await publishListingSubmission(id, extraParams?.slug, extraParams?.sportId, expectedVersion)
+    return res.success
+  }
+  if (status === 'unpublish') {
+    return unpublishListingSubmission(id, notes || 'Listing unpublished per moderator decision.', undefined, expectedVersion)
+  }
+  if (status === 'approved') {
+    return approveListingSubmission(id, notes, expectedVersion)
+  }
+  if (status === 'rejected') {
+    return rejectListingSubmission(id, notes || 'Rejected after review.', undefined, expectedVersion)
+  }
+  return false
+}
+
+// ============================================================================
+// Phase 3.1: Evidence verification and super-admin control panel RPC clients.
+// Every mutation is authorized again by PostgreSQL; frontend role checks are UX only.
+// ============================================================================
+export interface ModerationAccessProfile {
+  user_id: string
+  role: 'moderator' | 'super_admin'
+  is_active: boolean
+}
+
+export interface ListingEvidenceItem {
+  id: string
+  evidence_type: string
+  evidence_url: string
+  description: string
+  outcome: 'pending' | 'supports' | 'contradicts' | 'insufficient'
+  reviewer_notes: string | null
+  reviewed_at: string | null
+  created_at: string
+}
+
+export interface ListingModeratorAccount {
+  user_id: string
+  role: 'moderator' | 'super_admin'
+  is_active: boolean
+  notes: string | null
+  created_at: string
+  created_by: string | null
+}
+
+async function requireModerationSession() {
+  const client = getSupabaseClient()
+  if (!client) throw new Error('Moderation service is not configured.')
+  const { data, error } = await client.auth.getUser()
+  if (error || !data.user) throw new Error('Please sign in with an authorized KhelGrid moderation account.')
+  return client
+}
+
+export async function getModerationAccessProfile(): Promise<ModerationAccessProfile | null> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_moderation_access_profile')
+  if (error) throw new Error(error.message || 'Could not verify moderation access.')
+  const rows = Array.isArray(data) ? data : []
+  return (rows[0] as ModerationAccessProfile | undefined) ?? null
+}
+
+export async function getListingEvidence(submissionId: string): Promise<ListingEvidenceItem[]> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_listing_submission_evidence', { p_submission_id: submissionId })
+  if (error) throw new Error(error.message || 'Could not load verification evidence.')
+  return Array.isArray(data) ? data as ListingEvidenceItem[] : []
+}
+
+export async function addListingEvidence(input: {
+  submissionId: string
+  evidenceType: string
+  evidenceUrl: string
+  description: string
+}): Promise<string> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('add_listing_submission_evidence', {
+    p_submission_id: input.submissionId,
+    p_evidence_type: input.evidenceType,
+    p_evidence_url: input.evidenceUrl.trim(),
+    p_description: input.description.trim(),
+  })
+  if (error) throw new Error(error.message || 'Could not add evidence.')
+  return String(data)
+}
+
+export async function reviewListingEvidence(evidenceId: string, outcome: 'supports' | 'contradicts' | 'insufficient', notes?: string): Promise<void> {
+  const client = await requireModerationSession()
+  const { error } = await client.rpc('review_listing_submission_evidence', {
+    p_evidence_id: evidenceId,
+    p_outcome: outcome,
+    p_reviewer_notes: notes?.trim() || null,
+  })
+  if (error) throw new Error(error.message || 'Could not save evidence review.')
+}
+
+export async function verifyListingSubmission(submissionId: string, decision: 'verified' | 'rejected' | 'unverified', notes?: string): Promise<void> {
+  const client = await requireModerationSession()
+  const { error } = await client.rpc('verify_listing_submission', {
+    p_submission_id: submissionId,
+    p_decision: decision,
+    p_notes: notes?.trim() || null,
+  })
+  if (error) throw new Error(error.message || 'Could not save verification decision.')
+}
+
+export async function saveListingPublicationDetails(submissionId: string, structuredData: Record<string, unknown>, expectedVersion?: number): Promise<number> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('save_listing_publication_details', {
+    p_submission_id: submissionId,
+    p_structured_data: structuredData,
+    p_expected_version: expectedVersion ?? null,
+  })
+  if (error) throw new Error(error.message || 'Could not save category-specific publication details.')
+  return Number(data)
+}
+
+export async function getListingVerificationQueue(status = 'unverified'): Promise<Array<{
+  id: string
+  reference_number: string
+  listing_type: string
+  title: string
+  city: string | null
+  status: string
+  verification_status: string
+  version: number
+  created_at: string
+}>> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_listing_verification_queue', {
+    p_status: status,
+    p_limit: 100,
+    p_offset: 0,
+  })
+  if (error) throw new Error(error.message || 'Could not load verification queue.')
+  return Array.isArray(data) ? data as Array<{
+    id: string; reference_number: string; listing_type: string; title: string;
+    city: string | null; status: string; verification_status: string;
+    version: number; created_at: string
+  }> : []
+}
+
+export async function listListingModeratorAccounts(): Promise<ListingModeratorAccount[]> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('list_listing_moderator_accounts')
+  if (error) throw new Error(error.message || 'Could not load moderator accounts.')
+  return Array.isArray(data) ? data as ListingModeratorAccount[] : []
+}
+
+export async function setListingModeratorAccess(input: {
+  userId: string
+  role: 'moderator' | 'super_admin'
+  isActive: boolean
+  notes?: string
+}): Promise<void> {
+  const client = await requireModerationSession()
+  const { error } = await client.rpc('set_listing_moderator_access', {
+    p_user_id: input.userId,
+    p_role: input.role,
+    p_is_active: input.isActive,
+    p_notes: input.notes?.trim() || null,
+  })
+  if (error) throw new Error(error.message || 'Could not update moderator access.')
+}
+export interface ListingModeratorAccessAudit {
+  id: string
+  target_user_id: string
+  actor_id: string | null
+  action: string
+  old_role: string | null
+  new_role: string | null
+  old_is_active: boolean | null
+  new_is_active: boolean | null
+  notes: string | null
+  created_at: string
+}
+
+export async function getListingModeratorAccessAudit(limit = 100): Promise<ListingModeratorAccessAudit[]> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_listing_moderator_access_audit', { p_limit: limit })
+  if (error) throw new Error(error.message || 'Could not load moderator access audit history.')
+  return Array.isArray(data) ? data as ListingModeratorAccessAudit[] : []
+}
+export async function getListingPublicationDetails(submissionId: string): Promise<{
+  structured_data: Record<string, unknown>
+  version: number
+  verification_status: string
+}> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_listing_submission_publication_details', {
+    p_submission_id: submissionId,
+  })
+  if (error) throw new Error(error.message || 'Could not load saved publication details.')
+  const row = Array.isArray(data) ? data[0] : null
+  if (!row) throw new Error('Submission publication details were not found.')
+  return {
+    structured_data: (row.structured_data || {}) as Record<string, unknown>,
+    version: Number(row.version),
+    verification_status: String(row.verification_status || 'unverified'),
+  }
 }
 

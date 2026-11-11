@@ -106,6 +106,7 @@ export default function CommunityListingModal({
     mode: 'moderation_queue'
     requiresReview: boolean
     message: string
+    referenceNumber?: string
   } | null>(null)
 
   const modalRef = useRef<HTMLDivElement>(null)
@@ -180,7 +181,7 @@ export default function CommunityListingModal({
       const result = await submitCommunityListing(input)
       if (result.status !== 'submitted') { setError(result.message); return }
       const name = category === 'academy' ? academyName.trim() : category === 'venue' ? venueName.trim() : category === 'opportunity' ? oppTitle.trim() : `${sport.trim()} · ${pickupVenue.trim()}`
-      setSuccessResult({ category, name, city: cleanCity, directoryPath: category === 'academy' ? '/academies' : category === 'venue' ? '/venues' : category === 'opportunity' ? '/opportunities' : '/play', mode: 'moderation_queue', requiresReview: true, message: result.message })
+      setSuccessResult({ category, name, city: cleanCity, directoryPath: category === 'academy' ? '/academies' : category === 'venue' ? '/venues' : category === 'opportunity' ? '/opportunities' : '/play', mode: 'moderation_queue', requiresReview: true, message: result.message, referenceNumber: (result.record?.reference_number as string) || undefined })
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Submission failed. No listing was published.')
     } finally { setIsSubmitting(false) }
@@ -221,6 +222,11 @@ export default function CommunityListingModal({
                 <strong>{successResult.name}</strong> in <strong>{successResult.city}</strong> has been received by the KhelGrid sports desk.
                 A moderator must review the information and source before anything can appear in a public directory.
               </p>
+              {successResult.referenceNumber && (
+                <p style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', padding: '0.65rem 1rem', borderRadius: '6px', fontSize: '0.9rem', color: '#0f172a' }}>
+                  Submission Tracking Reference: <strong>{successResult.referenceNumber}</strong>
+                </p>
+              )}
 
               <div className="community-intake-review-note">
                 <span>💡 All community submissions require moderator review. A locally stored profile or verification badge does not bypass this process.</span>
