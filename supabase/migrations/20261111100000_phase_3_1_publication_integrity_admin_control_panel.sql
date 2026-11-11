@@ -691,6 +691,10 @@ begin
   if v_sub.submitter_id = auth.uid() then
     raise exception 'Submitters cannot approve their own listing submissions' using errcode = '42501';
   end if;
+  if v_sub.assigned_moderator_id is distinct from auth.uid()
+     and not public.is_listing_super_admin() then
+    raise exception 'Only the assigned moderator or a super-admin can approve this submission' using errcode = '42501';
+  end if;
   if p_expected_version is not null and v_sub.version <> p_expected_version then
     raise exception 'Submission version conflict' using errcode = '40001';
   end if;
