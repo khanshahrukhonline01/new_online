@@ -500,7 +500,7 @@ begin
   end if;
 
   begin
-    perform public.publish_listing_submission(v_sub_id, null, null, 12);
+    perform public.publish_listing_submission(v_sub_id, null, null, 10);
     raise exception 'Repeated publication unexpectedly succeeded';
   exception when invalid_parameter_value then
     null;
