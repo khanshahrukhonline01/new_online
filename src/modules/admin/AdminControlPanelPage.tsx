@@ -300,7 +300,8 @@ export function AdminControlPanelPage() {
               {(selected.status === 'pending_review' || selected.status === 'resubmitted' || selected.status === 'unpublished') && <button disabled={busy} onClick={() => void handleStartReview()}>Start review &amp; assign to me</button>}
               {(selected.status === 'under_review') && <div className="admin-control-actions"><button disabled={busy} onClick={() => void handleApproval('approve')}>Approve listing</button><button disabled={busy} onClick={() => void handleApproval('reject')}>Reject listing</button></div>}
               {selected.status !== 'rejected' && selected.status !== 'published' && <label className="admin-control-full">Rejection reason (required only to reject)<textarea value={decisionReason} onChange={e => setDecisionReason(e.target.value)} maxLength={2000} /></label>}
-              {selected.status === 'approved' && <div className="admin-control-form"><label>Publication slug (optional)<input value={publishSlug} onChange={e => setPublishSlug(e.target.value)} placeholder="Auto-generated if blank" /></label><button disabled={busy} onClick={() => void handlePublish()}>Publish verified listing</button></div>}
+              {selected.status === 'approved' && <div className="admin-control-form"><label>Publication slug (optional)<input value={publishSlug} onChange={e => setPublishSlug(e.target.value)} placeholder="Auto-generated if blank" /></label><button disabled={busy || verificationStates[selected.id] !== 'verified'} onClick={() => void handlePublish()}>Publish verified listing</button>
+                {verificationStates[selected.id] !== 'verified' && <small>Complete the evidence review and mark this submission verified before publication is enabled.</small>}</div>}
             </div>
             <div className="admin-control-card">
               <h3>Evidence register</h3>
