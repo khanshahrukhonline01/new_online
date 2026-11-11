@@ -22,10 +22,18 @@ on conflict (user_id) do update set is_active = excluded.is_active, role = exclu
 -- Seed a deterministic lifecycle fixture using the privileged CI connection.
 -- The public client is not permitted to insert directly into this private table.
 insert into public.listing_submissions (
-  id, listing_type, title, city, source_url, details, submitter_id
+  id, listing_type, title, city, source_url, details
 ) values (
   '00000000-0000-4000-8000-000000000040',
-  'venue', 'Grand Sports Arena', 'Bengaluru', 'https://example.org/arena', 'Multi-sport turf',
+  'venue', 'Grand Sports Arena', 'Bengaluru', 'https://example.org/arena', 'Multi-sport turf'
+);
+
+-- Separate fixture for the submitter self-review denial assertion; it never reaches notification paths.
+insert into public.listing_submissions (
+  id, listing_type, title, city, source_url, details, submitter_id
+) values (
+  '00000000-0000-4000-8000-000000000041',
+  'venue', 'Self Review Denial Fixture', 'Bengaluru', 'https://example.org/self-review', 'Self-review denial fixture',
   '00000000-0000-4000-8000-000000000010'
 );
 
@@ -218,7 +226,7 @@ declare
 begin
   begin
     perform public.start_listing_review(
-      '00000000-0000-4000-8000-000000000040', 1
+      '00000000-0000-4000-8000-000000000041', 1
     );
     raise exception 'A submitter who is a super-admin unexpectedly reviewed their own listing';
   exception when insufficient_privilege then
@@ -262,14 +270,6 @@ begin
 end;
 $new_moderator_profile$;
 reset role;
-
--- Keep the self-review guard fixture separate from submitter-notification integration;
--- this isolated PostgreSQL harness does not provision the application notifications table.
-SET LOCAL ROLE postgres;
-update public.listing_submissions
-set submitter_id = null
-where id = '00000000-0000-4000-8000-000000000040';
-RESET ROLE;
 
 -- Step 4A: Allowlisted moderator claims and starts review
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000030', true);
