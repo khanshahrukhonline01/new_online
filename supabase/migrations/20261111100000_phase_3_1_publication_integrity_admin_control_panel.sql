@@ -596,6 +596,102 @@ $function$;
 revoke all on function public.get_listing_verification_queue(text, integer, integer) from public, anon;
 grant execute on function public.get_listing_verification_queue(text, integer, integer) to authenticated, service_role;
 
+-- 6b. Require an explicit claimed review before editorial approval.
+create or replace function public.start_listing_review(
+  p_submission_id uuid,
+  p_expected_version integer default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $function$
+declare
+  v_sub public.listing_submissions%rowtype;
+begin
+  if auth.uid() is null or not public.is_listing_moderator() then
+    raise exception 'Moderator access required' using errcode = '42501';
+  end if;
+  select * into v_sub from public.listing_submissions
+  where id = p_submission_id for update;
+  if not found then raise exception 'Submission not found' using errcode = 'P0002'; end if;
+  if p_expected_version is not null and v_sub.version <> p_expected_version then
+    raise exception 'Submission version conflict' using errcode = '40001';
+  end if;
+  if v_sub.status not in ('pending_review', 'resubmitted', 'unpublished') then
+    raise exception 'Only pending, resubmitted or unpublished submissions can be claimed for review' using errcode = '22023';
+  end if;
+  update public.listing_submissions
+  set status = 'under_review',
+      assigned_moderator_id = auth.uid(),
+      review_started_at = clock_timestamp(),
+      version = v_sub.version + 1,
+      updated_at = clock_timestamp()
+  where id = p_submission_id;
+  insert into public.listing_submission_audits (
+    submission_id, action, actor_id, from_status, to_status, notes
+  ) values (
+    p_submission_id, 'start_review', auth.uid(), v_sub.status, 'under_review',
+    'Moderator claimed submission for review'
+  );
+end;
+$function$;
+revoke all on function public.start_listing_review(uuid, integer) from public, anon;
+grant execute on function public.start_listing_review(uuid, integer) to authenticated, service_role;
+
+create or replace function public.approve_listing_submission(
+  p_submission_id uuid,
+  p_notes text default null,
+  p_expected_version integer default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $function$
+declare
+  v_sub public.listing_submissions%rowtype;
+begin
+  if auth.uid() is null or not public.is_listing_moderator() then
+    raise exception 'Moderator access required' using errcode = '42501';
+  end if;
+  select * into v_sub from public.listing_submissions
+  where id = p_submission_id for update;
+  if not found then raise exception 'Submission not found' using errcode = 'P0002'; end if;
+  if p_expected_version is not null and v_sub.version <> p_expected_version then
+    raise exception 'Submission version conflict' using errcode = '40001';
+  end if;
+  if v_sub.status <> 'under_review' then
+    raise exception 'Only submissions actively under review can be approved' using errcode = '22023';
+  end if;
+  update public.listing_submissions
+  set status = 'approved',
+      reviewed_at = clock_timestamp(),
+      reviewed_by = auth.uid(),
+      moderator_notes = nullif(btrim(p_notes), ''),
+      version = v_sub.version + 1,
+      updated_at = clock_timestamp()
+  where id = p_submission_id;
+  insert into public.listing_submission_audits (
+    submission_id, action, actor_id, from_status, to_status, notes
+  ) values (
+    p_submission_id, 'approved', auth.uid(), 'under_review', 'approved',
+    nullif(btrim(p_notes), '')
+  );
+  if v_sub.submitter_id is not null then
+    insert into public.user_notifications (user_id, category, title, message, action_url)
+    values (
+      v_sub.submitter_id, 'moderation',
+      'Listing Approved: ' || v_sub.title,
+      'Your suggestion has been approved by our moderation desk. It is queued for publication.',
+      '/track-submission?ref=' || v_sub.reference_number
+    );
+  end if;
+end;
+$function$;
+revoke all on function public.approve_listing_submission(uuid, text, integer) from public, anon;
+grant execute on function public.approve_listing_submission(uuid, text, integer) to authenticated, service_role;
+
 -- 7. Publication function now refuses invented fallback data and only publishes after
 -- a distinct evidence verification decision. Re-publication reuses the same catalogue row.
 create or replace function public.publish_listing_submission(
