@@ -8,6 +8,7 @@ import {
   startListingReview,
   getAdminModerationQueue,
   getListingEvidence,
+  getListingVerificationQueue,
   getModerationAccessProfile,
   listListingModeratorAccounts,
   reviewListingEvidence,
@@ -48,6 +49,7 @@ export function AdminControlPanelPage() {
   const [selected, setSelected] = useState<ModeratorQueueItem | null>(null)
   const [evidence, setEvidence] = useState<ListingEvidenceItem[]>([])
   const [accounts, setAccounts] = useState<ListingModeratorAccount[]>([])
+  const [verificationStates, setVerificationStates] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -77,8 +79,12 @@ export function AdminControlPanelPage() {
         setAccounts([])
         return
       }
-      const data = await getAdminModerationQueue({ status: 'all', limit: 100, sortBy: 'created_at', sortDir: 'desc' })
+      const [data, verificationRows] = await Promise.all([
+        getAdminModerationQueue({ status: 'all', limit: 100, sortBy: 'created_at', sortDir: 'desc' }),
+        getListingVerificationQueue('all'),
+      ])
       setQueue(data)
+      setVerificationStates(Object.fromEntries(verificationRows.map(row => [row.id, row.verification_status])))
       if (current.role === 'super_admin') setAccounts(await listListingModeratorAccounts())
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not load the protected control panel.')
@@ -127,6 +133,7 @@ export function AdminControlPanelPage() {
       await addListingEvidence({ submissionId: selected.id, evidenceType, evidenceUrl, description: evidenceDescription })
       setEvidence(await getListingEvidence(selected.id))
       setSelected(prev => prev ? { ...prev, version: prev.version + 1 } : prev)
+      setVerificationStates(prev => ({ ...prev, [selected.id]: 'unverified' }))
       setEvidenceUrl(''); setEvidenceDescription('')
       setNotice('Evidence added to the private verification record. The prior verification decision, if any, has been invalidated.')
     } catch (cause) {
@@ -141,6 +148,7 @@ export function AdminControlPanelPage() {
       if (selected) {
         setEvidence(await getListingEvidence(selected.id))
         setSelected(prev => prev ? { ...prev, version: prev.version + 1 } : prev)
+        setVerificationStates(prev => ({ ...prev, [selected.id]: 'unverified' }))
       }
       setNotice('Evidence review saved and added to the audit trail. Re-verification is required after evidence changes.')
     } catch (cause) {
@@ -190,6 +198,7 @@ export function AdminControlPanelPage() {
     setBusy(true); setError(''); setNotice('')
     try {
       await verifyListingSubmission(selected.id, decision, verificationNotes)
+      setVerificationStates(prev => ({ ...prev, [selected.id]: decision }))
       setNotice(`Verification status updated to ${decision}. Approval and publication remain separate decisions.`)
       await refresh()
       setSelected(prev => prev ? { ...prev, version: prev.version + 1 } : prev)
@@ -255,7 +264,7 @@ export function AdminControlPanelPage() {
           <h2>Verification &amp; listing queue</h2>
           <p>{queue?.pendingSubmissions.length ?? 0} submissions loaded</p>
           {queue?.pendingSubmissions.map(item => <button type="button" key={item.id} className={selected?.id === item.id ? 'selected' : ''} onClick={() => void selectSubmission(item)}>
-            <span>{item.listing_type} · {item.status.replace(/_/g, ' ')}</span><strong>{item.title}</strong><small>{item.reference_number} · {item.city || 'Location missing'}</small>
+            <span>{item.listing_type} · {item.status.replace(/_/g, ' ')}</span><small>Evidence: {verificationStates[item.id] || 'unverified'}</small><strong>{item.title}</strong><small>{item.reference_number} · {item.city || 'Location missing'}</small>
           </button>)}
           {!queue?.pendingSubmissions.length && <p>No submissions in the current queue.</p>}
         </aside>
@@ -263,7 +272,7 @@ export function AdminControlPanelPage() {
           {!selected ? <div className="admin-control-empty"><h2>Select a submission</h2><p>Choose an item to inspect its evidence, verification state and publication requirements.</p></div> : <>
             <div className="admin-control-card">
               <p className="eyebrow">{selected.reference_number} · {selected.listing_type}</p>
-              <h2>{selected.title}</h2><p>{selected.city || 'City not supplied'} · Status: {selected.status.replace(/_/g, ' ')}</p>
+              <h2>{selected.title}</h2><p>{selected.city || 'City not supplied'} · Editorial status: {selected.status.replace(/_/g, ' ')} · Evidence status: {verificationStates[selected.id] || 'unverified'}</p>
               <p>{selected.details || 'No additional details supplied.'}</p>
               {selected.source_url && <a href={selected.source_url} target="_blank" rel="noreferrer">Open submitted source ↗</a>}
             </div>
