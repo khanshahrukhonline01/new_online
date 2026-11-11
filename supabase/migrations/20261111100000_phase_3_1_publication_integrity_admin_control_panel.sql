@@ -478,6 +478,10 @@ begin
       select 1 from public.listing_submission_evidence
       where submission_id = p_submission_id and evidence_type = 'venue_address' and outcome = 'supports'
     ) then raise exception 'Pickup-game verification requires supporting venue evidence' using errcode = '23514'; end if;
+    if v_sub.listing_type = 'pickup_game' and not exists (
+      select 1 from public.listing_submission_evidence
+      where submission_id = p_submission_id and evidence_type = 'organizer_identity' and outcome = 'supports'
+    ) then raise exception 'Pickup-game verification requires supporting host-identity evidence' using errcode = '23514'; end if;
     if v_sub.listing_type = 'sport' and not exists (
       select 1 from public.listing_submission_evidence
       where submission_id = p_submission_id and evidence_type = 'official_source' and outcome = 'supports'
