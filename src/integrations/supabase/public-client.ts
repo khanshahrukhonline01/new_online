@@ -3567,15 +3567,7 @@ export async function approveListingSubmission(id: string, notes?: string, expec
     p_notes: notes || null,
     p_expected_version: expectedVersion || null,
   })
-  if (error) {
-    // Fallback to legacy review_listing_submission RPC if needed
-    const { error: legacyErr } = await client.rpc('review_listing_submission', {
-      p_submission_id: id,
-      p_decision: 'approved',
-      p_notes: notes || null,
-    })
-    if (legacyErr) throw new Error(legacyErr.message || error.message || 'The listing approval could not be saved.')
-  }
+  if (error) throw new Error(error.message || 'The listing approval could not be saved.')
   return true
 }
 
@@ -3590,14 +3582,7 @@ export async function rejectListingSubmission(id: string, reason: string, notes?
     p_notes: notes || null,
     p_expected_version: expectedVersion || null,
   })
-  if (error) {
-    const { error: legacyErr } = await client.rpc('review_listing_submission', {
-      p_submission_id: id,
-      p_decision: 'rejected',
-      p_notes: reason.trim() + (notes ? ` | ${notes}` : ''),
-    })
-    if (legacyErr) throw new Error(legacyErr.message || error.message || 'The listing rejection could not be saved.')
-  }
+  if (error) throw new Error(error.message || 'The listing rejection could not be saved.')
   return true
 }
 
