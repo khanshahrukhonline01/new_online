@@ -313,7 +313,7 @@ begin
       verified_by = null,
       version = version + 1,
       updated_at = clock_timestamp()
-  where id = p_submission_id and verification_status = 'verified';
+  where id = p_submission_id;
 
   insert into public.listing_submission_audits (
     submission_id, action, actor_id, notes, metadata
@@ -367,7 +367,7 @@ begin
       verified_by = null,
       version = version + 1,
       updated_at = clock_timestamp()
-  where id = v_evidence.submission_id and verification_status = 'verified';
+  where id = v_evidence.submission_id;
 
   insert into public.listing_submission_audits (
     submission_id, action, actor_id, notes, metadata
