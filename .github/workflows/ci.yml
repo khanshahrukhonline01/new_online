@@ -77,6 +77,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-core-catalogue-listing-integrity-assertions.sql
       - name: Test anonymous, authenticated, moderator and service-role listing boundaries
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-core-catalogue-listing-moderator-flow.sql
+      - name: Apply moderation notifications prerequisite
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110150000_phase_moderation_notifications.sql
       - name: Apply Phase 3 complete listing moderation and publication migration
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110160000_phase_3_listing_moderation_publication_system.sql
       - name: Apply Phase 3.1 publication integrity and admin control panel
