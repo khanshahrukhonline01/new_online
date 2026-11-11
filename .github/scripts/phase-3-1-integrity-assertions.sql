@@ -65,7 +65,8 @@ begin
     'public.get_listing_submission_evidence(uuid)'::regprocedure,
     'public.verify_listing_submission(uuid,text,text)'::regprocedure,
     'public.save_listing_publication_details(uuid,jsonb,integer)'::regprocedure,
-    'public.get_listing_verification_queue(text,integer,integer)'::regprocedure
+    'public.get_listing_verification_queue(text,integer,integer)'::regprocedure,
+    'public.get_listing_submission_publication_details(uuid)'::regprocedure
   ] loop
     if has_function_privilege('anon', v_fn, 'EXECUTE') then
       raise exception 'Anonymous role must not execute privileged Phase 3.1 function %', v_fn;
