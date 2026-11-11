@@ -126,8 +126,9 @@ export function AdminControlPanelPage() {
     try {
       await addListingEvidence({ submissionId: selected.id, evidenceType, evidenceUrl, description: evidenceDescription })
       setEvidence(await getListingEvidence(selected.id))
+      setSelected(prev => prev ? { ...prev, version: prev.version + 1 } : prev)
       setEvidenceUrl(''); setEvidenceDescription('')
-      setNotice('Evidence added to the private verification record.')
+      setNotice('Evidence added to the private verification record. The prior verification decision, if any, has been invalidated.')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not add evidence.')
     } finally { setBusy(false) }
@@ -137,8 +138,11 @@ export function AdminControlPanelPage() {
     setBusy(true); setError(''); setNotice('')
     try {
       await reviewListingEvidence(item.id, outcome)
-      if (selected) setEvidence(await getListingEvidence(selected.id))
-      setNotice('Evidence review saved and added to the audit trail.')
+      if (selected) {
+        setEvidence(await getListingEvidence(selected.id))
+        setSelected(prev => prev ? { ...prev, version: prev.version + 1 } : prev)
+      }
+      setNotice('Evidence review saved and added to the audit trail. Re-verification is required after evidence changes.')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not review evidence.')
     } finally { setBusy(false) }
