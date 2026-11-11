@@ -319,35 +319,37 @@ export function AdminControlPanelPage() {
             <div className="admin-control-card">
               <h3>Evidence register</h3>
               <p>Evidence URLs and reviewer notes are private. A verified decision requires supporting evidence and no pending or contradictory evidence.</p>
-              <form onSubmit={handleAddEvidence} className="admin-control-form">
+              {['pending_review', 'under_review', 'approved', 'unpublished'].includes(selected.status) ? <form onSubmit={handleAddEvidence} className="admin-control-form">
                 <label>Evidence type<select value={evidenceType} onChange={e => setEvidenceType(e.target.value)}>{evidenceTypes.map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
                 <label>HTTPS evidence URL<input type="url" value={evidenceUrl} onChange={e => setEvidenceUrl(e.target.value)} placeholder="https://official-source.gov.in/…" required /></label>
                 <label>What does this evidence establish?<textarea value={evidenceDescription} onChange={e => setEvidenceDescription(e.target.value)} minLength={10} maxLength={2000} required /></label>
                 <button disabled={busy}>Add evidence</button>
-              </form>
+              </form> : <p>Evidence is read-only for this status. Claim review or unpublish the record before changing its evidence.</p>}
               {evidence.map(item => <article className="admin-control-evidence" key={item.id}>
                 <strong>{item.evidence_type.replace(/_/g, ' ')} · {item.outcome}</strong><p>{item.description}</p><a href={item.evidence_url} target="_blank" rel="noreferrer">Review source ↗</a>
-                {item.outcome === 'pending' && <div className="admin-control-actions">
+                {item.outcome === 'pending' && selected.status !== 'published' && <div className="admin-control-actions">
                   <button disabled={busy} onClick={() => void handleEvidenceReview(item, 'supports')}>Supports claim</button>
                   <button disabled={busy} onClick={() => void handleEvidenceReview(item, 'contradicts')}>Contradicts claim</button>
                   <button disabled={busy} onClick={() => void handleEvidenceReview(item, 'insufficient')}>Insufficient</button>
                 </div>}
                 {item.reviewer_notes && <p>Reviewer notes: {item.reviewer_notes}</p>}
               </article>)}
-              <label className="admin-control-full">Verification notes<textarea value={verificationNotes} onChange={e => setVerificationNotes(e.target.value)} maxLength={2000} /></label>
-              <div className="admin-control-actions">
-                <button disabled={busy} onClick={() => void handleVerification('verified')}>Mark evidence verified</button>
-                <button disabled={busy} onClick={() => void handleVerification('rejected')}>Reject verification</button>
-                <button disabled={busy} onClick={() => void handleVerification('unverified')}>Return to unverified</button>
-              </div>
+              {selected.status === 'published' ? <p>Verification is locked while this listing is published. Unpublish it before changing the evidence decision.</p> : <>
+                <label className="admin-control-full">Verification notes<textarea value={verificationNotes} onChange={e => setVerificationNotes(e.target.value)} maxLength={2000} /></label>
+                <div className="admin-control-actions">
+                  <button disabled={busy} onClick={() => void handleVerification('verified')}>Mark evidence verified</button>
+                  <button disabled={busy} onClick={() => void handleVerification('rejected')}>Reject verification</button>
+                  <button disabled={busy} onClick={() => void handleVerification('unverified')}>Return to unverified</button>
+                </div>
+              </>}
             </div>
             <div className="admin-control-card">
               <h3>Category-specific publication details</h3>
               <p>Only genuine, reviewed details should be entered. Missing values remain missing; the system must not invent them.</p>
-              <form onSubmit={handleSaveDetails} className="admin-control-form">
+              {['under_review', 'approved', 'unpublished'].includes(selected.status) ? <form onSubmit={handleSaveDetails} className="admin-control-form">
                 {(fieldSets[selected.listing_type] || []).map(([key,label]) => <label key={key}>{label}<input value={structured[key] || ''} onChange={e => setStructured(prev => ({ ...prev, [key]: e.target.value }))} required={!['ends_at','state'].includes(key)} /></label>)}
                 <button disabled={busy}>Save publication details</button>
-              </form>
+              </form> : <p>Start a review before editing category-specific publication details.</p>}
             </div>
           </>}
           {profile.role === 'super_admin' && <div className="admin-control-card">
