@@ -37,6 +37,7 @@ declare
   v_expected_evidence text;
   v_good_data jsonb;
   v_expected_version integer;
+  v_version integer;
 begin
   for r in
     select * from (values
@@ -56,35 +57,56 @@ begin
        '{}'::jsonb, 'sports')
     ) as fixtures(id, listing_type, evidence_type, structured_data, target_table)
   loop
-    perform public.start_listing_review(r.id, 1);
-    perform public.approve_listing_submission(r.id, 'Editorial review completed.', 2);
+    v_version := 1;
+    perform public.start_listing_review(r.id, v_version);
+    v_version := v_version + 1;
+    perform public.approve_listing_submission(r.id, 'Editorial review completed.', v_version);
+    v_version := v_version + 1;
 
     v_evidence_id := public.add_listing_submission_evidence(
       r.id, r.evidence_type, 'https://example.org/evidence/' || r.listing_type,
       'Official category evidence reviewed for this isolated CI fixture.'
     );
+    v_version := v_version + 1;
     perform public.review_listing_submission_evidence(
       v_evidence_id, 'supports', 'Evidence supports the category claim.'
     );
+    v_version := v_version + 1;
+
+    if r.listing_type = 'pickup_game' then
+      v_evidence_id := public.add_listing_submission_evidence(
+        r.id, 'organizer_identity', 'https://example.org/evidence/pickup-host',
+        'Host identity source reviewed for this isolated pickup-game fixture.'
+      );
+      v_version := v_version + 1;
+      perform public.review_listing_submission_evidence(
+        v_evidence_id, 'supports', 'Evidence supports the pickup-game host identity.'
+      );
+      v_version := v_version + 1;
+    end if;
+
     perform public.verify_listing_submission(
       r.id, 'verified', 'Category evidence criteria satisfied.'
     );
+    v_version := v_version + 1;
 
     -- A verified submission must still fail publication when its category requires
     -- structured facts that have not been supplied (venue, organizer, qualifications,
     -- event schedule, or pickup-game host/schedule).
-    perform public.save_listing_publication_details(r.id, '{}'::jsonb, 6);
+    perform public.save_listing_publication_details(r.id, '{}'::jsonb, v_version);
+    v_version := v_version + 1;
     if r.listing_type in ('venue', 'opportunity', 'coach', 'event', 'pickup_game') then
       begin
-        perform public.publish_listing_submission(r.id, null, null, 7);
+        perform public.publish_listing_submission(r.id, null, null, v_version);
         raise exception 'Incomplete % listing unexpectedly published', r.listing_type;
       exception when invalid_parameter_value then
         null;
       end;
     end if;
 
-    perform public.save_listing_publication_details(r.id, r.structured_data, 7);
-    select public.publish_listing_submission(r.id, null, null, 8) into v_pub;
+    perform public.save_listing_publication_details(r.id, r.structured_data, v_version);
+    v_version := v_version + 1;
+    select public.publish_listing_submission(r.id, null, null, v_version) into v_pub;
     v_target_id := (v_pub->>'published_record_id')::uuid;
     v_table := v_pub->>'published_table';
 
