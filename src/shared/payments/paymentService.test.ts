@@ -101,6 +101,29 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
     })
   })
 
+  describe('free directory listing policy', () => {
+    it('does not create a payment request for a directory listing subscription', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      const result = await recordListingSubscription({
+        orderId: 'KG_ORD_LISTING_DISABLED',
+        paymentId: 'PAYMENT_REFERENCE',
+        listingType: 'venue',
+        listingName: 'Community Sports Ground',
+        city: 'Delhi',
+        planId: '1_month',
+        planName: 'Legacy plan',
+        amount: 499,
+        durationDays: 30,
+        customerName: 'Submitter',
+        customerPhone: '9876543210',
+      })
+
+      expect(result.status).toBe('error')
+      expect(result.message).toContain('listings are free')
+      expect(fetchSpy).not.toHaveBeenCalled()
+    })
+  })
+
   describe('recordPaymentTransaction', () => {
     it('records pay_at_venue transaction directly with pay_at_venue status', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
