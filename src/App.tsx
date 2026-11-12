@@ -121,6 +121,15 @@ export default function App() {
     setIntakeModalOpen(true)
   }
 
+  function openListingSubmission() {
+    if (typeof window !== 'undefined' && window.location.pathname !== '/submit-listing') {
+      window.history.pushState({}, '', '/submit-listing')
+    }
+    setPath('/submit-listing')
+    setMenuOpen(false)
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'auto' })
+  }
+
   // Detect Supabase Auth callback errors or tokens from URL hash / search params
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -258,7 +267,7 @@ export default function App() {
         page = (
           <UserDashboardPage
             onNavigate={navigate}
-            onOpenIntake={openIntake}
+            onOpenIntake={openListingSubmission}
             onOpenAuth={tab => {
               setAuthModalTab(tab || 'login')
               setAuthModalOpen(true)
