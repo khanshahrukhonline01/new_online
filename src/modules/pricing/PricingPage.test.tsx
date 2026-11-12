@@ -7,7 +7,6 @@ import {
   VENUE_PLANS,
   ORGANIZER_BOOST_PLANS,
   PRICING_FAQS,
-  PRICING_TESTIMONIALS,
 } from './pricingPlansData'
 
 describe('PricingPage Component', () => {
@@ -16,13 +15,11 @@ describe('PricingPage Component', () => {
 
     expect(html).toContain('Simple, Transparent Sports Memberships')
     expect(html).toContain('Pricing &amp; Memberships')
-    expect(html).toContain('Direct UPI Instant Checkout · Zero Hidden Fees')
-    expect(html).toContain('45,000+')
-    expect(html).toContain('Active Athletes')
-    expect(html).toContain('850+')
-    expect(html).toContain('Verified Academies')
-    expect(html).toContain('0%')
-    expect(html).toContain('Turf Commission')
+    expect(html).toContain('Free directory listings · Memberships are separate')
+    expect(html).toContain('Venue, coach &amp; trial submissions')
+    expect(html).toContain('No paid badge')
+    expect(html).not.toContain('45,000+')
+    expect(html).not.toContain('850+')
   })
 
   it('renders audience switcher buttons and billing cycle options', () => {
@@ -99,19 +96,9 @@ describe('PricingPage Component', () => {
   it('renders trust and safety guarantee cards', () => {
     const html = renderToStaticMarkup(<PricingPage />)
 
-    expect(html).toContain('Zero Fake Trials Guarantee')
-    expect(html).toContain('Direct Instant UPI &amp; Cards')
-    expect(html).toContain('7-Day No-Questions Refund')
-  })
-
-  it('renders athlete and coach testimonials', () => {
-    const html = renderToStaticMarkup(<PricingPage />)
-
-    expect(html).toContain('Trusted by Grassroots Khiladis &amp; Academy Directors')
-    for (const t of PRICING_TESTIMONIALS) {
-      expect(html).toContain(t.author)
-      expect(html).toContain(t.role.replace(/&/g, '&amp;'))
-    }
+    expect(html).toContain('Evidence-led trial review')
+    expect(html).toContain('No payment for directory listings')
+    expect(html).toContain('Clear fee information')
   })
 
   it('renders FAQ accordion section with questions and answers', () => {
@@ -124,7 +111,7 @@ describe('PricingPage Component', () => {
       expect(html).toContain(faq.hindiQuestion.replace(/"/g, '&quot;'))
     }
     // First FAQ is open by default
-    expect(html).toContain('Yes! KhelGrid supports direct instant UPI checkout')
+    expect(html).toContain('Venue, coach and sports-trial directory submissions and evidence review are free.')
   })
 
   it('renders enterprise CSR partnership section with contact links', () => {
