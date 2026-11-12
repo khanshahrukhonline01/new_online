@@ -7,7 +7,7 @@ export interface HostDashboardPageProps {
   onOpenIntake?: () => void
 }
 
-export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDashboardPageProps) {
+export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps) {
   return (
     <section className="host-dashboard-root content-page">
       <header className="host-dashboard-header">
@@ -26,15 +26,9 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
           Submit an academy, venue, coach, opportunity, event or pickup game through the private review queue.
           A submission is not published or verified until the moderation and editorial process is complete.
         </p>
-        {onOpenIntake ? (
-          <button type="button" className="host-action-btn primary" onClick={onOpenIntake}>
-            Submit a listing for review <SiteIcon name="arrow-up-right" size={16} />
-          </button>
-        ) : (
-          <a className="host-action-btn primary" href="/submit-listing" onClick={event => onNavigate?.(event, '/submit-listing')}>
-            Submit a listing for review <SiteIcon name="arrow-up-right" size={16} />
-          </a>
-        )}
+        <a className="host-action-btn primary" href="/submit-listing" onClick={event => onNavigate?.(event, '/submit-listing')}>
+          Submit a listing for review <SiteIcon name="arrow-up-right" size={16} />
+        </a>
       </div>
 
       <div className="host-dashboard-empty-state">
