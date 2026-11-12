@@ -529,7 +529,7 @@ export async function fetchCoaches(options?: FetchCoachesOptions): Promise<Catal
 
   const filters: Record<string, string> = {
     publication_status: 'eq.published',
-    verification_status: 'neq.rejected',
+    verification_status: 'eq.verified',
   }
 
   if (options?.sport && options.sport !== 'All Sports') {
