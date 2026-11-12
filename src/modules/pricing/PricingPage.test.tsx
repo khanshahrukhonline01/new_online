@@ -17,7 +17,7 @@ describe('PricingPage Component', () => {
     expect(html).toContain('Pricing &amp; Memberships')
     expect(html).toContain('Free directory listings · Memberships are separate')
     expect(html).toContain('Venue, coach &amp; trial submissions')
-    expect(html).toContain('No paid badge')
+    expect(html).toContain('No paid verification')
     expect(html).not.toContain('45,000+')
     expect(html).not.toContain('850+')
   })
@@ -67,7 +67,7 @@ describe('PricingPage Component', () => {
     }
     expect(html).toContain('Free Venue Listing')
     expect(html).toContain('No listing subscription or checkout')
-    expect(html).toContain('Directory submissions are free. Verification is not for sale.')
+    expect(html).toContain('Directory submissions are free. Listing verification is not for sale.')
     expect(html).not.toContain('Featured #1 placement')
   })
 
