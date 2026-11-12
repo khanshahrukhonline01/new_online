@@ -57,4 +57,4 @@ Legacy payment schema, historical subscription rows and booking/trial-payment fu
 
 ## 7. Abuse and safeguarding
 
-Free submission does not mean automatic public publishing. Retain rate limiting/CAPTCHA consideration, private moderation access, audit history, correction and withdrawal paths. Avoid publishing personal home addresses, private contact details or sensitive information. Child-related profiles and contact routes require age-appropriate safeguards and a separate review before enabling public exposure.
+Free submission does not mean automatic public publishing. The intake RPC enforces a gateway-aware limit of 10 submissions per client per minute and validates field lengths and HTTPS source links server-side. Keep private moderation access, audit history, correction and withdrawal paths; consider CAPTCHA only if abuse monitoring shows it is needed. Avoid publishing personal home addresses, private contact details or sensitive information. Child-related profiles and contact routes require age-appropriate safeguards and a separate review before enabling public exposure.
