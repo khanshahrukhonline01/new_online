@@ -398,7 +398,7 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
 
             <div className="cv-actions">
               <button className="primary-link" type="submit" disabled={submitting}>
-                {submitting ? 'Submitting for review…' : 'Submit free listing for review'} <SiteIcon name="arrow-up-right" size={16} />
+                {submitting ? 'Submitting for review…' : 'Submit for moderator review'} <SiteIcon name="arrow-up-right" size={16} />
               </button>
             </div>
           </form>
