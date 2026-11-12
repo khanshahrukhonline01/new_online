@@ -66,8 +66,8 @@ CREATE POLICY coach_academies_read_published_relationships ON public.coach_acade
 
 CREATE INDEX IF NOT EXISTS venues_public_verified_city_idx
   ON public.venues (publication_status, verification_status, city);
-CREATE INDEX IF NOT EXISTS opportunities_public_verified_starts_idx
-  ON public.opportunities (publication_status, verification_status, starts_at);
+CREATE INDEX IF NOT EXISTS opportunities_public_verified_city_idx
+  ON public.opportunities (publication_status, verification_status, city);
 CREATE INDEX IF NOT EXISTS coaches_public_verified_city_idx
   ON public.coaches (publication_status, verification_status, city);
 
