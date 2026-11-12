@@ -39,10 +39,9 @@ export default function HostDashboardPage({ onNavigate, onOpenIntake }: HostDash
 
       <div className="host-dashboard-empty-state">
         <SiteIcon name="pause" size={34} />
-        <h2>Listing payments and host payouts are paused</h2>
+        <h2>Directory listings are free</h2>
         <p>
-          Listing plans, renewals, checkout, payment history, balances and payouts are unavailable while payment
-          development is paused. No payment will be requested or recorded through this dashboard.
+          Venue, coach, academy and opportunity submissions do not require a paid plan. Submit accurate information and supporting evidence for moderator review. Venue bookings and any future commercial services are separate from directory publication.
         </p>
       </div>
     </section>
