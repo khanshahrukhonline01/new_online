@@ -118,7 +118,7 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-moderation-lifecycle-flow.sql
       - name: Test Phase 3.1 category-specific publication integrity
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-1-publication-category-flow.sql
-      - name: Test anonymous directory reads require evidence verification
+      - name: Assert anonymous users can read verified listings only
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-2-public-directory-verification.sql
       - name: Validate SQL migration safety
         shell: bash
