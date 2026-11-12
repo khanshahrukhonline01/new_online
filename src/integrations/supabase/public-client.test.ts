@@ -368,7 +368,7 @@ describe('public catalogue client', () => {
       city: 'Delhi',
     })
     expect(result.status).toBe('unavailable')
-    if (result.status === 'unavailable') expect(result.message).toContain('403')
+    if (result.status === 'unavailable') expect(result.message).toContain('HTTP 403')
   })
 
   it('handles pickup game RSVP spot reservations, WhatsApp group link retrieval, and match locking', async () => {
