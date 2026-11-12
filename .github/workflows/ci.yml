@@ -106,6 +106,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110160000_phase_3_listing_moderation_publication_system.sql
       - name: Apply Phase 3.1 publication integrity and admin control panel
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261111100000_phase_3_1_publication_integrity_admin_control_panel.sql
+      - name: Require evidence verification for public directory reads
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112130000_require_verified_status_for_public_directory_rls.sql
       - name: Verify Phase 3.1 evidence, role and publication integrity
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-1-integrity-assertions.sql
       - name: Verify Phase 3 moderation and publication assertions
@@ -114,6 +116,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-moderation-lifecycle-flow.sql
       - name: Test Phase 3.1 category-specific publication integrity
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-1-publication-category-flow.sql
+      - name: Test anonymous directory reads require evidence verification
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-2-public-directory-verification.sql
       - name: Validate SQL migration safety
         shell: bash
         run: |
