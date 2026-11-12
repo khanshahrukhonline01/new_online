@@ -79,7 +79,7 @@ describe('CoachesPage & coachesData', () => {
     })
 
     it('renders accessible dialog with form fields, coach details, and privacy note when open', () => {
-      const coach = VERIFIED_COACHES[0]
+      const coach = COACH_FIXTURE
       const html = renderToStaticMarkup(
         <CoachInquiryModal coach={coach} isOpen={true} onClose={vi.fn()} />
       )
