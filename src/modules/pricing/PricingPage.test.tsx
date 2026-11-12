@@ -67,7 +67,7 @@ describe('PricingPage Component', () => {
     }
     expect(html).toContain('Free Venue Listing')
     expect(html).toContain('No listing subscription or checkout')
-    expect(html).toContain('Directory submissions are free. Listing verification is not for sale.')
+    expect(html).toContain('Venue, coach and trial listings are free. Verification is not for sale.')
     expect(html).not.toContain('Featured #1 placement')
   })
 
