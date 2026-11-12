@@ -8,7 +8,6 @@ import {
   VENUE_PLANS,
   ORGANIZER_BOOST_PLANS,
   PRICING_FAQS,
-  PRICING_TESTIMONIALS,
   type AudienceSegment,
   type BillingCycle,
   type PricingPlan,
@@ -119,7 +118,7 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
           <div className="pricing-hero-title-box">
             <div className="pricing-badge-pill">
               <SiteIcon name="sparkles" size={14} />
-              <span>Direct UPI Instant Checkout · Zero Hidden Fees</span>
+              <span>Free directory listings · Memberships are separate</span>
             </div>
             <h1 id="pricing-heading" className="pricing-hero-title">
               Simple, Transparent Sports Memberships
@@ -128,28 +127,26 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
               खिलाड़ियों, अकादमियों, टर्फ ग्राउंड्स और आयोजकों के लिए पारदर्शी सदस्यता योजनाएं
             </p>
             <p className="pricing-hero-sub">
-              Empowering India’s grassroots athletes to unlock verified scout attention, and helping academies
-              and turf owners maximize admissions and bookings with 0% platform commissions.
+              Explore membership information and optional services. Venue, coach and trial listings are free to submit; evidence review is independent of payment, membership or promotion.
             </p>
           </div>
 
-          {/* Social Proof Stats Ribbon */}
-          <div className="pricing-stats-ribbon" role="region" aria-label="Platform reach metrics">
+          <div className="pricing-stats-ribbon" role="region" aria-label="Directory listing principles">
             <div className="stat-card">
-              <strong className="stat-num">45,000+</strong>
-              <span className="stat-lbl">Active Athletes</span>
+              <strong className="stat-num">Free</strong>
+              <span className="stat-lbl">Venue, coach &amp; trial submissions</span>
             </div>
             <div className="stat-card">
-              <strong className="stat-num">850+</strong>
-              <span className="stat-lbl">Verified Academies</span>
+              <strong className="stat-num">Evidence-led</strong>
+              <span className="stat-lbl">Review before publication</span>
             </div>
             <div className="stat-card">
-              <strong className="stat-num">0%</strong>
-              <span className="stat-lbl">Turf Commission</span>
+              <strong className="stat-num">No paid badge</strong>
+              <span className="stat-lbl">Verification is not for sale</span>
             </div>
             <div className="stat-card">
-              <strong className="stat-num">100%</strong>
-              <span className="stat-lbl">UPI Direct Pay</span>
+              <strong className="stat-num">Provider fees</strong>
+              <span className="stat-lbl">Separate from KhelGrid listing</span>
             </div>
           </div>
         </div>
@@ -450,51 +447,25 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
           <div className="trust-card">
             <SiteIcon name="shield-check" size={24} className="trust-icon" />
             <div>
-              <h4>Zero Fake Trials Guarantee</h4>
-              <p>Every trial and combine verified against official federation records. No unverified pay-to-play scams.</p>
+              <h4>Evidence-led trial review</h4>
+              <p>We review organiser identity, source details, dates and eligibility before publication. Verification is evidence-based and can be revisited if information changes.</p>
             </div>
           </div>
 
           <div className="trust-card">
             <SiteIcon name="wallet" size={24} className="trust-icon" />
             <div>
-              <h4>Direct Instant UPI &amp; Cards</h4>
-              <p>Scan with GPay, PhonePe, Paytm or BHIM. Instant digital receipt and GST tax invoice generated.</p>
+              <h4>No payment for directory listings</h4>
+              <p>Submitting and reviewing venue, coach and trial listings is free. Any athlete entry, coaching or venue hire fee belongs to the provider.</p>
             </div>
           </div>
 
           <div className="trust-card">
             <SiteIcon name="refresh" size={24} className="trust-icon" />
             <div>
-              <h4>7-Day No-Questions Refund</h4>
-              <p>Try KhelGrid Pro risk-free. If not 100% satisfied with scout visibility, request a full refund within 7 days.</p>
+              <h4>Clear fee information</h4>
+              <p>We do not assume an event is free when its athlete entry fee is unknown. Provider charges are shown only when disclosed by the organiser or venue.</p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 7. ATHLETE & COACH TESTIMONIALS */}
-      <section className="pricing-testimonials-section" aria-labelledby="testimonials-heading">
-        <div className="pricing-testimonials-inner">
-          <h2 id="testimonials-heading" className="testimonials-title">
-            Trusted by Grassroots Khiladis &amp; Academy Directors
-          </h2>
-          <div className="testimonials-grid">
-            {PRICING_TESTIMONIALS.map((t, idx) => (
-              <div key={idx} className="testimonial-card">
-                <p className="testimonial-quote">“{t.quote}”</p>
-                <div className="testimonial-author-row">
-                  <div className="author-avatar">
-                    <SiteIcon name="user-round" size={18} />
-                  </div>
-                  <div>
-                    <strong className="author-name">{t.author}</strong>
-                    <span className="author-role">{t.role} · {t.sport}</span>
-                    <span className="author-loc">{t.location}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
