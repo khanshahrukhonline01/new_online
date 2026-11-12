@@ -455,7 +455,7 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
           <div className="trust-card">
             <SiteIcon name="wallet" size={24} className="trust-icon" />
             <div>
-              <h4>No payment for directory listings</h4>
+              <h4>No payment for venue, coach or trial listings</h4>
               <p>Submitting and reviewing venue, coach and trial listings is free. Any athlete entry, coaching or venue hire fee belongs to the provider.</p>
             </div>
           </div>
