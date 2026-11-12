@@ -12,7 +12,7 @@ The following community directory submissions are free:
 
 There is no listing submission fee, listing subscription, paid verification tier, paid approval, paid ranking or checkout requirement for these categories.
 
-This policy concerns listing submission and publication. It does not waive an independent organiser's athlete registration fee, a venue's own hire charge, or a coach's own training fee. Such charges must be clearly attributed to the provider and must not be presented as KhelGrid fees.
+This policy concerns the free submission and evidence-review process for venues, coaches and sports trials. It does not waive an independent organiser's athlete registration fee, a venue's own hire charge, a coach's own training fee, or any separately offered commercial membership or service. Such charges must be clearly attributed to the provider and must not be presented as KhelGrid listing fees.
 
 ## 2. Verification is not monetisation
 
