@@ -1150,9 +1150,15 @@ export async function submitListingIntake(input: ListingSubmissionInput & { subm
     } | null
 
     if (!response.ok) {
+      if (response.status === 404) {
+        return { status: 'unavailable', message: 'The private listing intake RPC is not installed on this database yet. No listing was submitted.' }
+      }
+      if (response.status >= 500) {
+        return { status: 'unavailable', message: 'We could not submit this suggestion. Please try again later.' }
+      }
       return {
         status: 'unavailable',
-        message: data?.message || data?.details || `The private review queue could not accept this submission (HTTP ${response.status}). No listing was submitted.`,
+        message: `The private review queue rejected this submission (HTTP ${response.status}). No listing was submitted.`,
       }
     }
 
