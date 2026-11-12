@@ -1149,6 +1149,13 @@ export async function submitListingIntake(input: ListingSubmissionInput & { subm
       details?: string
     } | null
 
+    if (data?.status === 'rate_limited') {
+      return {
+        status: 'unavailable',
+        message: data.message || 'Too many listing submissions from this connection. Please wait a minute and try again.',
+      }
+    }
+
     if (!response.ok) {
       if (response.status === 404) {
         return { status: 'unavailable', message: 'The private listing intake RPC is not installed on this database yet. No listing was submitted.' }
