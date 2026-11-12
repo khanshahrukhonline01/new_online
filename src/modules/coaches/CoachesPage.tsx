@@ -214,7 +214,7 @@ export function CoachesPage({ onNavigate }: CoachesPageProps) {
         title="Are you a sports coach? Get listed at no charge."
         description="Submit your professional profile and qualification evidence. KhelGrid reviews credentials before publishing a verified claim."
         buttonLabel="Submit coach listing"
-        buttonHref="/submit-listing"
+        buttonHref="/submit-listing?type=coach"
         onNavigate={onNavigate}
       />
 
