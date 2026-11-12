@@ -1077,34 +1077,90 @@ export async function submitListingSuggestion(input: ListingSubmissionInput): Pr
 
 /** Submit a suggestion without granting browser clients direct table INSERT access. */
 export async function submitListingIntake(input: ListingSubmissionInput & { submitter_email?: string }): Promise<ListingSubmissionResult> {
-  const client = getSupabaseClient()
-  if (!client) return { status: 'unconfigured' }
+  if (!supabaseUrl || !anonKey) return { status: 'unconfigured' }
+
+  const allowedTypes: ListingSubmissionInput['listing_type'][] = [
+    'opportunity', 'venue', 'coach', 'academy', 'event', 'pickup_game', 'sport',
+  ]
+  const title = input.title.trim()
+  const city = input.city?.trim() || ''
+  const details = input.details?.trim() || ''
+  const sourceUrl = input.source_url?.trim() || ''
+  const submitterEmail = input.submitter_email?.trim() || ''
+
+  if (!allowedTypes.includes(input.listing_type)) {
+    return { status: 'unavailable', message: 'Choose a supported listing category.' }
+  }
+  if (title.length < 2 || title.length > 150) {
+    return { status: 'unavailable', message: 'Listing title must contain between 2 and 150 characters.' }
+  }
+  if (city.length > 100 || details.length > 2000 || sourceUrl.length > 1000 || submitterEmail.length > 255) {
+    return { status: 'unavailable', message: 'One or more listing fields exceed the allowed length.' }
+  }
+  if (sourceUrl) {
+    try {
+      if (new URL(sourceUrl).protocol !== 'https:') throw new Error('HTTPS required')
+    } catch {
+      return { status: 'unavailable', message: 'Please provide a valid HTTPS source link, or leave it blank if unavailable.' }
+    }
+  }
 
   try {
-    const { data, error } = await client.rpc('submit_listing_intake', {
-      p_listing_type: input.listing_type,
-      p_title: input.title.trim(),
-      p_city: input.city?.trim() || null,
-      p_source_url: input.source_url?.trim() || null,
-      p_details: input.details?.trim() || null,
-      p_submitter_email: input.submitter_email?.trim() || null,
-    })
+    const baseUrl = new URL(supabaseUrl)
+    if (baseUrl.protocol !== 'https:' && baseUrl.hostname !== 'localhost' && baseUrl.hostname !== '127.0.0.1') {
+      return { status: 'unavailable', message: 'The submission service must use HTTPS.' }
+    }
 
-    if (error) {
-      return {
-        status: 'unavailable',
-        message: error.message || 'The private listing review queue could not accept this submission. No listing was submitted.',
+    // Preserve a signed-in user's identity where available; anonymous users use the public key.
+    let bearerToken = anonKey
+    const client = getSupabaseClient()
+    if (client) {
+      try {
+        const { data } = await client.auth.getSession()
+        if (data.session?.access_token) bearerToken = data.session.access_token
+      } catch {
+        // Anonymous public intake remains available if session lookup is unavailable.
       }
     }
 
-    if (data && typeof data === 'object') {
-      const res = data as { status?: string; reference_number?: string; tracking_key?: string }
-      if (res.status === 'submitted' && res.reference_number && res.tracking_key) {
-        return {
-          status: 'submitted',
-          reference_number: res.reference_number,
-          tracking_key: res.tracking_key,
-        }
+    const response = await fetch(`${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/submit_listing_intake`, {
+      method: 'POST',
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${bearerToken}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        p_listing_type: input.listing_type,
+        p_title: title,
+        p_city: city || null,
+        p_source_url: sourceUrl || null,
+        p_details: details || null,
+        p_submitter_email: submitterEmail || null,
+      }),
+    })
+
+    const data = await response.json().catch(() => null) as {
+      status?: string
+      reference_number?: string
+      tracking_key?: string
+      message?: string
+      details?: string
+    } | null
+
+    if (!response.ok) {
+      return {
+        status: 'unavailable',
+        message: data?.message || data?.details || `The private review queue could not accept this submission (HTTP ${response.status}). No listing was submitted.`,
+      }
+    }
+
+    if (data?.status === 'submitted' && data.reference_number && data.tracking_key) {
+      return {
+        status: 'submitted',
+        reference_number: data.reference_number,
+        tracking_key: data.tracking_key,
       }
     }
 
