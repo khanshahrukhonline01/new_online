@@ -3,7 +3,6 @@ export type PaymentItemType =
   | 'venue_booking'
   | 'trial_registration'
   | 'athlete_verification'
-  | 'listing_plan'
   | 'membership'
 
 export type { ListingPlanId, ListingPlan } from './listingPricing'
