@@ -410,6 +410,11 @@ export default function VenuesPage({ onNavigate }: VenuesPageProps = {}) {
                               <SiteIcon name="clock" size={14} /> {venue.timezone}
                             </span>
                           </div>
+                          {venue.source_url && /^https:\/\//i.test(venue.source_url) && (
+                            <a className="text-link venue-source-link" href={venue.source_url} target="_blank" rel="noopener noreferrer">
+                              <SiteIcon name="external-link" size={14} /> Official source{venue.source_name ? ` · ${venue.source_name}` : ''}
+                            </a>
+                          )}
                           <a
                             className="card-action"
                             href={`/venues/${encodeURIComponent(venue.slug)}`}
