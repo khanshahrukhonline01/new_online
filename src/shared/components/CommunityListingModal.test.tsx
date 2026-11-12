@@ -79,12 +79,12 @@ describe('CommunityListingModal', () => {
     expect(html).toContain('Contact WhatsApp / Phone *')
   })
 
-  it('clearly states that listing suggestions are free and paid plans are disabled', () => {
+  it('clearly states that directory submissions are free and evidence reviewed', () => {
     const html = renderToStaticMarkup(
       <CommunityListingModal isOpen={true} onClose={vi.fn()} defaultCategory="venue" />
     )
-    expect(html).toContain('Listing suggestions are currently free.')
-    expect(html).toContain('Paid listing plans and checkout are disabled')
+    expect(html).toContain('Directory submissions are free.')
+    expect(html).toContain('no listing payment or subscription is required')
     expect(html).not.toContain('₹99')
     expect(html).not.toContain('VIP Lifetime')
   })
