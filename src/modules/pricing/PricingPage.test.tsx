@@ -97,7 +97,7 @@ describe('PricingPage Component', () => {
     const html = renderToStaticMarkup(<PricingPage />)
 
     expect(html).toContain('Evidence-led trial review')
-    expect(html).toContain('No payment for directory listings')
+    expect(html).toContain('No payment for venue, coach or trial listings')
     expect(html).toContain('Clear fee information')
   })
 
