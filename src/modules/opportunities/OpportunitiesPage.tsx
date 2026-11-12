@@ -248,9 +248,9 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
 
       <DirectoryCallout
         variant="opportunity"
-        tag="Free Post"
-        title="Organising a sports trial? Post for Free"
-        description="Broadcast trial dates, age criteria, and circulars across 50+ cities."
+        tag="Free trial listing"
+        title="Organising a sports trial? List it free on KhelGrid."
+        description="Share trial dates, eligibility and the organiser’s official notice. Submitting a trial listing is free; evidence is reviewed before publication."
         buttonLabel="Submit a trial"
         buttonHref={onOpenIntake ? '#' : 'mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial%20or%20opportunity'}
         onButtonClick={onOpenIntake}
@@ -309,10 +309,13 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
                                 ₹{item.registration_fee} Entry Fee
                               </span>
                             )}
-                            {(item.registration_fee === 0 || item.registration_fee === undefined) && (
+                            {item.registration_fee === 0 && (
                               <span className="tag" style={{ color: '#16a34a', borderColor: 'rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)' }}>
-                                ₹0 Free Entry
+                                ₹0 Athlete Entry
                               </span>
+                            )}
+                            {item.registration_fee === undefined && (
+                              <span className="tag">Athlete entry fee not disclosed</span>
                             )}
                             {Boolean(item.available_spots) && (
                               <span className="tag" style={{ color: '#2563eb', borderColor: 'rgba(37,99,235,0.3)', background: 'rgba(37,99,235,0.08)' }}>
