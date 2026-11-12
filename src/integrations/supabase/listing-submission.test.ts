@@ -66,6 +66,21 @@ describe('listing suggestion submission', () => {
     expect(String(options?.body)).not.toContain('reviewed_by')
   })
 
+  it('shows server-side rate limiting without treating the listing as submitted', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({
+      status: 'rate_limited',
+      message: 'Too many listing submissions from this connection. Please wait a minute and try again.',
+    }), { status: 200 }))
+    const client = await loadClient()
+    const result = await client.submitListingSuggestion({
+      listing_type: 'venue', title: 'Test venue', source_url: 'https://example.org',
+    })
+    expect(result).toEqual({
+      status: 'unavailable',
+      message: 'Too many listing submissions from this connection. Please wait a minute and try again.',
+    })
+  })
+
   it('reports missing database migration without pretending the submission succeeded', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response('not found', { status: 404 }))
     const client = await loadClient()
