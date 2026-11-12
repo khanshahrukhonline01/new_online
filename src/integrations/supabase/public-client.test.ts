@@ -102,6 +102,7 @@ describe('public catalogue client', () => {
     const url = new URL(String(requestUrl))
     expect(url.pathname).toBe(`/rest/v1/${table}`)
     expect(url.searchParams.get(filterKey)).toBe(filterValue)
+    if (table !== 'sports') expect(url.searchParams.get('verification_status')).toBe('eq.verified')
     expect(url.searchParams.get('limit')).toBe('500')
     expect(options?.headers).toMatchObject({
       apikey: anonKey,
