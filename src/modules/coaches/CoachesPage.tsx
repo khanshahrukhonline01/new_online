@@ -61,7 +61,7 @@ export function CoachesPage({ onNavigate }: CoachesPageProps) {
           languages: c.languages || [],
           rating: Number(c.rating || 0),
           reviewCount: c.review_count ?? c.reviewCount ?? 0,
-          verifiedBadge: c.verified_badge || c.verifiedBadge || 'Evidence reviewed',
+          verifiedBadge: 'Evidence reviewed',
           websiteUrl: c.website_url || undefined,
           publicContactUrl: c.public_contact_url || undefined,
           bio: c.bio || '',
