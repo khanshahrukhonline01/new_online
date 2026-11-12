@@ -813,7 +813,7 @@ export default function CommunityListingModal({
                 </div>
 
               <p className="community-intake-payment-note" role="note">
-                Directory submissions are free. Venues, coaches, academies and sports opportunities are reviewed for evidence; no listing payment or subscription is required.
+                Venue, coach and sports-trial submissions are free. No listing payment or subscription is required for these categories; optional memberships and provider services are separate from evidence review.
               </p>
               <div className="community-intake-actions">
                 <button
