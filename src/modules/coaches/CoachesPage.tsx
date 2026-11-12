@@ -62,6 +62,8 @@ export function CoachesPage({ onNavigate }: CoachesPageProps) {
           rating: Number(c.rating || 0),
           reviewCount: c.review_count ?? c.reviewCount ?? 0,
           verifiedBadge: c.verified_badge || c.verifiedBadge || 'Evidence reviewed',
+          websiteUrl: c.website_url || undefined,
+          publicContactUrl: c.public_contact_url || undefined,
           bio: c.bio || '',
           availableForOneOnOne: c.available_one_on_one ?? c.availableForOneOnOne ?? false,
           availableForBatches: c.available_batches ?? c.availableForBatches ?? false,
@@ -366,6 +368,11 @@ export function CoachesPage({ onNavigate }: CoachesPageProps) {
                 {/* Coach Name & Certification */}
                 <h2 className="coach-name">{coach.name}</h2>
                 <div className="coach-cert-line">{coach.certification}</div>
+                {(coach.websiteUrl || coach.publicContactUrl) && /^https:\/\//i.test(coach.websiteUrl || coach.publicContactUrl || '') && (
+                  <a className="coach-source-link" href={coach.websiteUrl || coach.publicContactUrl} target="_blank" rel="noopener noreferrer">
+                    <SiteIcon name="external-link" size={13} /> Professional source
+                  </a>
+                )}
 
                 {/* Metadata List */}
                 <div className="coach-meta-list">
