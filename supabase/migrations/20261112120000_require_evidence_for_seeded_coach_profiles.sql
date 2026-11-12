@@ -6,8 +6,7 @@ BEGIN;
 UPDATE public.coaches
 SET
   publication_status = 'draft',
-  verification_status = 'unverified',
-  updated_at = now()
+  verification_status = 'unverified'
 WHERE slug IN (
   'chandrakant-pandit',
   'tarak-sinha',
