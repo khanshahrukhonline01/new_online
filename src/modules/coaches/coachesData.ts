@@ -32,6 +32,8 @@ export interface VerifiedCoach {
   rating: number
   reviewCount: number
   verifiedBadge: string
+  websiteUrl?: string
+  publicContactUrl?: string
   bio: string
   availableForOneOnOne: boolean
   availableForBatches: boolean
