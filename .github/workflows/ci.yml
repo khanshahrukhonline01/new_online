@@ -114,6 +114,12 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112120000_require_evidence_for_seeded_coach_profiles.sql
       - name: Require evidence verification for public directory reads
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112130000_require_verified_status_for_public_directory_rls.sql
+      - name: Synchronize verified status to existing catalogue rows
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112145000_sync_verified_listing_publication.sql
+      - name: Seed legacy catalogue review fixtures
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-4-legacy-directory-fixture.sql
+      - name: Queue legacy unverified directory records for review
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112150000_queue_legacy_unverified_directory_records.sql
       - name: Verify Phase 3.1 evidence, role and publication integrity
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-1-integrity-assertions.sql
       - name: Verify Phase 3 moderation and publication assertions
@@ -126,6 +132,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-2-public-directory-verification.sql
       - name: Test anonymous listing intake validation and rate limiting
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-3-listing-intake-hardening.sql
+      - name: Test legacy directory review queue and verified publication sync
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-4-legacy-directory-review.sql
       - name: Validate SQL migration safety
         shell: bash
         run: |
