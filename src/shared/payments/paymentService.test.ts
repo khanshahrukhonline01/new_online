@@ -424,7 +424,7 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
   })
 
   describe('recordListingSubscription', () => {
-    it('rejects all new paid listing subscriptions without calling the payment API', async () => {
+    it('rejects new paid listing subscriptions without calling the payment API', async () => {
       const fetchSpy = vi.spyOn(globalThis, 'fetch')
       const sub = await recordListingSubscription({
         orderId: 'KG_ORD_SUB_DISABLED',
