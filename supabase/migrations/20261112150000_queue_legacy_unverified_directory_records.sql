@@ -10,8 +10,8 @@ WITH legacy_records AS (
     v.name AS title,
     CASE WHEN char_length(v.city) <= 100 THEN v.city ELSE NULL END AS city,
     CASE
-      WHEN v.source_url ~* '^https://' AND char_length(v.source_url) <= 1000 AND v.source_url !~ '[[:space:]]'
-      THEN v.source_url ELSE NULL
+      WHEN (to_jsonb(v)->>'source_url') ~* '^https://' AND char_length(to_jsonb(v)->>'source_url') <= 1000 AND (to_jsonb(v)->>'source_url') !~ '[[:space:]]'
+      THEN to_jsonb(v)->>'source_url' ELSE NULL
     END AS source_url,
     left(concat_ws(E'\n',
       'Legacy KhelGrid venue record imported for independent evidence review.',
@@ -23,9 +23,9 @@ WITH legacy_records AS (
       'legacy_source_table', 'venues',
       'name', v.name,
       'city', v.city,
-      'address', v.address,
-      'description', v.description,
-      'source_url', v.source_url
+      'address', to_jsonb(v)->>'address',
+      'description', to_jsonb(v)->>'description',
+      'source_url', to_jsonb(v)->>'source_url'
     ) AS structured_data
   FROM public.venues v
   WHERE coalesce(v.verification_status, 'unverified') IN ('unverified', 'pending_review')
@@ -40,8 +40,8 @@ WITH legacy_records AS (
     c.display_name,
     CASE WHEN char_length(c.city) <= 100 THEN c.city ELSE NULL END,
     CASE
-      WHEN c.website_url ~* '^https://' AND char_length(c.website_url) <= 1000 AND c.website_url !~ '[[:space:]]'
-      THEN c.website_url ELSE NULL
+      WHEN (to_jsonb(c)->>'website_url') ~* '^https://' AND char_length(to_jsonb(c)->>'website_url') <= 1000 AND (to_jsonb(c)->>'website_url') !~ '[[:space:]]'
+      THEN to_jsonb(c)->>'website_url' ELSE NULL
     END,
     left(concat_ws(E'\n',
       'Legacy KhelGrid coach record imported for independent credential review.',
@@ -53,9 +53,9 @@ WITH legacy_records AS (
       'legacy_source_table', 'coaches',
       'display_name', c.display_name,
       'city', c.city,
-      'bio', c.bio,
-      'qualifications', c.qualifications,
-      'website_url', c.website_url
+      'bio', to_jsonb(c)->>'bio',
+      'qualifications', to_jsonb(c)->>'qualifications',
+      'website_url', to_jsonb(c)->>'website_url'
     )
   FROM public.coaches c
   WHERE coalesce(c.verification_status, 'unverified') IN ('unverified', 'pending_review')
@@ -71,8 +71,8 @@ WITH legacy_records AS (
     o.title,
     CASE WHEN char_length(o.city) <= 100 THEN o.city ELSE NULL END,
     CASE
-      WHEN o.source_url ~* '^https://' AND char_length(o.source_url) <= 1000 AND o.source_url !~ '[[:space:]]'
-      THEN o.source_url ELSE NULL
+      WHEN (to_jsonb(o)->>'source_url') ~* '^https://' AND char_length(to_jsonb(o)->>'source_url') <= 1000 AND (to_jsonb(o)->>'source_url') !~ '[[:space:]]'
+      THEN to_jsonb(o)->>'source_url' ELSE NULL
     END,
     left(concat_ws(E'\n',
       'Legacy KhelGrid sports-trial/opportunity record imported for independent source review.',
@@ -84,11 +84,11 @@ WITH legacy_records AS (
       'legacy_source_table', 'opportunities',
       'title', o.title,
       'city', o.city,
-      'opportunity_type', o.opportunity_type,
-      'organizer_name', o.organizer_name,
-      'venue_name', o.venue_name,
-      'source_name', o.source_name,
-      'source_url', o.source_url
+      'opportunity_type', to_jsonb(o)->>'opportunity_type',
+      'organizer_name', to_jsonb(o)->>'organizer_name',
+      'venue_name', to_jsonb(o)->>'venue_name',
+      'source_name', to_jsonb(o)->>'source_name',
+      'source_url', to_jsonb(o)->>'source_url'
     )
   FROM public.opportunities o
   WHERE coalesce(o.verification_status, 'unverified') IN ('unverified', 'pending_review')
