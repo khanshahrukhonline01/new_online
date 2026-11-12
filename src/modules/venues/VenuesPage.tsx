@@ -214,8 +214,8 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
         title="Run a sports venue? Add it to KhelGrid for free."
         description="Submit your venue details and public evidence. We review the information before publishing; no listing payment or subscription is required."
         buttonLabel="List your venue"
-        buttonHref={onOpenIntake ? '#' : 'mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue%20on%20KhelGrid'}
-        onButtonClick={onOpenIntake}
+        buttonHref="/submit-listing"
+        onNavigate={onNavigate}
       />
       <div className="kg-catalogue-layout">
         <CatalogueFilterPanel
