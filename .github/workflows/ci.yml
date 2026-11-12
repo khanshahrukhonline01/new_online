@@ -109,7 +109,7 @@ jobs:
       - name: Allow anonymous public listing intake
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112125000_allow_anonymous_listing_intake.sql
       - name: Harden public listing intake validation and rate limiting
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112135000_harden_public_listing_intake_rpc.sql
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112140000_harden_public_listing_intake_rpc.sql
       - name: Apply coach profile evidence cleanup
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112120000_require_evidence_for_seeded_coach_profiles.sql
       - name: Require evidence verification for public directory reads
