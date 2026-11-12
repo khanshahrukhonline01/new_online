@@ -214,7 +214,7 @@ export default function VenuesPage({ onNavigate }: VenuesPageProps = {}) {
         title="Run a sports venue? Add it to KhelGrid for free."
         description="Submit your venue details and public evidence. We review the information before publishing; no listing payment or subscription is required."
         buttonLabel="List your venue"
-        buttonHref="/submit-listing"
+        buttonHref="/submit-listing?type=venue"
         onNavigate={onNavigate}
       />
       <div className="kg-catalogue-layout">
