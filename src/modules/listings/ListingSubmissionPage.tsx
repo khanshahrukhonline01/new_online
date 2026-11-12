@@ -411,7 +411,7 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
             <div className="state-symbol">!</div>
             <h2>Publication requires verified moderation</h2>
             <p>
-              Submitting a listing is free and does not buy approval or a verified badge. Only listings that meet the evidence and publication requirements are added to KhelGrid's public catalogue.
+              Venue, coach and sports-trial submissions are free and do not buy approval or a verified badge. Only listings that meet the evidence and publication requirements are added to KhelGrid's public catalogue.
             </p>
           </div>
         </>
