@@ -300,7 +300,7 @@ async function fetchOpportunitiesCatalogue(): Promise<CatalogueResult<Opportunit
     order: 'is_featured.desc.nullslast,starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (featured.status === 'ready') return featured
@@ -311,7 +311,7 @@ async function fetchOpportunitiesCatalogue(): Promise<CatalogueResult<Opportunit
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (rich.status === 'ready') return rich
@@ -322,7 +322,7 @@ async function fetchOpportunitiesCatalogue(): Promise<CatalogueResult<Opportunit
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
 }
@@ -351,7 +351,7 @@ async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
     table: 'venues',
     select: enrichedFields,
     order: 'is_featured.desc.nullslast,name.asc',
-    filters: { publication_status: 'eq.published' },
+    filters: { publication_status: 'eq.published', verification_status: 'eq.verified' },
   })
   if (featured.status === 'ready') return featured
 
@@ -359,7 +359,7 @@ async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
     table: 'venues',
     select: baseFields,
     order: 'is_featured.desc.nullslast,name.asc',
-    filters: { publication_status: 'eq.published' },
+    filters: { publication_status: 'eq.published', verification_status: 'eq.verified' },
   })
   if (base.status === 'ready') return base
 
@@ -367,7 +367,7 @@ async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
     table: 'venues',
     select: baseFields,
     order: 'name.asc',
-    filters: { publication_status: 'eq.published' },
+    filters: { publication_status: 'eq.published', verification_status: 'eq.verified' },
   })
 }
 
