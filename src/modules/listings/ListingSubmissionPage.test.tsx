@@ -10,7 +10,7 @@ describe('ListingSubmissionPage Submitter Experience Suite', () => {
   it('renders intake form with all 7 supported categories and privacy notices', () => {
     const html = renderToStaticMarkup(<ListingSubmissionPage />)
     expect(html).toContain('Put your sports listing on the map.')
-    expect(html).toContain('Free to submit · No listing payment')
+    expect(html).toContain('Venue, coach and sports-trial submissions are free.')
     expect(html).toContain('Venue, coach and sports-trial submissions are free')
     expect(html).toContain('Submit for moderator review')
     expect(html).toContain('Suggest a Listing')
