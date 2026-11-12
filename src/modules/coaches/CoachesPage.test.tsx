@@ -108,56 +108,20 @@ describe('CoachesPage & coachesData', () => {
   })
 
   describe('CoachesPage rendering', () => {
-    it('renders page header, KPI ribbon, onboarding banner, sport tabs, filters, and coach cards', () => {
+    it('renders a free coach submission path and evidence-led directory without invented headline metrics', () => {
       const html = renderToStaticMarkup(
         <CoachesPage onNavigate={vi.fn()} onOpenCoachIntake={vi.fn()} />
       )
 
-      // Eyebrow and Page Title
-      expect(html).toContain('Verified Grassroots &amp; Elite Mentors')
-      expect(html).toContain('Dedicated Certified Coaches Directory')
-      expect(html).toContain('Find and connect directly with certified Indian sports coaches')
-
-      // KPI Ribbon
-      expect(html).toContain('850+ Coaches')
-      expect(html).toContain('SAI · BCCI · AFC')
-      expect(html).toContain('12 Disciplines')
-      expect(html).toContain('⭐ 4.9 / 5.0')
-
-      // Onboarding Banner
-      expect(html).toContain('Are you a certified sports coach in India?')
-      expect(html).toContain('Get Listed as a Coach')
-
-      // Sport horizontal pills
+      expect(html).toContain('Find a coach. Check the credentials.')
+      expect(html).toContain('Free coach listing')
+      expect(html).toContain('Submit coach listing')
+      expect(html).toContain('qualification evidence')
       expect(html).toContain('All Sports')
-      expect(html).toContain('Cricket')
-      expect(html).toContain('Badminton')
-      expect(html).toContain('Football')
-      expect(html).toContain('Athletics')
-      expect(html).toContain('Boxing')
-      expect(html).toContain('Wrestling')
-
-      // Controls
       expect(html).toContain('Search by coach name, academy, specialty')
-      expect(html).toContain('SAI / NIS Patiala Diploma')
-      expect(html).toContain('BCCI Level 1–3 (Cricket)')
-      expect(html).toContain('AIFF / AFC Licences (Football)')
-      expect(html).toContain('Sort: Experience (High to Low)')
-
-      // Baseline Coach Cards
-      expect(html).toContain('Coach Rajeev Sharma')
-      expect(html).toContain('Pace Bowling Biomechanics')
-      expect(html).toContain('Coach Manisha Ponnappa')
-      expect(html).toContain('Padukone-Dravid Centre of Sports Excellence')
-      expect(html).toContain('Coach Subhashish Sengupta')
-      expect(html).toContain('Coach Gurpreet Singh Sandhu')
-      expect(html).toContain('Coach Mary L. Komalata')
-      expect(html).toContain('Coach Devendra Rathi')
-      expect(html).toContain('Chhatrasal Akhada Training Program')
-
-      // Action buttons
-      expect(html).toContain('Connect with Coach')
-      expect(html).toContain('Student Track Record')
+      expect(html).not.toContain('850+ Coaches')
+      expect(html).not.toContain('⭐ 4.9 / 5.0')
+      expect(html).not.toContain('53 Indian cities')
     })
   })
 })
