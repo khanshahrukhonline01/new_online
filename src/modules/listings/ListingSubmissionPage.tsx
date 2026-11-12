@@ -255,7 +255,7 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
             <span className="listing-free-icon"><SiteIcon name="shield-check" size={20} /></span>
             <div>
               <strong>Free to submit · No listing payment</strong>
-              <p>Venue, coach, academy and sports-trial listings are free. There is no listing subscription, checkout or payment step. KhelGrid reviews the information and supporting evidence before publication.</p>
+              <p>Venue, coach and sports-trial submissions are free. No listing payment, subscription or checkout is required for these categories. Other services and optional memberships are separate. KhelGrid reviews supporting evidence before publication.</p>
             </div>
           </div>
           <div className="cv-privacy-note" role="note">
