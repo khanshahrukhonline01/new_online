@@ -624,7 +624,7 @@ npm run lint
 - **`fetchCoaches(options)`**:
   - Direct PostgreSQL REST query against `public.coaches` selecting enriched fields: `sport`, `sport_category`, `avatar_url`, `certification`, `credential_authority`, `authority_label`, `experience_years`, `monthly_fee`, `fee_range_category`, `student_track_record`, `specialties`, `languages`, `rating`, `review_count`, `verified_badge`, `available_for_one_on_one`, `available_for_batches`.
   - Supports server-side filtering: `sport=eq.${sport}`, `city=eq.${city}`, `credential_authority=eq.${credential}`, and `fee_range_category=eq.${feeRange}`.
-  - Graceful fallback to `VERIFIED_COACHES` baseline when unconfigured or offline.
+  - No hard-coded coach fallback: unconfigured or offline states remain explicit, and only published records with `verification_status = 'verified'` are returned.
 - **`submitCoachInquiry(input)`**:
   - Generates official inquiry tracking token format `INQ-COACH-XXXXXX`.
   - Posts payload directly to `public.coach_inquiries` via Supabase REST API (`POST /rest/v1/coach_inquiries`).
