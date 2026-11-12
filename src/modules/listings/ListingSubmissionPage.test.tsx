@@ -12,7 +12,7 @@ describe('ListingSubmissionPage Submitter Experience Suite', () => {
     expect(html).toContain('Put your sports listing on the map.')
     expect(html).toContain('Free to submit · No listing payment')
     expect(html).toContain('Venue, coach and sports-trial submissions are free')
-    expect(html).toContain('Submit free listing for review')
+    expect(html).toContain('Submit for moderator review')
     expect(html).toContain('Suggest a Listing')
     expect(html).toContain('Track Submission Status')
 
