@@ -27,7 +27,13 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
   const [activeTab, setActiveTab] = useState<'submit' | 'track'>(defaultTab)
 
   // Submission Form State
-  const [kind, setKind] = useState<ListingSubmissionInput['listing_type']>('opportunity')
+  const [kind, setKind] = useState<ListingSubmissionInput['listing_type']>(() => {
+    if (typeof window === 'undefined') return 'opportunity'
+    const requestedType = new URLSearchParams(window.location.search).get('type')
+    return listingTypes.some(item => item.id === requestedType)
+      ? requestedType as ListingSubmissionInput['listing_type']
+      : 'opportunity'
+  })
   const [title, setTitle] = useState('')
   const [city, setCity] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
