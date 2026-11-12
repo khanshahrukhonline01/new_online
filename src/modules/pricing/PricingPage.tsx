@@ -118,7 +118,7 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
           <div className="pricing-hero-title-box">
             <div className="pricing-badge-pill">
               <SiteIcon name="sparkles" size={14} />
-              <span>Free directory listings · Memberships are separate</span>
+              <span>Venue, coach &amp; trial listings are free · Memberships are separate</span>
             </div>
             <h1 id="pricing-heading" className="pricing-hero-title">
               Simple, Transparent Sports Memberships
