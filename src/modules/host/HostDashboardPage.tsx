@@ -35,7 +35,7 @@ export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps
         <SiteIcon name="pause" size={34} />
         <h2>Directory listings are free</h2>
         <p>
-          Venue, coach, academy and opportunity submissions do not require a paid plan. Submit accurate information and supporting evidence for moderator review. Venue bookings and any future commercial services are separate from directory publication.
+          Venue, coach and sports-trial submissions do not require a paid listing plan. Academy operations memberships, venue bookings and provider services are separate from evidence verification.
         </p>
       </div>
     </section>
