@@ -207,3 +207,78 @@
   padding: 1.5rem;
   margin: 1.5rem 0;
 }
+
+
+/* Free, evidence-led listing intake refresh */
+.listing-free-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  margin: 1.25rem 0;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 14px;
+  background: linear-gradient(120deg, rgba(16, 185, 129, 0.09), rgba(11, 25, 44, 0.035));
+  color: var(--text-primary, #0b192c);
+}
+.listing-free-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  color: #047857;
+  background: rgba(16, 185, 129, 0.14);
+}
+.listing-free-banner strong {
+  display: block;
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+.listing-free-banner p {
+  margin: 0;
+  color: var(--text-secondary, #475569);
+  line-height: 1.55;
+}
+.listing-category-guidance {
+  grid-column: 1 / -1;
+  margin: -0.35rem 0 0;
+  padding: 0.85rem 1rem;
+  border-left: 3px solid #10b981;
+  border-radius: 0 9px 9px 0;
+  background: rgba(16, 185, 129, 0.07);
+  color: var(--text-secondary, #475569);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.listing-submission-page .sports-cv-form {
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 16px;
+  padding: clamp(1rem, 3vw, 1.6rem);
+  background: var(--surface-card, #fff);
+  box-shadow: 0 8px 28px rgba(11, 25, 44, 0.045);
+}
+.listing-submission-page .sports-cv-form legend {
+  padding: 0 0.45rem;
+  font-weight: 800;
+  color: var(--text-primary, #0b192c);
+}
+.listing-submission-page .cv-actions .primary-link {
+  min-height: 46px;
+}
+@media (max-width: 640px) {
+  .listing-free-banner {
+    padding: 0.95rem;
+  }
+  .listing-category-guidance {
+    font-size: 0.84rem;
+  }
+  .listing-tabs-nav {
+    overflow-x: auto;
+  }
+  .listing-tab-btn {
+    white-space: nowrap;
+    padding-inline: 0.85rem;
+  }
+}
