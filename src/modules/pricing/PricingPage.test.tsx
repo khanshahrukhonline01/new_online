@@ -28,7 +28,7 @@ describe('PricingPage Component', () => {
     expect(html).toContain('Khiladi / Athlete Pass')
     expect(html).toContain('Academies &amp; Coaches')
     expect(html).toContain('Turfs &amp; Grounds')
-    expect(html).toContain('Event &amp; Trial Boost')
+    expect(html).toContain('Trials &amp; Opportunities')
     expect(html).toContain('Monthly Billing')
     expect(html).toContain('Annual Billing')
     expect(html).toContain('Save up to 50%')
