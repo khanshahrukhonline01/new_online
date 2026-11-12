@@ -32,7 +32,7 @@ export interface VenuesPageProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
-export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps = {}) {
+export default function VenuesPage({ onNavigate }: VenuesPageProps = {}) {
   const [result, setResult] = useState<CatalogueResult<Venue> | { status: 'loading'; data: [] }>({
     status: 'loading',
     data: [],
