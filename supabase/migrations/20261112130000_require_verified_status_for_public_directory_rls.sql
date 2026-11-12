@@ -37,6 +37,8 @@ CREATE POLICY events_read_published ON public.events
   FOR SELECT TO anon, authenticated
   USING (publication_status = 'published' AND verification_status = 'verified');
 
+ALTER TABLE public.venue_courts ENABLE ROW LEVEL SECURITY;
+
 DROP POLICY IF EXISTS courts_read_for_published_venues ON public.venue_courts;
 CREATE POLICY courts_read_for_published_venues ON public.venue_courts
   FOR SELECT TO anon, authenticated
@@ -46,6 +48,29 @@ CREATE POLICY courts_read_for_published_venues ON public.venue_courts
       AND v.publication_status = 'published'
       AND v.verification_status = 'verified'
   ));
+
+DO $venue_sport_policy$
+BEGIN
+  IF to_regclass('public.venue_sports') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS venue_sports_read_published_relationships ON public.venue_sports';
+    EXECUTE $policy$
+      CREATE POLICY venue_sports_read_published_relationships ON public.venue_sports
+        FOR SELECT TO anon, authenticated USING (
+          EXISTS (
+            SELECT 1 FROM public.venues v
+            WHERE v.id = venue_id
+              AND v.publication_status = 'published'
+              AND v.verification_status = 'verified'
+          )
+          AND EXISTS (
+            SELECT 1 FROM public.sports sp
+            WHERE sp.id = sport_id AND sp.is_published
+          )
+        )
+    $policy$;
+  END IF;
+END;
+$venue_sport_policy$;
 
 DROP POLICY IF EXISTS academy_sports_read_published_relationships ON public.academy_sports;
 CREATE POLICY academy_sports_read_published_relationships ON public.academy_sports
