@@ -3,10 +3,11 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import HostDashboardPage from './HostDashboardPage'
 
 describe('HostDashboardPage', () => {
-  it('does not show sample host records or accept listing-plan payments while paused', () => {
+  it('shows free directory listings without inventing host records or offering checkout', () => {
     const html = renderToStaticMarkup(<HostDashboardPage />)
     expect(html).toContain('Host tools are being prepared')
-    expect(html).toContain('Listing payments and host payouts are paused')
+    expect(html).toContain('Directory listings are free')
+    expect(html).toContain('no paid plan')
     expect(html).not.toContain('FSV Arena Bengaluru')
     expect(html).not.toContain('KG_ORD_')
     expect(html).not.toContain('Proceed to Pay')
