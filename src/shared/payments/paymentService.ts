@@ -743,50 +743,13 @@ export function getUserVenueBookings(): Array<VenueBookingResult & { createdAt?:
 }
 
 /**
- * Records an activated listing subscription (1-Day, 1-Month, 6-Month, 1-Year, Lifelong).
- * Browser clients cannot self-activate paid subscriptions. All online subscriptions require
- * verified backend payment confirmation via Edge Function or Webhook.
+ * Directory listings are free. Paid listing subscriptions are intentionally disabled;
+ * venue, coach, academy and opportunity publication is controlled by moderation evidence.
+ * Legacy database records remain untouched for historical compatibility.
  */
-export async function recordListingSubscription(input: ListingSubscriptionInput): Promise<ListingSubscriptionResult> {
-  const subRef = `SUB-${input.planId.toUpperCase()}-${Date.now().toString().slice(-6)}`
-  if (!supabaseUrl || !anonKey) {
-    return { status: 'error', message: 'Secure subscription registration is unavailable.' }
-  }
-
-  try {
-    const res = await fetch(`${supabaseUrl}/functions/v1/register-payment-intent`, {
-      method: 'POST',
-      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'register_listing_subscription',
-        order_id: input.orderId,
-        listing_type: input.listingType,
-        listing_id: input.listingId || null,
-        listing_name: input.listingName,
-        city: input.city,
-        plan_id: input.planId,
-        customer_name: input.customerName,
-        customer_phone: input.customerPhone,
-        customer_email: input.customerEmail || null,
-        payment_status: input.paymentStatus === 'pay_at_venue' ? 'pay_at_venue' : 'pending',
-        idempotency_key: input.idempotencyKey || input.orderId,
-      }),
-    })
-    const data = await res.json().catch(() => null)
-    if (!res.ok || data?.success !== true) {
-      return { status: 'error', message: data?.message || data?.error || 'Subscription registration failed.' }
-    }
-    return {
-      status: 'pending_verification',
-      subscriptionId: data.subscription_id || subRef,
-      planName: data.plan_name || input.planName,
-      expiresAt: null,
-      receiptRef: subRef,
-      accessToken: data.access_token,
-      message: 'Subscription is pending. It activates only after independent payment settlement.',
-    }
-  } catch (err) {
-    console.warn('[KhelGrid Payments] Secure subscription registration failed:', err)
-    return { status: 'error', message: 'Network error registering subscription.' }
+export async function recordListingSubscription(_input: ListingSubscriptionInput): Promise<ListingSubscriptionResult> {
+  return {
+    status: 'error',
+    message: 'KhelGrid directory listings are free. Submit the listing for evidence review; no payment or subscription is required.',
   }
 }
