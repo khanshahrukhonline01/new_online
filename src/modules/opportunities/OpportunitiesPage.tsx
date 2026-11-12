@@ -43,7 +43,7 @@ export interface OpportunitiesPageProps {
   initialApplySlug?: string
 }
 
-export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApplySlug }: OpportunitiesPageProps = {}) {
+export default function OpportunitiesPage({ onNavigate, initialApplySlug }: OpportunitiesPageProps = {}) {
   const [result, setResult] = useState<CatalogueResult<Opportunity> | { status: 'loading'; data: [] }>({
     status: 'loading',
     data: [],
@@ -241,8 +241,8 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
         title="Organising a sports trial? List it free on KhelGrid."
         description="Share trial dates, eligibility and the organiser’s official notice. Submitting a trial listing is free; evidence is reviewed before publication."
         buttonLabel="Submit a trial"
-        buttonHref={onOpenIntake ? '#' : 'mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial%20or%20opportunity'}
-        onButtonClick={onOpenIntake}
+        buttonHref="/submit-listing"
+        onNavigate={onNavigate}
       />
       <div className="kg-catalogue-layout">
         <CatalogueFilterPanel
