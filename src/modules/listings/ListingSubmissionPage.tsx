@@ -141,8 +141,12 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
       })
 
       if (result.status === 'submitted') {
-        const refNumber = result.reference_number || `KHL-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
-        const tKey = result.tracking_key || ''
+        if (!result.reference_number || !result.tracking_key) {
+          setSubmitError('The listing service did not return secure tracking credentials. No listing was marked as submitted.')
+          return
+        }
+        const refNumber = result.reference_number
+        const tKey = result.tracking_key
 
         setSubmittedData({
           referenceNumber: refNumber,
