@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { calculateVenueAdvanceDeposit, getCanonicalListingPlan, getCanonicalMembershipPrice, resolveVenueSlotPrice } from '../_shared/paymentPricing.ts'
+import { calculateVenueAdvanceDeposit, getCanonicalMembershipPrice, resolveVenueSlotPrice } from '../_shared/paymentPricing.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -110,8 +110,7 @@ serve(async (req) => {
     return json({ error: 'UNKNOWN_ACTION' }, 400)
   }
 
-  if (action === 'register_listing_subscription') {
-    const orderId = String(body.order_id || '').trim()
+  const orderId = String(body.order_id || '').trim()
     const planId = String(body.plan_id || '')
     const plan = getCanonicalListingPlan(planId)
     const listingType = String(body.listing_type || '')
