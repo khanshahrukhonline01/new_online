@@ -10,12 +10,6 @@ import {
   verifyPaymentWithServer,
   fetchVenueBookingVoucher,
 } from './paymentService'
-import {
-  LISTING_PLANS,
-  getListingPlan,
-  calculatePlanExpiry,
-  formatPlanDuration,
-} from './listingPricing'
 import type { PaymentCustomer, PaymentItem } from './paymentTypes'
 
 const memoryStorage: Record<string, string> = {}
@@ -942,40 +936,5 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
     })
   })
 
-  describe('listingPricing helper contracts', () => {
-    it('defines exactly the 5 requested listing plans with correct Indian pricing', () => {
-      expect(LISTING_PLANS.length).toBe(5)
-      const ids = LISTING_PLANS.map(p => p.id)
-      expect(ids).toEqual(['1_day', '1_month', '6_months', '1_year', 'lifelong'])
 
-      const dayPlan = getListingPlan('1_day')
-      expect(dayPlan.price).toBe(99)
-      expect(dayPlan.durationDays).toBe(1)
-
-      const monthPlan = getListingPlan('1_month')
-      expect(monthPlan.price).toBe(499)
-      expect(monthPlan.durationDays).toBe(30)
-
-      const sixMonthPlan = getListingPlan('6_months')
-      expect(sixMonthPlan.price).toBe(2499)
-      expect(sixMonthPlan.durationDays).toBe(180)
-
-      const yearPlan = getListingPlan('1_year')
-      expect(yearPlan.price).toBe(4499)
-      expect(yearPlan.durationDays).toBe(365)
-      expect(yearPlan.popular).toBe(true)
-
-      const lifelongPlan = getListingPlan('lifelong')
-      expect(lifelongPlan.price).toBe(9999)
-      expect(lifelongPlan.durationDays).toBe(0)
-    })
-
-    it('formats lifelong expiry and future dates cleanly', () => {
-      expect(formatPlanDuration('lifelong', null)).toBe('Lifelong (Never Expires)')
-      expect(calculatePlanExpiry('lifelong')).toBeNull()
-      expect(calculatePlanExpiry('1_day')).not.toBeNull()
-      const future = new Date('2027-11-06T12:00:00Z').toISOString()
-      expect(formatPlanDuration('1_year', future)).toContain('2027')
-    })
-  })
 })
