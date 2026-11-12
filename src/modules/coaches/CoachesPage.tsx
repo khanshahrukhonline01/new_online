@@ -64,7 +64,7 @@ export function CoachesPage({ onNavigate }: CoachesPageProps) {
           verifiedBadge: c.verified_badge || c.verifiedBadge || 'Evidence reviewed',
           bio: c.bio || '',
           availableForOneOnOne: c.available_one_on_one ?? c.availableForOneOnOne ?? false,
-          availableForBatches: c.available_batches ?? c.availableForBatches ?? true,
+          availableForBatches: c.available_batches ?? c.availableForBatches ?? false,
         }))
         setCoaches(mapped)
       }
