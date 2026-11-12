@@ -203,7 +203,7 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
         <div className="pricing-free-listing-note" role="note">
           <SiteIcon name="shield-check" size={20} />
           <div>
-            <strong>Directory submissions are free. Listing verification is not for sale.</strong>
+            <strong>Venue, coach and trial listings are free. Verification is not for sale.</strong>
             <p>Venue, coach and sports-trial submissions and evidence review are free. Optional memberships do not buy verification or ranking. Any venue hire or athlete entry fee belongs to the provider or organiser, not KhelGrid.</p>
           </div>
         </div>
