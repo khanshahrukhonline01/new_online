@@ -43,6 +43,13 @@ CREATE POLICY courts_read_for_published_venues ON public.venue_courts
       AND v.verification_status = 'verified'
   ));
 
+DROP POLICY IF EXISTS venue_sports_read_published_relationships ON public.venue_sports;
+CREATE POLICY venue_sports_read_published_relationships ON public.venue_sports
+  FOR SELECT TO anon, authenticated USING (
+    EXISTS (SELECT 1 FROM public.venues v WHERE v.id = venue_id AND v.publication_status = 'published' AND v.verification_status = 'verified')
+    AND EXISTS (SELECT 1 FROM public.sports sp WHERE sp.id = sport_id AND sp.is_published)
+  );
+
 DROP POLICY IF EXISTS academy_sports_read_published_relationships ON public.academy_sports;
 CREATE POLICY academy_sports_read_published_relationships ON public.academy_sports
   FOR SELECT TO anon, authenticated USING (
