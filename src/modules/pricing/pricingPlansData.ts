@@ -223,14 +223,14 @@ export interface PricingFaqItem {
 
 export const PRICING_FAQS: PricingFaqItem[] = [
   {
-    question: 'How do payments work on KhelGrid? Can I pay via UPI directly?',
+    question: 'Do I pay to submit or verify a venue, coach or trial listing?',
     hindiQuestion: 'खेलग्रिड पर भुगतान कैसे काम करता है? क्या सीधे यूपीआई से भुगतान कर सकते हैं?',
-    answer: 'Yes! KhelGrid supports direct instant UPI checkout across Google Pay, PhonePe, Paytm, BHIM, and any bank UPI app. You can also pay securely using Credit/Debit Cards (Visa, RuPay, MasterCard) or NetBanking. Payments are processed with bank-grade 256-bit encryption and activate your membership immediately with an instant digital GST invoice.',
+    answer: 'No. Venue, coach and sports-trial directory submissions and evidence review are free. Any venue hire, coaching or athlete entry fee is set by the independent provider or organiser and is separate from KhelGrid listing.',
   },
   {
-    question: 'What is the "Zero Fake Trials Guarantee"?',
+    question: 'How are sports-trial listings reviewed?',
     hindiQuestion: '"जीरो फेक ट्रायल गारंटी" क्या है?',
-    answer: 'Every trial, academy, and scholarship listed on KhelGrid undergoes physical and digital verification against official federation records (BCCI, AIFF, SAI, BAI). If any listed trial charges illegal unofficial fees or misrepresents selectors, our Trust & Safety team immediately blacklists the organizer and assists athletes with complete refunds.',
+    answer: 'KhelGrid reviews available organiser, source, date, venue and eligibility evidence before publication. A review is not a guarantee of future availability or selection. Athletes should confirm final instructions and any entry fee with the organiser.',
   },
   {
     question: 'Can I cancel my membership or switch between monthly and annual plans?',
@@ -243,9 +243,9 @@ export const PRICING_FAQS: PricingFaqItem[] = [
     answer: 'On average, sports academies in Indian metros charge ₹2,500 to ₹5,000 per month per student. Gaining just ONE new full-year student admission from KhelGrid (average annual fee ₹30,000–₹50,000) covers the cost of your KhelGrid Academy Pro membership 4× to 6× over.',
   },
   {
-    question: 'Do sports turfs have to pay commissions on match bookings?',
+    question: 'Do venues pay KhelGrid to appear in the directory?',
     hindiQuestion: 'क्या टर्फ मालिकों को बुकिंग पर कमीशन देना होता है?',
-    answer: 'No! Unlike food delivery or cab aggregator apps that take 20–30% cuts, KhelGrid Turf Pro has a strict 0% booking commission policy. You keep 100% of the court fee paid by players directly to your own UPI QR code.',
+    answer: 'No. Venue directory submission and evidence review are free. A venue may set its own hire rates and booking terms; those provider charges are separate from a KhelGrid listing.',
   },
 ]
 
