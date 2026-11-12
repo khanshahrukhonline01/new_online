@@ -16,7 +16,7 @@ This policy concerns listing submission and publication. It does not waive an in
 
 ## 2. Verification is not monetisation
 
-Verification is an evidence review, not a paid product. A submitter cannot purchase verification or a verified badge, faster approval or favourable moderation, search ranking or featured placement, or a selection outcome, trial admission or coach endorsement.
+Verification is an evidence review, not a paid product. A venue, coach, academy or trial organiser cannot purchase verification or a verified listing badge, faster approval or favourable moderation, search ranking or featured placement. A listing payment cannot buy a selection outcome, trial admission or coach endorsement.
 
 Editorial approval, evidence verification and publication remain distinct decisions. Publication is allowed only after the category-specific evidence and publication requirements are met.
 
@@ -33,7 +33,7 @@ Evidence classes must remain distinguishable: self-declared, document-supported,
 
 ## 4. Public display
 
-- Do not show a verified badge unless the database evidence-verification decision is verified.
+- Do not show a verified directory-listing badge unless the database evidence-verification decision is verified.
 - Do not show invented counts, ratings, reviews, credentials, fees, experience, affiliations, dates, addresses or availability.
 - Missing information must be labelled as not supplied/not disclosed or omitted.
 - Do not assume an opportunity has free athlete entry when its registration fee is unknown.
