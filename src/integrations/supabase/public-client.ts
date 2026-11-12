@@ -343,9 +343,9 @@ export async function getOpportunities(): Promise<CatalogueResult<Opportunity>> 
 
 async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
   const enrichedFields =
-    'id,slug,name,description,city,state,address,phone,email,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,rating,review_count,faqs,verification_status,sport'
+    'id,slug,name,description,city,state,address,phone,email,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,rating,review_count,faqs,verification_status,source_name,source_url,sport'
   const baseFields =
-    'id,slug,name,description,city,address,phone,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,verification_status,sport'
+    'id,slug,name,description,city,address,phone,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,verification_status,source_name,source_url,sport'
 
   const featured = await readCatalogue<Venue>({
     table: 'venues',
