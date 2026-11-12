@@ -112,7 +112,7 @@ export const ACADEMY_PLANS: PricingPlan[] = [
     blurb: 'Optional tools for managing admissions enquiries, batches and academy operations. Directory submission and evidence review are free and separate.',
     highlightFeature: 'Admissions enquiry workflow',
     features: [
-      'Directory submission and evidence review remain free without a membership',
+      'Membership does not purchase evidence review, a verified badge or directory placement',
       'Direct WhatsApp admissions routing to Academy Director',
       'Student lead management CRM with caller phone numbers',
       'Publish coaching batches, morning/evening slots & fee cards',
