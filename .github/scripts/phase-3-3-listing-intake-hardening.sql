@@ -37,6 +37,18 @@ BEGIN
 
   PERFORM set_config('request.headers', '{"cf-connecting-ip":"203.0.113.45"}', true);
 
+  v_result := public.submit_listing_intake(
+    'coach',
+    'Coach Profile Without Source Yet',
+    'Delhi',
+    NULL,
+    'Profile is accepted privately but cannot be published until evidence is reviewed.',
+    NULL
+  );
+  IF v_result->>'status' IS DISTINCT FROM 'submitted' THEN
+    RAISE EXCEPTION 'A source-less listing should be accepted into the private review queue, got %', v_result;
+  END IF;
+
   BEGIN
     PERFORM public.submit_listing_intake(
       'venue',
