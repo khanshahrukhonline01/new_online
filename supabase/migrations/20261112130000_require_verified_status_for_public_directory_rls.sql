@@ -2,6 +2,10 @@
 -- Publication status alone must never expose an unverified venue, coach, academy, event or trial.
 BEGIN;
 
+ALTER TABLE public.venues
+  ADD COLUMN IF NOT EXISTS verification_status text NOT NULL DEFAULT 'unverified'
+  CHECK (verification_status IN ('unverified', 'pending_review', 'verified', 'rejected'));
+
 ALTER TABLE public.venues ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.opportunities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coaches ENABLE ROW LEVEL SECURITY;
