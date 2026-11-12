@@ -111,7 +111,7 @@ describe('PricingPage Component', () => {
       expect(html).toContain(faq.hindiQuestion.replace(/"/g, '&quot;'))
     }
     // First FAQ is open by default
-    expect(html).toContain('Venue, coach and sports-trial directory submissions and evidence review are free.')
+    expect(html).toContain('Venue, coach and sports-trial submissions and evidence review are free.')
   })
 
   it('renders enterprise CSR partnership section with contact links', () => {
