@@ -68,8 +68,10 @@ describe('PricingPage Component', () => {
       expect(html).toContain(plan.name.replace(/&/g, '&amp;'))
       expect(html).toContain(plan.hindiName)
     }
-    expect(html).toContain('0% Booking Commission')
-    expect(html).toContain('Keep 100% of revenue')
+    expect(html).toContain('Free Venue Listing')
+    expect(html).toContain('No listing subscription or checkout')
+    expect(html).toContain('Directory submissions are free. Verification is not for sale.')
+    expect(html).not.toContain('Featured #1 placement')
   })
 
   it('renders organizer boost plans when initialSegment="organizer"', () => {
@@ -79,8 +81,9 @@ describe('PricingPage Component', () => {
       expect(html).toContain(plan.name.replace(/&/g, '&amp;'))
       expect(html).toContain(plan.hindiName)
     }
-    expect(html).toContain('1,500')
-    expect(html).toContain('Pinned &quot;Featured Trial&quot; top card')
+    expect(html).toContain('Free Trial &amp; Opportunity Listing')
+    expect(html).toContain('No listing payment, boost fee or subscription')
+    expect(html).not.toContain('Pinned &quot;Featured Trial&quot; top card')
   })
 
   it('renders interactive ROI Simulator for academies', () => {
