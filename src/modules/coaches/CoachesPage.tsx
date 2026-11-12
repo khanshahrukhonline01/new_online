@@ -19,7 +19,7 @@ export interface CoachesPageProps {
   onOpenCoachIntake?: () => void
 }
 
-export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps) {
+export function CoachesPage({ onNavigate }: CoachesPageProps) {
   const [coaches, setCoaches] = useState<VerifiedCoach[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedSport, setSelectedSport] = useState<string>('All Sports')
@@ -55,7 +55,7 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
           experienceYears: c.experience_years ?? c.experienceYears ?? 0,
           academyAffiliation: c.academy_affiliation || c.academyAffiliation || 'Affiliation not supplied',
           monthlyFee: c.monthly_fee || c.monthlyFee || 'Fee not supplied',
-          feeRangeCategory: (c.fee_range_category || c.feeRangeCategory || 'under-3k') as VerifiedCoach['feeRangeCategory'],
+          feeRangeCategory: (c.fee_range_category || c.feeRangeCategory || 'unknown') as VerifiedCoach['feeRangeCategory'],
           studentTrackRecord: c.student_track_record || c.studentTrackRecord || '',
           specialties: c.specialties || [],
           languages: c.languages || ['English', 'Hindi'],
@@ -111,6 +111,9 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
           return false
         }
         if (selectedFee === 'subsidized' && coach.feeRangeCategory !== 'subsidized') {
+          return false
+        }
+        if (selectedFee === 'unknown' && coach.feeRangeCategory !== 'unknown') {
           return false
         }
       }
@@ -288,6 +291,7 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
             <option value="3k-7k">₹3,000 – ₹7,000 / month</option>
             <option value="premium">Premium (₹7,000+ / month)</option>
             <option value="subsidized">Govt. Subsidized / Free</option>
+            <option value="unknown">Fee not disclosed</option>
           </select>
 
           {/* Sort By */}
