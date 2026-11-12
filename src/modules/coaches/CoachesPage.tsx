@@ -213,42 +213,7 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
         buttonLabel="Submit coach listing"
         buttonHref="/submit-listing"
         onNavigate={onNavigate}
-        onButtonClick={onOpenCoachIntake}
       />
-
-      {/* Coach Onboarding Banner CTA */}
-      <section className="coaches-intake-banner" aria-label="Coach Onboarding Banner">
-        <div className="coaches-intake-content">
-          <h3>
-            <SiteIcon name="shield-check" size={18} />
-            <span>Are you a certified sports coach in India?</span>
-          </h3>
-          <p>
-            Coach profiles are free to submit. Share your qualification, issuing body, coaching experience and public professional contact route. Our review checks evidence; it does not guarantee enquiries or athlete outcomes.
-          </p>
-        </div>
-
-        <div>
-          {onOpenCoachIntake ? (
-            <button
-              type="button"
-              className="coaches-intake-btn"
-              onClick={onOpenCoachIntake}
-            >
-              <span>Get Listed as a Coach</span>
-              <SiteIcon name="arrow-right" size={15} />
-            </button>
-          ) : (
-            <a
-              href="mailto:khelgrid@gmail.com?subject=Register%20as%20Coach%20on%20KhelGrid"
-              className="coaches-intake-btn"
-            >
-              <span>Get Listed as a Coach</span>
-              <SiteIcon name="arrow-right" size={15} />
-            </a>
-          )}
-        </div>
-      </section>
 
       {/* Sport Category Filter Tabs */}
       <div className="coaches-sport-pills" role="tablist" aria-label="Filter by sport">
