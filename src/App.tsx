@@ -10,7 +10,6 @@ import GameSportPlayAcrossIndia from './shared/components/GameSportPlayAcrossInd
 import FrequentlyAskedQuestions from './shared/components/FrequentlyAskedQuestions'
 import SiteAnnouncementBanner from './shared/components/SiteAnnouncementBanner'
 import NavbarSettingsMenu from './shared/components/NavbarSettingsMenu'
-import type { CommunityListingCategory } from './integrations/supabase/public-client'
 import {
   getStoredAuthUser,
   onAuthChange,
@@ -65,7 +64,6 @@ const AdminModerationPage = lazy(() => import('./modules/admin/AdminModerationPa
 const AdminControlPanelPage = lazy(() => import('./modules/admin/AdminControlPanelPage').then(module => ({ default: module.AdminControlPanelPage })))
 
 // Code-split heavyweight modal dialogs
-const CommunityListingModal = lazy(() => import('./shared/components/CommunityListingModal'))
 const NotificationCenterDrawer = lazy(() => import('./shared/components/NotificationCenterDrawer'))
 const SpotlightSearchModal = lazy(() => import('./shared/components/SpotlightSearchModal'))
 const FeedbackSupportModal = lazy(() => import('./shared/components/FeedbackSupportModal'))
@@ -100,8 +98,6 @@ export default function App() {
   const [isMobile, setIsMobile] = useState(false)
   const [headerQuery, setHeaderQuery] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [intakeModalOpen, setIntakeModalOpen] = useState(false)
-  const [intakeCategory, setIntakeCategory] = useState<CommunityListingCategory>('pickup_game')
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [unreadNotifCount, setUnreadNotifCount] = useState(3)
@@ -116,18 +112,14 @@ export default function App() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const menuToggleRef = useRef<HTMLButtonElement>(null)
 
-  function openIntake(category: CommunityListingCategory = 'pickup_game') {
-    setIntakeCategory(category)
-    setIntakeModalOpen(true)
-  }
-
-  function openListingSubmission() {
-    if (typeof window !== 'undefined' && window.location.pathname !== '/submit-listing') {
-      window.history.pushState({}, '', '/submit-listing')
+  function openListingSubmission(category?: string) {
+    const target = category ? `/submit-listing?type=${encodeURIComponent(category)}` : '/submit-listing'
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', target)
+      window.scrollTo({ top: 0, behavior: 'auto' })
     }
     setPath('/submit-listing')
     setMenuOpen(false)
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'auto' })
   }
 
   // Detect Supabase Auth callback errors or tokens from URL hash / search params
@@ -247,14 +239,14 @@ export default function App() {
     case 'sports-index': page = <SportsPage />; break
     case 'sport-detail': page = <SportDetailPage slug={match.slug} onNavigate={navigate} />; break
     case 'athlete-profile': page = <AthleteProfilePage username={match.username} onNavigate={navigate} />; break
-    case 'opportunities-index': page = <OpportunitiesPage onOpenIntake={() => openIntake('opportunity')} onNavigate={navigate} />; break
-    case 'opportunity-detail': page = match.isApply ? <OpportunitiesPage onOpenIntake={() => openIntake('opportunity')} onNavigate={navigate} initialApplySlug={match.slug} /> : <CatalogueDetailPage kind="opportunity" slug={match.slug} />; break
-    case 'academies-index': page = <AcademiesPage onOpenIntake={() => openIntake('academy')} onNavigate={navigate} />; break
-    case 'academy-detail': page = <AcademyDetailPage slug={match.slug} onNavigate={navigate} onOpenIntake={() => openIntake('academy')} initialEnrolOpen={match.isEnrol} />; break
-    case 'venues-index': page = <VenuesPage onOpenIntake={() => openIntake('venue')} onNavigate={navigate} />; break
+    case 'opportunities-index': page = <OpportunitiesPage onOpenIntake={() => openListingSubmission('opportunity')} onNavigate={navigate} />; break
+    case 'opportunity-detail': page = match.isApply ? <OpportunitiesPage onOpenIntake={() => openListingSubmission('opportunity')} onNavigate={navigate} initialApplySlug={match.slug} /> : <CatalogueDetailPage kind="opportunity" slug={match.slug} />; break
+    case 'academies-index': page = <AcademiesPage onOpenIntake={() => openListingSubmission('academy')} onNavigate={navigate} />; break
+    case 'academy-detail': page = <AcademyDetailPage slug={match.slug} onNavigate={navigate} onOpenIntake={() => openListingSubmission('academy')} initialEnrolOpen={match.isEnrol} />; break
+    case 'venues-index': page = <VenuesPage onOpenIntake={() => openListingSubmission('venue')} onNavigate={navigate} />; break
     case 'cities-index': page = <CitiesPage onNavigate={navigate} />; break
-    case 'city-detail': page = <CityDetailPage citySlug={match.slug} onNavigate={navigate} onOpenIntake={openIntake} />; break
-    case 'venue-detail': page = <VenueDetailPage slug={match.slug} onNavigate={navigate} onOpenIntake={openIntake} initialBookingOpen={match.isBooking} />; break
+    case 'city-detail': page = <CityDetailPage citySlug={match.slug} onNavigate={navigate} onOpenIntake={openListingSubmission} />; break
+    case 'venue-detail': page = <VenueDetailPage slug={match.slug} onNavigate={navigate} onOpenIntake={openListingSubmission} initialBookingOpen={match.isBooking} />; break
     case 'search': page = <SearchPage initialQuery={searchQuery} />; break
     case 'tools-index': page = <SportsToolsPage onNavigate={navigate} initialToolSlug={match.toolSlug} />; break
     case 'khelchronicle-index': page = <KhelChronicleHome onNavigate={navigate} />; break
@@ -282,7 +274,7 @@ export default function App() {
           page = (
             <UserDashboardPage
               onNavigate={navigate}
-              onOpenIntake={openIntake}
+              onOpenIntake={openListingSubmission}
               onOpenAuth={tab => {
                 setAuthModalTab(tab || 'login')
                 setAuthModalOpen(true)
@@ -291,13 +283,13 @@ export default function App() {
           )
         }
       } else if (match.canonicalPath === '/host' || match.canonicalPath === '/partner-dashboard') {
-        page = <HostDashboardPage onNavigate={navigate} onOpenIntake={openIntake} />
+        page = <HostDashboardPage onNavigate={navigate} onOpenIntake={openListingSubmission} />
       }
       else if (match.canonicalPath === '/help-feedback') page = <HelpFeedbackPage />
       else if (match.canonicalPath === '/sports-cv') page = <SportsCvWizard />
       else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} onOpenAuth={tab => { setAuthModalTab(tab || 'signup'); setAuthModalOpen(true) }} />
-      else if (match.canonicalPath === '/play') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openIntake('pickup_game')} />
-      else if (match.canonicalPath === '/coaches') page = <CoachesPage onNavigate={navigate} onOpenCoachIntake={() => openIntake('academy')} />
+      else if (match.canonicalPath === '/play') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openListingSubmission('pickup_game')} />
+      else if (match.canonicalPath === '/coaches') page = <CoachesPage onNavigate={navigate} onOpenCoachIntake={() => openListingSubmission('coach')} />
       else if (match.canonicalPath === '/events') page = <EventsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/scout-portal') page = <ScoutPortalPage onNavigate={navigate} />
       else if (match.canonicalPath === '/verification') page = <AthleteVerificationPage onNavigate={navigate} />
@@ -336,7 +328,7 @@ export default function App() {
       else if (match.canonicalPath === '/pricing' || match.canonicalPath === '/memberships' || match.canonicalPath === '/pro') page = <PricingPage onNavigate={navigate} />
       else if (match.canonicalPath === '/saved') page = <SavedPage onNavigate={navigate} />
       else if (match.canonicalPath === '/for-you') page = <ForYouPage onNavigate={navigate} onOpenAuth={tab => { setAuthModalTab(tab || 'signup'); setAuthModalOpen(true) }} />
-      else if (match.canonicalPath === '/partner' || match.canonicalPath === '/partners') page = <PartnerPage onNavigate={navigate} onOpenIntake={openIntake} />
+      else if (match.canonicalPath === '/partner' || match.canonicalPath === '/partners') page = <PartnerPage onNavigate={navigate} onOpenIntake={openListingSubmission} />
       else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
       break
@@ -578,7 +570,7 @@ export default function App() {
         onClose={() => setMenuOpen(false)}
         toggleRef={menuToggleRef}
         collapsed={sidebarCollapsed}
-        onOpenIntake={() => openIntake('pickup_game')}
+        onOpenIntake={() => openListingSubmission('pickup_game')}
         onOpenAuth={tab => {
           setAuthModalTab(tab || 'login')
           setAuthModalOpen(true)
@@ -634,9 +626,9 @@ export default function App() {
         <nav className="footer-column" aria-label="About and support">
           <h2>Grow with KhelGrid</h2>
           <a href="/partner" onClick={event => navigate(event, '/partner')}><strong>Partner with KhelGrid</strong></a>
-          <a href="mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue" onClick={e => { e.preventDefault(); openIntake('venue') }}>List your venue</a>
-          <a href="mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial" onClick={e => { e.preventDefault(); openIntake('opportunity') }}>Submit a trial</a>
-          <a href="mailto:khelgrid@gmail.com?subject=Register%20as%20a%20coach%20on%20KhelGrid">Join as Coach</a>
+          <a href="/submit-listing?type=venue" onClick={e => { e.preventDefault(); openListingSubmission('venue') }}>List your venue</a>
+          <a href="/submit-listing?type=opportunity" onClick={e => { e.preventDefault(); openListingSubmission('opportunity') }}>Submit a trial</a>
+          <a href="/submit-listing?type=coach" onClick={event => navigate(event, '/submit-listing?type=coach')}>Join as Coach</a>
           <a href="/khelchronicle/submit" onClick={event => navigate(event, '/khelchronicle/submit')}>Submit Paper</a>
           <a href="mailto:khelgrid@gmail.com">Contact KhelGrid</a>
           <a href="/about" onClick={event => navigate(event, '/about')}>About KhelGrid</a>
@@ -748,14 +740,6 @@ export default function App() {
       </div>
     </footer>
     <Suspense fallback={null}>
-      {intakeModalOpen && (
-        <CommunityListingModal
-          isOpen={intakeModalOpen}
-          onClose={() => setIntakeModalOpen(false)}
-          onNavigate={navigate}
-          defaultCategory={intakeCategory}
-        />
-      )}
       {notificationsOpen && (
         <NotificationCenterDrawer
           isOpen={notificationsOpen}
