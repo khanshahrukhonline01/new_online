@@ -424,7 +424,7 @@ async function fetchAcademiesCatalogue(): Promise<CatalogueResult<Academy>> {
     order: 'is_featured.desc.nullslast,name.asc',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (base.status === 'ready') return base
@@ -435,7 +435,7 @@ async function fetchAcademiesCatalogue(): Promise<CatalogueResult<Academy>> {
     order: 'name.asc',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
 }
@@ -802,7 +802,7 @@ export async function getEvents(): Promise<CatalogueResult<EventItem>> {
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (enriched.status === 'ready') return enriched
@@ -813,7 +813,7 @@ export async function getEvents(): Promise<CatalogueResult<EventItem>> {
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
 }
