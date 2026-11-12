@@ -108,6 +108,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261111100000_phase_3_1_publication_integrity_admin_control_panel.sql
       - name: Allow anonymous public listing intake
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112125000_allow_anonymous_listing_intake.sql
+      - name: Harden public listing intake validation and rate limiting
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112135000_harden_public_listing_intake_rpc.sql
       - name: Apply coach profile evidence cleanup
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112120000_require_evidence_for_seeded_coach_profiles.sql
       - name: Require evidence verification for public directory reads
@@ -122,6 +124,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-1-publication-category-flow.sql
       - name: Assert anonymous users can read verified listings only
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-2-public-directory-verification.sql
+      - name: Test anonymous listing intake validation and rate limiting
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-3-listing-intake-hardening.sql
       - name: Validate SQL migration safety
         shell: bash
         run: |
