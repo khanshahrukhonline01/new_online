@@ -6,7 +6,7 @@ describe('HostDashboardPage', () => {
   it('shows free directory listings without inventing host records or offering checkout', () => {
     const html = renderToStaticMarkup(<HostDashboardPage />)
     expect(html).toContain('Host tools are being prepared')
-    expect(html).toContain('Directory listings are free')
+    expect(html).toContain('Venue, coach and trial listings are free')
     expect(html).toContain('do not require a paid plan')
     expect(html).not.toContain('FSV Arena Bengaluru')
     expect(html).not.toContain('KG_ORD_')
