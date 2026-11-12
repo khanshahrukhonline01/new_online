@@ -49,7 +49,7 @@ export function CoachesPage({ onNavigate }: CoachesPageProps) {
           sportCategory: c.sportCategory || c.sport || 'Multi-Sport',
           certification: c.certification || 'Qualification not supplied',
           credentialAuthority: (c.credential_authority || c.credentialAuthority || 'all') as CredentialAuthority,
-          authorityLabel: c.authority_label || c.authorityLabel || 'Certified Coach',
+          authorityLabel: c.authority_label || c.authorityLabel || 'Issuing authority not supplied',
           city: c.city,
           state: c.state || '',
           experienceYears: c.experience_years ?? c.experienceYears ?? 0,
@@ -58,7 +58,7 @@ export function CoachesPage({ onNavigate }: CoachesPageProps) {
           feeRangeCategory: (c.fee_range_category || c.feeRangeCategory || 'unknown') as VerifiedCoach['feeRangeCategory'],
           studentTrackRecord: c.student_track_record || c.studentTrackRecord || '',
           specialties: c.specialties || [],
-          languages: c.languages || ['English', 'Hindi'],
+          languages: c.languages || [],
           rating: Number(c.rating || 0),
           reviewCount: c.review_count ?? c.reviewCount ?? 0,
           verifiedBadge: c.verified_badge || c.verifiedBadge || 'Evidence reviewed',
@@ -302,7 +302,7 @@ export function CoachesPage({ onNavigate }: CoachesPageProps) {
             aria-label="Sort coaches directory"
           >
             <option value="experience">Sort: Experience (High to Low)</option>
-            <option value="rating">Sort: Top Rated (4.9+ Stars)</option>
+            <option value="rating">Sort: Highest Rating First</option>
             <option value="fee">Sort: Monthly Fee (Low to High)</option>
             <option value="name">Sort: Name (A to Z)</option>
           </select>
@@ -391,26 +391,32 @@ export function CoachesPage({ onNavigate }: CoachesPageProps) {
                 </div>
 
                 {/* Student Track Record */}
-                <div className="coach-track-record-box">
-                  <span className="coach-track-record-label">Student Track Record</span>
-                  <span>{coach.studentTrackRecord}</span>
-                </div>
+                {coach.studentTrackRecord && (
+                  <div className="coach-track-record-box">
+                    <span className="coach-track-record-label">Student Track Record</span>
+                    <span>{coach.studentTrackRecord}</span>
+                  </div>
+                )}
 
                 {/* Specialties Tags */}
-                <div className="coach-specialties-row">
-                  {coach.specialties.map(spec => (
-                    <span key={spec} className="coach-spec-tag">
-                      {spec}
-                    </span>
-                  ))}
-                </div>
+                {coach.specialties.length > 0 && (
+                  <div className="coach-specialties-row">
+                    {coach.specialties.map(spec => (
+                      <span key={spec} className="coach-spec-tag">
+                        {spec}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Card Footer: Languages & CTA */}
               <div className="coach-card-footer">
-                <div className="coach-languages-text">
-                  <span>Languages: <strong>{coach.languages.join(', ')}</strong></span>
-                </div>
+                {coach.languages.length > 0 && (
+                  <div className="coach-languages-text">
+                    <span>Languages: <strong>{coach.languages.join(', ')}</strong></span>
+                  </div>
+                )}
 
                 <button
                   type="button"
@@ -430,9 +436,15 @@ export function CoachesPage({ onNavigate }: CoachesPageProps) {
           <div className="coaches-empty-icon">
             <SiteIcon name="search" size={40} />
           </div>
-          <h2 className="coaches-empty-title">No matching coaches found</h2>
+          <h2 className="coaches-empty-title">
+            {loading ? 'Loading reviewed coach profiles…' : coaches.length ? 'No matching coaches found' : 'No verified coach profiles published yet'}
+          </h2>
           <p className="coaches-empty-sub">
-            We couldn't find any coaches matching your active filters. Try adjusting your sport, city, or credential selections.
+            {loading
+              ? 'Please wait while the public directory is refreshed.'
+              : coaches.length
+                ? 'Try adjusting your sport, city, or credential selections.'
+                : 'Coach submissions are free. Share a professional profile and qualification evidence to start the review process.'}
           </p>
           <button
             type="button"
