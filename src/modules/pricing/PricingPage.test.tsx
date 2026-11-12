@@ -15,7 +15,7 @@ describe('PricingPage Component', () => {
 
     expect(html).toContain('Simple, Transparent Sports Memberships')
     expect(html).toContain('Pricing &amp; Memberships')
-    expect(html).toContain('Free directory listings · Memberships are separate')
+    expect(html).toContain('Venue, coach &amp; trial listings are free · Memberships are separate')
     expect(html).toContain('Venue, coach &amp; trial submissions')
     expect(html).toContain('No paid verification')
     expect(html).not.toContain('45,000+')
