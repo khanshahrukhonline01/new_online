@@ -35,6 +35,8 @@ BEGIN
     RAISE EXCEPTION 'Expected the 11th submission in one minute to be rate limited, got %', v_result;
   END IF;
 
+  PERFORM set_config('request.headers', '{"cf-connecting-ip":"203.0.113.45"}', true);
+
   BEGIN
     PERFORM public.submit_listing_intake(
       'venue',
