@@ -33,7 +33,7 @@ export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps
 
       <div className="host-dashboard-empty-state">
         <SiteIcon name="pause" size={34} />
-        <h2>Directory listings are free</h2>
+        <h2>Venue, coach and trial listings are free</h2>
         <p>
           Venue, coach and sports-trial submissions do not require a paid listing plan. Academy operations memberships, venue bookings and provider services are separate from evidence verification.
         </p>
