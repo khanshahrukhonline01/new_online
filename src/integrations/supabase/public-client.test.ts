@@ -118,6 +118,24 @@ describe('public catalogue client', () => {
     expect(requestUrl.searchParams.get('verification_status')).toBe('eq.verified')
   })
 
+  it('returns only evidence-verified venues in the public directory', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([]))
+    const client = await loadClient()
+    await client.getVenues()
+    const requestUrl = new URL(String(vi.mocked(fetch).mock.calls[0][0]))
+    expect(requestUrl.searchParams.get('publication_status')).toBe('eq.published')
+    expect(requestUrl.searchParams.get('verification_status')).toBe('eq.verified')
+  })
+
+  it('returns only evidence-verified coaches in the public directory', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([]))
+    const client = await loadClient()
+    await client.getCoaches()
+    const requestUrl = new URL(String(vi.mocked(fetch).mock.calls[0][0]))
+    expect(requestUrl.searchParams.get('publication_status')).toBe('eq.published')
+    expect(requestUrl.searchParams.get('verification_status')).toBe('eq.verified')
+  })
+
   it('returns an empty ready catalogue when the database has no published rows', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([]))
     const client = await loadClient()
