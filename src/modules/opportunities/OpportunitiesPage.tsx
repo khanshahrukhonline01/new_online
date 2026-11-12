@@ -54,7 +54,6 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
   const [sport, setSport] = useState(initial.get('sport') ?? '')
   const [ageCategory, setAgeCategory] = useState(initial.get('age') ?? '')
   const [type, setType] = useState(initial.get('type') ?? '')
-  const [verification, setVerification] = useState(initial.get('status') ?? '')
   const [feeFilter, setFeeFilter] = useState(initial.get('free') === 'true' ? 'free' : (initial.get('fee') ?? ''))
   const [sort, setSort] = useState(initial.get('sort') ?? 'newest')
   const [currentPage, setCurrentPage] = useState(1)
@@ -139,7 +138,6 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
               (ageCategory === 'open' && (item.title.toLowerCase().includes('open') || item.title.toLowerCase().includes('senior')))
             )) &&
             (!type || item.opportunity_type === type) &&
-            (!verification || item.verification_status === verification) &&
             (!feeFilter || (feeFilter === 'free' ? item.registration_fee === 0 : true)) &&
             (!fromDate || (Number.isFinite(start) && start >= after)) &&
             (!toDate || (Number.isFinite(start) && start <= before))
@@ -154,7 +152,7 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
               ? (a.application_deadline ?? '9999').localeCompare(b.application_deadline ?? '9999')
               : (b.starts_at ?? '').localeCompare(a.starts_at ?? ''),
         ),
-    [records, query, city, sport, ageCategory, type, verification, feeFilter, fromDate, toDate, sort],
+    [records, query, city, sport, ageCategory, type, feeFilter, fromDate, toDate, sort],
   )
 
   const totalPages = Math.max(1, Math.ceil(visible.length / OPPORTUNITY_PAGE_SIZE))
@@ -162,7 +160,7 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [query, city, sport, ageCategory, type, verification, feeFilter, fromDate, toDate, sort])
+  }, [query, city, sport, ageCategory, type, feeFilter, fromDate, toDate, sort])
 
   const clearAll = () => {
     setQuery('')
@@ -170,7 +168,6 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
     setSport('')
     setAgeCategory('')
     setType('')
-    setVerification('')
     setFeeFilter('')
     setFromDate('')
     setToDate('')
@@ -200,23 +197,12 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
         { value: 'free', label: 'Free Entry Only (₹0)' },
       ],
     },
-    {
-      key: 'status',
-      label: 'Source status',
-      value: verification,
-      onChange: setVerification,
-      options: ['verified', 'pending_review', 'unverified'].map(value => ({
-        value,
-        label: value.replace('_', ' '),
-      })),
-    },
     { key: 'from', label: 'Start date from', value: fromDate, onChange: setFromDate, options: [], inputType: 'date' as const },
     { key: 'to', label: 'Start date to', value: toDate, onChange: setToDate, options: [], inputType: 'date' as const },
   ]
 
   const quickFilters: QuickFilterPill[] = [
     { id: 'free', label: 'Free Entry (₹0)', icon: 'wallet', active: feeFilter === 'free', onClick: () => setFeeFilter(prev => prev === 'free' ? '' : 'free') },
-    { id: 'verified', label: 'Verified Only', icon: 'badge-check', active: verification === 'verified', onClick: () => setVerification(prev => prev === 'verified' ? '' : 'verified') },
     { id: 'trial', label: 'Trials & Combines', icon: 'target', active: type === 'trial', onClick: () => setType(prev => prev === 'trial' ? '' : 'trial') },
     { id: 'cricket', label: 'Cricket', icon: 'sports', active: sport === 'Cricket', onClick: () => setSport(prev => prev === 'Cricket' ? '' : 'Cricket') },
     { id: 'football', label: 'Football', icon: 'sports', active: sport === 'Football', onClick: () => setSport(prev => prev === 'Football' ? '' : 'Football') },
@@ -224,7 +210,7 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
   ]
 
   const hasActiveFilters = Boolean(
-    query.trim() || city || sport || ageCategory || type || verification || feeFilter || fromDate || toDate || sort !== 'newest',
+    query.trim() || city || sport || ageCategory || type || feeFilter || fromDate || toDate || sort !== 'newest',
   )
 
   return (
@@ -317,13 +303,13 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
                               </span>
                             )}
                             <span
-                              className={item.verification_status === 'verified' ? 'verification verified' : 'verification'}
+                              className="verification verified"
                             >
                               <SiteIcon
-                                name={item.verification_status === 'verified' ? 'shield-check' : 'info'}
+                                name="shield-check"
                                 size={14}
                               />{' '}
-                              {item.verification_status === 'verified' ? 'Source reviewed' : 'Not verified'}
+                              Source reviewed
                             </span>
                           </div>
                           <BookmarkButton item={createOpportunitySavedItem(item)} />
