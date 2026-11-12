@@ -56,7 +56,7 @@ BEGIN
   END IF;
 
   v_ref := 'KHL-' || to_char(now(), 'YYYYMMDD') || '-' || upper(substr(md5(gen_random_uuid()::text), 1, 6));
-  v_key := encode(gen_random_bytes(24), 'hex');
+  v_key := encode(extensions.gen_random_bytes(24), 'hex');
 
   INSERT INTO public.listing_submissions (
     listing_type, title, city, source_url, details,
