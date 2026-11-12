@@ -26,6 +26,24 @@ describe('listing suggestion submission', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
+  it('allows a source-less submission to enter private review without implying verification', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({
+      status: 'submitted',
+      reference_number: 'KHL-20261112-NOSRC1',
+      tracking_key: 'private-no-source-key',
+    }), { status: 200 }))
+    const client = await loadClient()
+    const result = await client.submitListingSuggestion({
+      listing_type: 'coach',
+      title: 'Coach profile awaiting evidence',
+      city: 'Delhi',
+    })
+    expect(result.status).toBe('submitted')
+    const [, options] = vi.mocked(fetch).mock.calls[0]
+    expect(JSON.parse(String(options?.body)).p_source_url).toBeNull()
+    expect(String(options?.body)).not.toContain('verification_status')
+  })
+
   it('only accepts HTTPS source URLs', async () => {
     const client = await loadClient()
     const result = await client.submitListingSuggestion({
