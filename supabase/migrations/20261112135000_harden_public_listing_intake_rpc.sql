@@ -52,8 +52,29 @@ DECLARE
   v_source_url text := nullif(btrim(coalesce(p_source_url, '')), '');
   v_details text := nullif(btrim(coalesce(p_details, '')), '');
   v_email text := nullif(lower(btrim(coalesce(p_submitter_email, ''))), '');
+  v_headers json;
+  v_ip text;
+  v_rate_identifier text;
 BEGIN
-  IF NOT public.check_and_increment_rate_limit('listing_intake', 10, 60) THEN
+  -- Derive the rate-limit key from a verified user ID or the trusted gateway IP.
+  IF auth.uid() IS NOT NULL THEN
+    v_rate_identifier := 'listing_intake:usr:' || auth.uid()::text;
+  ELSE
+    BEGIN
+      v_headers := nullif(current_setting('request.headers', true), '')::json;
+      IF v_headers IS NOT NULL THEN
+        v_ip := coalesce(
+          nullif(trim(v_headers->>'cf-connecting-ip'), ''),
+          nullif(trim(v_headers->>'x-real-ip'), '')
+        );
+      END IF;
+    EXCEPTION WHEN OTHERS THEN
+      v_ip := NULL;
+    END;
+    v_rate_identifier := 'listing_intake:ip:' || md5(coalesce(v_ip, 'anon:unverified-edge-client'));
+  END IF;
+
+  IF NOT public.check_and_increment_rate_limit(v_rate_identifier, 10, 60) THEN
     RETURN jsonb_build_object(
       'status', 'rate_limited',
       'message', 'Too many listing submissions from this connection. Please wait a minute and try again.'
