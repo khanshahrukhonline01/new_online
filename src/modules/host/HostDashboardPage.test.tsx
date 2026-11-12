@@ -18,6 +18,7 @@ describe('HostDashboardPage', () => {
     const onOpenIntake = vi.fn()
     const html = renderToStaticMarkup(<HostDashboardPage onOpenIntake={onOpenIntake} />)
     expect(html).toContain('Submit a listing for review')
+    expect(html).toContain('href="/submit-listing"')
     expect(html).toContain('A submission is not published or verified')
   })
 })
