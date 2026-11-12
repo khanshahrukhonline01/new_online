@@ -9,8 +9,10 @@ describe('ListingSubmissionPage Submitter Experience Suite', () => {
 
   it('renders intake form with all 7 supported categories and privacy notices', () => {
     const html = renderToStaticMarkup(<ListingSubmissionPage />)
-    expect(html).toContain('Sports Directory &amp; Listing Intake')
-    expect(html).toContain('Editorial Verification First')
+    expect(html).toContain('Put your sports listing on the map.')
+    expect(html).toContain('Free to submit · No listing payment')
+    expect(html).toContain('Venue, coach and sports-trial listings are free')
+    expect(html).toContain('Submit free listing for review')
     expect(html).toContain('Suggest a Listing')
     expect(html).toContain('Track Submission Status')
 
@@ -24,7 +26,7 @@ describe('ListingSubmissionPage Submitter Experience Suite', () => {
     expect(html).toContain('New Sport Suggestion')
 
     // Privacy notice
-    expect(html).toContain('We collect only listing details. Suggestions are not public catalogue records.')
+    expect(html).toContain('Your submission stays private while a moderator checks the source')
   })
 
   it('renders tracking tab with reference number and private tracking key inputs', () => {
