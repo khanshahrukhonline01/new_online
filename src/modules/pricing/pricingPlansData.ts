@@ -224,12 +224,12 @@ export interface PricingFaqItem {
 export const PRICING_FAQS: PricingFaqItem[] = [
   {
     question: 'Do I pay to submit or verify a venue, coach or trial listing?',
-    hindiQuestion: 'खेलग्रिड पर भुगतान कैसे काम करता है? क्या सीधे यूपीआई से भुगतान कर सकते हैं?',
+    hindiQuestion: 'क्या खेल स्थल, कोच या ट्रायल की सूची देने और उसकी जाँच के लिए भुगतान करना होगा?',
     answer: 'No. Venue, coach and sports-trial directory submissions and evidence review are free. Any venue hire, coaching or athlete entry fee is set by the independent provider or organiser and is separate from KhelGrid listing.',
   },
   {
     question: 'How are sports-trial listings reviewed?',
-    hindiQuestion: '"जीरो फेक ट्रायल गारंटी" क्या है?',
+    hindiQuestion: 'खेल ट्रायल की सूचियों की जाँच कैसे होती है?',
     answer: 'KhelGrid reviews available organiser, source, date, venue and eligibility evidence before publication. A review is not a guarantee of future availability or selection. Athletes should confirm final instructions and any entry fee with the organiser.',
   },
   {
@@ -244,7 +244,7 @@ export const PRICING_FAQS: PricingFaqItem[] = [
   },
   {
     question: 'Do venues pay KhelGrid to appear in the directory?',
-    hindiQuestion: 'क्या टर्फ मालिकों को बुकिंग पर कमीशन देना होता है?',
+    hindiQuestion: 'क्या खेल स्थल को डायरेक्टरी में सूचीबद्ध होने के लिए भुगतान करना होगा?',
     answer: 'No. Venue directory submission and evidence review are free. A venue may set its own hire rates and booking terms; those provider charges are separate from a KhelGrid listing.',
   },
 ]
