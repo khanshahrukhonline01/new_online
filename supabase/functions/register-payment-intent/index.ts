@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { calculateVenueAdvanceDeposit, getCanonicalListingPlan, getCanonicalMembershipPrice, resolveVenueSlotPrice } from '../_shared/paymentPricing.ts'
+import { calculateVenueAdvanceDeposit, getCanonicalMembershipPrice, resolveVenueSlotPrice } from '../_shared/paymentPricing.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,7 +9,7 @@ const corsHeaders = {
   'Vary': 'Origin',
 }
 
-type PaymentType = 'pickup_match' | 'venue_booking' | 'trial_registration' | 'listing_plan' | 'membership'
+type PaymentType = 'pickup_match' | 'venue_booking' | 'trial_registration' | 'membership'
 type PaymentMethod = 'upi' | 'razorpay' | 'card' | 'netbanking' | 'wallet' | 'pay_at_venue'
 
 function json(body: unknown, status = 200) {
@@ -64,6 +64,9 @@ serve(async (req) => {
   }
 
   const action = body.action || 'register_payment'
+  if (action === 'register_listing_subscription') {
+    return json({ error: 'DIRECTORY_LISTINGS_ARE_FREE', message: 'Directory listings are free and require evidence review, not payment or a subscription.' }, 410)
+  }
   const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
   const rateKey = await sha256([clientIp, userId || 'anonymous', String(body.customer_phone || '')].join(':'))
 
@@ -204,7 +207,7 @@ serve(async (req) => {
   if (!/^KG_ORD_[A-Z0-9]+_[A-Z0-9]{4,16}$/.test(orderId) || !itemId ||
       customerName.length < 2 || customerPhone.length < 10 ||
       !Number.isFinite(requestedAmount) || requestedAmount <= 0 ||
-      !['pickup_match','venue_booking','trial_registration','listing_plan','membership'].includes(itemType) ||
+      !['pickup_match','venue_booking','trial_registration','membership'].includes(itemType) ||
       !['upi','razorpay','pay_at_venue'].includes(method) || !idempotencyKey || idempotencyKey.length > 128) {
     return json({ error: 'INVALID_PAYMENT_INTENT' }, 400)
   }
@@ -212,7 +215,7 @@ serve(async (req) => {
   if (method === 'upi' && (!/^[A-Za-z0-9-]{6,64}$/.test(submittedReference))) {
     return json({ error: 'INVALID_PAYMENT_REFERENCE' }, 400)
   }
-  if (method === 'upi' && !['venue_booking','listing_plan'].includes(itemType)) {
+  if (method === 'upi' && itemType !== 'venue_booking') {
     return json({ error: 'PAYMENT_TARGET_NOT_SUPPORTED', message: 'Online payment is not enabled for this item until its settlement workflow is available.' }, 409)
   }
   if (method === 'pay_at_venue' && !['venue_booking','pickup_match'].includes(itemType)) {
@@ -225,13 +228,7 @@ serve(async (req) => {
   const targetId = itemId
   const metadata: Record<string, unknown> = {}
 
-  if (itemType === 'listing_plan') {
-    const plan = getCanonicalListingPlan(String((body.metadata as Record<string, unknown> | undefined)?.planId || ''))
-    if (!plan) return json({ error: 'INVALID_PLAN' }, 400)
-    expectedAmount = plan.amountRupees
-    itemTitle = plan.name
-    metadata.plan_id = String((body.metadata as Record<string, unknown>).planId)
-  } else if (itemType === 'membership') {
+  if (itemType === 'membership') {
     const meta = (body.metadata || {}) as Record<string, unknown>
     expectedAmount = getCanonicalMembershipPrice(meta)
     if (expectedAmount === null) return json({ error: 'INVALID_MEMBERSHIP_PLAN' }, 400)
