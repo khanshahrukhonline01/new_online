@@ -1,5 +1,29 @@
 -- Verify anonymous reads cannot see published-but-unverified directory records.
 BEGIN;
+DO $intake_assert$
+DECLARE
+  v_submitter_nullable text;
+BEGIN
+  SELECT is_nullable INTO v_submitter_nullable
+  FROM information_schema.columns
+  WHERE table_schema = 'public'
+    AND table_name = 'listing_submissions'
+    AND column_name = 'submitter_id';
+
+  IF v_submitter_nullable IS DISTINCT FROM 'YES' THEN
+    RAISE EXCEPTION 'Anonymous listing intake requires nullable submitter_id';
+  END IF;
+
+  IF NOT has_function_privilege(
+    'anon',
+    'public.submit_listing_intake(text,text,text,text,text,text)',
+    'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'Anonymous role must be able to submit through the validated intake RPC';
+  END IF;
+END;
+$intake_assert$;
+
 
 INSERT INTO public.venues (slug, name, city, publication_status, verification_status)
 VALUES
