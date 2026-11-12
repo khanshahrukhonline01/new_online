@@ -195,7 +195,7 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
               onClick={() => setSelectedAudience('organizer')}
             >
               <SiteIcon name="star" size={16} />
-              <span>Event &amp; Trial Boost</span>
+              <span>Trials &amp; Opportunities</span>
             </button>
           </div>
 
