@@ -413,7 +413,7 @@ async function fetchAcademiesCatalogue(): Promise<CatalogueResult<Academy>> {
     order: 'is_featured.desc.nullslast,name.asc',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (featured.status === 'ready') return featured
@@ -1070,86 +1070,54 @@ export type ListingSubmissionResult =
   | { status: 'unavailable'; message: string }
 
 /** Submit a user-provided suggestion to the private review queue. */
+/** Submit a user-provided suggestion through the validated private-intake RPC. */
 export async function submitListingSuggestion(input: ListingSubmissionInput): Promise<ListingSubmissionResult> {
-  if (!supabaseUrl || !anonKey) return { status: 'unconfigured' }
-  if (input.title.trim().length < 2 || input.title.trim().length > 150) {
-    return { status: 'unavailable', message: 'Listing title must contain between 2 and 150 characters.' }
-  }
-  if ((input.city?.trim().length ?? 0) > 100) {
-    return { status: 'unavailable', message: 'City must be 100 characters or fewer.' }
-  }
-  if ((input.details?.trim().length ?? 0) > 2000) {
-    return { status: 'unavailable', message: 'Listing details must be 2,000 characters or fewer.' }
-  }
-  if ((input.source_url?.trim().length ?? 0) > 1000) {
-    return { status: 'unavailable', message: 'Source links must be 1,000 characters or fewer.' }
-  }
-  if (input.source_url?.trim()) {
-    try {
-      if (new URL(input.source_url).protocol !== 'https:') throw new Error('HTTPS required')
-    } catch {
-      return { status: 'unavailable', message: 'Please provide a valid HTTPS source link, or leave it blank if unavailable.' }
-    }
-  }
-  try {
-    const baseUrl = new URL(supabaseUrl)
-    if (baseUrl.protocol !== 'https:' && baseUrl.hostname !== 'localhost' && baseUrl.hostname !== '127.0.0.1') {
-      return { status: 'unavailable', message: 'The submission service must use HTTPS.' }
-    }
-    const response = await fetch(`${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/listing_submissions`, {
-      method: 'POST',
-      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json', Accept: 'application/json', Prefer: 'return=minimal' },
-      body: JSON.stringify({
-        listing_type: input.listing_type,
-        title: input.title.trim(),
-        city: input.city?.trim() || null,
-        source_url: input.source_url?.trim() || null,
-        details: input.details?.trim() || null,
-      }),
-    })
-    if (!response.ok) {
-      if (response.status === 404) {
-        return { status: 'unavailable', message: 'The listing submission queue is not installed on this database yet. No listing was submitted.' }
-      }
-      if (response.status >= 500) {
-        return { status: 'unavailable', message: 'We could not submit this suggestion. Please try again later.' }
-      }
-      return { status: 'unavailable', message: `Submission could not be accepted (HTTP ${response.status}). Please check your details and try again.` }
-    }
-    return { status: 'submitted' }
-  } catch (error) {
-    return { status: 'unavailable', message: error instanceof Error ? error.message : 'Could not connect to the submission service.' }
-  }
+  return submitListingIntake(input)
 }
 
-/** Submit a user-provided suggestion with tracking metadata returned where supported. */
+/** Submit a suggestion without granting browser clients direct table INSERT access. */
 export async function submitListingIntake(input: ListingSubmissionInput & { submitter_email?: string }): Promise<ListingSubmissionResult> {
   const client = getSupabaseClient()
-  if (client) {
-    try {
-      const { data, error } = await client.rpc('submit_listing_intake', {
-        p_listing_type: input.listing_type,
-        p_title: input.title.trim(),
-        p_city: input.city?.trim() || null,
-        p_source_url: input.source_url?.trim() || null,
-        p_details: input.details?.trim() || null,
-        p_submitter_email: input.submitter_email?.trim() || null,
-      })
-      if (!error && data && typeof data === 'object') {
-        const res = data as { status?: string; reference_number?: string; tracking_key?: string }
-        if (res.status === 'submitted') {
-          return {
-            status: 'submitted',
-            reference_number: res.reference_number,
-            tracking_key: res.tracking_key,
-          }
+  if (!client) return { status: 'unconfigured' }
+
+  try {
+    const { data, error } = await client.rpc('submit_listing_intake', {
+      p_listing_type: input.listing_type,
+      p_title: input.title.trim(),
+      p_city: input.city?.trim() || null,
+      p_source_url: input.source_url?.trim() || null,
+      p_details: input.details?.trim() || null,
+      p_submitter_email: input.submitter_email?.trim() || null,
+    })
+
+    if (error) {
+      return {
+        status: 'unavailable',
+        message: error.message || 'The private listing review queue could not accept this submission. No listing was submitted.',
+      }
+    }
+
+    if (data && typeof data === 'object') {
+      const res = data as { status?: string; reference_number?: string; tracking_key?: string }
+      if (res.status === 'submitted' && res.reference_number && res.tracking_key) {
+        return {
+          status: 'submitted',
+          reference_number: res.reference_number,
+          tracking_key: res.tracking_key,
         }
       }
-    } catch {
-      // Fallback to standard submission
+    }
+
+    return {
+      status: 'unavailable',
+      message: 'The listing service returned an unexpected response. No listing was submitted.',
+    }
+  } catch (error) {
+    return {
+      status: 'unavailable',
+      message: error instanceof Error ? error.message : 'Could not connect to the private listing review queue.',
     }
   }
-  return submitListingSuggestion(input)
 }
 
 // -----------------------------------------------------------------------------
