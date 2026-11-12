@@ -25,7 +25,7 @@ export interface VerifiedCoach {
   experienceYears: number
   academyAffiliation: string
   monthlyFee: string
-  feeRangeCategory: 'under-3k' | '3k-7k' | 'premium' | 'subsidized'
+  feeRangeCategory: 'under-3k' | '3k-7k' | 'premium' | 'subsidized' | 'unknown'
   studentTrackRecord: string
   specialties: string[]
   languages: string[]
