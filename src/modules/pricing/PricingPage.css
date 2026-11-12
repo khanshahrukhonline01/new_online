@@ -1233,3 +1233,37 @@ html.dark .faq-answer-body {
 .faq-answer-body p {
   margin: 0;
 }
+
+
+/* Free directory listing notice — distinct from optional memberships and services */
+.pricing-free-listing-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  max-width: 1120px;
+  margin: 1rem auto 1.5rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 14px;
+  background: rgba(16, 185, 129, 0.08);
+  color: #0b192c;
+}
+.pricing-free-listing-note > svg {
+  flex: 0 0 auto;
+  color: #059669;
+}
+.pricing-free-listing-note strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.pricing-free-listing-note p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.55;
+}
+@media (max-width: 640px) {
+  .pricing-free-listing-note {
+    margin-inline: 1rem;
+    padding: 0.9rem;
+  }
+}
