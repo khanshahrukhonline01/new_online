@@ -28,7 +28,7 @@ WITH legacy_records AS (
       'source_url', v.source_url
     ) AS structured_data
   FROM public.venues v
-  WHERE coalesce(v.verification_status, 'unverified') <> 'verified'
+  WHERE coalesce(v.verification_status, 'unverified') IN ('unverified', 'pending_review')
     AND char_length(v.name) BETWEEN 2 AND 150
 
   UNION ALL
@@ -58,7 +58,7 @@ WITH legacy_records AS (
       'website_url', c.website_url
     )
   FROM public.coaches c
-  WHERE coalesce(c.verification_status, 'unverified') <> 'verified'
+  WHERE coalesce(c.verification_status, 'unverified') IN ('unverified', 'pending_review')
     AND c.slug LIKE 'coach-%'
     AND char_length(c.display_name) BETWEEN 2 AND 150
 
@@ -91,7 +91,7 @@ WITH legacy_records AS (
       'source_url', o.source_url
     )
   FROM public.opportunities o
-  WHERE coalesce(o.verification_status, 'unverified') <> 'verified'
+  WHERE coalesce(o.verification_status, 'unverified') IN ('unverified', 'pending_review')
     AND char_length(o.title) BETWEEN 2 AND 150
 ),
 to_queue AS (
