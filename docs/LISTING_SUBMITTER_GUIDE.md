@@ -21,7 +21,7 @@ You can suggest a sports listing at any time by visiting `/submit-listing` (or c
 
 ## 2. Free submission and independent verification
 
-Submitting a venue, coach or sports-trial listing to KhelGrid is free. There is no listing subscription, paid placement, checkout or payment requirement for submitting or reviewing these directory records. A free submission does not guarantee approval or publication.
+Submitting a venue, coach or sports-trial listing to KhelGrid is free. There is no listing subscription, paid placement, checkout or payment requirement for submitting or reviewing these directory records. The intake service applies server-side validation and a limit of 10 submissions per client per minute. A free submission does not guarantee approval or publication.
 
 KhelGrid checks the listing category’s relevant evidence before publication. Venue checks may include a genuine public address and facility details; coach checks may include the qualification and issuing authority; trial checks may include the organiser, official notice, dates, eligibility and application route. Evidence review is separate from editorial approval. A document upload or a submitter’s claim alone does not automatically make a listing verified.
 
