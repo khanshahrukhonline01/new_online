@@ -71,7 +71,7 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
     if (plan.isFree) {
       // Free plan navigation
       if (typeof window !== 'undefined') {
-        window.location.href = '/opportunities'
+        window.location.href = plan.audience === 'venue' || plan.audience === 'organizer' ? '/submit-listing' : '/opportunities'
       }
       return
     }
@@ -202,8 +202,18 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
             </button>
           </div>
 
-          {/* Monthly vs Annual Toggle (for non-boost tiers) */}
-          {selectedAudience !== 'organizer' && (
+          {(selectedAudience === 'venue' || selectedAudience === 'organizer') && (
+        <div className="pricing-free-listing-note" role="note">
+          <SiteIcon name="shield-check" size={20} />
+          <div>
+            <strong>Directory submissions are free. Verification is not for sale.</strong>
+            <p>Venue and sports-trial listings do not require a paid plan. KhelGrid reviews the evidence and publication details independently. Any venue hire or athlete entry fee belongs to the provider or organiser, not KhelGrid.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Monthly vs Annual Toggle (for non-boost tiers) */}
+          {selectedAudience !== 'organizer' && selectedAudience !== 'venue' && (
             <div className="billing-cycle-toggle-wrap">
               <div className="toggle-switch-group">
                 <button
