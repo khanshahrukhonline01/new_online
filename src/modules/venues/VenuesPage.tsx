@@ -205,14 +205,14 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
       <p className="eyebrow">VENUE & TURF DIRECTORY</p>
       <h1>Find a place to play.</h1>
       <p className="page-intro">
-        Explore sports grounds, synthetic turfs, and SAI National Centres of Excellence across India with verified coordinates and interactive directions.
+        Discover sports grounds, courts, turfs and training facilities. Check each venue’s address, facilities and source details before visiting.
       </p>
 
       <DirectoryCallout
         variant="venue"
-        tag="0% Commission"
-        title="Manage a sports facility? List with 0% Fee"
-        description="Showcase your courts, turfs, and grounds to athletes across India."
+        tag="Free venue listing"
+        title="Run a sports venue? Add it to KhelGrid for free."
+        description="Submit your venue details and public evidence. We review the information before publishing; no listing payment or subscription is required."
         buttonLabel="List your venue"
         buttonHref={onOpenIntake ? '#' : 'mailto:khelgrid@gmail.com?subject=List%20a%20sports%20venue%20on%20KhelGrid'}
         onButtonClick={onOpenIntake}
