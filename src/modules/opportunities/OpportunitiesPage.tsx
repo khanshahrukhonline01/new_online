@@ -227,7 +227,7 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
         title="Organising a sports trial? List it free on KhelGrid."
         description="Share trial dates, eligibility and the organiser’s official notice. Submitting a trial listing is free; evidence is reviewed before publication."
         buttonLabel="Submit a trial"
-        buttonHref="/submit-listing"
+        buttonHref="/submit-listing?type=opportunity"
         onNavigate={onNavigate}
       />
       <div className="kg-catalogue-layout">
