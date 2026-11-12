@@ -199,12 +199,12 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
             </button>
           </div>
 
-          {(selectedAudience === 'venue' || selectedAudience === 'organizer') && (
+          {(selectedAudience === 'venue' || selectedAudience === 'organizer' || selectedAudience === 'academy') && (
         <div className="pricing-free-listing-note" role="note">
           <SiteIcon name="shield-check" size={20} />
           <div>
             <strong>Directory submissions are free. Verification is not for sale.</strong>
-            <p>Venue and sports-trial listings do not require a paid plan. KhelGrid reviews the evidence and publication details independently. Any venue hire or athlete entry fee belongs to the provider or organiser, not KhelGrid.</p>
+            <p>Venue, coach, academy and sports-trial submissions and evidence review are free. Optional memberships do not buy verification or ranking. Any venue hire or athlete entry fee belongs to the provider or organiser, not KhelGrid.</p>
           </div>
         </div>
       )}
