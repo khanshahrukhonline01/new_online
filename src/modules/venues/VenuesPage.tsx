@@ -388,6 +388,9 @@ export default function VenuesPage({ onOpenIntake, onNavigate }: VenuesPageProps
                               <span className="card-kicker">
                                 {venue.government_facility ? 'Government facility' : 'Sports venue'}
                               </span>
+                              <span className="verification verified">
+                                <SiteIcon name="shield-check" size={13} /> Evidence reviewed
+                              </span>
                               {venue.distanceKm !== undefined && (
                                 <span className="venue-distance-badge" title="Driving distance from your GPS location">
                                   📍 {formatDistance(venue.distanceKm)} away
