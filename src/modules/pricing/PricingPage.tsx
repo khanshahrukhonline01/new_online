@@ -508,7 +508,7 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
           <h2 id="pricing-faq-heading" className="faq-title">
             Frequently Asked Questions
           </h2>
-          <p className="faq-sub">Everything you need to know about memberships, billing, and scout verification.</p>
+          <p className="faq-sub">Everything you need to know about directory submissions, evidence review and optional memberships.</p>
 
           <div className="faq-accordion-list">
             {PRICING_FAQS.map((faq, idx) => {
