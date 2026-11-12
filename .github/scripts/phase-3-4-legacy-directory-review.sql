@@ -32,7 +32,15 @@ BEGIN
   ) THEN RAISE EXCEPTION 'Legacy venue queue entry is not marked unverified'; END IF;
 
   UPDATE public.listing_submissions
-  SET status = 'published', verification_status = 'verified'
+  SET status = 'under_review', verification_status = 'verified'
+  WHERE id IN (v_venue_submission, v_coach_submission, v_trial_submission);
+
+  UPDATE public.listing_submissions
+  SET status = 'approved'
+  WHERE id IN (v_venue_submission, v_coach_submission, v_trial_submission);
+
+  UPDATE public.listing_submissions
+  SET status = 'published'
   WHERE id IN (v_venue_submission, v_coach_submission, v_trial_submission);
 
   IF NOT EXISTS (SELECT 1 FROM public.venues WHERE id = v_venue_id AND verification_status = 'verified' AND publication_status = 'published') THEN
