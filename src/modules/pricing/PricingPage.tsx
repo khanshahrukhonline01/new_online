@@ -141,8 +141,8 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
               <span className="stat-lbl">Review before publication</span>
             </div>
             <div className="stat-card">
-              <strong className="stat-num">No paid badge</strong>
-              <span className="stat-lbl">Verification is not for sale</span>
+              <strong className="stat-num">No paid verification</strong>
+              <span className="stat-lbl">Listing verification is not for sale</span>
             </div>
             <div className="stat-card">
               <strong className="stat-num">Provider fees</strong>
@@ -203,7 +203,7 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
         <div className="pricing-free-listing-note" role="note">
           <SiteIcon name="shield-check" size={20} />
           <div>
-            <strong>Directory submissions are free. Verification is not for sale.</strong>
+            <strong>Directory submissions are free. Listing verification is not for sale.</strong>
             <p>Venue, coach, academy and sports-trial submissions and evidence review are free. Optional memberships do not buy verification or ranking. Any venue hire or athlete entry fee belongs to the provider or organiser, not KhelGrid.</p>
           </div>
         </div>
