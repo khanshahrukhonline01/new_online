@@ -748,6 +748,7 @@ export function getUserVenueBookings(): Array<VenueBookingResult & { createdAt?:
  * Legacy database records remain untouched for historical compatibility.
  */
 export async function recordListingSubscription(_input: ListingSubscriptionInput): Promise<ListingSubscriptionResult> {
+  void _input
   return {
     status: 'error',
     message: 'KhelGrid directory listings are free. Submit the listing for evidence review; no payment or subscription is required.',
