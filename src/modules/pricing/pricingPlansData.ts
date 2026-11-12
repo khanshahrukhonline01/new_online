@@ -240,7 +240,7 @@ export const PRICING_FAQS: PricingFaqItem[] = [
   {
     question: 'Are academy directory listings free?',
     hindiQuestion: 'अकादमी मेंबरशिप से मेरी अकादमी को कैसे फायदा होगा?',
-    answer: 'Yes. An academy can submit a directory listing and supporting evidence without buying a membership. Optional academy operations services are separate and do not purchase approval, verification or search ranking.',
+    answer: 'Academies can submit public details for review. Optional academy operations services and memberships are separate from evidence review and do not purchase approval, verification or search ranking.',
   },
   {
     question: 'Do venues pay KhelGrid to appear in the directory?',
