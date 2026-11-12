@@ -351,37 +351,37 @@ export default function App() {
         <span>{t('play', 'Play')}</span>
       </a>
       <nav className="header-actions" aria-label="KhelGrid actions">
-        <button
+        <a
           className="header-action-link header-action-add"
-          type="button"
-          onClick={() => openIntake('pickup_game')}
-          title="List an Academy, Turf, Trial or Pickup Game on KhelGrid"
+          href="/submit-listing"
+          onClick={event => navigate(event, '/submit-listing')}
+          title="Submit a venue, coach, trial, academy or community listing for free review"
           aria-label={t('listOnKhelgrid', '+ List on KhelGrid')}
         >
           <SiteIcon name="plus" size={16} />
           <span>{t('listOnKhelgrid', '+ List on KhelGrid')}</span>
-        </button>
-        <button
+        </a>
+        <a
           className="header-action-link"
-          type="button"
-          onClick={() => openIntake('venue')}
-          title="List a sports venue on KhelGrid"
+          href="/submit-listing?type=venue"
+          onClick={event => navigate(event, '/submit-listing?type=venue')}
+          title="Submit a free venue listing for evidence review"
           aria-label={t('listVenue', 'List your venue')}
         >
           <SiteIcon name="building" size={16} />
           <span>{t('listVenue', 'List your venue')}</span>
-        </button>
-        <button
+        </a>
+        <a
           className="header-action-link header-action-secondary"
-          type="button"
-          onClick={() => openIntake('opportunity')}
-          title="Submit a sports trial or opportunity"
+          href="/submit-listing?type=opportunity"
+          onClick={event => navigate(event, '/submit-listing?type=opportunity')}
+          title="Submit a free sports trial listing for evidence review"
           aria-label={t('submitTrial', 'Submit a trial')}
         >
           <SiteIcon name="calendar-check" size={16} />
           <span>{t('submitTrial', 'Submit a trial')}</span>
-        </button>
-        <a className="header-action-link header-action-coach" href="mailto:khelgrid@gmail.com?subject=Register%20as%20a%20coach%20on%20KhelGrid" title="Register as a coach on KhelGrid" aria-label={t('joinAsCoach', 'Join as Coach')}><SiteIcon name="award" size={16} /><span>{t('joinAsCoach', 'Join as Coach')}</span></a>
+        </a>
+        <a className="header-action-link header-action-coach" href="/submit-listing?type=coach" onClick={event => navigate(event, '/submit-listing?type=coach')} title="Submit a free coach listing for evidence review" aria-label={t('joinAsCoach', 'Join as Coach')}><SiteIcon name="award" size={16} /><span>{t('joinAsCoach', 'Join as Coach')}</span></a>
         <a className="header-action-link header-action-chronicle" href="/khelchronicle/submit" onClick={event => navigate(event, '/khelchronicle/submit')} title="Submit research manuscript to KhelChronicle" aria-label={t('submitPaper', 'Submit Paper')}><SiteIcon name="file-text" size={16} /><span>{t('submitPaper', 'Submit Paper')}</span></a>
       </nav>
       <button
