@@ -109,7 +109,7 @@ export const ACADEMY_PLANS: PricingPlan[] = [
     originalMonthlyPrice: 1499,
     originalAnnualPrice: 8999,
     annualSavingsLabel: 'Save 44% · ₹416/mo',
-    blurb: 'Optional tools for managing admissions enquiries, batches and academy operations. Directory submission and evidence review are free and separate.',
+    blurb: 'Optional tools for managing admissions enquiries, batches and academy operations. Membership does not purchase evidence review or directory placement.',
     highlightFeature: 'Admissions enquiry workflow',
     features: [
       'Membership does not purchase evidence review, a verified badge or directory placement',
@@ -136,7 +136,7 @@ export const ACADEMY_PLANS: PricingPlan[] = [
     blurb: 'Optional admissions and programme-management tools for growing academies. Membership does not buy verification or search ranking.',
     highlightFeature: 'Admissions workflow and batch operations',
     features: [
-      'Everything in Academy Verified Partner',
+      'Everything in Academy Operations Starter',
       'Advanced admissions enquiry routing and batch administration',
       'Host Selection Trials & Camps with integrated online player registration',
       'Digital Player Bib & Entry Pass generator with QR scanning',
