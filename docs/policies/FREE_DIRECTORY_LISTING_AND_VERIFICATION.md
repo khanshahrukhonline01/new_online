@@ -7,7 +7,6 @@
 The following community directory submissions are free:
 - Sports venues and facilities
 - Individual coaches and trainers
-- Sports academies and training centres
 - Sports trials, selection camps and grassroots opportunities
 
 There is no listing submission fee, listing subscription, paid verification tier, paid approval, paid ranking or checkout requirement for these categories.
