@@ -43,7 +43,8 @@ describe('VenuesPage', () => {
 
     expect(html).toContain('VENUE &amp; TURF DIRECTORY')
     expect(html).toContain('Find a place to play.')
-    expect(html).toContain('Manage a sports facility? List with 0% Fee')
+    expect(html).toContain('Run a sports venue? Add it to KhelGrid for free.')
+    expect(html).toContain('Free venue listing')
   })
 
   it('renders Near Me GPS button and Grid/Map view switcher', () => {
