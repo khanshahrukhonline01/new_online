@@ -33,8 +33,31 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+          
+      - name: Check and install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if command -v psql >/dev/null 2>&1; then
+            echo "PostgreSQL client is already installed:"
+            psql --version
+          else
+            echo "PostgreSQL client is missing."
+            echo "Checking Ubuntu package repository DNS..."
+
+            if ! getent hosts archive.ubuntu.com >/dev/null 2>&1; then
+              echo "::error::Cannot resolve archive.ubuntu.com."
+              echo "Runner DNS/network connectivity must be fixed."
+              exit 1
+            fi
+
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+
+            echo "PostgreSQL client installed:"
+            psql --version
+          fi
       - name: Seed isolated hosted-schema PostgreSQL fixture
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-7-hosted-schema-fixture.sql
       - name: Create private listing submission queue
