@@ -414,7 +414,7 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
                   onClick={() => setActiveCoachForModal(coach)}
                   aria-label={`Connect with ${coach.name}`}
                 >
-                  <span>Connect with Coach</span>
+                  <span>View contact options</span>
                   <SiteIcon name="arrow-right" size={14} />
                 </button>
               </div>
