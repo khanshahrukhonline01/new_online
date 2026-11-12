@@ -70,7 +70,7 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
     if (plan.isFree) {
       // Free plan navigation
       if (typeof window !== 'undefined') {
-        window.location.href = plan.audience === 'venue' || plan.audience === 'organizer' ? '/submit-listing' : '/opportunities'
+        window.location.href = plan.audience === 'venue' ? '/submit-listing?type=venue' : plan.audience === 'organizer' ? '/submit-listing?type=opportunity' : '/opportunities'
       }
       return
     }
