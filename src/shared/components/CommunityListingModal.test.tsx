@@ -84,7 +84,7 @@ describe('CommunityListingModal', () => {
       <CommunityListingModal isOpen={true} onClose={vi.fn()} defaultCategory="venue" />
     )
     expect(html).toContain('Directory submissions are free.')
-    expect(html).toContain('no listing payment or subscription is required')
+    expect(html).toContain('No listing payment or subscription is required for these categories')
     expect(html).not.toContain('₹99')
     expect(html).not.toContain('VIP Lifetime')
   })
