@@ -110,12 +110,12 @@ describe('public catalogue client', () => {
     })
   })
 
-  it('excludes rejected opportunities from public results', async () => {
+  it('publishes only evidence-verified opportunities', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([]))
     const client = await loadClient()
     await client.getOpportunities()
     const requestUrl = new URL(String(vi.mocked(fetch).mock.calls[0][0]))
-    expect(requestUrl.searchParams.get('verification_status')).toBe('neq.rejected')
+    expect(requestUrl.searchParams.get('verification_status')).toBe('eq.verified')
   })
 
   it('returns an empty ready catalogue when the database has no published rows', async () => {
