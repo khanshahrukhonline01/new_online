@@ -58,7 +58,7 @@ describe('CoachesPage & coachesData', () => {
         preferredBatch: 'Morning (6:00 AM – 8:30 AM)',
       })
 
-      expect(record.referenceId).toMatch(/^KG-COACH-\\d{6}$/)
+      expect(record.referenceId).toMatch(/^KG-COACH-\d{6}$/)
       expect(record.athleteName).toBe('Devansh Verma')
       expect(record.coachName).toBe('Test Coach')
       expect(record.submittedAt).toBeTruthy()
