@@ -54,11 +54,10 @@ GRANT INSERT, UPDATE ON TABLE public.profiles, public.athlete_profiles
 TO authenticated;
 GRANT UPDATE ON TABLE public.listing_submissions TO authenticated;
 
--- Sequences are not table access. USAGE is sufficient for generated identifiers
--- where a public intake insert uses a sequence; do not grant UPDATE/setval.
+-- No public table currently uses a sequence-backed identifier. Keep all public
+-- sequences inaccessible to browser roles; UUID defaults need no sequence grant.
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public
   FROM PUBLIC, anon, authenticated;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
 
 -- Make future objects secure by default for migrations executed as postgres.
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
