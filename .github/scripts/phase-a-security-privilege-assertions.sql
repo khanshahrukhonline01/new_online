@@ -78,6 +78,11 @@ BEGIN
     RAISE EXCEPTION 'Phase A: anonymous execution remains on host/admin RPCs';
   END IF;
 
+  IF has_function_privilege('anon', 'public.create_pickup_game(text,text,text,text,integer,text,text,text,text,boolean,text)', 'EXECUTE')
+     OR NOT has_function_privilege('authenticated', 'public.create_pickup_game(text,text,text,text,integer,text,text,text,text,boolean,text)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'Phase A: pickup-game creation execution does not match authenticated-only contract';
+  END IF;
+
   IF NOT has_function_privilege('authenticated', 'public.admin_moderate_pickup_game(text,text,text)', 'EXECUTE')
      OR NOT has_function_privilege('authenticated', 'public.is_pickup_game_admin()', 'EXECUTE')
      OR NOT has_function_privilege('authenticated', 'public.is_service_role_or_admin()', 'EXECUTE') THEN
