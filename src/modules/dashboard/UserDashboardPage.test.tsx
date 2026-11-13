@@ -74,4 +74,22 @@ describe('UserDashboardPage', () => {
     expect(html).toContain('Welcome back, FSV Arena Bengaluru!')
     expect(html).toContain('Host &amp; Turfs Hub')
   })
+  it('does not expose the private moderation desk in the public-facing athlete dashboard, even for a legacy admin role', () => {
+    vi.spyOn(authClient, 'getStoredAuthUser').mockReturnValue({
+      id: 'usr-legacy-admin',
+      name: 'Legacy Admin',
+      fullName: 'Legacy Admin',
+      email: 'legacy-admin@khelgrid.test',
+      role: 'admin',
+      city: 'Delhi',
+      isVerified: true,
+      createdAt: '2026-11-01T00:00:00Z',
+    })
+
+    const html = renderToStaticMarkup(<UserDashboardPage />)
+    expect(html).not.toContain('Admin Desk')
+    expect(html).not.toContain('href="/admin"')
+    expect(html).not.toContain('href="/admin/control"')
+  })
+
 })
