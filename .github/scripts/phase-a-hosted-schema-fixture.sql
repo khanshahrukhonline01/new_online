@@ -86,34 +86,34 @@ $$;
 -- only stubs; their business logic is covered by their own feature migrations.
 CREATE OR REPLACE FUNCTION public.admin_moderate_pickup_game(text,text,text)
 RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path=''
-AS $ SELECT '{}'::jsonb $;
+AS $function$ SELECT '{}'::jsonb $function$;
 CREATE OR REPLACE FUNCTION public.approve_pickup_game_whatsapp_invite(uuid)
 RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path=''
-AS $ SELECT '{}'::jsonb $;
+AS $function$ SELECT '{}'::jsonb $function$;
 CREATE OR REPLACE FUNCTION public.cancel_pickup_game_as_host(text,text)
 RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path=''
-AS $ SELECT '{}'::jsonb $;
+AS $function$ SELECT '{}'::jsonb $function$;
 CREATE OR REPLACE FUNCTION public.complete_pickup_game_as_host(text)
 RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path=''
-AS $ SELECT '{}'::jsonb $;
+AS $function$ SELECT '{}'::jsonb $function$;
 CREATE OR REPLACE FUNCTION public.get_host_pickup_games()
 RETURNS SETOF jsonb LANGUAGE sql SECURITY DEFINER SET search_path=''
-AS $ SELECT '{}'::jsonb WHERE false $;
+AS $function$ SELECT '{}'::jsonb WHERE false $function$;
 CREATE OR REPLACE FUNCTION public.reopen_pickup_game_as_host(text)
 RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path=''
-AS $ SELECT '{}'::jsonb $;
+AS $function$ SELECT '{}'::jsonb $function$;
 CREATE OR REPLACE FUNCTION public.reschedule_pickup_game(text,text,text,text)
 RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path=''
-AS $ SELECT '{}'::jsonb $;
+AS $function$ SELECT '{}'::jsonb $function$;
 CREATE OR REPLACE FUNCTION public.update_pickup_game_capacity(text,integer,text)
 RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path=''
-AS $ SELECT '{}'::jsonb $;
+AS $function$ SELECT '{}'::jsonb $function$;
 CREATE OR REPLACE FUNCTION public.update_pickup_game_details(text,text,text,text,text)
 RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path=''
-AS $ SELECT '{}'::jsonb $;
+AS $function$ SELECT '{}'::jsonb $function$;
 CREATE OR REPLACE FUNCTION public.create_pickup_game(text,text,text,text,integer,text,text,text,text,boolean,text)
 RETURNS jsonb LANGUAGE sql SECURITY DEFINER SET search_path=''
-AS $ SELECT '{}'::jsonb $;
+AS $function$ SELECT '{}'::jsonb $function$;
 
 -- Mirror the owner-scoped profile and public intake policies used by hosted.
 DROP POLICY IF EXISTS profiles_insert_own ON public.profiles;
