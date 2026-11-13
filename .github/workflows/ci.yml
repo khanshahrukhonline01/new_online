@@ -138,6 +138,10 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261114100000_phase_b_listing_function_hardening.sql
       - name: Verify Phase B trigger ACLs and supported intake path
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-b-function-hardening-assertions.sql
+      - name: Add Phase B catalogue and moderation foreign-key indexes
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261114110000_phase_b_listing_fk_indexes.sql
+      - name: Verify Phase B foreign-key indexes
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-b-index-assertions.sql
       - name: Align isolated PostgreSQL fixture with hosted Phase A schema
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-a-hosted-schema-fixture.sql
       - name: Apply Phase A security default privilege hardening
