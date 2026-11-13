@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AdminControlPanelPage, getEvidenceChecklist } from './AdminControlPanelPage'
+import { AdminControlPanelPage } from './AdminControlPanelPage'
+import { getEvidenceChecklist } from './moderationEvidenceChecklist'
 
 describe('AdminControlPanelPage', () => {
   it('maps evidence to category-specific reviewer checklist states', () => {
