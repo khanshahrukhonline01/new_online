@@ -152,4 +152,39 @@ CREATE POLICY listing_reports_insert_community ON public.listing_reports
     char_length(trim(details)) >= 5 AND char_length(trim(entity_slug)) >= 1
   );
 
+
+-- Mirror the owner-scoped policies that exist in the hosted development DB.
+DROP POLICY IF EXISTS venue_bookings_owner_select ON public.venue_bookings;
+CREATE POLICY venue_bookings_owner_select ON public.venue_bookings
+  FOR SELECT TO authenticated USING ((SELECT auth.uid()) IS NOT NULL AND user_id = (SELECT auth.uid()));
+
+DROP POLICY IF EXISTS trial_reminders_owner_select ON public.trial_reminders;
+CREATE POLICY trial_reminders_owner_select ON public.trial_reminders
+  FOR SELECT TO authenticated USING ((SELECT auth.uid()) IS NOT NULL AND user_id = (SELECT auth.uid()));
+
+DROP POLICY IF EXISTS athlete_profiles_owner_draft_read ON public.athlete_profiles;
+CREATE POLICY athlete_profiles_owner_draft_read ON public.athlete_profiles
+  FOR SELECT TO authenticated USING ((SELECT auth.uid()) IS NOT NULL AND user_id = (SELECT auth.uid()));
+
+DROP POLICY IF EXISTS athlete_profiles_owner_insert ON public.athlete_profiles;
+CREATE POLICY athlete_profiles_owner_insert ON public.athlete_profiles
+  FOR INSERT TO authenticated WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND user_id = (SELECT auth.uid()));
+
+DROP POLICY IF EXISTS athlete_profiles_owner_update ON public.athlete_profiles;
+CREATE POLICY athlete_profiles_owner_update ON public.athlete_profiles
+  FOR UPDATE TO authenticated USING ((SELECT auth.uid()) IS NOT NULL AND user_id = (SELECT auth.uid()))
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND user_id = (SELECT auth.uid()));
+
+DROP POLICY IF EXISTS listing_subscriptions_owner_read ON public.listing_subscriptions;
+CREATE POLICY listing_subscriptions_owner_read ON public.listing_subscriptions
+  FOR SELECT TO authenticated USING ((SELECT auth.uid()) IS NOT NULL AND user_id = (SELECT auth.uid()));
+
+DROP POLICY IF EXISTS payments_user_read ON public.khelgrid_payments;
+CREATE POLICY payments_user_read ON public.khelgrid_payments
+  FOR SELECT TO authenticated USING ((SELECT auth.uid()) IS NOT NULL AND user_id = (SELECT auth.uid()));
+
+DROP POLICY IF EXISTS pickup_game_participants_owner_read ON public.pickup_game_participants;
+CREATE POLICY pickup_game_participants_owner_read ON public.pickup_game_participants
+  FOR SELECT TO authenticated USING ((SELECT auth.uid()) IS NOT NULL AND user_id = (SELECT auth.uid())::text);
+
 COMMIT;
