@@ -19,7 +19,15 @@ You can suggest a sports listing at any time by visiting `/submit-listing` (or c
 
 ---
 
-## 2. Tracking Your Submission Privately
+## 2. Free submission and independent verification
+
+Submitting a venue, coach or sports-trial listing to KhelGrid is free. There is no listing subscription, paid placement, checkout or payment requirement for submitting or reviewing these directory records. The intake service applies server-side validation and a limit of 10 submissions per client per minute. A free submission does not guarantee approval or publication.
+
+KhelGrid checks the listing category’s relevant evidence before publication. Venue checks may include a genuine public address and facility details; coach checks may include the qualification and issuing authority; trial checks may include the organiser, official notice, dates, eligibility and application route. Evidence review is separate from editorial approval. A document upload or a submitter’s claim alone does not automatically make a listing verified.
+
+Any athlete entry fee charged by an independent trial organiser is separate from KhelGrid’s free listing submission. If the organiser has not disclosed an athlete fee, KhelGrid should say it is not disclosed rather than assume the event is free.
+
+## 3. Tracking Your Submission Privately
 
 KhelGrid does **not** require you to create an account or sign in to submit a listing suggestion. Instead, when you submit a listing, the system generates two credentials:
 
@@ -43,7 +51,7 @@ KhelGrid does **not** require you to create an account or sign in to submit a li
 
 ---
 
-## 3. Responding to Correction Requests
+## 4. Responding to Correction Requests
 
 If a moderator needs more details before approving your suggestion, your tracking page will show a **Changes Requested** notice along with specific instructions (e.g., "Please provide the official registration link or venue address").
 
@@ -56,7 +64,7 @@ To resubmit:
 
 ---
 
-## 4. Community Guidelines & Standards
+## 5. Community Guidelines & Standards
 
 To ensure your suggestion is approved quickly:
 - **Include Official Verification Links:** Provide an HTTPS link to an official club website, verified social announcement, or federation press release whenever possible.

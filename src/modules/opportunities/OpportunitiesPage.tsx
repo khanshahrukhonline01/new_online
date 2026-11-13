@@ -15,8 +15,6 @@ import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 import { TrialAlertActions } from './TrialAlertActions'
 import { BookmarkButton } from '../../shared/components/BookmarkButton'
 import { createOpportunitySavedItem } from '../../shared/services/savedService'
-import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
-import type { PaymentItem } from '../../shared/payments/paymentTypes'
 import { TrialApplicationModal } from './TrialApplicationModal'
 import { getUserTrialApplications } from '../../integrations/supabase/athlete-profile-client'
 
@@ -45,7 +43,7 @@ export interface OpportunitiesPageProps {
   initialApplySlug?: string
 }
 
-export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApplySlug }: OpportunitiesPageProps = {}) {
+export default function OpportunitiesPage({ onNavigate, initialApplySlug }: OpportunitiesPageProps = {}) {
   const [result, setResult] = useState<CatalogueResult<Opportunity> | { status: 'loading'; data: [] }>({
     status: 'loading',
     data: [],
@@ -56,21 +54,11 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
   const [sport, setSport] = useState(initial.get('sport') ?? '')
   const [ageCategory, setAgeCategory] = useState(initial.get('age') ?? '')
   const [type, setType] = useState(initial.get('type') ?? '')
-  const [verification, setVerification] = useState(initial.get('status') ?? '')
   const [feeFilter, setFeeFilter] = useState(initial.get('free') === 'true' ? 'free' : (initial.get('fee') ?? ''))
   const [sort, setSort] = useState(initial.get('sort') ?? 'newest')
   const [currentPage, setCurrentPage] = useState(1)
   const [fromDate, setFromDate] = useState(initial.get('from') ?? '')
   const [toDate, setToDate] = useState(initial.get('to') ?? '')
-  const [checkoutItem, setCheckoutItem] = useState<PaymentItem | null>(null)
-  const [paymentNotice, setPaymentNotice] = useState('')
-  const [admitPass, setAdmitPass] = useState<{
-    item: Opportunity
-    passRef: string
-    athleteName: string
-    athletePhone: string
-    amount: number
-  } | null>(null)
   const [applyOpportunity, setApplyOpportunity] = useState<Opportunity | null>(null)
   const [appliedSlugs, setAppliedSlugs] = useState<Set<string>>(() => {
     const apps = getUserTrialApplications()
@@ -150,7 +138,6 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
               (ageCategory === 'open' && (item.title.toLowerCase().includes('open') || item.title.toLowerCase().includes('senior')))
             )) &&
             (!type || item.opportunity_type === type) &&
-            (!verification || item.verification_status === verification) &&
             (!feeFilter || (feeFilter === 'free' ? item.registration_fee === 0 : true)) &&
             (!fromDate || (Number.isFinite(start) && start >= after)) &&
             (!toDate || (Number.isFinite(start) && start <= before))
@@ -165,7 +152,7 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
               ? (a.application_deadline ?? '9999').localeCompare(b.application_deadline ?? '9999')
               : (b.starts_at ?? '').localeCompare(a.starts_at ?? ''),
         ),
-    [records, query, city, sport, ageCategory, type, verification, feeFilter, fromDate, toDate, sort],
+    [records, query, city, sport, ageCategory, type, feeFilter, fromDate, toDate, sort],
   )
 
   const totalPages = Math.max(1, Math.ceil(visible.length / OPPORTUNITY_PAGE_SIZE))
@@ -173,7 +160,7 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [query, city, sport, ageCategory, type, verification, feeFilter, fromDate, toDate, sort])
+  }, [query, city, sport, ageCategory, type, feeFilter, fromDate, toDate, sort])
 
   const clearAll = () => {
     setQuery('')
@@ -181,7 +168,6 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
     setSport('')
     setAgeCategory('')
     setType('')
-    setVerification('')
     setFeeFilter('')
     setFromDate('')
     setToDate('')
@@ -211,23 +197,12 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
         { value: 'free', label: 'Free Entry Only (₹0)' },
       ],
     },
-    {
-      key: 'status',
-      label: 'Source status',
-      value: verification,
-      onChange: setVerification,
-      options: ['verified', 'pending_review', 'unverified'].map(value => ({
-        value,
-        label: value.replace('_', ' '),
-      })),
-    },
     { key: 'from', label: 'Start date from', value: fromDate, onChange: setFromDate, options: [], inputType: 'date' as const },
     { key: 'to', label: 'Start date to', value: toDate, onChange: setToDate, options: [], inputType: 'date' as const },
   ]
 
   const quickFilters: QuickFilterPill[] = [
     { id: 'free', label: 'Free Entry (₹0)', icon: 'wallet', active: feeFilter === 'free', onClick: () => setFeeFilter(prev => prev === 'free' ? '' : 'free') },
-    { id: 'verified', label: 'Verified Only', icon: 'badge-check', active: verification === 'verified', onClick: () => setVerification(prev => prev === 'verified' ? '' : 'verified') },
     { id: 'trial', label: 'Trials & Combines', icon: 'target', active: type === 'trial', onClick: () => setType(prev => prev === 'trial' ? '' : 'trial') },
     { id: 'cricket', label: 'Cricket', icon: 'sports', active: sport === 'Cricket', onClick: () => setSport(prev => prev === 'Cricket' ? '' : 'Cricket') },
     { id: 'football', label: 'Football', icon: 'sports', active: sport === 'Football', onClick: () => setSport(prev => prev === 'Football' ? '' : 'Football') },
@@ -235,7 +210,7 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
   ]
 
   const hasActiveFilters = Boolean(
-    query.trim() || city || sport || ageCategory || type || verification || feeFilter || fromDate || toDate || sort !== 'newest',
+    query.trim() || city || sport || ageCategory || type || feeFilter || fromDate || toDate || sort !== 'newest',
   )
 
   return (
@@ -248,12 +223,12 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
 
       <DirectoryCallout
         variant="opportunity"
-        tag="Free Post"
-        title="Organising a sports trial? Post for Free"
-        description="Broadcast trial dates, age criteria, and circulars across 50+ cities."
+        tag="Free trial listing"
+        title="Organising a sports trial? List it free on KhelGrid."
+        description="Share trial dates, eligibility and the organiser’s official notice. Submitting a trial listing is free; evidence is reviewed before publication."
         buttonLabel="Submit a trial"
-        buttonHref={onOpenIntake ? '#' : 'mailto:khelgrid@gmail.com?subject=Submit%20a%20sports%20trial%20or%20opportunity'}
-        onButtonClick={onOpenIntake}
+        buttonHref="/submit-listing?type=opportunity"
+        onNavigate={onNavigate}
       />
       <div className="kg-catalogue-layout">
         <CatalogueFilterPanel
@@ -309,10 +284,13 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
                                 ₹{item.registration_fee} Entry Fee
                               </span>
                             )}
-                            {(item.registration_fee === 0 || item.registration_fee === undefined) && (
+                            {item.registration_fee === 0 && (
                               <span className="tag" style={{ color: '#16a34a', borderColor: 'rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)' }}>
-                                ₹0 Free Entry
+                                ₹0 Athlete Entry
                               </span>
+                            )}
+                            {item.registration_fee === undefined && (
+                              <span className="tag">Athlete entry fee not disclosed</span>
                             )}
                             {Boolean(item.available_spots) && (
                               <span className="tag" style={{ color: '#2563eb', borderColor: 'rgba(37,99,235,0.3)', background: 'rgba(37,99,235,0.08)' }}>
@@ -325,13 +303,13 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
                               </span>
                             )}
                             <span
-                              className={item.verification_status === 'verified' ? 'verification verified' : 'verification'}
+                              className="verification verified"
                             >
                               <SiteIcon
-                                name={item.verification_status === 'verified' ? 'shield-check' : 'info'}
+                                name="shield-check"
                                 size={14}
                               />{' '}
-                              {item.verification_status === 'verified' ? 'Source reviewed' : 'Not verified'}
+                              Source reviewed
                             </span>
                           </div>
                           <BookmarkButton item={createOpportunitySavedItem(item)} />
@@ -353,7 +331,7 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
                         </div>
                         {item.source_url && (
                           <a className="text-link" href={item.source_url} target="_blank" rel="noreferrer">
-                            <SiteIcon name="external-link" size={14} /> View source{' '}
+                            <SiteIcon name="external-link" size={14} /> Official organiser notice &amp; registration{' '}
                             {item.source_name ? `· ${item.source_name}` : ''}
                           </a>
                         )}
@@ -389,52 +367,6 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
                             <SiteIcon name={appliedSlugs.has(item.slug) ? 'badge-check' : 'sports-cv'} size={14} />
                             <span>{appliedSlugs.has(item.slug) ? 'Application Submitted ✓' : 'Apply with Sports CV'}</span>
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const fee = item.registration_fee || 0
-                              if (fee > 0) {
-                                setCheckoutItem({
-                                  id: item.id,
-                                  type: 'trial_registration',
-                                  title: `Trial Pass · ${item.title}`,
-                                  subtitle: `${[item.venue_name, item.city].filter(Boolean).join(', ')}`,
-                                  amount: fee,
-                                  emoji: '🎟️',
-                                  venueName: item.venue_name || undefined,
-                                  city: item.city || undefined,
-                                })
-                              } else {
-                                setAdmitPass({
-                                  item,
-                                  passRef: `PASS-${Date.now().toString().slice(-6)}`,
-                                  athleteName: 'Athlete',
-                                  athletePhone: '',
-                                  amount: 0,
-                                })
-                              }
-                            }}
-                            className="venue-btn venue-btn-book"
-                            style={{
-                              padding: '8px 14px',
-                              fontSize: '12.5px',
-                              borderRadius: '8px',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              border: 'none',
-                              color: '#fff',
-                              fontWeight: 700,
-                            }}
-                          >
-                            <SiteIcon name="badge-check" size={14} />
-                            <span>
-                              {item.registration_fee && item.registration_fee > 0
-                                ? `Register & Pay Pass (₹${item.registration_fee})`
-                                : 'Get Free Trial Admit Pass'}
-                            </span>
-                          </button>
                         </div>
                         <span style={{ display: 'none' }}
                         />
@@ -464,92 +396,6 @@ export default function OpportunitiesPage({ onOpenIntake, onNavigate, initialApp
           </AsyncState>
         </div>
       </div>
-      {/* Official Selection Trial Admit Pass Modal */}
-      {admitPass && (
-        <div className="venue-booking-overlay" onClick={() => setAdmitPass(null)}>
-          <div className="venue-booking-modal" onClick={e => e.stopPropagation()}>
-            <div className="venue-booking-header">
-              <h3>
-                <SiteIcon name="badge-check" size={20} />
-                <span>Official Selection Trial Admit Pass</span>
-              </h3>
-              <button
-                type="button"
-                className="kg-checkout-close"
-                onClick={() => setAdmitPass(null)}
-              >
-                <SiteIcon name="close" size={18} />
-              </button>
-            </div>
-            <div style={{ textAlign: 'center', padding: '12px 0' }}>
-              <div style={{ fontSize: '42px', marginBottom: '8px' }}>🎟️</div>
-              <h4 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 800 }}>
-                {admitPass.item.title}
-              </h4>
-              <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b' }}>
-                Present this digital pass at the venue entrance along with photo ID.
-              </p>
-              <div className="venue-summary-pill" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px', textAlign: 'left' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                  <span style={{ color: '#64748b' }}>Admit Pass ID:</span>
-                  <strong style={{ fontFamily: 'monospace', color: '#059669' }}>{admitPass.passRef}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                  <span style={{ color: '#64748b' }}>Trial Date:</span>
-                  <strong>{formatDate(admitPass.item.starts_at)}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                  <span style={{ color: '#64748b' }}>Location:</span>
-                  <strong>{[admitPass.item.venue_name, admitPass.item.city].filter(Boolean).join(', ')}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                  <span style={{ color: '#64748b' }}>Entry Status:</span>
-                  <strong style={{ color: '#16a34a' }}>Confirmed Verified Entry ({admitPass.amount > 0 ? `Paid ₹${admitPass.amount}` : 'Free Entry'})</strong>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-                <button type="button" className="kg-btn-cancel" style={{ flex: 1 }} onClick={() => window.print?.()}>
-                  <SiteIcon name="download" size={15} />
-                  <span>Print Pass</span>
-                </button>
-                <button type="button" className="venue-btn venue-btn-book" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setAdmitPass(null)}>
-                  Done
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {paymentNotice && <div role="status" className="state-panel">{paymentNotice}</div>}
-
-      {/* Checkout Modal for Paid Trials */}
-      {checkoutItem && (
-        <PaymentCheckoutModal
-          isOpen={Boolean(checkoutItem)}
-          onClose={() => setCheckoutItem(null)}
-          item={checkoutItem}
-          onSuccess={paymentResult => {
-            const currentItem = records.find(r => r.id === checkoutItem.id)
-            setCheckoutItem(null)
-            if (paymentResult.status !== 'completed') {
-              setPaymentNotice('Your payment reference is pending independent verification. No trial admission pass has been issued yet.')
-              return
-            }
-            if (currentItem) {
-              setAdmitPass({
-                item: currentItem,
-                passRef: paymentResult.receiptRef,
-                athleteName: 'Verified Athlete',
-                athletePhone: '',
-                amount: paymentResult.amount,
-              })
-            }
-          }}
-          allowPayAtVenue={false}
-        />
-      )}
-
       {/* Dynamic Selection Trial Application Modal */}
       {applyOpportunity && (
         <TrialApplicationModal

@@ -10,12 +10,6 @@ import {
   verifyPaymentWithServer,
   fetchVenueBookingVoucher,
 } from './paymentService'
-import {
-  LISTING_PLANS,
-  getListingPlan,
-  calculatePlanExpiry,
-  formatPlanDuration,
-} from './listingPricing'
 import type { PaymentCustomer, PaymentItem } from './paymentTypes'
 
 const memoryStorage: Record<string, string> = {}
@@ -98,6 +92,29 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
     it('handles empty or missing parameters safely', () => {
       expect(verifyPaymentSignature('', '', '')).toBe(false)
       expect(verifyPaymentSignature('order_123', '', 'sig')).toBe(false)
+    })
+  })
+
+  describe('free directory listing policy', () => {
+    it('does not create a payment request for a directory listing subscription', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      const result = await recordListingSubscription({
+        orderId: 'KG_ORD_LISTING_DISABLED',
+        paymentId: 'PAYMENT_REFERENCE',
+        listingType: 'venue',
+        listingName: 'Community Sports Ground',
+        city: 'Delhi',
+        planId: '1_month',
+        planName: 'Legacy plan',
+        amount: 499,
+        durationDays: 30,
+        customerName: 'Submitter',
+        customerPhone: '9876543210',
+      })
+
+      expect(result.status).toBe('error')
+      expect(result.message).toContain('listings are free')
+      expect(fetchSpy).not.toHaveBeenCalled()
     })
   })
 
@@ -407,99 +424,26 @@ describe('KhelGrid Payment Service — Phase 5.4 Hardened', () => {
   })
 
   describe('recordListingSubscription', () => {
-    it('always registers a pending subscription even when the client claims serverVerified', async () => {
-      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          status: 'pending_verification',
-          is_active: false,
-          subscription_id: 'SUB-1_YEAR-1234',
-          access_token: 'server-token',
-        }),
-      } as Response)
-
+    it('rejects new paid listing subscriptions without calling the payment API', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch')
       const sub = await recordListingSubscription({
-        orderId: 'KG_ORD_SUB_01_ABCD1234',
+        orderId: 'KG_ORD_SUB_DISABLED',
         paymentId: 'UPI_UTR_123456',
-        listingType: 'academy',
-        listingName: 'Bhaichung Bhutia Football School',
+        listingType: 'venue',
+        listingName: 'Community Sports Ground',
         city: 'Delhi',
         planId: '1_year',
-        planName: '1-Year Listing',
+        planName: 'Legacy plan',
         amount: 4499,
         durationDays: 365,
-        customerName: 'Coach Pradeep',
-        customerPhone: '9876543210',
-        paymentStatus: 'paid',
-        serverVerified: true,
-      })
-
-      expect(sub.status).toBe('pending_verification')
-      expect(sub.expiresAt).toBeNull()
-      expect(fetchSpy).toHaveBeenCalledWith(
-        expect.stringContaining('/functions/v1/register-payment-intent'),
-        expect.objectContaining({ method: 'POST' }),
-      )
-      const body = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))
-      expect(body.action).toBe('register_listing_subscription')
-      expect(body.p_payment_status).toBeUndefined()
-      expect(body.serverVerified).toBeUndefined()
-    })
-
-    it('returns an error rather than a locally fabricated subscription when the server is unavailable', async () => {
-      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('Network unavailable'))
-      const sub = await recordListingSubscription({
-        orderId: 'KG_ORD_SUB_FAIL_ABCD1234',
-        paymentId: 'UPI_UTR_123456',
-        listingType: 'academy',
-        listingName: 'Unverified Academy',
-        city: 'Delhi',
-        planId: '1_year',
-        planName: '1-Year Listing',
-        amount: 4499,
-        durationDays: 365,
-        customerName: 'Coach Unverified',
+        customerName: 'Submitter',
         customerPhone: '9876543210',
       })
+
       expect(sub.status).toBe('error')
+      expect(sub.message).toContain('directory listings are free')
+      expect(fetchSpy).not.toHaveBeenCalled()
     })
   })
 
-  describe('listingPricing helper contracts', () => {
-    it('defines exactly the 5 requested listing plans with correct Indian pricing', () => {
-      expect(LISTING_PLANS.length).toBe(5)
-      const ids = LISTING_PLANS.map(p => p.id)
-      expect(ids).toEqual(['1_day', '1_month', '6_months', '1_year', 'lifelong'])
-
-      const dayPlan = getListingPlan('1_day')
-      expect(dayPlan.price).toBe(99)
-      expect(dayPlan.durationDays).toBe(1)
-
-      const monthPlan = getListingPlan('1_month')
-      expect(monthPlan.price).toBe(499)
-      expect(monthPlan.durationDays).toBe(30)
-
-      const sixMonthPlan = getListingPlan('6_months')
-      expect(sixMonthPlan.price).toBe(2499)
-      expect(sixMonthPlan.durationDays).toBe(180)
-
-      const yearPlan = getListingPlan('1_year')
-      expect(yearPlan.price).toBe(4499)
-      expect(yearPlan.durationDays).toBe(365)
-      expect(yearPlan.popular).toBe(true)
-
-      const lifelongPlan = getListingPlan('lifelong')
-      expect(lifelongPlan.price).toBe(9999)
-      expect(lifelongPlan.durationDays).toBe(0)
-    })
-
-    it('formats lifelong expiry and future dates cleanly', () => {
-      expect(formatPlanDuration('lifelong', null)).toBe('Lifelong (Never Expires)')
-      expect(calculatePlanExpiry('lifelong')).toBeNull()
-      expect(calculatePlanExpiry('1_day')).not.toBeNull()
-      const future = new Date('2027-11-06T12:00:00Z').toISOString()
-      expect(formatPlanDuration('1_year', future)).toContain('2027')
-    })
-  })
 })

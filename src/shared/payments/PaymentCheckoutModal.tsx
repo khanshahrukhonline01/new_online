@@ -27,7 +27,7 @@ export function PaymentCheckoutModal({
   onSuccess,
   allowPayAtVenue = true,
 }: PaymentCheckoutModalProps) {
-  const supportsOnlinePaymentTarget = item.type === 'venue_booking' || item.type === 'listing_plan'
+  const supportsOnlinePaymentTarget = item.type === 'venue_booking'
   const supportsOnlinePayment = supportsOnlinePaymentTarget && isMerchantUpiConfigured()
   const supportsPayAtVenue = allowPayAtVenue && (item.type === 'venue_booking' || item.type === 'pickup_match')
   const [method, setMethod] = useState<PaymentMethod>(supportsOnlinePayment ? 'upi' : supportsPayAtVenue ? 'pay_at_venue' : 'upi')

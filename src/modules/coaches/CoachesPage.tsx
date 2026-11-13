@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { fetchCoaches } from '../../integrations/supabase/public-client'
 import {
-  VERIFIED_COACHES,
   COACH_SPORTS,
   COACH_CREDENTIALS,
   COACH_CITIES,
@@ -12,6 +11,7 @@ import {
 import CoachInquiryModal from './CoachInquiryModal'
 import { BookmarkButton } from '../../shared/components/BookmarkButton'
 import { createCoachSavedItem } from '../../shared/services/savedService'
+import { DirectoryCallout } from '../../shared/components/DirectoryCallout'
 import './CoachesPage.css'
 
 export interface CoachesPageProps {
@@ -19,8 +19,8 @@ export interface CoachesPageProps {
   onOpenCoachIntake?: () => void
 }
 
-export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps) {
-  const [coaches, setCoaches] = useState<VerifiedCoach[]>(VERIFIED_COACHES)
+export function CoachesPage({ onNavigate }: CoachesPageProps) {
+  const [coaches, setCoaches] = useState<VerifiedCoach[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedSport, setSelectedSport] = useState<string>('All Sports')
   const [selectedCredential, setSelectedCredential] = useState<CredentialAuthority>('all')
@@ -47,24 +47,26 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
           name: c.name || c.display_name,
           sport: c.sport || 'Multi-Sport',
           sportCategory: c.sportCategory || c.sport || 'Multi-Sport',
-          certification: c.certification || 'Certified Coach',
+          certification: c.certification || 'Qualification not supplied',
           credentialAuthority: (c.credential_authority || c.credentialAuthority || 'all') as CredentialAuthority,
-          authorityLabel: c.authority_label || c.authorityLabel || 'Certified Coach',
+          authorityLabel: c.authority_label || c.authorityLabel || 'Issuing authority not supplied',
           city: c.city,
           state: c.state || '',
-          experienceYears: c.experience_years ?? c.experienceYears ?? 5,
-          academyAffiliation: c.academy_affiliation || c.academyAffiliation || 'Independent',
-          monthlyFee: c.monthly_fee || c.monthlyFee || '₹3,000 / month',
-          feeRangeCategory: (c.fee_range_category || c.feeRangeCategory || '3k-7k') as VerifiedCoach['feeRangeCategory'],
+          experienceYears: c.experience_years ?? c.experienceYears ?? 0,
+          academyAffiliation: c.academy_affiliation || c.academyAffiliation || 'Affiliation not supplied',
+          monthlyFee: c.monthly_fee || c.monthlyFee || 'Fee not supplied',
+          feeRangeCategory: (c.fee_range_category || c.feeRangeCategory || 'unknown') as VerifiedCoach['feeRangeCategory'],
           studentTrackRecord: c.student_track_record || c.studentTrackRecord || '',
           specialties: c.specialties || [],
-          languages: c.languages || ['English', 'Hindi'],
-          rating: Number(c.rating || 4.8),
+          languages: c.languages || [],
+          rating: Number(c.rating || 0),
           reviewCount: c.review_count ?? c.reviewCount ?? 0,
-          verifiedBadge: c.verified_badge || c.verifiedBadge || 'Verified Coach',
+          verifiedBadge: 'Evidence reviewed',
+          websiteUrl: c.website_url || undefined,
+          publicContactUrl: c.public_contact_url || undefined,
           bio: c.bio || '',
-          availableForOneOnOne: c.available_one_on_one ?? c.availableForOneOnOne ?? true,
-          availableForBatches: c.available_batches ?? c.availableForBatches ?? true,
+          availableForOneOnOne: c.available_one_on_one ?? c.availableForOneOnOne ?? false,
+          availableForBatches: c.available_batches ?? c.availableForBatches ?? false,
         }))
         setCoaches(mapped)
       }
@@ -111,6 +113,9 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
           return false
         }
         if (selectedFee === 'subsidized' && coach.feeRangeCategory !== 'subsidized') {
+          return false
+        }
+        if (selectedFee === 'unknown' && coach.feeRangeCategory !== 'unknown') {
           return false
         }
       }
@@ -195,72 +200,25 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
       <header className="coaches-hero">
         <span className="coaches-eyebrow">
           <SiteIcon name="award" size={13} />
-          <span>Verified Grassroots &amp; Elite Mentors</span>
+          <span>Coach directory · evidence-led profiles</span>
         </span>
 
-        <h1 className="coaches-title">Dedicated Certified Coaches Directory</h1>
+        <h1 className="coaches-title">Find a coach. Check the credentials.</h1>
 
         <p className="coaches-subtitle">
-          Find and connect directly with certified Indian sports coaches. Filter by credential authorities
-          (SAI NIS Patiala, BCCI, AIFF, BWF), transparent monthly training fees, verified student track records,
-          and academy affiliations across India.
+          Explore published coach profiles by sport, qualification, location and training information. A credential is shown as verified only after supporting evidence has been reviewed. Confirm current availability and fees directly with the coach.
         </p>
-
-        {/* KPI Ribbon */}
-        <div className="coaches-kpi-ribbon">
-          <div className="coaches-kpi-card">
-            <div className="coaches-kpi-label">Verified Mentors</div>
-            <div className="coaches-kpi-value highlight">850+ Coaches</div>
-          </div>
-          <div className="coaches-kpi-card">
-            <div className="coaches-kpi-label">Accreditations</div>
-            <div className="coaches-kpi-value">SAI · BCCI · AFC</div>
-          </div>
-          <div className="coaches-kpi-card">
-            <div className="coaches-kpi-label">Sports Covered</div>
-            <div className="coaches-kpi-value">12 Disciplines</div>
-          </div>
-          <div className="coaches-kpi-card">
-            <div className="coaches-kpi-label">Average Rating</div>
-            <div className="coaches-kpi-value">⭐ 4.9 / 5.0</div>
-          </div>
-        </div>
       </header>
 
-      {/* Coach Onboarding Banner CTA */}
-      <section className="coaches-intake-banner" aria-label="Coach Onboarding Banner">
-        <div className="coaches-intake-content">
-          <h3>
-            <SiteIcon name="shield-check" size={18} />
-            <span>Are you a certified sports coach in India?</span>
-          </h3>
-          <p>
-            Create your verified coach profile on KhelGrid for free. Showcase your NIS / BCCI / AIFF credentials,
-            highlight student achievements, and receive direct inquiries from promising youth athletes across 53 Indian cities.
-          </p>
-        </div>
-
-        <div>
-          {onOpenCoachIntake ? (
-            <button
-              type="button"
-              className="coaches-intake-btn"
-              onClick={onOpenCoachIntake}
-            >
-              <span>Get Listed as a Coach</span>
-              <SiteIcon name="arrow-right" size={15} />
-            </button>
-          ) : (
-            <a
-              href="mailto:khelgrid@gmail.com?subject=Register%20as%20Coach%20on%20KhelGrid"
-              className="coaches-intake-btn"
-            >
-              <span>Get Listed as a Coach</span>
-              <SiteIcon name="arrow-right" size={15} />
-            </a>
-          )}
-        </div>
-      </section>
+      <DirectoryCallout
+        variant="coach"
+        tag="Free coach listing"
+        title="Are you a sports coach? Get listed at no charge."
+        description="Submit your professional profile and qualification evidence. KhelGrid reviews credentials before publishing a verified claim."
+        buttonLabel="Submit coach listing"
+        buttonHref="/submit-listing?type=coach"
+        onNavigate={onNavigate}
+      />
 
       {/* Sport Category Filter Tabs */}
       <div className="coaches-sport-pills" role="tablist" aria-label="Filter by sport">
@@ -335,6 +293,7 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
             <option value="3k-7k">₹3,000 – ₹7,000 / month</option>
             <option value="premium">Premium (₹7,000+ / month)</option>
             <option value="subsidized">Govt. Subsidized / Free</option>
+            <option value="unknown">Fee not disclosed</option>
           </select>
 
           {/* Sort By */}
@@ -345,7 +304,7 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
             aria-label="Sort coaches directory"
           >
             <option value="experience">Sort: Experience (High to Low)</option>
-            <option value="rating">Sort: Top Rated (4.9+ Stars)</option>
+            <option value="rating">Sort: Highest Rating First</option>
             <option value="fee">Sort: Monthly Fee (Low to High)</option>
             <option value="name">Sort: Name (A to Z)</option>
           </select>
@@ -396,10 +355,12 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className="coach-rating-badge" title={`${coach.reviewCount} verified athlete reviews`}>
-                      <SiteIcon name="star" size={12} style={{ fill: '#f59e0b', color: '#f59e0b' }} />
-                      <span>{coach.rating.toFixed(1)}</span>
-                    </div>
+                    {coach.rating > 0 && coach.reviewCount > 0 && (
+                      <div className="coach-rating-badge" title={`${coach.reviewCount} reviews`}>
+                        <SiteIcon name="star" size={12} style={{ fill: '#f59e0b', color: '#f59e0b' }} />
+                        <span>{coach.rating.toFixed(1)} · {coach.reviewCount}</span>
+                      </div>
+                    )}
                     <BookmarkButton item={createCoachSavedItem(coach)} />
                   </div>
                 </div>
@@ -407,12 +368,17 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
                 {/* Coach Name & Certification */}
                 <h2 className="coach-name">{coach.name}</h2>
                 <div className="coach-cert-line">{coach.certification}</div>
+                {(coach.websiteUrl || coach.publicContactUrl) && /^https:\/\//i.test(coach.websiteUrl || coach.publicContactUrl || '') && (
+                  <a className="text-link coach-source-link" href={coach.websiteUrl || coach.publicContactUrl} target="_blank" rel="noopener noreferrer">
+                    <SiteIcon name="external-link" size={13} /> Professional source
+                  </a>
+                )}
 
                 {/* Metadata List */}
                 <div className="coach-meta-list">
                   <div className="coach-meta-row">
                     <SiteIcon name="map-pin" size={14} />
-                    <span>{coach.city}, {coach.state}</span>
+                    <span>{[coach.city, coach.state].filter(Boolean).join(', ') || 'Location not supplied'}</span>
                   </div>
 
                   <div className="coach-meta-row">
@@ -423,33 +389,41 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
                   <div className="coach-meta-row">
                     <SiteIcon name="wallet" size={14} />
                     <span className="coach-meta-fee">{coach.monthlyFee}</span>
-                    <span style={{ fontSize: '11px', color: '#64748b' }}>
-                      ({coach.experienceYears}+ years coaching experience)
-                    </span>
+                    {coach.experienceYears > 0 && (
+                      <span style={{ fontSize: '11px', color: '#64748b' }}>
+                        ({coach.experienceYears} years coaching experience)
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 {/* Student Track Record */}
-                <div className="coach-track-record-box">
-                  <span className="coach-track-record-label">Student Track Record</span>
-                  <span>{coach.studentTrackRecord}</span>
-                </div>
+                {coach.studentTrackRecord && (
+                  <div className="coach-track-record-box">
+                    <span className="coach-track-record-label">Student Track Record</span>
+                    <span>{coach.studentTrackRecord}</span>
+                  </div>
+                )}
 
                 {/* Specialties Tags */}
-                <div className="coach-specialties-row">
-                  {coach.specialties.map(spec => (
-                    <span key={spec} className="coach-spec-tag">
-                      {spec}
-                    </span>
-                  ))}
-                </div>
+                {coach.specialties.length > 0 && (
+                  <div className="coach-specialties-row">
+                    {coach.specialties.map(spec => (
+                      <span key={spec} className="coach-spec-tag">
+                        {spec}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Card Footer: Languages & CTA */}
               <div className="coach-card-footer">
-                <div className="coach-languages-text">
-                  <span>Languages: <strong>{coach.languages.join(', ')}</strong></span>
-                </div>
+                {coach.languages.length > 0 && (
+                  <div className="coach-languages-text">
+                    <span>Languages: <strong>{coach.languages.join(', ')}</strong></span>
+                  </div>
+                )}
 
                 <button
                   type="button"
@@ -457,7 +431,7 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
                   onClick={() => setActiveCoachForModal(coach)}
                   aria-label={`Connect with ${coach.name}`}
                 >
-                  <span>Connect with Coach</span>
+                  <span>View contact options</span>
                   <SiteIcon name="arrow-right" size={14} />
                 </button>
               </div>
@@ -469,9 +443,15 @@ export function CoachesPage({ onNavigate, onOpenCoachIntake }: CoachesPageProps)
           <div className="coaches-empty-icon">
             <SiteIcon name="search" size={40} />
           </div>
-          <h2 className="coaches-empty-title">No matching coaches found</h2>
+          <h2 className="coaches-empty-title">
+            {loading ? 'Loading reviewed coach profiles…' : coaches.length ? 'No matching coaches found' : 'No verified coach profiles published yet'}
+          </h2>
           <p className="coaches-empty-sub">
-            We couldn't find any coaches matching your active filters. Try adjusting your sport, city, or credential selections.
+            {loading
+              ? 'Please wait while the public directory is refreshed.'
+              : coaches.length
+                ? 'Try adjusting your sport, city, or credential selections.'
+                : 'Coach submissions are free. Share a professional profile and qualification evidence to start the review process.'}
           </p>
           <button
             type="button"
