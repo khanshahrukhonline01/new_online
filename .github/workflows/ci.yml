@@ -1,9 +1,9 @@
 name: CI
 on:
   push:
-    branches: [main, development/admin-control-center]
+    branches: [main, development/admin-control-center, development/admin-app-separation]
   pull_request:
-    branches: [main]
+    branches: [main, development/admin-control-center]
 permissions:
   contents: read
 jobs:
