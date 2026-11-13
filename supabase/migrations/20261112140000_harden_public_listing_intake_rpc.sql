@@ -74,7 +74,15 @@ BEGIN
     EXCEPTION WHEN OTHERS THEN
       v_ip := NULL;
     END;
-    v_rate_identifier := 'listing_intake:ip:' || md5(coalesce(v_ip, 'anon:unverified-edge-client'));
+    -- Never collapse all unidentified anonymous clients into one shared bucket:
+    -- that would let one caller deny submissions for every other visitor.
+    IF v_ip IS NULL THEN
+      RETURN jsonb_build_object(
+        'status', 'unavailable',
+        'message', 'We could not safely identify this connection for submission. Please retry.'
+      );
+    END IF;
+    v_rate_identifier := 'listing_intake:ip:' || md5(v_ip);
   END IF;
 
   IF NOT public.check_and_increment_rate_limit(v_rate_identifier, 10, 60) THEN
