@@ -128,6 +128,10 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-4-legacy-directory-fixture.sql
       - name: Queue legacy unverified directory records for review
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112150000_queue_legacy_unverified_directory_records.sql
+      - name: Reject explicitly labelled test-only legacy venues
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261114120000_reject_test_only_legacy_venues.sql
+      - name: Verify test-only venue records are not publishable
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-b-test-only-data-assertions.sql
       - name: Assert anonymous users can read verified listings only
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-2-public-directory-verification.sql
       - name: Test anonymous listing intake validation and rate limiting
