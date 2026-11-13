@@ -18,8 +18,7 @@ WITH test_submissions AS (
 unpublished AS (
   UPDATE public.venues v
   SET publication_status = 'draft',
-      verification_status = 'unverified',
-      updated_at = clock_timestamp()
+      verification_status = 'unverified'
   FROM test_submissions s
   WHERE s.published_table = 'venues' AND s.published_record_id = v.id
   RETURNING v.id
