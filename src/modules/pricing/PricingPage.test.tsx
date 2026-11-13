@@ -7,7 +7,6 @@ import {
   VENUE_PLANS,
   ORGANIZER_BOOST_PLANS,
   PRICING_FAQS,
-  PRICING_TESTIMONIALS,
 } from './pricingPlansData'
 
 describe('PricingPage Component', () => {
@@ -16,13 +15,11 @@ describe('PricingPage Component', () => {
 
     expect(html).toContain('Simple, Transparent Sports Memberships')
     expect(html).toContain('Pricing &amp; Memberships')
-    expect(html).toContain('Direct UPI Instant Checkout · Zero Hidden Fees')
-    expect(html).toContain('45,000+')
-    expect(html).toContain('Active Athletes')
-    expect(html).toContain('850+')
-    expect(html).toContain('Verified Academies')
-    expect(html).toContain('0%')
-    expect(html).toContain('Turf Commission')
+    expect(html).toContain('Venue, coach &amp; trial listings are free · Memberships are separate')
+    expect(html).toContain('Venue, coach &amp; trial submissions')
+    expect(html).toContain('No paid verification')
+    expect(html).not.toContain('45,000+')
+    expect(html).not.toContain('850+')
   })
 
   it('renders audience switcher buttons and billing cycle options', () => {
@@ -31,7 +28,7 @@ describe('PricingPage Component', () => {
     expect(html).toContain('Khiladi / Athlete Pass')
     expect(html).toContain('Academies &amp; Coaches')
     expect(html).toContain('Turfs &amp; Grounds')
-    expect(html).toContain('Event &amp; Trial Boost')
+    expect(html).toContain('Trials &amp; Opportunities')
     expect(html).toContain('Monthly Billing')
     expect(html).toContain('Annual Billing')
     expect(html).toContain('Save up to 50%')
@@ -68,8 +65,10 @@ describe('PricingPage Component', () => {
       expect(html).toContain(plan.name.replace(/&/g, '&amp;'))
       expect(html).toContain(plan.hindiName)
     }
-    expect(html).toContain('0% Booking Commission')
-    expect(html).toContain('Keep 100% of revenue')
+    expect(html).toContain('Free Venue Listing')
+    expect(html).toContain('No listing subscription or checkout')
+    expect(html).toContain('Venue, coach and trial listings are free. Verification is not for sale.')
+    expect(html).not.toContain('Featured #1 placement')
   })
 
   it('renders organizer boost plans when initialSegment="organizer"', () => {
@@ -79,8 +78,9 @@ describe('PricingPage Component', () => {
       expect(html).toContain(plan.name.replace(/&/g, '&amp;'))
       expect(html).toContain(plan.hindiName)
     }
-    expect(html).toContain('1,500')
-    expect(html).toContain('Pinned &quot;Featured Trial&quot; top card')
+    expect(html).toContain('Free Trial &amp; Opportunity Listing')
+    expect(html).toContain('No listing payment, boost fee or subscription')
+    expect(html).not.toContain('Pinned &quot;Featured Trial&quot; top card')
   })
 
   it('renders interactive ROI Simulator for academies', () => {
@@ -96,19 +96,9 @@ describe('PricingPage Component', () => {
   it('renders trust and safety guarantee cards', () => {
     const html = renderToStaticMarkup(<PricingPage />)
 
-    expect(html).toContain('Zero Fake Trials Guarantee')
-    expect(html).toContain('Direct Instant UPI &amp; Cards')
-    expect(html).toContain('7-Day No-Questions Refund')
-  })
-
-  it('renders athlete and coach testimonials', () => {
-    const html = renderToStaticMarkup(<PricingPage />)
-
-    expect(html).toContain('Trusted by Grassroots Khiladis &amp; Academy Directors')
-    for (const t of PRICING_TESTIMONIALS) {
-      expect(html).toContain(t.author)
-      expect(html).toContain(t.role.replace(/&/g, '&amp;'))
-    }
+    expect(html).toContain('Evidence-led trial review')
+    expect(html).toContain('No payment for venue, coach or trial listings')
+    expect(html).toContain('Clear fee information')
   })
 
   it('renders FAQ accordion section with questions and answers', () => {
@@ -121,7 +111,7 @@ describe('PricingPage Component', () => {
       expect(html).toContain(faq.hindiQuestion.replace(/"/g, '&quot;'))
     }
     // First FAQ is open by default
-    expect(html).toContain('Yes! KhelGrid supports direct instant UPI checkout')
+    expect(html).toContain('No. Venue, coach and sports-trial directory submissions and evidence review are free.')
   })
 
   it('renders enterprise CSR partnership section with contact links', () => {

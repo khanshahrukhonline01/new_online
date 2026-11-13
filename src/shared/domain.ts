@@ -54,6 +54,8 @@ export interface Venue {
   rating?: number
   review_count?: number
   verification_status?: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+  source_name?: string | null
+  source_url?: string | null
   affiliation_proof?: string | null
   reported_count?: number
 }

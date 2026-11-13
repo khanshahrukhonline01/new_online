@@ -300,7 +300,7 @@ async function fetchOpportunitiesCatalogue(): Promise<CatalogueResult<Opportunit
     order: 'is_featured.desc.nullslast,starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (featured.status === 'ready') return featured
@@ -311,7 +311,7 @@ async function fetchOpportunitiesCatalogue(): Promise<CatalogueResult<Opportunit
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (rich.status === 'ready') return rich
@@ -322,7 +322,7 @@ async function fetchOpportunitiesCatalogue(): Promise<CatalogueResult<Opportunit
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
 }
@@ -343,15 +343,15 @@ export async function getOpportunities(): Promise<CatalogueResult<Opportunity>> 
 
 async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
   const enrichedFields =
-    'id,slug,name,description,city,state,address,phone,email,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,rating,review_count,faqs,verification_status,sport'
+    'id,slug,name,description,city,state,address,phone,email,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,rating,review_count,faqs,verification_status,source_name,source_url,sport'
   const baseFields =
-    'id,slug,name,description,city,address,phone,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,verification_status,sport'
+    'id,slug,name,description,city,address,phone,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,verification_status,source_name,source_url,sport'
 
   const featured = await readCatalogue<Venue>({
     table: 'venues',
     select: enrichedFields,
     order: 'is_featured.desc.nullslast,name.asc',
-    filters: { publication_status: 'eq.published' },
+    filters: { publication_status: 'eq.published', verification_status: 'eq.verified' },
   })
   if (featured.status === 'ready') return featured
 
@@ -359,7 +359,7 @@ async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
     table: 'venues',
     select: baseFields,
     order: 'is_featured.desc.nullslast,name.asc',
-    filters: { publication_status: 'eq.published' },
+    filters: { publication_status: 'eq.published', verification_status: 'eq.verified' },
   })
   if (base.status === 'ready') return base
 
@@ -367,7 +367,7 @@ async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
     table: 'venues',
     select: baseFields,
     order: 'name.asc',
-    filters: { publication_status: 'eq.published' },
+    filters: { publication_status: 'eq.published', verification_status: 'eq.verified' },
   })
 }
 
@@ -413,7 +413,7 @@ async function fetchAcademiesCatalogue(): Promise<CatalogueResult<Academy>> {
     order: 'is_featured.desc.nullslast,name.asc',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (featured.status === 'ready') return featured
@@ -424,7 +424,7 @@ async function fetchAcademiesCatalogue(): Promise<CatalogueResult<Academy>> {
     order: 'is_featured.desc.nullslast,name.asc',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (base.status === 'ready') return base
@@ -435,7 +435,7 @@ async function fetchAcademiesCatalogue(): Promise<CatalogueResult<Academy>> {
     order: 'name.asc',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
 }
@@ -529,7 +529,7 @@ export async function fetchCoaches(options?: FetchCoachesOptions): Promise<Catal
 
   const filters: Record<string, string> = {
     publication_status: 'eq.published',
-    verification_status: 'neq.rejected',
+    verification_status: 'eq.verified',
   }
 
   if (options?.sport && options.sport !== 'All Sports') {
@@ -802,7 +802,7 @@ export async function getEvents(): Promise<CatalogueResult<EventItem>> {
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (enriched.status === 'ready') return enriched
@@ -813,7 +813,7 @@ export async function getEvents(): Promise<CatalogueResult<EventItem>> {
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
 }
@@ -1070,86 +1070,123 @@ export type ListingSubmissionResult =
   | { status: 'unavailable'; message: string }
 
 /** Submit a user-provided suggestion to the private review queue. */
+/** Submit a user-provided suggestion through the validated private-intake RPC. */
 export async function submitListingSuggestion(input: ListingSubmissionInput): Promise<ListingSubmissionResult> {
+  return submitListingIntake(input)
+}
+
+/** Submit a suggestion without granting browser clients direct table INSERT access. */
+export async function submitListingIntake(input: ListingSubmissionInput & { submitter_email?: string }): Promise<ListingSubmissionResult> {
   if (!supabaseUrl || !anonKey) return { status: 'unconfigured' }
-  if (input.title.trim().length < 2 || input.title.trim().length > 150) {
+
+  const allowedTypes: ListingSubmissionInput['listing_type'][] = [
+    'opportunity', 'venue', 'coach', 'academy', 'event', 'pickup_game', 'sport',
+  ]
+  const title = input.title.trim()
+  const city = input.city?.trim() || ''
+  const details = input.details?.trim() || ''
+  const sourceUrl = input.source_url?.trim() || ''
+  const submitterEmail = input.submitter_email?.trim() || ''
+
+  if (!allowedTypes.includes(input.listing_type)) {
+    return { status: 'unavailable', message: 'Choose a supported listing category.' }
+  }
+  if (title.length < 2 || title.length > 150) {
     return { status: 'unavailable', message: 'Listing title must contain between 2 and 150 characters.' }
   }
-  if ((input.city?.trim().length ?? 0) > 100) {
-    return { status: 'unavailable', message: 'City must be 100 characters or fewer.' }
+  if (city.length > 100 || details.length > 2000 || sourceUrl.length > 1000 || submitterEmail.length > 255) {
+    return { status: 'unavailable', message: 'One or more listing fields exceed the allowed length.' }
   }
-  if ((input.details?.trim().length ?? 0) > 2000) {
-    return { status: 'unavailable', message: 'Listing details must be 2,000 characters or fewer.' }
-  }
-  if ((input.source_url?.trim().length ?? 0) > 1000) {
-    return { status: 'unavailable', message: 'Source links must be 1,000 characters or fewer.' }
-  }
-  if (input.source_url?.trim()) {
+  if (sourceUrl) {
     try {
-      if (new URL(input.source_url).protocol !== 'https:') throw new Error('HTTPS required')
+      if (new URL(sourceUrl).protocol !== 'https:') throw new Error('HTTPS required')
     } catch {
       return { status: 'unavailable', message: 'Please provide a valid HTTPS source link, or leave it blank if unavailable.' }
     }
   }
+
   try {
     const baseUrl = new URL(supabaseUrl)
     if (baseUrl.protocol !== 'https:' && baseUrl.hostname !== 'localhost' && baseUrl.hostname !== '127.0.0.1') {
       return { status: 'unavailable', message: 'The submission service must use HTTPS.' }
     }
-    const response = await fetch(`${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/listing_submissions`, {
+
+    // Preserve a signed-in user's identity where available; anonymous users use the public key.
+    let bearerToken = anonKey
+    const client = getSupabaseClient()
+    if (client) {
+      try {
+        const { data } = await client.auth.getSession()
+        if (data.session?.access_token) bearerToken = data.session.access_token
+      } catch {
+        // Anonymous public intake remains available if session lookup is unavailable.
+      }
+    }
+
+    const response = await fetch(`${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/submit_listing_intake`, {
       method: 'POST',
-      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json', Accept: 'application/json', Prefer: 'return=minimal' },
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${bearerToken}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
       body: JSON.stringify({
-        listing_type: input.listing_type,
-        title: input.title.trim(),
-        city: input.city?.trim() || null,
-        source_url: input.source_url?.trim() || null,
-        details: input.details?.trim() || null,
+        p_listing_type: input.listing_type,
+        p_title: title,
+        p_city: city || null,
+        p_source_url: sourceUrl || null,
+        p_details: details || null,
+        p_submitter_email: submitterEmail || null,
       }),
     })
+
+    const data = await response.json().catch(() => null) as {
+      status?: string
+      reference_number?: string
+      tracking_key?: string
+      message?: string
+      details?: string
+    } | null
+
+    if (data?.status === 'rate_limited') {
+      return {
+        status: 'unavailable',
+        message: data.message || 'Too many listing submissions from this connection. Please wait a minute and try again.',
+      }
+    }
+
     if (!response.ok) {
       if (response.status === 404) {
-        return { status: 'unavailable', message: 'The listing submission queue is not installed on this database yet. No listing was submitted.' }
+        return { status: 'unavailable', message: 'The private listing intake RPC is not installed on this database yet. No listing was submitted.' }
       }
       if (response.status >= 500) {
         return { status: 'unavailable', message: 'We could not submit this suggestion. Please try again later.' }
       }
-      return { status: 'unavailable', message: `Submission could not be accepted (HTTP ${response.status}). Please check your details and try again.` }
-    }
-    return { status: 'submitted' }
-  } catch (error) {
-    return { status: 'unavailable', message: error instanceof Error ? error.message : 'Could not connect to the submission service.' }
-  }
-}
-
-/** Submit a user-provided suggestion with tracking metadata returned where supported. */
-export async function submitListingIntake(input: ListingSubmissionInput & { submitter_email?: string }): Promise<ListingSubmissionResult> {
-  const client = getSupabaseClient()
-  if (client) {
-    try {
-      const { data, error } = await client.rpc('submit_listing_intake', {
-        p_listing_type: input.listing_type,
-        p_title: input.title.trim(),
-        p_city: input.city?.trim() || null,
-        p_source_url: input.source_url?.trim() || null,
-        p_details: input.details?.trim() || null,
-        p_submitter_email: input.submitter_email?.trim() || null,
-      })
-      if (!error && data && typeof data === 'object') {
-        const res = data as { status?: string; reference_number?: string; tracking_key?: string }
-        if (res.status === 'submitted') {
-          return {
-            status: 'submitted',
-            reference_number: res.reference_number,
-            tracking_key: res.tracking_key,
-          }
-        }
+      return {
+        status: 'unavailable',
+        message: `The private review queue rejected this submission (HTTP ${response.status}). No listing was submitted.`,
       }
-    } catch {
-      // Fallback to standard submission
+    }
+
+    if (data?.status === 'submitted' && data.reference_number && data.tracking_key) {
+      return {
+        status: 'submitted',
+        reference_number: data.reference_number,
+        tracking_key: data.tracking_key,
+      }
+    }
+
+    return {
+      status: 'unavailable',
+      message: 'The listing service returned an unexpected response. No listing was submitted.',
+    }
+  } catch (error) {
+    return {
+      status: 'unavailable',
+      message: error instanceof Error ? error.message : 'Could not connect to the private listing review queue.',
     }
   }
-  return submitListingSuggestion(input)
 }
 
 // -----------------------------------------------------------------------------
@@ -3501,22 +3538,13 @@ export async function getAdminModerationQueue(filters?: ModerationQueueFilters):
     p_sort_dir: filters?.sortDir || 'desc',
   })
 
-  if (!v2Error && Array.isArray(v2Data)) {
-    rows = v2Data as ModeratorQueueItem[]
-    totalCount = rows.length > 0 && 'total_count' in (rows[0] as unknown as { total_count: number })
-      ? Number((rows[0] as unknown as { total_count: number }).total_count)
-      : rows.length
-  } else {
-    // Fallback to legacy v1 RPC
-    const { data: v1Data, error: v1Error } = await client.rpc('get_listing_submissions')
-    if (v1Error) throw new Error(v1Error.message || 'Could not load the protected listing review queue.')
-    rows = (Array.isArray(v1Data) ? v1Data : []).map(r => ({
-      ...r,
-      reference_number: r.reference_number || `KHL-${(r.id || '').slice(0, 8).toUpperCase()}`,
-      version: r.version || 1,
-    })) as ModeratorQueueItem[]
-    totalCount = rows.length
+  if (v2Error) {
+    throw new Error(v2Error.message || 'Could not load the protected listing review queue.')
   }
+  rows = (Array.isArray(v2Data) ? v2Data : []) as ModeratorQueueItem[]
+  totalCount = rows.length > 0 && 'total_count' in (rows[0] as unknown as { total_count: number })
+    ? Number((rows[0] as unknown as { total_count: number }).total_count)
+    : rows.length
 
   const [academiesRes, venuesRes, coachesRes, eventsRes] = await Promise.all([
     getAcademies(),
@@ -3567,15 +3595,7 @@ export async function approveListingSubmission(id: string, notes?: string, expec
     p_notes: notes || null,
     p_expected_version: expectedVersion || null,
   })
-  if (error) {
-    // Fallback to legacy review_listing_submission RPC if needed
-    const { error: legacyErr } = await client.rpc('review_listing_submission', {
-      p_submission_id: id,
-      p_decision: 'approved',
-      p_notes: notes || null,
-    })
-    if (legacyErr) throw new Error(legacyErr.message || error.message || 'The listing approval could not be saved.')
-  }
+  if (error) throw new Error(error.message || 'The listing approval could not be saved.')
   return true
 }
 
@@ -3590,14 +3610,7 @@ export async function rejectListingSubmission(id: string, reason: string, notes?
     p_notes: notes || null,
     p_expected_version: expectedVersion || null,
   })
-  if (error) {
-    const { error: legacyErr } = await client.rpc('review_listing_submission', {
-      p_submission_id: id,
-      p_decision: 'rejected',
-      p_notes: reason.trim() + (notes ? ` | ${notes}` : ''),
-    })
-    if (legacyErr) throw new Error(legacyErr.message || error.message || 'The listing rejection could not be saved.')
-  }
+  if (error) throw new Error(error.message || 'The listing rejection could not be saved.')
   return true
 }
 
@@ -3709,5 +3722,191 @@ export async function moderateListingSubmission(
     return rejectListingSubmission(id, notes || 'Rejected after review.', undefined, expectedVersion)
   }
   return false
+}
+
+// ============================================================================
+// Phase 3.1: Evidence verification and super-admin control panel RPC clients.
+// Every mutation is authorized again by PostgreSQL; frontend role checks are UX only.
+// ============================================================================
+export interface ModerationAccessProfile {
+  user_id: string
+  role: 'moderator' | 'super_admin'
+  is_active: boolean
+}
+
+export interface ListingEvidenceItem {
+  id: string
+  evidence_type: string
+  evidence_url: string
+  description: string
+  outcome: 'pending' | 'supports' | 'contradicts' | 'insufficient'
+  reviewer_notes: string | null
+  reviewed_at: string | null
+  created_at: string
+}
+
+export interface ListingModeratorAccount {
+  user_id: string
+  role: 'moderator' | 'super_admin'
+  is_active: boolean
+  notes: string | null
+  created_at: string
+  created_by: string | null
+}
+
+async function requireModerationSession() {
+  const client = getSupabaseClient()
+  if (!client) throw new Error('Moderation service is not configured.')
+  const { data, error } = await client.auth.getUser()
+  if (error || !data.user) throw new Error('Please sign in with an authorized KhelGrid moderation account.')
+  return client
+}
+
+export async function getModerationAccessProfile(): Promise<ModerationAccessProfile | null> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_moderation_access_profile')
+  if (error) throw new Error(error.message || 'Could not verify moderation access.')
+  const rows = Array.isArray(data) ? data : []
+  return (rows[0] as ModerationAccessProfile | undefined) ?? null
+}
+
+export async function getListingEvidence(submissionId: string): Promise<ListingEvidenceItem[]> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_listing_submission_evidence', { p_submission_id: submissionId })
+  if (error) throw new Error(error.message || 'Could not load verification evidence.')
+  return Array.isArray(data) ? data as ListingEvidenceItem[] : []
+}
+
+export async function addListingEvidence(input: {
+  submissionId: string
+  evidenceType: string
+  evidenceUrl: string
+  description: string
+}): Promise<string> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('add_listing_submission_evidence', {
+    p_submission_id: input.submissionId,
+    p_evidence_type: input.evidenceType,
+    p_evidence_url: input.evidenceUrl.trim(),
+    p_description: input.description.trim(),
+  })
+  if (error) throw new Error(error.message || 'Could not add evidence.')
+  return String(data)
+}
+
+export async function reviewListingEvidence(evidenceId: string, outcome: 'supports' | 'contradicts' | 'insufficient', notes?: string): Promise<void> {
+  const client = await requireModerationSession()
+  const { error } = await client.rpc('review_listing_submission_evidence', {
+    p_evidence_id: evidenceId,
+    p_outcome: outcome,
+    p_reviewer_notes: notes?.trim() || null,
+  })
+  if (error) throw new Error(error.message || 'Could not save evidence review.')
+}
+
+export async function verifyListingSubmission(submissionId: string, decision: 'verified' | 'rejected' | 'unverified', notes?: string): Promise<void> {
+  const client = await requireModerationSession()
+  const { error } = await client.rpc('verify_listing_submission', {
+    p_submission_id: submissionId,
+    p_decision: decision,
+    p_notes: notes?.trim() || null,
+  })
+  if (error) throw new Error(error.message || 'Could not save verification decision.')
+}
+
+export async function saveListingPublicationDetails(submissionId: string, structuredData: Record<string, unknown>, expectedVersion?: number): Promise<number> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('save_listing_publication_details', {
+    p_submission_id: submissionId,
+    p_structured_data: structuredData,
+    p_expected_version: expectedVersion ?? null,
+  })
+  if (error) throw new Error(error.message || 'Could not save category-specific publication details.')
+  return Number(data)
+}
+
+export async function getListingVerificationQueue(status = 'unverified'): Promise<Array<{
+  id: string
+  reference_number: string
+  listing_type: string
+  title: string
+  city: string | null
+  status: string
+  verification_status: string
+  version: number
+  created_at: string
+}>> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_listing_verification_queue', {
+    p_status: status,
+    p_limit: 100,
+    p_offset: 0,
+  })
+  if (error) throw new Error(error.message || 'Could not load verification queue.')
+  return Array.isArray(data) ? data as Array<{
+    id: string; reference_number: string; listing_type: string; title: string;
+    city: string | null; status: string; verification_status: string;
+    version: number; created_at: string
+  }> : []
+}
+
+export async function listListingModeratorAccounts(): Promise<ListingModeratorAccount[]> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('list_listing_moderator_accounts')
+  if (error) throw new Error(error.message || 'Could not load moderator accounts.')
+  return Array.isArray(data) ? data as ListingModeratorAccount[] : []
+}
+
+export async function setListingModeratorAccess(input: {
+  userId: string
+  role: 'moderator' | 'super_admin'
+  isActive: boolean
+  notes?: string
+}): Promise<void> {
+  const client = await requireModerationSession()
+  const { error } = await client.rpc('set_listing_moderator_access', {
+    p_user_id: input.userId,
+    p_role: input.role,
+    p_is_active: input.isActive,
+    p_notes: input.notes?.trim() || null,
+  })
+  if (error) throw new Error(error.message || 'Could not update moderator access.')
+}
+export interface ListingModeratorAccessAudit {
+  id: string
+  target_user_id: string
+  actor_id: string | null
+  action: string
+  old_role: string | null
+  new_role: string | null
+  old_is_active: boolean | null
+  new_is_active: boolean | null
+  notes: string | null
+  created_at: string
+}
+
+export async function getListingModeratorAccessAudit(limit = 100): Promise<ListingModeratorAccessAudit[]> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_listing_moderator_access_audit', { p_limit: limit })
+  if (error) throw new Error(error.message || 'Could not load moderator access audit history.')
+  return Array.isArray(data) ? data as ListingModeratorAccessAudit[] : []
+}
+export async function getListingPublicationDetails(submissionId: string): Promise<{
+  structured_data: Record<string, unknown>
+  version: number
+  verification_status: string
+}> {
+  const client = await requireModerationSession()
+  const { data, error } = await client.rpc('get_listing_submission_publication_details', {
+    p_submission_id: submissionId,
+  })
+  if (error) throw new Error(error.message || 'Could not load saved publication details.')
+  const row = Array.isArray(data) ? data[0] : null
+  if (!row) throw new Error('Submission publication details were not found.')
+  return {
+    structured_data: (row.structured_data || {}) as Record<string, unknown>,
+    version: Number(row.version),
+    verification_status: String(row.verification_status || 'unverified'),
+  }
 }
 

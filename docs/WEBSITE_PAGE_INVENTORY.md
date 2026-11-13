@@ -252,6 +252,7 @@ No paid plan, payment, verification service, or premium feature should be repres
 | Route | Page | Purpose |
 |---|---|---|
 | `/admin` | Admin dashboard | Moderation overview |
+| `/admin/control` | Moderator & super-admin control panel | Evidence review, independent verification, publication details, moderator access and access audit; database-authorized only |
 | `/admin/opportunities` | Opportunity moderation | Review, approve, reject, archive listings |
 | `/admin/venues` | Venue moderation | Review venue and court submissions |
 | `/admin/coaches` | Coach moderation | Review coach submissions |

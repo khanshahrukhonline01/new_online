@@ -403,6 +403,9 @@ export function AdminModerationPage({
               <span className="admin-role-badge">
                 <SiteIcon name="check-circle" size={14} /> Authorized Moderator
               </span>
+              <a className="admin-btn admin-btn-secondary" href="/admin/control">
+                Evidence &amp; Admin Control
+              </a>
               <button type="button" className="admin-btn admin-btn-secondary" onClick={() => void handleSignOut()}>
                 Sign out
               </button>
@@ -662,7 +665,7 @@ export function AdminModerationPage({
                       <SiteIcon name="search" size={14} /> Inspect & History
                     </button>
 
-                    {(sub.status === 'pending_review' || sub.status === 'resubmitted') && (
+                    {(sub.status === 'pending_review' || sub.status === 'resubmitted' || sub.status === 'unpublished') && (
                       <button
                         type="button"
                         className="admin-btn admin-btn-secondary"
@@ -673,7 +676,7 @@ export function AdminModerationPage({
                       </button>
                     )}
 
-                    {sub.status !== 'approved' && sub.status !== 'published' && (
+                    {sub.status === 'under_review' && (
                       <button
                         type="button"
                         className="admin-btn admin-btn-approve"
@@ -830,7 +833,7 @@ export function AdminModerationPage({
                     <div className="admin-dialog-box">
                       <h3>Approve Submission for Catalogue Publication</h3>
                       <p>
-                        Approval marks this intake suggestion as verified. It does NOT automatically publish a public record. Catalogue publication remains a separate explicit step.
+                        Approval is an editorial decision only. Evidence verification is a separate step in the protected control panel, and publication is a third explicit action.
                       </p>
                       <label>
                         Internal moderator notes (optional, private to staff):

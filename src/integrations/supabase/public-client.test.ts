@@ -102,6 +102,7 @@ describe('public catalogue client', () => {
     const url = new URL(String(requestUrl))
     expect(url.pathname).toBe(`/rest/v1/${table}`)
     expect(url.searchParams.get(filterKey)).toBe(filterValue)
+    if (table !== 'sports') expect(url.searchParams.get('verification_status')).toBe('eq.verified')
     expect(url.searchParams.get('limit')).toBe('500')
     expect(options?.headers).toMatchObject({
       apikey: anonKey,
@@ -110,12 +111,30 @@ describe('public catalogue client', () => {
     })
   })
 
-  it('excludes rejected opportunities from public results', async () => {
+  it('publishes only evidence-verified opportunities', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([]))
     const client = await loadClient()
     await client.getOpportunities()
     const requestUrl = new URL(String(vi.mocked(fetch).mock.calls[0][0]))
-    expect(requestUrl.searchParams.get('verification_status')).toBe('neq.rejected')
+    expect(requestUrl.searchParams.get('verification_status')).toBe('eq.verified')
+  })
+
+  it('returns only evidence-verified venues in the public directory', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([]))
+    const client = await loadClient()
+    await client.getVenues()
+    const requestUrl = new URL(String(vi.mocked(fetch).mock.calls[0][0]))
+    expect(requestUrl.searchParams.get('publication_status')).toBe('eq.published')
+    expect(requestUrl.searchParams.get('verification_status')).toBe('eq.verified')
+  })
+
+  it('returns only evidence-verified coaches in the public directory', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([]))
+    const client = await loadClient()
+    await client.getCoaches()
+    const requestUrl = new URL(String(vi.mocked(fetch).mock.calls[0][0]))
+    expect(requestUrl.searchParams.get('publication_status')).toBe('eq.published')
+    expect(requestUrl.searchParams.get('verification_status')).toBe('eq.verified')
   })
 
   it('returns an empty ready catalogue when the database has no published rows', async () => {
@@ -240,7 +259,7 @@ describe('public catalogue client', () => {
   })
 
   it('routes every community listing type to the private review queue', async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse([]))
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ status: 'submitted', reference_number: 'KHL-20261112-ABC123', tracking_key: 'private-test-key' }))
     const client = await loadClient()
     const result = await client.submitCommunityListing({
       category: 'opportunity',
@@ -259,18 +278,19 @@ describe('public catalogue client', () => {
       expect(result.record.verification_status).toBe('unverified')
     }
     const [requestUrl, options] = vi.mocked(fetch).mock.calls[0]
-    expect(String(requestUrl)).toContain('/rest/v1/listing_submissions')
+    expect(String(requestUrl)).toContain('/rest/v1/rpc/submit_listing_intake')
     expect(options?.method).toBe('POST')
     const body = JSON.parse(String(options?.body))
-    expect(body.listing_type).toBe('opportunity')
-    expect(body.title).toBe('Delhi State U-17 Open Football Trials')
+    expect(body.p_listing_type).toBe('opportunity')
+    expect(body.p_title).toBe('Delhi State U-17 Open Football Trials')
+    expect(body.p_submitter_email).toBeNull()
     expect(body.status).toBeUndefined()
     expect(body.publication_status).toBeUndefined()
     expect(body.verification_status).toBeUndefined()
   })
 
   it('routes a new sport suggestion through the same private queue', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([]))
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ status: 'submitted', reference_number: 'KHL-20261112-DEF456', tracking_key: 'private-sport-key' }))
     const client = await loadClient()
     const result = await client.submitListingSuggestion({
       listing_type: 'sport',
@@ -281,12 +301,12 @@ describe('public catalogue client', () => {
     expect(result.status).toBe('submitted')
     const [, options] = vi.mocked(fetch).mock.calls[0]
     const body = JSON.parse(String(options?.body))
-    expect(body.listing_type).toBe('sport')
+    expect(body.p_listing_type).toBe('sport')
     expect(body.status).toBeUndefined()
   })
 
   it('accepts a missing source link without inventing one', async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([]))
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({ status: 'submitted', reference_number: 'KHL-20261112-GHI789', tracking_key: 'private-academy-key' }))
     const client = await loadClient()
     const result = await client.submitListingSuggestion({
       listing_type: 'academy',
@@ -295,7 +315,48 @@ describe('public catalogue client', () => {
     })
     expect(result.status).toBe('submitted')
     const [, options] = vi.mocked(fetch).mock.calls[0]
-    expect(JSON.parse(String(options?.body)).source_url).toBeNull()
+    expect(JSON.parse(String(options?.body)).p_source_url).toBeNull()
+  })
+
+  it('submits anonymous directory listings through the private RPC with a generated tracking key', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(jsonResponse({
+      status: 'submitted',
+      reference_number: 'KHL-20261112-ANON01',
+      tracking_key: 'opaque-private-tracking-key',
+    }))
+    const client = await loadClient()
+    const result = await client.submitListingIntake({
+      listing_type: 'venue',
+      title: 'Community Sports Ground',
+      city: 'Delhi',
+      details: 'Public address and facilities supplied by submitter',
+    })
+
+    expect(result).toEqual({
+      status: 'submitted',
+      reference_number: 'KHL-20261112-ANON01',
+      tracking_key: 'opaque-private-tracking-key',
+    })
+    const [requestUrl, options] = vi.mocked(fetch).mock.calls[0]
+    expect(String(requestUrl)).toContain('/rest/v1/rpc/submit_listing_intake')
+    expect(options?.method).toBe('POST')
+    expect(new Headers(options?.headers).get('Authorization')).toBe(`Bearer ${anonKey}`)
+    const body = JSON.parse(String(options?.body))
+    expect(body.p_listing_type).toBe('venue')
+    expect(body.p_title).toBe('Community Sports Ground')
+    expect(body.p_submitter_email).toBeNull()
+  })
+
+  it('rejects non-HTTPS source links before contacting the private queue', async () => {
+    const client = await loadClient()
+    const result = await client.submitListingIntake({
+      listing_type: 'opportunity',
+      title: 'Sports selection trials',
+      city: 'Delhi',
+      source_url: 'http://example.org/trials',
+    })
+    expect(result.status).toBe('unavailable')
+    expect(fetch).not.toHaveBeenCalled()
   })
 
   it('does not report success when the review queue rejects a submission', async () => {
@@ -307,7 +368,7 @@ describe('public catalogue client', () => {
       city: 'Delhi',
     })
     expect(result.status).toBe('unavailable')
-    if (result.status === 'unavailable') expect(result.message).toContain('403')
+    if (result.status === 'unavailable') expect(result.message).toContain('HTTP 403')
   })
 
   it('handles pickup game RSVP spot reservations, WhatsApp group link retrieval, and match locking', async () => {

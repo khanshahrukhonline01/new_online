@@ -13,9 +13,11 @@ insert into auth.users (id) values
 on conflict (id) do nothing;
 
 -- User 3 is an allowlisted active moderator
-insert into public.listing_moderators (user_id, is_active)
-values ('00000000-0000-4000-8000-000000000030', true)
-on conflict (user_id) do update set is_active = true;
+insert into public.listing_moderators (user_id, is_active, role)
+values
+  ('00000000-0000-4000-8000-000000000010', true, 'super_admin'),
+  ('00000000-0000-4000-8000-000000000030', true, 'moderator')
+on conflict (user_id) do update set is_active = excluded.is_active, role = excluded.role;
 
 -- Seed a deterministic lifecycle fixture using the privileged CI connection.
 -- The public client is not permitted to insert directly into this private table.
@@ -24,6 +26,15 @@ insert into public.listing_submissions (
 ) values (
   '00000000-0000-4000-8000-000000000040',
   'venue', 'Grand Sports Arena', 'Bengaluru', 'https://example.org/arena', 'Multi-sport turf'
+);
+
+-- Separate fixture for the submitter self-review denial assertion; it never reaches notification paths.
+insert into public.listing_submissions (
+  id, listing_type, title, city, source_url, details, submitter_id
+) values (
+  '00000000-0000-4000-8000-000000000041',
+  'venue', 'Self Review Denial Fixture', 'Bengaluru', 'https://example.org/self-review', 'Self-review denial fixture',
+  '00000000-0000-4000-8000-000000000010'
 );
 
 -- Diagnose the exact RPC implementation installed in this CI database before invoking it.
@@ -193,9 +204,71 @@ begin
   exception when insufficient_privilege then
     null;
   end;
+
+  -- 3E: Non-moderator cannot manage moderator accounts.
+  begin
+    perform public.list_listing_moderator_accounts();
+    raise exception 'Non-moderator unexpectedly accessed moderator accounts';
+  exception when insufficient_privilege then
+    null;
+  end;
 end;
 $non_mod_test$;
 
+reset role;
+
+-- Step 3F: Super-admin control plane can inspect access but cannot remove the last super-admin.
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000010', true);
+set local role authenticated;
+do $super_admin_control$
+declare
+  v_count integer;
+begin
+  begin
+    perform public.start_listing_review(
+      '00000000-0000-4000-8000-000000000041', 1
+    );
+    raise exception 'A submitter who is a super-admin unexpectedly reviewed their own listing';
+  exception when insufficient_privilege then
+    null;
+  end;
+  select count(*) into v_count from public.list_listing_moderator_accounts();
+  if v_count < 2 then
+    raise exception 'Super-admin did not receive the authorized moderator account list';
+  end if;
+  begin
+    perform public.set_listing_moderator_access(
+      '00000000-0000-4000-8000-000000000010', 'moderator', true,
+      'Must not remove the final active super-admin'
+    );
+    raise exception 'The last active super-admin was unexpectedly demoted';
+  exception when check_violation then
+    null;
+  end;
+  perform public.set_listing_moderator_access(
+    '00000000-0000-4000-8000-000000000020', 'moderator', true,
+    'CI fixture moderator grant'
+  );
+  select count(*) into v_count from public.get_listing_moderator_access_audit(50);
+  if v_count < 1 then
+    raise exception 'Super-admin access audit history did not record the moderator grant';
+  end if;
+end;
+$super_admin_control$;
+reset role;
+
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000020', true);
+set local role authenticated;
+do $new_moderator_profile$
+declare
+  v_role text;
+begin
+  select role into v_role from public.get_moderation_access_profile();
+  if v_role is distinct from 'moderator' then
+    raise exception 'Newly granted moderator did not receive the expected access profile';
+  end if;
+end;
+$new_moderator_profile$;
 reset role;
 
 -- Step 4A: Allowlisted moderator claims and starts review
@@ -352,10 +425,11 @@ do $mod_approve$
 declare
   v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040'::uuid;
 begin
+  perform public.start_listing_review(v_sub_id, 4);
   perform public.approve_listing_submission(
     v_sub_id,
-    'Verified via official website and sports authority directory',
-    4
+    'Editorial review completed after the submitter resubmitted corrections.',
+    5
   );
 end;
 $mod_approve$;
@@ -377,8 +451,8 @@ begin
   if v_sub.status <> 'approved' or v_sub.reviewed_by <> '00000000-0000-4000-8000-000000000030' then
     raise exception 'approve_listing_submission failed to update approved state';
   end if;
-  if v_sub.version <> 5 then
-    raise exception 'approve_listing_submission expected version 5, found %', v_sub.version;
+  if v_sub.version <> 6 then
+    raise exception 'approve_listing_submission expected version 6, found %', v_sub.version;
   end if;
 
   -- CRITICAL INVARIANT: Approval must NEVER create or publish a catalogue record automatically
@@ -391,26 +465,64 @@ end;
 $verify_approve$;
 RESET ROLE;
 
--- Step 4E: Moderator explicitly publishes the listing
+-- Step 4E: Approval alone must not permit publication before evidence verification.
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000030', true);
 set local role authenticated;
 
+do $publication_requires_verification$
+declare
+  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040'::uuid;
+begin
+  begin
+    perform public.publish_listing_submission(v_sub_id, null, null, 6);
+    raise exception 'Publication unexpectedly succeeded without evidence verification';
+  exception when check_violation then
+    null;
+  end;
+end;
+$publication_requires_verification$;
+
+-- Add and review real HTTPS evidence in the test fixture, then make the separate verification decision.
+select public.add_listing_submission_evidence(
+  '00000000-0000-4000-8000-000000000040',
+  'venue_address',
+  'https://example.org/arena-verification',
+  'Official venue source confirms the facility identity and submitted location.'
+) as phase3_evidence_id
+\gset
+
+select public.review_listing_submission_evidence(
+  :'phase3_evidence_id'::uuid,
+  'supports',
+  'Evidence supports the venue identity and submitted location.'
+);
+select public.verify_listing_submission(
+  '00000000-0000-4000-8000-000000000040',
+  'verified',
+  'Independent evidence review completed.'
+);
+select public.save_listing_publication_details(
+  '00000000-0000-4000-8000-000000000040',
+  '{"address":"12 Stadium Road, Koramangala, Bengaluru","sport":"Multi-sport"}'::jsonb,
+  9
+) as phase3_details_version
+\gset
+
+-- 4F: Publish only after approval, evidence verification and complete category data.
 do $mod_publish$
 declare
   v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040'::uuid;
   v_pub_res jsonb;
   v_target_id uuid;
 begin
-  select public.publish_listing_submission(v_sub_id, null, null, 5) into v_pub_res;
+  select public.publish_listing_submission(v_sub_id, null, null, 10) into v_pub_res;
   v_target_id := (v_pub_res->>'published_record_id')::uuid;
-
   if v_target_id is null or (v_pub_res->>'published_table') <> 'venues' then
     raise exception 'publish_listing_submission failed: %', v_pub_res;
   end if;
 
-  -- 4F: Test idempotent repeated publication prevention (under authenticated moderator role)
   begin
-    perform public.publish_listing_submission(v_sub_id, null, null, 6);
+    perform public.publish_listing_submission(v_sub_id, null, null, 11);
     raise exception 'Repeated publication unexpectedly succeeded';
   exception when invalid_parameter_value then
     null;
@@ -436,8 +548,8 @@ begin
   if v_sub.status <> 'published' or v_sub.published_record_id is null or v_sub.published_table <> 'venues' then
     raise exception 'submission state not marked published with published_record_id';
   end if;
-  if v_sub.version <> 6 then
-    raise exception 'publish_listing_submission expected version 6, found %', v_sub.version;
+  if v_sub.version <> 11 then
+    raise exception 'publish_listing_submission expected version 11, found %', v_sub.version;
   end if;
 
   -- Verify public catalogue row exists and is published
@@ -491,7 +603,7 @@ begin
     v_sub_id,
     'Facility temporarily closed for maintenance works',
     'Unpublished per venue notification',
-    6
+    11
   );
 end;
 $mod_unpublish$;
@@ -513,8 +625,8 @@ begin
   if v_sub.status <> 'unpublished' or v_sub.unpublished_at is null or v_sub.unpublish_reason is null then
     raise exception 'unpublish_listing_submission did not set unpublished status or reason';
   end if;
-  if v_sub.version <> 7 then
-    raise exception 'unpublish_listing_submission expected version 7, found %', v_sub.version;
+  if v_sub.version <> 12 then
+    raise exception 'unpublish_listing_submission expected version 12, found %', v_sub.version;
   end if;
 
   -- Verify catalogue record is NO LONGER published
@@ -548,7 +660,46 @@ select not exists (
 
 reset role;
 
--- Step 4J: Audit trail verification via authorized moderator RPC
+-- Step 4J: Re-approve and republish the same catalogue row without duplication.
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000030', true);
+set local role authenticated;
+do $republish_existing$
+declare
+  v_sub_id constant uuid := '00000000-0000-4000-8000-000000000040'::uuid;
+  v_before uuid;
+  v_after uuid;
+  v_count integer;
+begin
+  select published_record_id into v_before from public.listing_submissions where id = v_sub_id;
+  perform public.start_listing_review(v_sub_id, 12);
+  perform public.approve_listing_submission(v_sub_id, 'Re-approved after maintenance confirmation', 13);
+  select (public.publish_listing_submission(v_sub_id, null, null, 14)->>'published_record_id')::uuid into v_after;
+  if v_after is distinct from v_before then
+    raise exception 'Republishing created a different catalogue record instead of reusing the original';
+  end if;
+  select count(*) into v_count from public.venues where id = v_before;
+  if v_count <> 1 then
+    raise exception 'Republishing produced duplicate venue catalogue records';
+  end if;
+end;
+$republish_existing$;
+reset role;
+
+SET LOCAL ROLE postgres;
+do $verify_republished$
+declare
+  v_sub public.listing_submissions%rowtype;
+begin
+  select * into v_sub from public.listing_submissions
+  where id = '00000000-0000-4000-8000-000000000040'::uuid;
+  if v_sub.status <> 'published' or v_sub.version <> 15 then
+    raise exception 'Republishing did not restore published state at expected version 15';
+  end if;
+end;
+$verify_republished$;
+RESET ROLE;
+
+-- Step 4K: Audit trail verification via authorized moderator RPC
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000030', true);
 set local role authenticated;
 

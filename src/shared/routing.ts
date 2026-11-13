@@ -51,6 +51,7 @@ const featurePages: Record<string, string> = {
   '/profile': 'Athlete Profile', '/my-profile': 'My Profile', '/saved': 'Saved Items',
   '/referrals': 'Referrals', '/help': 'Help & Support', '/help-feedback': 'Help & Feedback', '/submit-listing': 'Suggest a Listing', '/track-submission': 'Track Submission', '/track': 'Track Submission',
   '/admin': 'Admin Moderation Desk', '/moderation': 'Admin Moderation Desk',
+  '/admin/control': 'Moderator & Super Admin Control Panel',
   '/start-from-zero': 'Start From Zero — Sports CV',
 }
 

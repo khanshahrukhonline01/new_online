@@ -5,7 +5,13 @@ import VenueDetailPage from './VenueDetailPage'
 
 describe('VenueDetailPage — Dedicated Venue Hub & Court Specifications', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 })))
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input)
+      const data = url.includes('/rpc/submit_listing_intake')
+        ? { status: 'submitted', reference_number: 'KHL-20261112-VEN001', tracking_key: 'private-venue-test-key' }
+        : []
+      return Promise.resolve(new Response(JSON.stringify(data), { status: 200 }))
+    }))
   })
 
   afterEach(() => {
@@ -104,7 +110,7 @@ describe('VenueDetailPage — Dedicated Venue Hub & Court Specifications', () =>
       expect(result.detailPath).toBeUndefined()
     }
     const [url] = vi.mocked(fetch).mock.calls[0]
-    expect(String(url)).toContain('/rest/v1/listing_submissions')
+    expect(String(url)).toContain('/rest/v1/rpc/submit_listing_intake')
     expect(String(url)).not.toContain('/rest/v1/venues')
     const html = renderToStaticMarkup(<VenueDetailPage slug="ranchi-sector-4-community-box-turf" onNavigate={vi.fn()} />)
     expect(html).toContain('Venue Record Not Found')

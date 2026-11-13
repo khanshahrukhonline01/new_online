@@ -27,7 +27,13 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
   const [activeTab, setActiveTab] = useState<'submit' | 'track'>(defaultTab)
 
   // Submission Form State
-  const [kind, setKind] = useState<ListingSubmissionInput['listing_type']>('opportunity')
+  const [kind, setKind] = useState<ListingSubmissionInput['listing_type']>(() => {
+    if (typeof window === 'undefined') return 'opportunity'
+    const requestedType = new URLSearchParams(window.location.search).get('type')
+    return listingTypes.some(item => item.id === requestedType)
+      ? requestedType as ListingSubmissionInput['listing_type']
+      : 'opportunity'
+  })
   const [title, setTitle] = useState('')
   const [city, setCity] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
@@ -135,8 +141,12 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
       })
 
       if (result.status === 'submitted') {
-        const refNumber = result.reference_number || `KHL-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
-        const tKey = result.tracking_key || ''
+        if (!result.reference_number || !result.tracking_key) {
+          setSubmitError('The listing service did not return secure tracking credentials. No listing was marked as submitted.')
+          return
+        }
+        const refNumber = result.reference_number
+        const tKey = result.tracking_key
 
         setSubmittedData({
           referenceNumber: refNumber,
@@ -219,9 +229,9 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
   return (
     <section className="content-page listing-submission-page">
       <p className="eyebrow">KHELGRID · LISTING INTAKE & MODERATION</p>
-      <h1>Sports Directory & Listing Intake</h1>
+      <h1>Put your sports listing on the map.</h1>
       <p className="page-intro">
-        Suggest an opportunity, sports venue, academy, coach, tournament, or pickup game. All community listings enter a private moderation queue and undergo independent verification before catalogue publication.
+        Share a genuine sports trial, venue, coach, academy, event or community opportunity. KhelGrid reviews submissions before anything is published.
       </p>
 
       {/* Navigation Tabs */}
@@ -245,10 +255,17 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
       {/* Tab 1: Submit Form */}
       {activeTab === 'submit' && (
         <>
+          <div className="listing-free-banner" role="note">
+            <span className="listing-free-icon"><SiteIcon name="shield-check" size={20} /></span>
+            <div>
+              <strong>Venue, coach &amp; trial listings are free</strong>
+              <p>Venue, coach and sports-trial submissions are free. No listing payment, subscription or checkout is required for these categories. Other services and optional memberships are separate. KhelGrid reviews supporting evidence before publication.</p>
+            </div>
+          </div>
           <div className="cv-privacy-note" role="note">
             <SiteIcon name="shield-check" size={18} />
             <span>
-              <strong>Editorial Verification First.</strong> We collect only listing details. Suggestions are not public catalogue records. A trusted moderator must verify the source and approve the listing before publication.
+              <strong>Review before publication.</strong> Your submission stays private while a moderator checks the source, key facts and category-specific evidence. Editorial approval and evidence verification are recorded separately.
             </span>
           </div>
 
@@ -310,6 +327,15 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
                     ))}
                   </select>
                 </label>
+                <p className="listing-category-guidance" aria-live="polite">
+                  {kind === 'venue' && 'For a venue: include its full public address, sports and facilities, operating hours, and an official website or public contact page.'}
+                  {kind === 'coach' && 'For a coach: include the sports coached, qualification and issuing body, experience, city, and a public professional profile or academy page. Credentials are checked separately.'}
+                  {kind === 'opportunity' && 'For a trial: include the organiser, trial dates and deadline, age/eligibility criteria, venue, and the official notice or registration link. Mention an athlete entry fee only when the organiser has published it.'}
+                  {kind === 'academy' && 'For an academy: include its public address, sports, programmes, coach details and official website or public contact page.'}
+                  {kind === 'event' && 'For an event: include the organiser, venue, actual dates, event rules and official announcement.'}
+                  {kind === 'pickup_game' && 'For a community game: include the public venue, host, sport, actual date/time and participation terms.'}
+                  {kind === 'sport' && 'For a new sport: share its recognised governing body or an authoritative source where available.'}
+                </p>
 
                 <label>
                   Listing title *
@@ -319,7 +345,7 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
                     maxLength={150}
                     value={title}
                     onChange={e => setTitle(e.target.value)}
-                    placeholder="e.g. Bangalore Football Stadium, Prakash Padukone Academy"
+                    placeholder={kind === 'venue' ? 'e.g. Public venue or sports complex name' : kind === 'coach' ? 'e.g. Coach name and primary sport' : kind === 'opportunity' ? 'e.g. U-17 Football Selection Trials' : 'Enter the official listing name'}
                   />
                 </label>
 
@@ -352,7 +378,7 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
                   maxLength={2000}
                   value={details}
                   onChange={e => setDetails(e.target.value)}
-                  placeholder="Key timings, courts, eligibility, coaches, registration details, or contact information."
+                  placeholder={kind === 'venue' ? 'Full address/locality, sports offered, courts or surfaces, facilities, timings and official contact route.' : kind === 'coach' ? 'Qualification, issuing authority, years of experience, coaching specialities, languages and academy affiliation. Do not include private personal details.' : kind === 'opportunity' ? 'Organiser, trial date, deadline, age group, eligibility, required documents, venue and any organiser-published athlete entry fee.' : 'Add useful, source-backed details such as dates, eligibility, facilities, organiser or public contact information.'}
                 />
               </label>
 
@@ -376,7 +402,7 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
 
             <div className="cv-actions">
               <button className="primary-link" type="submit" disabled={submitting}>
-                {submitting ? 'Submitting for review…' : 'Submit for review'} <SiteIcon name="arrow-up-right" size={16} />
+                {submitting ? 'Submitting for review…' : 'Submit for moderator review'} <SiteIcon name="arrow-up-right" size={16} />
               </button>
             </div>
           </form>
@@ -385,7 +411,7 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
             <div className="state-symbol">!</div>
             <h2>Publication requires verified moderation</h2>
             <p>
-              Community suggestions are strictly private intake entries. A trusted moderator must verify the source and approve the listing through an authorized editorial console before it appears in KhelGrid's public catalogue.
+              Venue, coach and sports-trial submissions are free and do not buy approval or a verified badge. Only listings that meet the evidence and publication requirements are added to KhelGrid's public catalogue.
             </p>
           </div>
         </>
