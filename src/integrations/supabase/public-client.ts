@@ -300,7 +300,7 @@ async function fetchOpportunitiesCatalogue(): Promise<CatalogueResult<Opportunit
     order: 'is_featured.desc.nullslast,starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (featured.status === 'ready') return featured
@@ -311,7 +311,7 @@ async function fetchOpportunitiesCatalogue(): Promise<CatalogueResult<Opportunit
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (rich.status === 'ready') return rich
@@ -322,7 +322,7 @@ async function fetchOpportunitiesCatalogue(): Promise<CatalogueResult<Opportunit
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
 }
@@ -343,15 +343,15 @@ export async function getOpportunities(): Promise<CatalogueResult<Opportunity>> 
 
 async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
   const enrichedFields =
-    'id,slug,name,description,city,state,address,phone,email,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,rating,review_count,faqs,verification_status,sport'
+    'id,slug,name,description,city,state,address,phone,email,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,rating,review_count,faqs,verification_status,source_name,source_url,sport'
   const baseFields =
-    'id,slug,name,description,city,address,phone,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,verification_status,sport'
+    'id,slug,name,description,city,address,phone,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,verification_status,source_name,source_url,sport'
 
   const featured = await readCatalogue<Venue>({
     table: 'venues',
     select: enrichedFields,
     order: 'is_featured.desc.nullslast,name.asc',
-    filters: { publication_status: 'eq.published' },
+    filters: { publication_status: 'eq.published', verification_status: 'eq.verified' },
   })
   if (featured.status === 'ready') return featured
 
@@ -359,7 +359,7 @@ async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
     table: 'venues',
     select: baseFields,
     order: 'is_featured.desc.nullslast,name.asc',
-    filters: { publication_status: 'eq.published' },
+    filters: { publication_status: 'eq.published', verification_status: 'eq.verified' },
   })
   if (base.status === 'ready') return base
 
@@ -367,7 +367,7 @@ async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
     table: 'venues',
     select: baseFields,
     order: 'name.asc',
-    filters: { publication_status: 'eq.published' },
+    filters: { publication_status: 'eq.published', verification_status: 'eq.verified' },
   })
 }
 
@@ -413,7 +413,7 @@ async function fetchAcademiesCatalogue(): Promise<CatalogueResult<Academy>> {
     order: 'is_featured.desc.nullslast,name.asc',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (featured.status === 'ready') return featured
@@ -424,7 +424,7 @@ async function fetchAcademiesCatalogue(): Promise<CatalogueResult<Academy>> {
     order: 'is_featured.desc.nullslast,name.asc',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (base.status === 'ready') return base
@@ -435,7 +435,7 @@ async function fetchAcademiesCatalogue(): Promise<CatalogueResult<Academy>> {
     order: 'name.asc',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
 }
@@ -529,7 +529,7 @@ export async function fetchCoaches(options?: FetchCoachesOptions): Promise<Catal
 
   const filters: Record<string, string> = {
     publication_status: 'eq.published',
-    verification_status: 'neq.rejected',
+    verification_status: 'eq.verified',
   }
 
   if (options?.sport && options.sport !== 'All Sports') {
@@ -802,7 +802,7 @@ export async function getEvents(): Promise<CatalogueResult<EventItem>> {
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
   if (enriched.status === 'ready') return enriched
@@ -813,7 +813,7 @@ export async function getEvents(): Promise<CatalogueResult<EventItem>> {
     order: 'starts_at.asc.nullslast',
     filters: {
       publication_status: 'eq.published',
-      verification_status: 'neq.rejected',
+      verification_status: 'eq.verified',
     },
   })
 }
@@ -1070,86 +1070,123 @@ export type ListingSubmissionResult =
   | { status: 'unavailable'; message: string }
 
 /** Submit a user-provided suggestion to the private review queue. */
+/** Submit a user-provided suggestion through the validated private-intake RPC. */
 export async function submitListingSuggestion(input: ListingSubmissionInput): Promise<ListingSubmissionResult> {
+  return submitListingIntake(input)
+}
+
+/** Submit a suggestion without granting browser clients direct table INSERT access. */
+export async function submitListingIntake(input: ListingSubmissionInput & { submitter_email?: string }): Promise<ListingSubmissionResult> {
   if (!supabaseUrl || !anonKey) return { status: 'unconfigured' }
-  if (input.title.trim().length < 2 || input.title.trim().length > 150) {
+
+  const allowedTypes: ListingSubmissionInput['listing_type'][] = [
+    'opportunity', 'venue', 'coach', 'academy', 'event', 'pickup_game', 'sport',
+  ]
+  const title = input.title.trim()
+  const city = input.city?.trim() || ''
+  const details = input.details?.trim() || ''
+  const sourceUrl = input.source_url?.trim() || ''
+  const submitterEmail = input.submitter_email?.trim() || ''
+
+  if (!allowedTypes.includes(input.listing_type)) {
+    return { status: 'unavailable', message: 'Choose a supported listing category.' }
+  }
+  if (title.length < 2 || title.length > 150) {
     return { status: 'unavailable', message: 'Listing title must contain between 2 and 150 characters.' }
   }
-  if ((input.city?.trim().length ?? 0) > 100) {
-    return { status: 'unavailable', message: 'City must be 100 characters or fewer.' }
+  if (city.length > 100 || details.length > 2000 || sourceUrl.length > 1000 || submitterEmail.length > 255) {
+    return { status: 'unavailable', message: 'One or more listing fields exceed the allowed length.' }
   }
-  if ((input.details?.trim().length ?? 0) > 2000) {
-    return { status: 'unavailable', message: 'Listing details must be 2,000 characters or fewer.' }
-  }
-  if ((input.source_url?.trim().length ?? 0) > 1000) {
-    return { status: 'unavailable', message: 'Source links must be 1,000 characters or fewer.' }
-  }
-  if (input.source_url?.trim()) {
+  if (sourceUrl) {
     try {
-      if (new URL(input.source_url).protocol !== 'https:') throw new Error('HTTPS required')
+      if (new URL(sourceUrl).protocol !== 'https:') throw new Error('HTTPS required')
     } catch {
       return { status: 'unavailable', message: 'Please provide a valid HTTPS source link, or leave it blank if unavailable.' }
     }
   }
+
   try {
     const baseUrl = new URL(supabaseUrl)
     if (baseUrl.protocol !== 'https:' && baseUrl.hostname !== 'localhost' && baseUrl.hostname !== '127.0.0.1') {
       return { status: 'unavailable', message: 'The submission service must use HTTPS.' }
     }
-    const response = await fetch(`${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/listing_submissions`, {
+
+    // Preserve a signed-in user's identity where available; anonymous users use the public key.
+    let bearerToken = anonKey
+    const client = getSupabaseClient()
+    if (client) {
+      try {
+        const { data } = await client.auth.getSession()
+        if (data.session?.access_token) bearerToken = data.session.access_token
+      } catch {
+        // Anonymous public intake remains available if session lookup is unavailable.
+      }
+    }
+
+    const response = await fetch(`${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/submit_listing_intake`, {
       method: 'POST',
-      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json', Accept: 'application/json', Prefer: 'return=minimal' },
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${bearerToken}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
       body: JSON.stringify({
-        listing_type: input.listing_type,
-        title: input.title.trim(),
-        city: input.city?.trim() || null,
-        source_url: input.source_url?.trim() || null,
-        details: input.details?.trim() || null,
+        p_listing_type: input.listing_type,
+        p_title: title,
+        p_city: city || null,
+        p_source_url: sourceUrl || null,
+        p_details: details || null,
+        p_submitter_email: submitterEmail || null,
       }),
     })
+
+    const data = await response.json().catch(() => null) as {
+      status?: string
+      reference_number?: string
+      tracking_key?: string
+      message?: string
+      details?: string
+    } | null
+
+    if (data?.status === 'rate_limited') {
+      return {
+        status: 'unavailable',
+        message: data.message || 'Too many listing submissions from this connection. Please wait a minute and try again.',
+      }
+    }
+
     if (!response.ok) {
       if (response.status === 404) {
-        return { status: 'unavailable', message: 'The listing submission queue is not installed on this database yet. No listing was submitted.' }
+        return { status: 'unavailable', message: 'The private listing intake RPC is not installed on this database yet. No listing was submitted.' }
       }
       if (response.status >= 500) {
         return { status: 'unavailable', message: 'We could not submit this suggestion. Please try again later.' }
       }
-      return { status: 'unavailable', message: `Submission could not be accepted (HTTP ${response.status}). Please check your details and try again.` }
-    }
-    return { status: 'submitted' }
-  } catch (error) {
-    return { status: 'unavailable', message: error instanceof Error ? error.message : 'Could not connect to the submission service.' }
-  }
-}
-
-/** Submit a user-provided suggestion with tracking metadata returned where supported. */
-export async function submitListingIntake(input: ListingSubmissionInput & { submitter_email?: string }): Promise<ListingSubmissionResult> {
-  const client = getSupabaseClient()
-  if (client) {
-    try {
-      const { data, error } = await client.rpc('submit_listing_intake', {
-        p_listing_type: input.listing_type,
-        p_title: input.title.trim(),
-        p_city: input.city?.trim() || null,
-        p_source_url: input.source_url?.trim() || null,
-        p_details: input.details?.trim() || null,
-        p_submitter_email: input.submitter_email?.trim() || null,
-      })
-      if (!error && data && typeof data === 'object') {
-        const res = data as { status?: string; reference_number?: string; tracking_key?: string }
-        if (res.status === 'submitted') {
-          return {
-            status: 'submitted',
-            reference_number: res.reference_number,
-            tracking_key: res.tracking_key,
-          }
-        }
+      return {
+        status: 'unavailable',
+        message: `The private review queue rejected this submission (HTTP ${response.status}). No listing was submitted.`,
       }
-    } catch {
-      // Fallback to standard submission
+    }
+
+    if (data?.status === 'submitted' && data.reference_number && data.tracking_key) {
+      return {
+        status: 'submitted',
+        reference_number: data.reference_number,
+        tracking_key: data.tracking_key,
+      }
+    }
+
+    return {
+      status: 'unavailable',
+      message: 'The listing service returned an unexpected response. No listing was submitted.',
+    }
+  } catch (error) {
+    return {
+      status: 'unavailable',
+      message: error instanceof Error ? error.message : 'Could not connect to the private listing review queue.',
     }
   }
-  return submitListingSuggestion(input)
 }
 
 // -----------------------------------------------------------------------------

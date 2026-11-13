@@ -813,7 +813,7 @@ export default function CommunityListingModal({
                 </div>
 
               <p className="community-intake-payment-note" role="note">
-                Listing suggestions are currently free. Paid listing plans and checkout are disabled while payment features are being developed.
+                Venue, coach and sports-trial submissions are free. No listing payment or subscription is required for these categories; optional memberships and provider services are separate from evidence review.
               </p>
               <div className="community-intake-actions">
                 <button

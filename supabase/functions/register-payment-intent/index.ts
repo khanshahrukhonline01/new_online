@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { calculateVenueAdvanceDeposit, getCanonicalListingPlan, getCanonicalMembershipPrice, resolveVenueSlotPrice } from '../_shared/paymentPricing.ts'
+import { calculateVenueAdvanceDeposit, getCanonicalMembershipPrice, resolveVenueSlotPrice } from '../_shared/paymentPricing.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,7 +9,7 @@ const corsHeaders = {
   'Vary': 'Origin',
 }
 
-type PaymentType = 'pickup_match' | 'venue_booking' | 'trial_registration' | 'listing_plan' | 'membership'
+type PaymentType = 'pickup_match' | 'venue_booking' | 'trial_registration' | 'membership'
 type PaymentMethod = 'upi' | 'razorpay' | 'card' | 'netbanking' | 'wallet' | 'pay_at_venue'
 
 function json(body: unknown, status = 200) {
@@ -64,6 +64,9 @@ serve(async (req) => {
   }
 
   const action = body.action || 'register_payment'
+  if (action === 'register_listing_subscription') {
+    return json({ error: 'DIRECTORY_LISTINGS_ARE_FREE', message: 'Directory listings are free and require evidence review, not payment or a subscription.' }, 410)
+  }
   const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
   const rateKey = await sha256([clientIp, userId || 'anonymous', String(body.customer_phone || '')].join(':'))
 
@@ -103,91 +106,8 @@ serve(async (req) => {
     return json({ success: true, linked: true })
   }
 
-  if (action !== 'register_payment' && action !== 'register_listing_subscription') {
+  if (action !== 'register_payment') {
     return json({ error: 'UNKNOWN_ACTION' }, 400)
-  }
-
-  if (action === 'register_listing_subscription') {
-    const orderId = String(body.order_id || '').trim()
-    const planId = String(body.plan_id || '')
-    const plan = getCanonicalListingPlan(planId)
-    const listingType = String(body.listing_type || '')
-    const listingName = String(body.listing_name || '').trim()
-    const city = String(body.city || '').trim()
-    const customerName = String(body.customer_name || '').trim()
-    const phone = String(body.customer_phone || '').replace(/\D/g, '')
-    const idempotencyKey = String(body.idempotency_key || orderId).trim()
-    if (!/^KG_ORD_[A-Z0-9]+_[A-Z0-9]{4,16}$/.test(orderId) || !plan ||
-        !['academy', 'venue', 'opportunity', 'pickup_game'].includes(listingType) ||
-        listingName.length < 2 || city.length < 2 || customerName.length < 2 || phone.length < 10 ||
-        !idempotencyKey || idempotencyKey.length > 128) return json({ error: 'INVALID_SUBSCRIPTION' }, 400)
-
-    const { data: existingByOrder } = await admin.from('listing_subscriptions')
-      .select('id,order_id,plan_id,amount,payment_status,is_active,access_token,customer_phone,listing_type,listing_name,city,user_id')
-      .eq('order_id', orderId).maybeSingle()
-    const { data: existingByKey } = existingByOrder ? { data: null } : await admin.from('listing_subscriptions')
-      .select('id,order_id,plan_id,amount,payment_status,is_active,access_token,customer_phone,listing_type,listing_name,city,user_id')
-      .eq('idempotency_key', idempotencyKey).maybeSingle()
-    const existing = existingByOrder || existingByKey
-    if (existing) {
-      if (existing.order_id !== orderId || existing.plan_id !== planId || Number(existing.amount) !== plan.amountRupees ||
-          existing.customer_phone !== phone || existing.listing_type !== listingType || existing.listing_name !== listingName ||
-          existing.city !== city || (existing.user_id || null) !== userId || existing.is_active) {
-        return json({ error: 'ORDER_CONFLICT' }, 409)
-      }
-      return json({ success: true, status: 'pending_verification', is_active: false, subscription_id: existing.id, access_token: existing.access_token })
-    }
-
-    const accessToken = Array.from(crypto.getRandomValues(new Uint8Array(24))).map(v => v.toString(16).padStart(2, '0')).join('')
-    if (body.payment_status === 'pay_at_venue') return json({ error: 'LISTING_SUBSCRIPTION_REQUIRES_ONLINE_VERIFICATION' }, 409)
-    const requestedSubscriptionStatus = 'pending'
-    const { data: paymentIntent, error: paymentLookupError } = await admin.from('khelgrid_payments')
-      .select('id,amount,item_type,customer_phone,user_id,status')
-      .eq('order_id', orderId).single()
-    if (paymentLookupError || !paymentIntent || paymentIntent.item_type !== 'listing_plan' ||
-        Number(paymentIntent.amount) !== plan.amountRupees || paymentIntent.customer_phone !== phone ||
-        (paymentIntent.user_id || null) !== userId || paymentIntent.status !== 'pending_verification') {
-      return json({ error: 'PAYMENT_INTENT_MISMATCH' }, 409)
-    }
-
-    const { data: subscription, error: insertError } = await admin.from('listing_subscriptions').insert({
-      order_id: orderId,
-      payment_id: null,
-      user_id: userId,
-      listing_type: listingType,
-      listing_id: body.listing_id ? String(body.listing_id) : null,
-      listing_name: listingName,
-      city,
-      plan_id: planId,
-      plan_name: plan.name,
-      amount: plan.amountRupees,
-      duration_days: plan.durationDays,
-      customer_name: customerName,
-      customer_phone: phone,
-      customer_email: body.customer_email ? String(body.customer_email).trim().toLowerCase() : null,
-      starts_at: new Date().toISOString(),
-      expires_at: null,
-      is_active: false,
-      payment_status: requestedSubscriptionStatus,
-      metadata: { source: 'register-payment-intent' },
-      access_token: accessToken,
-      idempotency_key: idempotencyKey,
-      updated_at: new Date().toISOString(),
-    }).select('id,plan_id,plan_name,is_active,payment_status,access_token').single()
-    if (insertError || !subscription) return json({ error: 'SUBSCRIPTION_REGISTRATION_FAILED' }, 500)
-    const { error: linkError } = await admin.from('khelgrid_payments')
-      .update({
-        target_type: 'listing_subscription',
-        target_id: subscription.id,
-        metadata: { subscription_id: subscription.id, plan_id: planId },
-      })
-      .eq('id', paymentIntent.id)
-      .in('status', ['pending_verification','pay_at_venue'])
-    if (linkError) {
-      await admin.from('listing_subscriptions').delete().eq('id', subscription.id)
-      return json({ error: 'SUBSCRIPTION_PAYMENT_LINK_FAILED' }, 500)
-    }
-    return json({ success: true, status: 'pending_verification', is_active: false, subscription_id: subscription.id, plan_id: subscription.plan_id, plan_name: subscription.plan_name, payment_status: subscription.payment_status, access_token: subscription.access_token })
   }
 
   const orderId = String(body.order_id || '').trim()
@@ -204,7 +124,7 @@ serve(async (req) => {
   if (!/^KG_ORD_[A-Z0-9]+_[A-Z0-9]{4,16}$/.test(orderId) || !itemId ||
       customerName.length < 2 || customerPhone.length < 10 ||
       !Number.isFinite(requestedAmount) || requestedAmount <= 0 ||
-      !['pickup_match','venue_booking','trial_registration','listing_plan','membership'].includes(itemType) ||
+      !['pickup_match','venue_booking','trial_registration','membership'].includes(itemType) ||
       !['upi','razorpay','pay_at_venue'].includes(method) || !idempotencyKey || idempotencyKey.length > 128) {
     return json({ error: 'INVALID_PAYMENT_INTENT' }, 400)
   }
@@ -212,7 +132,7 @@ serve(async (req) => {
   if (method === 'upi' && (!/^[A-Za-z0-9-]{6,64}$/.test(submittedReference))) {
     return json({ error: 'INVALID_PAYMENT_REFERENCE' }, 400)
   }
-  if (method === 'upi' && !['venue_booking','listing_plan'].includes(itemType)) {
+  if (method === 'upi' && itemType !== 'venue_booking') {
     return json({ error: 'PAYMENT_TARGET_NOT_SUPPORTED', message: 'Online payment is not enabled for this item until its settlement workflow is available.' }, 409)
   }
   if (method === 'pay_at_venue' && !['venue_booking','pickup_match'].includes(itemType)) {
@@ -225,13 +145,7 @@ serve(async (req) => {
   const targetId = itemId
   const metadata: Record<string, unknown> = {}
 
-  if (itemType === 'listing_plan') {
-    const plan = getCanonicalListingPlan(String((body.metadata as Record<string, unknown> | undefined)?.planId || ''))
-    if (!plan) return json({ error: 'INVALID_PLAN' }, 400)
-    expectedAmount = plan.amountRupees
-    itemTitle = plan.name
-    metadata.plan_id = String((body.metadata as Record<string, unknown>).planId)
-  } else if (itemType === 'membership') {
+  if (itemType === 'membership') {
     const meta = (body.metadata || {}) as Record<string, unknown>
     expectedAmount = getCanonicalMembershipPrice(meta)
     if (expectedAmount === null) return json({ error: 'INVALID_MEMBERSHIP_PLAN' }, 400)

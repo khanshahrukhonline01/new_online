@@ -110,11 +110,19 @@ alter table public.pickup_games
   add column if not exists host_name text default 'KhelGrid Host',
   add column if not exists publication_status text not null default 'draft';
 
--- Backfill reference numbers and tracking keys for any existing rows
+-- Backfill legacy identifiers as a privileged schema migration.
+-- The previous allowlisted trigger permits only authenticated moderator transitions;
+-- it must not block this metadata-only backfill during deployment.
+ALTER TABLE public.listing_submissions
+  DISABLE TRIGGER listing_submissions_enforce_moderation_transition;
+
 update public.listing_submissions
 set reference_number = coalesce(reference_number, 'KHL-' || to_char(created_at, 'YYYYMMDD') || '-' || upper(substr(md5(id::text), 1, 6))),
-    tracking_key = coalesce(tracking_key, md5(id::text || created_at::text))
+    tracking_key = coalesce(tracking_key, encode(extensions.gen_random_bytes(24), 'hex'))
 where reference_number is null or tracking_key is null;
+
+ALTER TABLE public.listing_submissions
+  ENABLE TRIGGER listing_submissions_enforce_moderation_transition;
 
 alter table public.listing_submissions
   alter column reference_number set not null,

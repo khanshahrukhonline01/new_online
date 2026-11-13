@@ -37,13 +37,13 @@ const evidenceTypes = [
 ] as const
 
 const fieldSets: Record<string, Array<[string, string]>> = {
-  venue: [['address', 'Full street/locality address'], ['sport', 'Sports supported']],
-  opportunity: [['organizer_name', 'Verified organizer name'], ['venue_name', 'Venue name'], ['opportunity_type', 'Opportunity type']],
-  academy: [['state', 'State']],
-  coach: [['state', 'State'], ['qualifications', 'Reviewed qualifications']],
-  event: [['organizer_name', 'Organizer name'], ['venue_name', 'Venue name'], ['event_type', 'Event type'], ['starts_at', 'Start date/time (ISO 8601)'], ['ends_at', 'End date/time (ISO 8601, optional)']],
-  pickup_game: [['sport', 'Sport'], ['venue_name', 'Venue name'], ['host_name', 'Host name'], ['starts_at', 'Start date/time (ISO 8601)'], ['ends_at', 'End date/time (ISO 8601, optional)']],
-  sport: [],
+  venue: [['city', 'City'], ['address', 'Full street/locality address'], ['sport', 'Sports supported']],
+  opportunity: [['city', 'City'], ['organizer_name', 'Verified organizer name'], ['venue_name', 'Venue name'], ['opportunity_type', 'Opportunity type']],
+  academy: [['city', 'City'], ['state', 'State']],
+  coach: [['city', 'City'], ['state', 'State'], ['qualifications', 'Reviewed qualifications']],
+  event: [['city', 'City'], ['organizer_name', 'Organizer name'], ['venue_name', 'Venue name'], ['event_type', 'Event type'], ['starts_at', 'Start date/time (ISO 8601)'], ['ends_at', 'End date/time (ISO 8601, optional)']],
+  pickup_game: [['city', 'City'], ['sport', 'Sport'], ['venue_name', 'Venue name'], ['host_name', 'Host name'], ['starts_at', 'Start date/time (ISO 8601)'], ['ends_at', 'End date/time (ISO 8601, optional)']],
+  sport: [['city', 'City']],
 }
 
 export function AdminControlPanelPage() {

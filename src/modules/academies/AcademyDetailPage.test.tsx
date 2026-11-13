@@ -5,7 +5,13 @@ import AcademyDetailPage from './AcademyDetailPage'
 
 describe('AcademyDetailPage — Dedicated Academy Hub & Rich Content', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 })))
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input)
+      const data = url.includes('/rpc/submit_listing_intake')
+        ? { status: 'submitted', reference_number: 'KHL-20261112-ACA001', tracking_key: 'private-academy-test-key' }
+        : []
+      return Promise.resolve(new Response(JSON.stringify(data), { status: 200 }))
+    }))
   })
 
   afterEach(() => {
@@ -100,7 +106,7 @@ describe('AcademyDetailPage — Dedicated Academy Hub & Rich Content', () => {
       expect(result.detailPath).toBeUndefined()
     }
     const [url] = vi.mocked(fetch).mock.calls[0]
-    expect(String(url)).toContain('/rest/v1/listing_submissions')
+    expect(String(url)).toContain('/rest/v1/rpc/submit_listing_intake')
     expect(String(url)).not.toContain('/rest/v1/academies')
     const html = renderToStaticMarkup(<AcademyDetailPage slug="shimla-high-altitude-football-club" onNavigate={vi.fn()} />)
     expect(html).toContain('Academy Record Not Found')
