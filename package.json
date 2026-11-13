@@ -13,7 +13,10 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dev:admin": "vite --config apps/admin/vite.config.ts",
+    "build:admin": "tsc --noEmit -p tsconfig.admin.json && vite build --config apps/admin/vite.config.ts",
+    "typecheck:admin": "tsc --noEmit -p tsconfig.admin.json"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
