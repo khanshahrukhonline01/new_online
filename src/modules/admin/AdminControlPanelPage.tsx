@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { signInWithEmail, signOut } from '../../integrations/supabase/auth-client'
+import { getSupabaseClient } from '../../integrations/supabase/realtime-client'
 import {
   addListingEvidence,
   approveListingSubmission,
@@ -69,6 +70,7 @@ export function getEvidenceChecklist(listingType: string, evidence: ListingEvide
 
 export function AdminControlPanelPage() {
   const [profile, setProfile] = useState<ModerationAccessProfile | null>(null)
+  const [signedIn, setSignedIn] = useState(false)
   const [queue, setQueue] = useState<AdminModerationQueue | null>(null)
   const [queueSearch, setQueueSearch] = useState('')
   const [selected, setSelected] = useState<ModeratorQueueItem | null>(null)
@@ -98,6 +100,11 @@ export function AdminControlPanelPage() {
     setLoading(true)
     setError('')
     try {
+      const client = getSupabaseClient()
+      if (!client) throw new Error('Authentication service is not configured.')
+      const { data: authData, error: authError } = await client.auth.getUser()
+      if (authError) throw authError
+      setSignedIn(Boolean(authData.user))
       const current = await getModerationAccessProfile()
       setProfile(current)
       if (!current?.is_active) {
@@ -295,6 +302,16 @@ export function AdminControlPanelPage() {
   }
 
   if (loading) return <section className="content-page admin-control"><p>Checking secure moderation access…</p></section>
+
+  if (signedIn && !profile?.is_active) return (
+    <section className="content-page admin-control" aria-labelledby="admin-control-denied-title">
+      <p className="eyebrow">KHELGRID · RESTRICTED OPERATIONS</p>
+      <h1 id="admin-control-denied-title">Access not authorized</h1>
+      <p role="alert" className="admin-control-error">You are signed in, but this account is not an active KhelGrid moderator. The private queue and evidence records are unavailable to your account.</p>
+      <p>Ask an existing super-admin to grant access if you have an approved moderation responsibility.</p>
+      <button type="button" onClick={async () => { await signOut(); setSignedIn(false); setProfile(null) }}>Sign out</button>
+    </section>
+  )
 
   if (!profile?.is_active) return (
     <section className="content-page admin-control">
