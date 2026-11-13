@@ -40,7 +40,11 @@ BEGIN
      OR has_table_privilege('authenticated', 'public.payment_webhook_events', 'UPDATE')
      OR has_table_privilege('anon', 'public.payment_webhook_events', 'SELECT')
      OR has_table_privilege('authenticated', 'public.payment_webhook_events', 'SELECT')
-     OR has_table_privilege('anon', 'public.venue_bookings', 'SELECT') THEN
+     OR has_table_privilege('anon', 'public.venue_bookings', 'SELECT')
+     OR has_table_privilege('anon', 'public.athlete_profile_moderation_audit', 'SELECT')
+     OR has_table_privilege('authenticated', 'public.athlete_profile_moderation_audit', 'SELECT')
+     OR has_table_privilege('anon', 'public.payment_manual_verification_audit', 'SELECT')
+     OR has_table_privilege('authenticated', 'public.payment_manual_verification_audit', 'SELECT') THEN
     RAISE EXCEPTION 'Phase A: sensitive table grants are too broad';
   END IF;
 
@@ -144,5 +148,41 @@ BEGIN
   END IF;
 END;
 $$;
+
+-- Verify the owner policy at row level: an authenticated user sees their own
+-- booking and cannot see another user's booking.
+INSERT INTO auth.users (id) VALUES
+  ('11111111-1111-4111-8111-111111111111'),
+  ('22222222-2222-4222-8222-222222222222')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.venue_bookings
+  (booking_ref, venue_id, venue_name, city, sport, slot_date, slot_time,
+   customer_name, customer_phone, total_amount, paid_amount, user_id)
+VALUES
+  ('PHASEA-RLS-OWN-TEST', 'phase-a-test', 'Phase A Test Venue', 'Delhi', 'Football',
+   '2099-01-01', '10:00', 'Test Owner', '9000000001', 100, 0,
+   '11111111-1111-4111-8111-111111111111'),
+  ('PHASEA-RLS-OTHER-TEST', 'phase-a-test', 'Phase A Test Venue', 'Delhi', 'Football',
+   '2099-01-01', '11:00', 'Other Owner', '9000000002', 100, 0,
+   '22222222-2222-4222-8222-222222222222');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+DO $
+DECLARE
+  v_own integer;
+  v_other integer;
+BEGIN
+  SELECT count(*) INTO v_own
+  FROM public.venue_bookings WHERE booking_ref='PHASEA-RLS-OWN-TEST';
+  SELECT count(*) INTO v_other
+  FROM public.venue_bookings WHERE booking_ref='PHASEA-RLS-OTHER-TEST';
+  IF v_own <> 1 OR v_other <> 0 THEN
+    RAISE EXCEPTION 'Phase A: venue booking owner RLS failed (own %, other %)',v_own,v_other;
+  END IF;
+END;
+$;
+RESET ROLE;
 
 ROLLBACK;
