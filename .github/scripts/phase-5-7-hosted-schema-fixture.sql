@@ -157,7 +157,7 @@ CREATE TABLE public.events (
 );
 CREATE TABLE public.academies (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), slug text, name text, payment_status text DEFAULT 'paid');
 CREATE TABLE public.opportunities (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), slug text, title text, payment_status text DEFAULT 'paid');
-CREATE TABLE public.pickup_games (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), slug text, sport text, payment_status text DEFAULT 'paid');
+CREATE TABLE public.pickup_games (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), slug text, sport text, payment_status text DEFAULT 'paid', host_user_id uuid);
 
 CREATE TABLE public.venue_courts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
