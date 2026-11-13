@@ -92,8 +92,15 @@ export function AdminControlPanelPage() {
       const current = await getModerationAccessProfile()
       setProfile(current)
       if (!current?.is_active) {
+        // Clear every previously loaded private record when the session is absent,
+        // expired, revoked, or no longer has an active moderation grant.
         setQueue(null)
+        setSelected(null)
+        setEvidence([])
         setAccounts([])
+        setAccessAudits([])
+        setVerificationStates({})
+        setLastRefreshedAt(null)
         return
       }
       const [data, verificationRows] = await Promise.all([
@@ -117,6 +124,14 @@ export function AdminControlPanelPage() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not load the protected control panel.')
       setProfile(null)
+      setSignedIn(false)
+      setQueue(null)
+      setSelected(null)
+      setEvidence([])
+      setAccounts([])
+      setAccessAudits([])
+      setVerificationStates({})
+      setLastRefreshedAt(null)
     } finally {
       setLoading(false)
     }
