@@ -314,15 +314,6 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
                 <SiteIcon name="building" size={14} /> Host &amp; Turfs Hub
               </a>
             )}
-            {authUser.role === 'admin' && (
-              <a
-                href="/admin"
-                onClick={e => handleLink(e, '/admin')}
-                className="user-dash-btn secondary"
-              >
-                <SiteIcon name="shield-check" size={14} /> Admin Desk
-              </a>
-            )}
           </div>
         </div>
       ) : (
