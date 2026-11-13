@@ -30,6 +30,16 @@ npm run build       # 106 URLs indexed in sitemap.xml
 
 Copy `.env.example` to `.env.local`. Never commit credentials.
 
+## Private Admin & Super-Admin Control Centre
+
+The development Control Centre is a restricted, UI-based operations area at `/admin/control`. It is intentionally excluded from public navigation and sitemap discovery; database authorization and RLS—not URL secrecy—protect its data and actions.
+
+- **Access and setup guide:** [Development Admin & Super-Admin Control Centre](docs/ADMIN_CONTROL_CENTRE_DEVELOPMENT_ACCESS.md)
+- **Moderator access and operations SOP:** [Listing Moderation Access SOP](docs/LISTING_MODERATION_ACCESS_SOP.md)
+- **Submission and publication workflow:** [Listing Submission and Moderation SOP](docs/LISTING_SUBMISSION_MODERATION_SOP.md)
+
+Use only the current Ready Vercel development deployment URL and append `/admin/control`. Do not use the production domain for development testing. The guide documents local access, role permissions, first super-admin provisioning, environment separation, and required release tests.
+
 ## Architecture & Development Record
 
 For a full historical record of all phases, fixes, database migrations, and repository parity syncs, see:
