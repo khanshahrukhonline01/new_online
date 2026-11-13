@@ -61,6 +61,7 @@ export function AdminControlPanelPage() {
   const [accessAudits, setAccessAudits] = useState<ListingModeratorAccessAudit[]>([])
   const [verificationStates, setVerificationStates] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -100,6 +101,7 @@ export function AdminControlPanelPage() {
         getListingVerificationQueue('all'),
       ])
       setQueue(data)
+      setLastRefreshedAt(new Date())
       setVerificationStates(Object.fromEntries(verificationRows.map(row => [row.id, row.verification_status])))
       if (current.role === 'super_admin') {
         const [authorizedAccounts, auditRows] = await Promise.all([
@@ -121,7 +123,15 @@ export function AdminControlPanelPage() {
   }, [])
 
   useEffect(() => { void refresh() }, [refresh])
-  const visibleQueue = (queue?.pendingSubmissions ?? []).filter(item => {
+  const queueItems = queue?.pendingSubmissions ?? []
+  const queueCounts = {
+    total: queueItems.length,
+    awaitingReview: queueItems.filter(item => ['pending_review', 'resubmitted'].includes(item.status)).length,
+    underReview: queueItems.filter(item => item.status === 'under_review').length,
+    approved: queueItems.filter(item => item.status === 'approved').length,
+    published: queueItems.filter(item => item.status === 'published').length,
+  }
+  const visibleQueue = queueItems.filter(item => {
     const query = queueSearch.trim().toLowerCase()
     if (!query) return true
     return [item.title, item.reference_number, item.city, item.listing_type, item.status].some(value => value?.toLowerCase().includes(query))
@@ -333,10 +343,18 @@ export function AdminControlPanelPage() {
     <section className="content-page admin-control">
       <header className="admin-control-header">
         <div><p className="eyebrow">KHELGRID · RESTRICTED OPERATIONS</p><h1>Moderation Control Panel</h1><p>Review submissions, record evidence, verify claims and manage authorized moderators.</p></div>
-        <div className="admin-control-identity"><strong>{profile.role.replace('_', ' ')}</strong><a href="/admin">Listing review desk</a><button type="button" onClick={async () => { await signOut(); setProfile(null); setQueue(null) }}>Sign out</button></div>
+        <div className="admin-control-identity"><strong>{profile.role.replace('_', ' ')}</strong><a href="/admin">Listing review desk</a><button type="button" onClick={() => void refresh()} disabled={loading || busy}>Refresh data</button><button type="button" onClick={async () => { await signOut(); setProfile(null); setQueue(null) }}>Sign out</button></div>
       </header>
       {error && <p role="alert" className="admin-control-error">{error}</p>}
       {notice && <p role="status" className="admin-control-notice">{notice}</p>}
+      <section className="admin-control-overview" aria-label="Live moderation overview">
+        <div className="admin-control-stat"><span>Loaded submissions</span><strong>{queueCounts.total}</strong><small>Latest queue records · maximum 100 loaded</small></div>
+        <div className="admin-control-stat"><span>Awaiting review</span><strong>{queueCounts.awaitingReview}</strong><small>Pending review or resubmitted</small></div>
+        <div className="admin-control-stat"><span>Under review</span><strong>{queueCounts.underReview}</strong><small>Currently claimed by moderators</small></div>
+        <div className="admin-control-stat"><span>Approved</span><strong>{queueCounts.approved}</strong><small>Editorial approval recorded</small></div>
+        <div className="admin-control-stat"><span>Published</span><strong>{queueCounts.published}</strong><small>Published records in loaded queue</small></div>
+      </section>
+      <div className="admin-control-overview-meta"><span>Access: active database-authorized {profile.role.replace('_', ' ')}</span><span>Data refreshed: {lastRefreshedAt ? lastRefreshedAt.toLocaleString('en-IN') : 'Not yet refreshed'}</span></div>
       <div className="admin-control-layout">
         <aside className="admin-control-queue">
           <h2>Verification &amp; listing queue</h2>
