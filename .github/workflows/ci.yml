@@ -206,3 +206,10 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: npm run build
+      - name: Typecheck isolated KhelGrid Admin application
+        run: npm run typecheck:admin
+      - name: Build isolated KhelGrid Admin application against approved development Supabase project
+        run: npm run build:admin
+        env:
+          VITE_SUPABASE_URL: https://hznsbxvovjxvmnchzzqt.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key
