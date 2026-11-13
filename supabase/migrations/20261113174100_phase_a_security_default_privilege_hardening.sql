@@ -54,10 +54,12 @@ GRANT INSERT, UPDATE ON TABLE public.profiles, public.athlete_profiles
 TO authenticated;
 GRANT UPDATE ON TABLE public.listing_submissions TO authenticated;
 
--- No public table currently uses a sequence-backed identifier. Keep all public
--- sequences inaccessible to browser roles; UUID defaults need no sequence grant.
+-- Grant USAGE only at this initial step for generated identifiers used by public
+-- intake paths. The immediately following correction migration narrows this to
+-- zero browser sequence privileges after confirming all current IDs are UUIDs.
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public
   FROM PUBLIC, anon, authenticated;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
 
 -- Make future objects secure by default for migrations executed as postgres.
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
