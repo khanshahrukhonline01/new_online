@@ -18,6 +18,7 @@ import {
   saveListingPublicationDetails,
   setListingModeratorAccess,
   verifyListingSubmission,
+  unpublishListingSubmission,
   type AdminModerationQueue,
   type ListingEvidenceItem,
   type ListingModeratorAccount,
@@ -70,6 +71,7 @@ export function AdminControlPanelPage() {
   const [evidenceDescription, setEvidenceDescription] = useState('')
   const [verificationNotes, setVerificationNotes] = useState('')
   const [decisionReason, setDecisionReason] = useState('')
+  const [unpublishReason, setUnpublishReason] = useState('')
   const [publishSlug, setPublishSlug] = useState('')
   const [structured, setStructured] = useState<Record<string, string>>({})
   const [targetUserId, setTargetUserId] = useState('')
@@ -235,6 +237,25 @@ export function AdminControlPanelPage() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Publication failed.') }
     finally { setBusy(false) }
   }
+  const handleUnpublish = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selected) return
+    if (unpublishReason.trim().length < 3) {
+      setError('Please provide a clear unpublishing reason (at least 3 characters).')
+      return
+    }
+    setBusy(true); setError(''); setNotice('')
+    try {
+      await unpublishListingSubmission(selected.id, unpublishReason.trim(), undefined, selected.version)
+      setUnpublishReason('')
+      setNotice('Listing unpublished. It is no longer available in public catalogue queries; the audit history is retained.')
+      await refresh()
+      setSelected(prev => prev ? { ...prev, status: 'unpublished', version: prev.version + 1 } : prev)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not unpublish listing.')
+    } finally { setBusy(false) }
+  }
+
   const handleVerification = async (decision: 'verified' | 'rejected' | 'unverified') => {
     if (!selected) return
     setBusy(true); setError(''); setNotice('')
@@ -343,6 +364,10 @@ export function AdminControlPanelPage() {
               {selected.status !== 'rejected' && selected.status !== 'published' && <label className="admin-control-full">Rejection reason (required only to reject)<textarea value={decisionReason} onChange={e => setDecisionReason(e.target.value)} maxLength={2000} /></label>}
               {selected.status === 'approved' && <div className="admin-control-form"><label>Publication slug (optional)<input value={publishSlug} onChange={e => setPublishSlug(e.target.value)} placeholder="Auto-generated if blank" /></label><button disabled={busy || verificationStates[selected.id] !== 'verified'} onClick={() => void handlePublish()}>Publish verified listing</button>
                 {verificationStates[selected.id] !== 'verified' && <small>Complete the evidence review and mark this submission verified before publication is enabled.</small>}</div>}
+              {selected.status === 'published' && <form onSubmit={handleUnpublish} className="admin-control-form">
+                <label>Reason for unpublishing (required)<textarea value={unpublishReason} onChange={e => setUnpublishReason(e.target.value)} minLength={3} maxLength={2000} required placeholder="For example: venue closed, event concluded, duplicate or evidence withdrawn" /></label>
+                <button type="submit" disabled={busy || unpublishReason.trim().length < 3}>Unpublish listing</button>
+              </form>}
             </div>
             <div className="admin-control-card">
               <h3>Category verification checklist</h3>
