@@ -1,0 +1,3 @@
+html:has(.khelgrid-admin-app) { color-scheme: light; }
+body:has(.khelgrid-admin-app) { min-width: 320px; min-height: 100vh; background: #f5f7fa; }
+.khelgrid-admin-app { min-height: 100vh; }
