@@ -116,6 +116,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-1-publication-category-flow.sql
       - name: Apply Phase A security default privilege hardening
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174100_phase_a_security_default_privilege_hardening.sql
+      - name: Apply Phase A sequence privilege correction
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174236_phase_a_sequence_privilege_correction.sql
       - name: Verify Phase A security privilege boundaries
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-a-security-privilege-assertions.sql
       - name: Validate SQL migration safety
