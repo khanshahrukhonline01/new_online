@@ -243,4 +243,86 @@ describe('KhelChronicle Supabase database integration client', () => {
       expect(call[1]?.method).toBe('POST')
     })
   })
+
+  describe('KhelChronicle Editorial Moderation Desk', () => {
+    it('fetches default moderation queue with stats and baseline submissions', async () => {
+      const client = await loadClient('', '')
+      const queue = await client.getChronicleModerationQueue()
+      expect(queue.submissions.length).toBeGreaterThanOrEqual(4)
+      expect(queue.stats.totalCount).toBeGreaterThanOrEqual(4)
+      expect(queue.stats.pendingCount).toBeGreaterThanOrEqual(1)
+      expect(queue.submissions.some(s => s.submissionId === 'KG-SUB-KC82A1-94F2')).toBe(true)
+    })
+
+    it('filters moderation queue by status, category, and keyword search', async () => {
+      const client = await loadClient('', '')
+      const pending = await client.getChronicleModerationQueue({ status: 'pending_review' })
+      expect(pending.submissions.every(s => s.status === 'pending_review')).toBe(true)
+
+      const biomech = await client.getChronicleModerationQueue({ category: 'sports-biomechanics' })
+      expect(biomech.submissions.every(s => s.category === 'sports-biomechanics')).toBe(true)
+
+      const search = await client.getChronicleModerationQueue({ search: 'Tenzing' })
+      expect(search.submissions.length).toBe(1)
+      expect(search.submissions[0].authorName).toContain('Tenzing Norbu')
+    })
+
+    it('supports full lifecycle: review, request corrections, approve, reject, and publish', async () => {
+      const client = await loadClient('', '')
+      const queue = await client.getChronicleModerationQueue()
+      const target = queue.submissions[0]
+
+      // Start review
+      const underReview = await client.startManuscriptReview(target.id, 'Dr. Editor')
+      expect(underReview.status).toBe('under_review')
+      expect(underReview.assignedEditor).toBe('Dr. Editor')
+
+      // Request corrections (validation: at least 10 chars)
+      await expect(client.requestManuscriptCorrections(target.id, 'Short')).rejects.toThrow('at least 10 characters')
+      const corrections = await client.requestManuscriptCorrections(target.id, 'Please update the IRB ethics clearance number.')
+      expect(corrections.status).toBe('changes_requested')
+      expect(corrections.correctionRequest).toContain('IRB ethics clearance')
+
+      // Approve
+      const approved = await client.approveManuscript(target.id, 'Rigorous study.')
+      expect(approved.status).toBe('approved')
+
+      // Publish to archive
+      const published = await client.publishManuscriptToArchive(target.id, 'himalayan-track-adaptation', 'KG-2026-006')
+      expect(published.success).toBe(true)
+      expect(published.paperId).toBe('KG-2026-006')
+      expect(published.slug).toBe('himalayan-track-adaptation')
+
+      // Reject (validation: reason required)
+      await expect(client.rejectManuscript(target.id, '')).rejects.toThrow('reason for rejection must be provided')
+      const rejected = await client.rejectManuscript(target.id, 'Outside the scope of sports science.')
+      expect(rejected.status).toBe('rejected')
+      expect(rejected.rejectionReason).toContain('Outside the scope')
+    })
+
+    it('automatically records manuscript submissions into the moderation desk queue', async () => {
+      const client = await loadClient('', '')
+      const subRes = await client.submitChronicleManuscript({
+        manuscript_title: 'Hydration and Electrolyte Kinetics in Rural Indian Wrestlers',
+        category_slug: 'sports-nutrition',
+        primary_author_name: 'Dr. Ramesh Chander',
+        primary_author_email: 'ramesh.chander@haryanaakhada.org',
+        primary_author_affiliation: 'Chhatrasal Akhada Sports Medicine Cell',
+        abstract_text: 'A structured evaluation of sodium loss, plasma osmolality, and acute dehydration recovery in 45 traditional mud pit pehlwans.',
+        keywords: 'Wrestling, Pehlwani, Dehydration, Electrolytes',
+        full_text_or_url: 'https://zenodo.org/record/99887766',
+        human_ethics_confirmed: true,
+        minor_consent_confirmed: true,
+      })
+
+      expect(subRes.status).not.toBe('unavailable')
+      if ('submissionId' in subRes) {
+        expect(subRes.submissionId).toBeDefined()
+      }
+      const queue = await client.getChronicleModerationQueue({ search: 'Wrestlers' })
+      expect(queue.submissions.length).toBeGreaterThanOrEqual(1)
+      expect(queue.submissions[0].title).toContain('Rural Indian Wrestlers')
+      expect(queue.submissions[0].status).toBe('pending_review')
+    })
+  })
 })

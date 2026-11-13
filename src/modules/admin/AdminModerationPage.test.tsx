@@ -72,5 +72,46 @@ describe('AdminModerationPage', () => {
     expect(html).toContain('Published')
     expect(html).toContain('Bangalore Turf Park')
     expect(html).toContain('KHL-20261110-TEST01')
+    expect(html).toContain('Directory Listings Queue')
+    expect(html).toContain('KhelChronicle Manuscripts')
+  })
+
+  it('renders KhelChronicle Manuscripts desk with research disciplines, author affiliations, and ethics badges', () => {
+    const mockQueue: client.AdminModerationQueue = {
+      pendingSubmissions: [],
+      stats: {
+        totalAcademies: 0,
+        totalVenues: 0,
+        totalCoaches: 0,
+        totalEvents: 0,
+        pendingSubmissionsCount: 0,
+        underReviewCount: 0,
+        changesRequestedCount: 0,
+        approvedCount: 0,
+        publishedCount: 0,
+        rejectedCount: 0,
+        unpublishedCount: 0,
+      },
+    }
+
+    const html = renderToStaticMarkup(
+      <AdminModerationPage initialQueue={mockQueue} initialDesk="chronicle" />
+    )
+
+    expect(html).toContain('KhelChronicle Manuscripts')
+    expect(html).toContain('Pending Screening')
+    expect(html).toContain('Under Review')
+    expect(html).toContain('Revisions Requested')
+    expect(html).toContain('Approved (Preprints)')
+    expect(html).toContain('Published Archive')
+    expect(html).toContain('All Disciplines')
+    expect(html).toContain('Sports Biomechanics')
+    expect(html).toContain('Exercise Physiology')
+    expect(html).toContain('High-Altitude Hypoxic Training Adaptation')
+    expect(html).toContain('Dr. Tenzing Norbu')
+    expect(html).toContain('Shillaroo')
+    expect(html).toContain('IRB Human Ethics Certified')
+    expect(html).toContain('Minor Consent Verified')
+    expect(html).toContain('Diamond Open Access (No APC)')
   })
 })
