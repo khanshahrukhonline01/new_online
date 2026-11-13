@@ -46,9 +46,31 @@ const fieldSets: Record<string, Array<[string, string]>> = {
   sport: [['city', 'City']],
 }
 
+
+const categoryEvidenceChecklist: Record<string, Array<{ type: string; label: string }>> = {
+  venue: [{ type: 'venue_address', label: 'Confirm the venue exists at the submitted street/locality address' }, { type: 'official_source', label: 'Check an official venue or operator source where available' }, { type: 'other', label: 'Review current facility/court evidence and image rights' }],
+  coach: [{ type: 'organizer_identity', label: 'Confirm the coach identity and contact independently' }, { type: 'coach_qualification', label: 'Verify each qualification or certification claim' }, { type: 'official_source', label: 'Check federation, employer or official profile claims where available' }],
+  academy: [{ type: 'academy_identity', label: 'Confirm the academy identity and operating location' }, { type: 'venue_address', label: 'Confirm the actual training location, not just a city name' }, { type: 'official_source', label: 'Check programme, affiliation and operator claims where available' }],
+  opportunity: [{ type: 'official_source', label: 'Confirm the trial/opportunity from the organiser or official notice' }, { type: 'organizer_identity', label: 'Independently confirm the organiser and contact channel' }, { type: 'event_details', label: 'Verify dates, venue, eligibility and any disclosed fee' }],
+  trial: [{ type: 'official_source', label: 'Confirm the trial from the organiser or official notice' }, { type: 'organizer_identity', label: 'Independently confirm the organiser and contact channel' }, { type: 'event_details', label: 'Verify dates, venue, eligibility and any disclosed fee' }],
+  event: [{ type: 'organizer_identity', label: 'Confirm the event organiser' }, { type: 'event_details', label: 'Verify the event schedule and actual venue' }, { type: 'official_source', label: 'Check the official event announcement where available' }],
+  pickup_game: [{ type: 'organizer_identity', label: 'Confirm the host identity and control of the game' }, { type: 'venue_address', label: 'Confirm the actual playing venue and location' }, { type: 'event_details', label: 'Verify date, time, sport and participation details' }],
+}
+export function getEvidenceChecklist(listingType: string, evidence: ListingEvidenceItem[]) {
+  const requirements = categoryEvidenceChecklist[listingType.toLowerCase()] || [{ type: 'official_source', label: 'Check an official source for the submitted claims' }]
+  return requirements.map(requirement => {
+    const matching = evidence.filter(item => item.evidence_type === requirement.type)
+    const supported = matching.some(item => item.outcome === 'supports')
+    const contradicted = matching.some(item => item.outcome === 'contradicts')
+    const pending = matching.some(item => item.outcome === 'pending')
+    return { ...requirement, status: contradicted ? 'contradicted' : supported ? 'supported' : pending ? 'pending' : 'missing' }
+  })
+}
+
 export function AdminControlPanelPage() {
   const [profile, setProfile] = useState<ModerationAccessProfile | null>(null)
   const [queue, setQueue] = useState<AdminModerationQueue | null>(null)
+  const [queueSearch, setQueueSearch] = useState('')
   const [selected, setSelected] = useState<ModeratorQueueItem | null>(null)
   const [evidence, setEvidence] = useState<ListingEvidenceItem[]>([])
   const [accounts, setAccounts] = useState<ListingModeratorAccount[]>([])
@@ -109,6 +131,12 @@ export function AdminControlPanelPage() {
   }, [])
 
   useEffect(() => { void refresh() }, [refresh])
+  const visibleQueue = (queue?.pendingSubmissions ?? []).filter(item => {
+    const query = queueSearch.trim().toLowerCase()
+    if (!query) return true
+    return [item.title, item.reference_number, item.city, item.listing_type, item.status].some(value => value?.toLowerCase().includes(query))
+  })
+
 
   const selectSubmission = async (item: ModeratorQueueItem) => {
     setSelected(item)
@@ -293,11 +321,13 @@ export function AdminControlPanelPage() {
       <div className="admin-control-layout">
         <aside className="admin-control-queue">
           <h2>Verification &amp; listing queue</h2>
-          <p>{queue?.pendingSubmissions.length ?? 0} submissions loaded</p>
-          {queue?.pendingSubmissions.map(item => <button type="button" key={item.id} className={selected?.id === item.id ? 'selected' : ''} onClick={() => void selectSubmission(item)}>
+          <p>{visibleQueue.length} of {queue?.pendingSubmissions.length ?? 0} submissions shown</p>
+          <label className="admin-control-queue-search">Search submissions<input type="search" value={queueSearch} onChange={event => setQueueSearch(event.target.value)} placeholder="Title, reference, city or category" /></label>
+          {visibleQueue.map(item => <button type="button" key={item.id} className={selected?.id === item.id ? 'selected' : ''} onClick={() => void selectSubmission(item)}>
             <span>{item.listing_type} · {item.status.replace(/_/g, ' ')}</span><small>Evidence: {verificationStates[item.id] || 'unverified'}</small><strong>{item.title}</strong><small>{item.reference_number} · {item.city || 'Location missing'}</small>
           </button>)}
-          {!queue?.pendingSubmissions.length && <p>No submissions in the current queue.</p>}
+          {queue?.pendingSubmissions.length === 0 && <p>No submissions in the current queue.</p>}
+          {Boolean(queue?.pendingSubmissions.length) && visibleQueue.length === 0 && <p>No submissions match this search.</p>}
         </aside>
         <div className="admin-control-workspace">
           {!selected ? <div className="admin-control-empty"><h2>Select a submission</h2><p>Choose an item to inspect its evidence, verification state and publication requirements.</p></div> : <>
@@ -315,6 +345,17 @@ export function AdminControlPanelPage() {
               {selected.status !== 'rejected' && selected.status !== 'published' && <label className="admin-control-full">Rejection reason (required only to reject)<textarea value={decisionReason} onChange={e => setDecisionReason(e.target.value)} maxLength={2000} /></label>}
               {selected.status === 'approved' && <div className="admin-control-form"><label>Publication slug (optional)<input value={publishSlug} onChange={e => setPublishSlug(e.target.value)} placeholder="Auto-generated if blank" /></label><button disabled={busy || verificationStates[selected.id] !== 'verified'} onClick={() => void handlePublish()}>Publish verified listing</button>
                 {verificationStates[selected.id] !== 'verified' && <small>Complete the evidence review and mark this submission verified before publication is enabled.</small>}</div>}
+            </div>
+            <div className="admin-control-card">
+              <h3>Category verification checklist</h3>
+              <p>Use this as a reviewer aid. Record source URLs and outcomes in the evidence register; a checklist label is not itself proof of verification.</p>
+              <ul className="admin-control-checklist">
+                {getEvidenceChecklist(selected.listing_type, evidence).map(item => <li key={item.type}>
+                  <span className={`admin-check-status is-${item.status}`}>{item.status.replace('_', ' ')}</span>
+                  <span>{item.label}</span>
+                </li>)}
+              </ul>
+              <p className="admin-control-caution">Do not treat a social profile, WhatsApp message or map pin as conclusive proof by itself. Independently confirm high-impact claims and never infer missing dates, fees, addresses or organizer details.</p>
             </div>
             <div className="admin-control-card">
               <h3>Evidence register</h3>
