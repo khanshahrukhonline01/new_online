@@ -343,7 +343,7 @@ export function AdminControlPanelPage() {
     <section className="content-page admin-control">
       <header className="admin-control-header">
         <div className="admin-control-brand"><span className="admin-control-brand-mark">KG</span><div><p className="eyebrow">KHELGRID / OPERATIONS</p><h1>Control Centre</h1><p>Private workspace for verification, moderation and platform governance.</p></div></div>
-        <div className="admin-control-identity"><span className="admin-control-live"><i /> Development workspace</span><strong>{profile.role.replace('_', ' ')}</strong><button type="button" onClick={() => void refresh()} disabled={loading || busy}>↻ Refresh</button><button type="button" onClick={async () => { await signOut(); setProfile(null); setQueue(null) }}>Sign out</button></div>
+        <div className="admin-control-identity"><span className="admin-control-live"><i /> Development workspace</span><strong>{profile.role.replace('_', ' ')}</strong><button type="button" onClick={() => void refresh()} disabled={loading || busy}>↻ Refresh</button><button type="button" onClick={async () => { await signOut(); setSignedIn(false); setProfile(null); setQueue(null); setSelected(null); setEvidence([]); setAccounts([]); setAccessAudits([]); setVerificationStates({}); setError(''); setNotice('') }}>Sign out</button></div>
       </header>
       <div className="admin-control-shell">
         <nav className="admin-control-sidebar" aria-label="Control centre sections">
