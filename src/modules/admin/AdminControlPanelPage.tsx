@@ -469,6 +469,7 @@ export function AdminControlPanelPage() {
           </div>}
         </div>
         </div>
+        </div>
       </div>
     </section>
   )
