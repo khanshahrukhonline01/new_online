@@ -132,6 +132,10 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261114120000_reject_test_only_legacy_venues.sql
       - name: Verify test-only venue records are not publishable
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-b-test-only-data-assertions.sql
+      - name: Unpublish unverified legacy catalogue rows
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261114130000_unpublish_unverified_catalogue_rows.sql
+      - name: Assert every published catalogue row is verified
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-b-published-verified-assertions.sql
       - name: Assert anonymous users can read verified listings only
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-2-public-directory-verification.sql
       - name: Test anonymous listing intake validation and rate limiting
