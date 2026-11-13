@@ -11,6 +11,23 @@ ALTER TABLE public.opportunities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coaches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.academies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pickup_games ENABLE ROW LEVEL SECURITY;
+
+-- Pickup-game host/admin visibility remains available to authenticated owners,
+-- but ordinary anonymous and authenticated catalogue readers require verification.
+DROP POLICY IF EXISTS pickup_games_read_published_anon ON public.pickup_games;
+CREATE POLICY pickup_games_read_published_anon ON public.pickup_games
+  FOR SELECT TO anon
+  USING (publication_status = 'published' AND verification_status = 'verified');
+
+DROP POLICY IF EXISTS pickup_games_read_authenticated ON public.pickup_games;
+CREATE POLICY pickup_games_read_authenticated ON public.pickup_games
+  FOR SELECT TO authenticated
+  USING (
+    (publication_status = 'published' AND verification_status = 'verified')
+    OR ((SELECT auth.uid()) IS NOT NULL AND host_user_id = (SELECT auth.uid()))
+    OR (SELECT public.is_pickup_game_admin())
+  );
 
 DROP POLICY IF EXISTS venues_read_published ON public.venues;
 CREATE POLICY venues_read_published ON public.venues

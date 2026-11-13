@@ -106,20 +106,6 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110160000_phase_3_listing_moderation_publication_system.sql
       - name: Apply Phase 3.1 publication integrity and admin control panel
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261111100000_phase_3_1_publication_integrity_admin_control_panel.sql
-      - name: Allow anonymous public listing intake
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112125000_allow_anonymous_listing_intake.sql
-      - name: Harden public listing intake validation and rate limiting
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112140000_harden_public_listing_intake_rpc.sql
-      - name: Apply coach profile evidence cleanup
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112120000_require_evidence_for_seeded_coach_profiles.sql
-      - name: Require evidence verification for public directory reads
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112130000_require_verified_status_for_public_directory_rls.sql
-      - name: Synchronize verified status to existing catalogue rows
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112145000_sync_verified_listing_publication.sql
-      - name: Seed legacy catalogue review fixtures
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-4-legacy-directory-fixture.sql
-      - name: Queue legacy unverified directory records for review
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112150000_queue_legacy_unverified_directory_records.sql
       - name: Verify Phase 3.1 evidence, role and publication integrity
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-1-integrity-assertions.sql
       - name: Verify Phase 3 moderation and publication assertions
@@ -128,12 +114,54 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-moderation-lifecycle-flow.sql
       - name: Test Phase 3.1 category-specific publication integrity
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-1-publication-category-flow.sql
+      - name: Remove unsupported seeded coach verification claims
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112120000_require_evidence_for_seeded_coach_profiles.sql
+      - name: Allow anonymous free listing intake
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112125000_allow_anonymous_listing_intake.sql
+      - name: Harden free listing intake validation and rate limiting
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112140000_harden_public_listing_intake_rpc.sql
+      - name: Require verified status for public directory reads
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112130000_require_verified_status_for_public_directory_rls.sql
+      - name: Synchronize verified publication state
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112145000_sync_verified_listing_publication.sql
+      - name: Seed legacy directory review fixtures
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-4-legacy-directory-fixture.sql
+      - name: Queue legacy unverified directory records for review
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112150000_queue_legacy_unverified_directory_records.sql
+      - name: Reject explicitly labelled test-only legacy venues
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261114120000_reject_test_only_legacy_venues.sql
+      - name: Verify test-only venue records are not publishable
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-b-test-only-data-assertions.sql
+      - name: Unpublish unverified legacy catalogue rows
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261114130000_unpublish_unverified_catalogue_rows.sql
+      - name: Assert every published catalogue row is verified
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-b-published-verified-assertions.sql
       - name: Assert anonymous users can read verified listings only
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-2-public-directory-verification.sql
       - name: Test anonymous listing intake validation and rate limiting
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-3-listing-intake-hardening.sql
       - name: Test legacy directory review queue and verified publication sync
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-4-legacy-directory-review.sql
+      - name: Harden Phase B listing trigger functions and helper search paths
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261114100000_phase_b_listing_function_hardening.sql
+      - name: Verify Phase B trigger ACLs and supported intake path
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-b-function-hardening-assertions.sql
+      - name: Add Phase B catalogue and moderation foreign-key indexes
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261114110000_phase_b_listing_fk_indexes.sql
+      - name: Verify Phase B foreign-key indexes
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-b-index-assertions.sql
+      - name: Align isolated PostgreSQL fixture with hosted Phase A schema
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-a-hosted-schema-fixture.sql
+      - name: Apply Phase A security default privilege hardening
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174100_phase_a_security_default_privilege_hardening.sql
+      - name: Apply Phase A sequence privilege correction
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174236_phase_a_sequence_privilege_correction.sql
+      - name: Restrict pickup-game creation to authenticated callers
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174338_phase_a_restrict_authenticated_game_creation.sql
+      - name: Optimize owner RLS auth identity evaluation
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174449_phase_a_rls_initplan_optimization.sql
+      - name: Verify Phase A security privilege boundaries
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-a-security-privilege-assertions.sql
       - name: Validate SQL migration safety
         shell: bash
         run: |

@@ -50,6 +50,11 @@ VALUES
   ('kg-ci-unverified-event', 'CI Unverified Event', now() + interval '1 day', 'published', 'unverified'),
   ('kg-ci-verified-event', 'CI Verified Event', now() + interval '1 day', 'published', 'verified');
 
+INSERT INTO public.pickup_games (slug, sport, venue_name, city, time_label, host_name, price_per_player, publication_status, verification_status)
+VALUES
+  ('kg-ci-unverified-game', 'Football', 'CI Test Venue', 'Delhi', 'Test Slot', 'CI Test Host', 'Free', 'published', 'unverified'),
+  ('kg-ci-verified-game', 'Football', 'CI Test Venue', 'Delhi', 'Test Slot', 'CI Test Host', 'Free', 'published', 'verified');
+
 SET LOCAL ROLE anon;
 DO $assert$
 BEGIN
@@ -63,6 +68,8 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.academies WHERE slug = 'kg-ci-verified-academy') THEN RAISE EXCEPTION 'Anon cannot read a verified academy'; END IF;
   IF EXISTS (SELECT 1 FROM public.events WHERE slug = 'kg-ci-unverified-event') THEN RAISE EXCEPTION 'Anon can read an unverified event'; END IF;
   IF NOT EXISTS (SELECT 1 FROM public.events WHERE slug = 'kg-ci-verified-event') THEN RAISE EXCEPTION 'Anon cannot read a verified event'; END IF;
+  IF EXISTS (SELECT 1 FROM public.pickup_games WHERE slug = 'kg-ci-unverified-game') THEN RAISE EXCEPTION 'Anon can read an unverified pickup game'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.pickup_games WHERE slug = 'kg-ci-verified-game') THEN RAISE EXCEPTION 'Anon cannot read a verified pickup game'; END IF;
 END;
 $assert$;
 RESET ROLE;
