@@ -44,6 +44,10 @@ BEGIN
     RAISE EXCEPTION 'Phase A: sensitive table grants are too broad';
   END IF;
 
+  IF NOT has_table_privilege('authenticated', 'public.profiles', 'SELECT') THEN
+    RAISE EXCEPTION 'Phase A: authenticated users cannot read their own profiles';
+  END IF;
+
   IF NOT has_table_privilege('anon', 'public.venues', 'SELECT')
      OR NOT has_table_privilege('anon', 'public.opportunities', 'SELECT')
      OR NOT has_table_privilege('anon', 'public.listing_submissions', 'INSERT')
@@ -52,7 +56,15 @@ BEGIN
     RAISE EXCEPTION 'Phase A: required application privileges are missing';
   END IF;
 
-  -- Host/admin-only functions cannot be executed by anon, but remain callable by
+  IF EXISTS (
+    SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND c.relkind='S'
+      AND (has_sequence_privilege('anon',c.oid,'USAGE') OR has_sequence_privilege('authenticated',c.oid,'USAGE'))
+  ) THEN
+    RAISE EXCEPTION 'Phase A: browser roles have unnecessary sequence privileges';
+  END IF;
+
+  -- Host/admin-only functions cannot be executed by
   -- authenticated clients whose identity is checked inside each function.
   IF has_function_privilege('anon', 'public.admin_moderate_pickup_game(text,text,text)', 'EXECUTE')
      OR has_function_privilege('anon', 'public.approve_pickup_game_whatsapp_invite(uuid)', 'EXECUTE')
