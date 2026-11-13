@@ -114,6 +114,18 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-moderation-lifecycle-flow.sql
       - name: Test Phase 3.1 category-specific publication integrity
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-1-publication-category-flow.sql
+      - name: Align isolated PostgreSQL fixture with hosted Phase A schema
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-a-hosted-schema-fixture.sql
+      - name: Apply Phase A security default privilege hardening
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174100_phase_a_security_default_privilege_hardening.sql
+      - name: Apply Phase A sequence privilege correction
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174236_phase_a_sequence_privilege_correction.sql
+      - name: Restrict pickup-game creation to authenticated callers
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174338_phase_a_restrict_authenticated_game_creation.sql
+      - name: Optimize owner RLS auth identity evaluation
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174449_phase_a_rls_initplan_optimization.sql
+      - name: Verify Phase A security privilege boundaries
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-a-security-privilege-assertions.sql
       - name: Validate SQL migration safety
         shell: bash
         run: |
