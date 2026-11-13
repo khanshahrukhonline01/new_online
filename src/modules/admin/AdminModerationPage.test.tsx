@@ -17,6 +17,12 @@ describe('AdminModerationPage', () => {
     expect(html).not.toContain('Decathlon Sportplex')
   })
 
+  it('does not expose a navigation link to the private evidence control panel', () => {
+    const html = renderToStaticMarkup(<AdminModerationPage />)
+    expect(html).not.toContain('Evidence &amp; Admin Control')
+    expect(html).not.toContain('href=\"/admin/control\"')
+  })
+
   it('renders queue status tabs, metrics ribbon, and search toolbar when queue data is present', () => {
     const mockQueue: client.AdminModerationQueue = {
       pendingSubmissions: [
