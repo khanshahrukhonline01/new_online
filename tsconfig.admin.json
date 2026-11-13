@@ -7,7 +7,8 @@
     "apps/admin/src",
     "src/integrations/supabase",
     "src/modules/admin",
-    "src/shared"
+    "src/shared",
+    "src/vite-env.d.ts"
   ],
   "exclude": [
     "**/*.test.ts",
