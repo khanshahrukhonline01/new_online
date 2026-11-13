@@ -169,7 +169,7 @@ VALUES
 
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
-DO $
+DO $phasea$
 DECLARE
   v_own integer;
   v_other integer;
@@ -182,7 +182,7 @@ BEGIN
     RAISE EXCEPTION 'Phase A: venue booking owner RLS failed (own %, other %)',v_own,v_other;
   END IF;
 END;
-$;
+$phasea$;
 RESET ROLE;
 
 ROLLBACK;
