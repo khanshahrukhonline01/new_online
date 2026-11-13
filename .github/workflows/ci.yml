@@ -1,7 +1,7 @@
 name: CI
 on:
   push:
-    branches: [main]
+    branches: [main, development/admin-control-center]
   pull_request:
     branches: [main]
 permissions:
@@ -182,7 +182,7 @@ jobs:
               echo "Potentially destructive statement in $base; require explicit review and an approved exception"; exit 1
             fi
           done
-          for check in "npm run typecheck" "npm run lint" "npm run test" "npm run build"; do
+          for check in "npm run typecheck" "npm run lint" "npm run test" "npm run build" "npm run typecheck:admin" "npm run build:admin"; do
             grep -Fq "$check" .github/workflows/ci.yml || { echo "Required CI check missing: $check"; exit 1; }
           done
       - name: Set up Deno for Edge Function type checking
