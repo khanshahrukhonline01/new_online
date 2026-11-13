@@ -107,7 +107,7 @@ BEGIN
       AND (
         (d.defaclobjtype = 'r' AND a.grantee IN ('anon'::regrole, 'authenticated'::regrole))
         OR (d.defaclobjtype = 'S' AND a.grantee IN ('anon'::regrole, 'authenticated'::regrole))
-        OR (d.defaclobjtype = 'f' AND a.grantee IN ('PUBLIC'::regrole, 'anon'::regrole, 'authenticated'::regrole)
+        OR (d.defaclobjtype = 'f' AND (a.grantee = 0 OR a.grantee IN ('anon'::regrole, 'authenticated'::regrole))
             AND a.privilege_type = 'EXECUTE')
       )
   ) THEN
