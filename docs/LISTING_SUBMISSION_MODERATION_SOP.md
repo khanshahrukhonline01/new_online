@@ -50,3 +50,14 @@ The first super-admin must be provisioned by a trusted database operator in the 
 - Keep submitter personal information out of public catalogue records and internal notes unless it is strictly necessary.
 - Monitor abuse and use a CAPTCHA or server-side rate limit before promoting public intake broadly. Do not introduce paid services without approval.
 - Apply migrations only to the intended development project after confirming the project reference and taking a backup. Do not apply these migrations to production without a separate approved rollout.
+
+
+## Private UI visibility and discoverability
+
+- The moderator control panel is a restricted application UI at `/admin/control`, not a public product destination.
+- Do not add it to the main navigation, sidebar, footer, public user menu or public CTA surfaces. The normal moderator desk must not advertise a link to it.
+- Keep the route available for an authorized operator who already knows the URL; the database authorization checks remain mandatory on every protected read and write.
+- The route emits `noindex, nofollow, noarchive` for robots, Googlebot and Bingbot. It is intentionally absent from `public/sitemap.xml`.
+- Search-engine directives and hidden navigation are discoverability controls only. They are not authentication or authorization controls; PostgreSQL RPC checks and RLS remain the security boundary.
+- The page must remain a complete UI workflow: sign-in, queue selection/search, evidence entry/review, verification, editorial decisions, category publication fields, publish/unpublish, and super-admin account management. No operator should need to run SQL for routine moderation.
+- An authenticated non-moderator sees an explicit access-denied screen, not another sign-in prompt. An unauthenticated visitor sees only the sign-in screen; neither state receives private queue data.
