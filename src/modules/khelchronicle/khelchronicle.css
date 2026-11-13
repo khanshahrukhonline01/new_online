@@ -959,3 +959,643 @@
 .kc-strip-link:hover {
   background: #1e293b;
 }
+
+/* ==========================================================================
+   Option C: Interactive Academic Charts, Sport Filters, Branded PDF Export
+   ========================================================================== */
+
+/* Sport Filters Bar (Homepage) */
+.kc-sports-filter-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+@media (min-width: 640px) {
+  .kc-sports-filter-strip {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.kc-sports-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.kc-sports-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.kc-sport-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-sport-pill:hover {
+  border-color: #059669;
+  color: #059669;
+  background: #f0fdf4;
+}
+
+.kc-sport-pill.is-active {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+
+.kc-sport-pill small {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.kc-sport-emoji {
+  font-size: 13px;
+}
+
+/* Sport Badge in Card Meta */
+.kc-paper-sport-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+/* Table Header Bar & Chart Switcher */
+.kc-table-top-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+@media (min-width: 640px) {
+  .kc-table-top-bar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.kc-chart-switcher {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border-radius: 8px;
+  background: #e2e8f0;
+  gap: 3px;
+  align-self: flex-start;
+}
+
+@media (min-width: 640px) {
+  .kc-chart-switcher {
+    align-self: center;
+  }
+}
+
+.kc-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-switch-btn:hover {
+  color: #0f172a;
+}
+
+.kc-switch-btn.is-active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  font-weight: 700;
+}
+
+/* Interactive Academic Data Chart */
+.kc-academic-chart-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px 14px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.kc-chart-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+@media (min-width: 640px) {
+  .kc-chart-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.kc-chart-caption {
+  font-size: 13.5px;
+  color: #1e293b;
+}
+
+.kc-chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.kc-metric-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.kc-metric-pill {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-metric-pill:hover {
+  background: #f0fdf4;
+  border-color: #059669;
+  color: #059669;
+}
+
+.kc-metric-pill.is-active {
+  background: #059669;
+  border-color: #059669;
+  color: #ffffff;
+}
+
+.kc-compare-toggle {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px dashed #0284c7;
+  background: #f0f9ff;
+  color: #0369a1;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-compare-toggle:hover,
+.kc-compare-toggle.is-active {
+  background: #0284c7;
+  color: #ffffff;
+  border-style: solid;
+}
+
+.kc-svg-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kc-academic-svg {
+  width: 100%;
+  height: auto;
+  min-height: 220px;
+  max-height: 290px;
+  display: block;
+}
+
+.kc-svg-bar {
+  transition: transform 0.2s ease, opacity 0.15s ease;
+}
+
+.kc-chart-item-group:hover .kc-svg-bar {
+  opacity: 1;
+}
+
+.kc-chart-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+@media (min-width: 640px) {
+  .kc-chart-footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.kc-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.kc-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.kc-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.kc-chart-hover-pill {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+}
+
+.kc-hover-val {
+  color: #059669;
+  font-weight: 700;
+}
+
+.kc-chart-fallback {
+  padding: 24px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+}
+
+/* Related Preprints Section */
+.kc-related-section {
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 2px solid #e2e8f0;
+}
+
+.kc-related-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 640px) {
+  .kc-related-head {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.kc-related-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.kc-related-browse-all {
+  font-size: 13px;
+  font-weight: 700;
+  color: #059669;
+  text-decoration: none;
+}
+
+.kc-related-browse-all:hover {
+  text-decoration: underline;
+}
+
+.kc-related-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 640px) {
+  .kc-related-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .kc-related-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.kc-related-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.kc-related-card:hover {
+  border-color: #059669;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+}
+
+.kc-related-card-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.kc-related-card-title a {
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.kc-related-card-title a:hover {
+  color: #059669;
+}
+
+.kc-related-authors {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* Export Modal Options Grid */
+.kc-export-options-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kc-export-option-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-export-option-card:hover {
+  border-color: #059669;
+  background: #f0fdf4;
+}
+
+.kc-export-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #059669;
+  flex-shrink: 0;
+}
+
+.kc-export-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kc-export-card-info strong {
+  font-size: 13.5px;
+  color: #0f172a;
+}
+
+.kc-export-card-info span {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* Print Only Academic Header & Styling */
+.kc-print-only-header,
+.kc-print-only-footer {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 1.5cm;
+    size: A4 portrait;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Hide interactive web UI components */
+  .kc-reader-actions-bar,
+  .kc-preprint-alert,
+  .kc-reader-container nav,
+  .kc-modal-overlay,
+  .kc-chart-switcher,
+  .kc-compare-toggle,
+  .kc-metric-pills-row,
+  .kc-chart-controls,
+  .kc-chart-hover-pill,
+  .kc-connected-tools,
+  .kc-related-section,
+  .site-header,
+  .site-footer,
+  .app-sidebar,
+  .kc-dispatch-strip,
+  button {
+    display: none !important;
+  }
+
+  /* Show official academic preprint print header */
+  .kc-print-only-header {
+    display: block !important;
+    padding-bottom: 14pt;
+    margin-bottom: 18pt;
+    border-bottom: 2pt solid #000000;
+  }
+
+  .kc-print-branding {
+    display: flex;
+    flex-direction: column;
+    gap: 4pt;
+  }
+
+  .kc-print-logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .kc-print-journal-name {
+    font-size: 13pt;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    color: #000000;
+  }
+
+  .kc-print-badge {
+    font-size: 8.5pt;
+    font-weight: 700;
+    border: 1pt solid #000000;
+    padding: 1pt 5pt;
+    border-radius: 3pt;
+  }
+
+  .kc-print-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12pt;
+    font-size: 8.5pt;
+    color: #333333;
+  }
+
+  .kc-print-url {
+    font-size: 8pt;
+    color: #555555;
+  }
+
+  .kc-reader-container {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .kc-reader-title {
+    font-size: 18pt !important;
+    line-height: 1.25 !important;
+    color: #000000 !important;
+    margin-bottom: 8pt !important;
+  }
+
+  .kc-reader-subtitle {
+    font-size: 11pt !important;
+    color: #333333 !important;
+    margin-bottom: 12pt !important;
+  }
+
+  .kc-reader-authors-box {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin-bottom: 16pt !important;
+  }
+
+  .kc-structured-abstract {
+    background: #f8fafc !important;
+    border: 1pt solid #cbd5e1 !important;
+    padding: 12pt !important;
+    page-break-inside: avoid;
+  }
+
+  .kc-section-block {
+    page-break-inside: avoid;
+    margin-bottom: 18pt !important;
+  }
+
+  .kc-section-title {
+    font-size: 13pt !important;
+    border-bottom: 1pt solid #cccccc;
+    padding-bottom: 4pt;
+  }
+
+  .kc-table-wrap {
+    page-break-inside: avoid;
+  }
+
+  .kc-academic-table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  .kc-academic-table th,
+  .kc-academic-table td {
+    border: 1pt solid #cccccc !important;
+    padding: 5pt 7pt !important;
+    font-size: 9pt !important;
+  }
+
+  .kc-academic-chart-box {
+    border: 1pt solid #cccccc !important;
+    page-break-inside: avoid;
+  }
+
+  .kc-callout-finding {
+    border-left: 3pt solid #000000 !important;
+    background: #f8fafc !important;
+    page-break-inside: avoid;
+  }
+
+  .kc-print-only-footer {
+    display: block !important;
+    margin-top: 24pt;
+    padding-top: 8pt;
+    border-top: 1pt solid #cccccc;
+    font-size: 8pt;
+    color: #666666;
+    text-align: center;
+  }
+}

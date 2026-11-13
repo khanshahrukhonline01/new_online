@@ -17,6 +17,8 @@ const FEATURED_PAPER_SLUGS = [
   'KG-2026-004',
   'KG-2026-003',
   'KG-2026-005',
+  'KG-2026-006',
+  'KG-2026-007',
 ]
 
 const ACTIONABLE_COACH_TAKEAWAYS: Record<string, { label: string; takeaway: string; badge: string }> = {
@@ -44,6 +46,16 @@ const ACTIONABLE_COACH_TAKEAWAYS: Record<string, { label: string; takeaway: stri
     badge: 'Infrastructure & Access',
     label: 'Grassroots Sports Policy',
     takeaway: 'Expanding subsidized community multi-sport hubs within a 5km radius increases youth athlete retention by 42% in district and tier-2 corridors.',
+  },
+  'KG-2026-006': {
+    badge: 'Altitude Acclimatization',
+    label: 'High-Altitude Conditioning Protocol',
+    takeaway: 'A 6-week Live High-Train Low cycle at 2,680m yields +6.8% total Hbmass expansion and a 14.8s gain in 5,000m running times without ferritin depletion.',
+  },
+  'KG-2026-007': {
+    badge: 'Injury Epidemiology',
+    label: 'Turf & Surface Safety Protocol',
+    takeaway: 'Synthetic EVA mats exhibit 3.05x higher ACL tear risk than clay akhadas under match congestion (ACWR > 1.5). Enforce 36h match recovery and neuromuscular drills.',
   },
 }
 

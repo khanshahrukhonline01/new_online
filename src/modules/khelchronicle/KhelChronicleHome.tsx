@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
   RESEARCH_CATEGORIES,
+  RESEARCH_SPORTS,
   RESEARCH_PAPERS,
   searchPapers,
   type ResearchPaper,
@@ -18,11 +19,12 @@ interface KhelChronicleHomeProps {
 export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelChronicleHomeProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState(initialCategory)
-  const [papers, setPapers] = useState<ResearchPaper[]>(() => searchPapers('', initialCategory))
+  const [selectedSport, setSelectedSport] = useState('all')
+  const [papers, setPapers] = useState<ResearchPaper[]>(() => searchPapers('', initialCategory, 'all'))
 
   useEffect(() => {
     let active = true
-    getChroniclePapers(selectedCategory, searchQuery).then(res => {
+    getChroniclePapers(selectedCategory, searchQuery, selectedSport).then(res => {
       if (active && res.data) {
         setPapers(res.data)
       }
@@ -30,7 +32,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
     return () => {
       active = false
     }
-  }, [selectedCategory, searchQuery])
+  }, [selectedCategory, searchQuery, selectedSport])
 
   const handleLink = (e: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (onNavigate) {
@@ -138,7 +140,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
       {/* Stats Row */}
       <div className="kc-stats-row" aria-label="Repository statistics">
         <div className="kc-stat-card">
-          <div className="kc-stat-val">5</div>
+          <div className="kc-stat-val">{RESEARCH_PAPERS.length}</div>
           <div className="kc-stat-lbl">Active Preprints</div>
         </div>
         <div className="kc-stat-card">
@@ -152,6 +154,35 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
         <div className="kc-stat-card">
           <div className="kc-stat-val">100%</div>
           <div className="kc-stat-lbl">Diamond Open Access</div>
+        </div>
+      </div>
+
+      {/* Sport Filter Bar */}
+      <div className="kc-sports-filter-strip" role="region" aria-label="Filter by sport">
+        <div className="kc-sports-filter-label">
+          <SiteIcon name="filter" size={13} />
+          <span>Sport Filter:</span>
+        </div>
+        <div className="kc-sports-pills-row">
+          {RESEARCH_SPORTS.map(sp => {
+            const count = sp.slug === 'all'
+              ? RESEARCH_PAPERS.length
+              : RESEARCH_PAPERS.filter(p => p.sportSlug === sp.slug).length
+            const isActive = selectedSport === sp.slug
+            return (
+              <button
+                key={sp.id}
+                type="button"
+                className={`kc-sport-pill ${isActive ? 'is-active' : ''}`}
+                onClick={() => setSelectedSport(sp.slug)}
+                aria-pressed={isActive}
+              >
+                <span className="kc-sport-emoji">{sp.emoji}</span>
+                <span>{sp.name}</span>
+                <small>({count})</small>
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -188,6 +219,11 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
           <div className="kc-paper-top-meta">
             <span className="kc-paper-id-tag">{featuredPaper.paperId}</span>
             <span className="kc-paper-ver-tag">{featuredPaper.version}</span>
+            {featuredPaper.sport && (
+              <span className="kc-paper-sport-tag">
+                {featuredPaper.sport}
+              </span>
+            )}
             <span className="kc-paper-category-tag">{featuredPaper.categoryName}</span>
             <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
               Test Data
@@ -287,6 +323,11 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
                 <div className="kc-paper-top-meta">
                   <span className="kc-paper-id-tag">{paper.paperId}</span>
                   <span className="kc-paper-ver-tag">{paper.version}</span>
+                  {paper.sport && (
+                    <span className="kc-paper-sport-tag">
+                      {paper.sport}
+                    </span>
+                  )}
                   <span className="kc-paper-category-tag">{paper.categoryName}</span>
                   <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
                     Test Data

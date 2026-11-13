@@ -47,6 +47,8 @@ export interface ResearchPaper {
   subtitle?: string
   category: string
   categoryName: string
+  sport?: string // e.g. "Cricket", "Athletics", "Kabaddi", "Multi-Sport"
+  sportSlug?: string // e.g. "cricket", "athletics", "kabaddi", "multi-sport"
   authors: ResearchAuthor[]
   datePublished: string
   dateModified?: string
@@ -139,6 +141,22 @@ export const RESEARCH_CATEGORIES: ResearchCategory[] = [
   },
 ]
 
+export interface ResearchSportFilter {
+  id: string
+  name: string
+  slug: string
+  icon: string
+  emoji: string
+}
+
+export const RESEARCH_SPORTS: ResearchSportFilter[] = [
+  { id: 'sport-all', name: 'All Sports', slug: 'all', icon: 'award', emoji: '🏅' },
+  { id: 'sport-cricket', name: 'Cricket', slug: 'cricket', icon: 'activity', emoji: '🏏' },
+  { id: 'sport-athletics', name: 'Athletics & Running', slug: 'athletics', icon: 'target', emoji: '🏃' },
+  { id: 'sport-kabaddi', name: 'Kabaddi', slug: 'kabaddi', icon: 'shield-check', emoji: '🤼' },
+  { id: 'sport-multisport', name: 'Multi-Sport & Grassroots', slug: 'multi-sport', icon: 'medal', emoji: '🎯' },
+]
+
 export const RESEARCH_AUTHORS: Record<string, ResearchAuthor> = {
   'dr-vikramaditya-rathore': {
     id: 'auth-1',
@@ -200,6 +218,26 @@ export const RESEARCH_AUTHORS: Record<string, ResearchAuthor> = {
     bio: 'Focuses on socioeconomic accessibility of public sports complexes, rural-urban infrastructure divides, and government sports quota recruitment efficacy.',
     email: 'harendra.singh@du.ac.in',
   },
+  'dr-tenzing-norbu': {
+    id: 'auth-7',
+    name: 'Dr. Tenzing Norbu',
+    slug: 'dr-tenzing-norbu',
+    affiliation: 'High Altitude Sports Training Centre (HASTC), Sports Authority of India (SAI), Shillaroo',
+    role: 'Senior Exercise Physiologist & Environmental Hypoxia Specialist',
+    orcid: '0000-0002-3914-7721',
+    bio: 'Leads altitude acclimatization and hematological adaptation protocols for national middle- and long-distance running squads. Specializes in multi-elevation Live High-Train Low (LHTL) paradigms in the Western Himalayas.',
+    email: 't.norbu@sai.gov.in',
+  },
+  'dr-sunita-malik': {
+    id: 'auth-8',
+    name: 'Dr. Sunita Malik',
+    slug: 'dr-sunita-malik',
+    affiliation: 'Division of Sports Medicine and Arthroscopy, All India Institute of Medical Sciences (AIIMS), New Delhi',
+    role: 'Consultant Orthopaedic Surgeon & Sports Injury Epidemiologist',
+    orcid: '0000-0003-4518-9923',
+    bio: 'Directs prospective injury registries across contact sport leagues including Pro Kabaddi and senior national tournaments. Focuses on knee ligament preservation, synthetic mat friction mechanics, and return-to-play timelines.',
+    email: 's.malik@aiims.edu',
+  },
 }
 
 export const RESEARCH_PAPERS: ResearchPaper[] = [
@@ -211,6 +249,8 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     subtitle: 'Investigation of front-foot contact ground reaction forces, shoulder counter-rotation, and lumbar bone stress injury epidemiology across 85 elite U-19 fast bowlers',
     category: 'sports-biomechanics',
     categoryName: 'Sports Biomechanics',
+    sport: 'Cricket',
+    sportSlug: 'cricket',
     authors: [
       RESEARCH_AUTHORS['dr-vikramaditya-rathore'],
       RESEARCH_AUTHORS['dr-alok-sen'],
@@ -312,6 +352,8 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     subtitle: 'A foundational reference dataset for objective talent identification and physical conditioning benchmarks across U-14, U-16, U-19, and Senior Open age brackets',
     category: 'exercise-physiology',
     categoryName: 'Exercise Physiology',
+    sport: 'Multi-Sport',
+    sportSlug: 'multi-sport',
     authors: [
       RESEARCH_AUTHORS['dr-rajeshwari-nair'],
       RESEARCH_AUTHORS['dr-alok-sen'],
@@ -399,6 +441,8 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     subtitle: 'A multi-institutional diagnostic accuracy study of biological maturity estimation across 320 junior athletes facing conflicting municipal birth certificate documentation',
     category: 'sports-medicine',
     categoryName: 'Sports Medicine',
+    sport: 'Multi-Sport',
+    sportSlug: 'multi-sport',
     authors: [
       RESEARCH_AUTHORS['dr-pradeep-chatterjee'],
       RESEARCH_AUTHORS['dr-vikramaditya-rathore'],
@@ -480,6 +524,8 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     subtitle: 'Extracting non-linear performance indicators from tracking data and multi-spell fatigue metrics in U-16 state selection combines',
     category: 'sports-analytics',
     categoryName: 'Sports Analytics',
+    sport: 'Cricket',
+    sportSlug: 'cricket',
     authors: [
       RESEARCH_AUTHORS['ananya-mukherjee'],
       RESEARCH_AUTHORS['dr-alok-sen'],
@@ -554,6 +600,8 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     subtitle: 'Evaluating multi-modal transit access, synthetic turf availability, and coach-to-athlete ratios across 42 rural districts in Haryana, Odisha, and Maharashtra',
     category: 'sports-policy',
     categoryName: 'Sports Development and Policy',
+    sport: 'Multi-Sport',
+    sportSlug: 'multi-sport',
     authors: [
       RESEARCH_AUTHORS['dr-harendra-singh'],
       RESEARCH_AUTHORS['dr-rajeshwari-nair'],
@@ -620,6 +668,195 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
       { label: 'Find a Game & Community Turf Match', href: '/play', badge: 'Pickup Games', description: 'Find accessible local venues and community matches in your neighborhood.' },
     ],
   },
+  {
+    id: 'paper-6',
+    paperId: 'KG-2026-006',
+    slug: 'high-altitude-hypoxic-conditioning-himalayan-runners',
+    title: 'High-Altitude Hypoxic Conditioning and Total Hemoglobin Mass Expansion in Subcontinental Distance Runners: A Multi-Elevation Trial at Shillaroo (2,680m)',
+    subtitle: 'Prospective physiological evaluation of a 6-week Live High-Train Low (LHTL) protocol on total hemoglobin mass, erythropoietin kinetics, and sea-level 5,000m running economy in junior elite distance runners',
+    category: 'exercise-physiology',
+    categoryName: 'Exercise Physiology',
+    sport: 'Athletics',
+    sportSlug: 'athletics',
+    authors: [
+      RESEARCH_AUTHORS['dr-tenzing-norbu'],
+      RESEARCH_AUTHORS['dr-rajeshwari-nair'],
+    ],
+    datePublished: '2026-11-04',
+    dateModified: '2026-11-10',
+    version: 'v1.0',
+    status: 'published',
+    license: 'CC BY-NC-ND 4.0',
+    readingTimeMinutes: 15,
+    metrics: {
+      downloads: 340,
+      views: 1520,
+      citations: 2,
+    },
+    abstract: {
+      background: 'Aerobic capacity and hematological adaptations in elite distance runners depend critically on environmental hypoxic exposure. While African and European altitude conditioning protocols are extensively documented, empirical data on subcontinental runners residing in the Western Himalayas under natural terrestrial altitude conditions remain scarce. We investigated the effects of a 6-week Live High-Train Low (LHTL) natural altitude residency at the High Altitude Sports Training Centre (HASTC, 2,680m) in Shillaroo, Himachal Pradesh, on total hemoglobin mass (Hbmass), serum erythropoietin (EPO), and subsequent sea-level running performance.',
+      methods: 'Forty-four competitive national-level junior distance runners (24 male, 20 female; mean age 18.2 ± 1.1 yrs, sea-level baseline VO2max 66.4 ± 4.2 mL/kg/min) were assigned to either a 6-week LHTL intervention (residence at 2,680m Shillaroo, daily speed sessions at 1,450m Rampur Bushahr) or a normoxic sea-level control group (Patiala, 250m). Total hemoglobin mass was measured via the optimized carbon monoxide (CO) rebreathing method at baseline, week 3, week 6, and 2 weeks post-descent. Physiological parameters including VO2max, submaximal blood lactate thresholds, running economy (VO2 at 16 km/h), and competitive 5,000m track trial times were quantified at sea level before and after the camp.',
+      results: 'The LHTL cohort demonstrated a statistically significant +6.8% increase in total Hbmass (from 11.8 ± 0.9 g/kg to 12.6 ± 0.8 g/kg, p < 0.001) compared to +0.4% in sea-level controls. Serum EPO peaked on day 3 at altitude (23.4 ± 4.6 mIU/mL vs baseline 8.9 ± 1.8 mIU/mL) and stabilized by week 3. Post-descent sea-level VO2max improved by +4.3% (p = 0.004) alongside a 14.8-second reduction in 5,000m time trial performance (mean time 14:48.2 vs 15:03.0, p < 0.001). Running economy at submaximal race pace improved by 3.1% with no adverse hematocrit or ferritin depletion under oral iron supplementation.',
+      conclusion: 'A 6-week natural LHTL protocol at 2,680m elevation yields robust erythropoietic and hematological adaptations in Indian distance runners, leading to meaningful sea-level endurance performance enhancements. High-altitude centers in the Western Himalayas offer a potent, ecologically valid alternative to artificial hypoxic chambers or overseas altitude camps for national track and field preparation.',
+    },
+    keywords: [
+      'High-Altitude Hypoxia',
+      'Live High-Train Low (LHTL)',
+      'Total Hemoglobin Mass (Hbmass)',
+      'Erythropoietin (EPO)',
+      'Running Economy',
+      'VO2 Max Kinetics',
+      'Endurance Athletics',
+      'Western Himalayas Sports Science',
+    ],
+    sections: [
+      {
+        title: '1. Environmental Hypoxia and Endurance Physiology in Subcontinental Athletics',
+        paragraphs: [
+          'Endurance running performance at the international level is fundamentally bounded by maximal oxygen uptake (VO2max), fractional utilization of VO2max, and running economy. Exposure to ambient hypoxia stimulates renal erythropoietin (EPO) production, accelerating erythropoiesis and driving an expansion of total hemoglobin mass (Hbmass). Every 1 g/kg increase in Hbmass is typically associated with a ~0.6 to 0.7% enhancement in VO2max.',
+          'Historically, Indian distance training camps have taken place either at sea-level campuses (NIS Patiala, SAI Bengaluru) or under ad-hoc altitude camps with limited longitudinal physiological telemetry. The High Altitude Sports Training Centre (HASTC) at Shillaroo in Himachal Pradesh, positioned at 2,680 meters above sea level, provides an ideal natural terrestrial altitude environment, with rapid highway access to sub-altitude valleys (1,450 meters) in Rampur Bushahr for high-velocity interval training.',
+        ],
+      },
+      {
+        title: '2. The 6-Week Multi-Elevation Live High-Train Low (LHTL) Protocol',
+        paragraphs: [
+          'Forty-four competitive junior distance athletes (24 male, 20 female) completed a 42-day residency. The cohort resided and slept at 2,680m (ambient barometric pressure ~552 mmHg, ambient PO2 ~115 mmHg), logging over 480 cumulative hypoxic hours across the intervention.',
+          'To prevent the muscular detraining and neuromuscular speed suppression customary with high-altitude running, interval sessions (800m repeats and 400m lactic threshold intervals) were executed at Rampur (1,450m), preserving race-specific velocities while athletes slept and recovered at 2,680m.',
+        ],
+        tableData: {
+          caption: 'Table 6: Hematological and Physiological Markers Pre- and Post-Altitude Conditioning',
+          headers: ['Cohort & Timeline', 'Total Hbmass (g/kg)', 'Serum EPO (mIU/mL)', 'VO2max (mL/kg/min)', '5,000m Trial (min:sec)', 'Blood Ferritin (ng/mL)'],
+          rows: [
+            ['LHTL Group (Baseline, 250m)', '11.8 ± 0.9', '8.9 ± 1.8', '66.4 ± 4.2', '15:03.0 ± 18.4s', '64.2 ± 12.5'],
+            ['LHTL Group (Week 3, 2,680m)', '12.2 ± 0.8', '16.8 ± 3.4', '62.1 ± 3.9 (acute)', '--', '52.8 ± 11.0'],
+            ['LHTL Group (Week 6, 2,680m)', '12.6 ± 0.8', '11.2 ± 2.1', '64.5 ± 4.1', '--', '46.5 ± 9.8'],
+            ['LHTL Group (Post-Descent, Sea-Level)', '12.5 ± 0.8', '9.1 ± 1.6', '69.3 ± 4.0', '14:48.2 ± 16.2s', '45.1 ± 10.2'],
+            ['Normoxic Control (Post-6 Weeks)', '11.9 ± 0.9', '8.7 ± 1.7', '66.8 ± 4.1', '15:01.8 ± 17.6s', '61.4 ± 11.9'],
+          ],
+        },
+        callout: {
+          type: 'finding',
+          title: 'Subcontinental Altitude Training Validation',
+          text: 'This empirical trial confirms that natural Himalayan topography at HASTC Shillaroo delivers hematological expansion (+6.8% Hbmass) comparable to the Rift Valley of Kenya, offering Indian athletes an accessible domestic high-performance training corridor.',
+        },
+      },
+      {
+        title: '3. Iron Homeostasis and Nutritional Periodization Under Hypoxia',
+        paragraphs: [
+          'Rapid erythropoiesis depletes systemic iron stores. Athletes received monitored elemental iron supplementation (100 mg elemental iron twice daily alongside 500 mg Vitamin C) to maintain serum ferritin > 35 ng/mL. Regular screening prevented blunted erythropoietic response.',
+          'Upon sea-level re-entry, the expanded red cell volume and elevated arterial oxygen content persisted for 18 to 24 days, demonstrating a target competitive window for national championships.',
+        ],
+      },
+    ],
+    ethicsStatement: 'Study protocols were approved by the Sports Authority of India (SAI) Institutional Ethics Committee (Ref: SAI-IEC-2026-ALT04) and LNIPE Research Ethics Board. Written informed consent was secured from all participants and guardians for minors.',
+    dataAvailability: 'Individual de-identified hematological panels, CO rebreathing logs, and spiroergometry raw data files are archived under KhelChronicle accession KG-DATA-2026-006.',
+    fundingStatement: 'Funded by the Department of Sports, Ministry of Youth Affairs and Sports (MYAS), under the National Sports Science Research Scheme.',
+    conflictsOfInterest: 'The authors declare no commercial conflicts of interest.',
+    references: [
+      { id: 1, text: 'Levine, B. D., & Stray-Gundersen, J. (1997). "Living high-training low": effect of moderate-altitude acclimatization with low-altitude training on performance. Journal of Applied Physiology, 83(1), 102-112.' },
+      { id: 2, text: 'Schmidt, W., & Prommer, N. (2005). The optimised CO-rebreathing method: a new tool to determine total haemoglobin mass routinely. European Journal of Applied Physiology, 95(5), 486-495.' },
+      { id: 3, text: 'Gore, C. J., Sharpe, K., Garvican-Lewis, L. A., et al. (2013). Altitude training and haemoglobin mass from the optimised carbon monoxide rebreathing method determined by a meta-analysis. British Journal of Sports Medicine, 47(Suppl 1), i31-i39.' },
+    ],
+    connectedKhelGridLinks: [
+      { label: 'Coaching & High Performance Centres', href: '/search?sport=Athletics', badge: 'Training Centres', description: 'Discover certified track and field coaching academies and high-altitude training facilities.' },
+      { label: 'Talent Scanner Endurance Calculator', href: '/talent-scanner', badge: 'Fitness Benchmarks', description: 'Benchmark your aerobic capacity and VO2 max percentiles against national standards.' },
+    ],
+  },
+  {
+    id: 'paper-7',
+    paperId: 'KG-2026-007',
+    slug: 'injury-epidemiology-match-congestion-kabaddi',
+    title: 'Epidemiological Patterns of Contact and Non-Contact Lower Limb Injuries in Semi-Professional Kabaddi: Comparing Synthetic EVA Mats Versus Traditional Clay Akhadas Under Tournament Match Congestion',
+    subtitle: 'A three-season prospective cohort registry of 640 registered players evaluating ACL ruptures, syndesmosis sprains, and acute-to-chronic workload spikes across tournament formats',
+    category: 'sports-medicine',
+    categoryName: 'Sports Medicine',
+    sport: 'Kabaddi',
+    sportSlug: 'kabaddi',
+    authors: [
+      RESEARCH_AUTHORS['dr-sunita-malik'],
+      RESEARCH_AUTHORS['dr-pradeep-chatterjee'],
+    ],
+    datePublished: '2026-11-08',
+    dateModified: '2026-11-12',
+    version: 'v1.0',
+    status: 'published',
+    license: 'CC BY-NC-ND 4.0',
+    readingTimeMinutes: 14,
+    metrics: {
+      downloads: 295,
+      views: 1380,
+      citations: 1,
+    },
+    abstract: {
+      background: 'Kabaddi is a high-intensity collision sport demanding rapid multi-directional accelerations, evasion maneuvers, and physical tackles. While the nationwide transition from traditional clay akhadas to 25mm Ethylene-Vinyl Acetate (EVA) interlocking synthetic mats has modernized play, it has substantially altered surface coefficient of friction and rotational shoe-surface traction. Simultaneously, tournament schedules frequently compress 4 to 6 matches into 72-hour windows, generating severe acute workload spikes. Epidemiological comparisons between surfaces under match congestion have not previously been quantified in Indian leagues.',
+      methods: 'A prospective 3-year multi-cohort injury registry tracked 640 registered semi-professional kabaddi athletes (420 male, 220 female; ages 17 to 26 yrs) across 1,120 official competitive matches. Matches were divided between certified 25mm EVA synthetic mats (n=680) and conditioned clay akhada surfaces (n=440). Standardized injury surveillance protocols compliant with the International Olympic Committee (IOC) consensus statement recorded injury incidence per 1,000 player-match hours, anatomical localization, mechanism (contact collision vs non-contact pivot/catch), and time-loss severity. Daily player load was captured via session-RPE to calculate Acute:Chronic Workload Ratios (ACWR).',
+      results: 'The overall injury incidence was significantly higher on synthetic EVA mats than on clay akhadas (54.6 vs 38.2 per 1,000 match hours; relative risk [RR] 1.43, 95% CI 1.22–1.68, p < 0.001). Synthetic mats exhibited markedly greater risk of non-contact lower limb ligament injuries, including anterior cruciate ligament (ACL) tears (5.8 vs 1.9 per 1,000 hrs, RR 3.05, p = 0.002) and lateral ankle/syndesmosis sprains (14.2 vs 7.4 per 1,000 hrs, RR 1.92, p < 0.001), attributed to higher rotational shoe-surface friction. Conversely, clay akhadas produced higher rates of cutaneous abrasions and soft-tissue contusions (16.8 vs 4.2 per 1,000 hrs, p < 0.001). When tournament match congestion induced ACWR > 1.5, injury hazard rose 2.8-fold across both surfaces.',
+      conclusion: 'Synthetic EVA mats create elevated rotational traction that predisposes kabaddi raiders and defenders to severe non-contact knee and ankle ligament ruptures, particularly during rapid toe-drag pivots and ankle holds. Mitigating these catastrophic injuries requires floor surface friction standardization, neuromuscular warm-up programs emphasizing eccentric hamstring and ankle stabilization, and mandatory scheduling limits preventing consecutive two-match days.',
+    },
+    keywords: [
+      'Kabaddi Injury Epidemiology',
+      'Synthetic EVA Mats',
+      'Clay Akhada',
+      'Anterior Cruciate Ligament (ACL)',
+      'Syndesmosis Sprains',
+      'Acute-to-Chronic Workload Ratio (ACWR)',
+      'Match Congestion',
+      'Sports Medicine India',
+    ],
+    sections: [
+      {
+        title: '1. Surface Modernization and Biomechanical Traction in Modern Kabaddi',
+        paragraphs: [
+          'The evolution of competitive kabaddi from traditional soft-clay akhadas to 25mm interlocking high-density EVA foam mats has dramatically elevated gameplay speed, diving maneuverability, and visual broadcasting clarity. However, this transition has drastically increased shoe-surface coefficient of kinetic and static friction.',
+          'In traditional clay courts, excessive rotational torque is mitigated by slight soil displacement under the plant foot. On high-friction EVA synthetic mats, sudden deceleration, toe-drag anchors, and multi-player collision tackles transfer unattenuated rotational shear directly to the knee and ankle complexes.',
+        ],
+      },
+      {
+        title: '2. Three-Season Multi-League Injury Surveillance',
+        paragraphs: [
+          'Over 1,120 matches involving 640 registered semi-professional athletes (420 male, 220 female), our prospective surveillance documented 438 total medical-attention injuries.',
+          'Contact mechanisms predominated in upper limb injuries (shoulder subluxations, clavicle trauma during chain tackles). Conversely, lower limb injuries on synthetic mats were heavily non-contact or indirect contact, notably during rapid directional changes, back-kicks, and ankle catch evasion.',
+        ],
+        tableData: {
+          caption: 'Table 7: Injury Incidence and Mechanism: Synthetic EVA Mats vs Clay Akhadas',
+          headers: ['Injury Type & Mechanism', 'Synthetic EVA Mats (per 1k hrs)', 'Clay Akhada (per 1k hrs)', 'Relative Risk (95% CI)', 'p-value'],
+          rows: [
+            ['All Lower Limb Injuries', '41.2', '24.6', '1.67 (1.38 - 2.03)', '< 0.001'],
+            ['Anterior Cruciate Ligament (ACL) Rupture', '5.8', '1.9', '3.05 (1.52 - 6.14)', '0.002'],
+            ['Ankle Inversion / Syndesmosis Sprain', '14.2', '7.4', '1.92 (1.41 - 2.62)', '< 0.001'],
+            ['Meniscal Tear / Knee Cartilage Trauma', '6.4', '3.1', '2.06 (1.18 - 3.60)', '0.011'],
+            ['Cutaneous Abrasions & Mat Burns', '4.2', '16.8', '0.25 (0.16 - 0.39)', '< 0.001'],
+            ['Acute Shoulder Dislocation (Tackle Contact)', '7.6', '6.8', '1.12 (0.74 - 1.69)', '0.59 (NS)'],
+          ],
+        },
+        callout: {
+          type: 'warning',
+          title: 'Match Congestion Workload Hazard',
+          text: 'When tournament fixtures required teams to play twice in 24 hours, driving Acute:Chronic Workload Ratios (ACWR) beyond 1.5, non-contact ligament tear frequency escalated by 2.8-fold. Tournament regulations should enforce a 36-hour mandatory rest interval.',
+        },
+      },
+      {
+        title: '3. Neuromuscular Injury Mitigation and Surface Standards',
+        paragraphs: [
+          'To combat the elevated ACL and syndesmosis injury risk on synthetic surfaces, academies and clubs must introduce structured neuromuscular warm-ups emphasizing eccentric hamstring strength (Nordic hamstring curls), dynamic ankle proprioception, and landing mechanics.',
+          'Furthermore, national federations should adopt standardized mat friction coefficient testing (DIN 18032-2 equivalent) to prevent excessively tacky mat textures from exacerbating rotational joint lock.',
+        ],
+      },
+    ],
+    ethicsStatement: 'The prospective injury registry was vetted and approved by the AIIMS Institutional Ethics Committee (Ref: AIIMS-IEC-2023-KB09). All participating clubs and federations provided institutional permission and individual player consent.',
+    dataAvailability: 'Anonymized epidemiological incidence registries and surface friction coefficient measurements are available in the KhelChronicle open database under accession KG-DATA-2026-007.',
+    fundingStatement: 'Supported by the Indian Council of Medical Research (ICMR) Task Force on Sports Trauma and Athlete Safety.',
+    conflictsOfInterest: 'None declared. The authors serve on no commercial sporting equipment or mat manufacturing advisory boards.',
+    references: [
+      { id: 1, text: 'Bahr, R., Clarsen, B., Derman, W., et al. (2020). International Olympic Committee consensus statement: methods for recording and reporting of epidemiological data on injury and illness in sport 2020 (including STROBE Extension for Sport Injury and Illness Surveillance (STROBE-SIIS)). British Journal of Sports Medicine, 54(7), 372-389.' },
+      { id: 2, text: 'Gabbett, T. J. (2016). The training-injury prevention paradox: should athletes be training smarter and harder? British Journal of Sports Medicine, 50(5), 273-280.' },
+      { id: 3, text: 'Sen, J. (2014). An overview of injuries in traditional Indian sports. International Journal of Sports Science & Coaching, 9(3), 515-524.' },
+    ],
+    connectedKhelGridLinks: [
+      { label: 'Find Sports Medicine & Orthopedic Clinics', href: '/search?sport=Kabaddi', badge: 'Sports Medicine', description: 'Locate certified sports physiotherapists, orthopaedic surgeons, and rehabilitation clinics.' },
+      { label: 'Kabaddi Tournaments & Verified Combines', href: '/opportunities?sport=Kabaddi', badge: 'Tournaments', description: 'Browse verified junior and state kabaddi championships with certified medical coverage.' },
+    ],
+  },
 ]
 
 export function getPaperBySlug(slug: string): ResearchPaper | undefined {
@@ -637,16 +874,58 @@ export function getPapersByAuthor(authorSlug: string): ResearchPaper[] {
   return RESEARCH_PAPERS.filter(p => p.authors.some(a => a.slug.toLowerCase() === normalized))
 }
 
-export function searchPapers(query: string, categoryFilter?: string): ResearchPaper[] {
+export function getPapersBySport(sportSlug: string): ResearchPaper[] {
+  const normalized = sportSlug.toLowerCase().trim()
+  if (normalized === 'all') return RESEARCH_PAPERS
+  return RESEARCH_PAPERS.filter(p => p.sportSlug?.toLowerCase() === normalized)
+}
+
+export function searchPapers(query: string, categoryFilter?: string, sportFilter?: string): ResearchPaper[] {
   const q = query.toLowerCase().trim()
   return RESEARCH_PAPERS.filter(p => {
     if (categoryFilter && categoryFilter !== 'all' && p.category.toLowerCase() !== categoryFilter.toLowerCase()) {
       return false
     }
+    if (sportFilter && sportFilter !== 'all' && p.sportSlug?.toLowerCase() !== sportFilter.toLowerCase()) {
+      return false
+    }
     if (!q) return true
-    const searchSpace = `${p.title} ${p.subtitle || ''} ${p.paperId} ${p.categoryName} ${p.keywords.join(' ')} ${p.authors.map(a => a.name).join(' ')} ${p.abstract.background} ${p.abstract.results}`.toLowerCase()
+    const searchSpace = `${p.title} ${p.subtitle || ''} ${p.paperId} ${p.sport || ''} ${p.categoryName} ${p.keywords.join(' ')} ${p.authors.map(a => a.name).join(' ')} ${p.abstract.background} ${p.abstract.results}`.toLowerCase()
     return searchSpace.includes(q)
   })
+}
+
+export function getRelatedPapers(currentPaper: ResearchPaper, limit = 3): ResearchPaper[] {
+  return RESEARCH_PAPERS.filter(p => p.paperId !== currentPaper.paperId)
+    .sort((a, b) => {
+      let scoreA = 0
+      let scoreB = 0
+      if (a.sportSlug && a.sportSlug === currentPaper.sportSlug) scoreA += 3
+      if (b.sportSlug && b.sportSlug === currentPaper.sportSlug) scoreB += 3
+      if (a.category === currentPaper.category) scoreA += 2
+      if (b.category === currentPaper.category) scoreB += 2
+      return scoreB - scoreA
+    })
+    .slice(0, limit)
+}
+
+export function generateRisCitation(paper: ResearchPaper): string {
+  const year = paper.datePublished.slice(0, 4)
+  const authorsRis = paper.authors.map(a => `AU  - ${a.name}`).join('\n')
+  return [
+    'TY  - JOUR',
+    `TI  - ${paper.title}`,
+    authorsRis,
+    'JO  - KhelChronicle Open Sports Research Archive',
+    `PY  - ${year}`,
+    `VL  - ${paper.version}`,
+    `IS  - ${paper.paperId}`,
+    `UR  - https://www.khelgrid.com/khelchronicle/${paper.slug}`,
+    `AB  - ${paper.abstract.background} ${paper.abstract.results}`,
+    `KW  - ${paper.keywords.join('; ')}`,
+    'PB  - KhelGrid Sports Research',
+    'ER  - ',
+  ].join('\n')
 }
 
 export function generateCitations(paper: ResearchPaper): { apa: string; bibtex: string; mla: string; chicago: string; vancouver: string } {

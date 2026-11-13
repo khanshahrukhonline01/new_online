@@ -44,6 +44,8 @@ interface DbPaperRow {
   slug: string
   title: string
   subtitle?: string | null
+  sport?: string | null
+  sport_slug?: string | null
   category?: string
   category_slug?: string
   author_name?: string
@@ -75,8 +77,10 @@ interface DbPaperRow {
 }
 
 function resolveSupabaseBaseUrl(): URL | null {
-  const currentUrl = (import.meta.env.VITE_SUPABASE_URL || supabaseUrl)?.replace(/\/$/, '')
-  const currentKey = import.meta.env.VITE_SUPABASE_ANON_KEY || anonKey
+  const envUrl = import.meta.env.VITE_SUPABASE_URL
+  const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  const currentUrl = (envUrl !== undefined ? envUrl : supabaseUrl)?.replace(/\/$/, '')
+  const currentKey = envKey !== undefined ? envKey : anonKey
   if (!currentUrl || !currentKey) return null
   try {
     const url = new URL(currentUrl)
@@ -90,7 +94,8 @@ function resolveSupabaseBaseUrl(): URL | null {
 }
 
 function resolveSupabaseAnonKey(): string {
-  return (import.meta.env.VITE_SUPABASE_ANON_KEY || anonKey || '') as string
+  const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  return (envKey !== undefined ? envKey : anonKey || '') as string
 }
 
 function mapDbRowToResearchPaper(
@@ -125,6 +130,8 @@ function mapDbRowToResearchPaper(
     subtitle: row.subtitle || undefined,
     category: categorySlug,
     categoryName: categoryName || cat?.name || categorySlug,
+    sport: row.sport || 'Multi-Sport & Grassroots',
+    sportSlug: row.sport_slug || 'multi-sport',
     authors: authors.length > 0 ? authors : [
       {
         id: `author-${row.paper_id.toLowerCase()}`,
@@ -214,11 +221,12 @@ export async function getChronicleCategories(): Promise<ChronicleCatalogueResult
  */
 export async function getChroniclePapers(
   categoryFilter?: string,
-  searchQuery?: string
+  searchQuery?: string,
+  sportFilter?: string
 ): Promise<ChronicleCatalogueResult<ResearchPaper[]>> {
   const baseUrl = resolveSupabaseBaseUrl()
   if (!baseUrl) {
-    const localFiltered = searchPapers(searchQuery || '', categoryFilter)
+    const localFiltered = searchPapers(searchQuery || '', categoryFilter, sportFilter)
     return { status: 'unconfigured', data: localFiltered }
   }
 
@@ -241,23 +249,44 @@ export async function getChroniclePapers(
     })
 
     if (!res.ok) {
-      const fallback = searchPapers(searchQuery || '', categoryFilter)
+      const fallback = searchPapers(searchQuery || '', categoryFilter, sportFilter)
       return { status: 'unavailable', data: fallback, message: 'Database query failed; showing cached preprints.' }
     }
 
     const rows: DbPaperRow[] = await res.json()
-    if (Array.isArray(rows) && rows.length > 0) {
-      let papers = rows.map(r => {
+    if (Array.isArray(rows)) {
+      const dbPapers = rows.map(r => {
         // Resolve authors from seed or default
         const localMatch = RESEARCH_PAPERS.find(p => p.paperId === r.paper_id || p.slug === r.slug)
         const authors = localMatch ? localMatch.authors : []
         return mapDbRowToResearchPaper(r, authors)
       })
 
+      // Include all repository research papers, letting DB rows override metrics or status if present
+      const dbPaperIds = new Set(dbPapers.map(p => p.paperId.toLowerCase()))
+      const dbSlugs = new Set(dbPapers.map(p => p.slug.toLowerCase()))
+
+      const localRemaining = RESEARCH_PAPERS.filter(
+        p =>
+          !dbPaperIds.has(p.paperId.toLowerCase()) &&
+          !dbSlugs.has(p.slug.toLowerCase()) &&
+          (!categoryFilter || categoryFilter === 'all' || p.category === categoryFilter)
+      )
+
+      let papers = [...dbPapers, ...localRemaining]
+
+      if (categoryFilter && categoryFilter !== 'all') {
+        papers = papers.filter(p => p.category === categoryFilter)
+      }
+
+      if (sportFilter && sportFilter !== 'all') {
+        papers = papers.filter(p => p.sportSlug?.toLowerCase() === sportFilter.toLowerCase())
+      }
+
       if (searchQuery && searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim()
         papers = papers.filter(p => {
-          const space = `${p.title} ${p.subtitle || ''} ${p.paperId} ${p.keywords.join(' ')} ${p.authors.map(a => a.name).join(' ')}`.toLowerCase()
+          const space = `${p.title} ${p.subtitle || ''} ${p.paperId} ${p.sport || ''} ${p.keywords.join(' ')} ${p.authors.map(a => a.name).join(' ')}`.toLowerCase()
           return space.includes(q)
         })
       }
@@ -265,10 +294,10 @@ export async function getChroniclePapers(
       return { status: 'ready', data: papers, source: 'supabase' }
     }
 
-    const localFallback = searchPapers(searchQuery || '', categoryFilter)
+    const localFallback = searchPapers(searchQuery || '', categoryFilter, sportFilter)
     return { status: 'ready', data: localFallback, source: 'fallback' }
   } catch {
-    const fallback = searchPapers(searchQuery || '', categoryFilter)
+    const fallback = searchPapers(searchQuery || '', categoryFilter, sportFilter)
     return { status: 'unavailable', data: fallback, message: 'Network error connecting to research database.' }
   }
 }
@@ -405,6 +434,35 @@ export async function submitChronicleManuscript(
   const baseUrl = resolveSupabaseBaseUrl()
   const generatedId = `KG-SUB-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
 
+  // Record submission into moderation queue storage (available for Admin Moderation Desk)
+  try {
+    const queue = getLocalModerationQueue()
+    const newSubmission: ChronicleModerationSubmission = {
+      id: `sub-kc-${Date.now()}`,
+      submissionId: generatedId,
+      title: input.manuscript_title.trim(),
+      category: input.category_slug,
+      categoryName: RESEARCH_CATEGORIES.find(c => c.slug === input.category_slug)?.name || input.category_slug,
+      authorName: input.primary_author_name.trim(),
+      authorEmail: input.primary_author_email.trim(),
+      affiliation: input.primary_author_affiliation.trim(),
+      orcid: input.orcid?.trim() || undefined,
+      coAuthors: input.co_authors?.trim() || undefined,
+      abstract: input.abstract_text.trim(),
+      keywords: input.keywords?.trim() || undefined,
+      fullTextOrUrl: input.full_text_or_url?.trim() || undefined,
+      humanEthicsConfirmed: input.human_ethics_confirmed,
+      minorConsentConfirmed: input.minor_consent_confirmed,
+      licenseType: 'cc-by-nc-nd-4.0',
+      status: 'pending_review',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    saveLocalModerationQueue([newSubmission, ...queue])
+  } catch {
+    // Non-fatal if localStorage is restricted
+  }
+
   if (!baseUrl) {
     return {
       status: 'unconfigured',
@@ -500,5 +558,345 @@ export async function recordPaperDownload(paperSlug: string): Promise<void> {
     })
   } catch {
     // silently ignore background metric errors
+  }
+}
+
+// ============================================================================
+// KhelChronicle Editorial & Manuscript Moderation Desk API
+// ============================================================================
+
+export interface ChronicleModerationSubmission {
+  id: string
+  submissionId: string
+  title: string
+  category: string
+  categoryName?: string
+  authorName: string
+  authorEmail: string
+  affiliation: string
+  orcid?: string
+  coAuthors?: string
+  abstract: string
+  keywords?: string
+  fullTextOrUrl?: string
+  humanEthicsConfirmed: boolean
+  minorConsentConfirmed: boolean
+  licenseType?: string
+  status: 'pending_review' | 'under_review' | 'changes_requested' | 'approved' | 'published' | 'rejected'
+  editorialNotes?: string
+  rejectionReason?: string
+  correctionRequest?: string
+  assignedEditor?: string
+  publishedPaperId?: string
+  publishedSlug?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ChronicleModerationQueueFilters {
+  status?: string
+  category?: string
+  search?: string
+}
+
+export interface ChronicleModerationQueueResult {
+  submissions: ChronicleModerationSubmission[]
+  stats: {
+    pendingCount: number
+    underReviewCount: number
+    changesRequestedCount: number
+    approvedCount: number
+    publishedCount: number
+    rejectedCount: number
+    totalCount: number
+  }
+}
+
+const CHRONICLE_QUEUE_STORAGE_KEY = 'khelchronicle_moderation_queue_v1'
+
+export const DEFAULT_MODERATION_SUBMISSIONS: ChronicleModerationSubmission[] = [
+  {
+    id: 'sub-kc-001',
+    submissionId: 'KG-SUB-KC82A1-94F2',
+    title: 'High-Altitude Hypoxic Training Adaptation and Hemoglobin Mass Expansion in Himalayan Track Athletes',
+    category: 'exercise-physiology',
+    categoryName: 'Exercise Physiology',
+    authorName: 'Dr. Tenzing Norbu',
+    authorEmail: 't.norbu@himalayansports.org',
+    affiliation: 'High Altitude Sports Training Centre (HASTC), Shillaroo',
+    orcid: '0000-0003-1244-8901',
+    coAuthors: 'Dr. Sonam Angmo (Leh Sports Science Cell)',
+    abstract: 'Investigation of 21-day live-high train-low (LHTL) protocols at 2,700m elevation in 28 sub-elite junior middle-distance runners from Ladakh and Himachal Pradesh.',
+    keywords: 'Altitude Training, Hypoxia, VO2max, Hemoglobin Mass',
+    fullTextOrUrl: 'https://zenodo.org/record/10892011',
+    humanEthicsConfirmed: true,
+    minorConsentConfirmed: true,
+    licenseType: 'cc-by-nc-nd-4.0',
+    status: 'pending_review',
+    createdAt: '2026-11-12T08:30:00Z',
+    updatedAt: '2026-11-12T08:30:00Z',
+  },
+  {
+    id: 'sub-kc-002',
+    submissionId: 'KG-SUB-KC71B2-31E9',
+    title: 'Kinematic Screening of Anterior Cruciate Ligament (ACL) Risk Factors in Junior Female Fast Bowlers and Fielders',
+    category: 'sports-biomechanics',
+    categoryName: 'Sports Biomechanics',
+    authorName: 'Dr. Priya V. Sharma',
+    authorEmail: 'priya.sharma@sportsbiomech.in',
+    affiliation: 'Sports Biomechanics Laboratory, LNIPE Gwalior',
+    orcid: '0000-0002-7719-3012',
+    coAuthors: 'Aakash Verma (LNIPE)',
+    abstract: '3D motion analysis of knee valgus moment and trunk lateral tilt during cutting maneuvers and landing across 42 junior female state cricketers.',
+    keywords: 'ACL Injury, Knee Valgus, Female Athletes, Fast Bowling',
+    fullTextOrUrl: 'https://zenodo.org/record/10892022',
+    humanEthicsConfirmed: true,
+    minorConsentConfirmed: true,
+    licenseType: 'cc-by-4.0',
+    status: 'under_review',
+    assignedEditor: 'Dr. Vikramaditya Rathore',
+    createdAt: '2026-11-11T14:15:00Z',
+    updatedAt: '2026-11-11T16:00:00Z',
+  },
+  {
+    id: 'sub-kc-003',
+    submissionId: 'KG-SUB-KC65C3-77D4',
+    title: 'Nutritional Knowledge and Energy Availability Deficits Among Rural Female Kabaddi Players in Haryana',
+    category: 'sports-nutrition',
+    categoryName: 'Sports Nutrition',
+    authorName: 'Dr. Sunita Malik',
+    authorEmail: 'sunitamalik@haryanaathletics.org',
+    affiliation: 'Department of Sports Nutrition, Maharshi Dayanand University, Rohtak',
+    abstract: 'Assessment of low energy availability (LEA) risk and dietary macronutrient distribution in 60 grassroots female kabaddi players competing at the state level.',
+    keywords: 'Relative Energy Deficiency in Sport (REDs), Kabaddi, Female Athlete Triad',
+    fullTextOrUrl: 'https://zenodo.org/record/10892033',
+    humanEthicsConfirmed: true,
+    minorConsentConfirmed: true,
+    licenseType: 'cc-by-nc-nd-4.0',
+    status: 'changes_requested',
+    correctionRequest: 'Please provide the institutional ethics clearance approval number and clarify the validation methodology for the food frequency questionnaire.',
+    editorialNotes: 'Strong grassroots relevance. Needs explicit ethics committee reference.',
+    createdAt: '2026-11-10T11:00:00Z',
+    updatedAt: '2026-11-11T09:20:00Z',
+  },
+  {
+    id: 'sub-kc-004',
+    submissionId: 'KG-SUB-KC54D4-12A8',
+    title: 'Cognitive Anxiety and Biofeedback Heart-Rate Variability in Archery Junior Nationals',
+    category: 'sports-psychology',
+    categoryName: 'Sports Psychology',
+    authorName: 'Dr. Rajesh Deshmukh',
+    authorEmail: 'r.deshmukh@archeryscience.org',
+    affiliation: 'Tata Archery Academy Sports Science Unit, Jamshedpur',
+    abstract: 'Pre-competition competitive state anxiety inventory (CSAI-2R) and photoplethysmography HRV monitoring in 36 recurve archers.',
+    keywords: 'Archery, HRV, Biofeedback, Performance Anxiety',
+    fullTextOrUrl: 'https://zenodo.org/record/10892044',
+    humanEthicsConfirmed: true,
+    minorConsentConfirmed: true,
+    licenseType: 'cc-by-nc-nd-4.0',
+    status: 'approved',
+    editorialNotes: 'Approved by editorial board. Ready for formal archive slug assignment and typesetting.',
+    createdAt: '2026-11-09T16:40:00Z',
+    updatedAt: '2026-11-10T12:00:00Z',
+  },
+]
+
+let inMemoryModerationQueue: ChronicleModerationSubmission[] = [...DEFAULT_MODERATION_SUBMISSIONS]
+
+export function getLocalModerationQueue(): ChronicleModerationSubmission[] {
+  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(CHRONICLE_QUEUE_STORAGE_KEY)
+      if (!raw) {
+        localStorage.setItem(CHRONICLE_QUEUE_STORAGE_KEY, JSON.stringify(DEFAULT_MODERATION_SUBMISSIONS))
+        return [...DEFAULT_MODERATION_SUBMISSIONS]
+      }
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : [...DEFAULT_MODERATION_SUBMISSIONS]
+    } catch {
+      return inMemoryModerationQueue
+    }
+  }
+  return inMemoryModerationQueue
+}
+
+export function saveLocalModerationQueue(queue: ChronicleModerationSubmission[]): void {
+  inMemoryModerationQueue = queue
+  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+    try {
+      localStorage.setItem(CHRONICLE_QUEUE_STORAGE_KEY, JSON.stringify(queue))
+    } catch {
+      // ignore
+    }
+  }
+}
+
+/**
+ * Fetch KhelChronicle manuscripts for the editorial moderation desk.
+ */
+export async function getChronicleModerationQueue(
+  filters?: ChronicleModerationQueueFilters
+): Promise<ChronicleModerationQueueResult> {
+  const queue = getLocalModerationQueue()
+  let filtered = queue
+
+  if (filters?.status && filters.status !== 'all') {
+    filtered = filtered.filter(s => s.status === filters.status)
+  }
+  if (filters?.category && filters.category !== 'all') {
+    filtered = filtered.filter(s => s.category === filters.category)
+  }
+  if (filters?.search && filters.search.trim()) {
+    const q = filters.search.toLowerCase()
+    filtered = filtered.filter(s =>
+      s.title.toLowerCase().includes(q) ||
+      s.authorName.toLowerCase().includes(q) ||
+      s.affiliation.toLowerCase().includes(q) ||
+      s.submissionId.toLowerCase().includes(q)
+    )
+  }
+
+  return {
+    submissions: filtered,
+    stats: {
+      pendingCount: queue.filter(s => s.status === 'pending_review').length,
+      underReviewCount: queue.filter(s => s.status === 'under_review').length,
+      changesRequestedCount: queue.filter(s => s.status === 'changes_requested').length,
+      approvedCount: queue.filter(s => s.status === 'approved').length,
+      publishedCount: queue.filter(s => s.status === 'published').length,
+      rejectedCount: queue.filter(s => s.status === 'rejected').length,
+      totalCount: queue.length,
+    },
+  }
+}
+
+/**
+ * Claim or start review for a submitted manuscript.
+ */
+export async function startManuscriptReview(
+  id: string,
+  reviewerName = 'Authorized Editorial Moderator'
+): Promise<ChronicleModerationSubmission> {
+  const queue = getLocalModerationQueue()
+  const index = queue.findIndex(s => s.id === id || s.submissionId === id)
+  if (index === -1) throw new Error('Manuscript submission not found.')
+
+  queue[index] = {
+    ...queue[index],
+    status: 'under_review',
+    assignedEditor: reviewerName,
+    updatedAt: new Date().toISOString(),
+  }
+  saveLocalModerationQueue(queue)
+  return queue[index]
+}
+
+/**
+ * Request corrections or revisions from the submitting author.
+ */
+export async function requestManuscriptCorrections(
+  id: string,
+  message: string,
+  notes?: string
+): Promise<ChronicleModerationSubmission> {
+  if (!message || message.trim().length < 10) {
+    throw new Error('A revision message of at least 10 characters is required for the author.')
+  }
+  const queue = getLocalModerationQueue()
+  const index = queue.findIndex(s => s.id === id || s.submissionId === id)
+  if (index === -1) throw new Error('Manuscript submission not found.')
+
+  queue[index] = {
+    ...queue[index],
+    status: 'changes_requested',
+    correctionRequest: message.trim(),
+    editorialNotes: notes?.trim() || queue[index].editorialNotes,
+    updatedAt: new Date().toISOString(),
+  }
+  saveLocalModerationQueue(queue)
+  return queue[index]
+}
+
+/**
+ * Approve a manuscript for publication.
+ */
+export async function approveManuscript(
+  id: string,
+  notes?: string
+): Promise<ChronicleModerationSubmission> {
+  const queue = getLocalModerationQueue()
+  const index = queue.findIndex(s => s.id === id || s.submissionId === id)
+  if (index === -1) throw new Error('Manuscript submission not found.')
+
+  queue[index] = {
+    ...queue[index],
+    status: 'approved',
+    editorialNotes: notes?.trim() || queue[index].editorialNotes,
+    updatedAt: new Date().toISOString(),
+  }
+  saveLocalModerationQueue(queue)
+  return queue[index]
+}
+
+/**
+ * Reject a manuscript with explicit reason.
+ */
+export async function rejectManuscript(
+  id: string,
+  reason: string,
+  notes?: string
+): Promise<ChronicleModerationSubmission> {
+  if (!reason || !reason.trim()) {
+    throw new Error('A reason for rejection must be provided to the author.')
+  }
+  const queue = getLocalModerationQueue()
+  const index = queue.findIndex(s => s.id === id || s.submissionId === id)
+  if (index === -1) throw new Error('Manuscript submission not found.')
+
+  queue[index] = {
+    ...queue[index],
+    status: 'rejected',
+    rejectionReason: reason.trim(),
+    editorialNotes: notes?.trim() || queue[index].editorialNotes,
+    updatedAt: new Date().toISOString(),
+  }
+  saveLocalModerationQueue(queue)
+  return queue[index]
+}
+
+/**
+ * Formally publish an approved manuscript into the KhelChronicle research archive.
+ */
+export async function publishManuscriptToArchive(
+  id: string,
+  targetSlug?: string,
+  targetPaperId?: string
+): Promise<{ success: boolean; paperId: string; slug: string }> {
+  const queue = getLocalModerationQueue()
+  const index = queue.findIndex(s => s.id === id || s.submissionId === id)
+  if (index === -1) throw new Error('Manuscript submission not found.')
+
+  const sub = queue[index]
+  const generatedPaperId = targetPaperId?.trim() || `KG-2026-00${Math.floor(Math.random() * 90) + 10}`
+  const generatedSlug =
+    targetSlug?.trim() ||
+    sub.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+
+  queue[index] = {
+    ...sub,
+    status: 'published',
+    publishedPaperId: generatedPaperId,
+    publishedSlug: generatedSlug,
+    updatedAt: new Date().toISOString(),
+  }
+  saveLocalModerationQueue(queue)
+
+  return {
+    success: true,
+    paperId: generatedPaperId,
+    slug: generatedSlug,
   }
 }

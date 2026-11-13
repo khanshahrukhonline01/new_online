@@ -3,10 +3,13 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
   getPaperBySlug,
   generateCitations,
+  getRelatedPapers,
+  generateRisCitation,
   RESEARCH_PAPERS,
   type ResearchPaper,
 } from './data/khelchronicleData'
 import { recordPaperView, recordPaperDownload } from '../../integrations/supabase/chronicle-client'
+import { AcademicDataChart } from './components/AcademicDataChart'
 import './khelchronicle.css'
 
 interface KhelChroniclePaperPageProps {
@@ -26,8 +29,17 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
   }, [paper])
 
   const [citationModalOpen, setCitationModalOpen] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
   const [citationFormat, setCitationFormat] = useState<'apa' | 'bibtex' | 'mla' | 'chicago' | 'vancouver'>('apa')
   const [copyFeedback, setCopyFeedback] = useState(false)
+  const [chartViewModes, setChartViewModes] = useState<Record<number, 'table' | 'chart'>>({})
+
+  const toggleViewMode = (sectionIdx: number, mode: 'table' | 'chart') => {
+    setChartViewModes(prev => ({
+      ...prev,
+      [sectionIdx]: mode,
+    }))
+  }
 
   const handleLink = (e: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (onNavigate) {
@@ -38,6 +50,11 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
   const citations = useMemo(() => {
     if (!paper) return { apa: '', bibtex: '', mla: '', chicago: '', vancouver: '' }
     return generateCitations(paper)
+  }, [paper])
+
+  const relatedPapers = useMemo(() => {
+    if (!paper) return []
+    return getRelatedPapers(paper, 3)
   }, [paper])
 
   const copyCitation = () => {
@@ -56,6 +73,30 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
     if (typeof window !== 'undefined') {
       window.print()
     }
+  }
+
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    if (typeof window === 'undefined') return
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleDownloadBibtex = () => {
+    if (!paper) return
+    downloadFile(citations.bibtex, `${paper.paperId}.bib`, 'application/x-bibtex')
+  }
+
+  const handleDownloadRis = () => {
+    if (!paper) return
+    const ris = generateRisCitation(paper)
+    downloadFile(ris, `${paper.paperId}.ris`, 'application/x-research-info-systems')
   }
 
   const scholarlySchema = useMemo(() => {
@@ -103,6 +144,26 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
 
   return (
     <div className="kc-root">
+      {/* Print-Only Academic Journal Header */}
+      <aside className="kc-print-only-header" aria-hidden="true">
+        <div className="kc-print-branding">
+          <div className="kc-print-logo-row">
+            <span className="kc-print-journal-name">KHELCHRONICLE OPEN SPORTS RESEARCH ARCHIVE</span>
+            <span className="kc-print-badge">Diamond Open Access · CC BY-NC-ND 4.0</span>
+          </div>
+          <div className="kc-print-meta-row">
+            <span><strong>Preprint Accession:</strong> {paper.paperId}</span>
+            <span><strong>Published:</strong> {paper.datePublished}</span>
+            <span><strong>Version:</strong> {paper.version}</span>
+            <span><strong>Discipline:</strong> {paper.categoryName}</span>
+            {paper.sport && <span><strong>Sport:</strong> {paper.sport}</span>}
+          </div>
+          <div className="kc-print-url">
+            <strong>Permanent Repository URL:</strong> https://www.khelgrid.com/khelchronicle/{paper.slug}
+          </div>
+        </div>
+      </aside>
+
       {/* Schema.org Structured Data */}
       <script
         type="application/ld+json"
@@ -139,6 +200,11 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
           <div className="kc-paper-top-meta" style={{ marginBottom: '14px' }}>
             <span className="kc-paper-id-tag">{paper.paperId}</span>
             <span className="kc-paper-ver-tag">{paper.version}</span>
+            {paper.sport && (
+              <span className="kc-paper-sport-tag">
+                {paper.sport}
+              </span>
+            )}
             <span className="kc-paper-category-tag">{paper.categoryName}</span>
             <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
               Test Data Only
@@ -182,7 +248,12 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
 
           {/* Reader Action Bar */}
           <div className="kc-reader-actions-bar">
-            <button type="button" className="kc-btn-primary" onClick={handlePrintPdf} aria-label="Download or print research paper PDF">
+            <button
+              type="button"
+              className="kc-btn-primary"
+              onClick={() => setExportModalOpen(true)}
+              aria-label="Download or print research paper PDF"
+            >
               <SiteIcon name="download" size={14} />
               <span>Download PDF / Print</span>
             </button>
@@ -231,47 +302,78 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
 
         {/* Full Paper Body Sections */}
         <main className="kc-paper-body">
-          {paper.sections.map((sec, sIdx) => (
-            <section key={sIdx} className="kc-section-block">
-              <h2 className="kc-section-title">{sec.title}</h2>
-              {sec.paragraphs.map((p, pIdx) => (
-                <p key={pIdx} className="kc-paragraph">{p}</p>
-              ))}
+          {paper.sections.map((sec, sIdx) => {
+            const currentMode = chartViewModes[sIdx] ?? 'table'
 
-              {sec.callout && (
-                <div className="kc-callout-finding">
-                  <div className="kc-callout-title">{sec.callout.title}</div>
-                  <p className="kc-callout-text">{sec.callout.text}</p>
-                </div>
-              )}
+            return (
+              <section key={sIdx} className="kc-section-block">
+                <h2 className="kc-section-title">{sec.title}</h2>
+                {sec.paragraphs.map((p, pIdx) => (
+                  <p key={pIdx} className="kc-paragraph">{p}</p>
+                ))}
 
-              {sec.tableData && (
-                <div className="kc-table-wrap">
-                  {sec.tableData.caption && (
-                    <div className="kc-table-caption">{sec.tableData.caption}</div>
-                  )}
-                  <table className="kc-academic-table">
-                    <thead>
-                      <tr>
-                        {sec.tableData.headers.map((h, hIdx) => (
-                          <th key={hIdx}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sec.tableData.rows.map((row, rIdx) => (
-                        <tr key={rIdx}>
-                          {row.map((cell, cIdx) => (
-                            <td key={cIdx}>{cell}</td>
+                {sec.callout && (
+                  <div className="kc-callout-finding">
+                    <div className="kc-callout-title">{sec.callout.title}</div>
+                    <p className="kc-callout-text">{sec.callout.text}</p>
+                  </div>
+                )}
+
+                {sec.tableData && (
+                  <div className="kc-table-wrap">
+                    <div className="kc-table-top-bar">
+                      {sec.tableData.caption && (
+                        <div className="kc-table-caption">{sec.tableData.caption}</div>
+                      )}
+                      <div className="kc-chart-switcher" role="group" aria-label="Table or chart display mode">
+                        <button
+                          type="button"
+                          className={`kc-switch-btn ${currentMode === 'table' ? 'is-active' : ''}`}
+                          onClick={() => toggleViewMode(sIdx, 'table')}
+                          aria-pressed={currentMode === 'table'}
+                        >
+                          <SiteIcon name="file-text" size={13} />
+                          <span>Academic Table</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={`kc-switch-btn ${currentMode === 'chart' ? 'is-active' : ''}`}
+                          onClick={() => toggleViewMode(sIdx, 'chart')}
+                          aria-pressed={currentMode === 'chart'}
+                        >
+                          <SiteIcon name="chart" size={13} />
+                          <span>Interactive Chart</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {currentMode === 'table' ? (
+                      <table className="kc-academic-table">
+                        <thead>
+                          <tr>
+                            {sec.tableData.headers.map((h, hIdx) => (
+                              <th key={hIdx}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sec.tableData.rows.map((row, rIdx) => (
+                            <tr key={rIdx}>
+                              {row.map((cell, cIdx) => (
+                                <td key={cIdx}>{cell}</td>
+                              ))}
+                            </tr>
                           ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <AcademicDataChart tableData={sec.tableData} />
+                    )}
+                  </div>
+                )}
+              </section>
+            )
+          })}
 
           {/* Research Statements Box */}
           <section className="kc-statements-box" aria-label="Research ethics and data statements">
@@ -343,8 +445,135 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
               </div>
             </aside>
           )}
+
+          {/* Related Preprints in Same Sport / Discipline */}
+          {relatedPapers.length > 0 && (
+            <section className="kc-related-section" aria-labelledby="related-papers-heading">
+              <div className="kc-related-head">
+                <h3 id="related-papers-heading" className="kc-related-title">
+                  Related Preprints in {paper.sport || paper.categoryName}
+                </h3>
+                <a
+                  href="/khelchronicle"
+                  onClick={e => handleLink(e, '/khelchronicle')}
+                  className="kc-related-browse-all"
+                >
+                  Browse All Archive ({RESEARCH_PAPERS.length} Papers) →
+                </a>
+              </div>
+              <div className="kc-related-grid">
+                {relatedPapers.map(rel => (
+                  <article key={rel.id} className="kc-related-card">
+                    <div className="kc-paper-top-meta" style={{ marginBottom: '6px' }}>
+                      <span className="kc-paper-id-tag">{rel.paperId}</span>
+                      {rel.sport && <span className="kc-paper-sport-tag">{rel.sport}</span>}
+                    </div>
+                    <h4 className="kc-related-card-title">
+                      <a href={`/khelchronicle/${rel.slug}`} onClick={e => handleLink(e, `/khelchronicle/${rel.slug}`)}>
+                        {rel.title}
+                      </a>
+                    </h4>
+                    <p className="kc-related-authors">{rel.authors.map(a => a.name).join(', ')}</p>
+                    <div className="kc-card-bottom" style={{ marginTop: 'auto', paddingTop: '10px' }}>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>{rel.readingTimeMinutes} min read</span>
+                      <a
+                        href={`/khelchronicle/${rel.slug}`}
+                        className="kc-btn-secondary"
+                        style={{ fontSize: '12px', padding: '4px 10px' }}
+                        onClick={e => handleLink(e, `/khelchronicle/${rel.slug}`)}
+                      >
+                        Read Preprint
+                      </a>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
         </main>
       </div>
+
+      {/* Export & Download Dialog */}
+      {exportModalOpen && (
+        <div className="kc-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
+          <div className="kc-modal-box">
+            <div className="kc-modal-header">
+              <h3 id="export-modal-title" className="kc-modal-title">Export &amp; Download Preprint</h3>
+              <button
+                type="button"
+                className="kc-modal-close-btn"
+                onClick={() => setExportModalOpen(false)}
+                aria-label="Close export modal"
+              >
+                <SiteIcon name="close" size={18} />
+              </button>
+            </div>
+
+            <div className="kc-modal-content">
+              <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: '#475569' }}>
+                Select your preferred academic export format for <strong>{paper.paperId}</strong>:
+              </p>
+
+              <div className="kc-export-options-grid">
+                <button
+                  type="button"
+                  className="kc-export-option-card"
+                  onClick={() => {
+                    setExportModalOpen(false)
+                    handlePrintPdf()
+                  }}
+                >
+                  <div className="kc-export-card-icon">
+                    <SiteIcon name="download" size={20} />
+                  </div>
+                  <div className="kc-export-card-info">
+                    <strong>Official Branded PDF / Print</strong>
+                    <span>Clean academic preprint layout formatted for PDF save and printing.</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className="kc-export-option-card"
+                  onClick={handleDownloadBibtex}
+                >
+                  <div className="kc-export-card-icon">
+                    <SiteIcon name="file-text" size={20} />
+                  </div>
+                  <div className="kc-export-card-info">
+                    <strong>BibTeX Citation File (.bib)</strong>
+                    <span>Standard LaTeX and Overleaf citation bibliography file.</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className="kc-export-option-card"
+                  onClick={handleDownloadRis}
+                >
+                  <div className="kc-export-card-icon">
+                    <SiteIcon name="bookmark" size={20} />
+                  </div>
+                  <div className="kc-export-card-info">
+                    <strong>RIS Reference Manager (.ris)</strong>
+                    <span>Direct import for Zotero, Mendeley, and EndNote reference managers.</span>
+                  </div>
+                </button>
+              </div>
+
+              <div className="kc-modal-footer" style={{ marginTop: '20px' }}>
+                <button
+                  type="button"
+                  className="kc-btn-secondary"
+                  onClick={() => setExportModalOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Citation Modal */}
       {citationModalOpen && (
