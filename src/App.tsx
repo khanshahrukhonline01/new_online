@@ -491,20 +491,6 @@ export default function App() {
                   <span>Host &amp; Partner Dashboard</span>
                 </a>
               )}
-              {authUser.role === 'admin' && (
-                <a
-                  href="/admin"
-                  className="header-user-dropdown-item"
-                  role="menuitem"
-                  onClick={e => {
-                    setUserMenuOpen(false)
-                    navigate(e, '/admin')
-                  }}
-                >
-                  <SiteIcon name="shield-check" size={15} />
-                  <span>Admin Moderation Desk</span>
-                </a>
-              )}
               <a
                 href="/settings"
                 className="header-user-dropdown-item"
