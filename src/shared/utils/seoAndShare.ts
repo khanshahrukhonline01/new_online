@@ -13,6 +13,7 @@ export interface PageSeoConfig {
   image?: string
   keywords?: string[]
   jsonLd?: Record<string, unknown>
+  robots?: string
 }
 
 export const DEFAULT_KEYWORDS = [
@@ -27,6 +28,15 @@ export const DEFAULT_KEYWORDS = [
 
 export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
   const cleanPath = pathname.split('?')[0].replace(/\/+$/, '') || '/'
+
+  if (cleanPath === '/admin/control') {
+    return {
+      title: 'Restricted Moderator Control Panel · KhelGrid',
+      description: 'Restricted KhelGrid moderation workspace.',
+      canonicalUrl: 'https://khelgrid.com/admin/control',
+      robots: 'noindex, nofollow, noarchive',
+    }
+  }
 
   if (cleanPath === '/') {
     return {
@@ -257,6 +267,9 @@ export function updatePageSeoMetadata(config: PageSeoConfig): () => void {
   }
 
   setMetaTag('name', 'description', config.description)
+  setMetaTag('name', 'robots', config.robots || 'index, follow')
+  setMetaTag('name', 'googlebot', config.robots || 'index, follow')
+  setMetaTag('name', 'bingbot', config.robots || 'index, follow')
   if (config.keywords && config.keywords.length > 0) {
     setMetaTag('name', 'keywords', config.keywords.join(', '))
   }
