@@ -198,3 +198,85 @@ A super admin can use the Super-admin access management section at `/admin/contr
 - `published` means the record was explicitly copied/activated in the public catalogue after both conditions and category-specific data requirements were satisfied.
 
 A published listing can remain labelled unverified only in legacy data predating Phase 3.1; review and reconcile legacy rows before making verification claims.
+
+
+---
+
+## 9. Category-specific evidence verification playbook
+
+Use the following as a minimum checklist, not as a substitute for judgement. Every evidence item must have a source URL, a concise statement of what it proves, and a recorded outcome. Evidence must relate to the actual submitted listing, not merely to a similarly named organisation.
+
+### Venue
+- Confirm the venue exists at the submitted street/locality address; a city name or map pin alone is not an address.
+- Compare the address and facility details against the venue/operator's official source where available.
+- Check that the listed sports/courts are actually offered and that photos are current and permitted for use.
+- If the operator cannot be independently contacted or the location cannot be corroborated, request more information rather than publishing.
+
+### Coach
+- Independently confirm the coach's identity and contact channel.
+- Verify every claimed qualification, certification, federation affiliation or employment claim against the issuing body/employer where possible.
+- Do not convert years of experience, athlete results or selection claims into facts without supporting evidence.
+- A social profile or self-written biography is a lead, not independent proof of a qualification.
+
+### Academy
+- Confirm the academy's operating identity and actual training location.
+- Independently confirm the programme and the person responsible for it.
+- Check claimed affiliations, accreditations, government recognition or partnerships with the named institution.
+- Do not imply government recognition or endorsement from a generic association or logo.
+
+### Trial / opportunity
+- Locate the organiser's official announcement or independently confirm the organiser through a trusted channel.
+- Verify the sport, actual trial date/time, venue, eligibility, age group, gender category (if applicable), registration route and deadline.
+- Record any disclosed athlete fee accurately; if the organiser has not disclosed a fee, leave it unknown.
+- Do not publish forwarded WhatsApp posters or copied social posts as the sole basis for a high-impact opportunity.
+
+### Event
+- Confirm the organiser, schedule, venue and registration source.
+- Check that the event dates are current and that the source belongs to the named organiser or recognised authority.
+- Do not infer a schedule, host or venue from an old edition of an event.
+
+### Pickup game
+- Confirm the host identity and that the host is authorised to organise the session.
+- Confirm the actual playing venue, date/time, sport, capacity/participation terms and any stated cost.
+- Protect participant personal information; do not expose private phone numbers, invite tokens or participant lists in public listing details.
+
+### Evidence quality and decision outcomes
+- **Supports:** the source directly corroborates the specific claim under review.
+- **Contradicts:** reliable evidence conflicts with the claim; explain the conflict in reviewer notes and escalate suspected fraud.
+- **Insufficient:** the source is inaccessible, indirect, stale, ambiguous or does not establish the claim.
+- **Pending:** not yet reviewed. Pending evidence must never be treated as supporting evidence.
+- Prefer primary sources: government departments, SAI/MYAS/Khelo India, recognised sports federations, official event/venue/academy websites, issuing institutions and direct confirmation from an independently verified organisational contact.
+- Search results, maps, directories, reposted posters, social profiles and messaging screenshots may help locate primary evidence but should not independently establish material claims.
+- Capture the date checked and the exact claim supported. Do not store unnecessary identity documents or sensitive personal data.
+
+## 10. Standard review sequence
+
+1. **Intake screening:** check completeness, duplicates, prohibited content, suspicious links and category fit.
+2. **Claim extraction:** list the material claims that would appear publicly (identity, address, qualification, organiser, date, venue, eligibility and fees).
+3. **Independent evidence:** find primary sources or contact the organisation through a separately verified channel.
+4. **Evidence register:** add each source with a short factual description; review it as supports, contradicts or insufficient.
+5. **Verification decision:** mark verified only when the required category claims are supported, no contradiction remains unresolved, and no evidence review is pending.
+6. **Editorial decision:** separately approve, request corrections or reject. Record clear reasons for adverse decisions.
+7. **Publication readiness:** enter only corroborated category-specific facts. Leave unknown values blank.
+8. **Publish:** use the protected publication action only after editorial approval, verification and category completeness checks pass.
+9. **Post-publication monitoring:** unpublish promptly if evidence becomes invalid, the event expires, the venue closes or a credible report is received. Preserve the audit history.
+
+## 11. Reviewer communication templates
+
+### More information required
+"Thank you for submitting this listing to KhelGrid. We could not independently confirm: [specific claim]. Please provide an official source or a contact for the responsible organisation. This request does not guarantee publication. Listing submission and evidence review are free."
+
+### Rejected
+"We cannot publish this listing because: [specific, factual reason]. You may submit a corrected listing with supporting evidence. KhelGrid does not charge for listing verification."
+
+### Verified and approved
+"Your listing has passed KhelGrid's evidence and editorial checks and is approved for publication. Please notify us if any listed details change. KhelGrid verification is an independent platform review and does not represent government endorsement or accreditation."
+
+## 12. Non-negotiable safeguards
+- Never charge for listing submission, moderation or verification.
+- Never allow an applicant to verify their own listing.
+- Never treat editorial approval as evidence verification.
+- Never publish an unverified or incomplete record.
+- Never invent or infer an address, organiser, host, date, fee, qualification or availability.
+- Never expose the private queue, evidence notes, applicant contact details or participant data to public catalogue users.
+- Do not bootstrap or promote a super-admin from the browser. The first super-admin must be provisioned by the trusted database operator after identity confirmation.
