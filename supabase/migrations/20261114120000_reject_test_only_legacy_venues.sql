@@ -40,8 +40,7 @@ FROM test_submissions s;
 -- published or verified as a genuine public listing.
 UPDATE public.venues
 SET publication_status = 'draft',
-    verification_status = 'unverified',
-    updated_at = clock_timestamp()
+    verification_status = 'unverified'
 WHERE name ILIKE 'TEST ONLY — NOT A REAL LISTING:%'
    OR slug ILIKE 'test-only-%';
 
