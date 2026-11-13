@@ -102,6 +102,24 @@ BEGIN
     RAISE EXCEPTION 'Phase A: internal SECURITY DEFINER helper remains directly executable';
   END IF;
 
+  -- Owner policies must use statement-level auth.uid() evaluation.
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public'
+      AND (
+        (tablename='venue_bookings' AND policyname='venue_bookings_owner_select' AND qual LIKE '%auth.uid()%' AND qual NOT LIKE '%SELECT auth.uid()%')
+        OR (tablename='trial_reminders' AND policyname='trial_reminders_owner_select' AND qual LIKE '%auth.uid()%' AND qual NOT LIKE '%SELECT auth.uid()%')
+        OR (tablename='athlete_profiles' AND policyname IN ('athlete_profiles_owner_draft_read','athlete_profiles_owner_insert','athlete_profiles_owner_update')
+            AND coalesce(qual,'') || coalesce(with_check,'') LIKE '%auth.uid()%'
+            AND coalesce(qual,'') || coalesce(with_check,'') NOT LIKE '%SELECT auth.uid()%')
+        OR (tablename='listing_subscriptions' AND policyname='listing_subscriptions_owner_read' AND qual LIKE '%auth.uid()%' AND qual NOT LIKE '%SELECT auth.uid()%')
+        OR (tablename='khelgrid_payments' AND policyname='payments_user_read' AND qual LIKE '%auth.uid()%' AND qual NOT LIKE '%SELECT auth.uid()%')
+        OR (tablename='pickup_game_participants' AND policyname='pickup_game_participants_owner_read' AND qual LIKE '%auth.uid()%' AND qual NOT LIKE '%SELECT auth.uid()%')
+      )
+  ) THEN
+    RAISE EXCEPTION 'Phase A: owner RLS policy still evaluates auth.uid() per row';
+  END IF;
+
   -- Future postgres-owned public objects must not inherit broad API privileges.
   IF EXISTS (
     SELECT 1
