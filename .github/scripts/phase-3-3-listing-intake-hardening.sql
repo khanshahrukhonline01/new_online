@@ -9,6 +9,16 @@ DECLARE
   v_result jsonb;
   v_index integer;
 BEGIN
+  PERFORM set_config('request.headers', '{}', true);
+  v_result := public.submit_listing_intake(
+    'venue', 'No Trusted IP Venue', 'Delhi', 'https://example.org/venue',
+    'This request has no trusted gateway IP and must fail closed.', NULL
+  );
+  IF v_result->>'status' IS DISTINCT FROM 'unavailable' THEN
+    RAISE EXCEPTION 'Missing trusted client IP must fail closed, got %', v_result;
+  END IF;
+
+  PERFORM set_config('request.headers', '{"cf-connecting-ip":"203.0.113.44"}', true);
   FOR v_index IN 1..10 LOOP
     v_result := public.submit_listing_intake(
       'venue',
