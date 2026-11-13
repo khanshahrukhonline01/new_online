@@ -153,6 +153,7 @@ CREATE TABLE public.events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   slug text,
   title text,
+  venue_id uuid,
   publication_status text NOT NULL DEFAULT 'published'
 );
 CREATE TABLE public.academies (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), slug text, name text, payment_status text DEFAULT 'paid');
@@ -162,6 +163,7 @@ CREATE TABLE public.pickup_games (id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 CREATE TABLE public.venue_courts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   venue_id uuid NOT NULL REFERENCES public.venues(id),
+  sport_id uuid,
   name text NOT NULL,
   hourly_price_paise integer,
   is_bookable boolean NOT NULL DEFAULT false
