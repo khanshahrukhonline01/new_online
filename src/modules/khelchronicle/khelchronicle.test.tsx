@@ -362,6 +362,7 @@ describe('KhelChronicle Open Sports Research Repository', () => {
     expect(homeHtml).toContain('About KhelChronicle')
     expect(homeHtml).toContain('Editorial &amp; Moderation Policy')
     expect(homeHtml).toContain('Author Guidelines')
+    expect(homeHtml).toContain('Open Science Policies')
     expect(homeHtml).toContain('FAQ')
   })
 
@@ -424,6 +425,7 @@ describe('KhelChronicle Open Sports Research Repository', () => {
     expect(html).toContain('kc-trust-ribbon')
     expect(html).toContain('Preprints Indexed')
     expect(html).toContain('Repository Views')
+    expect(html).toContain('Manuscript Downloads')
     expect(html).toContain('Athletes Tested')
     expect(html).toContain('100% Diamond Open Access')
     expect(html).toContain('SAI NCOE')

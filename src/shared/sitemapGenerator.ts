@@ -168,6 +168,7 @@ export function buildSitemapEntries(): SitemapEntry[] {
     '/privacy',
     '/terms',
     '/editorial-policy',
+    '/open-science-policy',
     '/ipr-policy',
     '/contact',
   ]

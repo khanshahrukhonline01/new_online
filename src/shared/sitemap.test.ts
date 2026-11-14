@@ -141,6 +141,12 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     )
     expect(rathore).toBeDefined()
     expect(rathore?.priority).toBe(0.75)
+
+    // 5. Open Science & Research Ethics Policy
+    const openSciencePolicy = entries.find(e => e.loc === `${BASE_URL}/open-science-policy`)
+    expect(openSciencePolicy).toBeDefined()
+    expect(openSciencePolicy?.priority).toBe(0.6)
+    expect(openSciencePolicy?.changefreq).toBe('monthly')
   })
 
   it('contains expected metadata and date formatting on every entry', () => {

@@ -329,7 +329,7 @@ export default function App() {
       else if (match.canonicalPath === '/saved') page = <SavedPage onNavigate={navigate} />
       else if (match.canonicalPath === '/for-you') page = <ForYouPage onNavigate={navigate} onOpenAuth={tab => { setAuthModalTab(tab || 'signup'); setAuthModalOpen(true) }} />
       else if (match.canonicalPath === '/partner' || match.canonicalPath === '/partners') page = <PartnerPage onNavigate={navigate} onOpenIntake={openListingSubmission} />
-      else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
+      else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy','/open-science-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
       break
     default:
@@ -698,6 +698,8 @@ export default function App() {
         <a href="/editorial-policy" onClick={event => navigate(event, '/editorial-policy')}>Editorial</a>
         <a href="/verification-policy" onClick={event => navigate(event, '/verification-policy')}>Verification</a>
         <a href="/correction-policy" onClick={event => navigate(event, '/correction-policy')}>Corrections</a>
+        <a href="/open-science-policy" onClick={event => navigate(event, '/open-science-policy')}>Open Science</a>
+        <a href="/khelchronicle" onClick={event => navigate(event, '/khelchronicle')}>KhelChronicle</a>
         <a href="https://www.khelgrid.com/sitemap.xml" target="_blank" rel="noopener noreferrer">Sitemap</a>
         <a
           href="#sports-pass"
