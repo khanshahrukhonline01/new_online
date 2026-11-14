@@ -208,7 +208,6 @@ jobs:
         shell: bash
         env:
           ADMIN_BASE_URL: ${{ secrets.ADMIN_BASE_URL }}
-          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           KG_DEV_SUPABASE_ANON_KEY: ${{ secrets.KG_DEV_SUPABASE_ANON_KEY }}
           KG_ADMIN_TEST_USER_EMAIL: ${{ secrets.KG_ADMIN_TEST_USER_EMAIL }}
           KG_ADMIN_TEST_USER_PASSWORD: ${{ secrets.KG_ADMIN_TEST_USER_PASSWORD }}
@@ -235,6 +234,7 @@ jobs:
         run: npx playwright test --config=playwright.config.ts
         env:
           ADMIN_BASE_URL: ${{ secrets.ADMIN_BASE_URL }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           KG_DEV_SUPABASE_ANON_KEY: ${{ secrets.KG_DEV_SUPABASE_ANON_KEY }}
           KG_ADMIN_TEST_USER_EMAIL: ${{ secrets.KG_ADMIN_TEST_USER_EMAIL }}
           KG_ADMIN_TEST_USER_PASSWORD: ${{ secrets.KG_ADMIN_TEST_USER_PASSWORD }}
