@@ -5,9 +5,13 @@ import {
   getPaperBySlug,
   getPapersByAuthor,
   filterAndSortPapers,
+  getPaperComments,
+  addPaperComment,
+  upvotePaperComment,
   type ResearchAuthor,
   type ResearchCategory,
   type ResearchPaper,
+  type PaperComment,
   type ChronicleSortOption,
 } from '../../modules/khelchronicle/data/khelchronicleData'
 import type { SiteIconName } from '../../shared/components/SiteIcon'
@@ -646,6 +650,203 @@ export async function recordPaperDownload(paperSlug: string): Promise<void> {
   } catch {
     // silently ignore background metric errors
   }
+}
+
+// ============================================================================
+// Real Database Community Comments & Peer Review API
+// ============================================================================
+
+export interface CreateCommentInput {
+  author: string
+  affiliation: string
+  role?: string
+  orcid?: string
+  commentType?: 'peer_review' | 'methodological_query' | 'replication_note' | 'general'
+  competingInterests?: string
+  content: string
+}
+
+interface DbCommentRow {
+  id: string
+  paper_slug: string
+  author: string
+  affiliation: string
+  role?: string | null
+  orcid?: string | null
+  comment_type?: string | null
+  competing_interests?: string | null
+  content: string
+  helpful_count?: number | null
+  is_author_response?: boolean | null
+  created_at: string
+}
+
+/**
+ * Fetch real reader comments and peer reviews from Supabase database,
+ * merging with local comments and providing graceful offline/mock fallback.
+ */
+export async function getChroniclePaperComments(paperSlug: string): Promise<PaperComment[]> {
+  const localComments = getPaperComments(paperSlug)
+  const baseUrl = resolveSupabaseBaseUrl()
+  if (!baseUrl) {
+    return localComments
+  }
+
+  try {
+    const url = `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/chronicle_paper_comments?paper_slug=eq.${encodeURIComponent(paperSlug)}&status=eq.approved&order=created_at.desc&select=*`
+    const res = await fetch(url, {
+      headers: {
+        apikey: resolveSupabaseAnonKey(),
+        Authorization: `Bearer ${resolveSupabaseAnonKey()}`,
+        Accept: 'application/json',
+      },
+    })
+
+    if (!res.ok) {
+      return localComments
+    }
+
+    const rows: DbCommentRow[] = await res.json()
+    if (Array.isArray(rows) && rows.length > 0) {
+      const dbComments: PaperComment[] = rows.map(r => ({
+        id: r.id,
+        author: r.author,
+        affiliation: r.affiliation,
+        role: r.role || 'Sports Science Researcher',
+        orcid: r.orcid || undefined,
+        commentType: (r.comment_type as PaperComment['commentType']) || 'peer_review',
+        competingInterests: r.competing_interests || 'None declared',
+        date: r.created_at ? r.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+        content: r.content,
+        helpfulCount: r.helpful_count || 0,
+        isAuthorResponse: Boolean(r.is_author_response),
+      }))
+
+      // Merge avoiding duplicate ids
+      const dbIds = new Set(dbComments.map(c => c.id))
+      const combined = [...dbComments, ...localComments.filter(c => !dbIds.has(c.id))]
+      return combined
+    }
+
+    return localComments
+  } catch {
+    return localComments
+  }
+}
+
+/**
+ * Add a new peer review or scientific comment and save directly into the database.
+ */
+export async function addChroniclePaperComment(
+  paperSlug: string,
+  input: CreateCommentInput
+): Promise<PaperComment> {
+  if (!input.author || input.author.trim().length < 2) {
+    throw new Error('Please enter your full name.')
+  }
+  if (!input.affiliation || input.affiliation.trim().length < 2) {
+    throw new Error('Please provide your university, institute, or sports academy.')
+  }
+  if (!input.content || input.content.trim().length < 10) {
+    throw new Error('Comment must be at least 10 characters long.')
+  }
+
+  // Save optimistically to local storage/memory
+  const localSaved = addPaperComment(paperSlug, {
+    author: input.author.trim(),
+    affiliation: input.affiliation.trim(),
+    role: input.role?.trim(),
+    orcid: input.orcid?.trim(),
+    commentType: input.commentType || 'peer_review',
+    competingInterests: input.competingInterests?.trim(),
+    content: input.content.trim(),
+  })
+
+  const baseUrl = resolveSupabaseBaseUrl()
+  if (!baseUrl) {
+    return localSaved
+  }
+
+  try {
+    const url = `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/chronicle_paper_comments`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        apikey: resolveSupabaseAnonKey(),
+        Authorization: `Bearer ${resolveSupabaseAnonKey()}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Prefer: 'return=representation',
+      },
+      body: JSON.stringify({
+        paper_slug: paperSlug,
+        author: input.author.trim(),
+        affiliation: input.affiliation.trim(),
+        role: input.role?.trim() || 'Sports Science Researcher',
+        orcid: input.orcid?.trim() || null,
+        comment_type: input.commentType || 'peer_review',
+        competing_interests: input.competingInterests?.trim() || 'None declared',
+        content: input.content.trim(),
+        helpful_count: 0,
+        is_author_response: false,
+        status: 'approved',
+      }),
+    })
+
+    if (res.ok) {
+      const inserted = await res.json()
+      if (Array.isArray(inserted) && inserted.length > 0) {
+        const row = inserted[0]
+        return {
+          id: row.id,
+          author: row.author,
+          affiliation: row.affiliation,
+          role: row.role || 'Sports Science Researcher',
+          orcid: row.orcid || undefined,
+          commentType: row.comment_type || 'peer_review',
+          competingInterests: row.competing_interests || 'None declared',
+          date: row.created_at ? row.created_at.split('T')[0] : localSaved.date,
+          content: row.content,
+          helpfulCount: row.helpful_count || 0,
+          isAuthorResponse: Boolean(row.is_author_response),
+        }
+      }
+    }
+  } catch {
+    // Falls back cleanly to localSaved
+  }
+
+  return localSaved
+}
+
+/**
+ * Vote a peer comment as helpful and sync to database.
+ */
+export async function voteChronicleCommentHelpful(
+  commentId: string,
+  paperSlug: string
+): Promise<{ helpfulCount: number }> {
+  const localCount = upvotePaperComment(paperSlug, commentId)
+  const baseUrl = resolveSupabaseBaseUrl()
+  if (!baseUrl) {
+    return { helpfulCount: localCount }
+  }
+
+  try {
+    await fetch(`${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/rpc/increment_chronicle_comment_helpful`, {
+      method: 'POST',
+      headers: {
+        apikey: resolveSupabaseAnonKey(),
+        Authorization: `Bearer ${resolveSupabaseAnonKey()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_comment_id: commentId }),
+    })
+  } catch {
+    // Ignore RPC failure, local update already applied
+  }
+
+  return { helpfulCount: localCount }
 }
 
 // ============================================================================

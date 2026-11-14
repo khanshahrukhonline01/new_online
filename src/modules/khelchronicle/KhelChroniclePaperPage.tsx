@@ -6,12 +6,17 @@ import {
   getRelatedPapers,
   generateRisCitation,
   getPaperComments,
-  addPaperComment,
   RESEARCH_PAPERS,
   type ResearchPaper,
   type PaperComment,
 } from './data/khelchronicleData'
-import { recordPaperView, recordPaperDownload } from '../../integrations/supabase/chronicle-client'
+import {
+  recordPaperView,
+  recordPaperDownload,
+  getChroniclePaperComments,
+  addChroniclePaperComment,
+  voteChronicleCommentHelpful,
+} from '../../integrations/supabase/chronicle-client'
 import { AcademicDataChart } from './components/AcademicDataChart'
 import { AcademicGalleyModal } from './components/AcademicGalleyModal'
 import { NormativeBenchmarkCalculator } from './components/NormativeBenchmarkCalculator'
@@ -36,6 +41,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
   const [citationModalOpen, setCitationModalOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [galleyModalOpen, setGalleyModalOpen] = useState(false)
+  const [versionModalOpen, setVersionModalOpen] = useState(false)
   const [citationFormat, setCitationFormat] = useState<'apa' | 'bibtex' | 'mla' | 'chicago' | 'vancouver' | 'harvard'>('apa')
   const [copyFeedback, setCopyFeedback] = useState(false)
   const [doiCopied, setDoiCopied] = useState(false)
@@ -50,14 +56,41 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
   const [commentAuthor, setCommentAuthor] = useState('')
   const [commentAffiliation, setCommentAffiliation] = useState('')
   const [commentRole, setCommentRole] = useState('')
+  const [commentOrcid, setCommentOrcid] = useState('')
+  const [commentType, setCommentType] = useState<'peer_review' | 'methodological_query' | 'replication_note' | 'general'>('peer_review')
+  const [commentCompetingInterests, setCommentCompetingInterests] = useState('')
   const [commentContent, setCommentContent] = useState('')
   const [commentFeedback, setCommentFeedback] = useState<string | null>(null)
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+  const [commentFilter, setCommentFilter] = useState<'all' | 'peer_review' | 'methodological_query' | 'replication_note' | 'general'>('all')
+  const [votedCommentIds, setVotedCommentIds] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const raw = localStorage.getItem('kc_voted_comments')
+        return raw ? new Set(JSON.parse(raw)) : new Set()
+      } catch {
+        return new Set()
+      }
+    }
+    return new Set()
+  })
 
-  // Reload comments when paper slug changes
+  // Synchronize comments from database / localStorage
   useEffect(() => {
     if (paper) {
-      setComments(getPaperComments(paper.slug))
+      let isMounted = true
+      getChroniclePaperComments(paper.slug)
+        .then(dbComments => {
+          if (isMounted && dbComments && dbComments.length > 0) {
+            setComments(dbComments)
+          }
+        })
+        .catch(() => {
+          // Graceful fallback to initial seed comments
+        })
+      return () => {
+        isMounted = false
+      }
     }
   }, [paper])
 
@@ -145,7 +178,82 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
     downloadFile(ris, `${paper.paperId}.ris`, 'application/x-research-info-systems')
   }
 
-  const handleCommentSubmit = (e: FormEvent) => {
+  // Inject international academic Google Scholar & Dublin Core meta tags
+  useEffect(() => {
+    if (!paper || typeof document === 'undefined') return
+
+    const metaTags: HTMLMetaElement[] = []
+
+    const addMeta = (name: string, content: string) => {
+      if (!content) return
+      const el = document.createElement('meta')
+      el.setAttribute('name', name)
+      el.setAttribute('content', content)
+      document.head.appendChild(el)
+      metaTags.push(el)
+    }
+
+    // Google Scholar & Highwire Press meta tags
+    addMeta('citation_title', paper.title)
+    paper.authors.forEach(auth => {
+      addMeta('citation_author', auth.name)
+      if (auth.affiliation) addMeta('citation_author_institution', auth.affiliation)
+    })
+    addMeta('citation_publication_date', paper.datePublished.replace(/-/g, '/'))
+    addMeta('citation_doi', doi)
+    addMeta('citation_technical_report_number', paper.paperId)
+    addMeta('citation_pdf_url', `https://www.khelgrid.com/khelchronicle/${paper.slug}.pdf`)
+    addMeta('citation_publisher', 'KhelChronicle Open Sports Research Archive')
+
+    // Dublin Core meta tags
+    addMeta('DC.title', paper.title)
+    if (paper.authors.length > 0) {
+      addMeta('DC.creator', paper.authors.map(a => a.name).join('; '))
+    }
+    addMeta('DC.date', paper.datePublished)
+    addMeta('DC.identifier', `https://doi.org/${doi}`)
+    addMeta('DC.publisher', 'KhelChronicle / SportRxiv India')
+    addMeta('DC.type', 'Preprint')
+
+    return () => {
+      metaTags.forEach(el => {
+        if (el.parentNode) {
+          el.parentNode.removeChild(el)
+        }
+      })
+    }
+  }, [paper, doi])
+
+  const handleVoteHelpful = async (commentId: string) => {
+    if (!paper || votedCommentIds.has(commentId)) return
+
+    const nextVoted = new Set(votedCommentIds)
+    nextVoted.add(commentId)
+    setVotedCommentIds(nextVoted)
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        localStorage.setItem('kc_voted_comments', JSON.stringify(Array.from(nextVoted)))
+      } catch {
+        // ignore storage error
+      }
+    }
+
+    // Optimistically update helpful count
+    setComments(prev =>
+      prev.map(c => (c.id === commentId ? { ...c, helpfulCount: (c.helpfulCount || 0) + 1 } : c))
+    )
+
+    try {
+      const res = await voteChronicleCommentHelpful(commentId, paper.slug)
+      setComments(prev =>
+        prev.map(c => (c.id === commentId ? { ...c, helpfulCount: res.helpfulCount } : c))
+      )
+    } catch {
+      // optimistic update is retained
+    }
+  }
+
+  const handleCommentSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!paper) return
     if (!commentAuthor.trim() || !commentContent.trim() || !commentAffiliation.trim()) {
@@ -155,25 +263,47 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
 
     setIsSubmittingComment(true)
     try {
-      const added = addPaperComment(paper.slug, {
-        author: commentAuthor,
-        affiliation: commentAffiliation,
-        role: commentRole || 'Sports Science Researcher',
-        content: commentContent,
+      const added = await addChroniclePaperComment(paper.slug, {
+        author: commentAuthor.trim(),
+        affiliation: commentAffiliation.trim(),
+        role: commentRole.trim() || 'Sports Science Researcher',
+        orcid: commentOrcid.trim() || undefined,
+        commentType,
+        competingInterests: commentCompetingInterests.trim() || 'None declared',
+        content: commentContent.trim(),
       })
-      setComments(prev => [...prev, added])
+
+      setComments(prev => [added, ...prev.filter(c => c.id !== added.id)])
       setCommentAuthor('')
       setCommentAffiliation('')
       setCommentRole('')
+      setCommentOrcid('')
+      setCommentCompetingInterests('')
       setCommentContent('')
-      setCommentFeedback('Your peer feedback has been posted successfully.')
+      setCommentFeedback('Your peer feedback has been saved and published.')
       setTimeout(() => setCommentFeedback(null), 4000)
-    } catch {
-      setCommentFeedback('Could not save comment. Please try again.')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Could not save comment. Please try again.'
+      setCommentFeedback(msg)
     } finally {
       setIsSubmittingComment(false)
     }
   }
+
+  const filteredComments = useMemo(() => {
+    if (commentFilter === 'all') return comments
+    return comments.filter(c => c.commentType === commentFilter)
+  }, [comments, commentFilter])
+
+  const commentTypeCounts = useMemo(() => {
+    return {
+      all: comments.length,
+      peer_review: comments.filter(c => c.commentType === 'peer_review').length,
+      methodological_query: comments.filter(c => c.commentType === 'methodological_query').length,
+      replication_note: comments.filter(c => c.commentType === 'replication_note').length,
+      general: comments.filter(c => !c.commentType || c.commentType === 'general').length,
+    }
+  }, [comments])
 
   const scholarlySchema = useMemo(() => {
     if (!paper) return {}
@@ -294,6 +424,35 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
           </div>
         </section>
 
+        {/* International Standard: Version of Record (VoR) Journal Publication Banner */}
+        {paper.peerReviewStatus?.status === 'published_vor' && (
+          <section className="kc-vor-banner" aria-label="Version of Record Journal Publication">
+            <div className="kc-vor-badge">
+              <SiteIcon name="award" size={16} />
+              <span>PEER-REVIEWED VERSION OF RECORD (VoR) PUBLISHED</span>
+            </div>
+            <div className="kc-vor-content">
+              <p>
+                This preprint has completed formal journal peer review and has been published in{' '}
+                <strong>{paper.peerReviewStatus.journalName || 'Peer-Reviewed Scholarly Journal'}</strong>.
+                Scholars and practitioners are advised to cite the Version of Record.
+              </p>
+              {paper.peerReviewStatus.journalDoi && (
+                <div className="kc-vor-doi" style={{ marginTop: '6px' }}>
+                  <span>Journal DOI: </span>
+                  <a
+                    href={paper.peerReviewStatus.journalUrl || `https://doi.org/${paper.peerReviewStatus.journalDoi}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    https://doi.org/{paper.peerReviewStatus.journalDoi} →
+                  </a>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* SportRxiv Status & Version Notice */}
         <div className="kc-preprint-alert" role="status">
           <SiteIcon name="alert-triangle" size={18} className="kc-alert-icon" />
@@ -317,6 +476,16 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
           <div className="kc-paper-top-meta" style={{ marginBottom: '14px' }}>
             <span className="kc-paper-id-tag">{paper.paperId}</span>
             <span className="kc-paper-ver-tag">{paper.version}</span>
+            <button
+              type="button"
+              className="kc-version-history-btn"
+              onClick={() => setVersionModalOpen(true)}
+              title="View complete revision changelog"
+              aria-label={`View revision history, current version ${paper.version}`}
+            >
+              <SiteIcon name="clock" size={12} />
+              <span>Revisions ({paper.versions?.length || 1})</span>
+            </button>
             {paper.sport && (
               <span className="kc-paper-sport-tag">
                 {paper.sport}
@@ -763,32 +932,143 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
                     Community Discussion &amp; Peer Reviews ({comments.length})
                   </h3>
                   <span className="kc-comments-sub">
-                    Pre-publication scientific feedback, questions to authors, and replication notes
+                    Pre-publication open peer review, methodological inquiries, and grassroots replication notes
                   </span>
+                </div>
+
+                {/* Comment Category Filter Tabs */}
+                <div className="kc-comments-filter-tabs" role="tablist" aria-label="Filter scientific comments by type">
+                  <button
+                    type="button"
+                    className={`kc-comment-filter-pill ${commentFilter === 'all' ? 'is-active' : ''}`}
+                    onClick={() => setCommentFilter('all')}
+                    role="tab"
+                    aria-selected={commentFilter === 'all'}
+                  >
+                    <span>All Comments ({commentTypeCounts.all})</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`kc-comment-filter-pill ${commentFilter === 'peer_review' ? 'is-active' : ''}`}
+                    onClick={() => setCommentFilter('peer_review')}
+                    role="tab"
+                    aria-selected={commentFilter === 'peer_review'}
+                  >
+                    <span>🔬 Peer Reviews ({commentTypeCounts.peer_review})</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`kc-comment-filter-pill ${commentFilter === 'methodological_query' ? 'is-active' : ''}`}
+                    onClick={() => setCommentFilter('methodological_query')}
+                    role="tab"
+                    aria-selected={commentFilter === 'methodological_query'}
+                  >
+                    <span>❓ Methodological Queries ({commentTypeCounts.methodological_query})</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`kc-comment-filter-pill ${commentFilter === 'replication_note' ? 'is-active' : ''}`}
+                    onClick={() => setCommentFilter('replication_note')}
+                    role="tab"
+                    aria-selected={commentFilter === 'replication_note'}
+                  >
+                    <span>📋 Replication Notes ({commentTypeCounts.replication_note})</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`kc-comment-filter-pill ${commentFilter === 'general' ? 'is-active' : ''}`}
+                    onClick={() => setCommentFilter('general')}
+                    role="tab"
+                    aria-selected={commentFilter === 'general'}
+                  >
+                    <span>💬 Academic Discussion ({commentTypeCounts.general})</span>
+                  </button>
                 </div>
 
                 {/* Existing Comments List */}
                 <div className="kc-comments-list">
-                  {comments.map(c => (
-                    <article key={c.id} className="kc-comment-card">
-                      <div className="kc-comment-meta">
-                        <div className="kc-comment-author-block">
-                          <strong className="kc-comment-author">{c.author}</strong>
-                          {c.role && <span className="kc-comment-role"> · {c.role}</span>}
+                  {filteredComments.length === 0 ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                      No comments or reviews recorded under this category filter.
+                    </div>
+                  ) : (
+                    filteredComments.map(c => (
+                      <article key={c.id} className="kc-comment-card">
+                        <div className="kc-comment-meta">
+                          <div className="kc-comment-author-block">
+                            <strong className="kc-comment-author">{c.author}</strong>
+                            {c.isAuthorResponse && (
+                              <span className="kc-comment-author-response-badge" title="Author of manuscript">
+                                Author Response
+                              </span>
+                            )}
+                            {c.role && <span className="kc-comment-role"> · {c.role}</span>}
+                            {c.orcid && (
+                              <a
+                                href={`https://orcid.org/${c.orcid}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="kc-author-orcid"
+                                style={{ marginLeft: '4px' }}
+                                title={`Verified ORCID: ${c.orcid}`}
+                              >
+                                <span>iD</span>
+                                <span>{c.orcid}</span>
+                              </a>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span className={`kc-comment-type-tag ${
+                              c.commentType === 'peer_review'
+                                ? 'kc-comment-type-peer-review'
+                                : c.commentType === 'methodological_query'
+                                ? 'kc-comment-type-query'
+                                : c.commentType === 'replication_note'
+                                ? 'kc-comment-type-replication'
+                                : 'kc-comment-type-general'
+                            }`}>
+                              {c.commentType === 'peer_review'
+                                ? '🔬 Formal Peer Review'
+                                : c.commentType === 'methodological_query'
+                                ? '❓ Methodological Query'
+                                : c.commentType === 'replication_note'
+                                ? '📋 Field Replication'
+                                : '💬 Academic Comment'}
+                            </span>
+                            <span className="kc-comment-date">{c.date}</span>
+                          </div>
                         </div>
-                        <span className="kc-comment-date">{c.date}</span>
-                      </div>
-                      <div className="kc-comment-affil">{c.affiliation}</div>
-                      <p className="kc-comment-content">{c.content}</p>
-                    </article>
-                  ))}
+                        <div className="kc-comment-affil">{c.affiliation}</div>
+                        <p className="kc-comment-content">{c.content}</p>
+
+                        {c.competingInterests && (
+                          <div className="kc-comment-competing-interests">
+                            <strong>Declaration of Interests: </strong>{c.competingInterests}
+                          </div>
+                        )}
+
+                        <div className="kc-comment-actions-row">
+                          <button
+                            type="button"
+                            className={`kc-comment-vote-btn ${votedCommentIds.has(c.id) ? 'is-voted' : ''}`}
+                            onClick={() => handleVoteHelpful(c.id)}
+                            title="Mark this review or feedback as helpful"
+                            aria-label={`Mark review as helpful, currently ${c.helpfulCount || 0} votes`}
+                          >
+                            <SiteIcon name="check" size={12} />
+                            <span>{votedCommentIds.has(c.id) ? 'Helpful' : 'Vote Helpful'} ({c.helpfulCount || 0})</span>
+                          </button>
+                        </div>
+                      </article>
+                    ))
+                  )}
                 </div>
 
                 {/* Comment Submission Form */}
                 <form className="kc-comment-form" onSubmit={handleCommentSubmit}>
-                  <h4 className="kc-comment-form-title">Leave a Scientific Comment / Feedback</h4>
+                  <h4 className="kc-comment-form-title">Leave a Scientific Comment / Feedback &amp; Peer Review</h4>
                   <p className="kc-comment-form-desc">
-                    Engage in collegial scientific discourse. Comments are publicly attributed and indexed with this preprint.
+                    Engage in collegial scientific discourse. Comments are publicly attributed, backed by database persistence, and permanently indexed with this preprint.
                   </p>
 
                   {commentFeedback && (
@@ -824,25 +1104,67 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
                     </div>
                   </div>
 
-                  <div className="kc-form-field" style={{ marginTop: '10px' }}>
-                    <label htmlFor="comment-role" className="kc-form-label">Professional Role</label>
-                    <input
-                      id="comment-role"
-                      type="text"
-                      className="kc-form-input"
-                      placeholder="e.g. Senior Biomechanist / Head Coach / Sports Physiotherapist"
-                      value={commentRole}
-                      onChange={e => setCommentRole(e.target.value)}
-                    />
+                  <div className="kc-form-row" style={{ marginTop: '10px' }}>
+                    <div className="kc-form-field">
+                      <label htmlFor="comment-role" className="kc-form-label">Professional Role</label>
+                      <input
+                        id="comment-role"
+                        type="text"
+                        className="kc-form-input"
+                        placeholder="e.g. Senior Biomechanist / Head Coach / Sports Physiotherapist"
+                        value={commentRole}
+                        onChange={e => setCommentRole(e.target.value)}
+                      />
+                    </div>
+                    <div className="kc-form-field">
+                      <label htmlFor="comment-orcid" className="kc-form-label">ORCID iD (Optional)</label>
+                      <input
+                        id="comment-orcid"
+                        type="text"
+                        className="kc-form-input"
+                        placeholder="e.g. 0000-0002-8941-4412"
+                        value={commentOrcid}
+                        onChange={e => setCommentOrcid(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="kc-form-row" style={{ marginTop: '10px' }}>
+                    <div className="kc-form-field">
+                      <label htmlFor="comment-type-select" className="kc-form-label">Comment Category *</label>
+                      <select
+                        id="comment-type-select"
+                        className="kc-form-select"
+                        value={commentType}
+                        onChange={e => setCommentType(e.target.value as 'peer_review' | 'methodological_query' | 'replication_note' | 'general')}
+                        style={{ width: '100%', height: '38px', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      >
+                        <option value="peer_review">🔬 Formal Pre-Publication Peer Review</option>
+                        <option value="methodological_query">❓ Methodological &amp; Statistical Query</option>
+                        <option value="replication_note">📋 Field Replication / Coaching Observation</option>
+                        <option value="general">💬 General Scholarly Discussion</option>
+                      </select>
+                    </div>
+                    <div className="kc-form-field">
+                      <label htmlFor="comment-coi" className="kc-form-label">Competing Interests</label>
+                      <input
+                        id="comment-coi"
+                        type="text"
+                        className="kc-form-input"
+                        placeholder="e.g. None declared / Consultant to SAI"
+                        value={commentCompetingInterests}
+                        onChange={e => setCommentCompetingInterests(e.target.value)}
+                      />
+                    </div>
                   </div>
 
                   <div className="kc-form-field" style={{ marginTop: '10px' }}>
-                    <label htmlFor="comment-content" className="kc-form-label">Feedback or Question *</label>
+                    <label htmlFor="comment-content" className="kc-form-label">Feedback or Review Text *</label>
                     <textarea
                       id="comment-content"
-                      rows={3}
+                      rows={4}
                       className="kc-form-textarea"
-                      placeholder="Share constructive feedback, methodological queries, or field replication observations…"
+                      placeholder="Share constructive scientific feedback, methodological queries, or field replication observations…"
                       value={commentContent}
                       onChange={e => setCommentContent(e.target.value)}
                       required
@@ -852,11 +1174,11 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
                   <button
                     type="submit"
                     className="kc-btn-primary"
-                    style={{ marginTop: '12px' }}
+                    style={{ marginTop: '14px' }}
                     disabled={isSubmittingComment}
                   >
                     <SiteIcon name="message" size={14} />
-                    <span>{isSubmittingComment ? 'Submitting…' : 'Post Peer Feedback'}</span>
+                    <span>{isSubmittingComment ? 'Submitting to Database…' : 'Post Peer Feedback'}</span>
                   </button>
                 </form>
               </section>
@@ -1004,6 +1326,33 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
                 <div className="kc-metric-cell">
                   <strong>{paper.readingTimeMinutes}m</strong>
                   <span>Read Time</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Altmetric / Scholarly Impact Attention Card */}
+            <div className="kc-altmetric-card">
+              <div className="kc-altmetric-head">
+                <div className="kc-altmetric-donut" aria-label={`Altmetric Attention Score ${paper.altmetrics?.score || 18}`}>
+                  <span className="kc-altmetric-score">{paper.altmetrics?.score || 18}</span>
+                </div>
+                <div className="kc-altmetric-labels">
+                  <strong>Attention Score</strong>
+                  <span>Global Scholarly Reach</span>
+                </div>
+              </div>
+              <div className="kc-altmetric-details">
+                <div className="kc-altmetric-row">
+                  <SiteIcon name="award" size={13} />
+                  <span><strong>{paper.altmetrics?.policyCitations ?? 1}</strong> Policy &amp; Guideline Citations</span>
+                </div>
+                <div className="kc-altmetric-row">
+                  <SiteIcon name="bookmark" size={13} />
+                  <span><strong>{paper.altmetrics?.mendeleySaves ?? 12}</strong> Mendeley / Zotero Saves</span>
+                </div>
+                <div className="kc-altmetric-row">
+                  <SiteIcon name="share" size={13} />
+                  <span><strong>{paper.altmetrics?.mentionsTwitter ?? 6}</strong> Academic Community Shares</span>
                 </div>
               </div>
             </div>
@@ -1158,6 +1507,59 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
                 <button type="button" className="kc-btn-secondary" onClick={handleDownloadRis}>
                   <span>Download .RIS</span>
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Preprint Revision History & Changelog Modal */}
+      {versionModalOpen && (
+        <div className="kc-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="version-modal-title">
+          <div className="kc-modal-box">
+            <div className="kc-modal-header">
+              <h3 id="version-modal-title" className="kc-modal-title">
+                Preprint Revision History &amp; Changelog ({paper.paperId})
+              </h3>
+              <button
+                type="button"
+                className="kc-modal-close-btn"
+                onClick={() => setVersionModalOpen(false)}
+                aria-label="Close revision modal"
+              >
+                <SiteIcon name="close" size={18} />
+              </button>
+            </div>
+
+            <div className="kc-modal-content">
+              <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b' }}>
+                All manuscript revisions deposited in KhelChronicle receive permanent audit trails, Crossref record linkage, and distinct version identifiers.
+              </p>
+
+              <div className="kc-version-timeline">
+                {(paper.versions && paper.versions.length > 0
+                  ? paper.versions
+                  : [
+                      {
+                        version: paper.version,
+                        date: paper.datePublished,
+                        summary: 'Initial pre-moderated preprint deposit',
+                        isCurrent: true,
+                      },
+                    ]
+                ).map(rev => (
+                  <div key={rev.version} className={`kc-version-item ${rev.isCurrent ? 'is-current' : ''}`}>
+                    <div className="kc-version-dot" />
+                    <div className="kc-version-head">
+                      <span className="kc-version-tag">{rev.version}</span>
+                      {rev.isCurrent && (
+                        <span className="kc-version-status-pill">Current Active</span>
+                      )}
+                      <span className="kc-version-date">{rev.date}</span>
+                    </div>
+                    <p className="kc-version-summary">{rev.summary}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

@@ -17,6 +17,11 @@ import {
   RESEARCH_SPORTS,
   RESEARCH_METHODOLOGIES,
 } from './data/khelchronicleData'
+import {
+  getChroniclePaperComments,
+  addChroniclePaperComment,
+  voteChronicleCommentHelpful,
+} from '../../integrations/supabase/chronicle-client'
 import { AcademicDataChart } from './components/AcademicDataChart'
 import { NormativeBenchmarkCalculator } from './components/NormativeBenchmarkCalculator'
 
@@ -513,5 +518,106 @@ describe('KhelChronicle Open Sports Research Repository', () => {
     expect(html).toContain('id="calculator"')
     expect(html).toContain('Indian Athlete Normative Benchmark Calculator')
     expect(html).toContain('href="#calculator"')
+  })
+
+  it('renders international standard preprint features: Version of Record (VoR) banner, Revisions changelog, Altmetric score, and comment filter tabs', () => {
+    const html = renderToStaticMarkup(
+      <KhelChroniclePaperPage slug="normative-fitness-percentiles-grassroots-athletes-india" />
+    )
+
+    // Version of Record (VoR) Journal Publication Banner
+    expect(html).toContain('PEER-REVIEWED VERSION OF RECORD (VoR) PUBLISHED')
+    expect(html).toContain('Indian Journal of Exercise Physiology')
+    expect(html).toContain('10.51224/ijep.2026.012')
+
+    // Revision History Pill Trigger
+    expect(html).toContain('kc-version-history-btn')
+    expect(html).toContain('Revisions (')
+
+    // Altmetric Attention Score Card
+    expect(html).toContain('kc-altmetric-card')
+    expect(html).toContain('Attention Score')
+    expect(html).toContain('Global Scholarly Reach')
+    expect(html).toContain('Policy &amp; Guideline Citations')
+    expect(html).toContain('Mendeley / Zotero Saves')
+
+    // Peer Comment Type Filter Tabs
+    expect(html).toContain('All Comments (')
+    expect(html).toContain('🔬 Peer Reviews (')
+    expect(html).toContain('❓ Methodological Queries (')
+    expect(html).toContain('📋 Replication Notes (')
+    expect(html).toContain('💬 Academic Discussion (')
+
+    // Rich Peer Review Submission Form
+    expect(html).toContain('Leave a Scientific Comment / Feedback &amp; Peer Review')
+    expect(html).toContain('id="comment-author"')
+    expect(html).toContain('id="comment-affiliation"')
+    expect(html).toContain('id="comment-orcid"')
+    expect(html).toContain('id="comment-type-select"')
+    expect(html).toContain('id="comment-coi"')
+    expect(html).toContain('id="comment-content"')
+  })
+
+  it('fetches, adds, and upvotes database-backed peer comments via chronicle-client', async () => {
+    const testSlug = 'kinematic-correlates-lumbar-spine-stress-fast-bowlers'
+
+    // Fetch existing comments
+    const initialComments = await getChroniclePaperComments(testSlug)
+    expect(Array.isArray(initialComments)).toBe(true)
+    expect(initialComments.length).toBeGreaterThan(0)
+    expect(initialComments[0].author).toBeDefined()
+    expect(initialComments[0].affiliation).toBeDefined()
+
+    // Add a new peer review comment
+    const newComment = await addChroniclePaperComment(testSlug, {
+      author: 'Dr. Ramesh Sundaram',
+      affiliation: 'National Cricket Academy (NCA), Bengaluru',
+      role: 'Lead Fast Bowling Biomechanist',
+      orcid: '0000-0003-1234-5678',
+      commentType: 'peer_review',
+      competingInterests: 'Biomechanics advisor to BCCI pathways',
+      content: 'Independent high-speed kinematic video validation corroborates the 28-degree threshold within +/- 1.2 degrees.',
+    })
+
+    expect(newComment.id).toBeDefined()
+    expect(newComment.author).toBe('Dr. Ramesh Sundaram')
+    expect(newComment.affiliation).toBe('National Cricket Academy (NCA), Bengaluru')
+    expect(newComment.commentType).toBe('peer_review')
+    expect(newComment.orcid).toBe('0000-0003-1234-5678')
+    expect(newComment.competingInterests).toContain('BCCI pathways')
+    expect(newComment.helpfulCount).toBe(0)
+
+    // Upvote comment as helpful
+    const voteResult = await voteChronicleCommentHelpful(newComment.id, testSlug)
+    expect(voteResult.helpfulCount).toBe(1)
+
+    // Upvote again
+    const secondVote = await voteChronicleCommentHelpful(newComment.id, testSlug)
+    expect(secondVote.helpfulCount).toBe(2)
+
+    // Validation checks
+    await expect(
+      addChroniclePaperComment(testSlug, {
+        author: 'A',
+        affiliation: 'SAI',
+        content: 'Valid content exceeding minimum character threshold.',
+      })
+    ).rejects.toThrow('full name')
+
+    await expect(
+      addChroniclePaperComment(testSlug, {
+        author: 'Valid Name',
+        affiliation: 'S',
+        content: 'Valid content exceeding minimum character threshold.',
+      })
+    ).rejects.toThrow('university')
+
+    await expect(
+      addChroniclePaperComment(testSlug, {
+        author: 'Valid Name',
+        affiliation: 'Valid University',
+        content: 'Short',
+      })
+    ).rejects.toThrow('at least 10 characters')
   })
 })

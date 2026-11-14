@@ -3854,3 +3854,344 @@
   background: #f1f5f9;
   color: #0f172a;
 }
+
+
+/* ==========================================================================
+   INTERNATIONAL PREPRINT STANDARDS: VoR BANNER, VERSIONS, ALTMETRIC, PEER REVIEWS
+   ========================================================================== */
+
+/* Version of Record (VoR) Journal Publication Banner */
+.kc-vor-banner {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1px solid #a7f3d0;
+  border-left: 5px solid #059669;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.08);
+}
+
+.kc-vor-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #065f46;
+  letter-spacing: -0.01em;
+}
+
+.kc-vor-content p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #064e3b;
+}
+
+.kc-vor-doi a {
+  font-family: monospace;
+  color: #047857;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* Version History Pill Button & Modal Timeline */
+.kc-version-history-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-version-history-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.kc-version-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  padding-left: 24px;
+}
+
+.kc-version-timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: #cbd5e1;
+}
+
+.kc-version-item {
+  position: relative;
+}
+
+.kc-version-dot {
+  position: absolute;
+  left: -24px;
+  top: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0284c7;
+  border: 3px solid #ffffff;
+  box-shadow: 0 0 0 1px #0284c7;
+}
+
+.kc-version-item.is-current .kc-version-dot {
+  background: #15803d;
+  box-shadow: 0 0 0 1px #15803d;
+}
+
+.kc-version-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.kc-version-tag {
+  font-weight: 800;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.kc-version-status-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.kc-version-date {
+  font-size: 12px;
+  color: #64748b;
+  margin-left: auto;
+}
+
+.kc-version-summary {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #334155;
+}
+
+/* Altmetric / Scholarly Impact Attention Card */
+.kc-altmetric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.kc-altmetric-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 12px;
+}
+
+.kc-altmetric-donut {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: conic-gradient(#059669 0% 35%, #0284c7 35% 65%, #d97706 65% 85%, #dc2626 85% 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+}
+
+.kc-altmetric-score {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 14px;
+  color: #0f172a;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.kc-altmetric-labels strong {
+  display: block;
+  font-size: 12.5px;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.kc-altmetric-labels span {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.kc-altmetric-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.kc-altmetric-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kc-altmetric-row svg {
+  color: #0284c7;
+  flex-shrink: 0;
+}
+
+/* Comment Filters & Type Pills */
+.kc-comments-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 18px;
+}
+
+.kc-comment-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-comment-filter-pill:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.kc-comment-filter-pill.is-active {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+}
+
+.kc-comment-type-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.kc-comment-type-peer-review {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.kc-comment-type-query {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.kc-comment-type-replication {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.kc-comment-type-general {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.kc-comment-author-response-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 3px;
+}
+
+.kc-comment-competing-interests {
+  font-size: 11.5px;
+  font-style: italic;
+  color: #64748b;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.kc-comment-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.kc-comment-vote-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-comment-vote-btn:hover {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.kc-comment-vote-btn.is-voted {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #15803d;
+  cursor: default;
+}

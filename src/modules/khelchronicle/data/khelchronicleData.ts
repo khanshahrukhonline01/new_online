@@ -84,8 +84,20 @@ export interface PaperComment {
   author: string
   affiliation: string
   role?: string
+  orcid?: string
+  commentType?: 'peer_review' | 'methodological_query' | 'replication_note' | 'general'
+  competingInterests?: string
   date: string
   content: string
+  helpfulCount?: number
+  isAuthorResponse?: boolean
+}
+
+export interface ResearchAltmetrics {
+  score: number
+  mentionsTwitter: number
+  policyCitations: number
+  mendeleySaves: number
 }
 
 export interface ResearchPaper {
@@ -110,6 +122,7 @@ export interface ResearchPaper {
   supplementaryFiles?: SupplementaryFile[]
   coachingTakeaways?: CoachingTakeaways
   comments?: PaperComment[]
+  altmetrics?: ResearchAltmetrics
   authors: ResearchAuthor[]
   datePublished: string
   dateModified?: string
@@ -365,18 +378,44 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
         author: 'Dr. Ramesh Sundaram',
         affiliation: 'National Cricket Academy (NCA), Bengaluru',
         role: 'Lead Fast Bowling Biomechanist',
+        orcid: '0000-0002-1944-5511',
+        commentType: 'replication_note',
+        competingInterests: 'None declared',
         date: '2026-10-31',
         content: 'Crucial kinetic baseline for Indian conditions. The 32.5° threshold corresponds directly with the pars stress reactions we diagnose in junior pacers. We have incorporated this cutoff into our talent camp movement screen.',
+        helpfulCount: 8,
       },
       {
         id: 'c2',
         author: 'Coach Kuldeep Yadav',
         affiliation: 'Delhi & District Cricket Association (DDCA)',
         role: 'Pace Bowling Coach',
+        commentType: 'methodological_query',
+        competingInterests: 'None declared',
         date: '2026-11-04',
         content: 'The coaching cues on front-leg brace mechanics are immediately applicable on the nets. Excellent work making this open-access for state coaches.',
+        helpfulCount: 4,
+      },
+      {
+        id: 'c3',
+        author: 'Dr. Vikramaditya Rathore',
+        affiliation: 'National Institute of Sports (NIS), Patiala',
+        role: 'Lead Author / Senior Biomechanist',
+        orcid: '0000-0002-8941-4412',
+        commentType: 'peer_review',
+        competingInterests: 'Preprint lead author',
+        isAuthorResponse: true,
+        date: '2026-11-05',
+        content: 'Thank you Dr. Sundaram and Coach Yadav. We are currently calibrating dual IMU sensor thresholds to replicate these optical motion-capture cutoffs directly in academy net sessions.',
+        helpfulCount: 12,
       },
     ],
+    altmetrics: {
+      score: 48,
+      mentionsTwitter: 24,
+      policyCitations: 2,
+      mendeleySaves: 142,
+    },
     slug: 'kinematic-correlates-lumbar-spine-stress-fast-bowlers',
     title: 'Kinematic Correlates of Lumbar Spine Stress and Ball Release Velocity in Indian Junior Fast Bowlers: A Multi-Centre Motion Capture Study',
     subtitle: 'Investigation of front-foot contact ground reaction forces, shoulder counter-rotation, and lumbar bone stress injury epidemiology across 85 elite U-19 fast bowlers',
@@ -525,10 +564,32 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
         author: 'Dr. Sandeep K.',
         affiliation: 'Sports Authority of India (SAI), Kolkata',
         role: 'Exercise Physiologist',
+        orcid: '0000-0001-9022-4410',
+        commentType: 'replication_note',
+        competingInterests: 'None declared',
         date: '2026-10-22',
         content: 'The first comprehensive multi-city Yo-Yo percentile dataset. Essential reference for SAI state talent testing.',
+        helpfulCount: 15,
+      },
+      {
+        id: 'c2-2',
+        author: 'Dr. Anita Joshi',
+        affiliation: 'AIIMS Sports Medicine, New Delhi',
+        role: 'Clinical Exercise Specialist',
+        orcid: '0000-0003-8812-3001',
+        commentType: 'peer_review',
+        competingInterests: 'None declared',
+        date: '2026-10-25',
+        content: 'Methodological rigor across the 16 centres is commendable. The thermal calibration protocol ensured robust VO2 max estimation despite regional humidity variations.',
+        helpfulCount: 9,
       },
     ],
+    altmetrics: {
+      score: 74,
+      mentionsTwitter: 42,
+      policyCitations: 4,
+      mendeleySaves: 280,
+    },
     slug: 'normative-fitness-percentiles-grassroots-athletes-india',
     title: 'Normative Physical Fitness Percentiles (Yo-Yo IR1, 30m Sprint, Countermovement Jump) Across 4,800 Grassroots Athletes in 16 Indian Metropolitan and Rural Districts',
     subtitle: 'A foundational reference dataset for objective talent identification and physical conditioning benchmarks across U-14, U-16, U-19, and Senior Open age brackets',
@@ -1382,39 +1443,67 @@ export function getRelatedPapers(currentPaper: ResearchPaper, limit = 3): Resear
 }
 
 const COMMENTS_STORAGE_PREFIX = 'kc_comments_'
+const memoryCommentsStore: Record<string, PaperComment[]> = {}
 
 export function getPaperComments(paperSlug: string): PaperComment[] {
   const paper = getPaperBySlug(paperSlug)
   const defaultComments = paper?.comments || []
+  const inMemory = memoryCommentsStore[paperSlug] || []
+
   if (typeof window === 'undefined' || !window.localStorage) {
-    return defaultComments
+    const memoryIds = new Set(inMemory.map(c => c.id))
+    return [...defaultComments.filter(c => !memoryIds.has(c.id)), ...inMemory]
   }
+
   try {
     const stored = localStorage.getItem(`${COMMENTS_STORAGE_PREFIX}${paperSlug}`)
     if (stored) {
       const parsed = JSON.parse(stored)
       if (Array.isArray(parsed)) {
-        return [...defaultComments, ...parsed]
+        const storedIds = new Set(parsed.map(c => c.id))
+        return [...defaultComments.filter(c => !storedIds.has(c.id)), ...parsed]
       }
     }
   } catch {
     // fallback
   }
-  return defaultComments
+
+  const memoryIds = new Set(inMemory.map(c => c.id))
+  return [...defaultComments.filter(c => !memoryIds.has(c.id)), ...inMemory]
 }
 
 export function addPaperComment(
   paperSlug: string,
-  commentData: { author: string; affiliation: string; role?: string; content: string }
+  commentData: {
+    author: string
+    affiliation: string
+    role?: string
+    orcid?: string
+    commentType?: 'peer_review' | 'methodological_query' | 'replication_note' | 'general'
+    competingInterests?: string
+    content: string
+    helpfulCount?: number
+    isAuthorResponse?: boolean
+  }
 ): PaperComment {
   const newComment: PaperComment = {
     id: `comm-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     author: commentData.author.trim(),
     affiliation: commentData.affiliation.trim(),
     role: commentData.role?.trim() || 'Sports Science Researcher',
+    orcid: commentData.orcid?.trim() || undefined,
+    commentType: commentData.commentType || 'peer_review',
+    competingInterests: commentData.competingInterests?.trim() || 'None declared',
     date: new Date().toISOString().split('T')[0],
     content: commentData.content.trim(),
+    helpfulCount: commentData.helpfulCount || 0,
+    isAuthorResponse: Boolean(commentData.isAuthorResponse),
   }
+
+  if (!memoryCommentsStore[paperSlug]) {
+    memoryCommentsStore[paperSlug] = []
+  }
+  memoryCommentsStore[paperSlug].push(newComment)
 
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
@@ -1428,6 +1517,48 @@ export function addPaperComment(
   }
 
   return newComment
+}
+
+export function upvotePaperComment(paperSlug: string, commentId: string): number {
+  let count = 1
+
+  // Update in memoryCommentsStore
+  const inMemory = memoryCommentsStore[paperSlug]
+  if (inMemory) {
+    const idx = inMemory.findIndex(c => c.id === commentId)
+    if (idx !== -1) {
+      inMemory[idx].helpfulCount = (inMemory[idx].helpfulCount || 0) + 1
+      count = inMemory[idx].helpfulCount || 1
+    }
+  }
+
+  // Also check paper seed comments if inMemory didn't have it
+  const paper = getPaperBySlug(paperSlug)
+  if (paper && paper.comments) {
+    const seed = paper.comments.find(c => c.id === commentId)
+    if (seed) {
+      seed.helpfulCount = (seed.helpfulCount || 0) + 1
+      count = seed.helpfulCount
+    }
+  }
+
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const key = `${COMMENTS_STORAGE_PREFIX}${paperSlug}`
+      const stored = localStorage.getItem(key)
+      const list: PaperComment[] = stored ? JSON.parse(stored) : []
+      const idx = list.findIndex(c => c.id === commentId)
+      if (idx !== -1) {
+        list[idx].helpfulCount = (list[idx].helpfulCount || 0) + 1
+        localStorage.setItem(key, JSON.stringify(list))
+        return list[idx].helpfulCount || 1
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  return count
 }
 
 export function generateRisCitation(paper: ResearchPaper): string {
