@@ -4,10 +4,11 @@ import {
   RESEARCH_PAPERS,
   getPaperBySlug,
   getPapersByAuthor,
-  searchPapers,
+  filterAndSortPapers,
   type ResearchAuthor,
   type ResearchCategory,
   type ResearchPaper,
+  type ChronicleSortOption,
 } from '../../modules/khelchronicle/data/khelchronicleData'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
@@ -46,6 +47,10 @@ interface DbPaperRow {
   subtitle?: string | null
   sport?: string | null
   sport_slug?: string | null
+  methodology?: string | null
+  methodology_label?: string | null
+  has_interactive_chart?: boolean | null
+  has_normative_benchmarks?: boolean | null
   category?: string
   category_slug?: string
   author_name?: string
@@ -132,6 +137,10 @@ function mapDbRowToResearchPaper(
     categoryName: categoryName || cat?.name || categorySlug,
     sport: row.sport || 'Multi-Sport & Grassroots',
     sportSlug: row.sport_slug || 'multi-sport',
+    methodology: row.methodology || 'field-trial',
+    methodologyLabel: row.methodology_label || 'Empirical Field Trials',
+    hasInteractiveChart: Boolean(row.has_interactive_chart),
+    hasNormativeBenchmarks: Boolean(row.has_normative_benchmarks),
     authors: authors.length > 0 ? authors : [
       {
         id: `author-${row.paper_id.toLowerCase()}`,
@@ -216,17 +225,41 @@ export async function getChronicleCategories(): Promise<ChronicleCatalogueResult
   }
 }
 
+export interface ChronicleFilterOptions {
+  categoryFilter?: string
+  searchQuery?: string
+  sportFilter?: string
+  methodologyFilter?: string
+  hasChartOnly?: boolean
+  hasBenchmarksOnly?: boolean
+  sortBy?: ChronicleSortOption
+}
+
 /**
- * Fetch all published/screened preprints, with optional category filtering and search query.
+ * Fetch all published/screened preprints, with optional multi-dimensional filters, sorting, and search query.
  */
 export async function getChroniclePapers(
   categoryFilter?: string,
   searchQuery?: string,
-  sportFilter?: string
+  sportFilter?: string,
+  extraOptions?: Partial<ChronicleFilterOptions>
 ): Promise<ChronicleCatalogueResult<ResearchPaper[]>> {
+  const methodologyFilter = extraOptions?.methodologyFilter || 'all'
+  const hasChartOnly = Boolean(extraOptions?.hasChartOnly)
+  const hasBenchmarksOnly = Boolean(extraOptions?.hasBenchmarksOnly)
+  const sortBy = extraOptions?.sortBy || 'newest'
+
   const baseUrl = resolveSupabaseBaseUrl()
   if (!baseUrl) {
-    const localFiltered = searchPapers(searchQuery || '', categoryFilter, sportFilter)
+    const localFiltered = filterAndSortPapers({
+      query: searchQuery || '',
+      category: categoryFilter,
+      sport: sportFilter,
+      methodology: methodologyFilter,
+      hasChartOnly,
+      hasBenchmarksOnly,
+      sort: sortBy,
+    })
     return { status: 'unconfigured', data: localFiltered }
   }
 
@@ -249,7 +282,15 @@ export async function getChroniclePapers(
     })
 
     if (!res.ok) {
-      const fallback = searchPapers(searchQuery || '', categoryFilter, sportFilter)
+      const fallback = filterAndSortPapers({
+        query: searchQuery || '',
+        category: categoryFilter,
+        sport: sportFilter,
+        methodology: methodologyFilter,
+        hasChartOnly,
+        hasBenchmarksOnly,
+        sort: sortBy,
+      })
       return { status: 'unavailable', data: fallback, message: 'Database query failed; showing cached preprints.' }
     }
 
@@ -283,6 +324,18 @@ export async function getChroniclePapers(
         papers = papers.filter(p => p.sportSlug?.toLowerCase() === sportFilter.toLowerCase())
       }
 
+      if (methodologyFilter && methodologyFilter !== 'all') {
+        papers = papers.filter(p => p.methodology?.toLowerCase() === methodologyFilter.toLowerCase())
+      }
+
+      if (hasChartOnly) {
+        papers = papers.filter(p => Boolean(p.hasInteractiveChart))
+      }
+
+      if (hasBenchmarksOnly) {
+        papers = papers.filter(p => Boolean(p.hasNormativeBenchmarks))
+      }
+
       if (searchQuery && searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim()
         papers = papers.filter(p => {
@@ -291,13 +344,46 @@ export async function getChroniclePapers(
         })
       }
 
+      // Sort papers
+      papers.sort((a, b) => {
+        switch (sortBy) {
+          case 'oldest':
+            return a.datePublished.localeCompare(b.datePublished)
+          case 'citations':
+            return (b.metrics.citations || 0) - (a.metrics.citations || 0)
+          case 'downloads':
+            return (b.metrics.downloads || 0) - (a.metrics.downloads || 0)
+          case 'reading_time':
+            return (a.readingTimeMinutes || 0) - (b.readingTimeMinutes || 0)
+          case 'newest':
+          default:
+            return b.datePublished.localeCompare(a.datePublished)
+        }
+      })
+
       return { status: 'ready', data: papers, source: 'supabase' }
     }
 
-    const localFallback = searchPapers(searchQuery || '', categoryFilter, sportFilter)
+    const localFallback = filterAndSortPapers({
+      query: searchQuery || '',
+      category: categoryFilter,
+      sport: sportFilter,
+      methodology: methodologyFilter,
+      hasChartOnly,
+      hasBenchmarksOnly,
+      sort: sortBy,
+    })
     return { status: 'ready', data: localFallback, source: 'fallback' }
   } catch {
-    const fallback = searchPapers(searchQuery || '', categoryFilter, sportFilter)
+    const fallback = filterAndSortPapers({
+      query: searchQuery || '',
+      category: categoryFilter,
+      sport: sportFilter,
+      methodology: methodologyFilter,
+      hasChartOnly,
+      hasBenchmarksOnly,
+      sort: sortBy,
+    })
     return { status: 'unavailable', data: fallback, message: 'Network error connecting to research database.' }
   }
 }

@@ -49,6 +49,10 @@ export interface ResearchPaper {
   categoryName: string
   sport?: string // e.g. "Cricket", "Athletics", "Kabaddi", "Multi-Sport"
   sportSlug?: string // e.g. "cricket", "athletics", "kabaddi", "multi-sport"
+  methodology?: string // e.g. "field-trial", "motion-capture", "ml-analytics", "epidemiology", "policy-survey"
+  methodologyLabel?: string
+  hasInteractiveChart?: boolean
+  hasNormativeBenchmarks?: boolean
   authors: ResearchAuthor[]
   datePublished: string
   dateModified?: string
@@ -157,6 +161,25 @@ export const RESEARCH_SPORTS: ResearchSportFilter[] = [
   { id: 'sport-multisport', name: 'Multi-Sport & Grassroots', slug: 'multi-sport', icon: 'medal', emoji: '🎯' },
 ]
 
+export interface ResearchMethodology {
+  id: string
+  slug: string
+  name: string
+  shortName: string
+  icon?: string
+}
+
+export const RESEARCH_METHODOLOGIES: ResearchMethodology[] = [
+  { id: 'meth-all', slug: 'all', name: 'All Methodologies', shortName: 'All' },
+  { id: 'meth-field', slug: 'field-trial', name: 'Empirical Field Trials', shortName: 'Field Trials' },
+  { id: 'meth-mocap', slug: 'motion-capture', name: '3D Motion Capture & Kinematics', shortName: '3D Motion Capture' },
+  { id: 'meth-ml', slug: 'ml-analytics', name: 'Machine Learning & Predictive AI', shortName: 'AI & Analytics' },
+  { id: 'meth-epi', slug: 'epidemiology', name: 'Epidemiological Injury Registry', shortName: 'Epidemiology' },
+  { id: 'meth-policy', slug: 'policy-survey', name: 'Policy & Grassroots Surveys', shortName: 'Policy Surveys' },
+]
+
+export type ChronicleSortOption = 'newest' | 'oldest' | 'citations' | 'downloads' | 'reading_time'
+
 export const RESEARCH_AUTHORS: Record<string, ResearchAuthor> = {
   'dr-vikramaditya-rathore': {
     id: 'auth-1',
@@ -251,6 +274,10 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     categoryName: 'Sports Biomechanics',
     sport: 'Cricket',
     sportSlug: 'cricket',
+    methodology: 'motion-capture',
+    methodologyLabel: '3D Motion Capture & Kinematics',
+    hasInteractiveChart: true,
+    hasNormativeBenchmarks: false,
     authors: [
       RESEARCH_AUTHORS['dr-vikramaditya-rathore'],
       RESEARCH_AUTHORS['dr-alok-sen'],
@@ -354,6 +381,10 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     categoryName: 'Exercise Physiology',
     sport: 'Multi-Sport',
     sportSlug: 'multi-sport',
+    methodology: 'field-trial',
+    methodologyLabel: 'Empirical Field Trials',
+    hasInteractiveChart: true,
+    hasNormativeBenchmarks: true,
     authors: [
       RESEARCH_AUTHORS['dr-rajeshwari-nair'],
       RESEARCH_AUTHORS['dr-alok-sen'],
@@ -443,6 +474,10 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     categoryName: 'Sports Medicine',
     sport: 'Multi-Sport',
     sportSlug: 'multi-sport',
+    methodology: 'field-trial',
+    methodologyLabel: 'Empirical Field Trials',
+    hasInteractiveChart: true,
+    hasNormativeBenchmarks: true,
     authors: [
       RESEARCH_AUTHORS['dr-pradeep-chatterjee'],
       RESEARCH_AUTHORS['dr-vikramaditya-rathore'],
@@ -526,6 +561,10 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     categoryName: 'Sports Analytics',
     sport: 'Cricket',
     sportSlug: 'cricket',
+    methodology: 'ml-analytics',
+    methodologyLabel: 'Machine Learning & Predictive AI',
+    hasInteractiveChart: true,
+    hasNormativeBenchmarks: true,
     authors: [
       RESEARCH_AUTHORS['ananya-mukherjee'],
       RESEARCH_AUTHORS['dr-alok-sen'],
@@ -602,6 +641,10 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     categoryName: 'Sports Development and Policy',
     sport: 'Multi-Sport',
     sportSlug: 'multi-sport',
+    methodology: 'policy-survey',
+    methodologyLabel: 'Policy & Grassroots Surveys',
+    hasInteractiveChart: true,
+    hasNormativeBenchmarks: false,
     authors: [
       RESEARCH_AUTHORS['dr-harendra-singh'],
       RESEARCH_AUTHORS['dr-rajeshwari-nair'],
@@ -676,8 +719,12 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     subtitle: 'Prospective physiological evaluation of a 6-week Live High-Train Low (LHTL) protocol on total hemoglobin mass, erythropoietin kinetics, and sea-level 5,000m running economy in junior elite distance runners',
     category: 'exercise-physiology',
     categoryName: 'Exercise Physiology',
-    sport: 'Athletics',
+    sport: 'Athletics & Running',
     sportSlug: 'athletics',
+    methodology: 'field-trial',
+    methodologyLabel: 'Empirical Field Trials',
+    hasInteractiveChart: true,
+    hasNormativeBenchmarks: true,
     authors: [
       RESEARCH_AUTHORS['dr-tenzing-norbu'],
       RESEARCH_AUTHORS['dr-rajeshwari-nair'],
@@ -772,6 +819,10 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     categoryName: 'Sports Medicine',
     sport: 'Kabaddi',
     sportSlug: 'kabaddi',
+    methodology: 'epidemiology',
+    methodologyLabel: 'Epidemiological Injury Registry',
+    hasInteractiveChart: true,
+    hasNormativeBenchmarks: false,
     authors: [
       RESEARCH_AUTHORS['dr-sunita-malik'],
       RESEARCH_AUTHORS['dr-pradeep-chatterjee'],
@@ -880,19 +931,69 @@ export function getPapersBySport(sportSlug: string): ResearchPaper[] {
   return RESEARCH_PAPERS.filter(p => p.sportSlug?.toLowerCase() === normalized)
 }
 
-export function searchPapers(query: string, categoryFilter?: string, sportFilter?: string): ResearchPaper[] {
+export interface PaperFilterOptions {
+  query?: string
+  category?: string
+  sport?: string
+  methodology?: string
+  hasChartOnly?: boolean
+  hasBenchmarksOnly?: boolean
+  sort?: ChronicleSortOption
+}
+
+export function filterAndSortPapers(options: PaperFilterOptions): ResearchPaper[] {
+  const {
+    query = '',
+    category = 'all',
+    sport = 'all',
+    methodology = 'all',
+    hasChartOnly = false,
+    hasBenchmarksOnly = false,
+    sort = 'newest',
+  } = options
+
   const q = query.toLowerCase().trim()
-  return RESEARCH_PAPERS.filter(p => {
-    if (categoryFilter && categoryFilter !== 'all' && p.category.toLowerCase() !== categoryFilter.toLowerCase()) {
+
+  const filtered = RESEARCH_PAPERS.filter(p => {
+    if (category && category !== 'all' && p.category.toLowerCase() !== category.toLowerCase()) {
       return false
     }
-    if (sportFilter && sportFilter !== 'all' && p.sportSlug?.toLowerCase() !== sportFilter.toLowerCase()) {
+    if (sport && sport !== 'all' && p.sportSlug?.toLowerCase() !== sport.toLowerCase()) {
+      return false
+    }
+    if (methodology && methodology !== 'all' && p.methodology?.toLowerCase() !== methodology.toLowerCase()) {
+      return false
+    }
+    if (hasChartOnly && !p.hasInteractiveChart) {
+      return false
+    }
+    if (hasBenchmarksOnly && !p.hasNormativeBenchmarks) {
       return false
     }
     if (!q) return true
-    const searchSpace = `${p.title} ${p.subtitle || ''} ${p.paperId} ${p.sport || ''} ${p.categoryName} ${p.keywords.join(' ')} ${p.authors.map(a => a.name).join(' ')} ${p.abstract.background} ${p.abstract.results}`.toLowerCase()
+    const searchSpace = `${p.title} ${p.subtitle || ''} ${p.paperId} ${p.sport || ''} ${p.categoryName} ${p.methodologyLabel || ''} ${p.keywords.join(' ')} ${p.authors.map(a => a.name).join(' ')} ${p.abstract.background} ${p.abstract.results}`.toLowerCase()
     return searchSpace.includes(q)
   })
+
+  return filtered.sort((a, b) => {
+    switch (sort) {
+      case 'oldest':
+        return a.datePublished.localeCompare(b.datePublished)
+      case 'citations':
+        return (b.metrics.citations || 0) - (a.metrics.citations || 0)
+      case 'downloads':
+        return (b.metrics.downloads || 0) - (a.metrics.downloads || 0)
+      case 'reading_time':
+        return (a.readingTimeMinutes || 0) - (b.readingTimeMinutes || 0)
+      case 'newest':
+      default:
+        return b.datePublished.localeCompare(a.datePublished)
+    }
+  })
+}
+
+export function searchPapers(query: string, categoryFilter?: string, sportFilter?: string): ResearchPaper[] {
+  return filterAndSortPapers({ query, category: categoryFilter, sport: sportFilter })
 }
 
 export function getRelatedPapers(currentPaper: ResearchPaper, limit = 3): ResearchPaper[] {

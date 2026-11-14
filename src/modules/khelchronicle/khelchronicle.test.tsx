@@ -10,10 +10,12 @@ import {
   generateCitations,
   generateRisCitation,
   searchPapers,
+  filterAndSortPapers,
   getPaperBySlug,
   getPapersBySport,
   getRelatedPapers,
   RESEARCH_SPORTS,
+  RESEARCH_METHODOLOGIES,
 } from './data/khelchronicleData'
 import { AcademicDataChart } from './components/AcademicDataChart'
 
@@ -272,5 +274,77 @@ describe('KhelChronicle Open Sports Research Repository', () => {
     const related = getRelatedPapers(paper, 3)
     expect(related.length).toBeGreaterThanOrEqual(1)
     expect(related.every(r => r.paperId !== paper.paperId)).toBe(true)
+  })
+
+  it('filters and sorts research papers across study methodology, charts, benchmarks, and citations', () => {
+    // 1. Methodology catalogue
+    expect(RESEARCH_METHODOLOGIES.length).toBeGreaterThanOrEqual(5)
+
+    // 2. Filter by methodology
+    const fieldTrialPapers = filterAndSortPapers({ methodology: 'field-trial' })
+    expect(fieldTrialPapers.length).toBeGreaterThanOrEqual(2)
+    expect(fieldTrialPapers.some(p => p.paperId === 'KG-2026-002')).toBe(true)
+    expect(fieldTrialPapers.some(p => p.paperId === 'KG-2026-006')).toBe(true)
+
+    const epidemiologyPapers = filterAndSortPapers({ methodology: 'epidemiology' })
+    expect(epidemiologyPapers.length).toBe(1)
+    expect(epidemiologyPapers[0].paperId).toBe('KG-2026-007')
+
+    const mlPapers = filterAndSortPapers({ methodology: 'ml-analytics' })
+    expect(mlPapers.length).toBe(1)
+    expect(mlPapers[0].paperId).toBe('KG-2026-004')
+
+    // 3. Filter by interactive chart availability
+    const chartPapers = filterAndSortPapers({ hasChartOnly: true })
+    expect(chartPapers.length).toBeGreaterThanOrEqual(4)
+    expect(chartPapers.every(p => p.hasInteractiveChart)).toBe(true)
+
+    // 4. Filter by normative benchmarks
+    const benchmarkPapers = filterAndSortPapers({ hasBenchmarksOnly: true })
+    expect(benchmarkPapers.length).toBeGreaterThanOrEqual(3)
+    expect(benchmarkPapers.every(p => p.hasNormativeBenchmarks)).toBe(true)
+
+    // 5. Sort by citations (descending)
+    const sortedByCitations = filterAndSortPapers({ sort: 'citations' })
+    expect(sortedByCitations[0].metrics.citations).toBeGreaterThanOrEqual(sortedByCitations[1].metrics.citations)
+    expect(sortedByCitations[1].metrics.citations).toBeGreaterThanOrEqual(sortedByCitations[2].metrics.citations)
+
+    // 6. Sort by downloads (descending)
+    const sortedByDownloads = filterAndSortPapers({ sort: 'downloads' })
+    expect(sortedByDownloads[0].metrics.downloads).toBeGreaterThanOrEqual(sortedByDownloads[1].metrics.downloads)
+
+    // 7. Sort by shortest reading time (ascending)
+    const sortedByReadingTime = filterAndSortPapers({ sort: 'reading_time' })
+    expect(sortedByReadingTime[0].readingTimeMinutes).toBeLessThanOrEqual(sortedByReadingTime[sortedByReadingTime.length - 1].readingTimeMinutes)
+  })
+
+  it('renders methodology pills, empirical feature toggles, sort controls, and trending keywords on homepage', () => {
+    const homeHtml = renderToStaticMarkup(<KhelChronicleHome />)
+
+    // 1. Methodology filter bar
+    expect(homeHtml).toContain('Methodology:')
+    expect(homeHtml).toContain('Empirical Field Trials')
+    expect(homeHtml).toContain('3D Motion Capture &amp; Kinematics')
+    expect(homeHtml).toContain('Machine Learning &amp; Predictive AI')
+    expect(homeHtml).toContain('Epidemiological Injury Registry')
+    expect(homeHtml).toContain('Policy &amp; Grassroots Surveys')
+
+    // 2. Empirical feature toggles
+    expect(homeHtml).toContain('Interactive Charts')
+    expect(homeHtml).toContain('Normative Cutoffs')
+
+    // 3. Sort controls and toolbar
+    expect(homeHtml).toContain('Sort by:')
+    expect(homeHtml).toContain('Newest Published')
+    expect(homeHtml).toContain('Most Cited')
+    expect(homeHtml).toContain('Most Downloaded')
+    expect(homeHtml).toContain('Shortest Reading Time')
+
+    // 4. Trending research keywords cloud
+    expect(homeHtml).toContain('Trending Topics:')
+    expect(homeHtml).toContain('#YoYoIR1')
+    expect(homeHtml).toContain('#FastBowling')
+    expect(homeHtml).toContain('#HighAltitude')
+    expect(homeHtml).toContain('#KabaddiInjuries')
   })
 })
