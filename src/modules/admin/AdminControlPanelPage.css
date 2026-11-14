@@ -11,3 +11,47 @@
 .admin-control-header .admin-control-identity a{color:var(--text-primary,#0b192c);font-size:.85rem}
 @media(max-width:1050px){.admin-control-overview{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.admin-control-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-control-stat{padding:.8rem}.admin-control-stat strong{font-size:1.55rem}.admin-control-overview-meta{display:grid}}
+
+/* KhelGrid Control Centre workspace */
+.admin-control{max-width:1680px;padding:1.5rem clamp(1rem,2.5vw,2.5rem) 4rem;color:var(--text-primary,#0b192c)}
+.admin-control-header{align-items:center;padding-bottom:1.25rem;border-bottom:1px solid var(--border-subtle,#dbe3ec)}
+.admin-control-brand{display:flex;align-items:center;gap:1rem}
+.admin-control-brand-mark{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:#0b192c;color:#10b981;font-weight:900;letter-spacing:-.08em;box-shadow:0 7px 18px rgba(11,25,44,.18)}
+.admin-control-brand h1{font-size:clamp(1.5rem,2.5vw,2rem);letter-spacing:-.035em}
+.admin-control-brand p:last-child{margin:.2rem 0 0;color:var(--text-secondary,#64748b);font-size:.9rem}
+.admin-control-identity{gap:.65rem;flex-wrap:wrap}
+.admin-control-identity>strong{padding:.4rem .65rem;border-radius:999px;background:rgba(16,185,129,.12);color:#047857;font-size:.75rem;letter-spacing:.04em}
+.admin-control-live{display:inline-flex;align-items:center;gap:.4rem;color:#047857;font-size:.76rem;font-weight:750}
+.admin-control-live i,.admin-control-secure-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.13)}
+.admin-control-shell{display:grid;grid-template-columns:220px minmax(0,1fr);gap:1.5rem;align-items:start}
+.admin-control-sidebar{position:sticky;top:1rem;min-height:calc(100vh - 130px);padding:1rem .75rem;border:1px solid var(--border-subtle,#dbe3ec);border-radius:16px;background:var(--surface,#fff);display:flex;flex-direction:column;gap:.35rem}
+.admin-control-nav-label{padding:.8rem .65rem .35rem;color:var(--text-secondary,#64748b);font-size:.65rem;font-weight:850;letter-spacing:.13em}
+.admin-control-sidebar>a{display:flex;align-items:center;gap:.7rem;padding:.7rem .75rem;border-radius:9px;text-decoration:none;color:var(--text-secondary,#475569);font-size:.84rem;font-weight:650}
+.admin-control-sidebar>a:hover,.admin-control-sidebar>a.active{background:rgba(16,185,129,.1);color:#047857}
+.admin-control-sidebar-foot{margin-top:auto;padding:.85rem .6rem .25rem;border-top:1px solid var(--border-subtle,#e2e8f0);display:flex;align-items:center;gap:.5rem;color:var(--text-secondary,#64748b);font-size:.68rem;line-height:1.45}
+.admin-control-main{min-width:0;display:grid;gap:1rem}
+.admin-control-overview-section{display:grid;gap:.75rem}
+.admin-control-section-heading{display:flex;align-items:end;justify-content:space-between;gap:1rem}
+.admin-control-section-heading .eyebrow{margin:0 0 .2rem;color:#059669;font-size:.66rem;font-weight:850;letter-spacing:.14em}
+.admin-control-section-heading h2{margin:0;font-size:1.2rem;letter-spacing:-.025em}
+.admin-control-section-heading>span{color:var(--text-secondary,#64748b);font-size:.75rem}
+.admin-control-overview{margin:0;gap:.65rem}
+.admin-control-stat{border-radius:12px;box-shadow:0 3px 12px rgba(11,25,44,.035)}
+.admin-control-layout{grid-template-columns:minmax(250px,310px) minmax(0,1fr);gap:1rem}
+.admin-control-queue{border-radius:14px;box-shadow:0 3px 14px rgba(11,25,44,.035)}
+.admin-control-queue h2{font-size:1rem;letter-spacing:-.02em}
+.admin-control-queue>button{border:1px solid transparent;border-radius:10px;padding:.75rem}
+.admin-control-queue>button:hover{border-color:#a7f3d0;background:rgba(16,185,129,.055)}
+.admin-control-card,.admin-control-empty{border-radius:14px;box-shadow:0 3px 14px rgba(11,25,44,.035);padding:1.15rem}
+.admin-control-card .eyebrow{margin:0 0 .35rem;color:#059669;font-size:.65rem;font-weight:850;letter-spacing:.13em}
+.admin-control-card h3{font-size:1.05rem;letter-spacing:-.02em}
+.admin-control-card>p{color:var(--text-secondary,#64748b);line-height:1.55}
+.admin-control button{transition:transform .15s ease,background .15s ease,border-color .15s ease}
+.admin-control button:not(:disabled):hover{transform:translateY(-1px);background:#12304e}
+.admin-control button:focus-visible,.admin-control a:focus-visible,.admin-control input:focus-visible,.admin-control select:focus-visible,.admin-control textarea:focus-visible{outline:3px solid rgba(16,185,129,.35);outline-offset:2px}
+.admin-control input,.admin-control select,.admin-control textarea{border-color:#cbd5e1}
+.admin-control input:focus,.admin-control select:focus,.admin-control textarea:focus{border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.1);outline:none}
+.admin-control-notice{color:#065f46}
+@media(max-width:1100px){.admin-control-shell{grid-template-columns:1fr}.admin-control-sidebar{position:static;min-height:0;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center}.admin-control-nav-label{padding:.4rem}.admin-control-sidebar-foot{margin:0 0 0 auto;border:0;padding:.4rem}}
+@media(max-width:800px){.admin-control-layout{grid-template-columns:1fr}.admin-control-queue{max-height:340px}}
+@media(max-width:600px){.admin-control{padding:1rem .75rem 3rem}.admin-control-header{align-items:flex-start}.admin-control-brand{align-items:flex-start}.admin-control-brand-mark{width:40px;height:40px;flex:0 0 40px}.admin-control-identity{justify-content:flex-start}.admin-control-section-heading{align-items:flex-start;flex-direction:column}.admin-control-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-control-sidebar{gap:.15rem}.admin-control-sidebar>a{padding:.55rem;font-size:.75rem}.admin-control-sidebar-foot{width:100%;margin:0;padding:.55rem .4rem 0;border-top:1px solid var(--border-subtle,#e2e8f0)}}

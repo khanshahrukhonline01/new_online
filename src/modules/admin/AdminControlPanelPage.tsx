@@ -342,21 +342,35 @@ export function AdminControlPanelPage() {
   return (
     <section className="content-page admin-control">
       <header className="admin-control-header">
-        <div><p className="eyebrow">KHELGRID · RESTRICTED OPERATIONS</p><h1>Moderation Control Panel</h1><p>Review submissions, record evidence, verify claims and manage authorized moderators.</p></div>
-        <div className="admin-control-identity"><strong>{profile.role.replace('_', ' ')}</strong><a href="/admin">Listing review desk</a><button type="button" onClick={() => void refresh()} disabled={loading || busy}>Refresh data</button><button type="button" onClick={async () => { await signOut(); setProfile(null); setQueue(null) }}>Sign out</button></div>
+        <div className="admin-control-brand"><span className="admin-control-brand-mark">KG</span><div><p className="eyebrow">KHELGRID / OPERATIONS</p><h1>Control Centre</h1><p>Private workspace for verification, moderation and platform governance.</p></div></div>
+        <div className="admin-control-identity"><span className="admin-control-live"><i /> Development workspace</span><strong>{profile.role.replace('_', ' ')}</strong><button type="button" onClick={() => void refresh()} disabled={loading || busy}>↻ Refresh</button><button type="button" onClick={async () => { await signOut(); setProfile(null); setQueue(null) }}>Sign out</button></div>
       </header>
+      <div className="admin-control-shell">
+        <nav className="admin-control-sidebar" aria-label="Control centre sections">
+          <span className="admin-control-nav-label">WORKSPACE</span>
+          <a className="active" href="#overview">▦ <span>Overview</span></a>
+          <a href="#queue">☷ <span>Listing moderation</span></a>
+          <a href="#evidence">◈ <span>Evidence review</span></a>
+          <a href="#publication">↗ <span>Publication workflow</span></a>
+          {profile.role === 'super_admin' && <><span className="admin-control-nav-label">GOVERNANCE</span><a href="#access">♙ <span>Access management</span></a><a href="#access-audit">◷ <span>Access history</span></a></>}
+          <div className="admin-control-sidebar-foot"><span className="admin-control-secure-dot" /> Protected by database authorization</div>
+        </nav>
+        <div className="admin-control-main">
       {error && <p role="alert" className="admin-control-error">{error}</p>}
       {notice && <p role="status" className="admin-control-notice">{notice}</p>}
-      <section className="admin-control-overview" aria-label="Live moderation overview">
+      <section id="overview" className="admin-control-overview-section" aria-label="Live moderation overview">
+        <div className="admin-control-section-heading"><div><p className="eyebrow">AT A GLANCE</p><h2>Moderation overview</h2></div><span>Queue snapshot · {queueItems.length} loaded records</span></div>
+        <div className="admin-control-overview">
         <div className="admin-control-stat"><span>Loaded submissions</span><strong>{queueCounts.total}</strong><small>Latest queue records · maximum 100 loaded</small></div>
         <div className="admin-control-stat"><span>Awaiting review</span><strong>{queueCounts.awaitingReview}</strong><small>Pending review or resubmitted</small></div>
         <div className="admin-control-stat"><span>Under review</span><strong>{queueCounts.underReview}</strong><small>Currently claimed by moderators</small></div>
         <div className="admin-control-stat"><span>Approved</span><strong>{queueCounts.approved}</strong><small>Editorial approval recorded</small></div>
         <div className="admin-control-stat"><span>Published</span><strong>{queueCounts.published}</strong><small>Published records in loaded queue</small></div>
+        </div>
       </section>
       <div className="admin-control-overview-meta"><span>Access: active database-authorized {profile.role.replace('_', ' ')}</span><span>Data refreshed: {lastRefreshedAt ? lastRefreshedAt.toLocaleString('en-IN') : 'Not yet refreshed'}</span></div>
       <div className="admin-control-layout">
-        <aside className="admin-control-queue">
+        <aside id="queue" className="admin-control-queue">
           <h2>Verification &amp; listing queue</h2>
           <p>{visibleQueue.length} of {queue?.pendingSubmissions.length ?? 0} submissions shown</p>
           <label className="admin-control-queue-search">Search submissions<input type="search" value={queueSearch} onChange={event => setQueueSearch(event.target.value)} placeholder="Title, reference, city or category" /></label>
@@ -374,8 +388,8 @@ export function AdminControlPanelPage() {
               <p>{selected.details || 'No additional details supplied.'}</p>
               {selected.source_url && <a href={selected.source_url} target="_blank" rel="noreferrer">Open submitted source ↗</a>}
             </div>
-            <div className="admin-control-card">
-              <h3>Editorial decision &amp; publication</h3>
+            <div id="publication" className="admin-control-card">
+              <p className="eyebrow">WORKFLOW / 01</p><h3>Editorial decision &amp; publication</h3>
               <p>Editorial approval, evidence verification and public publication are three separate recorded decisions.</p>
               {(selected.status === 'pending_review' || selected.status === 'resubmitted' || selected.status === 'unpublished') && <button disabled={busy} onClick={() => void handleStartReview()}>Start review &amp; assign to me</button>}
               {(selected.status === 'under_review') && <div className="admin-control-actions"><button disabled={busy} onClick={() => void handleApproval('approve')}>Approve listing</button><button disabled={busy} onClick={() => void handleApproval('reject')}>Reject listing</button></div>}
@@ -388,7 +402,7 @@ export function AdminControlPanelPage() {
               </form>}
             </div>
             <div className="admin-control-card">
-              <h3>Category verification checklist</h3>
+              <p className="eyebrow">QUALITY CONTROL</p><h3>Category verification checklist</h3>
               <p>Use this as a reviewer aid. Record source URLs and outcomes in the evidence register; a checklist label is not itself proof of verification.</p>
               <ul className="admin-control-checklist">
                 {getEvidenceChecklist(selected.listing_type, evidence).map(item => <li key={item.type}>
@@ -398,8 +412,8 @@ export function AdminControlPanelPage() {
               </ul>
               <p className="admin-control-caution">Do not treat a social profile, WhatsApp message or map pin as conclusive proof by itself. Independently confirm high-impact claims and never infer missing dates, fees, addresses or organizer details.</p>
             </div>
-            <div className="admin-control-card">
-              <h3>Evidence register</h3>
+            <div id="evidence" className="admin-control-card">
+              <p className="eyebrow">WORKFLOW / 02</p><h3>Evidence register</h3>
               <p>Evidence URLs and reviewer notes are private. A verified decision requires supporting evidence and no pending or contradictory evidence.</p>
               {['pending_review', 'under_review', 'approved', 'unpublished'].includes(selected.status) ? <form onSubmit={handleAddEvidence} className="admin-control-form">
                 <label>Evidence type<select value={evidenceType} onChange={e => setEvidenceType(e.target.value)}>{evidenceTypes.map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
@@ -426,7 +440,7 @@ export function AdminControlPanelPage() {
               </>}
             </div>
             <div className="admin-control-card">
-              <h3>Category-specific publication details</h3>
+              <p className="eyebrow">CATALOGUE DATA</p><h3>Category-specific publication details</h3>
               <p>Only genuine, reviewed details should be entered. Missing values remain missing; the system must not invent them.</p>
               {['under_review', 'approved', 'unpublished'].includes(selected.status) ? <form onSubmit={handleSaveDetails} className="admin-control-form">
                 {(fieldSets[selected.listing_type] || []).map(([key,label]) => <label key={key}>{label}<input value={structured[key] || ''} onChange={e => setStructured(prev => ({ ...prev, [key]: e.target.value }))} required={!['ends_at','state'].includes(key)} /></label>)}
@@ -434,8 +448,8 @@ export function AdminControlPanelPage() {
               </form> : <p>Start a review before editing category-specific publication details.</p>}
             </div>
           </>}
-          {profile.role === 'super_admin' && <div className="admin-control-card">
-            <h3>Super-admin access management</h3>
+          {profile.role === 'super_admin' && <div id="access" className="admin-control-card">
+            <p className="eyebrow">GOVERNANCE / SUPER-ADMIN</p><h3>Access management</h3>
             <p>Grant or revoke moderator access using an existing Auth user UUID. The database prevents removal of the last active super-admin.</p>
             <form onSubmit={handleAccessUpdate} className="admin-control-form">
               <label>Auth user UUID<input value={targetUserId} onChange={e => setTargetUserId(e.target.value)} required pattern="[0-9a-fA-F-]{36}" /></label>
@@ -446,12 +460,15 @@ export function AdminControlPanelPage() {
             </form>
             <h4>Authorized accounts</h4>
             {accounts.map(account => <p key={account.user_id}><code>{account.user_id}</code> · {account.role} · {account.is_active ? 'Active' : 'Inactive'}</p>)}
-            <h4>Moderator access audit history</h4>
+            <div id="access-audit"><h4>Moderator access history</h4>
             {accessAudits.length === 0 ? <p>No access changes recorded yet.</p> : accessAudits.map(audit => <p key={audit.id}>
               {audit.action} · <code>{audit.target_user_id}</code> · {audit.old_role || 'none'} → {audit.new_role} · {new Date(audit.created_at).toLocaleString('en-IN')}
               {audit.notes ? <small> · {audit.notes}</small> : null}
             </p>)}
+            </div>
           </div>}
+        </div>
+        </div>
         </div>
       </div>
     </section>
