@@ -797,7 +797,18 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
                 </span>
               </div>
 
-              {/* Sort Control */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <a
+                  href="/khelchronicle/feed.xml"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="kc-rss-pill-link"
+                  title="Subscribe to KhelChronicle RSS / Atom XML Feed"
+                  aria-label="Subscribe to RSS / Atom Feed"
+                >
+                  <SiteIcon name="rss" size={13} />
+                  <span>RSS Feed</span>
+                </a>
               <div className="kc-sort-wrap">
                 <label htmlFor="kc-sort-select">Sort by:</label>
                 <select
@@ -813,6 +824,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
                   <option value="reading_time">Shortest Reading Time</option>
                   <option value="oldest">Date: Oldest First</option>
                 </select>
+              </div>
               </div>
             </div>
 
@@ -1341,6 +1353,16 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
               </div>
               <p style={{ margin: 0, fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
                 Full compatibility with major journals (BJSM, JSS, MSSE). When published, an automated VoR badge links directly to the peer-reviewed journal DOI.
+              </p>
+            </div>
+
+            <div className="kc-policy-card" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span style={{ fontSize: '18px' }}>📡</span>
+                <h4 style={{ margin: 0, fontSize: '15px', color: '#0f172a' }}>Machine-Readable RSS &amp; PRISM Feeds</h4>
+              </div>
+              <p style={{ margin: 0, fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>
+                Automated syndication via RSS 2.0 with Dublin Core and PRISM metadata standards (<a href="/khelchronicle/feed.xml" target="_blank" rel="noopener noreferrer" style={{ color: '#07964f', fontWeight: 600 }}>/khelchronicle/feed.xml</a>) for research libraries, Zotero feeds, and automated indexing harvesters.
               </p>
             </div>
           </div>

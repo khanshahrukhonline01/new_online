@@ -53,6 +53,10 @@ describe('KhelChronicle Open Sports Research Repository', () => {
     expect(html).toContain('KG-2026-001')
     expect(html).toContain('Kinematic Correlates of Lumbar Spine Stress')
     expect(html).toContain('Dr. Vikramaditya Rathore')
+
+    // Machine-readable RSS feed
+    expect(html).toContain('href="/khelchronicle/feed.xml"')
+    expect(html).toContain('RSS Feed')
   })
 
   it('renders test research article KG-2026-001 with full academic layout, tables, and ScholarlyArticle schema', () => {

@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "vite",
     "build:sitemap": "node --experimental-strip-types scripts/generate-sitemap.mjs",
-    "build": "node --experimental-strip-types scripts/generate-sitemap.mjs && tsc -b && vite build",
+    "build:feed": "node --experimental-strip-types scripts/generate-feed.mjs",
+    "build": "node --experimental-strip-types scripts/generate-sitemap.mjs && node --experimental-strip-types scripts/generate-feed.mjs && tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty",
     "lint": "eslint .",

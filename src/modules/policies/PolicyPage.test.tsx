@@ -39,6 +39,7 @@ describe('PolicyPage', () => {
     expect(html).toContain('FAIR Primary Data &amp; Code Sharing Mandate')
     expect(html).toContain('Community Peer Review &amp; Scholarly Conduct Code')
     expect(html).toContain('Version of Record (VoR) Linking')
+    expect(html).toContain('Machine-Readable Syndication &amp; PRISM Feeds')
     expect(html).toContain('href="/open-science-policy"')
   })
 

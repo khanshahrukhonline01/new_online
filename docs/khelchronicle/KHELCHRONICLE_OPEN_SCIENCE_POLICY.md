@@ -99,3 +99,20 @@ Transparency in funding and commercial relationships is essential for research c
    * Comments must focus strictly on scientific methodology, statistical validity, data transparency, and practical field implications.
    * Ad hominem attacks, derogatory commentary, discriminatory remarks, and commercial promotional spam are strictly prohibited and will be moderated.
    * Reviewers must disclose any competing interests related to the paper or its authors.
+
+
+---
+
+## 9. Machine-Readable Syndication, RSS 2.0 & PRISM Feeds
+
+To empower research libraries, universities, sports science institutes, reference managers (Zotero, Mendeley), and automated bibliometric indexing harvesters, KhelChronicle exposes a live, machine-readable syndication feed:
+
+1. **Feed Specification**: Conforms to the RSS 2.0 standard augmented with Dublin Core 1.1 (`xmlns:dc="http://purl.org/dc/elements/1.1/"`) and PRISM 2.0 (`xmlns:prism="http://prismstandard.org/namespaces/basic/2.0/"`) vocabularies.
+2. **Canonical Endpoint**: [`https://khelgrid.com/khelchronicle/feed.xml`](https://khelgrid.com/khelchronicle/feed.xml)
+3. **Syndicated Metadata Attributes**:
+   - `dc:creator`: Author name, ORCID identifier, and institutional affiliation.
+   - `dc:date` & `prism:publicationDate`: Timestamped publication and revision dates.
+   - `dc:identifier` & `prism:doi`: Permanent Crossref DOI resolution links.
+   - `prism:section`: Academic kinesiology and sports discipline classification.
+   - `content:encoded`: Structured background, methodology, empirical results, and conclusion abstracts.
+   - `enclosure`: Direct link to open access PDF galleys.

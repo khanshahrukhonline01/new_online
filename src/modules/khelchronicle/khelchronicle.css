@@ -4195,3 +4195,26 @@
   color: #15803d;
   cursor: default;
 }
+
+
+/* RSS 2.0 & PRISM Feed Button */
+.kc-rss-pill-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #c2410c;
+  background: #fff7ed;
+  border: 1px solid #ffedd5;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.kc-rss-pill-link:hover {
+  background: #ffedd5;
+  border-color: #fdba74;
+  color: #9a3412;
+}
