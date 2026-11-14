@@ -27,7 +27,7 @@ describe('KhelChronicle Open Sports Research Repository', () => {
     expect(html).toContain('KhelChronicle · Open Sports Research Archive')
     expect(html).toContain('Open Research in Sports and Human Performance.')
     expect(html).toContain('Diamond Open Access')
-    expect(html).toContain('CC BY-NC-ND 4.0')
+    expect(html).toContain('CC BY 4.0')
 
     // Schema.org Structured Data
     expect(html).toContain('application/ld+json')
@@ -346,5 +346,68 @@ describe('KhelChronicle Open Sports Research Repository', () => {
     expect(homeHtml).toContain('#FastBowling')
     expect(homeHtml).toContain('#HighAltitude')
     expect(homeHtml).toContain('#KabaddiInjuries')
+  })
+
+  it('renders SportRxiv server navigation tabs and information panels (About, Moderation Policy, Author Guidelines, FAQ)', () => {
+    const homeHtml = renderToStaticMarkup(<KhelChronicleHome />)
+
+    // SportRxiv Server Navigation Tabs
+    expect(homeHtml).toContain('Preprints Archive')
+    expect(homeHtml).toContain('About KhelChronicle')
+    expect(homeHtml).toContain('Editorial &amp; Moderation Policy')
+    expect(homeHtml).toContain('Author Guidelines')
+    expect(homeHtml).toContain('FAQ')
+  })
+
+  it('renders Crossref persistent DOI, STORK open science badges, bilingual coach takeaways, and supplementary files on preprint page', () => {
+    const paperHtml = renderToStaticMarkup(
+      <KhelChroniclePaperPage slug="kinematic-correlates-lumbar-spine-stress-fast-bowlers" />
+    )
+
+    // Persistent DOI banner
+    expect(paperHtml).toContain('https://doi.org/10.51224/khelchronicle.2026.001')
+    expect(paperHtml).toContain('Copy DOI')
+    expect(paperHtml).toContain('Copy Link')
+
+    // STORK Open Science Badges
+    expect(paperHtml).toContain('Open Science Badges:')
+    expect(paperHtml).toContain('Open Data')
+    expect(paperHtml).toContain('Open Materials / Code')
+    expect(paperHtml).toContain('Preregistered Study')
+    expect(paperHtml).toContain('CC BY 4.0')
+
+    // Bilingual Grassroots Coaching Takeaways
+    expect(paperHtml).toContain('Grassroots Coaching Takeaways &amp; Field Implications')
+    expect(paperHtml).toContain('English')
+    expect(paperHtml).toContain('हिंदी (Hindi)')
+    expect(paperHtml).toContain('Maintain shoulder counter-rotation under 25°')
+
+    // Supplementary Datasets Table
+    expect(paperHtml).toContain('Supplementary Datasets &amp; Protocols')
+    expect(paperHtml).toContain('KG-2026-001-raw-telemetry.csv')
+    expect(paperHtml).toContain('KG-2026-001-mocap-protocol.pdf')
+    expect(paperHtml).toContain('Download')
+
+    // Community Discussion & Peer Reviews
+    expect(paperHtml).toContain('Community Discussion &amp; Peer Reviews')
+    expect(paperHtml).toContain('Dr. Ramesh Sundaram')
+    expect(paperHtml).toContain('Leave a Scientific Comment / Feedback')
+    expect(paperHtml).toContain('Post Peer Feedback')
+  })
+
+  it('supports expanded academic citations including DOI, Harvard, and SportRxiv attribution', () => {
+    const paper = getPaperBySlug('kinematic-correlates-lumbar-spine-stress-fast-bowlers')
+    expect(paper).toBeDefined()
+    if (!paper) return
+
+    const citations = generateCitations(paper)
+    expect(citations.apa).toContain('https://doi.org/10.51224/khelchronicle.2026.001')
+    expect(citations.bibtex).toContain('doi       = {10.51224/khelchronicle.2026.001}')
+    expect(citations.bibtex).toContain('publisher = {KhelGrid Sports Research / SportRxiv India}')
+    expect(citations.harvard).toContain('doi: 10.51224/khelchronicle.2026.001')
+
+    const ris = generateRisCitation(paper)
+    expect(ris).toContain('DO  - 10.51224/khelchronicle.2026.001')
+    expect(ris).toContain('JO  - KhelChronicle Open Sports Research Archive (SportRxiv India)')
   })
 })

@@ -10,6 +10,7 @@ import {
   type ResearchPaper,
   type ChronicleSortOption,
 } from '../../modules/khelchronicle/data/khelchronicleData'
+import type { SiteIconName } from '../../shared/components/SiteIcon'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -214,7 +215,7 @@ export async function getChronicleCategories(): Promise<ChronicleCatalogueResult
         slug: d.slug,
         name: d.name,
         description: d.description,
-        icon: d.icon || 'award',
+        icon: (d.icon as SiteIconName) || 'award',
         color: d.color || '#059669',
       }))
       return { status: 'ready', data: categories, source: 'supabase' }
