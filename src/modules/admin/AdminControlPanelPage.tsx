@@ -138,6 +138,51 @@ export function AdminControlPanelPage() {
   }, [])
 
   useEffect(() => { void refresh() }, [refresh])
+  useEffect(() => {
+    const client = getSupabaseClient()
+    if (!client) return
+
+    let active = true
+    const clearPrivateState = () => {
+      setSignedIn(false)
+      setProfile(null)
+      setQueue(null)
+      setSelected(null)
+      setEvidence([])
+      setAccounts([])
+      setAccessAudits([])
+      setVerificationStates({})
+      setLastRefreshedAt(null)
+    }
+
+    const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        clearPrivateState()
+        return
+      }
+
+      // Re-check authorization after sign-in and token/user changes. Defer the
+      // async Supabase calls until after the auth callback has returned.
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        window.setTimeout(() => {
+          if (active) void refresh()
+        }, 0)
+      }
+    })
+
+    const revalidateVisibleSession = () => {
+      if (document.visibilityState === 'visible') void refresh()
+    }
+    window.addEventListener('focus', revalidateVisibleSession)
+    document.addEventListener('visibilitychange', revalidateVisibleSession)
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+      window.removeEventListener('focus', revalidateVisibleSession)
+      document.removeEventListener('visibilitychange', revalidateVisibleSession)
+    }
+  }, [refresh])
   const queueItems = queue?.pendingSubmissions ?? []
   const queueCounts = {
     total: queueItems.length,
