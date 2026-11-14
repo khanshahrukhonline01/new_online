@@ -197,6 +197,19 @@ export function AdminControlPanelPage() {
     return [item.title, item.reference_number, item.city, item.listing_type, item.status].some(value => value?.toLowerCase().includes(query))
   })
 
+  const activityTimeline = selected ? [
+    { id: 'submitted', label: 'Submission received', detail: 'Original listing submission entered the private review queue.', at: selected.created_at },
+    ...(selected.review_started_at ? [{ id: 'review-started', label: 'Review started', detail: 'A moderator claimed this submission for review.', at: selected.review_started_at }] : []),
+    ...evidence.flatMap(item => [
+      { id: `evidence-added-${item.id}`, label: 'Evidence added', detail: `${item.evidence_type.replace(/_/g, ' ')} · ${item.description}`, at: item.created_at },
+      ...(item.reviewed_at ? [{ id: `evidence-reviewed-${item.id}`, label: 'Evidence reviewed', detail: `Outcome: ${item.outcome}${item.reviewer_notes ? ` · ${item.reviewer_notes}` : ''}`, at: item.reviewed_at }] : []),
+    ]),
+    ...(selected.reviewed_at ? [{ id: 'editorial-decision', label: 'Editorial decision recorded', detail: selected.status === 'rejected' ? `Rejected${selected.rejection_reason ? `: ${selected.rejection_reason}` : ''}` : 'Editorial review decision recorded.', at: selected.reviewed_at }] : []),
+    ...(selected.published_at ? [{ id: 'published', label: 'Published to catalogue', detail: selected.published_table ? `Catalogue: ${selected.published_table}` : 'Listing published.', at: selected.published_at }] : []),
+    ...(selected.unpublished_at ? [{ id: 'unpublished', label: 'Unpublished', detail: selected.unpublish_reason || 'Listing removed from public catalogue.', at: selected.unpublished_at }] : []),
+  ].filter(item => Boolean(item.at)).sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime()) : []
+
+
 
   const selectSubmission = async (item: ModeratorQueueItem) => {
     setSelected(item)
@@ -447,6 +460,25 @@ export function AdminControlPanelPage() {
               <h2>{selected.title}</h2><p>{selected.city || 'City not supplied'} · Editorial status: {selected.status.replace(/_/g, ' ')} · Evidence status: {verificationStates[selected.id] || 'unverified'}</p>
               <p>{selected.details || 'No additional details supplied.'}</p>
               {selected.source_url && <a href={selected.source_url} target="_blank" rel="noreferrer">Open submitted source ↗</a>}
+            </div>
+            <div className="admin-control-detail-grid">
+              <section className="admin-control-card admin-control-timeline" aria-labelledby="admin-activity-title">
+                <p className="eyebrow">REVIEW HISTORY</p><h3 id="admin-activity-title">Submission activity</h3>
+                <p>Recorded events from the submission and evidence workflow, ordered by time.</p>
+                {activityTimeline.length ? <ol>
+                  {activityTimeline.map(event => <li key={event.id}>
+                    <span className="admin-control-timeline-marker" aria-hidden="true" />
+                    <div><strong>{event.label}</strong><p>{event.detail}</p><time dateTime={event.at}>{new Date(event.at).toLocaleString('en-IN')}</time></div>
+                  </li>)}
+                </ol> : <p>No dated activity is available for this submission yet.</p>}
+              </section>
+              <section className="admin-control-card admin-control-next-step" aria-label="Current workflow status">
+                <p className="eyebrow">CURRENT STATE</p><h3>Review readiness</h3>
+                <div className="admin-control-state-row"><span>Editorial</span><strong>{selected.status.replace(/_/g, ' ')}</strong></div>
+                <div className="admin-control-state-row"><span>Evidence</span><strong>{verificationStates[selected.id] || 'unverified'}</strong></div>
+                <div className="admin-control-state-row"><span>Record version</span><strong>v{selected.version}</strong></div>
+                <p>Every decision is submitted to a protected database operation. The interface does not grant permissions by itself.</p>
+              </section>
             </div>
             <div id="publication" className="admin-control-card">
               <p className="eyebrow">WORKFLOW / 01</p><h3>Editorial decision &amp; publication</h3>
