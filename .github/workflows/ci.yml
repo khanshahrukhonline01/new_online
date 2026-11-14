@@ -204,6 +204,29 @@ jobs:
       - run: npm install
       - name: Install pinned Playwright test runner for isolated admin acceptance suite
         run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+      - name: Require all private admin acceptance secrets
+        shell: bash
+        env:
+          ADMIN_BASE_URL: ${{ secrets.ADMIN_BASE_URL }}
+          KG_DEV_SUPABASE_ANON_KEY: ${{ secrets.KG_DEV_SUPABASE_ANON_KEY }}
+          KG_ADMIN_TEST_USER_EMAIL: ${{ secrets.KG_ADMIN_TEST_USER_EMAIL }}
+          KG_ADMIN_TEST_USER_PASSWORD: ${{ secrets.KG_ADMIN_TEST_USER_PASSWORD }}
+          KG_ADMIN_TEST_MODERATOR_EMAIL: ${{ secrets.KG_ADMIN_TEST_MODERATOR_EMAIL }}
+          KG_ADMIN_TEST_MODERATOR_PASSWORD: ${{ secrets.KG_ADMIN_TEST_MODERATOR_PASSWORD }}
+          KG_ADMIN_TEST_SUPER_ADMIN_EMAIL: ${{ secrets.KG_ADMIN_TEST_SUPER_ADMIN_EMAIL }}
+          KG_ADMIN_TEST_SUPER_ADMIN_PASSWORD: ${{ secrets.KG_ADMIN_TEST_SUPER_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in ADMIN_BASE_URL KG_DEV_SUPABASE_ANON_KEY KG_ADMIN_TEST_USER_EMAIL KG_ADMIN_TEST_USER_PASSWORD KG_ADMIN_TEST_MODERATOR_EMAIL KG_ADMIN_TEST_MODERATOR_PASSWORD KG_ADMIN_TEST_SUPER_ADMIN_EMAIL KG_ADMIN_TEST_SUPER_ADMIN_PASSWORD; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Required repository secret is missing: $name"
+              exit 1
+            fi
+          done
+          if [[ "$ADMIN_BASE_URL" != https://khelgrid-admin-git-development-admin-app-separation-khelgrid2.vercel.app ]]; then
+            echo "::error::ADMIN_BASE_URL must target the approved development branch preview deployment."
+            exit 1
+          fi
       - name: Install Chromium for admin browser acceptance tests
         run: npx playwright install --with-deps chromium
       - name: Run private admin browser acceptance tests
