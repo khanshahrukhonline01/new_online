@@ -14,6 +14,9 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   use: {
     baseURL,
+    extraHTTPHeaders: process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+      ? { 'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET }
+      : {},
     ...devices['Desktop Chrome'],
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
