@@ -1,9 +1,9 @@
 name: CI
 on:
   push:
-    branches: [main]
+    branches: [main, development/admin-control-center, development/admin-app-separation]
   pull_request:
-    branches: [main]
+    branches: [main, development/admin-control-center]
 permissions:
   contents: read
 jobs:
@@ -182,7 +182,7 @@ jobs:
               echo "Potentially destructive statement in $base; require explicit review and an approved exception"; exit 1
             fi
           done
-          for check in "npm run typecheck" "npm run lint" "npm run test" "npm run build"; do
+          for check in "npm run typecheck" "npm run lint" "npm run test" "npm run build" "npm run typecheck:admin" "npm run build:admin"; do
             grep -Fq "$check" .github/workflows/ci.yml || { echo "Required CI check missing: $check"; exit 1; }
           done
       - name: Set up Deno for Edge Function type checking
@@ -206,3 +206,10 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: npm run build
+      - name: Typecheck isolated KhelGrid Admin application
+        run: npm run typecheck:admin
+      - name: Build isolated KhelGrid Admin application against approved development Supabase project
+        run: npm run build:admin
+        env:
+          VITE_SUPABASE_URL: https://hznsbxvovjxvmnchzzqt.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key

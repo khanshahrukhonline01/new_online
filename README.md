@@ -30,6 +30,16 @@ npm run build       # 106 URLs indexed in sitemap.xml
 
 Copy `.env.example` to `.env.local`. Never commit credentials.
 
+## Private Admin & Super-Admin Control Centre
+
+The development Control Centre is a restricted, UI-based operations area at `/admin/control`. It is intentionally excluded from public navigation and sitemap discovery; database authorization and RLS—not URL secrecy—protect its data and actions.
+
+- **Access and setup guide:** [Development Admin & Super-Admin Control Centre](docs/ADMIN_CONTROL_CENTRE_DEVELOPMENT_ACCESS.md)
+- **Moderator access and operations SOP:** [Listing Moderation Access SOP](docs/LISTING_MODERATION_ACCESS_SOP.md)
+- **Submission and publication workflow:** [Listing Submission and Moderation SOP](docs/LISTING_SUBMISSION_MODERATION_SOP.md)
+
+Use only the current Ready Vercel development deployment URL and append `/admin/control`. Do not use the production domain for development testing. The guide documents local access, role permissions, first super-admin provisioning, environment separation, and required release tests.
+
 ## Architecture & Development Record
 
 For a full historical record of all phases, fixes, database migrations, and repository parity syncs, see:
@@ -130,3 +140,13 @@ Code ownership:
 - `src/styles.css`: global styling only; do not add sidebar-specific overrides.
 
 When changing the sidebar, update its regression tests and architecture documentation in the same pull request. The sidebar suite lives with the app tests in `src/App.test.tsx` and protects the default compact state, route/utility links, desktop shell structure and separate mobile navigation. CI checks are necessary but manual preview verification is also required for hover, keyboard focus, pointer-leave collapse, navigation, scrolling and no content/footer shift.
+
+## Separate KhelGrid Admin application
+
+KhelGrid Admin is being separated into its own Vite application and independent Vercel project within this monorepo. The target hostname is `admin.khelgrid.com`; custom-domain attachment is deferred until the protected development preview and authorization tests pass.
+
+- [Admin application architecture](docs/ADMIN_APPLICATION_ARCHITECTURE.md)
+- [Admin implementation plan](docs/ADMIN_APPLICATION_IMPLEMENTATION_PLAN.md)
+- [Admin application development guide](apps/admin/README.md)
+
+Run the admin application locally with `npm run dev:admin`; validate it with `npm run typecheck:admin` and `npm run build:admin`. The admin build writes to `dist-admin/`, separately from the public app's `dist/`. Use only development Supabase credentials for the admin preview. No production DNS, database, Vercel project or deployment changes are part of this work.
