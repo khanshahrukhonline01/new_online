@@ -202,6 +202,21 @@ jobs:
       - name: Test strict Razorpay provider verification
         run: deno test supabase/functions/_shared/razorpayVerification.deno.ts
       - run: npm install
+      - name: Install pinned Playwright test runner for isolated admin acceptance suite
+        run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+      - name: Install Chromium for admin browser acceptance tests
+        run: npx playwright install --with-deps chromium
+      - name: Run private admin browser acceptance tests
+        run: npx playwright test --config=playwright.config.ts
+        env:
+          ADMIN_BASE_URL: ${{ secrets.ADMIN_BASE_URL }}
+          KG_DEV_SUPABASE_ANON_KEY: ${{ secrets.KG_DEV_SUPABASE_ANON_KEY }}
+          KG_ADMIN_TEST_USER_EMAIL: ${{ secrets.KG_ADMIN_TEST_USER_EMAIL }}
+          KG_ADMIN_TEST_USER_PASSWORD: ${{ secrets.KG_ADMIN_TEST_USER_PASSWORD }}
+          KG_ADMIN_TEST_MODERATOR_EMAIL: ${{ secrets.KG_ADMIN_TEST_MODERATOR_EMAIL }}
+          KG_ADMIN_TEST_MODERATOR_PASSWORD: ${{ secrets.KG_ADMIN_TEST_MODERATOR_PASSWORD }}
+          KG_ADMIN_TEST_SUPER_ADMIN_EMAIL: ${{ secrets.KG_ADMIN_TEST_SUPER_ADMIN_EMAIL }}
+          KG_ADMIN_TEST_SUPER_ADMIN_PASSWORD: ${{ secrets.KG_ADMIN_TEST_SUPER_ADMIN_PASSWORD }}
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test
