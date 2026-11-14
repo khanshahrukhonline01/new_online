@@ -14,6 +14,7 @@ import {
 import { recordPaperView, recordPaperDownload } from '../../integrations/supabase/chronicle-client'
 import { AcademicDataChart } from './components/AcademicDataChart'
 import { AcademicGalleyModal } from './components/AcademicGalleyModal'
+import { NormativeBenchmarkCalculator } from './components/NormativeBenchmarkCalculator'
 import './khelchronicle.css'
 
 interface KhelChroniclePaperPageProps {
@@ -87,7 +88,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
   const permanentUrl = `https://www.khelgrid.com/khelchronicle/${paper?.slug || ''}`
 
   const copyDoi = () => {
-    if (navigator.clipboard) {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(`https://doi.org/${doi}`)
       setDoiCopied(true)
       setTimeout(() => setDoiCopied(false), 2000)
@@ -95,7 +96,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
   }
 
   const copyPermanentLink = () => {
-    if (navigator.clipboard) {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(permanentUrl)
       setLinkCopied(true)
       setTimeout(() => setLinkCopied(false), 2000)
@@ -104,7 +105,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
 
   const copyCitation = () => {
     const textToCopy = citations[citationFormat]
-    if (navigator.clipboard) {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(textToCopy)
       setCopyFeedback(true)
       setTimeout(() => setCopyFeedback(false), 2000)
@@ -333,7 +334,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
             <span className="kc-paper-date">Published {paper.datePublished}</span>
           </div>
 
-          <h1 className="kc-reader-title">{paper.title}</h1>
+          <h1 className="kc-reader-title kc-serif-title">{paper.title}</h1>
           {paper.subtitle && <p className="kc-reader-subtitle">{paper.subtitle}</p>}
 
           {/* Authors List Box with Affiliations & ORCID */}
@@ -429,7 +430,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
             </a>
           </div>
 
-          {/* Reader Action Bar */}
+          {/* Reader Action Bar (Top) */}
           <div className="kc-reader-actions-bar">
             <button
               type="button"
@@ -473,414 +474,569 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
           </div>
         </header>
 
-        {/* Structured Abstract */}
-        <section className="kc-structured-abstract" aria-labelledby="abstract-heading">
-          <h2 id="abstract-heading" className="kc-abstract-heading">Structured Abstract</h2>
-          <div className="kc-abstract-section">
-            <span className="kc-abstract-tag">Background: </span>
-            <span>{paper.abstract.background}</span>
-          </div>
-          <div className="kc-abstract-section">
-            <span className="kc-abstract-tag">Methods: </span>
-            <span>{paper.abstract.methods}</span>
-          </div>
-          <div className="kc-abstract-section">
-            <span className="kc-abstract-tag">Results: </span>
-            <span>{paper.abstract.results}</span>
-          </div>
-          <div className="kc-abstract-section">
-            <span className="kc-abstract-tag">Conclusion: </span>
-            <span>{paper.abstract.conclusion}</span>
-          </div>
-
-          <div className="kc-keywords-row" style={{ marginTop: '18px', marginBottom: 0 }}>
-            {paper.keywords.map(kw => (
-              <span key={kw} className="kc-keyword-chip">#{kw}</span>
-            ))}
-          </div>
-        </section>
-
-        {/* Bilingual Grassroots Coach Takeaways Strip */}
-        {paper.coachingTakeaways && (
-          <section className="kc-takeaways-box" aria-labelledby="takeaways-heading">
-            <div className="kc-takeaways-head">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <SiteIcon name="award" size={18} className="kc-takeaways-icon" />
-                <h3 id="takeaways-heading" className="kc-takeaways-title">
-                  Grassroots Coaching Takeaways &amp; Field Implications
-                </h3>
+        {/* PHASE 1: TWO-COLUMN READING LAYOUT (Desktop Article Column + Sticky TOC Rail) */}
+        <div className="kc-paper-two-col-layout">
+          {/* MAIN ARTICLE COLUMN */}
+          <article className="kc-paper-article-col">
+            {/* Structured Abstract */}
+            <section id="abstract" className="kc-structured-abstract" aria-labelledby="abstract-heading">
+              <h2 id="abstract-heading" className="kc-abstract-heading">Structured Abstract</h2>
+              <div className="kc-abstract-section">
+                <span className="kc-abstract-tag">Background: </span>
+                <span>{paper.abstract.background}</span>
               </div>
-              <div className="kc-lang-toggle" role="group" aria-label="Coaching takeaways language switcher">
-                <button
-                  type="button"
-                  className={`kc-lang-btn ${takeawaysLang === 'en' ? 'is-active' : ''}`}
-                  onClick={() => setTakeawaysLang('en')}
-                  aria-pressed={takeawaysLang === 'en'}
-                >
-                  English
-                </button>
-                <button
-                  type="button"
-                  className={`kc-lang-btn ${takeawaysLang === 'hi' ? 'is-active' : ''}`}
-                  onClick={() => setTakeawaysLang('hi')}
-                  aria-pressed={takeawaysLang === 'hi'}
-                >
-                  हिंदी (Hindi)
-                </button>
+              <div className="kc-abstract-section">
+                <span className="kc-abstract-tag">Methods: </span>
+                <span>{paper.abstract.methods}</span>
               </div>
-            </div>
+              <div className="kc-abstract-section">
+                <span className="kc-abstract-tag">Results: </span>
+                <span>{paper.abstract.results}</span>
+              </div>
+              <div className="kc-abstract-section">
+                <span className="kc-abstract-tag">Conclusion: </span>
+                <span>{paper.abstract.conclusion}</span>
+              </div>
 
-            <ul className="kc-takeaways-list">
-              {paper.coachingTakeaways[takeawaysLang].map((cue, cIdx) => (
-                <li key={cIdx} className="kc-takeaway-item">
-                  <span className="kc-takeaway-num">{cIdx + 1}</span>
-                  <span className="kc-takeaway-text">{cue}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {/* Full Paper Body Sections */}
-        <main className="kc-paper-body">
-          {paper.sections.map((sec, sIdx) => {
-            const currentMode = chartViewModes[sIdx] ?? 'table'
-
-            return (
-              <section key={sIdx} className="kc-section-block">
-                <h2 className="kc-section-title">{sec.title}</h2>
-                {sec.paragraphs.map((p, pIdx) => (
-                  <p key={pIdx} className="kc-paragraph">{p}</p>
+              <div className="kc-keywords-row" style={{ marginTop: '18px', marginBottom: 0 }}>
+                {paper.keywords.map(kw => (
+                  <span key={kw} className="kc-keyword-chip">#{kw}</span>
                 ))}
-
-                {sec.callout && (
-                  <div className="kc-callout-finding">
-                    <div className="kc-callout-title">{sec.callout.title}</div>
-                    <p className="kc-callout-text">{sec.callout.text}</p>
-                  </div>
-                )}
-
-                {sec.tableData && (
-                  <div className="kc-table-wrap">
-                    <div className="kc-table-top-bar">
-                      {sec.tableData.caption && (
-                        <div className="kc-table-caption">{sec.tableData.caption}</div>
-                      )}
-                      <div className="kc-chart-switcher" role="group" aria-label="Table or chart display mode">
-                        <button
-                          type="button"
-                          className={`kc-switch-btn ${currentMode === 'table' ? 'is-active' : ''}`}
-                          onClick={() => toggleViewMode(sIdx, 'table')}
-                          aria-pressed={currentMode === 'table'}
-                        >
-                          <SiteIcon name="file-text" size={13} />
-                          <span>Academic Table</span>
-                        </button>
-                        <button
-                          type="button"
-                          className={`kc-switch-btn ${currentMode === 'chart' ? 'is-active' : ''}`}
-                          onClick={() => toggleViewMode(sIdx, 'chart')}
-                          aria-pressed={currentMode === 'chart'}
-                        >
-                          <SiteIcon name="chart" size={13} />
-                          <span>Interactive Chart</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {currentMode === 'table' ? (
-                      <table className="kc-academic-table">
-                        <thead>
-                          <tr>
-                            {sec.tableData.headers.map((h, hIdx) => (
-                              <th key={hIdx}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sec.tableData.rows.map((row, rIdx) => (
-                            <tr key={rIdx}>
-                              {row.map((cell, cIdx) => (
-                                <td key={cIdx}>{cell}</td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <AcademicDataChart tableData={sec.tableData} />
-                    )}
-                  </div>
-                )}
-              </section>
-            )
-          })}
-
-          {/* Supplementary Files & Datasets (SportRxiv / OPS Style) */}
-          {paper.supplementaryFiles && paper.supplementaryFiles.length > 0 && (
-            <section className="kc-supplements-section" aria-labelledby="supplements-heading">
-              <h2 id="supplements-heading" className="kc-section-title">Supplementary Datasets &amp; Protocols</h2>
-              <div className="kc-supplements-table-wrap">
-                <table className="kc-supplements-table">
-                  <thead>
-                    <tr>
-                      <th>Filename / Descriptor</th>
-                      <th>Format</th>
-                      <th>Size</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paper.supplementaryFiles.map(file => (
-                      <tr key={file.id}>
-                        <td>
-                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{file.name}</div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>{file.description}</div>
-                        </td>
-                        <td>
-                          <span className="kc-file-format-badge">{file.format}</span>
-                        </td>
-                        <td>{file.size}</td>
-                        <td>
-                          <button
-                            type="button"
-                            className="kc-supp-download-btn"
-                            onClick={() => downloadFile(`# Supplementary data for ${file.name}\n`, file.name, 'text/plain')}
-                            title={`Download ${file.name}`}
-                          >
-                            <SiteIcon name="download" size={12} />
-                            <span>Download</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
             </section>
-          )}
 
-          {/* Research Statements Box */}
-          <section className="kc-statements-box" aria-label="Research ethics and data statements">
-            <div className="kc-statement-item">
-              <span className="kc-statement-title">Ethics &amp; Consent Statement: </span>
-              <span>{paper.ethicsStatement}</span>
-            </div>
-            <div className="kc-statement-item">
-              <span className="kc-statement-title">Data Availability: </span>
-              <span>{paper.dataAvailability}</span>
-            </div>
-            <div className="kc-statement-item">
-              <span className="kc-statement-title">Funding &amp; Grants: </span>
-              <span>{paper.fundingStatement}</span>
-            </div>
-            <div className="kc-statement-item">
-              <span className="kc-statement-title">Conflicts of Interest: </span>
-              <span>{paper.conflictsOfInterest}</span>
-            </div>
-            <div className="kc-statement-item">
-              <span className="kc-statement-title">License &amp; Rights: </span>
-              <span>Distributed under Creative Commons Attribution 4.0 International ({paper.license || 'CC BY 4.0'}).</span>
-            </div>
-          </section>
-
-          {/* Bibliographic References */}
-          <section className="kc-references-box" aria-labelledby="references-heading">
-            <h2 id="references-heading" className="kc-section-title">References</h2>
-            <ol className="kc-references-list">
-              {paper.references.map(ref => (
-                <li key={ref.id} className="kc-ref-item">
-                  <span>{ref.text}</span>
-                  {ref.doi && (
-                    <a
-                      href={`https://doi.org/${ref.doi}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="kc-ref-doi"
-                    >
-                      doi:{ref.doi}
-                    </a>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </section>
-
-          {/* Connected KhelGrid Platform Tools */}
-          {paper.connectedKhelGridLinks && paper.connectedKhelGridLinks.length > 0 && (
-            <aside className="kc-connected-tools" aria-label="Connected KhelGrid platform tools">
-              <h3 className="kc-tools-title">
-                Operationalize This Research on KhelGrid
-              </h3>
-              <div className="kc-tools-grid">
-                {paper.connectedKhelGridLinks.map((tool, tIdx) => (
-                  <a
-                    key={tIdx}
-                    href={tool.href}
-                    className="kc-tool-card"
-                    onClick={e => handleLink(e, tool.href)}
-                  >
-                    <div className="kc-tool-head">
-                      <span className="kc-tool-label">{tool.label}</span>
-                      <span className="kc-tool-badge">{tool.badge}</span>
-                    </div>
-                    <p className="kc-tool-desc">{tool.description}</p>
-                  </a>
-                ))}
-              </div>
-            </aside>
-          )}
-
-          {/* Community Discussion & Peer Feedback (SportRxiv / OPS Style) */}
-          <section className="kc-comments-section" aria-labelledby="comments-heading">
-            <div className="kc-comments-head">
-              <h3 id="comments-heading" className="kc-comments-title">
-                Community Discussion &amp; Peer Reviews ({comments.length})
-              </h3>
-              <span className="kc-comments-sub">
-                Pre-publication scientific feedback, questions to authors, and replication notes
-              </span>
-            </div>
-
-            {/* Existing Comments List */}
-            <div className="kc-comments-list">
-              {comments.map(c => (
-                <article key={c.id} className="kc-comment-card">
-                  <div className="kc-comment-meta">
-                    <div className="kc-comment-author-block">
-                      <strong className="kc-comment-author">{c.author}</strong>
-                      {c.role && <span className="kc-comment-role"> · {c.role}</span>}
-                    </div>
-                    <span className="kc-comment-date">{c.date}</span>
+            {/* Bilingual Grassroots Coach Takeaways Strip */}
+            {paper.coachingTakeaways && (
+              <section id="takeaways" className="kc-takeaways-box" aria-labelledby="takeaways-heading">
+                <div className="kc-takeaways-head">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <SiteIcon name="award" size={18} className="kc-takeaways-icon" />
+                    <h3 id="takeaways-heading" className="kc-takeaways-title">
+                      Grassroots Coaching Takeaways &amp; Field Implications
+                    </h3>
                   </div>
-                  <div className="kc-comment-affil">{c.affiliation}</div>
-                  <p className="kc-comment-content">{c.content}</p>
-                </article>
-              ))}
-            </div>
-
-            {/* Comment Submission Form */}
-            <form className="kc-comment-form" onSubmit={handleCommentSubmit}>
-              <h4 className="kc-comment-form-title">Leave a Scientific Comment / Feedback</h4>
-              <p className="kc-comment-form-desc">
-                Engage in collegial scientific discourse. Comments are publicly attributed and indexed with this preprint.
-              </p>
-
-              {commentFeedback && (
-                <div className="kc-comment-alert" role="status">
-                  {commentFeedback}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="kc-field-cue-print-btn"
+                      onClick={() => {
+                        if (typeof window !== 'undefined') window.print()
+                      }}
+                      title="Print standalone 1-page protocol sheet for academy coaches"
+                    >
+                      <SiteIcon name="download" size={12} />
+                      <span>Print Field Cue Card</span>
+                    </button>
+                    <div className="kc-lang-toggle" role="group" aria-label="Coaching takeaways language switcher">
+                      <button
+                        type="button"
+                        className={`kc-lang-btn ${takeawaysLang === 'en' ? 'is-active' : ''}`}
+                        onClick={() => setTakeawaysLang('en')}
+                        aria-pressed={takeawaysLang === 'en'}
+                      >
+                        English
+                      </button>
+                      <button
+                        type="button"
+                        className={`kc-lang-btn ${takeawaysLang === 'hi' ? 'is-active' : ''}`}
+                        onClick={() => setTakeawaysLang('hi')}
+                        aria-pressed={takeawaysLang === 'hi'}
+                      >
+                        हिंदी (Hindi)
+                      </button>
+                    </div>
+                  </div>
                 </div>
+
+                <ul className="kc-takeaways-list">
+                  {paper.coachingTakeaways[takeawaysLang].map((cue, cIdx) => (
+                    <li key={cIdx} className="kc-takeaway-item">
+                      <span className="kc-takeaway-num">{cIdx + 1}</span>
+                      <span className="kc-takeaway-text">{cue}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {/* Phase 3: Interactive Normative Benchmark Calculator (when applicable e.g. KG-2026-002) */}
+            {paper.hasNormativeBenchmarks && (
+              <div id="calculator">
+                <NormativeBenchmarkCalculator />
+              </div>
+            )}
+
+            {/* Full Paper Body Sections */}
+            <main className="kc-paper-body">
+              {paper.sections.map((sec, sIdx) => {
+                const currentMode = chartViewModes[sIdx] ?? 'table'
+
+                return (
+                  <section id={`section-${sIdx}`} key={sIdx} className="kc-section-block">
+                    <h2 className="kc-section-title">{sec.title}</h2>
+                    {sec.paragraphs.map((p, pIdx) => (
+                      <p key={pIdx} className="kc-paragraph">{p}</p>
+                    ))}
+
+                    {sec.callout && (
+                      <div className="kc-callout-finding">
+                        <div className="kc-callout-title">{sec.callout.title}</div>
+                        <p className="kc-callout-text">{sec.callout.text}</p>
+                      </div>
+                    )}
+
+                    {sec.tableData && (
+                      <div className="kc-table-wrap">
+                        <div className="kc-table-top-bar">
+                          {sec.tableData.caption && (
+                            <div className="kc-table-caption">{sec.tableData.caption}</div>
+                          )}
+                          <div className="kc-chart-switcher" role="group" aria-label="Table or chart display mode">
+                            <button
+                              type="button"
+                              className={`kc-switch-btn ${currentMode === 'table' ? 'is-active' : ''}`}
+                              onClick={() => toggleViewMode(sIdx, 'table')}
+                              aria-pressed={currentMode === 'table'}
+                            >
+                              <SiteIcon name="file-text" size={13} />
+                              <span>Academic Table</span>
+                            </button>
+                            <button
+                              type="button"
+                              className={`kc-switch-btn ${currentMode === 'chart' ? 'is-active' : ''}`}
+                              onClick={() => toggleViewMode(sIdx, 'chart')}
+                              aria-pressed={currentMode === 'chart'}
+                            >
+                              <SiteIcon name="chart" size={13} />
+                              <span>Interactive Chart</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {currentMode === 'table' ? (
+                          <table className="kc-academic-table">
+                            <thead>
+                              <tr>
+                                {sec.tableData.headers.map((h, hIdx) => (
+                                  <th key={hIdx}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sec.tableData.rows.map((row, rIdx) => (
+                                <tr key={rIdx}>
+                                  {row.map((cell, cIdx) => (
+                                    <td key={cIdx}>{cell}</td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        ) : (
+                          <AcademicDataChart tableData={sec.tableData} />
+                        )}
+                      </div>
+                    )}
+                  </section>
+                )
+              })}
+
+              {/* Supplementary Files & Datasets (SportRxiv / OPS Style) */}
+              {paper.supplementaryFiles && paper.supplementaryFiles.length > 0 && (
+                <section id="supplements" className="kc-supplements-section" aria-labelledby="supplements-heading">
+                  <h2 id="supplements-heading" className="kc-section-title">Supplementary Datasets &amp; Protocols</h2>
+                  <div className="kc-supplements-table-wrap">
+                    <table className="kc-supplements-table">
+                      <thead>
+                        <tr>
+                          <th>Filename / Descriptor</th>
+                          <th>Format</th>
+                          <th>Size</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paper.supplementaryFiles.map(file => (
+                          <tr key={file.id}>
+                            <td>
+                              <div style={{ fontWeight: 600, color: '#0f172a' }}>{file.name}</div>
+                              <div style={{ fontSize: '12px', color: '#64748b' }}>{file.description}</div>
+                            </td>
+                            <td>
+                              <span className="kc-file-format-badge">{file.format}</span>
+                            </td>
+                            <td>{file.size}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="kc-supp-download-btn"
+                                onClick={() => downloadFile(`# Supplementary data for ${file.name}\n`, file.name, 'text/plain')}
+                                title={`Download ${file.name}`}
+                              >
+                                <SiteIcon name="download" size={12} />
+                                <span>Download</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
               )}
 
-              <div className="kc-form-row">
-                <div className="kc-form-field">
-                  <label htmlFor="comment-author" className="kc-form-label">Full Name *</label>
-                  <input
-                    id="comment-author"
-                    type="text"
-                    className="kc-form-input"
-                    placeholder="e.g. Dr. Anita Sharma"
-                    value={commentAuthor}
-                    onChange={e => setCommentAuthor(e.target.value)}
-                    required
-                  />
+              {/* Research Statements Box */}
+              <section id="ethics" className="kc-statements-box" aria-label="Research ethics and data statements">
+                <div className="kc-statement-item">
+                  <span className="kc-statement-title">Ethics &amp; Consent Statement: </span>
+                  <span>{paper.ethicsStatement}</span>
                 </div>
-                <div className="kc-form-field">
-                  <label htmlFor="comment-affiliation" className="kc-form-label">Institution / Academy *</label>
-                  <input
-                    id="comment-affiliation"
-                    type="text"
-                    className="kc-form-input"
-                    placeholder="e.g. Sports Authority of India, Patiala"
-                    value={commentAffiliation}
-                    onChange={e => setCommentAffiliation(e.target.value)}
-                    required
-                  />
+                <div className="kc-statement-item">
+                  <span className="kc-statement-title">Data Availability: </span>
+                  <span>{paper.dataAvailability}</span>
                 </div>
-              </div>
+                <div className="kc-statement-item">
+                  <span className="kc-statement-title">Funding &amp; Grants: </span>
+                  <span>{paper.fundingStatement}</span>
+                </div>
+                <div className="kc-statement-item">
+                  <span className="kc-statement-title">Conflicts of Interest: </span>
+                  <span>{paper.conflictsOfInterest}</span>
+                </div>
+                <div className="kc-statement-item">
+                  <span className="kc-statement-title">License &amp; Rights: </span>
+                  <span>Distributed under Creative Commons Attribution 4.0 International ({paper.license || 'CC BY 4.0'}).</span>
+                </div>
+              </section>
 
-              <div className="kc-form-field" style={{ marginTop: '10px' }}>
-                <label htmlFor="comment-role" className="kc-form-label">Professional Role</label>
-                <input
-                  id="comment-role"
-                  type="text"
-                  className="kc-form-input"
-                  placeholder="e.g. Senior Biomechanist / Head Coach / Sports Physiotherapist"
-                  value={commentRole}
-                  onChange={e => setCommentRole(e.target.value)}
-                />
-              </div>
+              {/* Bibliographic References */}
+              <section id="references" className="kc-references-box" aria-labelledby="references-heading">
+                <h2 id="references-heading" className="kc-section-title">References</h2>
+                <ol className="kc-references-list">
+                  {paper.references.map(ref => (
+                    <li key={ref.id} className="kc-ref-item">
+                      <span>{ref.text}</span>
+                      {ref.doi && (
+                        <a
+                          href={`https://doi.org/${ref.doi}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="kc-ref-doi"
+                        >
+                          doi:{ref.doi}
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </section>
 
-              <div className="kc-form-field" style={{ marginTop: '10px' }}>
-                <label htmlFor="comment-content" className="kc-form-label">Feedback or Question *</label>
-                <textarea
-                  id="comment-content"
-                  rows={3}
-                  className="kc-form-textarea"
-                  placeholder="Share constructive feedback, methodological queries, or field replication observations…"
-                  value={commentContent}
-                  onChange={e => setCommentContent(e.target.value)}
-                  required
-                />
-              </div>
+              {/* Connected KhelGrid Platform Tools */}
+              {paper.connectedKhelGridLinks && paper.connectedKhelGridLinks.length > 0 && (
+                <aside id="tools" className="kc-connected-tools" aria-label="Connected KhelGrid platform tools">
+                  <h3 className="kc-tools-title">
+                    Operationalize This Research on KhelGrid
+                  </h3>
+                  <div className="kc-tools-grid">
+                    {paper.connectedKhelGridLinks.map((tool, tIdx) => (
+                      <a
+                        key={tIdx}
+                        href={tool.href}
+                        className="kc-tool-card"
+                        onClick={e => handleLink(e, tool.href)}
+                      >
+                        <div className="kc-tool-head">
+                          <span className="kc-tool-label">{tool.label}</span>
+                          <span className="kc-tool-badge">{tool.badge}</span>
+                        </div>
+                        <p className="kc-tool-desc">{tool.description}</p>
+                      </a>
+                    ))}
+                  </div>
+                </aside>
+              )}
+
+              {/* Community Discussion & Peer Feedback (SportRxiv / OPS Style) */}
+              <section id="comments" className="kc-comments-section" aria-labelledby="comments-heading">
+                <div className="kc-comments-head">
+                  <h3 id="comments-heading" className="kc-comments-title">
+                    Community Discussion &amp; Peer Reviews ({comments.length})
+                  </h3>
+                  <span className="kc-comments-sub">
+                    Pre-publication scientific feedback, questions to authors, and replication notes
+                  </span>
+                </div>
+
+                {/* Existing Comments List */}
+                <div className="kc-comments-list">
+                  {comments.map(c => (
+                    <article key={c.id} className="kc-comment-card">
+                      <div className="kc-comment-meta">
+                        <div className="kc-comment-author-block">
+                          <strong className="kc-comment-author">{c.author}</strong>
+                          {c.role && <span className="kc-comment-role"> · {c.role}</span>}
+                        </div>
+                        <span className="kc-comment-date">{c.date}</span>
+                      </div>
+                      <div className="kc-comment-affil">{c.affiliation}</div>
+                      <p className="kc-comment-content">{c.content}</p>
+                    </article>
+                  ))}
+                </div>
+
+                {/* Comment Submission Form */}
+                <form className="kc-comment-form" onSubmit={handleCommentSubmit}>
+                  <h4 className="kc-comment-form-title">Leave a Scientific Comment / Feedback</h4>
+                  <p className="kc-comment-form-desc">
+                    Engage in collegial scientific discourse. Comments are publicly attributed and indexed with this preprint.
+                  </p>
+
+                  {commentFeedback && (
+                    <div className="kc-comment-alert" role="status">
+                      {commentFeedback}
+                    </div>
+                  )}
+
+                  <div className="kc-form-row">
+                    <div className="kc-form-field">
+                      <label htmlFor="comment-author" className="kc-form-label">Full Name *</label>
+                      <input
+                        id="comment-author"
+                        type="text"
+                        className="kc-form-input"
+                        placeholder="e.g. Dr. Anita Sharma"
+                        value={commentAuthor}
+                        onChange={e => setCommentAuthor(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="kc-form-field">
+                      <label htmlFor="comment-affiliation" className="kc-form-label">Institution / Academy *</label>
+                      <input
+                        id="comment-affiliation"
+                        type="text"
+                        className="kc-form-input"
+                        placeholder="e.g. Sports Authority of India, Patiala"
+                        value={commentAffiliation}
+                        onChange={e => setCommentAffiliation(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="kc-form-field" style={{ marginTop: '10px' }}>
+                    <label htmlFor="comment-role" className="kc-form-label">Professional Role</label>
+                    <input
+                      id="comment-role"
+                      type="text"
+                      className="kc-form-input"
+                      placeholder="e.g. Senior Biomechanist / Head Coach / Sports Physiotherapist"
+                      value={commentRole}
+                      onChange={e => setCommentRole(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="kc-form-field" style={{ marginTop: '10px' }}>
+                    <label htmlFor="comment-content" className="kc-form-label">Feedback or Question *</label>
+                    <textarea
+                      id="comment-content"
+                      rows={3}
+                      className="kc-form-textarea"
+                      placeholder="Share constructive feedback, methodological queries, or field replication observations…"
+                      value={commentContent}
+                      onChange={e => setCommentContent(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="kc-btn-primary"
+                    style={{ marginTop: '12px' }}
+                    disabled={isSubmittingComment}
+                  >
+                    <SiteIcon name="message" size={14} />
+                    <span>{isSubmittingComment ? 'Submitting…' : 'Post Peer Feedback'}</span>
+                  </button>
+                </form>
+              </section>
+
+              {/* Related Preprints in Same Sport / Discipline */}
+              {relatedPapers.length > 0 && (
+                <section id="related" className="kc-related-section" aria-labelledby="related-papers-heading">
+                  <div className="kc-related-head">
+                    <h3 id="related-papers-heading" className="kc-related-title">
+                      Related Preprints in {paper.sport || paper.categoryName}
+                    </h3>
+                    <a
+                      href="/khelchronicle"
+                      onClick={e => handleLink(e, '/khelchronicle')}
+                      className="kc-related-browse-all"
+                    >
+                      Browse All Archive ({RESEARCH_PAPERS.length} Papers) →
+                    </a>
+                  </div>
+                  <div className="kc-related-grid">
+                    {relatedPapers.map(rel => (
+                      <article key={rel.id} className="kc-related-card">
+                        <div className="kc-paper-top-meta" style={{ marginBottom: '6px' }}>
+                          <span className="kc-paper-id-tag">{rel.paperId}</span>
+                          {rel.sport && <span className="kc-paper-sport-tag">{rel.sport}</span>}
+                        </div>
+                        <h4 className="kc-related-card-title">
+                          <a href={`/khelchronicle/${rel.slug}`} onClick={e => handleLink(e, `/khelchronicle/${rel.slug}`)}>
+                            {rel.title}
+                          </a>
+                        </h4>
+                        <p className="kc-related-authors">{rel.authors.map(a => a.name).join(', ')}</p>
+                        <div className="kc-card-bottom" style={{ marginTop: 'auto', paddingTop: '10px' }}>
+                          <span style={{ fontSize: '12px', color: '#64748b' }}>{rel.readingTimeMinutes} min read</span>
+                          <a
+                            href={`/khelchronicle/${rel.slug}`}
+                            className="kc-btn-secondary"
+                            style={{ fontSize: '12px', padding: '4px 10px' }}
+                            onClick={e => handleLink(e, `/khelchronicle/${rel.slug}`)}
+                          >
+                            Read Preprint
+                          </a>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </main>
+          </article>
+
+          {/* STICKY RIGHT READING RAIL (TOC & Quick Actions) */}
+          <aside className="kc-paper-toc-rail" aria-label="Article navigation and actions">
+            {/* Action Box */}
+            <div className="kc-sticky-action-box">
+              <button
+                type="button"
+                className="kc-btn-primary"
+                onClick={() => setGalleyModalOpen(true)}
+                aria-label="View interactive two-column academic galley reader"
+              >
+                <SiteIcon name="file-text" size={14} />
+                <span>Read Manuscript Galley</span>
+              </button>
 
               <button
-                type="submit"
-                className="kc-btn-primary"
-                style={{ marginTop: '12px' }}
-                disabled={isSubmittingComment}
+                type="button"
+                className="kc-btn-secondary"
+                onClick={() => setExportModalOpen(true)}
+                aria-label="Download or print research paper PDF"
               >
-                <SiteIcon name="message" size={14} />
-                <span>{isSubmittingComment ? 'Submitting…' : 'Post Peer Feedback'}</span>
+                <SiteIcon name="download" size={14} />
+                <span>Download PDF / Print</span>
               </button>
-            </form>
-          </section>
 
-          {/* Related Preprints in Same Sport / Discipline */}
-          {relatedPapers.length > 0 && (
-            <section className="kc-related-section" aria-labelledby="related-papers-heading">
-              <div className="kc-related-head">
-                <h3 id="related-papers-heading" className="kc-related-title">
-                  Related Preprints in {paper.sport || paper.categoryName}
-                </h3>
-                <a
-                  href="/khelchronicle"
-                  onClick={e => handleLink(e, '/khelchronicle')}
-                  className="kc-related-browse-all"
-                >
-                  Browse All Archive ({RESEARCH_PAPERS.length} Papers) →
-                </a>
+              <button
+                type="button"
+                className="kc-btn-secondary"
+                onClick={() => setCitationModalOpen(true)}
+                aria-label="Export citation in APA, BibTeX, RIS formats"
+              >
+                <SiteIcon name="bookmark" size={14} />
+                <span>Cite This Preprint</span>
+              </button>
+            </div>
+
+            {/* Table of Contents Box */}
+            <div className="kc-toc-box">
+              <div className="kc-toc-title">
+                <SiteIcon name="file-text" size={13} />
+                <span>On This Page</span>
               </div>
-              <div className="kc-related-grid">
-                {relatedPapers.map(rel => (
-                  <article key={rel.id} className="kc-related-card">
-                    <div className="kc-paper-top-meta" style={{ marginBottom: '6px' }}>
-                      <span className="kc-paper-id-tag">{rel.paperId}</span>
-                      {rel.sport && <span className="kc-paper-sport-tag">{rel.sport}</span>}
-                    </div>
-                    <h4 className="kc-related-card-title">
-                      <a href={`/khelchronicle/${rel.slug}`} onClick={e => handleLink(e, `/khelchronicle/${rel.slug}`)}>
-                        {rel.title}
-                      </a>
-                    </h4>
-                    <p className="kc-related-authors">{rel.authors.map(a => a.name).join(', ')}</p>
-                    <div className="kc-card-bottom" style={{ marginTop: 'auto', paddingTop: '10px' }}>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>{rel.readingTimeMinutes} min read</span>
-                      <a
-                        href={`/khelchronicle/${rel.slug}`}
-                        className="kc-btn-secondary"
-                        style={{ fontSize: '12px', padding: '4px 10px' }}
-                        onClick={e => handleLink(e, `/khelchronicle/${rel.slug}`)}
-                      >
-                        Read Preprint
-                      </a>
-                    </div>
-                  </article>
+              <ul className="kc-toc-list">
+                <li className="kc-toc-item">
+                  <a href="#abstract">Structured Abstract</a>
+                </li>
+                {paper.coachingTakeaways && (
+                  <li className="kc-toc-item">
+                    <a href="#takeaways">Coaching Takeaways</a>
+                  </li>
+                )}
+                {paper.hasNormativeBenchmarks && (
+                  <li className="kc-toc-item">
+                    <a href="#calculator">Percentile Calculator</a>
+                  </li>
+                )}
+                {paper.sections.map((sec, sIdx) => (
+                  <li key={sIdx} className="kc-toc-item">
+                    <a href={`#section-${sIdx}`}>{sec.title}</a>
+                  </li>
                 ))}
+                {paper.supplementaryFiles && paper.supplementaryFiles.length > 0 && (
+                  <li className="kc-toc-item">
+                    <a href="#supplements">Supplementary Data</a>
+                  </li>
+                )}
+                <li className="kc-toc-item">
+                  <a href="#ethics">Ethics &amp; Statements</a>
+                </li>
+                <li className="kc-toc-item">
+                  <a href="#references">References</a>
+                </li>
+                <li className="kc-toc-item">
+                  <a href="#comments">Peer Discussion ({comments.length})</a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Metrics Box */}
+            <div className="kc-sticky-metrics-box">
+              <div className="kc-sticky-metrics-title">Preprint Impact Metrics</div>
+              <div className="kc-sticky-metrics-grid">
+                <div className="kc-metric-cell">
+                  <strong>{paper.metrics.views}</strong>
+                  <span>Views</span>
+                </div>
+                <div className="kc-metric-cell">
+                  <strong>{paper.metrics.downloads}</strong>
+                  <span>Downloads</span>
+                </div>
+                <div className="kc-metric-cell">
+                  <strong>{paper.metrics.citations}</strong>
+                  <span>Citations</span>
+                </div>
+                <div className="kc-metric-cell">
+                  <strong>{paper.readingTimeMinutes}m</strong>
+                  <span>Read Time</span>
+                </div>
               </div>
-            </section>
-          )}
-        </main>
+            </div>
+
+            {/* Share & DOI Box */}
+            <div className="kc-toc-box">
+              <div className="kc-toc-title">
+                <SiteIcon name="share" size={13} />
+                <span>Share &amp; Permanent DOI</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="kc-btn-secondary"
+                  style={{ width: '100%', fontSize: '12px', justifyContent: 'center' }}
+                  onClick={copyDoi}
+                >
+                  <SiteIcon name="copy" size={12} />
+                  <span>{doiCopied ? 'DOI Copied!' : 'Copy Crossref DOI'}</span>
+                </button>
+                <button
+                  type="button"
+                  className="kc-btn-secondary"
+                  style={{ width: '100%', fontSize: '12px', justifyContent: 'center' }}
+                  onClick={copyPermanentLink}
+                >
+                  <SiteIcon name="share" size={12} />
+                  <span>{linkCopied ? 'Link Copied!' : 'Copy Permanent Link'}</span>
+                </button>
+              </div>
+            </div>
+          </aside>
+        </div>
       </div>
 
       {/* Export & Download Dialog */}
@@ -1017,4 +1173,5 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
     </div>
   )
 }
+
 export default KhelChroniclePaperPage

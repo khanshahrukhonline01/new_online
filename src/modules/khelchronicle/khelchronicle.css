@@ -2998,3 +2998,859 @@
     column-count: 1;
   }
 }
+
+
+/* ==========================================================================
+   PHASE 1 - 5 SCHOLARLY UPGRADE: TWO-COLUMN LAYOUT, CARDS, CALCULATOR & TOC
+   ========================================================================== */
+
+/* Phase 5: Repository Header Trust Seal & Live Stats Bar */
+.kc-trust-ribbon {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.kc-stats-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.kc-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.kc-stat-val {
+  font-weight: 800;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.kc-stat-lbl {
+  color: #64748b;
+}
+
+.kc-stat-pill-highlight {
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.kc-institutions-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  font-size: 12px;
+}
+
+.kc-inst-label {
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+}
+
+.kc-inst-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kc-inst-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  transition: all 0.15s ease;
+}
+
+.kc-inst-badge:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+/* Phase 1: Two-Column Desktop Layout (Left Filter Rail + Results Feed) */
+.kc-two-col-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (min-width: 1024px) {
+  .kc-two-col-layout {
+    display: grid;
+    grid-template-columns: 290px 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+}
+
+/* Left Sticky Filter Rail */
+.kc-filter-sidebar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+@media (min-width: 1024px) {
+  .kc-filter-sidebar {
+    position: sticky;
+    top: 24px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
+.kc-sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.kc-sidebar-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #0f172a;
+}
+
+.kc-sidebar-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.kc-sidebar-reset-btn {
+  background: none;
+  border: none;
+  color: #0284c7;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.kc-sidebar-reset-btn:hover {
+  background: #f0f9ff;
+  text-decoration: underline;
+}
+
+/* Facets */
+.kc-facet-section {
+  margin-bottom: 20px;
+}
+
+.kc-facet-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.kc-facet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kc-facet-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #334155;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-facet-item:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.kc-facet-item.is-active {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0369a1;
+  font-weight: 700;
+}
+
+.kc-facet-icon {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.kc-facet-item.is-active .kc-facet-icon {
+  color: #0284c7;
+}
+
+.kc-facet-emoji {
+  font-size: 14px;
+}
+
+.kc-facet-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kc-facet-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.kc-facet-item.is-active .kc-facet-count {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+/* Facet Toggles (Checkboxes) */
+.kc-facet-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kc-facet-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.kc-facet-toggle-label:hover {
+  background: #f8fafc;
+}
+
+.kc-facet-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #0284c7;
+  cursor: pointer;
+}
+
+.kc-facet-toggle-text {
+  font-weight: 600;
+}
+
+/* Sidebar Widget Promo Banner */
+.kc-sidebar-widget-banner {
+  margin-top: 16px;
+  padding: 14px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+}
+
+.kc-widget-banner-icon {
+  color: #0284c7;
+  margin-bottom: 6px;
+}
+
+.kc-widget-banner-text strong {
+  display: block;
+  font-size: 13px;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.kc-widget-banner-text p {
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.kc-widget-open-btn {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+}
+
+.kc-widget-open-btn:hover {
+  background: #0369a1;
+}
+
+/* Main Feed Column */
+.kc-main-feed {
+  min-width: 0;
+  flex: 1;
+}
+
+/* Phase 2: Scholarly Action Card Redesign */
+.kc-paper-card {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.kc-paper-card:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
+}
+
+.kc-serif-title {
+  font-family: Merriweather, Georgia, Cambria, 'Times New Roman', serif;
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.38;
+  letter-spacing: -0.01em;
+  margin: 8px 0 10px;
+}
+
+.kc-serif-title a {
+  color: #0f172a;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.kc-serif-title a:hover {
+  color: #0284c7;
+}
+
+/* Card Inline DOI Copy Chip */
+.kc-card-doi-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #0369a1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-card-doi-pill:hover {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+}
+
+.kc-doi-mono {
+  font-weight: 600;
+}
+
+.kc-copied-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #15803d;
+  background: #dcfce7;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* Author Byline & ORCID micro badge */
+.kc-card-authors-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.kc-author-inline-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kc-orcid-micro-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 3px;
+  color: #15803d;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1;
+}
+
+.kc-orcid-micro-badge:hover {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* Card Action Micro Buttons */
+.kc-card-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kc-card-micro-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.kc-card-micro-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.kc-card-micro-btn-primary {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+}
+
+.kc-card-micro-btn-primary:hover {
+  background: #0369a1;
+  border-color: #0369a1;
+  color: #ffffff;
+}
+
+/* Standardized Open Science Badges */
+.kc-chip-badge-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.kc-badge-open-data {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.kc-badge-open-code {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.kc-badge-prereg {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+/* Phase 3: Interactive Normative Benchmark Calculator */
+.kc-calculator-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 28px 0;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05);
+}
+
+.kc-calc-header {
+  margin-bottom: 20px;
+}
+
+.kc-calc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  color: #1d4ed8;
+  font-size: 11.5px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.kc-calc-title {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.kc-calc-sub {
+  margin: 0;
+  font-size: 13.5px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.kc-calc-controls-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 640px) {
+  .kc-calc-controls-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .kc-calc-controls-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.kc-calc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kc-calc-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.kc-calc-select,
+.kc-calc-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: #0f172a;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.kc-calc-select:focus,
+.kc-calc-input:focus {
+  outline: none;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.kc-calc-result-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 18px 20px;
+}
+
+.kc-calc-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.kc-calc-tier {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.kc-calc-percentile-pill {
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.kc-calc-gauge-bar {
+  width: 100%;
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.kc-calc-gauge-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.kc-calc-gauge-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 16px;
+}
+
+.kc-calc-advice-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e2e8f0;
+}
+
+@media (min-width: 768px) {
+  .kc-calc-advice-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.kc-calc-advice-col strong {
+  display: block;
+  font-size: 12px;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.kc-calc-advice-col p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #334155;
+}
+
+/* Phase 1 & 3: Paper Detail Page Two-Column Reading Layout */
+.kc-paper-two-col-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+@media (min-width: 1024px) {
+  .kc-paper-two-col-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 310px;
+    gap: 40px;
+    align-items: start;
+  }
+}
+
+.kc-paper-article-col {
+  min-width: 0;
+}
+
+/* Sticky Right Reading Rail on Paper Detail Page */
+.kc-paper-toc-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (min-width: 1024px) {
+  .kc-paper-toc-rail {
+    position: sticky;
+    top: 24px;
+  }
+}
+
+/* Sticky Quick Action Box */
+.kc-sticky-action-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.kc-sticky-action-box .kc-btn-primary,
+.kc-sticky-action-box .kc-btn-secondary {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Table of Contents Box */
+.kc-toc-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.kc-toc-title {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kc-toc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kc-toc-item a {
+  display: block;
+  font-size: 13px;
+  color: #475569;
+  text-decoration: none;
+  padding: 5px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  line-height: 1.4;
+}
+
+.kc-toc-item a:hover {
+  background: #f1f5f9;
+  color: #0284c7;
+}
+
+/* Sticky Metrics Box */
+.kc-sticky-metrics-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+.kc-sticky-metrics-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin: 0 0 10px;
+}
+
+.kc-sticky-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.kc-metric-cell {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.kc-metric-cell strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.kc-metric-cell span {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Dedicated Field Cue Card Print Mode */
+.kc-field-cue-print-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.kc-field-cue-print-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}

@@ -18,6 +18,7 @@ import {
   RESEARCH_METHODOLOGIES,
 } from './data/khelchronicleData'
 import { AcademicDataChart } from './components/AcademicDataChart'
+import { NormativeBenchmarkCalculator } from './components/NormativeBenchmarkCalculator'
 
 describe('KhelChronicle Open Sports Research Repository', () => {
   it('renders KhelChronicle repository homepage with search, categories, and Schema.org DataCatalog', () => {
@@ -409,5 +410,108 @@ describe('KhelChronicle Open Sports Research Repository', () => {
     const ris = generateRisCitation(paper)
     expect(ris).toContain('DO  - 10.51224/khelchronicle.2026.001')
     expect(ris).toContain('JO  - KhelChronicle Open Sports Research Archive (SportRxiv India)')
+  })
+
+  it('renders Phase 1 Two-Column layout, Phase 5 Trust Ribbon, and Phase 2 Scholarly Action Cards on homepage', () => {
+    const html = renderToStaticMarkup(<KhelChronicleHome />)
+
+    // Phase 5: Institutional Trust Ribbon & Live Stats
+    expect(html).toContain('kc-trust-ribbon')
+    expect(html).toContain('Preprints Indexed')
+    expect(html).toContain('Repository Views')
+    expect(html).toContain('Athletes Tested')
+    expect(html).toContain('100% Diamond Open Access')
+    expect(html).toContain('SAI NCOE')
+    expect(html).toContain('LNIPE Gwalior')
+    expect(html).toContain('AIIMS Sports Medicine')
+    expect(html).toContain('STORK Network')
+    expect(html).toContain('Crossref DOIs')
+
+    // Phase 1: Two-Column Layout and Left Sticky Filter Rail
+    expect(html).toContain('kc-two-col-layout')
+    expect(html).toContain('kc-filter-sidebar')
+    expect(html).toContain('kc-main-feed')
+    expect(html).toContain('Filter Repository')
+    expect(html).toContain('Study Methodology')
+    expect(html).toContain('Normative Calculator Tool')
+
+    // Phase 2: Scholarly Action Cards with 1-click Galley, Cite & DOI copy
+    expect(html).toContain('kc-card-doi-pill')
+    expect(html).toContain('doi:10.51224/khelchronicle.2026.001')
+    expect(html).toContain('Read Galley')
+    expect(html).toContain('Cite')
+    expect(html).toContain('kc-serif-title')
+  })
+
+  it('renders Phase 1 Two-Column Reading Layout on paper page with Sticky TOC rail and Print Field Cue Card', () => {
+    const html = renderToStaticMarkup(
+      <KhelChroniclePaperPage slug="kinematic-correlates-lumbar-spine-stress-fast-bowlers" />
+    )
+
+    // Two-column paper layout & Sticky TOC rail
+    expect(html).toContain('kc-paper-two-col-layout')
+    expect(html).toContain('kc-paper-article-col')
+    expect(html).toContain('kc-paper-toc-rail')
+    expect(html).toContain('On This Page')
+
+    // Table of contents jump links
+    expect(html).toContain('href="#abstract"')
+    expect(html).toContain('href="#takeaways"')
+    expect(html).toContain('href="#supplements"')
+    expect(html).toContain('href="#ethics"')
+    expect(html).toContain('href="#references"')
+    expect(html).toContain('href="#comments"')
+
+    // Sticky Action Box
+    expect(html).toContain('Read Manuscript Galley')
+    expect(html).toContain('Download PDF / Print')
+    expect(html).toContain('Cite This Preprint')
+
+    // Print Field Cue Card Button
+    expect(html).toContain('Print Field Cue Card')
+  })
+
+  it('renders Phase 3 NormativeBenchmarkCalculator with test selection, percentile gauges, and bilingual advice', () => {
+    const html = renderToStaticMarkup(<NormativeBenchmarkCalculator />)
+
+    // Header & Tool Information
+    expect(html).toContain('Indian Athlete Normative Benchmark Calculator')
+    expect(html).toContain('Interactive National Norms Tool')
+    expect(html).toContain('4,820 grassroots athletes')
+
+    // Form Controls
+    expect(html).toContain('benchmark-test-select')
+    expect(html).toContain('Yo-Yo Intermittent Recovery Level 1')
+    expect(html).toContain('30m Electronic Sprint')
+    expect(html).toContain('Countermovement Jump Height')
+
+    expect(html).toContain('benchmark-age-select')
+    expect(html).toContain('Under-14')
+    expect(html).toContain('Under-16')
+    expect(html).toContain('Under-19')
+    expect(html).toContain('Senior Open')
+
+    expect(html).toContain('benchmark-gender-select')
+    expect(html).toContain('Male Athletes')
+    expect(html).toContain('Female Athletes')
+
+    // Percentile Progress Gauge
+    expect(html).toContain('role="progressbar"')
+    expect(html).toContain('kc-calc-gauge-fill')
+
+    // Bilingual Coaching Advice
+    expect(html).toContain('Coaching Action (English):')
+    expect(html).toContain('कोच के लिए सुझाव (हिंदी):')
+  })
+
+  it('embeds NormativeBenchmarkCalculator directly in empirical benchmark paper KG-2026-002', () => {
+    const html = renderToStaticMarkup(
+      <KhelChroniclePaperPage slug="normative-fitness-percentiles-grassroots-athletes-india" />
+    )
+
+    // Must embed calculator under #calculator anchor
+    expect(html).toContain('id="calculator"')
+    expect(html).toContain('Indian Athlete Normative Benchmark Calculator')
+    expect(html).toContain('href="#calculator"')
   })
 })

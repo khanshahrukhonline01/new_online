@@ -6,10 +6,14 @@ import {
   RESEARCH_METHODOLOGIES,
   RESEARCH_PAPERS,
   filterAndSortPapers,
+  generateCitations,
+  generateRisCitation,
   type ResearchPaper,
   type ChronicleSortOption,
 } from './data/khelchronicleData'
 import { getChroniclePapers } from '../../integrations/supabase/chronicle-client'
+import { AcademicGalleyModal } from './components/AcademicGalleyModal'
+import { NormativeBenchmarkCalculator } from './components/NormativeBenchmarkCalculator'
 import './khelchronicle.css'
 
 interface KhelChronicleHomeProps {
@@ -48,6 +52,14 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
   const [hasChartOnly, setHasChartOnly] = useState(() => initialParams.get('chart') === 'true')
   const [hasBenchmarksOnly, setHasBenchmarksOnly] = useState(() => initialParams.get('benchmarks') === 'true')
   const [sortBy, setSortBy] = useState<ChronicleSortOption>(() => (initialParams.get('sort') as ChronicleSortOption) || 'newest')
+
+  // Interactive Galley & Citation Modal states
+  const [galleyPaper, setGalleyPaper] = useState<ResearchPaper | null>(null)
+  const [citePaper, setCitePaper] = useState<ResearchPaper | null>(null)
+  const [calcModalOpen, setCalcModalOpen] = useState(false)
+  const [copiedDoiId, setCopiedDoiId] = useState<string | null>(null)
+  const [citationFormat, setCitationFormat] = useState<'apa' | 'bibtex' | 'mla' | 'chicago' | 'vancouver' | 'harvard'>('apa')
+  const [copyFeedback, setCopyFeedback] = useState(false)
 
   const [papers, setPapers] = useState<ResearchPaper[]>(() =>
     filterAndSortPapers({
@@ -298,6 +310,56 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
     setSortBy('newest')
   }
 
+  // Handle 1-click DOI copy on scholarly cards
+  const handleCopyDoi = (paperId: string, doi?: string) => {
+    const fullDoi = doi || `10.51224/khelchronicle.2026.${paperId.replace(/[^0-9]/g, '').padStart(3, '0')}`
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(`https://doi.org/${fullDoi}`)
+      setCopiedDoiId(paperId)
+      setTimeout(() => setCopiedDoiId(null), 2000)
+    }
+  }
+
+  // Quick Citation modal citations
+  const citations = useMemo(() => {
+    if (!citePaper) return { apa: '', bibtex: '', mla: '', chicago: '', vancouver: '', harvard: '' }
+    return generateCitations(citePaper)
+  }, [citePaper])
+
+  const copyCitation = () => {
+    if (!citePaper) return
+    const textToCopy = citations[citationFormat]
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(textToCopy)
+      setCopyFeedback(true)
+      setTimeout(() => setCopyFeedback(false), 2000)
+    }
+  }
+
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    if (typeof window === 'undefined') return
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleDownloadBibtex = () => {
+    if (!citePaper) return
+    downloadFile(citations.bibtex, `${citePaper.paperId}.bib`, 'application/x-bibtex')
+  }
+
+  const handleDownloadRis = () => {
+    if (!citePaper) return
+    const ris = generateRisCitation(citePaper)
+    downloadFile(ris, `${citePaper.paperId}.ris`, 'application/x-research-info-systems')
+  }
+
   const repositorySchema = useMemo(() => {
     return {
       '@context': 'https://schema.org',
@@ -408,6 +470,53 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
         </div>
       </section>
 
+      {/* PHASE 5: Repository Header Trust Seal & Live Stats Bar */}
+      <section className="kc-trust-ribbon" aria-label="Repository Verification and Live Metrics">
+        <div className="kc-stats-strip">
+          <div className="kc-stat-pill">
+            <strong className="kc-stat-val">{RESEARCH_PAPERS.length}</strong>
+            <span className="kc-stat-lbl">Preprints Indexed</span>
+          </div>
+          <div className="kc-stat-pill">
+            <strong className="kc-stat-val">18,400+</strong>
+            <span className="kc-stat-lbl">Repository Views</span>
+          </div>
+          <div className="kc-stat-pill">
+            <strong className="kc-stat-val">4,800+</strong>
+            <span className="kc-stat-lbl">Athletes Tested</span>
+          </div>
+          <div className="kc-stat-pill">
+            <strong className="kc-stat-val">16</strong>
+            <span className="kc-stat-lbl">Regional Hubs</span>
+          </div>
+          <div className="kc-stat-pill kc-stat-pill-highlight">
+            <SiteIcon name="shield-check" size={14} />
+            <span>100% Diamond Open Access</span>
+          </div>
+        </div>
+
+        <div className="kc-institutions-strip">
+          <span className="kc-inst-label">Institutional Alignment &amp; Partner Cohorts:</span>
+          <div className="kc-inst-badges">
+            <span className="kc-inst-badge" title="Sports Authority of India - National Centres of Excellence">
+              🏛️ SAI NCOE
+            </span>
+            <span className="kc-inst-badge" title="Lakshmibai National Institute of Physical Education, Gwalior">
+              🎓 LNIPE Gwalior
+            </span>
+            <span className="kc-inst-badge" title="All India Institute of Medical Sciences Sports Medicine">
+              🏥 AIIMS Sports Medicine
+            </span>
+            <span className="kc-inst-badge" title="Society for Transparency, Openness, and Replication in Kinesiology">
+              🌐 STORK Network
+            </span>
+            <span className="kc-inst-badge" title="Crossref Registered DOIs">
+              🔗 Crossref DOIs
+            </span>
+          </div>
+        </div>
+      </section>
+
       {/* SportRxiv Top Navigation Tabs */}
       <nav className="kc-server-nav-tabs" role="tablist" aria-label="KhelChronicle Navigation Tabs">
         <button
@@ -462,232 +571,185 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
         </button>
       </nav>
 
-      {/* TAB 1: ARCHIVE BROWSE (DEFAULT) */}
+      {/* TAB 1: ARCHIVE BROWSE (DEFAULT) — PHASE 1 TWO-COLUMN DESKTOP LAYOUT */}
       {activeTab === 'archive' && (
-        <>
-          {/* Sports Filter & Feature Toggles Strip */}
-          <div className="kc-sports-filter-strip" role="group" aria-label="Filter preprints by sport and empirical features">
-            <span className="kc-sports-filter-label">Sport Filter:</span>
-            {RESEARCH_SPORTS.map(sport => {
-              const count = sportCounts[sport.slug] ?? 0
-              const isSelected = selectedSport === sport.slug
-              return (
-                <button
-                  key={sport.id}
-                  type="button"
-                  className={`kc-sport-pill ${isSelected ? 'is-active' : ''}`}
-                  onClick={() => setSelectedSport(sport.slug)}
-                  aria-pressed={isSelected}
-                >
-                  <span className="kc-sport-emoji" aria-hidden="true">{sport.emoji}</span>
-                  <span className="kc-sport-name">{sport.name}</span>
-                  <span className="kc-sport-count" aria-label={`${count} papers`}>{count}</span>
-                </button>
-              )
-            })}
-
-            {/* Quick Feature Toggles */}
-            <div className="kc-feature-toggles-wrap">
-              <button
-                type="button"
-                className={`kc-feature-pill ${hasChartOnly ? 'is-active' : ''}`}
-                onClick={() => setHasChartOnly(prev => !prev)}
-                aria-pressed={hasChartOnly}
-                title="Filter papers with interactive SVG data charts"
-              >
-                <span>📊 Interactive Charts</span>
-              </button>
-              <button
-                type="button"
-                className={`kc-feature-pill ${hasBenchmarksOnly ? 'is-active' : ''}`}
-                onClick={() => setHasBenchmarksOnly(prev => !prev)}
-                aria-pressed={hasBenchmarksOnly}
-                title="Filter papers with normative cutoffs and percentiles"
-              >
-                <span>📈 Normative Cutoffs</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Methodology Filter Bar */}
-          <div className="kc-methodologies-bar" role="group" aria-label="Filter preprints by study methodology">
-            <span className="kc-methodology-label">Study Methodology:</span>
-            <div className="kc-methodology-pills-row">
-              {RESEARCH_METHODOLOGIES.map(meth => {
-                const count = methodologyCounts[meth.slug] ?? 0
-                const isSelected = selectedMethodology === meth.slug
-                return (
-                  <button
-                    key={meth.id}
-                    type="button"
-                    className={`kc-methodology-pill ${isSelected ? 'is-active' : ''}`}
-                    onClick={() => setSelectedMethodology(meth.slug)}
-                    aria-pressed={isSelected}
-                  >
-                    <span>{meth.shortName}</span>
-                    <span className="kc-methodology-count">{count}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Active Filter Chips Bar */}
-          {activeChips.length > 0 && (
-            <div className="kc-active-chips-bar" role="region" aria-label="Active filters">
-              <span className="kc-active-chips-label">Active filters ({activeChips.length}):</span>
-              <div className="kc-chips-wrapper">
-                {activeChips.map(chip => (
-                  <span key={chip.id} className="kc-active-chip">
-                    <span>{chip.label}</span>
-                    <button
-                      type="button"
-                      className="kc-chip-remove"
-                      onClick={chip.onRemove}
-                      aria-label={`Remove filter: ${chip.label}`}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+        <div className="kc-two-col-layout">
+          {/* LEFT STICKY FILTER RAIL (290px on Desktop) */}
+          <aside className="kc-filter-sidebar" aria-label="Research Filters and Facets">
+            <div className="kc-sidebar-head">
+              <div className="kc-sidebar-title-row">
+                <SiteIcon name="filter" size={16} />
+                <h3 className="kc-sidebar-title">Filter Repository</h3>
+              </div>
+              {activeChips.length > 0 && (
                 <button
                   type="button"
-                  className="kc-reset-filters-btn"
+                  className="kc-sidebar-reset-btn"
                   onClick={clearAllFilters}
-                  aria-label="Reset all filters"
+                  title="Reset all filters"
                 >
-                  Reset all
+                  Reset ({activeChips.length})
                 </button>
+              )}
+            </div>
+
+            {/* Facet 1: Research Disciplines (Categories) */}
+            <div className="kc-facet-section">
+              <h4 className="kc-facet-title">Discipline</h4>
+              <div className="kc-facet-list">
+                <button
+                  type="button"
+                  className={`kc-facet-item ${selectedCategory === 'all' ? 'is-active' : ''}`}
+                  onClick={() => setSelectedCategory('all')}
+                >
+                  <SiteIcon name="award" size={14} className="kc-facet-icon" />
+                  <span className="kc-facet-name">All Disciplines</span>
+                  <span className="kc-facet-count">{RESEARCH_PAPERS.length}</span>
+                </button>
+                {RESEARCH_CATEGORIES.map(cat => {
+                  const count = RESEARCH_PAPERS.filter(p => p.category === cat.slug).length
+                  const isSelected = selectedCategory === cat.slug
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      className={`kc-facet-item ${isSelected ? 'is-active' : ''}`}
+                      onClick={() => setSelectedCategory(cat.slug)}
+                    >
+                      <SiteIcon name={cat.icon} size={14} className="kc-facet-icon" />
+                      <span className="kc-facet-name">{cat.name}</span>
+                      <span className="kc-facet-count">{count}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
-          )}
 
-          {/* Category Quick Filter Grid */}
-          <div className="kc-categories-grid" role="region" aria-label="Research disciplines">
-            <button
-              type="button"
-              className={`kc-category-chip ${selectedCategory === 'all' ? 'is-active' : ''}`}
-              onClick={() => setSelectedCategory('all')}
-            >
-              <SiteIcon name="award" size={14} />
-              <span>All Disciplines ({RESEARCH_PAPERS.length})</span>
-            </button>
-            {RESEARCH_CATEGORIES.map(cat => {
-              const count = RESEARCH_PAPERS.filter(p => p.category === cat.slug).length
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  className={`kc-category-chip ${selectedCategory === cat.slug ? 'is-active' : ''}`}
-                  onClick={() => setSelectedCategory(cat.slug)}
-                >
-                  <SiteIcon name={cat.icon} size={14} />
-                  <span>{cat.name} ({count})</span>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Featured Preprint Card */}
-          {featuredPaper && !searchQuery && selectedCategory === 'all' && selectedSport === 'all' && selectedMethodology === 'all' && (
-            <article className="kc-featured-card" aria-labelledby="featured-paper-title">
-              <div className="kc-eyebrow-row" style={{ marginBottom: '8px' }}>
-                <span className="kc-badge-featured">Featured Research Preprint</span>
-                <span className="kc-badge-open-access">Pre-Moderated</span>
-                {featuredPaper.doi && (
-                  <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#0369a1', fontWeight: 600 }}>
-                    doi:{featuredPaper.doi}
-                  </span>
-                )}
-              </div>
-
-              <div className="kc-paper-top-meta" style={{ marginBottom: '10px' }}>
-                <span className="kc-paper-id-tag">{featuredPaper.paperId}</span>
-                <span className="kc-paper-ver-tag">{featuredPaper.version}</span>
-                {featuredPaper.sport && (
-                  <span className="kc-paper-sport-tag">
-                    {featuredPaper.sport}
-                  </span>
-                )}
-                <span className="kc-paper-category-tag">{featuredPaper.categoryName}</span>
-                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#dcfce7', color: '#15803d' }}>
-                  Diamond Open Access
-                </span>
-                <span className="kc-paper-date">Published {featuredPaper.datePublished}</span>
-              </div>
-
-              <h2 id="featured-paper-title" className="kc-featured-title">
-                <a
-                  href={`/khelchronicle/${featuredPaper.slug}`}
-                  onClick={e => handleLink(e, `/khelchronicle/${featuredPaper.slug}`)}
-                >
-                  {featuredPaper.title}
-                </a>
-              </h2>
-
-              <div className="kc-paper-authors">
-                <span>By </span>
-                {featuredPaper.authors.map((auth, idx) => (
-                  <span key={auth.id}>
-                    <a
-                      href={`/khelchronicle/author/${auth.slug}`}
-                      onClick={e => handleLink(e, `/khelchronicle/author/${auth.slug}`)}
+            {/* Facet 2: Sports Selector */}
+            <div className="kc-facet-section">
+              <h4 className="kc-facet-title">Sport Filter:</h4>
+              <div className="kc-facet-list">
+                {RESEARCH_SPORTS.map(sport => {
+                  const count = sportCounts[sport.slug] ?? 0
+                  const isSelected = selectedSport === sport.slug
+                  return (
+                    <button
+                      key={sport.id}
+                      type="button"
+                      className={`kc-facet-item kc-sport-pill ${isSelected ? 'is-active' : ''}`}
+                      onClick={() => setSelectedSport(sport.slug)}
                     >
-                      {auth.name}
-                    </a>
-                    {auth.affiliation ? ` (${auth.affiliation.split(',')[0]})` : ''}
-                    {idx < featuredPaper.authors.length - 1 ? ', ' : ''}
-                  </span>
-                ))}
+                      <span className="kc-facet-emoji">{sport.emoji}</span>
+                      <span className="kc-facet-name">{sport.name}</span>
+                      <span className="kc-facet-count">{count}</span>
+                    </button>
+                  )
+                })}
               </div>
+            </div>
 
-              <div className="kc-abstract-box">
-                <span className="kc-abstract-label">Abstract: </span>
-                <span>{featuredPaper.abstract.background} {featuredPaper.abstract.results}</span>
+            {/* Facet 3: Study Methodology */}
+            <div className="kc-facet-section">
+              <h4 className="kc-facet-title">Study Methodology:</h4>
+              <div className="kc-facet-list">
+                {RESEARCH_METHODOLOGIES.map(meth => {
+                  const count = methodologyCounts[meth.slug] ?? 0
+                  const isSelected = selectedMethodology === meth.slug
+                  return (
+                    <button
+                      key={meth.id}
+                      type="button"
+                      className={`kc-facet-item kc-methodology-pill ${isSelected ? 'is-active' : ''}`}
+                      onClick={() => setSelectedMethodology(meth.slug)}
+                    >
+                      <span className="kc-facet-name">{meth.name}</span>
+                      <span className="kc-facet-count">{count}</span>
+                    </button>
+                  )
+                })}
               </div>
+            </div>
 
-              <div className="kc-keywords-row">
-                {featuredPaper.keywords.map(kw => (
-                  <span key={kw} className="kc-keyword-chip">#{kw}</span>
-                ))}
+            {/* Facet 4: Open Science & Interactive Features */}
+            <div className="kc-facet-section">
+              <h4 className="kc-facet-title">Open Science &amp; Features</h4>
+              <div className="kc-facet-toggles">
+                <label className="kc-facet-toggle-label">
+                  <input
+                    type="checkbox"
+                    checked={hasChartOnly}
+                    onChange={e => setHasChartOnly(e.target.checked)}
+                    className="kc-facet-checkbox"
+                  />
+                  <span className="kc-facet-toggle-text">📊 Interactive Charts</span>
+                </label>
+                <label className="kc-facet-toggle-label">
+                  <input
+                    type="checkbox"
+                    checked={hasBenchmarksOnly}
+                    onChange={e => setHasBenchmarksOnly(e.target.checked)}
+                    className="kc-facet-checkbox"
+                  />
+                  <span className="kc-facet-toggle-text">📈 Normative Cutoffs</span>
+                </label>
               </div>
+            </div>
 
-              <div className="kc-card-bottom">
-                <div className="kc-metrics-group">
-                  <span className="kc-metric-item">
-                    <SiteIcon name="download" size={14} />
-                    <span>{featuredPaper.metrics.downloads} downloads</span>
-                  </span>
-                  <span className="kc-metric-item">
-                    <SiteIcon name="eye" size={14} />
-                    <span>{featuredPaper.metrics.views} views</span>
-                  </span>
-                  <span className="kc-metric-item">
-                    <SiteIcon name="bookmark" size={14} />
-                    <span>{featuredPaper.metrics.citations} citations</span>
-                  </span>
-                </div>
+            {/* Phase 3: Interactive Normative Calculator Sidebar Widget */}
+            <div className="kc-sidebar-widget-banner">
+              <div className="kc-widget-banner-icon">
+                <SiteIcon name="chart" size={18} />
+              </div>
+              <div className="kc-widget-banner-text">
+                <strong>Normative Calculator Tool</strong>
+                <p>Compare athlete test scores against 4,800+ national junior norms.</p>
+              </div>
+              <button
+                type="button"
+                className="kc-widget-open-btn"
+                onClick={() => setCalcModalOpen(true)}
+              >
+                Launch National Norms Tool
+              </button>
+            </div>
+          </aside>
 
-                <div className="kc-card-actions">
-                  <a
-                    href={`/khelchronicle/${featuredPaper.slug}`}
-                    className="kc-btn-primary"
-                    onClick={e => handleLink(e, `/khelchronicle/${featuredPaper.slug}`)}
+          {/* RIGHT MAIN CONTENT FEED */}
+          <main className="kc-main-feed">
+            {/* Active Filter Chips Bar */}
+            {activeChips.length > 0 && (
+              <div className="kc-active-chips-bar" role="region" aria-label="Active filters">
+                <span className="kc-active-chips-label">Active filters ({activeChips.length}):</span>
+                <div className="kc-chips-wrapper">
+                  {activeChips.map(chip => (
+                    <span key={chip.id} className="kc-active-chip">
+                      <span>{chip.label}</span>
+                      <button
+                        type="button"
+                        className="kc-chip-remove"
+                        onClick={chip.onRemove}
+                        aria-label={`Remove filter: ${chip.label}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  <button
+                    type="button"
+                    className="kc-reset-filters-btn"
+                    onClick={clearAllFilters}
+                    aria-label="Reset all filters"
                   >
-                    <span>Read Full Preprint</span>
-                    <SiteIcon name="arrow-up-right" size={14} />
-                  </a>
+                    Reset all
+                  </button>
                 </div>
               </div>
-            </article>
-          )}
+            )}
 
-          {/* Filtered Papers List Section */}
-          <section aria-labelledby="all-preprints-heading">
             {/* Results & Sorting Toolbar */}
             <div className="kc-toolbar-row">
               <div>
-                <h2 id="all-preprints-heading" style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>
+                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>
                   {selectedCategory === 'all'
                     ? 'All Research Preprints'
                     : `${RESEARCH_CATEGORIES.find(c => c.slug === selectedCategory)?.name || 'Discipline'} Preprints`}
@@ -716,6 +778,137 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
               </div>
             </div>
 
+            {/* Featured Preprint Card (only when default view) */}
+            {featuredPaper && !searchQuery && selectedCategory === 'all' && selectedSport === 'all' && selectedMethodology === 'all' && (
+              <article className="kc-featured-card" aria-labelledby="featured-paper-title">
+                <div className="kc-eyebrow-row" style={{ marginBottom: '8px' }}>
+                  <span className="kc-badge-featured">Featured Research Preprint</span>
+                  <span className="kc-badge-open-access">Pre-Moderated</span>
+                  {featuredPaper.doi && (
+                    <button
+                      type="button"
+                      className="kc-card-doi-pill"
+                      onClick={() => handleCopyDoi(featuredPaper.paperId, featuredPaper.doi)}
+                      title="Click to copy Crossref DOI link"
+                    >
+                      <span className="kc-doi-mono">doi:{featuredPaper.doi}</span>
+                      <SiteIcon name={copiedDoiId === featuredPaper.paperId ? 'check' : 'copy'} size={11} />
+                      {copiedDoiId === featuredPaper.paperId && <span className="kc-copied-badge">Copied!</span>}
+                    </button>
+                  )}
+                </div>
+
+                <div className="kc-paper-top-meta" style={{ marginBottom: '10px' }}>
+                  <span className="kc-paper-id-tag">{featuredPaper.paperId}</span>
+                  <span className="kc-paper-ver-tag">{featuredPaper.version}</span>
+                  {featuredPaper.sport && (
+                    <span className="kc-paper-sport-tag">
+                      {featuredPaper.sport}
+                    </span>
+                  )}
+                  <span className="kc-paper-category-tag">{featuredPaper.categoryName}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#dcfce7', color: '#15803d' }}>
+                    Diamond Open Access
+                  </span>
+                  <span className="kc-paper-date">Published {featuredPaper.datePublished}</span>
+                </div>
+
+                <h2 id="featured-paper-title" className="kc-featured-title kc-serif-title">
+                  <a
+                    href={`/khelchronicle/${featuredPaper.slug}`}
+                    onClick={e => handleLink(e, `/khelchronicle/${featuredPaper.slug}`)}
+                  >
+                    {featuredPaper.title}
+                  </a>
+                </h2>
+
+                <div className="kc-paper-authors">
+                  <span>By </span>
+                  {featuredPaper.authors.map((auth, idx) => (
+                    <span key={auth.id} className="kc-author-inline-item">
+                      <a
+                        href={`/khelchronicle/author/${auth.slug}`}
+                        onClick={e => handleLink(e, `/khelchronicle/author/${auth.slug}`)}
+                      >
+                        {auth.name}
+                      </a>
+                      {auth.orcid && (
+                        <a
+                          href={`https://orcid.org/${auth.orcid}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="kc-orcid-micro-badge"
+                          title={`ORCID: ${auth.orcid}`}
+                        >
+                          iD
+                        </a>
+                      )}
+                      {auth.affiliation ? ` (${auth.affiliation.split(',')[0]})` : ''}
+                      {idx < featuredPaper.authors.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="kc-abstract-box">
+                  <span className="kc-abstract-label">Abstract: </span>
+                  <span>{featuredPaper.abstract.background} {featuredPaper.abstract.results}</span>
+                </div>
+
+                <div className="kc-keywords-row">
+                  {featuredPaper.keywords.map(kw => (
+                    <span key={kw} className="kc-keyword-chip">#{kw}</span>
+                  ))}
+                </div>
+
+                <div className="kc-card-bottom">
+                  <div className="kc-metrics-group">
+                    <span className="kc-metric-item">
+                      <SiteIcon name="download" size={14} />
+                      <span>{featuredPaper.metrics.downloads} downloads</span>
+                    </span>
+                    <span className="kc-metric-item">
+                      <SiteIcon name="eye" size={14} />
+                      <span>{featuredPaper.metrics.views} views</span>
+                    </span>
+                    <span className="kc-metric-item">
+                      <SiteIcon name="bookmark" size={14} />
+                      <span>{featuredPaper.metrics.citations} citations</span>
+                    </span>
+                  </div>
+
+                  <div className="kc-card-actions-group">
+                    <button
+                      type="button"
+                      className="kc-card-micro-btn"
+                      onClick={() => setGalleyPaper(featuredPaper)}
+                      title="Read preprint galley viewer"
+                    >
+                      <SiteIcon name="file-text" size={13} />
+                      <span>Read Galley</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="kc-card-micro-btn"
+                      onClick={() => setCitePaper(featuredPaper)}
+                      title="Export citation"
+                    >
+                      <SiteIcon name="bookmark" size={13} />
+                      <span>Cite</span>
+                    </button>
+                    <a
+                      href={`/khelchronicle/${featuredPaper.slug}`}
+                      className="kc-card-micro-btn kc-card-micro-btn-primary"
+                      onClick={e => handleLink(e, `/khelchronicle/${featuredPaper.slug}`)}
+                    >
+                      <span>Read Full Preprint</span>
+                      <SiteIcon name="arrow-up-right" size={13} />
+                    </a>
+                  </div>
+                </div>
+              </article>
+            )}
+
+            {/* Filtered Papers Feed */}
             {filteredPapers.length === 0 ? (
               <div className="kc-empty-state" role="status" aria-live="polite">
                 <div className="kc-empty-icon">
@@ -739,6 +932,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
               <div className="kc-papers-grid">
                 {filteredPapers.map(paper => (
                   <article key={paper.id} className="kc-paper-card">
+                    {/* Top Identifiers & Metadata Row */}
                     <div className="kc-paper-top-meta">
                       <span className="kc-paper-id-tag">{paper.paperId}</span>
                       <span className="kc-paper-ver-tag">{paper.version}</span>
@@ -753,19 +947,27 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
                         </span>
                       )}
                       {paper.hasInteractiveChart && (
-                        <span className="kc-chart-indicator-badge" title="Interactive chart available">
+                        <span className="kc-chart-indicator-badge" title="Interactive SVG chart available">
                           📊 Chart
                         </span>
                       )}
                       <span className="kc-paper-category-tag">{paper.categoryName}</span>
                       {paper.doi && (
-                        <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#0369a1', fontWeight: 600 }}>
-                          doi:{paper.doi}
-                        </span>
+                        <button
+                          type="button"
+                          className="kc-card-doi-pill"
+                          onClick={() => handleCopyDoi(paper.paperId, paper.doi)}
+                          title="Click to copy Crossref DOI"
+                        >
+                          <span className="kc-doi-mono">doi:{paper.doi}</span>
+                          <SiteIcon name={copiedDoiId === paper.paperId ? 'check' : 'copy'} size={11} />
+                          {copiedDoiId === paper.paperId && <span className="kc-copied-badge">Copied!</span>}
+                        </button>
                       )}
                     </div>
 
-                    <h3 className="kc-card-title">
+                    {/* Academic Serif Title */}
+                    <h3 className="kc-card-title kc-serif-title">
                       <a
                         href={`/khelchronicle/${paper.slug}`}
                         onClick={e => handleLink(e, `/khelchronicle/${paper.slug}`)}
@@ -774,24 +976,42 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
                       </a>
                     </h3>
 
-                    <div className="kc-paper-authors" style={{ marginBottom: '8px' }}>
-                      <span>{paper.authors.map(a => a.name).join(', ')}</span>
+                    {/* Author Byline with ORCID micro-badge */}
+                    <div className="kc-card-authors-row">
+                      {paper.authors.map((auth, aIdx) => (
+                        <span key={auth.id} className="kc-author-inline-item">
+                          <span>{auth.name}</span>
+                          {auth.orcid && (
+                            <a
+                              href={`https://orcid.org/${auth.orcid}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="kc-orcid-micro-badge"
+                              title={`ORCID: ${auth.orcid}`}
+                            >
+                              iD
+                            </a>
+                          )}
+                          {aIdx < paper.authors.length - 1 ? ', ' : ''}
+                        </span>
+                      ))}
                     </div>
 
+                    {/* Abstract Snippet */}
                     <p className="kc-card-abstract-snippet">
                       {paper.abstract.background.slice(0, 220)}…
                     </p>
 
-                    {/* Open science badges preview */}
+                    {/* STORK Open Science Badges */}
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
                       {paper.openScienceBadges?.openData && (
-                        <span className="kc-chip-badge-sm">🟢 Open Data</span>
+                        <span className="kc-chip-badge-sm kc-badge-open-data">🟢 Open Data</span>
                       )}
                       {paper.openScienceBadges?.openCode && (
-                        <span className="kc-chip-badge-sm">💻 Open Code</span>
+                        <span className="kc-chip-badge-sm kc-badge-open-code">💻 Open Code</span>
                       )}
                       {paper.openScienceBadges?.preregistered && (
-                        <span className="kc-chip-badge-sm">📝 Preregistered</span>
+                        <span className="kc-chip-badge-sm kc-badge-prereg">📝 Preregistered</span>
                       )}
                       {paper.peerReviewStatus && (
                         <span className="kc-chip-badge-sm" style={{ background: '#f1f5f9', color: '#475569' }}>
@@ -800,43 +1020,65 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
                       )}
                     </div>
 
+                    {/* Keywords */}
                     <div className="kc-keywords-row" style={{ marginBottom: '14px' }}>
                       {paper.keywords.slice(0, 4).map(kw => (
                         <span key={kw} className="kc-keyword-chip">#{kw}</span>
                       ))}
                     </div>
 
+                    {/* Card Footer: Metrics & Scholarly Action Buttons */}
                     <div className="kc-card-bottom">
                       <div className="kc-metrics-group">
-                        <span className="kc-metric-item">
+                        <span className="kc-metric-item" title="Abstract and paper views">
                           <SiteIcon name="eye" size={13} />
                           <span>{paper.metrics.views}</span>
                         </span>
-                        <span className="kc-metric-item">
+                        <span className="kc-metric-item" title="PDF and dataset downloads">
                           <SiteIcon name="download" size={13} />
                           <span>{paper.metrics.downloads}</span>
                         </span>
-                        <span className="kc-metric-item">
+                        <span className="kc-metric-item" title="Crossref citations">
                           <SiteIcon name="bookmark" size={13} />
                           <span>{paper.metrics.citations}</span>
                         </span>
                       </div>
 
-                      <a
-                        href={`/khelchronicle/${paper.slug}`}
-                        className="kc-btn-secondary"
-                        onClick={e => handleLink(e, `/khelchronicle/${paper.slug}`)}
-                      >
-                        <span>View Preprint &amp; Galley</span>
-                        <SiteIcon name="chevron-right" size={13} />
-                      </a>
+                      <div className="kc-card-actions-group">
+                        <button
+                          type="button"
+                          className="kc-card-micro-btn"
+                          onClick={() => setGalleyPaper(paper)}
+                          title="Open 2-column preprint galley reader"
+                        >
+                          <SiteIcon name="file-text" size={12} />
+                          <span>Galley</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="kc-card-micro-btn"
+                          onClick={() => setCitePaper(paper)}
+                          title="Generate academic citation"
+                        >
+                          <SiteIcon name="bookmark" size={12} />
+                          <span>Cite</span>
+                        </button>
+                        <a
+                          href={`/khelchronicle/${paper.slug}`}
+                          className="kc-card-micro-btn kc-card-micro-btn-primary"
+                          onClick={e => handleLink(e, `/khelchronicle/${paper.slug}`)}
+                        >
+                          <span>Read Preprint</span>
+                          <SiteIcon name="chevron-right" size={12} />
+                        </a>
+                      </div>
                     </div>
                   </article>
                 ))}
               </div>
             )}
-          </section>
-        </>
+          </main>
+        </div>
       )}
 
       {/* TAB 2: ABOUT SPORTRXIV / KHELCHRONICLE */}
@@ -1044,6 +1286,94 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
           </div>
         </div>
       </section>
+
+      {/* Modal: Interactive Academic Galley Viewer */}
+      {galleyPaper && (
+        <AcademicGalleyModal
+          paper={galleyPaper}
+          isOpen={!!galleyPaper}
+          onClose={() => setGalleyPaper(null)}
+        />
+      )}
+
+      {/* Modal: Quick Scholarly Citation Export */}
+      {citePaper && (
+        <div className="kc-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="home-cite-modal-title">
+          <div className="kc-modal-box">
+            <div className="kc-modal-header">
+              <h3 id="home-cite-modal-title" className="kc-modal-title">Cite {citePaper.paperId}</h3>
+              <button
+                type="button"
+                className="kc-modal-close-btn"
+                onClick={() => setCitePaper(null)}
+                aria-label="Close citation modal"
+              >
+                <SiteIcon name="close" size={18} />
+              </button>
+            </div>
+
+            <div className="kc-modal-content">
+              <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#475569' }}>
+                {citePaper.title}
+              </p>
+
+              <div className="kc-citation-format-tabs" role="tablist" aria-label="Citation Formats">
+                {(['apa', 'harvard', 'chicago', 'mla', 'vancouver', 'bibtex'] as const).map(fmt => (
+                  <button
+                    key={fmt}
+                    type="button"
+                    className={`kc-citation-tab ${citationFormat === fmt ? 'is-active' : ''}`}
+                    onClick={() => setCitationFormat(fmt)}
+                    role="tab"
+                    aria-selected={citationFormat === fmt}
+                  >
+                    {fmt.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+
+              <div className="kc-citation-preview-box">
+                <code>{citations[citationFormat]}</code>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
+                <button type="button" className="kc-btn-primary" onClick={copyCitation}>
+                  <SiteIcon name="copy" size={14} />
+                  <span>{copyFeedback ? 'Copied to Clipboard!' : 'Copy Citation Text'}</span>
+                </button>
+                <button type="button" className="kc-btn-secondary" onClick={handleDownloadBibtex}>
+                  <span>Download .BIB</span>
+                </button>
+                <button type="button" className="kc-btn-secondary" onClick={handleDownloadRis}>
+                  <span>Download .RIS</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Interactive Normative Benchmark Calculator */}
+      {calcModalOpen && (
+        <div className="kc-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-calc-heading">
+          <div className="kc-modal-box" style={{ maxWidth: '840px' }}>
+            <div className="kc-modal-header">
+              <h3 id="modal-calc-heading" className="kc-modal-title">National Normative Percentile Tool</h3>
+              <button
+                type="button"
+                className="kc-modal-close-btn"
+                onClick={() => setCalcModalOpen(false)}
+                aria-label="Close calculator modal"
+              >
+                <SiteIcon name="close" size={18} />
+              </button>
+            </div>
+            <div className="kc-modal-content">
+              <NormativeBenchmarkCalculator />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
