@@ -389,17 +389,12 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
           <section className="venue-section">
             <h2>About {venue.name}</h2>
             <div className="venue-prose">
-              <p>{venue.description}</p>
-              <p>
-                {venue.name} is one of {venue.city}&apos;s premier destinations for sports enthusiasts, offering
-                professional-grade playing conditions for competitive games and casual training sessions alike.
-                The arena is maintained with clean surroundings, high-lux illumination, and dedicated sports staff.
-              </p>
+              {venue.description && <p>{venue.description}</p>}
             </div>
           </section>
 
-          {/* Facilities & Amenities */}
-          <section className="venue-section">
+          {/* Facilities & Amenities — show only source-provided details */}
+          {facilitiesList.length > 0 && <section className="venue-section">
             <h2>Amenities &amp; Features</h2>
             <div className="venue-facilities-grid">
               {facilitiesList.map((facility, index) => (
@@ -409,10 +404,10 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                 </div>
               ))}
             </div>
-          </section>
+          </section>}
 
           {/* Ground Guidelines & Rules */}
-          <section className="venue-section">
+          {rulesList.length > 0 && <section className="venue-section">
             <h2>Ground Rules &amp; Guidelines</h2>
             <ul className="venue-rules-list">
               {rulesList.map((rule, index) => (
@@ -422,7 +417,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                 </li>
               ))}
             </ul>
-          </section>
+          </section>}
 
           {/* Location & Directions Card */}
           <section className="venue-section">
@@ -435,20 +430,17 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                   <p>{fullAddress}</p>
                 </div>
               </div>
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="venue-btn venue-btn-primary location-directions-btn"
-              >
-                <SiteIcon name="map" size={16} />
-                <span>Open in Google Maps</span>
-              </a>
+              {fullAddress && (
+                <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-primary location-directions-btn">
+                  <SiteIcon name="map" size={16} />
+                  <span>Open in Google Maps</span>
+                </a>
+              )}
             </div>
           </section>
 
-          {/* FAQs Accordion */}
-          <section className="venue-section venue-faqs">
+          {/* FAQs Accordion — never invent questions or answers */}
+          {faqs.length > 0 && <section className="venue-section venue-faqs">
             <h2>Frequently Asked Questions</h2>
             <div className="faq-accordion-list">
               {faqs.map((faq, index) => {
