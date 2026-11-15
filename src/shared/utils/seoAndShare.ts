@@ -40,8 +40,8 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/') {
     return {
-      title: "KhelGrid (खेलग्रिड) — India's Premier Sports Platform | Play, Book Turfs, Academies, Trials & Live Scores",
-      description: "Discover verified sports academies, book turfs & courts, find open selection trials, join local pickup games, connect with coaches, and follow live scores across 30+ sports in all Indian languages (खेल, खेलकूद, टूर्नामेंट, ट्रायल, अकादमी).",
+      title: "KhelGrid | Sports Trials, Venues & Athlete Resources in India",
+      description: "Explore published sports trials and opportunities, sports venues, coaching listings, athlete CV tools and KhelChronicle research. Confirm details with organisers and providers.",
       canonicalUrl: 'https://khelgrid.com/',
       keywords: DEFAULT_KEYWORDS,
       ogType: 'website',
