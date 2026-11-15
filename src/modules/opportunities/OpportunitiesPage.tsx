@@ -17,6 +17,7 @@ import { BookmarkButton } from '../../shared/components/BookmarkButton'
 import { createOpportunitySavedItem } from '../../shared/services/savedService'
 import { TrialApplicationModal } from './TrialApplicationModal'
 import { getUserTrialApplications } from '../../integrations/supabase/athlete-profile-client'
+import { WhatsAppTrialAlertWidget } from './WhatsAppTrialAlertWidget'
 
 function formatDate(value: string | null) {
   if (!value) return 'Date not provided'
@@ -227,6 +228,13 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
       <p className="page-intro">
         Published opportunities only. Check the source and organizer details before applying.
       </p>
+
+      {/* 1-Tap WhatsApp Trial Alerts Subscription Banner */}
+      <WhatsAppTrialAlertWidget
+        sport={sport || 'All Sports'}
+        city={city || undefined}
+        variant="banner"
+      />
 
       <DirectoryCallout
         variant="opportunity"

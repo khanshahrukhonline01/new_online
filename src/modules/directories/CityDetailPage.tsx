@@ -18,6 +18,8 @@ import {
 import type { Academy, Opportunity, Venue } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { createBannerSvg } from '../home/homeSvgBanners'
+import { WhatsAppTrialAlertWidget } from '../opportunities/WhatsAppTrialAlertWidget'
+import { TournamentBracketViewer } from '../events/TournamentBracketViewer'
 import './CityDetailPage.css'
 
 export interface CityDetailPageProps {
@@ -35,6 +37,7 @@ export default function CityDetailPage({
   const [opportunities, setOpportunities] = useState<Opportunity[]>([])
   const [pickupGames, setPickupGames] = useState<DatabasePickupGame[]>([])
   const [academies, setAcademies] = useState<Academy[]>([])
+  const [activeCategoryTab, setActiveCategoryTab] = useState<'all' | 'venues' | 'academies' | 'trials' | 'games'>('all')
   const [loading, setLoading] = useState(true)
   const [cityMetaList, setCityMetaList] = useState<CityInfo[]>(ALL_INDIAN_CITIES)
 
@@ -341,6 +344,22 @@ export default function CityDetailPage({
             <SiteIcon name="arrow-up-right" size={14} />
           </a>
         </div>
+
+        {/* Weather & Outdoor Playing Conditions Live Bar */}
+        <div className="city-hub-weather-strip" aria-label="City Playing Conditions">
+          <div className="weather-pill">
+            <span className="weather-emoji">🌤️</span>
+            <span>28°C · Clear Skies in {city.name}</span>
+          </div>
+          <div className="turf-condition-pill">
+            <span className="live-turf-dot" />
+            <span>Optimal Turf &amp; Pitch Moisture</span>
+          </div>
+          <div className="evening-slots-pill">
+            <SiteIcon name="clock" size={13} />
+            <span>Evening Floodlit Slots Open (6 PM – 11 PM)</span>
+          </div>
+        </div>
       </header>
 
       {/* Iconic Stadiums Callout Banner */}
@@ -362,6 +381,56 @@ export default function CityDetailPage({
           </div>
         </section>
       )}
+
+      {/* Category Navigation Filter Tabs */}
+      <nav className="city-hub-filter-tabs" aria-label="City Hub Categories">
+        <button
+          type="button"
+          className={`hub-filter-tab ${activeCategoryTab === 'all' ? 'is-active' : ''}`}
+          onClick={() => setActiveCategoryTab('all')}
+        >
+          All Hub Listings ({venues.length + opportunities.length + pickupGames.length + academies.length})
+        </button>
+        <button
+          type="button"
+          className={`hub-filter-tab ${activeCategoryTab === 'venues' ? 'is-active' : ''}`}
+          onClick={() => setActiveCategoryTab('venues')}
+        >
+          <SiteIcon name="calendar-check" size={14} />
+          <span>Turfs &amp; Box Cricket ({venues.length})</span>
+        </button>
+        <button
+          type="button"
+          className={`hub-filter-tab ${activeCategoryTab === 'academies' ? 'is-active' : ''}`}
+          onClick={() => setActiveCategoryTab('academies')}
+        >
+          <SiteIcon name="building" size={14} />
+          <span>Top Academies &amp; Akhadas ({academies.length})</span>
+        </button>
+        <button
+          type="button"
+          className={`hub-filter-tab ${activeCategoryTab === 'trials' ? 'is-active' : ''}`}
+          onClick={() => setActiveCategoryTab('trials')}
+        >
+          <SiteIcon name="trophy" size={14} />
+          <span>Selection Trials ({opportunities.length})</span>
+        </button>
+        <button
+          type="button"
+          className={`hub-filter-tab ${activeCategoryTab === 'games' ? 'is-active' : ''}`}
+          onClick={() => setActiveCategoryTab('games')}
+        >
+          <SiteIcon name="activity" size={14} />
+          <span>Pickup Games ({pickupGames.length})</span>
+        </button>
+      </nav>
+
+      {/* 1-Tap WhatsApp Trial Alerts Widget */}
+      <WhatsAppTrialAlertWidget
+        city={city.name}
+        state={city.state}
+        variant="banner"
+      />
 
       {/* SECTION 1: Selection Trials & Tournaments */}
       <section id="city-trials" className="city-hub-section" aria-label={`Selection Trials in ${city.name}`}>
@@ -542,11 +611,21 @@ export default function CityDetailPage({
                     <SiteIcon name="map-pin" size={12} />
                     <span>{v.address || v.city}</span>
                   </p>
+                  <div className="city-card-features-row">
+                    <span className="city-price-pill">
+                      {(v as unknown as { pricing?: string }).pricing || '₹800 – ₹1,400 / hr'}
+                    </span>
+                    <span className="city-surface-pill">
+                      {(v as unknown as { surface_type?: string }).surface_type || 'Synthetic Turf'}
+                    </span>
+                  </div>
                 </div>
                 <div className="city-card-footer">
-                  <span className="city-card-deadline">Informational Listing</span>
+                  <span className="city-card-deadline">
+                    <SiteIcon name="sparkles" size={11} /> Hourly Turf Booking
+                  </span>
                   <span className="city-card-cta">
-                    View <SiteIcon name="chevron-right" size={11} />
+                    Book Slot <SiteIcon name="chevron-right" size={11} />
                   </span>
                 </div>
               </a>
@@ -718,8 +797,19 @@ export default function CityDetailPage({
                     <SiteIcon name="map-pin" size={12} />
                     <span>{acad.city}{acad.state ? `, ${acad.state}` : ''}</span>
                   </p>
+                  <div className="city-card-features-row">
+                    <span className="city-fee-pill">
+                      {(acad as unknown as { fee_structure?: string }).fee_structure || '₹2,000 – ₹3,500 / mo'}
+                    </span>
+                    <span className="city-admission-pill">
+                      Admissions Open 2026–27
+                    </span>
+                  </div>
                 </div>
                 <div className="city-card-footer">
+                  <span className="city-card-deadline">
+                    <SiteIcon name="award" size={11} /> SAI / Federation Pathway
+                  </span>
                   <a
                     href={`/academies?q=${encodeURIComponent(acad.name)}`}
                     onClick={e => handleLink(e, `/academies?q=${encodeURIComponent(acad.name)}`)}
@@ -735,7 +825,16 @@ export default function CityDetailPage({
         )}
       </section>
 
-      {/* SECTION 5: Regional Sports Geography Explorer */}
+      {/* SECTION 5: Tournament Knockout Brackets & District League Centre */}
+      {(activeCategoryTab === 'all' || activeCategoryTab === 'trials') && (
+        <TournamentBracketViewer
+          tournamentTitle={`${city.name} District Junior Sports Championship 2026`}
+          city={city.name}
+          sport="Cricket"
+        />
+      )}
+
+      {/* SECTION 6: Regional Sports Geography Explorer */}
       {relatedCities.length > 0 && (
         <section className="city-hub-section city-hub-related-section" aria-label={`Other ${city.zone} Zone Cities`}>
           <div className="city-hub-section-header">

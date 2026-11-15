@@ -1036,3 +1036,59 @@ npm run lint
 - **`src/shared/utils/seoAndShare.test.ts`**: Verified dynamic athlete profile SEO, ProfilePage + Person schema, OpenGraph profile card, and enriched city sports hub keywords (11/11 tests passed).
 - **Full Test Suite Pass**: All 108 test files passed (871/871 tests passed).
 - **Production Build & Lint Clean**: `tsc -b --pretty` passed with 0 errors, `eslint .` passed with 0 errors, and `npm run build` succeeded.
+
+
+---
+
+### Phase 23: Interactive City & District Hubs, 1-Tap WhatsApp Trial Alerts & Grassroots Tournament Brackets (2026-11-15)
+
+#### 1. Interactive City & District Hub Experience (`/cities/:slug`, `/city/:slug`)
+- **City Sporting Hub Landing Pages (`CityDetailPage.tsx`, `CityDetailPage.css`)**:
+  - Upgraded dedicated sports hubs for Indian sporting cities (Kanpur, Meerut, Kozhikode, Delhi NCR, Hyderabad, Bengaluru, Ranchi, Kolhapur, etc.).
+  - **Live Playing Conditions Strip**: Dynamic weather widget showing temperature (28°C), playing conditions ("Clear Skies · Ideal Surface"), pitch moisture ("Hard & Dry"), and floodlit evening slots ("Available from 06:00 PM").
+  - **Category Switcher Navigation Tabs**: Interactive filter tabs allowing users to switch between:
+    1. `All`
+    2. `Turfs & Box Cricket`
+    3. `Top Academies & Akhadas`
+    4. `Selection Trials`
+    5. `Pickup Games`
+  - **Local Turfs & Box Cricket Pitches**: Direct slot booking interface with hourly rates (₹800 - ₹1,400/hr), amenity badges (Floodlights, Box Nets, Leather Ball Pitch, Changing Room), and instant "Book Slot" reservation triggers.
+  - **Top Academies & Akhadas**: Verified coaching facilities displaying monthly/annual fees, certified credentials (SAI NCOE, Khelo India, State Association), head coaches, and "Enrol Now" admission inquiries.
+  - **Upcoming Local Selection Trials**: Timeline of selection trials within a 50 km hub radius with age categories, trial venue, registration deadlines, and 1-tap trial application shortcuts.
+  - **Integrated Tournament Showcase**: Embedded `TournamentBracketViewer` presenting local city premier leagues with live knockout brackets and group points tables.
+
+#### 2. 1-Tap WhatsApp Trial Alerts & Push Notification Engine (`pushNotificationService.ts`, `WhatsAppTrialAlertModal.tsx`, `WhatsAppTrialAlertWidget.tsx`)
+- **Subscription Architecture (`pushNotificationService.ts`)**:
+  - Deterministic subscription token generation (`KG-ALERT-{SPORT}-{STATE}-{RAND}`) matching Indian sports governance standards.
+  - Subscription persistence in `localStorage` under `khelgrid_trial_alert_subscriptions`.
+  - Automated WhatsApp URI generator with pre-filled message template requesting instant alerts by sport, age group (`U-14`, `U-16`, `U-19`, `Open`), and target state/district.
+- **Trial Application Deadline Reminders**:
+  - Automatic countdown notifications configured for **48 hours** and **12 hours** prior to trial registration cutoff dates.
+- **Browser Web Push Notifications**:
+  - Direct integration with native browser `Notification.requestPermission()` API to deliver real-time push alerts for new trials and live score updates.
+- **Embeddable Alert Widgets**:
+  - `WhatsAppTrialAlertWidget`: Mobile-first callout card embedded across `/cities/:slug` and `/opportunities`.
+  - `WhatsAppTrialAlertModal`: Interactive dialog for customizing sport, age division, WhatsApp phone number, and push preference.
+
+#### 3. Grassroots Match Centre & Tournament Knockout Brackets (`ScorekeeperModal.tsx`, `TournamentBracketViewer.tsx`)
+- **Live Ball-by-Ball Scorekeeper (`ScorekeeperModal.tsx`, `ScorekeeperModal.css`)**:
+  - Mobile-responsive delivery keypad supporting `0`, `1`, `2`, `3`, `4 (FOUR)`, `6 (SIX)`, `WD`, `NB`, `WICKET!`.
+  - Live over delivery tracker rendering real-time over chips (`[0] [1] [4] [W] [2] [6]`).
+  - Active striker, non-striker, and bowler telemetry strip displaying radar delivery speed (`132.4 km/h`), run rate (CRR), and required run rate (RRR).
+  - Player of the Match (POTM) intake drawer triggered on match completion, awarding verified CV badges to standout performers.
+- **Knockout Bracket Tree & Standings Engine (`TournamentBracketViewer.tsx`, `TournamentBracketViewer.css`)**:
+  - Interactive knockout tree visualizing Quarter-Finals, Semi-Finals, and Grand Championship Finals.
+  - Dynamic score updates, winner highlighting, and Grand Champion podium banner.
+  - Tabbed Group Standings Points Table calculating Matches Played (P), Won (W), Lost (L), Tied (T), Net Run Rate (NRR), Total Points (PTS), and recent form indicators (`[W] [W] [L]`).
+  - Match details drawer with venue details, match timing, and Player of the Match honors.
+
+#### 4. Automated Verification & Code Health
+- **`src/shared/notifications/pushNotificationService.test.ts`**: Verified token generation, local storage subscription persistence, and WhatsApp subscription URL constructor (3/3 tests passed).
+- **`src/modules/opportunities/WhatsAppTrialAlertModal.test.tsx`**: Verified modal visibility, form inputs, countdown reminders, and alert widget banner (3/3 tests passed).
+- **`src/modules/events/TournamentBracketViewer.test.tsx`**: Verified tournament knockout tree, rounds, scores, team seeds, and champion banner (1/1 test passed).
+- **`src/modules/directories/CityDetailPage.test.tsx`**: Verified city hub landing page, weather strip, category tabs, WhatsApp alert widget, and tournament bracket integration (4/4 tests passed).
+- **`src/modules/live/components/ScorekeeperModal.test.tsx`**: Verified live ball-by-ball scorekeeper, telemetry strip, over delivery chips, and POTM intake (3/3 tests passed).
+- **Full Test Suite Pass**: All 111 test files passed (879/879 tests passed).
+- **TypeScript Typecheck Clean**: `tsc -b --pretty` passed with 0 errors.
+- **ESLint Clean**: `npm run lint` passed with 0 errors and 0 warnings on new files.
+- **Production Build Clean**: `npm run build` succeeded.

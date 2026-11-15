@@ -86,5 +86,23 @@ describe('CityDetailPage Dynamic City Sports Hub', () => {
     expect(html).toContain('BreadcrumbList')
     expect(html).toContain('https://khelgrid.com/cities/kanpur')
     expect(html).toContain('+ List in Kanpur')
+
+    // Weather & Playing Conditions Live Strip
+    expect(html).toContain('Optimal Turf &amp; Pitch Moisture')
+    expect(html).toContain('Clear Skies in Kanpur')
+
+    // Category Navigation Filter Tabs
+    expect(html).toContain('Turfs &amp; Box Cricket')
+    expect(html).toContain('Top Academies &amp; Akhadas')
+    expect(html).toContain('Selection Trials')
+
+    // 1-Tap WhatsApp Trial Alerts Integration
+    expect(html).toContain('1-TAP WHATSAPP TRIAL ALERTS')
+    expect(html).toContain('Subscribe in 1 Tap')
+
+    // Tournament Bracket & Knockout Viewer Integration
+    expect(html).toContain('Kanpur District Junior Sports Championship 2026')
+    expect(html).toContain('Knockout Bracket Tree')
+    expect(html).toContain('Group Standings Table')
   })
 })
