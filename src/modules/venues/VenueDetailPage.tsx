@@ -64,7 +64,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
     return () => {
       active = false
     }
-  }, [slug]
+  }, [slug])
 
   // Dynamic Community Rating & Review Stats
   useEffect(() => {
@@ -99,7 +99,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
       active = false
       window.removeEventListener('khelgrid:review-added', onReviewAdded)
     }
-  }, [slug, venue?.rating, venue?.review_count]
+  }, [slug, venue?.rating, venue?.review_count])
 
   // Real-time booked slots tracking directly from PostgreSQL public.venue_bookings via zero-PII RPC
   useEffect(() => {
@@ -472,7 +472,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
             </div>
           </section>}
 
-          {/* Community Reviews, Ratings & Media Uploads */
+          {/* Community Reviews, Ratings & Media Uploads */}
           <CommunityReviewsSection
             entityType="venue"
             entityId={venue.id}
@@ -489,6 +489,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
             <h3>Contact the Venue</h3>
             <p>
               Online booking and payment are not enabled here yet. Contact {venue.name} directly to confirm access, availability and current pricing.
+            </p>
             {whatsappUrl && (
               <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-whatsapp-block">
                 <SiteIcon name="message" size={18} />
