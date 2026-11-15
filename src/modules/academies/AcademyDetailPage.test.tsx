@@ -38,7 +38,7 @@ describe('AcademyDetailPage — published and verified catalogue access', () => 
         ? { status: 'submitted', reference_number: 'KHL-20261112-ACA001', tracking_key: 'private-academy-test-key' }
         : url.includes('/rest/v1/academies?')
           ? (() => {
-              const requestedSlug = new URL(url).searchParams.get('slug')?.replace(/^ilike\\./, '')
+              const requestedSlug = new URL(url).searchParams.get('slug')?.replace(/^ilike\./, '')
               return !requestedSlug || requestedSlug.toLowerCase() === academyFixture.slug.toLowerCase()
                 ? [academyFixture]
                 : []
