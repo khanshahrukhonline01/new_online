@@ -4,7 +4,7 @@ export type RouteMatch =
   | { name: 'sport-detail'; canonicalPath: '/sports/:slug'; slug: string }
   | { name: 'athlete-profile'; canonicalPath: '/u/:username'; username: string }
   | { name: 'opportunities-index'; canonicalPath: '/opportunities'; alias?: string }
-  | { name: 'opportunity-detail'; canonicalPath: '/opportunities/:slug'; slug: string; isApply?: boolean }
+  | { name: 'opportunity-detail'; canonicalPath: '/trial/:slug'; slug: string; isApply?: boolean }
   | { name: 'academies-index'; canonicalPath: '/academies'; alias?: string }
   | { name: 'academy-detail'; canonicalPath: '/academies/:slug'; slug: string; isEnrol?: boolean }
   | { name: 'venues-index'; canonicalPath: '/venues'; alias?: string }
@@ -22,6 +22,7 @@ export type RouteMatch =
   | { name: 'not-found'; canonicalPath: '/404' }
 
 const opportunityAliases = new Set(['/trials', '/combines', '/scholarships', '/camps'])
+const opportunityDetailPrefixes = ['/trial/', '/trials/', '/opportunity/', '/opportunities/'] as const
 const khelchronicleCategories = new Set([
   'sports-biomechanics',
   'exercise-physiology',
@@ -78,13 +79,16 @@ export function resolveRoute(pathname: string): RouteMatch {
     }
   }
   if (path === '/opportunities' || opportunityAliases.has(path)) return { name: 'opportunities-index', canonicalPath: '/opportunities', ...(path === '/opportunities' ? {} : { alias: path }) }
-  if (path.startsWith('/opportunities/')) {
-    const rest = path.slice('/opportunities/'.length)
-    if (rest.endsWith('/apply')) {
+  const opportunityPrefix = opportunityDetailPrefixes.find(prefix => path.startsWith(prefix))
+  if (opportunityPrefix) {
+    const rest = path.slice(opportunityPrefix.length)
+    if (opportunityPrefix === '/opportunities/' && rest.endsWith('/apply')) {
       const slug = rest.slice(0, -('/apply'.length))
-      if (slug && !slug.includes('/')) return { name: 'opportunity-detail', canonicalPath: '/opportunities/:slug', slug: decodeURIComponentSafe(slug), isApply: true }
+      if (slug && !slug.includes('/')) return { name: 'opportunity-detail', canonicalPath: '/trial/:slug', slug: decodeURIComponentSafe(slug), isApply: true }
     }
-    if (rest && !rest.includes('/')) return { name: 'opportunity-detail', canonicalPath: '/opportunities/:slug', slug: decodeURIComponentSafe(rest) }
+    if (rest && !rest.includes('/')) {
+      return { name: 'opportunity-detail', canonicalPath: '/trial/:slug', slug: decodeURIComponentSafe(rest) }
+    }
   }
   if (path === '/academies' || path === '/academy' || path === '/train') return { name: 'academies-index', canonicalPath: '/academies', ...(path === '/academies' ? {} : { alias: path }) }
   if (path.startsWith('/academies/') || path.startsWith('/academy/')) {
