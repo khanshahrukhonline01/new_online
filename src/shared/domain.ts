@@ -58,6 +58,7 @@ export interface Venue {
   source_url?: string | null
   affiliation_proof?: string | null
   reported_count?: number
+  faqs?: Array<{ question: string; answer: string }>
 }
 
 export interface Academy {
@@ -86,6 +87,8 @@ export interface Academy {
   review_count?: number
   affiliation_proof?: string | null
   reported_count?: number
+  curriculum_highlights?: string[]
+  faqs?: Array<{ question: string; answer: string }>
 }
 
 export interface ListingReport {
