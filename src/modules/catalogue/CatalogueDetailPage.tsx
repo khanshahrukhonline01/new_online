@@ -42,12 +42,57 @@ export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: 
         ].filter(Boolean).join(' · ').slice(0, 160)
       : 'This sports trial or opportunity is not currently available in the published KhelGrid catalogue.'
 
+    const startDate = opportunity?.starts_at ? new Date(opportunity.starts_at) : null
+    const endDate = opportunity?.ends_at ? new Date(opportunity.ends_at) : null
+    const locationName = opportunity?.venue_name || opportunity?.city
+    const isSportingEvent = Boolean(
+      opportunity &&
+      opportunity.verification_status === 'verified' &&
+      ['trial', 'combine', 'camp'].includes(opportunity.opportunity_type) &&
+      startDate &&
+      !Number.isNaN(startDate.getTime()) &&
+      locationName,
+    )
+    const jsonLd = isSportingEvent && opportunity && startDate
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'SportsEvent',
+          name: opportunity.title,
+          startDate: startDate.toISOString(),
+          ...(endDate && !Number.isNaN(endDate.getTime()) ? { endDate: endDate.toISOString() } : {}),
+          url: canonicalUrl,
+          location: {
+            '@type': 'Place',
+            name: locationName,
+            ...(opportunity.city ? {
+              address: {
+                '@type': 'PostalAddress',
+                addressLocality: opportunity.city,
+                addressCountry: 'IN',
+              },
+            } : {}),
+          },
+          ...(opportunity.organizer_name ? {
+            organizer: { '@type': 'Organization', name: opportunity.organizer_name },
+          } : {}),
+          ...(typeof opportunity.registration_fee === 'number' && Number.isFinite(opportunity.registration_fee) ? {
+            offers: {
+              '@type': 'Offer',
+              price: String(opportunity.registration_fee),
+              priceCurrency: 'INR',
+              url: opportunity.source_url || canonicalUrl,
+            },
+          } : {}),
+        }
+      : undefined
+
     return updatePageSeoMetadata({
       title: opportunity ? `${opportunity.title} · Sports Trial | KhelGrid` : 'Trial not found · KhelGrid',
       description,
       canonicalUrl,
       robots: opportunity?.verification_status === 'verified' ? undefined : 'noindex, follow',
       ogType: 'website',
+      jsonLd,
     })
   }, [kind, record, result.status, slug])
   const back = kind === 'sport' ? '/sports' : kind === 'opportunity' ? '/opportunities' : '/venues'
