@@ -203,7 +203,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
   const sportName = venue.sport || venue.sports?.map(sport => sport.name).join(', ') || 'Sport not specified'
   const fullAddress = venue.address || [venue.city, venue.state].filter(Boolean).join(', ')
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`
-  const whatsappUrl = venue.phone ? `https://wa.me/${venue.phone.replace(/\\D/g, '')}?text=${encodeURIComponent(`Hi, I found ${venue.name} on KhelGrid and would like to enquire about availability.`)}` : undefined
+  const whatsappUrl = venue.phone ? `https://wa.me/${venue.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi, I found ${venue.name} on KhelGrid and would like to enquire about availability.`)}` : undefined
 
   const facilitiesList = venue.facilities || []
 
@@ -214,6 +214,8 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
   const courtText = venue.court_count || 'Court details not provided'
   const pricingText = venue.pricing || 'Contact venue to confirm current pricing'
   const displaySlotFee = parseInrPrice(pricingText)
+  // Online booking/payment remains disabled until the booking release gate is approved.
+  const venueBookingEnabled = false
 
   const faqs = venue.faqs || []
 
@@ -274,18 +276,20 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
         <div className="venue-actions-bar">
           <BookmarkButton item={createVenueSavedItem(venue)} variant="pill" showLabel={true} />
 
-          <button
-            type="button"
-            onClick={() => {
-              setIsBookingModalOpen(true)
-              setConfirmedBooking(null)
-              setBookingError('')
-            }}
-            className="venue-btn venue-btn-book"
-          >
-            <SiteIcon name="calendar-check" size={16} />
-            <span>Book Turf / Court Slot</span>
-          </button>
+          {venueBookingEnabled && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsBookingModalOpen(true)
+                setConfirmedBooking(null)
+                setBookingError('')
+              }}
+              className="venue-btn venue-btn-book"
+            >
+              <SiteIcon name="calendar-check" size={16} />
+              <span>Book Turf / Court Slot</span>
+            </button>
+          )}
 
           {whatsappUrl && (
             <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-primary">
@@ -373,7 +377,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
           <strong className="highlight-value">{courtText}</strong>
         </div>
         <div className="highlight-card">
-          <span className="highlight-label">Estimated Slot Rates</span>
+          <span className="highlight-label">Published Pricing</span>
           <strong className="highlight-value">{pricingText}</strong>
         </div>
         <div className="highlight-card">
@@ -481,10 +485,9 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
         {/* Sidebar / Quick Inquiry Box */}
         <aside className="venue-sidebar-column">
           <div className="venue-inquiry-box">
-            <h3>Book or Check Slots</h3>
+            <h3>Contact the Venue</h3>
             <p>
-              Connect directly with {venue.name} management to verify current court availability and hourly slot pricing.
-            </p>
+              Online booking and payment are not enabled here yet. Contact {venue.name} directly to confirm access, availability and current pricing.
             {whatsappUrl && (
               <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-whatsapp-block">
                 <SiteIcon name="message" size={18} />
@@ -555,7 +558,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
       />
 
       {/* Venue Court / Turf Slot Booking Modal */}
-      {isBookingModalOpen && (
+      {venueBookingEnabled && isBookingModalOpen && (
         <div className="venue-booking-overlay" onClick={() => setIsBookingModalOpen(false)}>
           <div
             className="venue-booking-modal"
