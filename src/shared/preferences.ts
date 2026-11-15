@@ -138,7 +138,7 @@ export function savePreferences(updates: Partial<UserPreferences>): UserPreferen
         localStorage.setItem(LANG_STORAGE_KEY, updates.language)
         changeAppLanguage(updates.language)
       }
-      applyThemeToDOM(next.theme)
+      applyThemeToDOM(next.theme, next.accent)
       applyAccessibilityToDOM(next.reducedMotion)
       if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
         window.dispatchEvent(new CustomEvent('khelgrid-preferences-change', { detail: next }))
