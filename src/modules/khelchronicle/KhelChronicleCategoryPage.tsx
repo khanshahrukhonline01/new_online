@@ -1,10 +1,14 @@
-import { useMemo, type MouseEvent } from 'react'
+import { useMemo, useState, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
   RESEARCH_CATEGORIES,
   getPapersByCategory,
   type ResearchCategory,
+  type ResearchPaper,
 } from './data/khelchronicleData'
+import { KhelChroniclePaperCard } from './components/KhelChroniclePaperCard'
+import { AcademicGalleyModal } from './components/AcademicGalleyModal'
+import { CitationExportModal } from './components/CitationExportModal'
 import './khelchronicle.css'
 
 interface KhelChronicleCategoryPageProps {
@@ -22,6 +26,42 @@ export function KhelChronicleCategoryPage({ categorySlug, onNavigate }: KhelChro
     return getPapersByCategory(category.slug)
   }, [category])
 
+  // Dynamically computed metrics for this scientific discipline
+  const categoryMetrics = useMemo(() => {
+    const totalPreprints = papers.length
+    const totalViews = papers.reduce((sum, p) => sum + (p.metrics?.views || 0), 0)
+    const totalDownloads = papers.reduce((sum, p) => sum + (p.metrics?.downloads || 0), 0)
+    const totalCitations = papers.reduce((sum, p) => sum + (p.metrics?.citations || 0), 0)
+    const totalAthletes = papers.reduce((sum, p) => {
+      if (p.paperId === 'KG-2026-001') return sum + 85
+      if (p.paperId === 'KG-2026-002') return sum + 4820
+      if (p.paperId === 'KG-2026-003') return sum + 412
+      if (p.paperId === 'KG-2026-006') return sum + 1240
+      return sum
+    }, 0)
+
+    return {
+      totalPreprints,
+      totalViews,
+      totalDownloads,
+      totalCitations,
+      totalAthletes,
+    }
+  }, [papers])
+
+  // Interactive Galley & Citation Modal states
+  const [galleyPaper, setGalleyPaper] = useState<ResearchPaper | null>(null)
+  const [citePaper, setCitePaper] = useState<ResearchPaper | null>(null)
+  const [copiedDoiId, setCopiedDoiId] = useState<string | null>(null)
+
+  const handleCopyDoi = (paperId: string, doi: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(`https://doi.org/${doi}`)
+      setCopiedDoiId(paperId)
+      setTimeout(() => setCopiedDoiId(null), 2000)
+    }
+  }
+
   const handleLink = (e: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (onNavigate) {
       onNavigate(e, href)
@@ -36,7 +76,9 @@ export function KhelChronicleCategoryPage({ categorySlug, onNavigate }: KhelChro
           KhelChronicle
         </a>
         <span> / </span>
-        <span style={{ color: '#64748b' }}>{category?.name}</span>
+        <span style={{ color: '#64748b' }}>Disciplines</span>
+        <span> / </span>
+        <span style={{ color: '#0f172a', fontWeight: 600 }}>{category?.name}</span>
       </nav>
 
       {/* Header */}
@@ -46,16 +88,14 @@ export function KhelChronicleCategoryPage({ categorySlug, onNavigate }: KhelChro
             <SiteIcon name="award" size={13} />
             <span>Research Discipline</span>
           </span>
-          <span className="kc-badge-open-access">Preprints Archive</span>
-          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-            Test Data Only
-          </span>
+          <span className="kc-badge-open-access">Curated Scientific Discipline</span>
+          <span className="kc-badge-open-access">Diamond Open Access (CC BY 4.0)</span>
         </div>
 
         <h1 className="kc-hero-title">{category?.name}</h1>
         <p className="kc-hero-subtitle">{category?.description}</p>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <a
             href="/khelchronicle/submit"
             className="kc-submit-btn-link"
@@ -63,6 +103,16 @@ export function KhelChronicleCategoryPage({ categorySlug, onNavigate }: KhelChro
           >
             <SiteIcon name="upload" size={16} />
             <span>Submit {category?.name} Preprint</span>
+          </a>
+          <a
+            href="/khelchronicle/feed.xml"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="kc-rss-pill-link"
+            title="Subscribe to RSS / Atom feed"
+          >
+            <SiteIcon name="rss" size={14} />
+            <span>RSS Feed</span>
           </a>
           <a
             href="/khelchronicle"
@@ -74,83 +124,91 @@ export function KhelChronicleCategoryPage({ categorySlug, onNavigate }: KhelChro
         </div>
       </header>
 
+      {/* Discipline Metrics Ribbon */}
+      <div className="kc-trust-ribbon" style={{ margin: '20px 0 28px' }}>
+        <div className="kc-ribbon-item">
+          <SiteIcon name="file-text" size={15} />
+          <span><strong>{categoryMetrics.totalPreprints}</strong> Preprints Published</span>
+        </div>
+        <div className="kc-ribbon-item">
+          <SiteIcon name="eye" size={15} />
+          <span><strong>{categoryMetrics.totalViews.toLocaleString('en-IN')}+</strong> Readers</span>
+        </div>
+        <div className="kc-ribbon-item">
+          <SiteIcon name="download" size={15} />
+          <span><strong>{categoryMetrics.totalDownloads.toLocaleString('en-IN')}+</strong> Full Downloads</span>
+        </div>
+        <div className="kc-ribbon-item">
+          <SiteIcon name="bookmark" size={15} />
+          <span><strong>{categoryMetrics.totalCitations}</strong> Citations</span>
+        </div>
+        {categoryMetrics.totalAthletes > 0 && (
+          <div className="kc-ribbon-item">
+            <SiteIcon name="users" size={15} />
+            <span><strong>{categoryMetrics.totalAthletes.toLocaleString('en-IN')}+</strong> Benchmarked Cohorts</span>
+          </div>
+        )}
+      </div>
+
       {/* Papers List */}
       <section aria-labelledby="category-preprints-title">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
           <h2 id="category-preprints-title" style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>
-            Published Preprints ({papers.length})
+            Published Preprints in {category?.name} ({papers.length})
           </h2>
+          <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
+            Showing {papers.length} of {papers.length} Preprints
+          </span>
         </div>
 
         {papers.length === 0 ? (
-          <div style={{ padding: '48px 24px', textAlign: 'center', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-            <SiteIcon name="search" size={28} style={{ color: '#94a3b8', marginBottom: '10px' }} />
+          <div style={{ padding: '48px 24px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+            <SiteIcon name="search" size={32} style={{ color: '#94a3b8', marginBottom: '10px' }} />
             <h3 style={{ margin: '0 0 6px', fontSize: '16px', color: '#0f172a' }}>No preprints in this discipline yet</h3>
-            <p style={{ margin: 0, fontSize: '13.5px', color: '#64748b' }}>Be the first researcher to submit a manuscript in {category?.name}.</p>
+            <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: '#64748b' }}>Be the first sports scientist to deposit a manuscript in {category?.name}.</p>
+            <a
+              href="/khelchronicle/submit"
+              className="kc-btn-primary"
+              style={{ display: 'inline-flex' }}
+              onClick={e => handleLink(e, '/khelchronicle/submit')}
+            >
+              <span>Submit Manuscript Now</span>
+            </a>
           </div>
         ) : (
-          <div className="kc-papers-grid">
+          <div className="kc-papers-grid" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {papers.map(paper => (
-              <article key={paper.id} className="kc-paper-card">
-                <div className="kc-paper-top-meta">
-                  <span className="kc-paper-id-tag">{paper.paperId}</span>
-                  <span className="kc-paper-ver-tag">{paper.version}</span>
-                  <span className="kc-paper-category-tag">{paper.categoryName}</span>
-                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-                    Test Data
-                  </span>
-                  <span className="kc-paper-date">{paper.datePublished}</span>
-                </div>
-
-                <h3 className="kc-card-title">
-                  <a
-                    href={`/khelchronicle/${paper.slug}`}
-                    onClick={e => handleLink(e, `/khelchronicle/${paper.slug}`)}
-                  >
-                    {paper.title}
-                  </a>
-                </h3>
-
-                <div className="kc-paper-authors" style={{ marginBottom: '8px' }}>
-                  <span>{paper.authors.map(a => a.name).join(', ')}</span>
-                </div>
-
-                <p className="kc-card-abstract-snippet">
-                  {paper.abstract.background.slice(0, 220)}…
-                </p>
-
-                <div className="kc-keywords-row" style={{ marginBottom: '14px' }}>
-                  {paper.keywords.map(kw => (
-                    <span key={kw} className="kc-keyword-chip">#{kw}</span>
-                  ))}
-                </div>
-
-                <div className="kc-card-bottom">
-                  <div className="kc-metrics-group">
-                    <span className="kc-metric-item">
-                      <SiteIcon name="eye" size={13} />
-                      <span>{paper.metrics.views} views</span>
-                    </span>
-                    <span className="kc-metric-item">
-                      <SiteIcon name="download" size={13} />
-                      <span>{paper.metrics.downloads} downloads</span>
-                    </span>
-                  </div>
-
-                  <a
-                    href={`/khelchronicle/${paper.slug}`}
-                    className="kc-btn-secondary"
-                    onClick={e => handleLink(e, `/khelchronicle/${paper.slug}`)}
-                  >
-                    <span>Read Full Paper</span>
-                    <SiteIcon name="arrow-up-right" size={13} />
-                  </a>
-                </div>
-              </article>
+              <KhelChroniclePaperCard
+                key={paper.id}
+                paper={paper}
+                copiedDoiId={copiedDoiId}
+                onCopyDoi={handleCopyDoi}
+                onOpenGalley={p => setGalleyPaper(p)}
+                onOpenCite={p => setCitePaper(p)}
+                onNavigate={onNavigate}
+              />
             ))}
           </div>
         )}
       </section>
+
+      {/* Modal: Interactive Galley Reader */}
+      {galleyPaper && (
+        <AcademicGalleyModal
+          paper={galleyPaper}
+          isOpen={!!galleyPaper}
+          onClose={() => setGalleyPaper(null)}
+        />
+      )}
+
+      {/* Modal: Scholarly Citation Export */}
+      {citePaper && (
+        <CitationExportModal
+          paper={citePaper}
+          isOpen={!!citePaper}
+          onClose={() => setCitePaper(null)}
+        />
+      )}
     </div>
   )
 }

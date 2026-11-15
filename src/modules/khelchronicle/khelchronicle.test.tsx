@@ -134,6 +134,11 @@ describe('KhelChronicle Open Sports Research Repository', () => {
     expect(html).toContain('Sports Biomechanics')
     expect(html).toContain('Kinematics, inverse dynamics, ground reaction forces')
     expect(html).toContain('KG-2026-001')
+    expect(html).toContain('Curated Scientific Discipline')
+    expect(html).toContain('Preprints Published')
+    expect(html).toContain('RSS Feed')
+    expect(html).toContain('Read Galley')
+    expect(html).toContain('Cite')
   })
 
   it('renders author profile and bibliography page correctly', () => {
@@ -145,7 +150,14 @@ describe('KhelChronicle Open Sports Research Repository', () => {
     expect(html).toContain('Senior Biomechanist &amp; Movement Consultant')
     expect(html).toContain('National Institute of Sports (NIS), Patiala')
     expect(html).toContain('0000-0002-8941-4412')
+    expect(html).toContain('Verified Institutional Investigator')
+    expect(html).toContain('Authored Preprints')
+    expect(html).toContain('Cumulative Views')
+    expect(html).toContain('Frequent Co-Authors')
+    expect(html).toContain('Dr. Alok Sen')
     expect(html).toContain('Kinematic Correlates of Lumbar Spine Stress')
+    expect(html).toContain('Read Galley')
+    expect(html).toContain('Cite')
   })
 
   it('renders manuscript submission guidelines and intake form correctly', () => {

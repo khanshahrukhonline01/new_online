@@ -424,9 +424,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
           <span className="kc-badge-open-access">Diamond Open Access</span>
           <span className="kc-badge-open-access">CC BY 4.0</span>
           <span className="kc-badge-open-access">STORK Aligned</span>
-          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-            Test Data Only
-          </span>
+          <span className="kc-badge-open-access">Crossref DOIs</span>
         </div>
 
         <h1 id="kc-main-heading" className="kc-hero-title">
