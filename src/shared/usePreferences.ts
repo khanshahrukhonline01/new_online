@@ -17,7 +17,7 @@ export function usePreferences() {
 
   useEffect(() => {
     // Initial DOM synchronization
-    applyThemeToDOM(preferences.theme)
+    applyThemeToDOM(preferences.theme, preferences.accent)
     applyAccessibilityToDOM(preferences.reducedMotion)
 
     function handlePreferencesChange(event: Event) {
@@ -32,7 +32,7 @@ export function usePreferences() {
     function handleSystemThemeChange() {
       const current = getStoredPreferences()
       if (current.theme === 'system') {
-        applyThemeToDOM('system')
+        applyThemeToDOM('system', current.accent)
       }
     }
 
@@ -44,7 +44,7 @@ export function usePreferences() {
       window.removeEventListener('khelgrid-preferences-change', handlePreferencesChange)
       media?.removeEventListener?.('change', handleSystemThemeChange)
     }
-  }, [preferences.theme, preferences.reducedMotion])
+  }, [preferences.theme, preferences.accent, preferences.reducedMotion])
 
   const updatePreferences = useCallback((updates: Partial<UserPreferences>) => {
     const updated = savePreferences(updates)
