@@ -5,6 +5,7 @@ import {
 } from '../modules/khelchronicle/data/khelchronicleData.ts'
 import { TOP_CITY_SPORTS_COMPLEXES } from './components/cityComplexesData.ts'
 import { CURATED_ACADEMIES, CURATED_VENUES } from './data/curatedEntitiesData.ts'
+import { CURATED_OPPORTUNITIES } from './data/curatedOpportunitiesData.ts'
 
 export const BASE_URL = 'https://khelgrid.com'
 export const SITEMAP_LASTMOD = '2026-10-30'
@@ -121,6 +122,18 @@ export function buildSitemapEntries(): SitemapEntry[] {
         lastmod: SITEMAP_LASTMOD,
         changefreq: 'weekly',
         priority: 0.85,
+      })
+    }
+  }
+
+  // 4b. Curated Verified Selection Trials & Opportunities
+  for (const opp of CURATED_OPPORTUNITIES) {
+    if (opp.slug) {
+      entries.push({
+        loc: `${BASE_URL}/opportunities/${opp.slug}`,
+        lastmod: SITEMAP_LASTMOD,
+        changefreq: 'daily',
+        priority: 0.88,
       })
     }
   }

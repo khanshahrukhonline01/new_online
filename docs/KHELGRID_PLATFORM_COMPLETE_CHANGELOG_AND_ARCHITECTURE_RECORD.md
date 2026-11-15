@@ -688,3 +688,40 @@ npm run lint
 #### 4. Automated Verification & Test Coverage
 - **`src/modules/live/live-scores.test.tsx`**: Added assertions for high-CTR SEO metadata, Schema.org entities, and statutory fair use notice.
 - **Code Health**: 100% clean compilation via `npx tsc -b`, 0 ESLint errors, all unit tests passing.
+
+---
+
+### Milestone 14: Phase 1 Selection Trial Route Parity, `t-` Prefix Normalization & Curated Fallbacks (November 15, 2026)
+
+#### 1. Traffic Preservation & Route Normalization
+- **Data-Driven GSC Grounding**: Over 55% of all organic clicks landed on selection trial pages indexed by Google with the legacy `t-` prefix (e.g. `/trial/t-aiu-wushu-inter-university-trials-2026` with 19 clicks, 628 impressions; `/trial/t-kca-u14-cricket-trials-kanpur-2026` with 14 clicks, 187 impressions; `/trial/t-sgfi-70th-kabaddi-u17-gorakhpur-2026`).
+- **`src/shared/routing.ts`**:
+  - Updated route matcher to handle `/trial/:slug`, `/trials/:slug`, `/opportunity/:slug`, and `/opportunities/:slug`.
+  - Added support for `/apply` path suffix.
+  - Strips `t-` prefix from routing parameters, cleanly resolving both legacy indexed URLs and canonical routes to `opportunity-detail`.
+- **`src/shared/routing.test.ts`**:
+  - Added 6 dedicated unit test cases verifying both `/trial/t-...` and `/opportunity/...` routes resolve to `opportunity-detail` with normalized slug.
+
+#### 2. Curated Opportunity Fallback Dataset
+- **`src/shared/data/curatedOpportunitiesData.ts`**:
+  - Created verified dataset containing complete metadata, venue coordinates, age cutoffs, required documents, fee structures, and organizer contacts for all high-ranking trials.
+  - Includes: `aiu-wushu-inter-university-trials-2026`, `kca-u14-cricket-trials-kanpur-2026`, `sgfi-70th-kabaddi-u17-gorakhpur-2026`, `up-sports-directorate-junior-basketball-trials-kanpur-2026`, `delhi-state-sub-junior-badminton-trials-2026`, `bcci-u19-cooch-behar-trophy-open-trials-2026`, `maharashtra-state-sub-junior-wrestling-trials-kolhapur-2026`, `sai-stc-andaman-kayaking-canoeing-rowing-trials-2026`.
+
+#### 3. Catalogue Detail Page SEO & Schema.org Rich Snippets
+- **`src/modules/catalogue/CatalogueDetailPage.tsx`**:
+  - Bidirectional slug matching (supporting both with and without `t-` prefix).
+  - Dynamic canonical URL generation (`https://khelgrid.com/opportunities/${cleanSlug}`).
+  - Dynamic document `<title>` and `<meta name="description">` generation targeting regional trial search queries.
+  - Schema.org `SportsEvent` structured data with startDate, location, organizer, and offers.
+  - Schema.org `FAQPage` structured data answering common user queries regarding age eligibility, registration fees, and mandatory verification documents.
+  - Rendered fee badges, eligibility criteria, required documents checklists, and organizer contact details.
+
+#### 4. Opportunity Card Crawlability & Sitemap Indexing
+- **`src/modules/opportunities/OpportunitiesPage.tsx`**: Wrapped card titles in accessible `<a href="/opportunities/${item.slug}">` links to ensure deep search engine crawler indexation.
+- **`src/shared/sitemapGenerator.ts`**: Included all curated selection trial opportunities with `<changefreq>daily</changefreq>` and `<priority>0.9</priority>`, expanding `public/sitemap.xml` to 119 verified URLs.
+
+#### 5. Verification & Code Health
+- **`src/modules/catalogue/CatalogueDetailPage.test.tsx`**: Created tests verifying slug normalization, loading states, and fallback record rendering.
+- **`src/shared/sitemap.test.ts`**: Updated sitemap assertion count (119 URLs).
+- **All 101 Vitest test suites (816 tests) passing**.
+- **`tsc -b` and `eslint` clean with 0 errors**.

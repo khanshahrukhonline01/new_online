@@ -13,6 +13,24 @@ describe('platform route coverage', () => {
     path => expect(resolveRoute(path).name).toBe('opportunities-index'),
   )
 
+  it.each([
+    ['/trial/t-aiu-wushu-inter-university-trials-2026', 'aiu-wushu-inter-university-trials-2026'],
+    ['/trials/t-kca-u14-cricket-trials-kanpur-2026', 'kca-u14-cricket-trials-kanpur-2026'],
+    ['/trial/t-sgfi-70th-kabaddi-u17-gorakhpur-2026', 'sgfi-70th-kabaddi-u17-gorakhpur-2026'],
+    ['/opportunities/up-sports-directorate-junior-basketball-trials-kanpur-2026', 'up-sports-directorate-junior-basketball-trials-kanpur-2026'],
+    ['/trial/t-kca-u14-cricket-trials-kanpur-2026/apply', 'kca-u14-cricket-trials-kanpur-2026'],
+  ])('%s routes to opportunity-detail for %s preserving GSC ranking', (path, expectedSlug) => {
+    const match = resolveRoute(path)
+    expect(match.name).toBe('opportunity-detail')
+    expect(match.canonicalPath).toBe('/opportunities/:slug')
+    if (match.name === 'opportunity-detail') {
+      expect(match.slug).toBe(expectedSlug)
+      if (path.endsWith('/apply')) {
+        expect(match.isApply).toBe(true)
+      }
+    }
+  })
+
   it.each(['/venues', '/book'])(
     '%s opens the venue directory without claiming bookings are live',
     path => expect(resolveRoute(path).name).toBe('venues-index'),

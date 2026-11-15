@@ -93,6 +93,19 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     expect(kanteerava?.changefreq).toBe('weekly')
   })
 
+  it('indexes verified national selection trials with daily crawl priority', () => {
+    const entries = buildSitemapEntries()
+
+    const wushu = entries.find(e => e.loc === `${BASE_URL}/opportunities/aiu-wushu-inter-university-trials-2026`)
+    expect(wushu).toBeDefined()
+    expect(wushu?.priority).toBe(0.88)
+    expect(wushu?.changefreq).toBe('daily')
+
+    const kcaCricket = entries.find(e => e.loc === `${BASE_URL}/opportunities/kca-u14-cricket-trials-kanpur-2026`)
+    expect(kcaCricket).toBeDefined()
+    expect(kcaCricket?.priority).toBe(0.88)
+  })
+
   it('indexes KhelChronicle repository, all 7 disciplines, preprints, and author profiles', () => {
     const entries = buildSitemapEntries()
 

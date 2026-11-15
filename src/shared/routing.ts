@@ -78,13 +78,40 @@ export function resolveRoute(pathname: string): RouteMatch {
     }
   }
   if (path === '/opportunities' || opportunityAliases.has(path)) return { name: 'opportunities-index', canonicalPath: '/opportunities', ...(path === '/opportunities' ? {} : { alias: path }) }
-  if (path.startsWith('/opportunities/')) {
-    const rest = path.slice('/opportunities/'.length)
+  if (
+    path.startsWith('/opportunities/') ||
+    path.startsWith('/opportunity/') ||
+    path.startsWith('/trials/') ||
+    path.startsWith('/trial/')
+  ) {
+    const prefix = path.startsWith('/opportunities/')
+      ? '/opportunities/'
+      : path.startsWith('/opportunity/')
+        ? '/opportunity/'
+        : path.startsWith('/trials/')
+          ? '/trials/'
+          : '/trial/'
+    const rest = path.slice(prefix.length)
     if (rest.endsWith('/apply')) {
-      const slug = rest.slice(0, -('/apply'.length))
-      if (slug && !slug.includes('/')) return { name: 'opportunity-detail', canonicalPath: '/opportunities/:slug', slug: decodeURIComponentSafe(slug), isApply: true }
+      const rawSlug = rest.slice(0, -('/apply'.length))
+      if (rawSlug && !rawSlug.includes('/')) {
+        const cleanSlug = decodeURIComponentSafe(rawSlug).replace(/^t-/, '')
+        return {
+          name: 'opportunity-detail',
+          canonicalPath: '/opportunities/:slug',
+          slug: cleanSlug,
+          isApply: true,
+        }
+      }
     }
-    if (rest && !rest.includes('/')) return { name: 'opportunity-detail', canonicalPath: '/opportunities/:slug', slug: decodeURIComponentSafe(rest) }
+    if (rest && !rest.includes('/')) {
+      const cleanSlug = decodeURIComponentSafe(rest).replace(/^t-/, '')
+      return {
+        name: 'opportunity-detail',
+        canonicalPath: '/opportunities/:slug',
+        slug: cleanSlug,
+      }
+    }
   }
   if (path === '/academies' || path === '/academy' || path === '/train') return { name: 'academies-index', canonicalPath: '/academies', ...(path === '/academies' ? {} : { alias: path }) }
   if (path.startsWith('/academies/') || path.startsWith('/academy/')) {

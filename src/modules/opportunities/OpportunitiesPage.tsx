@@ -314,7 +314,15 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
                           </div>
                           <BookmarkButton item={createOpportunitySavedItem(item)} />
                         </div>
-                        <h2>{item.title}</h2>
+                        <h2>
+                          <a
+                            href={`/opportunities/${item.slug}`}
+                            onClick={(e) => onNavigate?.(e, `/opportunities/${item.slug}`)}
+                            style={{ color: 'inherit', textDecoration: 'none' }}
+                          >
+                            {item.title}
+                          </a>
+                        </h2>
                         <p>
                           {[item.organizer_name, item.city, item.venue_name].filter(Boolean).join(' · ') ||
                             'Location or organizer not provided'}
