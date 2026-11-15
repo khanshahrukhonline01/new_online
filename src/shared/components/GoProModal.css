@@ -292,7 +292,7 @@
 }
 
 .gopro-feature-item svg {
-  color: #059669;
+  color: var(--accent-strong, #059669);
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -407,7 +407,7 @@
 }
 
 .gopro-trust-item svg {
-  color: #10b981;
+  color: var(--accent, #10b981);
 }
 
 .gopro-enterprise-help {
