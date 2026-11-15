@@ -137,6 +137,16 @@ describe('public catalogue client', () => {
     expect(requestUrl.searchParams.get('verification_status')).toBe('eq.verified')
   })
 
+  it('does not fall back to static curated academy records when the public catalogue is unconfigured', async () => {
+    const client = await loadClient('', '')
+    expect(await client.getAcademyBySlug('bengaluru-fc-academy')).toBeUndefined()
+  })
+
+  it('does not fall back to static curated venue records when the public catalogue is unconfigured', async () => {
+    const client = await loadClient('', '')
+    expect(await client.getVenueBySlug('kanteerava-stadium')).toBeUndefined()
+  })
+
   it('returns an empty ready catalogue when the database has no published rows', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(jsonResponse([]))
     const client = await loadClient()
