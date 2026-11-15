@@ -190,9 +190,14 @@ export default function App() {
   useEffect(() => { setMenuOpen(false) }, [path])
 
   useEffect(() => {
-    const seo = getRouteSeoMetadata(path)
-    const cleanup = updatePageSeoMetadata(seo)
-    return cleanup
+    const route = resolveRoute(path)
+    const baseSeo = getRouteSeoMetadata(path)
+    // Opportunity detail metadata is promoted to indexable only after the
+    // published record has loaded and its source has been reviewed.
+    const seo = route.name === 'opportunity-detail'
+      ? { ...baseSeo, canonicalUrl: `https://khelgrid.com/trial/${encodeURIComponent(route.slug)}`, robots: 'noindex, follow' }
+      : baseSeo
+    return updatePageSeoMetadata(seo)
   }, [path])
 
   function toggleMainMenu() {
