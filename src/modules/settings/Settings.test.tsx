@@ -77,6 +77,37 @@ describe('Settings & Preferences System', () => {
     expect(['light', 'dark']).toContain(resolveEffectiveTheme('system'))
   })
 
+  it('falls back safely when persisted theme and preference values are invalid', () => {
+    localStorage.setItem('khelgrid-user-preferences', JSON.stringify({
+      theme: 'ultraviolet',
+      accent: 'pink',
+      language: 'xx',
+      preferredCity: { unexpected: true },
+      soundAlerts: 'yes',
+      reducedMotion: 1,
+      favoriteSports: ['Football', 42, 'Invented Sport'],
+      profileVisibility: 'everyone',
+    }))
+
+    const preferences = getStoredPreferences()
+    expect(preferences.theme).toBe(DEFAULT_PREFERENCES.theme)
+    expect(preferences.accent).toBe(DEFAULT_PREFERENCES.accent)
+    expect(preferences.language).toBe(DEFAULT_PREFERENCES.language)
+    expect(preferences.preferredCity).toBe(DEFAULT_PREFERENCES.preferredCity)
+    expect(preferences.soundAlerts).toBe(DEFAULT_PREFERENCES.soundAlerts)
+    expect(preferences.reducedMotion).toBe(DEFAULT_PREFERENCES.reducedMotion)
+    expect(preferences.favoriteSports).toEqual(['Football'])
+    expect(preferences.profileVisibility).toBe(DEFAULT_PREFERENCES.profileVisibility)
+  })
+
+  it('supports legacy valid theme values while rejecting invalid legacy values', () => {
+    localStorage.setItem('khelgrid-theme', 'dark')
+    expect(getStoredPreferences().theme).toBe('dark')
+
+    localStorage.setItem('khelgrid-theme', 'ultraviolet')
+    expect(getStoredPreferences().theme).toBe(DEFAULT_PREFERENCES.theme)
+  })
+
   it('includes key Indian regional languages and major sports cities', () => {
     const langCodes = SUPPORTED_LANGUAGES.map(l => l.code)
     expect(langCodes).toContain('en')
