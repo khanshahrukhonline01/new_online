@@ -192,6 +192,127 @@ export const VENUES_FAQS: FAQItem[] = [
     question: 'Are premier public stadiums like JLN Stadium, Kanteerava, or Gachibowli open to the public?',
     answer: 'Many iconic public and SAI-operated stadiums (such as Jawaharlal Nehru Stadium in Delhi, Sree Kanteerava in Bengaluru, and Shree Shiv Chhatrapati Complex in Pune) operate Come & Play schemes and offer subsidized monthly pay-and-play memberships for athletics, swimming, and badminton. KhelGrid details gate reporting procedures, facility timings, and membership options across all 50+ supported cities.',
   },
+  {
+    id: 'venues-7',
+    category: 'Box Cricket & Khel Turf',
+    badge: 'Near You',
+    question: 'How do I find and book a khel turf or box cricket ground near me on KhelGrid?',
+    answer: 'KhelGrid makes finding and booking a khel turf or box cricket ground effortless. Use our GPS "Near You" radius filter (Within 5 km, 10 km, or 25 km) or filter by city to see verified artificial turfs with hourly pricing, pitch dimensions, night LED floodlights, and box cricket nets.',
+  },
+  {
+    id: 'venues-8',
+    category: 'Turf Pricing',
+    badge: 'Transparent Fees',
+    question: 'What is the average hourly booking rate for box cricket turfs and football grounds?',
+    answer: 'Hourly turf booking rates across Indian metros and regional hubs typically range from ₹600 to ₹1,800 per hour depending on prime evening slots, floodlights, and weekend demand. KhelGrid enforces 100% price transparency with 0% hidden booking surcharges.',
+  },
+]
+
+export const SPORTS_CV_FAQS: FAQItem[] = [
+  {
+    id: 'cv-1',
+    category: 'Digital Khel ID',
+    badge: 'Official Sports Credential',
+    question: 'What is Khel ID (खेल आईडी) and how do athletes create and download their digital sports ID card?',
+    answer: 'The Khel ID is an official digital athlete credential issued by KhelGrid to grassroots and competitive sportspersons across India. When you build your Sports CV (/sports-cv), KhelGrid generates a unique Khel ID (e.g. KG-ATH-USERNAME) and an official FIFA-style Player Card with your overall rating (OVR), playing position, and fitness benchmarks. You can download your vector Player Card or QR-coded athletic PDF to share with scouts, coaches, and sports academies.',
+  },
+  {
+    id: 'cv-2',
+    category: 'Scout Evaluation',
+    badge: 'Verified Scouting',
+    question: 'What is the KhelGrid Sports CV and how does it help athletes get scouted?',
+    answer: 'The KhelGrid Sports CV is a standardized digital athletic passport that catalogues an athlete’s competitive tournament history, physical fitness benchmarks (Yo-Yo test, 30m sprint, vertical leap), playing position, and federation registration numbers (such as AIFF CRS or BCCI UID). Certified scouts, coaches, and sports directors across India utilize our verified QR-coded profile format to evaluate authentic talent without relying on unverified claims.',
+  },
+  {
+    id: 'cv-3',
+    category: '100% Free Access',
+    badge: 'Zero Cost',
+    question: 'Is creating a Sports CV and generating a Khel ID free on KhelGrid?',
+    answer: 'Yes! Building your basic sports CV, generating your digital Khel ID, and downloading your custom FIFA-style Player Card is 100% free for all athletes, student-sportspersons, and parents.',
+  },
+  {
+    id: 'cv-4',
+    category: 'Instant Sharing',
+    badge: 'WhatsApp Share',
+    question: 'Can I export and share my KhelGrid Sports CV with academy selectors and coaches via WhatsApp?',
+    answer: 'Yes! Athletes can generate a 1-tap shareable WhatsApp link or download an official QR-coded PDF athletic resume. When coaches, club selectors, or federation scouts open your link or scan the QR code, they can instantly inspect your match statistics, video telemetry, and fitness combine scores directly on KhelGrid.',
+  },
+  {
+    id: 'cv-5',
+    category: 'Credential Verification',
+    badge: 'Badge Desk',
+    question: 'How does KhelGrid verify athlete tournament certificates and match achievements?',
+    answer: 'Athletes can submit verified tournament scorecards, federation certificates, or organizer letters. Our sports verification desk cross-references these credentials with official tournament brackets and records before issuing a "Verified Athlete" credential mark, ensuring scouts review trustworthy records.',
+  },
+]
+
+export const ACADEMIES_FAQS: FAQItem[] = [
+  {
+    id: 'acad-1',
+    category: 'Govt Accreditation',
+    badge: 'SAI NCOE & Khelo India',
+    question: 'How do I find Khelo India accredited sports academies and SAI NCOE training centers near me?',
+    answer: 'KhelGrid indexes verified sports academies, Khelo India accredited training centres (KISCE), and Sports Authority of India National Centres of Excellence (SAI NCOE) across 50+ Indian sports hubs. You can filter by discipline (Cricket, Football, Badminton, Wrestling, Boxing, Athletics), city, and verification badge to locate certified centers with authorized coaches and residential training facilities.',
+  },
+  {
+    id: 'acad-2',
+    category: 'Fee Transparency',
+    badge: 'Monthly Coaching Fees',
+    question: 'How can I compare fees, admission batches, and coach certifications across sports academies?',
+    answer: 'Each academy listing on KhelGrid provides transparent details on monthly coaching fees, age-group batches (U-12, U-14, U-16, Senior), student-to-coach ratios, coach credentials (SAI NIS Patiala, BCCI, AIFF, BWF), and facility specifications (indoor wooden courts, synthetic turfs, Olympic swimming pools).',
+  },
+  {
+    id: 'acad-3',
+    category: 'Admissions & Trials',
+    badge: 'Selection Cutoffs',
+    question: 'What is the admission procedure for SAI NCOE and Khelo India State Centres?',
+    answer: 'Admissions to SAI NCOEs and Khelo India centres are conducted through official merit-based talent identification trials and national championship podium finishes. KhelGrid actively tracks and publishes open admission circulars, age cut-off dates, reporting documents, and district reporting centers.',
+  },
+  {
+    id: 'acad-4',
+    category: 'Academy Registration',
+    badge: '0% Listing Fee',
+    question: 'How can sports academy directors and coaching clubs register on KhelGrid?',
+    answer: 'Academy owners, head coaches, and sports clubs can submit their academy profile, coaching staff certifications, and admission batch details through KhelGrid’s free listing desk. Following credential verification, the academy is published to athletes seeking professional coaching.',
+  },
+  {
+    id: 'acad-5',
+    category: 'Grassroots vs Govt',
+    badge: 'Training Pathways',
+    question: 'What is the difference between grassroots club academies and SAI National Centres of Excellence (NCOE)?',
+    answer: 'SAI National Centres of Excellence (NCOE) and Khelo India State Centres of Excellence (KISCE) are premier government institutions established under the Ministry of Youth Affairs and Sports. They provide full scholarship boarding, international coaching, sports science biomechanics, and nutrition to prepare athletes for Olympic and Asian Games pathways. Grassroots club academies provide localized coaching, foundational skills, and district league exposure that prepare athletes for state and SAI selection combines.',
+  },
+]
+
+export const KHELCHRONICLE_FAQS: FAQItem[] = [
+  {
+    id: 'kc-1',
+    category: 'Open Science Research',
+    badge: 'Preprint Archive',
+    question: 'What sports science research, cricket biomechanics, and normative benchmarks does KhelChronicle publish?',
+    answer: 'KhelChronicle is a Diamond Open Access preprint archive dedicated to Indian sports science, biomechanics, exercise physiology, and sports medicine. Key preprints include kinematic studies on fast bowling lumbar spine stress (KG-2026-001), empirical normative physical fitness percentiles across 4,820 grassroots athletes (KG-2026-002), and hypoxic training adaptations for high-altitude runners (KG-2026-003).',
+  },
+  {
+    id: 'kc-2',
+    category: 'Talent Benchmarking',
+    badge: 'Yo-Yo Norms KG-2026-002',
+    question: 'How do coaches and PE teachers use KhelChronicle Yo-Yo test normative standards (KG-2026-002)?',
+    answer: 'Coaches and physical education instructors can use KhelChronicle’s interactive Normative Benchmark Calculator and Talent Scanner to evaluate student-athletes against national age-group percentiles (U-14, U-16, U-19) for Yo-Yo IR1 endurance distance, 30m sprint velocity, and countermovement jump power.',
+  },
+  {
+    id: 'kc-3',
+    category: 'Diamond Open Access',
+    badge: 'Free Submission & Read',
+    question: 'Is KhelChronicle Diamond Open Access, and how can researchers submit preprints?',
+    answer: 'Yes! KhelChronicle operates under Diamond Open Access (CC BY 4.0). It is 100% free to submit and free to read with zero Article Processing Charges (APCs). Authors receive permanent Crossref DOIs, automated Dublin Core & PRISM RSS feeds, and open peer review commenting.',
+  },
+  {
+    id: 'kc-4',
+    category: 'Fast Bowling Biomechanics',
+    badge: 'Injury Prevention',
+    question: 'What are the key cricket fast bowling biomechanics insights from KhelChronicle preprints?',
+    answer: 'Preprint KG-2026-001 investigates front-foot contact knee angles and lumbo-pelvic rotation in Indian junior fast bowlers. The research establishes kinematic thresholds that differentiate high-velocity delivery mechanics from excessive lumbar lordosis stress that causes pars interarticularis stress fractures.',
+  },
 ]
 
 export const SEARCH_FAQS: FAQItem[] = [
@@ -241,6 +362,36 @@ export const SEARCH_FAQS: FAQItem[] = [
 
 export function getFaqsForPath(path: string): RouteFAQContext {
   const normalized = path.toLowerCase().trim()
+
+  if (normalized.startsWith('/sports-cv')) {
+    return {
+      contextName: 'Khel ID & Athlete Sports CV FAQ',
+      heading: 'Frequently Asked Questions',
+      tagline: 'Got questions? We have answers.',
+      description: 'Everything you need to know about creating your verified Sports CV, downloading your digital Khel ID card, and sharing your athletic portfolio with scouts.',
+      faqs: SPORTS_CV_FAQS,
+    }
+  }
+
+  if (normalized.startsWith('/academies') || normalized.startsWith('/academy') || normalized.startsWith('/train')) {
+    return {
+      contextName: 'Sports Academies & SAI Coaching FAQ',
+      heading: 'Frequently Asked Questions',
+      tagline: 'Got questions? We have answers.',
+      description: 'Explore verified coaching academies, Khelo India accredited centers, SAI NCOE training hubs, cricket academy fees, and admission cutoffs across India.',
+      faqs: ACADEMIES_FAQS,
+    }
+  }
+
+  if (normalized.startsWith('/khelchronicle')) {
+    return {
+      contextName: 'KhelChronicle Sports Science FAQ',
+      heading: 'Frequently Asked Questions',
+      tagline: 'Got questions? We have answers.',
+      description: 'Frequently asked questions on sports biomechanics, cricket bowling stress analysis, Yo-Yo test normative percentiles, and open research preprints on KhelGrid.',
+      faqs: KHELCHRONICLE_FAQS,
+    }
+  }
 
   if (normalized.startsWith('/sports') || normalized.startsWith('/sport/') || normalized.startsWith('/sport')) {
     return {

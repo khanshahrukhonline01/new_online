@@ -754,7 +754,19 @@ npm run lint
 - **`DataCatalog`**: Injected open science repository schema on `/khelchronicle`.
 - **`ItemList`**: Injected structured lists on `/opportunities` and `/academies`.
 
-#### 4. Automated Verification & Code Health
-- **`src/shared/utils/seoAndShare.test.ts`**: Expanded with test assertions verifying mobile title lengths, high-intent GSC keywords, and Schema.org JSON-LD graphs.
-- **All 101 Vitest suites passing (819 tests total)**.
+#### 4. High-Intent On-Page UI & FAQ Schema Integration
+- **`PlayerCard.tsx`**: Updated athlete card footer to explicitly display `KHELGRID · DIGITAL KHEL ID (खेल आईडी)` and button action `Download Card (Khel ID)`.
+- **`VenuesPage.tsx`**: Updated directory eyebrow and title to `KHEL TURF · VENUE & TURF DIRECTORY (टर्फ बुकिंग)` and added `Cricket & Box Turfs` and `Football Turfs` quick filter pills.
+- **`AcademiesPage.tsx`**: Added quick filter for `Cricket Academies` and updated intro to spotlight `Khelo India accredited centers, SAI NCOE hubs, cricket academies, and wrestling akhadas`.
+- **`KhelChronicleHome.tsx`**: Injected `#CricketBiomechanics` and `#SportsScienceIndia` trending query pills and updated subtitle to feature cricket fast bowling biomechanics and Yo-Yo normative benchmarks.
+- **`faqData.ts` & `FrequentlyAskedQuestions.tsx`**:
+  - Added dedicated `SPORTS_CV_FAQS` for `/sports-cv` answering how to create and download digital Khel ID cards.
+  - Added dedicated `ACADEMIES_FAQS` for `/academies` detailing Khelo India accredited centers, SAI NCOEs, and fee transparency.
+  - Added dedicated `KHELCHRONICLE_FAQS` for `/khelchronicle` highlighting fast bowling kinematic insights and Yo-Yo test percentiles.
+  - Enriched `VENUES_FAQS` on `/venues` with specific box cricket and khel turf hourly booking questions.
+
+#### 5. Automated Verification & Code Health
+- **`src/shared/components/FrequentlyAskedQuestions.test.tsx`**: Expanded with test assertions verifying Khel ID, Academies, and KhelChronicle FAQPage Schema.org accordions.
+- **`src/shared/utils/seoAndShare.test.ts`**: Verified mobile title limits and GSC keywords.
+- **All 101 Vitest suites passing (823 tests total)**.
 - **`npm run build` and `npm run lint` clean with 0 errors**.

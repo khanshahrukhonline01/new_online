@@ -109,6 +109,7 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
   ]
 
   const quickFilters: QuickFilterPill[] = [
+    { id: 'cricket', label: 'Cricket Academies', icon: 'sports', active: sport === 'Cricket', onClick: () => setSport(prev => prev === 'Cricket' ? '' : 'Cricket') },
     { id: 'football', label: 'Football Academies', icon: 'sports', active: sport === 'Football', onClick: () => setSport(prev => prev === 'Football' ? '' : 'Football') },
     { id: 'badminton', label: 'Badminton Academies', icon: 'sports', active: sport === 'Badminton', onClick: () => setSport(prev => prev === 'Badminton' ? '' : 'Badminton') },
     { id: 'boxing', label: 'Boxing Academies', icon: 'sports', active: sport === 'Boxing', onClick: () => setSport(prev => prev === 'Boxing' ? '' : 'Boxing') },
@@ -120,10 +121,10 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
 
   return (
     <section className="content-page academies-directory-page">
-      <p className="eyebrow">ACADEMY &amp; TRAINING DIRECTORY</p>
+      <p className="eyebrow">ACADEMY &amp; TRAINING DIRECTORY · SAI CENTERS (खेल अकादमी)</p>
       <h1>Certified Sports Academies in India.</h1>
       <p className="page-intro">
-        Explore verified training institutes, youth development centers, and high performance coaching academies across India.
+        Explore certified sports academies, Khelo India accredited centers, SAI NCOE hubs, cricket academies, and wrestling akhadas across India.
       </p>
 
       <DirectoryCallout

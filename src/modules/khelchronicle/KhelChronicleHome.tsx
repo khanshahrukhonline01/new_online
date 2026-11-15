@@ -26,9 +26,11 @@ type ChronicleNavTab = 'archive' | 'about' | 'moderation' | 'guidelines' | 'poli
 const TRENDING_TOPICS = [
   { label: '#YoYoIR1', query: 'Yo-Yo' },
   { label: '#FastBowling', query: 'fast bowling' },
+  { label: '#CricketBiomechanics', query: 'cricket biomechanics' },
+  { label: '#SportsScienceIndia', query: 'sports science research' },
+  { label: '#NormativeData', query: 'normative percentiles' },
   { label: '#HighAltitude', query: 'hypoxic altitude' },
   { label: '#KabaddiInjuries', query: 'kabaddi injuries' },
-  { label: '#NormativeData', query: 'normative percentiles' },
   { label: '#XGBoostScouting', query: 'XGBoost' },
   { label: '#BoneAgeTW3', query: 'TW3' },
 ]
@@ -431,7 +433,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
           Open Research in Sports and Human Performance.
         </h1>
         <p className="kc-hero-subtitle">
-          An open-access preprint archive for sports biomechanics, exercise physiology, movement sciences, talent identification, and Indian sports policy. Free to submit, free to read, permanent Crossref DOIs.
+          An open-access preprint archive for Indian sports science research, cricket biomechanics, exercise physiology, movement sciences, Yo-Yo test normative benchmarks, and youth sports policy. Free to submit, free to read, permanent Crossref DOIs.
         </p>
 
         {/* Test Data Disclaimer Banner */}

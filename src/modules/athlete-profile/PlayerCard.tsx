@@ -121,7 +121,7 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
 
   <!-- Verified Seal Footer -->
   <rect x="70" y="450" width="260" height="28" rx="14" fill="#0D2338" stroke="#A7F36B" stroke-width="1" />
-  <text x="200" y="469" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#A7F36B" text-anchor="middle">✓ KHELGRID VERIFIED ATHLETE</text>
+  <text x="200" y="469" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#A7F36B" text-anchor="middle">✓ KHELGRID VERIFIED ATHLETE · KHEL ID</text>
 
   <!-- Link watermark -->
   <text x="200" y="525" font-family="Arial, sans-serif" font-size="10" fill="#6A8098" text-anchor="middle">khelgrid.com/u/@${profile.username}</text>
@@ -205,7 +205,7 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
         </div>
 
         <div className="card-footer-branding">
-          <span>KHELGRID · ATHLETE IDENTITY</span>
+          <span>KHELGRID · DIGITAL KHEL ID (खेल आईडी)</span>
           <small className="card-handle">@{profile.username}</small>
         </div>
       </div>
@@ -217,9 +217,9 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
             type="button"
             className="card-action-btn btn-download-card"
             onClick={handleDownloadCard}
-            title="Download high-resolution vector Player Card"
+            title="Download high-resolution vector Player Card & Digital Khel ID"
           >
-            <SiteIcon name="download" size={15} /> Download Card
+            <SiteIcon name="download" size={15} /> Download Card (Khel ID)
           </button>
 
           <a
