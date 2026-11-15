@@ -179,6 +179,8 @@ export default function LiveScoresPage({ onNavigate }: LiveScoresPageProps) {
       title,
       description,
       canonicalUrl: 'https://khelgrid.com/live',
+      // Keep the route-level exclusion even when live score updates refresh metadata.
+      robots: 'noindex, follow',
       keywords: [
         'live cricket score',
         'live football score',
@@ -323,9 +325,9 @@ export default function LiveScoresPage({ onNavigate }: LiveScoresPageProps) {
             </span>
 
             {isLiveFeedConnected && (
-              <span className="live-btn is-active" title="Connected to official scoreboard feed">
+              <span className="live-btn is-active" title="Connected to external scoreboard feed">
                 <SiteIcon name="activity" size={13} />
-                <span>Live Feed {lastUpdated ? `(${lastUpdated})` : ''}</span>
+                <span>External Feed {lastUpdated ? `(${lastUpdated})` : ''}</span>
               </span>
             )}
 

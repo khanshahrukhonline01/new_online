@@ -135,12 +135,17 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
                 setIsCreatingNew(false);
               }}
               disabled={isCreatingNew}
+              disabled={isCreatingNew || matches.length === 0}
             >
-              {matches.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.tournament}: {m.teamA.name} ({m.teamA.score}) vs {m.teamB.name} ({m.teamB.score}) — {m.status}
-                </option>
-              ))}
+              {matches.length === 0 ? (
+                <option value="" disabled>No community matches yet — create one to start scoring</option>
+              ) : (
+                matches.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.tournament}: {m.teamA.name} ({m.teamA.score}) vs {m.teamB.name} ({m.teamB.score}) — {m.status}
+                  </option>
+                ))
+              )}
             </select>
             <button
               type="button"

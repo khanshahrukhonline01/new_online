@@ -104,6 +104,7 @@ describe('LiveScoresPage component', () => {
   it('supplies high-CTR SEO metadata and Schema.org for live cricket, WPL and ICC', () => {
     const seo = getRouteSeoMetadata('/live');
     expect(seo.title).toBe('Live Sports Scores & Match Centre · KhelGrid');
+    expect(seo.robots).toBe('noindex, follow');
     expect(seo.description).toContain('connected scoreboard feeds');
     expect(seo.description).toContain('Community scorekeeper entries');
     expect(seo.description).not.toContain('Fastest');
