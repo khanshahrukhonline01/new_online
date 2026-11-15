@@ -66,7 +66,7 @@
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.12em;
-  color: #10b981;
+  color: var(--accent, #10b981);
   text-transform: uppercase;
   margin-bottom: 8px;
 }
@@ -125,7 +125,7 @@
 }
 
 .community-intake-tab.is-active {
-  background: #10b981;
+  background: var(--accent, #10b981);
   color: #042f2e;
   font-weight: 750;
   box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28);
@@ -201,7 +201,7 @@
 .community-field-group select:focus,
 .community-field-group textarea:focus {
   outline: none;
-  border-color: #10b981;
+  border-color: var(--accent, #10b981);
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
 }
 
@@ -250,7 +250,7 @@
   padding: 10px 20px;
   border-radius: 8px;
   border: none;
-  background: #10b981;
+  background: var(--accent, #10b981);
   color: #042f2e;
   font-size: 13.5px;
   font-weight: 750;
@@ -259,7 +259,7 @@
 }
 
 .community-intake-btn-submit:hover:not(:disabled) {
-  background: #059669;
+  background: var(--accent-strong, #059669);
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
 }
@@ -281,7 +281,7 @@
   height: 72px;
   border-radius: 50%;
   background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  color: var(--accent, #10b981);
   display: grid;
   place-items: center;
   margin: 0 auto 18px;
@@ -313,7 +313,7 @@
   gap: 8px;
   padding: 12px 22px;
   border-radius: 10px;
-  background: #10b981;
+  background: var(--accent, #10b981);
   color: #042f2e;
   text-decoration: none;
   font-size: 14px;
@@ -322,7 +322,7 @@
 }
 
 .community-intake-btn-primary:hover {
-  background: #059669;
+  background: var(--accent-strong, #059669);
   transform: translateY(-1px);
 }
 
@@ -402,7 +402,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #059669;
+  background: var(--accent-strong, #059669);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -585,7 +585,7 @@
 
 .community-plan-guarantee {
   font-size: 11px;
-  color: #10b981;
+  color: var(--accent, #10b981);
   font-weight: 600;
   margin-left: auto;
 }
@@ -624,9 +624,9 @@
 }
 
 .community-plan-card.is-selected {
-  border-color: #10b981;
+  border-color: var(--accent, #10b981);
   background: rgba(16, 185, 129, 0.08);
-  box-shadow: 0 0 0 1px #10b981, 0 8px 24px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 0 1px var(--accent, #10b981), 0 8px 24px rgba(16, 185, 129, 0.2);
 }
 
 .community-plan-card.is-popular {
@@ -653,7 +653,7 @@
   position: absolute;
   top: -9px;
   right: 12px;
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, var(--accent, #10b981), var(--accent-strong, #059669));
   color: #fff;
   font-size: 10px;
   font-weight: 800;
@@ -715,7 +715,7 @@
 .community-plan-savings {
   font-size: 10px;
   font-weight: 700;
-  color: #10b981;
+  color: var(--accent, #10b981);
   background: rgba(16, 185, 129, 0.12);
   padding: 2px 6px;
   border-radius: 4px;
@@ -748,7 +748,7 @@
 }
 
 .community-plan-features li svg {
-  color: #10b981;
+  color: var(--accent, #10b981);
   flex-shrink: 0;
 }
 
@@ -762,7 +762,7 @@
 }
 
 .indicator-selected {
-  color: #10b981;
+  color: var(--accent, #10b981);
 }
 
 .indicator-choose {
@@ -801,7 +801,7 @@
 .receipt-status-pill {
   font-size: 11px;
   font-weight: 700;
-  color: #10b981;
+  color: var(--accent, #10b981);
   background: rgba(16, 185, 129, 0.15);
   padding: 3px 8px;
   border-radius: 999px;
