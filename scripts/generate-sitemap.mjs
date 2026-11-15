@@ -3,6 +3,10 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { generateSitemapXml, buildSitemapEntries } from '../src/shared/sitemapGenerator.ts'
 
+try {
+  process.loadEnvFile?.('.env')
+} catch {}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
 const publicSitemap = path.resolve(rootDir, 'public', 'sitemap.xml')

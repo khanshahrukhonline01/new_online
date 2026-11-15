@@ -1,0 +1,27 @@
+{
+  "name": "KhelGrid (खेलग्रिड) — India's Premier Sports Platform",
+  "short_name": "KhelGrid",
+  "description": "Discover verified sports academies, book turfs & courts, find open selection trials, join pickup games, and track live scores across India.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b0f17",
+  "theme_color": "#101827",
+  "categories": ["sports", "fitness", "lifestyle"],
+  "lang": "en-IN",
+  "icons": [
+    {
+      "src": "/assets/kg-logo.webp",
+      "sizes": "192x192",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/kg-logo.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any maskable"
+    }
+  ]
+}
