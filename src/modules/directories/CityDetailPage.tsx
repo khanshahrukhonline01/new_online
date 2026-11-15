@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import type { MouseEvent } from 'react'
 import { ALL_INDIAN_CITIES } from '../../shared/components/citiesData'
 import type { CityInfo } from '../../shared/components/citiesData'
-import { TOP_CITY_SPORTS_COMPLEXES } from '../../shared/components/cityComplexesData'
+import { ALL_ACTIVE_CITY_HUBS } from '../../shared/components/cityComplexesData'
+import { CURATED_ACADEMIES, CURATED_VENUES } from '../../shared/data/curatedEntitiesData'
+import { CURATED_OPPORTUNITIES } from '../../shared/data/curatedOpportunitiesData'
+import { updatePageSeoMetadata, DEFAULT_KEYWORDS } from '../../shared/utils/seoAndShare'
 import {
   getAcademies,
   getCities,
@@ -105,18 +108,25 @@ export default function CityDetailPage({
           return lower.includes(cityNameLower) || cityNameLower.includes(lower)
         }
 
-        if (vRes.status === 'ready') {
-          setVenues(vRes.data.filter(v => matchCity(v.city) || (v.address && matchCity(v.address))))
-        }
-        if (oRes.status === 'ready') {
-          setOpportunities(oRes.data.filter(o => matchCity(o.city) || matchCity(o.title)))
-        }
+        const curatedVenuesMatching = CURATED_VENUES.filter(v => matchCity(v.city) || (v.address && matchCity(v.address)))
+        const curatedOppsMatching = CURATED_OPPORTUNITIES.filter(o => matchCity(o.city) || matchCity(o.title))
+        const curatedAcadsMatching = CURATED_ACADEMIES.filter(a => matchCity(a.city) || (a.description && matchCity(a.description)))
+
+        const dbVenues = vRes.status === 'ready' ? vRes.data.filter(v => matchCity(v.city) || (v.address && matchCity(v.address))) : []
+        const mergedVenues = Array.from(new Map([...curatedVenuesMatching, ...dbVenues].map(v => [v.slug || v.id, v])).values())
+        setVenues(mergedVenues)
+
+        const dbOpps = oRes.status === 'ready' ? oRes.data.filter(o => matchCity(o.city) || matchCity(o.title)) : []
+        const mergedOpps = Array.from(new Map([...curatedOppsMatching, ...dbOpps].map(o => [o.slug || o.id, o])).values())
+        setOpportunities(mergedOpps)
+
         if (pRes.status === 'ready') {
           setPickupGames(pRes.data.filter(g => matchCity(g.city)))
         }
-        if (aRes.status === 'ready') {
-          setAcademies(aRes.data.filter(a => matchCity(a.city) || (a.description && matchCity(a.description))))
-        }
+
+        const dbAcads = aRes.status === 'ready' ? aRes.data.filter(a => matchCity(a.city) || (a.description && matchCity(a.description))) : []
+        const mergedAcads = Array.from(new Map([...curatedAcadsMatching, ...dbAcads].map(a => [a.slug || a.id, a])).values())
+        setAcademies(mergedAcads)
 
         setLoading(false)
       })
@@ -139,7 +149,7 @@ export default function CityDetailPage({
 
   // Find iconic stadiums from cityComplexesData if available
   const complexInfo = useMemo(() => {
-    return TOP_CITY_SPORTS_COMPLEXES.find(
+    return ALL_ACTIVE_CITY_HUBS.find(
       c => c.slug.toLowerCase() === city.slug.toLowerCase() || c.city.toLowerCase() === city.name.toLowerCase(),
     )
   }, [city])
@@ -157,20 +167,84 @@ export default function CityDetailPage({
       .slice(0, 8)
   }, [cityMetaList, city])
 
-  // Structured Schema.org for SEO
-  const schemaData = useMemo(() => ({
-    '@context': 'https://schema.org',
-    '@type': 'SportsActivityLocation',
-    name: `${city.name} Sports Hub · KhelGrid`,
-    description: `Sports directory, stadiums, SAI selection trials, training academies, and community pickup games in ${city.name}, ${city.state}.`,
-    address: {
-      '@type': 'PostalAddress',
-      addressLocality: city.name,
-      addressRegion: city.state,
-      addressCountry: 'IN',
-    },
-    url: `https://khelgrid.com/cities/${city.slug}`,
-  }), [city])
+  // Structured Schema.org for SEO with BreadcrumbList
+  const schemaData = useMemo(() => {
+    const pageUrl = `https://khelgrid.com/cities/${city.slug}`
+    const pageDesc = `Sports directory, stadiums, SAI selection trials, training academies, and community pickup games in ${city.name}, ${city.state}.`
+
+    return {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'SportsActivityLocation',
+          '@id': `${pageUrl}#location`,
+          name: `${city.name} Sports Hub · KhelGrid`,
+          description: pageDesc,
+          url: pageUrl,
+          address: {
+            '@type': 'PostalAddress',
+            addressLocality: city.name,
+            addressRegion: city.state,
+            addressCountry: 'IN',
+          },
+        },
+        {
+          '@type': 'BreadcrumbList',
+          '@id': `${pageUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              '@type': 'ListItem',
+              position: 1,
+              name: 'Home',
+              item: 'https://khelgrid.com',
+            },
+            {
+              '@type': 'ListItem',
+              position: 2,
+              name: 'Cities',
+              item: 'https://khelgrid.com/cities',
+            },
+            {
+              '@type': 'ListItem',
+              position: 3,
+              name: `${city.name} Sports Hub`,
+              item: pageUrl,
+            },
+          ],
+        },
+      ],
+    }
+  }, [city])
+
+  // Real-time Mobile SERP Title and Head Tags Sync
+  useEffect(() => {
+    const pageTitle = `${city.name} Sports Hub: Turfs, Academies & Trials · KhelGrid`
+    const pageDesc = `Explore sports grounds, box cricket turfs, academies, and selection trials in ${city.name}, ${city.state} on KhelGrid.`
+    const pageUrl = `https://khelgrid.com/cities/${city.slug}`
+
+    const cleanup = updatePageSeoMetadata({
+      title: pageTitle,
+      description: pageDesc,
+      canonicalUrl: pageUrl,
+      keywords: [
+        `cricket turf in ${city.name.toLowerCase()}`,
+        `cricket academy ${city.name.toLowerCase()}`,
+        `sports complex ${city.name.toLowerCase()}`,
+        `badminton court ${city.name.toLowerCase()}`,
+        `sports trials ${city.name.toLowerCase()}`,
+        `box cricket ${city.name.toLowerCase()}`,
+        `turf near me ${city.name.toLowerCase()}`,
+        `khelo india ${city.name.toLowerCase()}`,
+        `sports in ${city.name.toLowerCase()}`,
+        `${city.name.toLowerCase()} sports hub`,
+        `खेलग्रिड ${city.name}`,
+        ...DEFAULT_KEYWORDS,
+      ],
+      jsonLd: schemaData,
+    })
+
+    return cleanup
+  }, [city, schemaData])
 
   return (
     <article className="content-page city-hub-container" aria-label={`${city.name} Sports Hub`}>

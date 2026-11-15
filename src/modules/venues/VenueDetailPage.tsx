@@ -140,25 +140,54 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
   useEffect(() => {
     if (!venue) return
 
-    const pageTitle = `${venue.name} — Sports Venue in ${venue.city} | KhelGrid`
+    const pageTitle = `${venue.name} · Sports Turf in ${venue.city} | KhelGrid`
     const pageDesc = venue.description || `Play sports at ${venue.name} in ${venue.city}, India. Pitch surfaces, timings, floodlights, facilities, and booking enquiries on KhelGrid.`
     const pageUrl = `https://khelgrid.com/venues/${venue.slug}`
 
     const jsonLd = {
       '@context': 'https://schema.org',
-      '@type': 'SportsActivityLocation',
-      name: venue.name,
-      description: pageDesc,
-      url: pageUrl,
-      address: {
-        '@type': 'PostalAddress',
-        addressLocality: venue.city,
-        addressCountry: 'IN',
-        streetAddress: venue.address || `${venue.name}, ${venue.city}`,
-      },
-      telephone: (venue as CuratedVenue).phone || undefined,
-      openingHours: (venue as CuratedVenue).timings || 'Mo-Su 06:00-23:00',
-      priceRange: '₹₹',
+      '@graph': [
+        {
+          '@type': 'SportsActivityLocation',
+          '@id': `${pageUrl}#location`,
+          name: venue.name,
+          description: pageDesc,
+          url: pageUrl,
+          address: {
+            '@type': 'PostalAddress',
+            addressLocality: venue.city,
+            addressCountry: 'IN',
+            streetAddress: venue.address || `${venue.name}, ${venue.city}`,
+          },
+          telephone: (venue as CuratedVenue).phone || undefined,
+          openingHours: (venue as CuratedVenue).timings || 'Mo-Su 06:00-23:00',
+          priceRange: '₹₹',
+        },
+        {
+          '@type': 'BreadcrumbList',
+          '@id': `${pageUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              '@type': 'ListItem',
+              position: 1,
+              name: 'Home',
+              item: 'https://khelgrid.com',
+            },
+            {
+              '@type': 'ListItem',
+              position: 2,
+              name: 'Turfs & Venues',
+              item: 'https://khelgrid.com/venues',
+            },
+            {
+              '@type': 'ListItem',
+              position: 3,
+              name: venue.name,
+              item: pageUrl,
+            },
+          ],
+        },
+      ],
     }
 
     const cleanup = updatePageSeoMetadata({
@@ -170,6 +199,9 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
         venue.name,
         `${venue.name} ${venue.city}`,
         `sports turf in ${venue.city}`,
+        'cricket turf near me',
+        `box cricket ${venue.city}`,
+        `football turf ${venue.city}`,
         'box cricket venue',
         'football turf booking',
         'KhelGrid sports venues',

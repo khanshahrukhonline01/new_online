@@ -112,26 +112,55 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
   useEffect(() => {
     if (!academy) return
 
-    const pageTitle = `${academy.name} — Sports Academy in ${academy.city} | KhelGrid`
+    const pageTitle = `${academy.name} · Sports Academy in ${academy.city} | KhelGrid`
     const pageDesc = academy.description || `Explore ${academy.name} in ${academy.city}, India. Certified coaching, facilities, age groups, timings, and admission enquiry on KhelGrid.`
     const pageUrl = `https://khelgrid.com/academies/${academy.slug}`
 
     const jsonLd = {
       '@context': 'https://schema.org',
-      '@type': 'SportsClub',
-      name: academy.name,
-      description: pageDesc,
-      url: pageUrl,
-      address: {
-        '@type': 'PostalAddress',
-        addressLocality: academy.city,
-        addressRegion: academy.state || 'India',
-        addressCountry: 'IN',
-        streetAddress: (academy as CuratedAcademy).address || `${academy.name}, ${academy.city}`,
-      },
-      telephone: (academy as CuratedAcademy).phone || undefined,
-      sport: (academy as CuratedAcademy).sport || 'Multi-Sport',
-      priceRange: '₹₹',
+      '@graph': [
+        {
+          '@type': 'SportsClub',
+          '@id': `${pageUrl}#club`,
+          name: academy.name,
+          description: pageDesc,
+          url: pageUrl,
+          address: {
+            '@type': 'PostalAddress',
+            addressLocality: academy.city,
+            addressRegion: academy.state || 'India',
+            addressCountry: 'IN',
+            streetAddress: (academy as CuratedAcademy).address || `${academy.name}, ${academy.city}`,
+          },
+          telephone: (academy as CuratedAcademy).phone || undefined,
+          sport: (academy as CuratedAcademy).sport || 'Multi-Sport',
+          priceRange: '₹₹',
+        },
+        {
+          '@type': 'BreadcrumbList',
+          '@id': `${pageUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              '@type': 'ListItem',
+              position: 1,
+              name: 'Home',
+              item: 'https://khelgrid.com',
+            },
+            {
+              '@type': 'ListItem',
+              position: 2,
+              name: 'Sports Academies',
+              item: 'https://khelgrid.com/academies',
+            },
+            {
+              '@type': 'ListItem',
+              position: 3,
+              name: academy.name,
+              item: pageUrl,
+            },
+          ],
+        },
+      ],
     }
 
     const cleanup = updatePageSeoMetadata({
@@ -143,6 +172,9 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
         academy.name,
         `${academy.name} ${academy.city}`,
         `${(academy as CuratedAcademy).sport || 'Sports'} academy in ${academy.city}`,
+        `cricket academy ${academy.city}`,
+        'khelo india academy near me',
+        `sports coaching ${academy.city}`,
         'sports academy admission',
         'youth sports trials',
         'KhelGrid verified academy',

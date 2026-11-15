@@ -6,6 +6,8 @@
  * Optimized for mobile SERP character constraints (<65 chars title) and high-CTR conversion.
  */
 
+import { ALL_INDIAN_CITIES } from '../components/citiesData'
+
 export interface PageSeoConfig {
   title: string
   description: string
@@ -490,6 +492,287 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
           },
         ],
       },
+    }
+  }
+
+  // Dynamic City Sports Hubs (/cities/:slug and /city/:slug)
+  if (cleanPath.startsWith('/cities/') || cleanPath.startsWith('/city/')) {
+    const slug = cleanPath.startsWith('/cities/')
+      ? cleanPath.slice('/cities/'.length).trim()
+      : cleanPath.slice('/city/'.length).trim()
+
+    if (slug) {
+      const city = ALL_INDIAN_CITIES.find(
+        c => c.slug.toLowerCase() === slug.toLowerCase() || c.name.toLowerCase() === slug.toLowerCase(),
+      )
+      const cityName = city ? city.name : slug.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
+      const stateName = city ? city.state : 'India'
+      const canonicalUrl = `https://khelgrid.com/cities/${slug.toLowerCase()}`
+      const title = `${cityName} Sports Hub: Turfs, Academies & Trials · KhelGrid`
+      const description = `Explore sports grounds, box cricket turfs, academies, and selection trials in ${cityName}, ${stateName} on KhelGrid.`
+
+      return {
+        title,
+        description,
+        canonicalUrl,
+        keywords: [
+          `cricket turf in ${cityName.toLowerCase()}`,
+          `cricket academy ${cityName.toLowerCase()}`,
+          `sports complex ${cityName.toLowerCase()}`,
+          `badminton court ${cityName.toLowerCase()}`,
+          `sports trials ${cityName.toLowerCase()}`,
+          `box cricket ${cityName.toLowerCase()}`,
+          `turf near me ${cityName.toLowerCase()}`,
+          `khelo india ${cityName.toLowerCase()}`,
+          `sports in ${cityName.toLowerCase()}`,
+          `${cityName.toLowerCase()} sports hub`,
+          `खेलग्रिड ${cityName}`,
+          ...DEFAULT_KEYWORDS,
+        ],
+        ogType: 'website',
+        jsonLd: {
+          '@context': 'https://schema.org',
+          '@graph': [
+            {
+              '@type': 'SportsActivityLocation',
+              '@id': `${canonicalUrl}#location`,
+              name: `${cityName} Sports Hub · KhelGrid`,
+              description,
+              url: canonicalUrl,
+              address: {
+                '@type': 'PostalAddress',
+                addressLocality: cityName,
+                addressRegion: stateName,
+                addressCountry: 'IN',
+              },
+            },
+            {
+              '@type': 'BreadcrumbList',
+              '@id': `${canonicalUrl}#breadcrumb`,
+              itemListElement: [
+                {
+                  '@type': 'ListItem',
+                  position: 1,
+                  name: 'Home',
+                  item: 'https://khelgrid.com',
+                },
+                {
+                  '@type': 'ListItem',
+                  position: 2,
+                  name: 'Cities',
+                  item: 'https://khelgrid.com/cities',
+                },
+                {
+                  '@type': 'ListItem',
+                  position: 3,
+                  name: `${cityName} Sports Hub`,
+                  item: canonicalUrl,
+                },
+              ],
+            },
+          ],
+        },
+      }
+    }
+  }
+
+  // Dynamic Sport Directories (/sports/:slug)
+  if (cleanPath.startsWith('/sports/') && cleanPath !== '/sports') {
+    const slug = cleanPath.slice('/sports/'.length).trim()
+    if (slug) {
+      const sportName = slug.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
+      const canonicalUrl = `https://khelgrid.com/sports/${slug.toLowerCase()}`
+      const title = `${sportName} in India: Trials, Academies & Turfs · KhelGrid`
+      const description = `Discover certified ${sportName} academies, selection trials, coaches, tournament fixtures, and venues across India on KhelGrid.`
+
+      return {
+        title,
+        description,
+        canonicalUrl,
+        keywords: [
+          `${slug.toLowerCase()} in india`,
+          `${slug.toLowerCase()} trials`,
+          `${slug.toLowerCase()} academy near me`,
+          `${slug.toLowerCase()} coaching`,
+          `${slug.toLowerCase()} tournaments india`,
+          `${slug.toLowerCase()} turf booking`,
+          `khelo india ${slug.toLowerCase()}`,
+          `sports in india`,
+          `खेलग्रिड ${sportName}`,
+          ...DEFAULT_KEYWORDS,
+        ],
+        ogType: 'website',
+        jsonLd: {
+          '@context': 'https://schema.org',
+          '@graph': [
+            {
+              '@type': 'SportsEvent',
+              '@id': `${canonicalUrl}#hub`,
+              name: `${sportName} in India · KhelGrid`,
+              description,
+              url: canonicalUrl,
+            },
+            {
+              '@type': 'BreadcrumbList',
+              '@id': `${canonicalUrl}#breadcrumb`,
+              itemListElement: [
+                {
+                  '@type': 'ListItem',
+                  position: 1,
+                  name: 'Home',
+                  item: 'https://khelgrid.com',
+                },
+                {
+                  '@type': 'ListItem',
+                  position: 2,
+                  name: 'Sports',
+                  item: 'https://khelgrid.com/sports',
+                },
+                {
+                  '@type': 'ListItem',
+                  position: 3,
+                  name: sportName,
+                  item: canonicalUrl,
+                },
+              ],
+            },
+          ],
+        },
+      }
+    }
+  }
+
+  // Dynamic Venues & Turfs Detail Pages (/venues/:slug, /book/:slug)
+  if (
+    (cleanPath.startsWith('/venues/') && cleanPath !== '/venues') ||
+    (cleanPath.startsWith('/book/') && cleanPath !== '/book')
+  ) {
+    const slug = (cleanPath.startsWith('/venues/') ? cleanPath.slice('/venues/'.length) : cleanPath.slice('/book/'.length)).replace(/\/book$/, '').trim()
+    if (slug) {
+      const venueName = slug.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
+      const canonicalUrl = `https://khelgrid.com/venues/${slug.toLowerCase()}`
+      const title = `${venueName} · Sports Turf Booking | KhelGrid`
+      const description = `Book slots, turf surfaces, floodlights, and facilities at ${venueName} on KhelGrid.`
+
+      return {
+        title,
+        description,
+        canonicalUrl,
+        keywords: [venueName, 'sports turf booking', 'cricket turf near me', 'box cricket court', 'turf booking', ...DEFAULT_KEYWORDS],
+        ogType: 'place',
+        jsonLd: {
+          '@context': 'https://schema.org',
+          '@graph': [
+            {
+              '@type': 'SportsActivityLocation',
+              '@id': `${canonicalUrl}#location`,
+              name: `${venueName} · KhelGrid`,
+              url: canonicalUrl,
+              description,
+            },
+            {
+              '@type': 'BreadcrumbList',
+              '@id': `${canonicalUrl}#breadcrumb`,
+              itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://khelgrid.com' },
+                { '@type': 'ListItem', position: 2, name: 'Turfs & Venues', item: 'https://khelgrid.com/venues' },
+                { '@type': 'ListItem', position: 3, name: venueName, item: canonicalUrl },
+              ],
+            },
+          ],
+        },
+      }
+    }
+  }
+
+  // Dynamic Sports Academies Detail Pages (/academies/:slug, /train/:slug)
+  if (
+    (cleanPath.startsWith('/academies/') && cleanPath !== '/academies') ||
+    (cleanPath.startsWith('/train/') && cleanPath !== '/train')
+  ) {
+    const slug = (cleanPath.startsWith('/academies/') ? cleanPath.slice('/academies/'.length) : cleanPath.slice('/train/'.length)).replace(/\/enrol$/, '').trim()
+    if (slug) {
+      const academyName = slug.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
+      const canonicalUrl = `https://khelgrid.com/academies/${slug.toLowerCase()}`
+      const title = `${academyName} · Sports Academy | KhelGrid`
+      const description = `Explore certified coaching, facilities, timings, and admissions for ${academyName} on KhelGrid.`
+
+      return {
+        title,
+        description,
+        canonicalUrl,
+        keywords: [academyName, 'sports academy near me', 'cricket academy', 'khelo india academy', 'sports coaching', ...DEFAULT_KEYWORDS],
+        ogType: 'place',
+        jsonLd: {
+          '@context': 'https://schema.org',
+          '@graph': [
+            {
+              '@type': 'SportsClub',
+              '@id': `${canonicalUrl}#club`,
+              name: `${academyName} · KhelGrid`,
+              url: canonicalUrl,
+              description,
+            },
+            {
+              '@type': 'BreadcrumbList',
+              '@id': `${canonicalUrl}#breadcrumb`,
+              itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://khelgrid.com' },
+                { '@type': 'ListItem', position: 2, name: 'Sports Academies', item: 'https://khelgrid.com/academies' },
+                { '@type': 'ListItem', position: 3, name: academyName, item: canonicalUrl },
+              ],
+            },
+          ],
+        },
+      }
+    }
+  }
+
+  // Dynamic Selection Trials & Opportunities (/opportunities/:slug, /trials/:slug, /trial/:slug)
+  if (
+    (cleanPath.startsWith('/opportunities/') && cleanPath !== '/opportunities') ||
+    (cleanPath.startsWith('/trials/') && cleanPath !== '/trials') ||
+    (cleanPath.startsWith('/trial/') && cleanPath !== '/trial')
+  ) {
+    const slug = cleanPath
+      .replace(/^\/(opportunities|trials|trial)\//, '')
+      .replace(/\/apply$/, '')
+      .replace(/^t-/, '')
+      .trim()
+    if (slug) {
+      const oppTitle = slug.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
+      const canonicalUrl = `https://khelgrid.com/opportunities/${slug.toLowerCase()}`
+      const title = `${oppTitle} · Selection Trials | KhelGrid`
+      const description = `Official eligibility, documents, trial dates, and registration for ${oppTitle} on KhelGrid.`
+
+      return {
+        title,
+        description,
+        canonicalUrl,
+        keywords: [oppTitle, 'selection trials 2026', 'sports trials india', 'open trials', ...DEFAULT_KEYWORDS],
+        ogType: 'website',
+        jsonLd: {
+          '@context': 'https://schema.org',
+          '@graph': [
+            {
+              '@type': 'SportsEvent',
+              '@id': `${canonicalUrl}#event`,
+              name: oppTitle,
+              url: canonicalUrl,
+              description,
+            },
+            {
+              '@type': 'BreadcrumbList',
+              '@id': `${canonicalUrl}#breadcrumb`,
+              itemListElement: [
+                { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://khelgrid.com' },
+                { '@type': 'ListItem', position: 2, name: 'Selection Trials', item: 'https://khelgrid.com/opportunities' },
+                { '@type': 'ListItem', position: 3, name: oppTitle, item: canonicalUrl },
+              ],
+            },
+          ],
+        },
+      }
     }
   }
 

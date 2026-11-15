@@ -307,33 +307,70 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
 
   const scholarlySchema = useMemo(() => {
     if (!paper) return {}
+    const paperUrl = `https://www.khelgrid.com/khelchronicle/${paper.slug}`
+
     return {
       '@context': 'https://schema.org',
-      '@type': 'ScholarlyArticle',
-      headline: paper.title,
-      name: paper.title,
-      identifier: paper.paperId,
-      url: `https://www.khelgrid.com/khelchronicle/${paper.slug}`,
-      datePublished: paper.datePublished,
-      dateModified: paper.dateModified || paper.datePublished,
-      version: paper.version,
-      license: 'https://creativecommons.org/licenses/by/4.0/',
-      sameAs: `https://doi.org/${doi}`,
-      author: paper.authors.map(a => ({
-        '@type': 'Person',
-        name: a.name,
-        affiliation: {
-          '@type': 'Organization',
-          name: a.affiliation,
+      '@graph': [
+        {
+          '@type': 'ScholarlyArticle',
+          '@id': `${paperUrl}#article`,
+          headline: paper.title,
+          name: paper.title,
+          identifier: paper.paperId,
+          url: paperUrl,
+          datePublished: paper.datePublished,
+          dateModified: paper.dateModified || paper.datePublished,
+          version: paper.version,
+          license: 'https://creativecommons.org/licenses/by/4.0/',
+          sameAs: `https://doi.org/${doi}`,
+          author: paper.authors.map(a => ({
+            '@type': 'Person',
+            name: a.name,
+            affiliation: {
+              '@type': 'Organization',
+              name: a.affiliation,
+            },
+          })),
+          publisher: {
+            '@type': 'Organization',
+            name: 'KhelChronicle Open Sports Research Archive (SportRxiv India)',
+            logo: 'https://www.khelgrid.com/assets/kg-logo.webp',
+          },
+          description: paper.abstract.background,
+          keywords: paper.keywords.join(', '),
         },
-      })),
-      publisher: {
-        '@type': 'Organization',
-        name: 'KhelChronicle Open Sports Research Archive (SportRxiv India)',
-        logo: 'https://www.khelgrid.com/assets/kg-logo.webp',
-      },
-      description: paper.abstract.background,
-      keywords: paper.keywords.join(', '),
+        {
+          '@type': 'BreadcrumbList',
+          '@id': `${paperUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              '@type': 'ListItem',
+              position: 1,
+              name: 'Home',
+              item: 'https://khelgrid.com',
+            },
+            {
+              '@type': 'ListItem',
+              position: 2,
+              name: 'KhelChronicle',
+              item: 'https://khelgrid.com/khelchronicle',
+            },
+            {
+              '@type': 'ListItem',
+              position: 3,
+              name: paper.categoryName,
+              item: `https://khelgrid.com/khelchronicle/category/${paper.category}`,
+            },
+            {
+              '@type': 'ListItem',
+              position: 4,
+              name: paper.title,
+              item: paperUrl,
+            },
+          ],
+        },
+      ],
     }
   }, [paper, doi])
 

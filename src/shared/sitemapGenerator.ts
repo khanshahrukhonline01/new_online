@@ -3,7 +3,7 @@ import {
   RESEARCH_CATEGORIES,
   RESEARCH_PAPERS,
 } from '../modules/khelchronicle/data/khelchronicleData.ts'
-import { TOP_CITY_SPORTS_COMPLEXES } from './components/cityComplexesData.ts'
+import { ALL_ACTIVE_CITY_HUBS } from './components/cityComplexesData.ts'
 import { CURATED_ACADEMIES, CURATED_VENUES } from './data/curatedEntitiesData.ts'
 import { CURATED_OPPORTUNITIES } from './data/curatedOpportunitiesData.ts'
 
@@ -93,8 +93,8 @@ export function buildSitemapEntries(): SitemapEntry[] {
     })
   }
 
-  // 3. All 16 Metro City Complex Hubs
-  for (const city of TOP_CITY_SPORTS_COMPLEXES) {
+  // 3. All Active City Complex Hubs (Metros + Regional Sports Hubs)
+  for (const city of ALL_ACTIVE_CITY_HUBS) {
     entries.push({
       loc: `${BASE_URL}${city.href}`,
       lastmod: SITEMAP_LASTMOD,

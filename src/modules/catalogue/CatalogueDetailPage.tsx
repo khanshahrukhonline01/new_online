@@ -68,6 +68,30 @@ export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: 
           },
         },
         {
+          '@type': 'BreadcrumbList',
+          '@id': `${canonicalUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              '@type': 'ListItem',
+              position: 1,
+              name: 'Home',
+              item: 'https://khelgrid.com',
+            },
+            {
+              '@type': 'ListItem',
+              position: 2,
+              name: 'Selection Trials',
+              item: 'https://khelgrid.com/opportunities',
+            },
+            {
+              '@type': 'ListItem',
+              position: 3,
+              name: opp.title,
+              item: canonicalUrl,
+            },
+          ],
+        },
+        {
           '@type': 'SportsEvent',
           name: opp.title,
           description,

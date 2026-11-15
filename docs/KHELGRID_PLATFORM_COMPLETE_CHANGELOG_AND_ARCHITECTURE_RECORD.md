@@ -783,3 +783,46 @@ npm run lint
 - **`src/shared/utils/seoAndShare.test.ts`**: Verified mobile title limits and GSC keywords.
 - **All 101 Vitest suites passing (823 tests total)**.
 - **`npm run build` and `npm run lint` clean with 0 errors**.
+
+---
+
+### Milestone 16: Phase 5 Local SEO, Multi-City Directory Expansion & Long-Tail Geo Keywords (November 15, 2026)
+
+#### 1. Dynamic City Hub Route Metadata & Geo-Targeting (`/cities/:slug` & `/city/:slug`)
+- Grounded Google Search Console local search queries (`cricket academy kanpur`, `cricket turf near me`, `khelo india academy near me`).
+- Configured dynamic routing in `getRouteSeoMetadata` extracting city slugs and looking up official boundaries in `ALL_INDIAN_CITIES`.
+- Mobile-first title formatting: `${cityName} Sports Hub: Turfs, Academies & Trials · KhelGrid` (50–65 characters, strictly <= 70 chars, e.g. Kanpur is 58 chars).
+- Localized geo-keyword injection: `cricket turf in <city>`, `cricket academy <city>`, `sports complex <city>`, `sports trials <city>`, `box cricket <city>`, `turf near me <city>`, `khelo india <city>`, `खेलग्रिड <city>`.
+- Injected `SportsActivityLocation` and `BreadcrumbList` (Home > Cities > `${cityName} Sports Hub`) Schema.org JSON-LD.
+
+#### 2. Dynamic Sport Directories (`/sports/:slug`)
+- Formatted crisp mobile SERP titles: `${sportName} in India: Trials, Academies & Turfs · KhelGrid` (54–65 characters).
+- Injected `SportsEvent` and `BreadcrumbList` (Home > Sports > `${sportName}`) structured data.
+- Enriched sport keywords with trial, academy, coaching, and turf booking queries.
+
+#### 3. Structured `BreadcrumbList` Across All Detail Pages
+- **`CityDetailPage.tsx`**: Injected `BreadcrumbList` and synchronized document head tags and JSON-LD via `updatePageSeoMetadata`.
+- **`SportDetailPage.tsx`**: Injected `BreadcrumbList` into `@graph` schema and reduced title length to eliminate mobile truncation.
+- **`VenueDetailPage.tsx`**: Injected `BreadcrumbList` (Home > Turfs & Venues > `${venue.name}`) and enriched local turf booking keywords.
+- **`AcademyDetailPage.tsx`**: Injected `BreadcrumbList` (Home > Sports Academies > `${academy.name}`) and enriched academy admission keywords.
+- **`CatalogueDetailPage.tsx`**: Injected `BreadcrumbList` (Home > Selection Trials > `${opp.title}`) into `@graph`.
+- **`KhelChroniclePaperPage.tsx`**: Injected `BreadcrumbList` (Home > KhelChronicle > `${category}` > `${paper.title}`) into `@graph`.
+
+#### 4. Multi-City Hub Directory Expansion & Curated Regional Entities
+- Added `REGIONAL_CITY_SPORTS_COMPLEXES` in `src/shared/components/cityComplexesData.ts` covering key athletic hubs: Kanpur, Varanasi, Meerut, Jalandhar, Indore.
+- Added curated entities for Kanpur in `src/shared/data/curatedEntitiesData.ts`:
+  - `Kanpur Cricket Association (KCA) Coaching Academy` (`kanpur-cricket-association-academy`)
+  - `Green Park International Cricket Stadium & Sports Arena` (`green-park-stadium-kanpur`)
+- `CityDetailPage.tsx` now merges curated entities with Supabase responses to guarantee instant, rich display for regional cities even during cold starts.
+
+#### 5. Google XML Sitemap Expansion (`public/sitemap.xml`)
+- Expanded verified sitemap from 119 to **126 URLs** in `public/sitemap.xml`.
+- Indexed all active city complex hubs (16 Metros + 5 Regional Sports Hubs) with `<changefreq>weekly</changefreq>` and `<priority>0.8</priority>`.
+- Indexed all curated academies and venues detail pages.
+
+#### 6. Automated Verification & Code Health
+- **`src/shared/utils/seoAndShare.test.ts`**: Expanded with 3 new test suites verifying dynamic city routes, sport routes, and detail page breadcrumbs (8/8 tests passed).
+- **`src/modules/directories/CityDetailPage.test.tsx`**: Added Kanpur regional hub assertions (4/4 tests passed).
+- **`src/shared/sitemap.test.ts`**: Verified all 8 sitemap indexing tests passed.
+- **Detail page tests**: Verified `SportDetailPage`, `VenueDetailPage`, `AcademyDetailPage`, `CatalogueDetailPage`, and `khelchronicle` (48/48 tests passed).
+- **Production Build & Lint**: `npm run build` and `npm run lint` clean with 0 errors.

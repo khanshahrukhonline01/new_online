@@ -128,16 +128,45 @@ export default function SportDetailPage({ slug, onNavigate }: SportDetailPagePro
 
   // SEO & Schema.org JSON-LD
   useEffect(() => {
-    const pageTitle = `${sport.name} in India — Selection Trials, Academies, Venues & Rules | KhelGrid`
-    const pageDesc = `${sport.tagline} Discover official national championships, age-group selection pathways, and coaching academies for ${sport.name} on KhelGrid.`
+    const pageTitle = `${sport.name} in India: Trials, Academies & Turfs · KhelGrid`
+    const pageDesc = `Explore certified ${sport.name} academies, selection trials, coaches, tournament fixtures, and grounds across India on KhelGrid.`
     const pageUrl = `https://khelgrid.com/sports/${sport.slug}`
 
     const jsonLd = {
       '@context': 'https://schema.org',
-      '@type': 'SportsEvent',
-      name: sport.name,
-      description: sport.description,
-      url: pageUrl,
+      '@graph': [
+        {
+          '@type': 'SportsEvent',
+          '@id': `${pageUrl}#hub`,
+          name: `${sport.name} in India · KhelGrid`,
+          description: pageDesc,
+          url: pageUrl,
+        },
+        {
+          '@type': 'BreadcrumbList',
+          '@id': `${pageUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              '@type': 'ListItem',
+              position: 1,
+              name: 'Home',
+              item: 'https://khelgrid.com',
+            },
+            {
+              '@type': 'ListItem',
+              position: 2,
+              name: 'Sports',
+              item: 'https://khelgrid.com/sports',
+            },
+            {
+              '@type': 'ListItem',
+              position: 3,
+              name: sport.name,
+              item: pageUrl,
+            },
+          ],
+        },
+      ],
     }
 
     const cleanup = updatePageSeoMetadata({
@@ -146,10 +175,11 @@ export default function SportDetailPage({ slug, onNavigate }: SportDetailPagePro
       canonicalUrl: pageUrl,
       keywords: [
         sport.name,
-        `${sport.name} India`,
+        `${sport.name} in India`,
         `${sport.name} selection trials`,
-        `${sport.name} academies`,
+        `${sport.name} academy near me`,
         `${sport.name} venues`,
+        `${sport.name} coaching`,
         'KhelGrid sports directory',
       ],
       jsonLd,

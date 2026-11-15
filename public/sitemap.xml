@@ -433,6 +433,36 @@
     <priority>0.80</priority>
   </url>
   <url>
+    <loc>https://khelgrid.com/city/kanpur</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/city/varanasi</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/city/meerut</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/city/jalandhar</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/city/indore</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
     <loc>https://khelgrid.com/academies/bengaluru-fc-academy</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -457,6 +487,12 @@
     <priority>0.85</priority>
   </url>
   <url>
+    <loc>https://khelgrid.com/academies/kanpur-cricket-association-academy</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
     <loc>https://khelgrid.com/venues/sree-kanteerava-stadium</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -470,6 +506,12 @@
   </url>
   <url>
     <loc>https://khelgrid.com/venues/cooperage-football-ground</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/venues/green-park-stadium-kanpur</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>

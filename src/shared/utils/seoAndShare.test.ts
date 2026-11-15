@@ -112,4 +112,65 @@ describe('SEO & SERP Metadata Validation', () => {
     expect(JSON.stringify(getRouteSeoMetadata('/events').jsonLd)).toContain('ItemList')
     expect(JSON.stringify(getRouteSeoMetadata('/cities').jsonLd)).toContain('ItemList')
   })
+
+  it('handles dynamic city sports hubs (/cities/:slug) with mobile SERP titles, geo keywords, and BreadcrumbList schema', () => {
+    const kanpurMeta = getRouteSeoMetadata('/cities/kanpur')
+    expect(kanpurMeta.title).toBe('Kanpur Sports Hub: Turfs, Academies & Trials · KhelGrid')
+    expect(kanpurMeta.title.length).toBeLessThanOrEqual(70)
+    expect(kanpurMeta.canonicalUrl).toBe('https://khelgrid.com/cities/kanpur')
+    expect(kanpurMeta.keywords).toContain('cricket academy kanpur')
+    expect(kanpurMeta.keywords).toContain('cricket turf in kanpur')
+    expect(kanpurMeta.keywords).toContain('sports trials kanpur')
+    expect(kanpurMeta.keywords).toContain('खेलग्रिड Kanpur')
+    expect(JSON.stringify(kanpurMeta.jsonLd)).toContain('SportsActivityLocation')
+    expect(JSON.stringify(kanpurMeta.jsonLd)).toContain('BreadcrumbList')
+    expect(JSON.stringify(kanpurMeta.jsonLd)).toContain('Uttar Pradesh')
+
+    // Legacy /city/ alias route parity
+    const kanpurAliasMeta = getRouteSeoMetadata('/city/kanpur')
+    expect(kanpurAliasMeta.title).toBe('Kanpur Sports Hub: Turfs, Academies & Trials · KhelGrid')
+    expect(kanpurAliasMeta.canonicalUrl).toBe('https://khelgrid.com/cities/kanpur')
+
+    // Metro city check
+    const delhiMeta = getRouteSeoMetadata('/cities/delhi')
+    expect(delhiMeta.title).toBe('Delhi Sports Hub: Turfs, Academies & Trials · KhelGrid')
+    expect(delhiMeta.title.length).toBeLessThanOrEqual(70)
+    expect(JSON.stringify(delhiMeta.jsonLd)).toContain('Delhi NCR')
+  })
+
+  it('handles dynamic sport directories (/sports/:slug) with mobile SERP titles, keywords, and BreadcrumbList schema', () => {
+    const cricketMeta = getRouteSeoMetadata('/sports/cricket')
+    expect(cricketMeta.title).toBe('Cricket in India: Trials, Academies & Turfs · KhelGrid')
+    expect(cricketMeta.title.length).toBeLessThanOrEqual(70)
+    expect(cricketMeta.canonicalUrl).toBe('https://khelgrid.com/sports/cricket')
+    expect(cricketMeta.keywords).toContain('cricket in india')
+    expect(cricketMeta.keywords).toContain('cricket trials')
+    expect(cricketMeta.keywords).toContain('cricket academy near me')
+    expect(JSON.stringify(cricketMeta.jsonLd)).toContain('SportsEvent')
+    expect(JSON.stringify(cricketMeta.jsonLd)).toContain('BreadcrumbList')
+
+    const badmintonMeta = getRouteSeoMetadata('/sports/badminton')
+    expect(badmintonMeta.title).toBe('Badminton in India: Trials, Academies & Turfs · KhelGrid')
+    expect(badmintonMeta.title.length).toBeLessThanOrEqual(70)
+  })
+
+  it('handles dynamic venue, academy, and trial detail routes with BreadcrumbList schema', () => {
+    const venueMeta = getRouteSeoMetadata('/venues/green-park-stadium-kanpur')
+    expect(venueMeta.title.length).toBeLessThanOrEqual(70)
+    expect(venueMeta.canonicalUrl).toBe('https://khelgrid.com/venues/green-park-stadium-kanpur')
+    expect(JSON.stringify(venueMeta.jsonLd)).toContain('SportsActivityLocation')
+    expect(JSON.stringify(venueMeta.jsonLd)).toContain('BreadcrumbList')
+
+    const academyMeta = getRouteSeoMetadata('/academies/kanpur-cricket-association-academy')
+    expect(academyMeta.title.length).toBeLessThanOrEqual(70)
+    expect(academyMeta.canonicalUrl).toBe('https://khelgrid.com/academies/kanpur-cricket-association-academy')
+    expect(JSON.stringify(academyMeta.jsonLd)).toContain('SportsClub')
+    expect(JSON.stringify(academyMeta.jsonLd)).toContain('BreadcrumbList')
+
+    const trialMeta = getRouteSeoMetadata('/opportunities/kca-u14-cricket-trials-kanpur-2026')
+    expect(trialMeta.title.length).toBeLessThanOrEqual(70)
+    expect(trialMeta.canonicalUrl).toBe('https://khelgrid.com/opportunities/kca-u14-cricket-trials-kanpur-2026')
+    expect(JSON.stringify(trialMeta.jsonLd)).toContain('SportsEvent')
+    expect(JSON.stringify(trialMeta.jsonLd)).toContain('BreadcrumbList')
+  })
 })
