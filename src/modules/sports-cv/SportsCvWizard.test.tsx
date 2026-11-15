@@ -5,6 +5,7 @@ import {
   computeFitnessTier,
   saveGenerationRecord,
   clearGenerationRecords,
+  getSafeStorage,
 } from '../../shared/utils/khelId'
 
 describe('SportsCvWizard — 4 Pillars: Digital Khel ID, Combine Benchmarks & Trial Dossier', () => {
@@ -150,6 +151,41 @@ describe('SportsCvWizard — 4 Pillars: Digital Khel ID, Combine Benchmarks & Tr
       // Print preview reflects the stored reference
       expect(html).toContain('KG-DOS-20261115-99AB')
       expect(html).toContain('Revision 2')
+    })
+
+    it('renders sport-specific role presets, popular sport quick-pick tray, and technical scouting panel', () => {
+      const html = renderToStaticMarkup(<SportsCvWizard />)
+
+      // Quick-select popular sports tray
+      expect(html).toContain('Popular Presets:')
+      expect(html).toContain('Cricket')
+      expect(html).toContain('Football')
+      expect(html).toContain('Athletics')
+      expect(html).toContain('Badminton')
+      expect(html).toContain('Kabaddi')
+
+      // Since default sport is Cricket, scouting panel is active for Cricket
+      expect(html).toContain('SPORT-SPECIFIC SCOUTING PRESET: CRICKET')
+      expect(html).toContain('Right-Arm Fast Bowler')
+      expect(html).toContain('Left-Arm Fast Bowler')
+      expect(html).toContain('Fast Bowling All-Rounder')
+      expect(html).toContain('Batting Style')
+      expect(html).toContain('Bowling Style')
+    })
+
+    it('renders technical scouting indicators row in dossier when technical attributes are specified', () => {
+      getSafeStorage().setItem(
+        'khelgrid_cv_draft_v2',
+        JSON.stringify({
+          sport: 'Cricket',
+          battingStyle: 'Right-Hand Bat (RHB)',
+          bowlingStyle: 'Right-Arm Fast (135+ km/h)',
+        })
+      )
+
+      const html = renderToStaticMarkup(<SportsCvWizard />)
+      expect(html).toContain('TECHNICAL SCOUTING INDICATORS:')
+      expect(html).toContain('Batting: Right-Hand Bat (RHB) · Bowling: Right-Arm Fast (135+ km/h)')
     })
   })
 })

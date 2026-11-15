@@ -117,7 +117,7 @@ export const DOSSIER_HISTORY_STORAGE_KEY = 'khelgrid_cv_generation_history_v1'
 
 let memoryStorage: Record<string, string> = {}
 
-function getSafeStorage(): {
+export function getSafeStorage(): {
   getItem: (k: string) => string | null
   setItem: (k: string, v: string) => void
   removeItem: (k: string) => void

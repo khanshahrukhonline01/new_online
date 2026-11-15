@@ -274,6 +274,16 @@ export interface AthleteProfile {
   dossierReference?: string
   dossierGeneratedAt?: string
   dossierRevision?: number
+  battingStyle?: string
+  bowlingStyle?: string
+  preferredFoot?: string
+  tacticalPosition?: string
+  athleticsEvent?: string
+  personalBest?: string
+  seasonBest?: string
+  playingStyle?: string
+  racketHand?: string
+  signatureMove?: string
   achievements: { year: string; event: string; result: string }[]
   videoClips: VideoClip[]
   fitnessBenchmarks?: {

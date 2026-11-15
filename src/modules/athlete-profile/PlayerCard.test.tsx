@@ -62,4 +62,16 @@ describe('PlayerCard (FIFA Trading Card Component & Digital Khel ID)', () => {
     expect(html).toContain('DOSSIER REF: KG-DOS-20261115-4A9B')
     expect(html).toContain('15 Nov 2026')
   })
+
+  it('renders technical scouting indicators chip when sport technical attributes are present', () => {
+    const profile = {
+      ...SHOWCASE_ATHLETE_PROFILES['rohit-verma'],
+      battingStyle: 'Left-Hand Bat (LHB)',
+      bowlingStyle: 'Right-Arm Fast (135+ km/h)',
+    }
+    const html = renderToStaticMarkup(<PlayerCard profile={profile} />)
+
+    expect(html).toContain('card-tech-role')
+    expect(html).toContain('Batting: Left-Hand Bat (LHB) · Bowling: Right-Arm Fast (135+ km/h)')
+  })
 })

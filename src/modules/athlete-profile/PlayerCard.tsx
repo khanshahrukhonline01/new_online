@@ -4,6 +4,7 @@ import { SportIcon } from '../../shared/sports/sportIcons'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { generateQrMatrix, generateQrSvgString } from '../../shared/utils/qrCodeGenerator'
 import { generateKhelId, calculateOverallRating } from '../../shared/utils/khelId'
+import { formatTechnicalIndicators } from '../../shared/data/sportRolesData'
 import './PlayerCard.css'
 
 export interface PlayerCardProps {
@@ -41,6 +42,24 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
     return generateQrSvgString(publicUrl, { size: 76, color: '#A7F36B', bgColor: 'transparent' })
   }, [publicUrl])
 
+  // Technical indicators for card subtitle and scouting badge
+  const techIndicator = useMemo(() => {
+    return formatTechnicalIndicators({
+      sport: profile.sport,
+      battingStyle: profile.battingStyle,
+      bowlingStyle: profile.bowlingStyle,
+      preferredFoot: profile.preferredFoot,
+      tacticalPosition: profile.tacticalPosition,
+      athleticsEvent: profile.athleticsEvent,
+      personalBest: profile.personalBest,
+      seasonBest: profile.seasonBest,
+      playingStyle: profile.playingStyle,
+      racketHand: profile.racketHand,
+      signatureMove: profile.signatureMove,
+      primaryFootOrHand: profile.primaryFootOrHand,
+    })
+  }, [profile])
+
   const handleCopy = () => {
     navigator.clipboard?.writeText(publicUrl)
     setCopied(true)
@@ -64,6 +83,10 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
         }
       }
     }
+
+    const techIndicatorClean = techIndicator && techIndicator !== '—'
+      ? techIndicator.replace(/&/g, '&amp;').slice(0, 48)
+      : ''
 
     return `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="620" viewBox="0 0 420 620">
   <defs>
@@ -93,8 +116,9 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
 
   <!-- Player Name & Details -->
   <text x="210" y="215" font-family="Arial, sans-serif" font-weight="900" font-size="22" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">${profile.fullName.toUpperCase()}</text>
-  <text x="210" y="238" font-family="Arial, sans-serif" font-size="13" font-weight="600" fill="#A7F36B" text-anchor="middle">${profile.playingPosition} · ${profile.city}</text>
-  <text x="210" y="258" font-family="Arial, sans-serif" font-size="11" fill="#8FA5BE" text-anchor="middle">${profile.teamOrAcademy || 'Grassroots Athlete'}</text>
+  <text x="210" y="235" font-family="Arial, sans-serif" font-size="12" font-weight="600" fill="#A7F36B" text-anchor="middle">${profile.playingPosition} · ${profile.city}</text>
+  ${techIndicatorClean ? `<text x="210" y="250" font-family="Arial, sans-serif" font-size="9.5" font-weight="bold" fill="#E5C07B" text-anchor="middle">${techIndicatorClean}</text>` : ''}
+  <text x="210" y="${techIndicatorClean ? 265 : 255}" font-family="Arial, sans-serif" font-size="10" fill="#8FA5BE" text-anchor="middle">${profile.teamOrAcademy || 'Grassroots Athlete'}</text>
 
   <!-- Divider Line -->
   <line x1="50" y1="275" x2="370" y2="275" stroke="url(#goldBorder)" stroke-width="1.5" opacity="0.6" />
@@ -244,6 +268,11 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
           <p className="card-subtitle">
             {profile.playingPosition} · {profile.city}
           </p>
+          {techIndicator && techIndicator !== '—' && (
+            <div className="card-tech-role" title="Technical Scouting Attribute">
+              <span>{techIndicator}</span>
+            </div>
+          )}
           {profile.teamOrAcademy && <p className="card-club">{profile.teamOrAcademy}</p>}
         </div>
 

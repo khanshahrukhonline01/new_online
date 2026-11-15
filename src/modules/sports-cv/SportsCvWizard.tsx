@@ -24,7 +24,13 @@ import {
   clearGenerationRecords,
   generateDossierReference,
   formatIndianDateTime,
+  getSafeStorage,
 } from '../../shared/utils/khelId'
+import {
+  getSportRolePreset,
+  formatTechnicalIndicators,
+  POPULAR_SPORTS_LIST,
+} from '../../shared/data/sportRolesData'
 import { generateQrSvgString } from '../../shared/utils/qrCodeGenerator'
 import './sports-cv.css'
 
@@ -52,6 +58,16 @@ export type Cv = {
   guardianName: string
   guardianRelation: string
   guardianPhone: string
+  battingStyle?: string
+  bowlingStyle?: string
+  preferredFoot?: string
+  tacticalPosition?: string
+  athleticsEvent?: string
+  personalBest?: string
+  seasonBest?: string
+  playingStyle?: string
+  racketHand?: string
+  signatureMove?: string
   goals: string
   achievements: Achievement[]
   videoClips: VideoClip[]
@@ -88,6 +104,16 @@ const initialCv: Cv = {
   guardianName: '',
   guardianRelation: '',
   guardianPhone: '',
+  battingStyle: '',
+  bowlingStyle: '',
+  preferredFoot: '',
+  tacticalPosition: '',
+  athleticsEvent: '',
+  personalBest: '',
+  seasonBest: '',
+  playingStyle: '',
+  racketHand: '',
+  signatureMove: '',
   goals: '',
   achievements: [{ year: '', event: '', result: '' }],
   videoClips: [],
@@ -98,7 +124,29 @@ export default function SportsCvWizard() {
   const [currentUser, setCurrentUser] = useState<AuthUserProfile | KhelGridUser | null>(
     () => getStoredAuthUser() || getStoredUser()
   )
-  const [cv, setCv] = useState<Cv>(initialCv)
+  const [cv, setCv] = useState<Cv>(() => {
+    try {
+      const raw = getSafeStorage().getItem(DRAFT_STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<Cv>
+        if (parsed.fullName || parsed.sport || parsed.phone) {
+          return {
+            ...initialCv,
+            ...parsed,
+            fitnessBenchmarks: parsed.fitnessBenchmarks || initialCv.fitnessBenchmarks,
+            achievements:
+              parsed.achievements && parsed.achievements.length > 0
+                ? parsed.achievements
+                : initialCv.achievements,
+            videoClips: parsed.videoClips || initialCv.videoClips,
+          }
+        }
+      }
+    } catch {
+      // Ignore corrupt local storage
+    }
+    return initialCv
+  })
   const [draftRestored, setDraftRestored] = useState(false)
   const [savedForPrint, setSavedForPrint] = useState(false)
   const [publishedProfile, setPublishedProfile] = useState<AthleteProfile | null>(null)
@@ -118,7 +166,7 @@ export default function SportsCvWizard() {
   // Pillar 4: Local-First Draft Auto-Save & Recovery on Mount
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(DRAFT_STORAGE_KEY)
+      const raw = getSafeStorage().getItem(DRAFT_STORAGE_KEY)
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<Cv>
         if (parsed.fullName || parsed.sport || parsed.phone) {
@@ -145,7 +193,7 @@ export default function SportsCvWizard() {
     const timer = setTimeout(() => {
       try {
         if (cv.fullName || cv.sport || cv.city || cv.phone) {
-          localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(cv))
+          getSafeStorage().setItem(DRAFT_STORAGE_KEY, JSON.stringify(cv))
         }
       } catch {
         // Ignore quota limits
@@ -216,6 +264,16 @@ export default function SportsCvWizard() {
       guardianName: publishedProfile.guardianName || '',
       guardianRelation: publishedProfile.guardianRelation || '',
       guardianPhone: publishedProfile.guardianPhone || '',
+      battingStyle: publishedProfile.battingStyle || '',
+      bowlingStyle: publishedProfile.bowlingStyle || '',
+      preferredFoot: publishedProfile.preferredFoot || '',
+      tacticalPosition: publishedProfile.tacticalPosition || '',
+      athleticsEvent: publishedProfile.athleticsEvent || '',
+      personalBest: publishedProfile.personalBest || '',
+      seasonBest: publishedProfile.seasonBest || '',
+      playingStyle: publishedProfile.playingStyle || '',
+      racketHand: publishedProfile.racketHand || '',
+      signatureMove: publishedProfile.signatureMove || '',
       goals: publishedProfile.summary || '',
       achievements:
         publishedProfile.achievements && publishedProfile.achievements.length > 0
@@ -337,7 +395,7 @@ export default function SportsCvWizard() {
 
   const handleClearDraft = () => {
     try {
-      localStorage.removeItem(DRAFT_STORAGE_KEY)
+      getSafeStorage().removeItem(DRAFT_STORAGE_KEY)
     } catch {
       // Ignore
     }
@@ -392,6 +450,16 @@ export default function SportsCvWizard() {
       guardianName: cv.guardianName,
       guardianRelation: cv.guardianRelation,
       guardianPhone: cv.guardianPhone,
+      battingStyle: cv.battingStyle,
+      bowlingStyle: cv.bowlingStyle,
+      preferredFoot: cv.preferredFoot,
+      tacticalPosition: cv.tacticalPosition,
+      athleticsEvent: cv.athleticsEvent,
+      personalBest: cv.personalBest,
+      seasonBest: cv.seasonBest,
+      playingStyle: cv.playingStyle,
+      racketHand: cv.racketHand,
+      signatureMove: cv.signatureMove,
       summary: cv.goals,
       achievements: cv.achievements.filter(a => a.event.trim()),
       videoClips: cv.videoClips.filter(c => c.title.trim() && c.videoUrl.trim()),
@@ -434,6 +502,41 @@ export default function SportsCvWizard() {
   const printQrSvg = useMemo(() => {
     return generateQrSvgString(dossierPublicUrl, { size: 92, color: '#0B1C2D', bgColor: '#FFFFFF' })
   }, [dossierPublicUrl])
+
+  // Sport Role Preset & Technical Indicators
+  const sportPreset = useMemo(() => {
+    return getSportRolePreset(cv.sport || 'Cricket')
+  }, [cv.sport])
+
+  const technicalIndicatorsString = useMemo(() => {
+    return formatTechnicalIndicators({
+      sport: cv.sport,
+      battingStyle: cv.battingStyle,
+      bowlingStyle: cv.bowlingStyle,
+      preferredFoot: cv.preferredFoot,
+      tacticalPosition: cv.tacticalPosition,
+      athleticsEvent: cv.athleticsEvent,
+      personalBest: cv.personalBest,
+      seasonBest: cv.seasonBest,
+      playingStyle: cv.playingStyle,
+      racketHand: cv.racketHand,
+      signatureMove: cv.signatureMove,
+      primaryFootOrHand: cv.primaryFootOrHand,
+    })
+  }, [
+    cv.sport,
+    cv.battingStyle,
+    cv.bowlingStyle,
+    cv.preferredFoot,
+    cv.tacticalPosition,
+    cv.athleticsEvent,
+    cv.personalBest,
+    cv.seasonBest,
+    cv.playingStyle,
+    cv.racketHand,
+    cv.signatureMove,
+    cv.primaryFootOrHand,
+  ])
 
   // Calculated athlete age
   const calculatedAge = useMemo(() => {
@@ -646,16 +749,31 @@ export default function SportsCvWizard() {
               />
             </label>
 
-            <label>
-              Primary Sport *
-              <input
-                required
-                maxLength={80}
-                value={cv.sport}
-                onChange={e => update('sport', e.target.value)}
-                placeholder="e.g. Cricket, Athletics, Badminton, Kabaddi"
-              />
-            </label>
+            <div className="sport-input-wrap">
+              <label>
+                Primary Sport *
+                <input
+                  required
+                  maxLength={80}
+                  value={cv.sport}
+                  onChange={e => update('sport', e.target.value)}
+                  placeholder="e.g. Cricket, Football, Athletics, Badminton, Kabaddi"
+                />
+              </label>
+              <div className="popular-sports-tray" aria-label="Quick Select Sport">
+                <span className="tray-label">Popular Presets:</span>
+                {POPULAR_SPORTS_LIST.map(sportName => (
+                  <button
+                    key={sportName}
+                    type="button"
+                    className={`sport-preset-pill ${cv.sport.toLowerCase().includes(sportName.toLowerCase()) ? 'is-selected' : ''}`}
+                    onClick={() => update('sport', sportName)}
+                  >
+                    {sportName}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <label>
               Federation / Board UID (Optional)
@@ -786,6 +904,203 @@ export default function SportsCvWizard() {
         {/* Section 2: Sporting Background & Biometrics */}
         <fieldset>
           <legend>2. Sporting Background &amp; Biometrics</legend>
+
+          {/* Dynamic Sport-Specific Roles & Tactical Attributes (Improvement 4) */}
+          {sportPreset && (
+            <div className="sport-specific-scouting-panel" aria-label={`${sportPreset.sport} Scouting Profile`}>
+              <div className="preset-panel-header">
+                <span className="preset-header-tag">SPORT-SPECIFIC SCOUTING PRESET: {sportPreset.sport.toUpperCase()}</span>
+                <span className="preset-header-hint">Tap a role preset below to autofill or customize your position</span>
+              </div>
+
+              {/* Position Quick-Pick Pills */}
+              <div className="preset-pills-row" aria-label="Suggested Positions">
+                {sportPreset.primaryPositions.map(pos => (
+                  <button
+                    key={pos}
+                    type="button"
+                    className={`preset-pill ${cv.playingPosition === pos ? 'is-active' : ''}`}
+                    onClick={() => update('playingPosition', pos)}
+                  >
+                    {pos}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sport-Specific Technical Fields Grid */}
+              <div className="preset-technical-grid">
+                {/* Cricket: Batting Style & Bowling Style */}
+                {sportPreset.technicalFields.battingStyles && (
+                  <label>
+                    Batting Style
+                    <select
+                      value={cv.battingStyle || ''}
+                      onChange={e => {
+                        const val = e.target.value
+                        update('battingStyle', val)
+                        if (val.includes('Left')) {
+                          update('primaryFootOrHand', 'Left-Hand Bat')
+                        } else if (val.includes('Right')) {
+                          update('primaryFootOrHand', 'Right-Hand Bat')
+                        }
+                      }}
+                    >
+                      <option value="">Select Batting Style</option>
+                      {sportPreset.technicalFields.battingStyles.map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {sportPreset.technicalFields.bowlingStyles && (
+                  <label>
+                    Bowling Style
+                    <select
+                      value={cv.bowlingStyle || ''}
+                      onChange={e => update('bowlingStyle', e.target.value)}
+                    >
+                      <option value="">Select Bowling Style</option>
+                      {sportPreset.technicalFields.bowlingStyles.map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {/* Football: Preferred Foot & Tactical Role */}
+                {sportPreset.technicalFields.preferredFeet && (
+                  <label>
+                    Preferred Foot
+                    <select
+                      value={cv.preferredFoot || ''}
+                      onChange={e => {
+                        const val = e.target.value
+                        update('preferredFoot', val)
+                        update('primaryFootOrHand', val)
+                      }}
+                    >
+                      <option value="">Select Preferred Foot</option>
+                      {sportPreset.technicalFields.preferredFeet.map(f => (
+                        <option key={f} value={f}>{f}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {sportPreset.technicalFields.tacticalPositions && (
+                  <label>
+                    Tactical Playing Role
+                    <select
+                      value={cv.tacticalPosition || ''}
+                      onChange={e => update('tacticalPosition', e.target.value)}
+                    >
+                      <option value="">Select Tactical Role</option>
+                      {sportPreset.technicalFields.tacticalPositions.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {/* Athletics: Primary Event, Personal Best (PB), Season Best (SB) */}
+                {sportPreset.technicalFields.athleticsEvents && (
+                  <>
+                    <label>
+                      Primary Track / Field Event
+                      <select
+                        value={cv.athleticsEvent || ''}
+                        onChange={e => {
+                          const val = e.target.value
+                          update('athleticsEvent', val)
+                          if (!cv.playingPosition || cv.playingPosition.includes('Sprint') || cv.playingPosition.includes('Specialist')) {
+                            update('playingPosition', `${val} Specialist`)
+                          }
+                        }}
+                      >
+                        <option value="">Select Official Event</option>
+                        {sportPreset.technicalFields.athleticsEvents.map(evt => (
+                          <option key={evt} value={evt}>{evt}</option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label>
+                      Official Personal Best (PB)
+                      <input
+                        maxLength={50}
+                        value={cv.personalBest || ''}
+                        onChange={e => update('personalBest', e.target.value)}
+                        placeholder="e.g. 10.42s / 84.50m / 2.15m"
+                      />
+                    </label>
+
+                    <label>
+                      Season Best (SB)
+                      <input
+                        maxLength={50}
+                        value={cv.seasonBest || ''}
+                        onChange={e => update('seasonBest', e.target.value)}
+                        placeholder="e.g. 10.51s / 82.30m"
+                      />
+                    </label>
+                  </>
+                )}
+
+                {/* Badminton & Tennis: Racket Hand & Playing Style */}
+                {sportPreset.technicalFields.racketHands && (
+                  <label>
+                    Racket Hand
+                    <select
+                      value={cv.racketHand || ''}
+                      onChange={e => {
+                        const val = e.target.value
+                        update('racketHand', val)
+                        update('primaryFootOrHand', val)
+                      }}
+                    >
+                      <option value="">Select Racket Hand</option>
+                      {sportPreset.technicalFields.racketHands.map(h => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {sportPreset.technicalFields.playingStyles && (
+                  <label>
+                    Playing Style &amp; Tactical Specialty
+                    <select
+                      value={cv.playingStyle || ''}
+                      onChange={e => update('playingStyle', e.target.value)}
+                    >
+                      <option value="">Select Playing Style</option>
+                      {sportPreset.technicalFields.playingStyles.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {/* Kabaddi: Signature Move */}
+                {sportPreset.technicalFields.signatureMoves && (
+                  <label>
+                    Signature Move / Scoring Weapon
+                    <select
+                      value={cv.signatureMove || ''}
+                      onChange={e => update('signatureMove', e.target.value)}
+                    >
+                      <option value="">Select Signature Move</option>
+                      {sportPreset.technicalFields.signatureMoves.map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="cv-field-grid">
             <label>
               Playing Position / Primary Event *
@@ -1159,6 +1474,17 @@ export default function SportsCvWizard() {
             city: cv.city.trim() || 'Delhi',
             state: cv.state.trim() || 'Delhi',
             teamOrAcademy: cv.teamOrAcademy.trim() || 'Sonnet Cricket Club',
+            battingStyle: cv.battingStyle,
+            bowlingStyle: cv.bowlingStyle,
+            preferredFoot: cv.preferredFoot,
+            tacticalPosition: cv.tacticalPosition,
+            athleticsEvent: cv.athleticsEvent,
+            personalBest: cv.personalBest,
+            seasonBest: cv.seasonBest,
+            playingStyle: cv.playingStyle,
+            racketHand: cv.racketHand,
+            signatureMove: cv.signatureMove,
+            primaryFootOrHand: cv.primaryFootOrHand,
             achievements: cv.achievements.filter(a => a.event.trim()),
             videoClips: cv.videoClips,
             fitnessBenchmarks: cv.fitnessBenchmarks,
@@ -1242,6 +1568,16 @@ export default function SportsCvWizard() {
                 <td>{cv.bloodGroup || '—'}</td>
                 <td>{cv.primaryFootOrHand || '—'}</td>
               </tr>
+              {technicalIndicatorsString && technicalIndicatorsString !== '—' && (
+                <tr className="dossier-technical-row">
+                  <td colSpan={6}>
+                    <div className="dossier-tech-indicators-box">
+                      <span className="tech-badge-label">TECHNICAL SCOUTING INDICATORS:</span>
+                      <strong className="tech-badge-value">{technicalIndicatorsString}</strong>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

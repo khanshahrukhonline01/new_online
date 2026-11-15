@@ -174,6 +174,131 @@
   font-weight: 400;
 }
 
+/* Quick-Select Popular Sports Tray */
+.sport-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.popular-sports-tray {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--page-elevated);
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}
+
+.tray-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-right: 4px;
+}
+
+.sport-preset-pill {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card-bg, #0b1c2d);
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sport-preset-pill:hover {
+  border-color: #a7f36b;
+  color: #fff;
+  background: rgba(167, 243, 107, 0.1);
+}
+
+.sport-preset-pill.is-selected {
+  border-color: #a7f36b;
+  background: #a7f36b;
+  color: #030e18;
+  font-weight: 750;
+}
+
+/* Sport-Specific Role Presets & Scouting Panel (Improvement 4) */
+.sport-specific-scouting-panel {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, rgba(13, 39, 64, 0.6) 0%, rgba(9, 25, 41, 0.9) 100%);
+  border: 1px solid rgba(167, 243, 107, 0.35);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 0 16px;
+}
+
+.preset-panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(229, 192, 123, 0.25);
+}
+
+.preset-header-tag {
+  font-size: 11px;
+  font-weight: 800;
+  color: #a7f36b;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.preset-header-hint {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.preset-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.preset-pill {
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid rgba(167, 243, 107, 0.25);
+  background: rgba(11, 28, 45, 0.8);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.preset-pill:hover {
+  border-color: #a7f36b;
+  background: rgba(167, 243, 107, 0.15);
+  color: #fff;
+}
+
+.preset-pill.is-active {
+  border-color: #e5c07b;
+  background: rgba(229, 192, 123, 0.2);
+  color: #f7d28b;
+  font-weight: 750;
+  box-shadow: 0 0 8px rgba(229, 192, 123, 0.3);
+}
+
+.preset-technical-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
 /* Minor Athlete Guardian Box */
 .cv-guardian-box {
   margin-top: 16px;
@@ -510,6 +635,32 @@
   font-size: 10px;
   color: #2563eb;
   word-break: break-all;
+}
+
+.dossier-technical-row td {
+  background: #f8fafc;
+  padding: 8px 12px !important;
+}
+
+.dossier-tech-indicators-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.tech-badge-label {
+  font-weight: 800;
+  color: #0b1c2d;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tech-badge-value {
+  color: #087b45;
+  font-size: 12.5px;
 }
 
 /* ==========================================================================

@@ -911,9 +911,28 @@ npm run lint
   - Candidate Statutory Declaration and footer disclaimer explicitly stamp the document with the dossier reference and generation date/time.
   - Live PlayerCard embeds `REF: KG-DOS-...` reference stamp and issuance date.
 
-#### 6. Automated Verification & Code Health
+#### 6. Sport-Specific Role Presets & Technical Indicators (`sportRolesData.ts`, `domain.ts`, `SportsCvWizard.tsx`, `PlayerCard.tsx`, `PlayerCard.css`, `sports-cv.css`)
+- **Domain-Specific Role Taxonomy (`src/shared/data/sportRolesData.ts`)**:
+  - **Cricket**: Batting Style (`Right-Hand Bat (RHB)`, `Left-Hand Bat (LHB)`), Bowling Style (`Right-Arm Fast (135+ km/h)`, `Right-Arm Medium-Fast`, `Left-Arm Fast (130+ km/h)`, `Left-Arm Medium-Fast`, `Right-Arm Leg-Spin (Wrist Spin)`, `Left-Arm Orthodox (Finger Spin)`, etc.), and Primary Positions (`Top-Order Batter`, `Middle-Order Batter`, `Wicketkeeper-Batter`, `Fast Bowling All-Rounder`, `Spin Bowling All-Rounder`).
+  - **Football**: Primary Tactical Position (`CB`, `LB`, `RB`, `CDM`, `CM`, `CAM`, `LW`, `RW`, `ST / CF`, `GK`), Preferred Foot (`Right Foot`, `Left Foot`, `Both Feet (Ambidextrous)`), and Tactical Roles (`Box-to-Box Midfielder`, `Ball-Playing Center Back`, `Inverted Winger`, `Target Man Striker`, `Sweeper Keeper`).
+  - **Athletics (Track & Field)**: Primary Events (`100m Sprint`, `200m Sprint`, `400m Sprint`, `800m`, `1500m`, `5000m`, `110m Hurdles`, `Long Jump`, `Triple Jump`, `High Jump`, `Javelin Throw`, `Shot Put`, `Discus Throw`), along with dedicated input fields for Official Personal Best (`PB`) and Season Best (`SB`).
+  - **Badminton & Tennis**: Racket Hand (`Right-Handed`, `Left-Handed (Southpaw)`), Playing Style (`Attacking Singles (Smash & Net Domination)`, `Rally & Counter-Attacking Tactician`, `Doubles Front-Court / Net Specialist`, `Doubles Rear-Court / Power Smasher`).
+  - **Kabaddi, Basketball & Hockey**: Positions and signature moves (`Ankle Hold (Kona Catch)`, `Thigh Hold`, `Running Hand Touch`, `Dubki / Escape Specialist`, `Drag-Flick PC Specialist`).
+- **Dynamic Quick-Select Sports Tray & Scouting Panel (`SportsCvWizard.tsx`)**:
+  - Horizontal popular sports tray (`Popular Presets: Cricket · Football · Athletics · Badminton · Kabaddi · Tennis · Basketball · Hockey`) for instant one-click switching.
+  - Interactive role preset pills row that dynamically reflects the selected sport and autofills `playingPosition`.
+  - Contextual technical inputs that adapt automatically (e.g. Batting & Bowling dropdowns for Cricket; Preferred Foot & Tactical Role for Football; Event, PB & SB inputs for Athletics).
+  - Backward compatibility: automatically synchronizes dominant side/hand/foot into `primaryFootOrHand` to ensure compatibility across all platform components.
+- **Selection Trial Print Dossier Technical Indicators Row (`SportsCvWizard.tsx`, `sports-cv.css`)**:
+  - Table 1 of the official selection trial resume renders a dedicated high-density `dossier-technical-row` displaying `TECHNICAL SCOUTING INDICATORS:` (e.g. `Batting: RHB · Bowling: Right-Arm Fast (135+ km/h)` or `Event: 100m Sprint · PB: 10.42s · SB: 10.51s`).
+- **Player Card Live & SVG Integration (`PlayerCard.tsx`, `PlayerCard.css`)**:
+  - Displays `.card-tech-role` badge with high-contrast gold styling under the nameplate.
+  - Injects technical indicators into the exported high-resolution vector SVG trading card.
+
+#### 7. Automated Verification & Code Health
+- **`src/shared/data/sportRolesData.test.ts`**: Verified presets for Cricket, Football, Athletics, Badminton, Kabaddi, fuzzy sport name matching, and formatted technical strings (6/6 tests passed).
 - **`src/shared/utils/qrCodeGenerator.test.ts`**: Verified 21x21 matrix, 7x7 corner finder patterns, timing patterns, and valid SVG output (2/2 tests passed).
 - **`src/shared/utils/khelId.test.ts`**: Verified Khel ID generation, combine tier calculations, Indian datetime formatting, fresh generation records, and history audit storage (7/7 tests passed).
-- **`src/modules/athlete-profile/PlayerCard.test.tsx`**: Verified standardized Khel ID format, QR verification box, PNG/SVG download actions, and dossier reference stamps (4/4 tests passed).
-- **`src/modules/sports-cv/SportsCvWizard.test.tsx`**: Verified `computeFitnessTier` algorithm, all form sections, selection trial dossier layout, and returning-user active dossier reference cards (10/10 tests passed).
+- **`src/modules/athlete-profile/PlayerCard.test.tsx`**: Verified standardized Khel ID format, QR verification box, PNG/SVG download actions, dossier reference stamps, and technical scouting attribute chips (5/5 tests passed).
+- **`src/modules/sports-cv/SportsCvWizard.test.tsx`**: Verified `computeFitnessTier` algorithm, all form sections, selection trial dossier layout, returning-user active dossier reference cards, sport presets, and technical indicator dossier rows (12/12 tests passed).
 - **Build & Quality Assurance**: Production build clean (`npm run build` succeeded) and 0 ESLint errors.
