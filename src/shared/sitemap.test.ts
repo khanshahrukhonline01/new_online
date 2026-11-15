@@ -42,6 +42,11 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     expect(talentScanner?.priority).toBe(0.85)
   })
 
+  it('does not index the live match centre until provider permissions and current data are confirmed', () => {
+    const urls = buildSitemapEntries().map(entry => entry.loc)
+    expect(urls).not.toContain(`${BASE_URL}/live`)
+  })
+
   it('indexes all 34 verified sports directories with weekly freshness', () => {
     const entries = buildSitemapEntries()
     expect(VERIFIED_SPORTS).toHaveLength(34)

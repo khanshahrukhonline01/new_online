@@ -63,6 +63,7 @@ describe('SEO & SERP Metadata Validation', () => {
     expect(liveScoresMeta.keywords).toContain('live football score')
     expect(liveScoresMeta.description).toContain('connected scoreboard feeds')
     expect(liveScoresMeta.description).not.toContain('Fastest')
+    expect(liveScoresMeta.robots).toBe('noindex, follow')
     expect(liveScoresMeta.keywords).not.toContain('wpl live score')
 
     const chronicleMeta = getRouteSeoMetadata('/khelchronicle')

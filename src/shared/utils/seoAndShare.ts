@@ -180,6 +180,7 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
         'लाइव स्कोर',
         ...DEFAULT_KEYWORDS,
       ],
+      robots: 'noindex, follow',
       ogType: 'website',
       jsonLd: {
         '@context': 'https://schema.org',
