@@ -186,7 +186,7 @@
   gap: 5px;
   font-size: 10px;
   font-weight: 800;
-  color: #047857;
+  color: var(--accent-strong, #047857);
   background: rgba(16, 185, 129, 0.1);
   padding: 2px 7px;
   border-radius: 999px;
@@ -199,7 +199,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #10b981;
+  background: var(--accent, #10b981);
 }
 
 .home-live-pulse-dot::after {
@@ -289,7 +289,7 @@
   gap: 4px;
   font-size: 10px;
   font-weight: 700;
-  color: #047857;
+  color: var(--accent-strong, #047857);
   background: rgba(16, 185, 129, 0.12);
   padding: 2px 6px;
   border-radius: 6px;
@@ -547,7 +547,7 @@
 
 .home-rail-view-all-icon-wrap.tone-emerald {
   background: rgba(16, 185, 129, 0.14);
-  color: #059669;
+  color: var(--accent-strong, #059669);
 }
 
 .home-rail-view-all-icon-wrap.tone-blue {
@@ -1279,7 +1279,7 @@
   border-radius: 8px;
   font-size: 12px;
   font-weight: 700;
-  color: #059669;
+  color: var(--accent-strong, #059669);
   background: #f0fdf4;
   margin-top: 2px;
   transition: all 0.12s ease;
@@ -1287,7 +1287,7 @@
 
 .home-hero-city-all-link:hover {
   background: #dcfce7;
-  color: #047857;
+  color: var(--accent-strong, #047857);
 }
 
 /* 2. Full-Width Search Pill with Find button */
@@ -1732,7 +1732,7 @@
 
 .home-rail-card.is-live-updated,
 .home-academy-card.is-live-updated {
-  outline: 2px solid #10b981;
+  outline: 2px solid var(--accent, #10b981);
   box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
   transition: all 0.3s ease;
 }
@@ -1743,8 +1743,8 @@
   justify-content: center;
   padding: 4px 11px;
   border-radius: 999px;
-  border: 1px solid #10b981;
-  background: #10b981;
+  border: 1px solid var(--accent, #10b981);
+  background: var(--accent, #10b981);
   color: #ffffff;
   font-size: 11px;
   font-weight: 700;
@@ -1753,8 +1753,8 @@
 }
 
 .home-pickup-join-btn:hover:not(:disabled) {
-  background: #059669;
-  border-color: #059669;
+  background: var(--accent-strong, #059669);
+  border-color: var(--accent-strong, #059669);
   transform: translateY(-1px);
 }
 
@@ -1788,7 +1788,7 @@
   padding: 10px 16px;
   margin: 16px 0 8px;
   background: var(--surface-raised, #ffffff);
-  border: 1px solid #10b981;
+  border: 1px solid var(--accent, #10b981);
   border-radius: 12px;
   box-shadow: 0 3px 12px rgba(16, 185, 129, 0.12);
   animation: filterBarSlideDown 0.2s ease-out;
@@ -1822,7 +1822,7 @@
   border-radius: 999px;
   background: rgba(16, 185, 129, 0.12);
   border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #047857;
+  color: var(--accent-strong, #047857);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -1894,8 +1894,8 @@
 }
 
 .home-pickup-join-btn.is-joined {
-  background: #047857 !important;
-  border-color: #047857 !important;
+  background: var(--accent-strong, #047857) !important;
+  border-color: var(--accent-strong, #047857) !important;
   color: #ffffff !important;
   font-weight: 700;
 }
