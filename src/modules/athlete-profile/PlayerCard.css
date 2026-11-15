@@ -242,6 +242,19 @@
   font-family: monospace, ui-monospace, sans-serif;
 }
 
+.card-dossier-ref-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 9px;
+  font-family: monospace, ui-monospace, sans-serif;
+  color: #94a3b8;
+  margin: 3px auto 8px;
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
 /* Scannable QR Footer */
 .card-qr-footer {
   display: flex;

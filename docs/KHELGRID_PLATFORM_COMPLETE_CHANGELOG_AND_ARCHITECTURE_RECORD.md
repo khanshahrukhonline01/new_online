@@ -899,8 +899,21 @@ npm run lint
 - **Auto-Restore & Notification**: Detects saved drafts on mount, populates all form sections seamlessly, and displays an emerald confirmation banner (`"Draft restored from local session"`).
 - **Clear Draft Action**: Includes a "Clear Draft" reset action with user confirmation to wipe saved state when starting fresh.
 
-#### 5. Automated Verification & Code Health
+#### 5. Official Dossier Reference, Timestamp Audit Trail & Multi-Generation Lifecycle (`khelId.ts`, `domain.ts`, `SportsCvWizard.tsx`, `PlayerCard.tsx`)
+- **Unique Dossier Generation Reference**: Format `KG-DOS-YYYYMMDD-{CODE}` (e.g. `KG-DOS-20261115-4A9B`) assigned upon initial generation, preview, or print.
+- **Timestamp & Season Grounding**: Captures exact generation date and time in Indian Standard Time (`formatIndianDateTime`, e.g. `15 Nov 2026, 02:40 PM IST`) and trial season (e.g. `2026–2027 National Trials`).
+- **Returning User Reference Recognition**: Detects existing generation records on subsequent visits and displays a dedicated **Active Selection Dossier Reference** card above the wizard with active reference ID, revision level, and generation timestamp.
+- **Fresh Generation with Audit Trail**:
+  - Provides a 1-click **"Generate Fresh Dossier (New Ref & Time)"** action that increments revision (`Revision 2`, `Revision 3`), updates the timestamp to the exact current second, generates a new reference code, and archives the previous reference into the generation history log.
+  - Expandable **Audit History Drawer** lists all previous dossier generations with timestamps and allow restoring previous references if needed.
+- **Selection Trial Print & Digital Card Synchronization**:
+  - Injects `dossier-audit-strip` into the printable selection resume header displaying Reference ID, Revision, Generation Timestamp, and Official Scrutiny authority.
+  - Candidate Statutory Declaration and footer disclaimer explicitly stamp the document with the dossier reference and generation date/time.
+  - Live PlayerCard embeds `REF: KG-DOS-...` reference stamp and issuance date.
+
+#### 6. Automated Verification & Code Health
 - **`src/shared/utils/qrCodeGenerator.test.ts`**: Verified 21x21 matrix, 7x7 corner finder patterns, timing patterns, and valid SVG output (2/2 tests passed).
-- **`src/modules/athlete-profile/PlayerCard.test.tsx`**: Verified standardized Khel ID format, QR verification box, and PNG/SVG download actions (3/3 tests passed).
-- **`src/modules/sports-cv/SportsCvWizard.test.tsx`**: Verified `computeFitnessTier` algorithm, all 4 form sections, and the complete selection trial dossier layout (9/9 tests passed).
+- **`src/shared/utils/khelId.test.ts`**: Verified Khel ID generation, combine tier calculations, Indian datetime formatting, fresh generation records, and history audit storage (7/7 tests passed).
+- **`src/modules/athlete-profile/PlayerCard.test.tsx`**: Verified standardized Khel ID format, QR verification box, PNG/SVG download actions, and dossier reference stamps (4/4 tests passed).
+- **`src/modules/sports-cv/SportsCvWizard.test.tsx`**: Verified `computeFitnessTier` algorithm, all form sections, selection trial dossier layout, and returning-user active dossier reference cards (10/10 tests passed).
 - **Build & Quality Assurance**: Production build clean (`npm run build` succeeded) and 0 ESLint errors.

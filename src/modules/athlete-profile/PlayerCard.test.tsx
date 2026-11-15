@@ -50,4 +50,16 @@ describe('PlayerCard (FIFA Trading Card Component & Digital Khel ID)', () => {
     expect(html).not.toContain('Download Card (PNG)')
     expect(html).not.toContain('Download (SVG)')
   })
+
+  it('renders dossier reference stamp when provided in profile metadata', () => {
+    const profile = {
+      ...SHOWCASE_ATHLETE_PROFILES['rohit-verma'],
+      dossierReference: 'KG-DOS-20261115-4A9B',
+      dossierGeneratedAt: '15 Nov 2026, 02:40 PM IST',
+    }
+    const html = renderToStaticMarkup(<PlayerCard profile={profile} />)
+
+    expect(html).toContain('DOSSIER REF: KG-DOS-20261115-4A9B')
+    expect(html).toContain('15 Nov 2026')
+  })
 })

@@ -271,6 +271,9 @@ export interface AthleteProfile {
   guardianName?: string
   guardianRelation?: string
   guardianPhone?: string
+  dossierReference?: string
+  dossierGeneratedAt?: string
+  dossierRevision?: number
   achievements: { year: string; event: string; result: string }[]
   videoClips: VideoClip[]
   fitnessBenchmarks?: {
@@ -295,5 +298,16 @@ export interface TrialReminder {
   venueName?: string | null
   notificationType: 'whatsapp' | 'google-calendar' | 'ical'
   createdAt: string
+}
+
+export interface CvGenerationRecord {
+  referenceId: string
+  revisionNumber: number
+  generatedAt: string
+  formattedDateTime: string
+  season: string
+  khelId: string
+  athleteName: string
+  sport: string
 }
 

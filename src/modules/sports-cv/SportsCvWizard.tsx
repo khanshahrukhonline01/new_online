@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import type { AthleteProfile, VideoClip } from '../../shared/domain'
+import type { AthleteProfile, VideoClip, CvGenerationRecord } from '../../shared/domain'
 import {
   publishAthleteProfile,
   normalizeUsername,
@@ -14,7 +14,17 @@ import {
   type AuthUserProfile,
 } from '../../integrations/supabase/auth-client'
 import { PlayerCard } from '../athlete-profile/PlayerCard'
-import { generateKhelId, computeFitnessTier } from '../../shared/utils/khelId'
+import {
+  generateKhelId,
+  computeFitnessTier,
+  createFreshGenerationRecord,
+  getStoredGenerationRecord,
+  saveGenerationRecord,
+  getGenerationHistory,
+  clearGenerationRecords,
+  generateDossierReference,
+  formatIndianDateTime,
+} from '../../shared/utils/khelId'
 import { generateQrSvgString } from '../../shared/utils/qrCodeGenerator'
 import './sports-cv.css'
 
@@ -95,6 +105,15 @@ export default function SportsCvWizard() {
   const [publishMessage, setPublishMessage] = useState<string | null>(null)
   const [isPublishing, setIsPublishing] = useState(false)
   const [hasExistingProfile, setHasExistingProfile] = useState(false)
+
+  // Dossier Generation Reference & Audit History
+  const [currentGenerationRecord, setCurrentGenerationRecord] = useState<CvGenerationRecord | null>(
+    () => getStoredGenerationRecord()
+  )
+  const [generationHistory, setGenerationHistory] = useState<CvGenerationRecord[]>(
+    () => getGenerationHistory()
+  )
+  const [showHistory, setShowHistory] = useState(false)
 
   // Pillar 4: Local-First Draft Auto-Save & Recovery on Mount
   useEffect(() => {
@@ -271,17 +290,66 @@ export default function SportsCvWizard() {
     }))
   }
 
+  // Active Khel ID & Public Profile URL
+  const activeHandle = normalizeUsername(cv.username || cv.fullName || 'athlete')
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://khelgrid.com'
+  const dossierPublicUrl = `${origin}/u/@${activeHandle}`
+  const activeKhelId = generateKhelId({ state: cv.state, username: activeHandle })
+
+  // Active Dossier Generation Record (fallback to dynamic preview if not yet explicitly generated)
+  const activeDossierRecord = useMemo<CvGenerationRecord>(() => {
+    if (currentGenerationRecord) {
+      return currentGenerationRecord
+    }
+    return {
+      referenceId: generateDossierReference({ seed: `${activeKhelId}-0` }),
+      revisionNumber: 1,
+      generatedAt: new Date().toISOString(),
+      formattedDateTime: formatIndianDateTime(),
+      season: `${new Date().getFullYear()}–${new Date().getFullYear() + 1}`,
+      khelId: activeKhelId,
+      athleteName: cv.fullName.trim() || 'Athlete',
+      sport: cv.sport.trim() || 'Sports Candidate',
+    }
+  }, [currentGenerationRecord, activeKhelId, cv.fullName, cv.sport])
+
+  const handleGenerateFreshDossier = () => {
+    const prevRevision = currentGenerationRecord?.revisionNumber || 0
+    const freshRecord = createFreshGenerationRecord({
+      athleteName: cv.fullName.trim() || 'Athlete Full Name',
+      khelId: activeKhelId,
+      sport: cv.sport.trim() || 'Sports Candidate',
+      previousRevision: prevRevision,
+    })
+    saveGenerationRecord(freshRecord)
+    setCurrentGenerationRecord(freshRecord)
+    setGenerationHistory(getGenerationHistory())
+    setPublishMessage(
+      `✓ Fresh Selection Dossier Generated! Reference ID: ${freshRecord.referenceId} (Revision ${freshRecord.revisionNumber}), Timestamped: ${freshRecord.formattedDateTime}`
+    )
+  }
+
+  const handleRestorePreviousRecord = (record: CvGenerationRecord) => {
+    saveGenerationRecord(record)
+    setCurrentGenerationRecord(record)
+    setPublishMessage(`Restored active dossier reference to #${record.referenceId} (${record.formattedDateTime}).`)
+  }
+
   const handleClearDraft = () => {
     try {
       localStorage.removeItem(DRAFT_STORAGE_KEY)
     } catch {
       // Ignore
     }
+    clearGenerationRecords()
     setCv(initialCv)
     setDraftRestored(false)
     setSavedForPrint(false)
     setPublishedProfile(null)
-    setPublishMessage('Draft cleared. Form reset to fresh state.')
+    setCurrentGenerationRecord(null)
+    setGenerationHistory([])
+    setShowHistory(false)
+    setPublishMessage('Draft and dossier generation records cleared. Form reset to fresh state.')
   }
 
   const handlePublish = async () => {
@@ -296,12 +364,14 @@ export default function SportsCvWizard() {
 
     setIsPublishing(true)
     const handle = normalizeUsername(cv.username || cv.fullName)
-    const activeKhelId = generateKhelId({ state: cv.state, username: handle })
 
     const res = await publishAthleteProfile({
       userId: currentUser?.id,
       username: handle,
       khelId: activeKhelId,
+      dossierReference: activeDossierRecord.referenceId,
+      dossierGeneratedAt: activeDossierRecord.formattedDateTime,
+      dossierRevision: activeDossierRecord.revisionNumber,
       fullName: cv.fullName,
       sport: cv.sport,
       playingPosition: cv.playingPosition || 'Athlete',
@@ -345,15 +415,20 @@ export default function SportsCvWizard() {
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (!currentGenerationRecord) {
+      const initialRecord = createFreshGenerationRecord({
+        athleteName: cv.fullName.trim() || 'Athlete Full Name',
+        khelId: activeKhelId,
+        sport: cv.sport.trim() || 'Sports Candidate',
+        previousRevision: 0,
+      })
+      saveGenerationRecord(initialRecord)
+      setCurrentGenerationRecord(initialRecord)
+      setGenerationHistory(getGenerationHistory())
+    }
     setSavedForPrint(true)
     window.setTimeout(() => window.print(), 80)
   }
-
-  // Active Khel ID & Public Profile URL
-  const activeHandle = normalizeUsername(cv.username || cv.fullName || 'athlete')
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://khelgrid.com'
-  const dossierPublicUrl = `${origin}/u/@${activeHandle}`
-  const activeKhelId = generateKhelId({ state: cv.state, username: activeHandle })
 
   // High-contrast scannable QR Code for the official print dossier
   const printQrSvg = useMemo(() => {
@@ -433,6 +508,116 @@ export default function SportsCvWizard() {
           Enter federation UIDs (BCCI, AFI, BAI, SGFI, AIFF) to streamline eligibility checks at selection trials.
         </span>
       </div>
+
+      {/* Active Dossier Generation Reference & Audit Card for returning athletes */}
+      {currentGenerationRecord && (
+        <div className="active-dossier-reference-card" role="region" aria-label="Official Dossier Reference">
+          <div className="dossier-ref-header">
+            <div className="dossier-ref-title-group">
+              <span className="ref-badge-live">
+                <SiteIcon name="badge-check" size={16} /> OFFICIAL SELECTION DOSSIER REFERENCE
+              </span>
+              <h3 className="ref-main-code">{currentGenerationRecord.referenceId}</h3>
+            </div>
+            <div className="dossier-ref-quick-actions">
+              <button
+                type="button"
+                className="primary-link btn-generate-fresh"
+                onClick={handleGenerateFreshDossier}
+                title="Generate fresh revision with current date, time and new reference number"
+              >
+                <SiteIcon name="sparkles" size={16} /> Generate Fresh Dossier (New Ref &amp; Time)
+              </button>
+              <button
+                type="button"
+                className="secondary-link btn-history-toggle"
+                onClick={() => setShowHistory(prev => !prev)}
+                title="View past generated dossiers"
+              >
+                <SiteIcon name="clock" size={15} /> {showHistory ? 'Hide History' : `History (${generationHistory.length})`}
+              </button>
+            </div>
+          </div>
+
+          <div className="dossier-ref-meta-grid">
+            <div className="ref-meta-cell">
+              <span className="ref-cell-label">Generation Status</span>
+              <strong className="ref-cell-val">
+                {currentGenerationRecord.revisionNumber === 1
+                  ? 'Revision 1 (Initial Release)'
+                  : `Revision ${currentGenerationRecord.revisionNumber} (Fresh Release)`}
+              </strong>
+            </div>
+            <div className="ref-meta-cell">
+              <span className="ref-cell-label">Generated Timestamp (IST)</span>
+              <strong className="ref-cell-val">{currentGenerationRecord.formattedDateTime}</strong>
+            </div>
+            <div className="ref-meta-cell">
+              <span className="ref-cell-label">Trial Season</span>
+              <strong className="ref-cell-val">{currentGenerationRecord.season} National Trials</strong>
+            </div>
+            <div className="ref-meta-cell">
+              <span className="ref-cell-label">Registered Athlete</span>
+              <strong className="ref-cell-val">
+                {currentGenerationRecord.athleteName} ({currentGenerationRecord.sport})
+              </strong>
+            </div>
+          </div>
+
+          {showHistory && (
+            <div className="dossier-history-drawer">
+              <h4>Dossier Generation Audit Log</h4>
+              <p className="history-subtitle">
+                Every generation records an immutable reference with exact timestamp and revision number.
+              </p>
+              <div className="table-responsive">
+                <table className="dossier-history-table">
+                  <thead>
+                    <tr>
+                      <th>Revision</th>
+                      <th>Reference ID</th>
+                      <th>Generated Date &amp; Time (IST)</th>
+                      <th>Athlete &amp; Sport</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generationHistory.map(item => (
+                      <tr
+                        key={item.referenceId}
+                        className={item.referenceId === currentGenerationRecord.referenceId ? 'current-ref-row' : ''}
+                      >
+                        <td>
+                          <strong>{item.revisionNumber === 1 ? 'Rev 1 (Initial)' : `Rev ${item.revisionNumber}`}</strong>
+                          {item.referenceId === currentGenerationRecord.referenceId && (
+                            <span className="current-ref-tag">Active</span>
+                          )}
+                        </td>
+                        <td className="mono-ref">{item.referenceId}</td>
+                        <td>{item.formattedDateTime}</td>
+                        <td>
+                          {item.athleteName} · {item.sport}
+                        </td>
+                        <td>
+                          {item.referenceId !== currentGenerationRecord.referenceId && (
+                            <button
+                              type="button"
+                              className="btn-restore-ref"
+                              onClick={() => handleRestorePreviousRecord(item)}
+                            >
+                              Set as Active
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <form className="sports-cv-form" onSubmit={submit}>
         {/* Section 1: Athlete Details & Federation Registration */}
@@ -914,6 +1099,15 @@ export default function SportsCvWizard() {
             {isPublishing ? 'Publishing Player Card…' : 'Publish & Get Shareable Player Card'}
           </button>
 
+          <button
+            type="button"
+            className="secondary-link btn-generate-fresh"
+            onClick={handleGenerateFreshDossier}
+            title="Generate a fresh selection trial dossier reference with current timestamp"
+          >
+            <SiteIcon name="sparkles" size={16} /> Generate Fresh Dossier (New Ref &amp; Time)
+          </button>
+
           <button type="submit" className="secondary-link">
             <SiteIcon name="download" size={17} /> Preview &amp; Print Selection Resume (PDF)
           </button>
@@ -956,6 +1150,9 @@ export default function SportsCvWizard() {
             id: 'preview-id',
             username: activeHandle,
             khelId: activeKhelId,
+            dossierReference: activeDossierRecord.referenceId,
+            dossierGeneratedAt: activeDossierRecord.formattedDateTime,
+            dossierRevision: activeDossierRecord.revisionNumber,
             fullName: cv.fullName.trim() || 'Rohit Verma',
             sport: cv.sport.trim() || 'Cricket',
             playingPosition: cv.playingPosition.trim() || 'Right-Arm Fast Bowler',
@@ -1000,6 +1197,25 @@ export default function SportsCvWizard() {
             />
             <span className="dossier-qr-label">Scan for Video Proof</span>
             <small className="dossier-qr-link">khelgrid.com/u/@{activeHandle}</small>
+          </div>
+        </div>
+
+        {/* Official Reference & Timestamp Audit Strip */}
+        <div className="dossier-audit-strip">
+          <div className="audit-strip-col">
+            <span className="audit-label">DOSSIER REFERENCE:</span>
+            <strong className="audit-code">{activeDossierRecord.referenceId}</strong>
+            <span className="audit-rev">
+              ({activeDossierRecord.revisionNumber === 1 ? 'Original Issue' : `Revision ${activeDossierRecord.revisionNumber}`})
+            </span>
+          </div>
+          <div className="audit-strip-col">
+            <span className="audit-label">GENERATED ON:</span>
+            <strong className="audit-val">{activeDossierRecord.formattedDateTime}</strong>
+          </div>
+          <div className="audit-strip-col">
+            <span className="audit-label">OFFICIAL SCRUTINY:</span>
+            <strong className="audit-val">SAI / State Directorate {activeDossierRecord.season}</strong>
           </div>
         </div>
 
@@ -1148,6 +1364,10 @@ export default function SportsCvWizard() {
               I hereby solemnly declare that all competitive records, federation registrations, biometrics, and telemetry
               stated in this Sports CV are true, accurate, and verifiable against official tournament scorecards.
             </p>
+            <div className="dossier-cert-reference-line">
+              <span>Dossier Ref: <strong>{activeDossierRecord.referenceId}</strong> (Rev {activeDossierRecord.revisionNumber})</span>
+              <span>Timestamp: <strong>{activeDossierRecord.formattedDateTime}</strong></span>
+            </div>
             <div className="signature-line-row">
               <div className="sig-block">
                 <span className="sig-line" />
@@ -1189,7 +1409,7 @@ export default function SportsCvWizard() {
         </div>
 
         <p className="cv-disclaimer">
-          Digital Khel ID ({activeKhelId}) issued via KhelGrid Athlete Network. Scan the QR code to verify video telemetry and certificate attachments.
+          Digital Khel ID ({activeKhelId}) · Dossier Ref: {activeDossierRecord.referenceId} · Generated on {activeDossierRecord.formattedDateTime} via KhelGrid Athlete Network. Scan the QR code to verify video telemetry and certificate attachments.
         </p>
       </section>
     </section>
