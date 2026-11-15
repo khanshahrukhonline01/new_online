@@ -268,9 +268,12 @@ export function updatePageSeoMetadata(config: PageSeoConfig): () => void {
   }
 
   setMetaTag('name', 'description', config.description)
-  setMetaTag('name', 'robots', config.robots || 'index, follow')
-  setMetaTag('name', 'googlebot', config.robots || 'index, follow')
-  setMetaTag('name', 'bingbot', config.robots || 'index, follow')
+  const robots = __KHELGRID_INDEXABLE__
+    ? (config.robots || 'index, follow')
+    : 'noindex, nofollow'
+  setMetaTag('name', 'robots', robots)
+  setMetaTag('name', 'googlebot', robots)
+  setMetaTag('name', 'bingbot', robots)
   if (config.keywords && config.keywords.length > 0) {
     setMetaTag('name', 'keywords', config.keywords.join(', '))
   }
