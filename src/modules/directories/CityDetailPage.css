@@ -22,7 +22,7 @@
 }
 
 .city-breadcrumb-link:hover {
-  color: var(--color-primary, #059669);
+  color: var(--color-primary, var(--accent-strong, #059669));
   text-decoration: underline;
 }
 
@@ -59,7 +59,7 @@
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: var(--color-primary, #059669);
+  color: var(--color-primary, var(--accent-strong, #059669));
   text-transform: uppercase;
 }
 
@@ -72,7 +72,7 @@
   padding: 0.2rem 0.65rem;
   border-radius: 9999px;
   background: rgba(5, 150, 105, 0.12);
-  color: var(--color-primary, #059669);
+  color: var(--color-primary, var(--accent-strong, #059669));
   border: 1px solid rgba(5, 150, 105, 0.25);
 }
 
@@ -126,14 +126,14 @@
 }
 
 .city-hub-stat-card:hover {
-  border-color: var(--color-primary, #059669);
+  border-color: var(--color-primary, var(--accent-strong, #059669));
   transform: translateY(-2px);
 }
 
 .city-hub-stat-num {
   font-size: 1.75rem;
   font-weight: 800;
-  color: var(--color-primary, #059669);
+  color: var(--color-primary, var(--accent-strong, #059669));
   line-height: 1;
   margin-bottom: 0.35rem;
 }
@@ -157,7 +157,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.65rem 1.25rem;
-  background: var(--color-primary, #059669);
+  background: var(--color-primary, var(--accent-strong, #059669));
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -169,7 +169,7 @@
 }
 
 .city-hub-primary-btn:hover {
-  background: #047857;
+  background: var(--accent-strong, #047857);
   transform: translateY(-1px);
 }
 
@@ -190,8 +190,8 @@
 }
 
 .city-hub-secondary-btn:hover {
-  border-color: var(--color-primary, #059669);
-  color: var(--color-primary, #059669);
+  border-color: var(--color-primary, var(--accent-strong, #059669));
+  color: var(--color-primary, var(--accent-strong, #059669));
 }
 
 /* Stadiums Banner */
@@ -211,7 +211,7 @@
   height: 36px;
   border-radius: 8px;
   background: rgba(5, 150, 105, 0.15);
-  color: var(--color-primary, #059669);
+  color: var(--color-primary, var(--accent-strong, #059669));
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -247,7 +247,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-primary, #059669);
+  background: var(--color-primary, var(--accent-strong, #059669));
 }
 
 /* Section Common Styling */
@@ -289,7 +289,7 @@
 .city-hub-inline-btn {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--color-primary, #059669);
+  color: var(--color-primary, var(--accent-strong, #059669));
   background: rgba(5, 150, 105, 0.08);
   border: 1px solid rgba(5, 150, 105, 0.25);
   border-radius: 6px;
@@ -308,7 +308,7 @@
   gap: 0.25rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-primary, #059669);
+  color: var(--color-primary, var(--accent-strong, #059669));
   text-decoration: none;
   transition: gap 0.15s ease;
 }
@@ -339,7 +339,7 @@
 
 .city-hub-card:hover {
   transform: translateY(-2px);
-  border-color: var(--color-primary, #059669);
+  border-color: var(--color-primary, var(--accent-strong, #059669));
   box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08);
 }
 
@@ -366,7 +366,7 @@
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
   background: rgba(5, 150, 105, 0.1);
-  color: var(--color-primary, #059669);
+  color: var(--color-primary, var(--accent-strong, #059669));
 }
 
 .city-featured-pill {
@@ -431,7 +431,7 @@
   gap: 0.25rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-primary, #059669);
+  color: var(--color-primary, var(--accent-strong, #059669));
 }
 
 /* Venue & Academy Media Wrap */
@@ -502,7 +502,7 @@
 
 .city-game-price {
   font-weight: 700;
-  color: var(--color-primary, #059669);
+  color: var(--color-primary, var(--accent-strong, #059669));
 }
 
 .city-game-spots {
@@ -576,7 +576,7 @@
 }
 
 .city-hub-related-pill:hover {
-  border-color: var(--color-primary, #059669);
+  border-color: var(--color-primary, var(--accent-strong, #059669));
   background: rgba(5, 150, 105, 0.05);
   transform: translateY(-1px);
 }
