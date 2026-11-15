@@ -1,6 +1,6 @@
 # SEO, Structured Data and Content Quality
 
-**Status:** Draft
+**Status:** In progress — see [Five-Pillar SEO Implementation](./KHELGRID_FIVE_PILLAR_SEO_IMPLEMENTATION.md) for implementation decisions and release gates.
 
 Use crawlable canonical URLs, meaningful titles/descriptions, sitemap and robots rules, sensible redirects and a consistent URL policy. Include only public, useful, canonical pages in the sitemap; exclude private, test, duplicate and error routes.
 
