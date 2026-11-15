@@ -143,7 +143,7 @@ export function buildSitemapEntries(catalogues: PublishedSitemapCatalogues = {})
   for (const paper of RESEARCH_PAPERS) {
     entries.push({
       loc: `${BASE_URL}/khelchronicle/${paper.slug}`,
-      lastmod: paper.dateModified || paper.datePublished || SITEMAP_LASTMOD,
+      ...(paper.dateModified || paper.datePublished ? { lastmod: paper.dateModified || paper.datePublished } : {}),
       changefreq: 'monthly',
       priority: 0.85,
     })
@@ -188,7 +188,7 @@ export function generateSitemapXml(catalogues: PublishedSitemapCatalogues = {}):
     ...entries.map(
       e => `  <url>
     <loc>${e.loc}</loc>
-    ${e.lastmod ? `<lastmod>${e.lastmod}</lastmod>\\n    ` : ''}<changefreq>${e.changefreq}</changefreq>
+    ${e.lastmod ? `<lastmod>${e.lastmod}</lastmod>\n    ` : ''}<changefreq>${e.changefreq}</changefreq>
     <priority>${e.priority.toFixed(2)}</priority>
   </url>`,
     ),
