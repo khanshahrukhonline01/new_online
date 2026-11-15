@@ -4,3 +4,28 @@ body:has(.khelgrid-admin-app) { min-width: 320px; min-height: 100vh; background:
 .khelgrid-admin-config-error { display: grid; align-content: center; justify-items: start; gap: 0.75rem; min-height: 100vh; padding: clamp(1.5rem, 5vw, 4rem); color: #0B192C; }
 .khelgrid-admin-config-error h1 { margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); }
 .khelgrid-admin-config-error p { max-width: 42rem; margin: 0; line-height: 1.6; }
+
+/* Admin workspace consumes the same user-selected appearance tokens. */
+.khelgrid-admin-app {
+  --kg-admin-accent: var(--accent, #10b981);
+  --kg-admin-accent-soft: var(--accent-soft, rgba(16,185,129,.13));
+}
+.khelgrid-admin-app .admin-control button:not(.admin-control-header button) {
+  background: var(--kg-admin-accent);
+  border-color: var(--kg-admin-accent);
+  color: #fff;
+}
+.khelgrid-admin-app .admin-control button:focus-visible,
+.khelgrid-admin-app .admin-control a:focus-visible,
+.khelgrid-admin-app .admin-control input:focus-visible,
+.khelgrid-admin-app .admin-control select:focus-visible,
+.khelgrid-admin-app .admin-control textarea:focus-visible {
+  outline-color: var(--kg-admin-accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .khelgrid-admin-app *, .khelgrid-admin-app *::before, .khelgrid-admin-app *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
