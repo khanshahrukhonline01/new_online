@@ -37,10 +37,6 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     expect(opportunities).toBeDefined()
     expect(opportunities?.priority).toBe(0.9)
 
-    const trials = entries.find(e => e.loc === `${BASE_URL}/trials`)
-    expect(trials).toBeDefined()
-    expect(trials?.priority).toBe(0.9)
-
     const talentScanner = entries.find(e => e.loc === `${BASE_URL}/talent-scanner`)
     expect(talentScanner).toBeDefined()
     expect(talentScanner?.priority).toBe(0.85)
@@ -93,19 +89,19 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     expect(kanteerava?.changefreq).toBe('weekly')
   })
 
-  it('indexes verified national selection trials with daily crawl priority', () => {
-    const entries = buildSitemapEntries()
-
-    const wushu = entries.find(e => e.loc === `${BASE_URL}/opportunities/aiu-wushu-inter-university-trials-2026`)
-    expect(wushu).toBeDefined()
-    expect(wushu?.priority).toBe(0.88)
-    expect(wushu?.changefreq).toBe('daily')
-
-    const kcaCricket = entries.find(e => e.loc === `${BASE_URL}/opportunities/kca-u14-cricket-trials-kanpur-2026`)
-    expect(kcaCricket).toBeDefined()
-    expect(kcaCricket?.priority).toBe(0.88)
+  it('includes trial detail URLs only from the published-and-verified snapshot', () => {
+    const entries = buildSitemapEntries({ opportunities: [{ slug: 'sample-verified-trial' }] })
+    const urls = entries.map(entry => entry.loc)
+    expect(urls).toContain(`${BASE_URL}/trial/sample-verified-trial`)
+    expect(urls).not.toContain(`${BASE_URL}/opportunities/sample-verified-trial`)
+    expect(urls).not.toContain(`${BASE_URL}/trials`)
   })
 
+  it('does not add curated trial detail URLs without a database snapshot', () => {
+    const urls = buildSitemapEntries().map(entry => entry.loc)
+    expect(urls.some(url => url.includes('/trial/'))).toBe(false)
+    expect(urls.some(url => url.includes('/opportunities/') && url !== `${BASE_URL}/opportunities`)).toBe(false)
+  })
   it('indexes KhelChronicle repository, all 7 disciplines, preprints, and author profiles', () => {
     const entries = buildSitemapEntries()
 

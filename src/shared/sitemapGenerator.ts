@@ -5,7 +5,6 @@ import {
 } from '../modules/khelchronicle/data/khelchronicleData.ts'
 import { ALL_ACTIVE_CITY_HUBS } from './components/cityComplexesData.ts'
 import { CURATED_ACADEMIES, CURATED_VENUES } from './data/curatedEntitiesData.ts'
-import { CURATED_OPPORTUNITIES } from './data/curatedOpportunitiesData.ts'
 
 export const BASE_URL = 'https://khelgrid.com'
 export const SITEMAP_LASTMOD = '2026-10-30'
@@ -47,6 +46,10 @@ export const VERIFIED_SPORTS = [
   'yoga',
 ] as const
 
+export interface PublishedSitemapCatalogues {
+  opportunities?: Array<{ slug: string }>
+}
+
 export interface SitemapEntry {
   loc: string
   lastmod?: string
@@ -54,7 +57,7 @@ export interface SitemapEntry {
   priority: number
 }
 
-export function buildSitemapEntries(): SitemapEntry[] {
+export function buildSitemapEntries(catalogues: PublishedSitemapCatalogues = {}): SitemapEntry[] {
   const entries: SitemapEntry[] = []
 
   // 1. Core Primary Hubs
@@ -63,7 +66,6 @@ export function buildSitemapEntries(): SitemapEntry[] {
     { loc: `${BASE_URL}/play`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.95 },
     { loc: `${BASE_URL}/sports`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
     { loc: `${BASE_URL}/opportunities`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
-    { loc: `${BASE_URL}/trials`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
     { loc: `${BASE_URL}/venues`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
     { loc: `${BASE_URL}/book`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
     { loc: `${BASE_URL}/academies`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.9 },
@@ -126,18 +128,12 @@ export function buildSitemapEntries(): SitemapEntry[] {
     }
   }
 
-  // 4b. Curated Verified Selection Trials & Opportunities
-  for (const opp of CURATED_OPPORTUNITIES) {
-    if (opp.slug) {
-      entries.push({
-        loc: `${BASE_URL}/opportunities/${opp.slug}`,
-        lastmod: SITEMAP_LASTMOD,
-        changefreq: 'daily',
-        priority: 0.88,
-      })
+  // Detail URLs are sourced only from the read-only published + verified database snapshot.
+  for (const opportunity of catalogues.opportunities ?? []) {
+    if (opportunity.slug) {
+      entries.push({ loc: `${BASE_URL}/trial/${encodeURIComponent(opportunity.slug)}`, changefreq: 'weekly', priority: 0.88 })
     }
   }
-
   // 5. KhelChronicle Open Sports Research Repository
   entries.push(
     { loc: `${BASE_URL}/khelchronicle`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.95 },
@@ -197,8 +193,8 @@ export function buildSitemapEntries(): SitemapEntry[] {
   return entries
 }
 
-export function generateSitemapXml(): string {
-  const entries = buildSitemapEntries()
+export function generateSitemapXml(catalogues: PublishedSitemapCatalogues = {}): string {
+  const entries = buildSitemapEntries(catalogues)
   const xmlLines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
