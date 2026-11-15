@@ -30,7 +30,8 @@ export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: 
     if (kind !== 'opportunity' || result.status !== 'ready') return
 
     const opportunity = record as Opportunity | undefined
-    const canonicalUrl = `https://khelgrid.com/trial/${encodeURIComponent(slug)}`
+    const canonicalSlug = opportunity?.slug ?? slug
+    const canonicalUrl = `https://khelgrid.com/trial/${encodeURIComponent(canonicalSlug)}`
     const description = opportunity
       ? [
           opportunity.title,
