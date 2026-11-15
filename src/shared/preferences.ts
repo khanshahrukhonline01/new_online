@@ -7,6 +7,7 @@
 import { changeAppLanguage } from '../i18n'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
+export type AccentColour = 'green' | 'blue' | 'orange'
 export type EmailFrequency = 'daily' | 'weekly' | 'monthly' | 'never'
 export type ProfileVisibility = 'public' | 'scouts_only' | 'private'
 
@@ -69,6 +70,7 @@ export const ALL_SPORTS_DISCIPLINES = [
 
 export interface UserPreferences {
   theme: ThemeMode
+  accent: AccentColour
   language: string
   preferredCity: string
   soundAlerts: boolean
@@ -84,6 +86,7 @@ export interface UserPreferences {
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'light',
+  accent: 'green',
   language: 'en',
   preferredCity: 'All India',
   soundAlerts: true,
@@ -113,6 +116,7 @@ export function getStoredPreferences(): UserPreferences {
       ...DEFAULT_PREFERENCES,
       ...parsed,
       theme: parsed.theme || legacyTheme || DEFAULT_PREFERENCES.theme,
+      accent: parsed.accent === 'blue' || parsed.accent === 'orange' ? parsed.accent : 'green',
       language: parsed.language || legacyLang || DEFAULT_PREFERENCES.language,
     }
   } catch {
@@ -156,10 +160,11 @@ export function resolveEffectiveTheme(theme: ThemeMode): 'light' | 'dark' {
   return 'light'
 }
 
-export function applyThemeToDOM(theme: ThemeMode): void {
+export function applyThemeToDOM(theme: ThemeMode, accent: AccentColour = 'green'): void {
   if (typeof document === 'undefined') return
   const effective = resolveEffectiveTheme(theme)
   const root = document.documentElement
+  root.dataset.accent = accent
 
   if (effective === 'dark') {
     root.classList.remove('light')
