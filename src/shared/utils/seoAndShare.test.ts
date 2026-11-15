@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getRouteSeoMetadata } from './seoAndShare'
+import { getRouteSeoMetadata, updatePageSeoMetadata } from './seoAndShare'
 
 describe('SEO & SERP Metadata Validation', () => {
   it('marks the moderator control panel as non-indexable', () => {
@@ -172,5 +172,67 @@ describe('SEO & SERP Metadata Validation', () => {
     expect(trialMeta.canonicalUrl).toBe('https://khelgrid.com/opportunities/kca-u14-cricket-trials-kanpur-2026')
     expect(JSON.stringify(trialMeta.jsonLd)).toContain('SportsEvent')
     expect(JSON.stringify(trialMeta.jsonLd)).toContain('BreadcrumbList')
+  })
+
+  it('injects complete OpenGraph and Twitter card metadata with 1200x630 social preview tags', () => {
+    const meta = getRouteSeoMetadata('/venues/green-park-stadium-kanpur')
+
+    // Mock document in Node test environment
+    const metaTags = new Map<string, string>()
+    const originalDocument = globalThis.document
+
+    globalThis.document = {
+      title: '',
+      querySelector: (selector: string) => {
+        const match = selector.match(/meta\[(name|property)="([^"]+)"\]/)
+        if (match) {
+          const key = match[2]
+          if (metaTags.has(key)) {
+            return {
+              content: metaTags.get(key),
+              setAttribute: () => {},
+            } as unknown as HTMLMetaElement
+          }
+        }
+        return null
+      },
+      createElement: () => {
+        let currentContent = ''
+        let currentAttr = ''
+        return {
+          setAttribute: (_attr: string, val: string) => {
+            currentAttr = val
+          },
+          set content(val: string) {
+            currentContent = val
+            if (currentAttr) metaTags.set(currentAttr, val)
+          },
+          get content() {
+            return currentContent
+          },
+          rel: '',
+          href: '',
+        } as unknown as HTMLElement
+      },
+      head: {
+        appendChild: () => {},
+      },
+      getElementById: () => null,
+    } as unknown as Document
+
+    try {
+      const cleanup = updatePageSeoMetadata(meta)
+
+      expect(metaTags.get('og:image')).toBe('https://khelgrid.com/assets/kg-logo.webp')
+      expect(metaTags.get('og:image:width')).toBe('1200')
+      expect(metaTags.get('og:image:height')).toBe('630')
+      expect(metaTags.get('twitter:card')).toBe('summary_large_image')
+      expect(metaTags.get('twitter:site')).toBe('@KhelGrid')
+      expect(metaTags.get('og:title')).toBe(meta.title)
+
+      cleanup()
+    } finally {
+      globalThis.document = originalDocument
+    }
   })
 })

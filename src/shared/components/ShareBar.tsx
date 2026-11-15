@@ -16,6 +16,7 @@ export function ShareBar({ title, text, url, compact = false, className = '' }: 
   const shareUrl = url || (typeof window !== 'undefined' ? window.location.href : 'https://khelgrid.com')
   const shareText = text || `Check out ${title} on KhelGrid — India's Sports Discovery & Talent Grid`
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText}\n${shareUrl}`)}`
+  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
 
   async function handleNativeShare() {
     if (typeof navigator !== 'undefined' && navigator.share) {
@@ -62,6 +63,18 @@ export function ShareBar({ title, text, url, compact = false, className = '' }: 
         >
           <SiteIcon name="message" size={15} />
           <span>WhatsApp</span>
+        </a>
+
+        <a
+          href={twitterUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="kg-share-btn is-twitter"
+          title="Share on X (Twitter)"
+          aria-label="Share on X (Twitter)"
+        >
+          <SiteIcon name="share" size={14} />
+          <span>X / Post</span>
         </a>
 
         <button

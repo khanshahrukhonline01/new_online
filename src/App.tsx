@@ -340,7 +340,7 @@ export default function App() {
     <a className="skip-link" href="#main-content">Skip to content</a>
     <header className="site-header">
       <button ref={menuToggleRef} className="menu-toggle" type="button" aria-expanded={isMobile ? menuOpen : !sidebarCollapsed} aria-controls={isMobile ? 'mobile-sidebar-drawer' : 'app-sidebar'} onClick={toggleMainMenu} aria-label="Toggle main navigation"><SiteIcon name={isMobile && menuOpen ? 'close' : 'menu'} size={20} /></button>
-      <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /><span>KHELGRID</span></a>
+      <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="KhelGrid Platform Logo" width="34" height="34" fetchPriority="high" /><span>KHELGRID</span></a>
       <a
         href="/play"
         className={`header-play-pill ${path === '/play' ? 'is-active' : ''}`}
@@ -423,7 +423,7 @@ export default function App() {
           >
             <span className="header-user-avatar">
               {authUser.avatarUrl ? (
-                <img src={authUser.avatarUrl} alt="" />
+                <img src={authUser.avatarUrl} alt={authUser.fullName || 'User Avatar'} width="32" height="32" loading="lazy" decoding="async" />
               ) : (
                 authUser.fullName.charAt(0).toUpperCase()
               )}
@@ -580,7 +580,7 @@ export default function App() {
       <TopSportsComplexes onNavigate={navigate} />
       <div className="footer-main">
         <div className="footer-about">
-          <a className="footer-brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="footer-brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /></a>
+          <a className="footer-brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="footer-brand-logo" src="/assets/kg-logo.webp" alt="KhelGrid Platform Logo" width="118" height="38" loading="lazy" decoding="async" /></a>
           <p className="footer-tagline">India’s grid for sports trials, venues, coaching and athlete profiles.</p>
           <p className="footer-region">India · 50+ sports cities in the grid (16 metro hubs)</p>
           <a className="footer-pro-link" href="/pricing" onClick={event => navigate(event, '/pricing')}>★ Go Pro · ₹499/month</a>

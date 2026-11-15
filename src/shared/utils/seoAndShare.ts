@@ -823,23 +823,26 @@ export function updatePageSeoMetadata(config: PageSeoConfig): () => void {
 
   setLinkTag('canonical', config.canonicalUrl)
 
-  // Open Graph
+  // Open Graph Social Cards
+  const socialImage = config.image || 'https://khelgrid.com/assets/kg-logo.webp'
   setMetaTag('property', 'og:title', config.title)
   setMetaTag('property', 'og:description', config.description)
   setMetaTag('property', 'og:url', config.canonicalUrl)
   setMetaTag('property', 'og:type', config.ogType || 'website')
   setMetaTag('property', 'og:site_name', 'KhelGrid (खेलग्रिड)')
-  if (config.image) {
-    setMetaTag('property', 'og:image', config.image)
-  }
+  setMetaTag('property', 'og:image', socialImage)
+  setMetaTag('property', 'og:image:width', '1200')
+  setMetaTag('property', 'og:image:height', '630')
+  setMetaTag('property', 'og:image:alt', config.title)
 
-  // Twitter Cards
+  // Twitter Social Cards
   setMetaTag('name', 'twitter:card', 'summary_large_image')
+  setMetaTag('name', 'twitter:site', '@KhelGrid')
+  setMetaTag('name', 'twitter:creator', '@KhelGrid')
   setMetaTag('name', 'twitter:title', config.title)
   setMetaTag('name', 'twitter:description', config.description)
-  if (config.image) {
-    setMetaTag('name', 'twitter:image', config.image)
-  }
+  setMetaTag('name', 'twitter:image', socialImage)
+  setMetaTag('name', 'twitter:image:alt', config.title)
 
   // Schema.org JSON-LD
   let scriptElement = document.getElementById('khelgrid-jsonld') as HTMLScriptElement | null

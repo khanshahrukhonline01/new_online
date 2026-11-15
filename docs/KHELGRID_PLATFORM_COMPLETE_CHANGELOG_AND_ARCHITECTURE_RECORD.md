@@ -826,3 +826,33 @@ npm run lint
 - **`src/shared/sitemap.test.ts`**: Verified all 8 sitemap indexing tests passed.
 - **Detail page tests**: Verified `SportDetailPage`, `VenueDetailPage`, `AcademyDetailPage`, `CatalogueDetailPage`, and `khelchronicle` (48/48 tests passed).
 - **Production Build & Lint**: `npm run build` and `npm run lint` clean with 0 errors.
+
+---
+
+### Milestone 17: Phase 6 Image SEO, OpenGraph Rich Social Cards & Core Web Vitals Optimization (November 15, 2026)
+
+#### 1. Dynamic OpenGraph & Twitter Social Card Meta Tags
+- Updated `updatePageSeoMetadata` in `src/shared/utils/seoAndShare.ts` to automatically populate 1200x630 social preview tags on every page navigation:
+  - `og:image`: Falls back to high-resolution `https://khelgrid.com/assets/kg-logo.webp`.
+  - `og:image:width`: Standardized to `1200` pixels.
+  - `og:image:height`: Standardized to `630` pixels.
+  - `og:image:alt`: Synced with page title.
+  - `twitter:card`: Enforced `summary_large_image`.
+  - `twitter:site` & `twitter:creator`: Bound to official `@KhelGrid` handle.
+  - `twitter:title`, `twitter:description`, `twitter:image`, `twitter:image:alt`.
+
+#### 2. Cumulative Layout Shift (CLS) Prevention & Image Alt Attributes
+- Enforced explicit `width` and `height` dimensions on branding and navigation elements to eliminate layout shifts during page loading:
+  - Header brand logo: `width="34" height="34" fetchPriority="high" alt="KhelGrid Platform Logo"`
+  - Footer brand logo: `width="118" height="38" loading="lazy" decoding="async" alt="KhelGrid Platform Logo"`
+  - Mobile drawer brand logo: `width="26" height="26" loading="lazy" decoding="async" alt="KhelGrid Platform Logo"`
+  - User avatar image: `width="32" height="32" loading="lazy" decoding="async" alt={authUser.fullName}`
+
+#### 3. Multi-Channel Social Sharing Expansion (`ShareBar.tsx`)
+- Added direct X / Twitter post intent button (`https://twitter.com/intent/tweet?text=...&url=...`) to `ShareBar.tsx` alongside WhatsApp and native mobile share API.
+- Enables athletes and coaches to rapidly post trials, venue slots, and academy listings to Twitter/X with pre-populated hashtags and URLs.
+
+#### 4. Automated Verification & Code Health
+- **`src/shared/utils/seoAndShare.test.ts`**: Added test verifying OpenGraph 1200x630 and Twitter card injection (9/9 tests passed).
+- **`src/App.test.tsx`**: Verified shell rendering and image accessibility (31/31 tests passed).
+- **Production Build & Lint**: `npm run build` and `npm run lint` clean with 0 errors.
