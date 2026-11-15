@@ -76,7 +76,7 @@ html.dark .calendar-hero-section {
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #047857;
+  color: var(--accent-strong, #047857);
   background: rgba(16, 185, 129, 0.12);
   border: 1px solid rgba(16, 185, 129, 0.25);
   padding: 3px 10px;
@@ -136,13 +136,13 @@ html.dark .calendar-eyebrow-badge {
 }
 
 .calendar-hero-btn.is-primary {
-  background: #059669;
+  background: var(--accent-strong, #059669);
   color: #ffffff;
-  border-color: #059669;
+  border-color: var(--accent-strong, #059669);
 }
 
 .calendar-hero-btn.is-primary:hover {
-  background: #047857;
+  background: var(--accent-strong, #047857);
 }
 
 /* 2. Main Content Wrapper */
@@ -191,7 +191,7 @@ html.dark .calendar-aiu-card {
   gap: 5px;
   font-size: 11px;
   font-weight: 700;
-  color: #047857;
+  color: var(--accent-strong, #047857);
   background: rgba(16, 185, 129, 0.12);
   border: 1px solid rgba(16, 185, 129, 0.24);
   padding: 2px 8px;
@@ -280,13 +280,13 @@ html.dark .calendar-aiu-tag {
 }
 
 .calendar-aiu-btn.is-primary {
-  background: #059669;
+  background: var(--accent-strong, #059669);
   color: #ffffff;
-  border-color: #059669;
+  border-color: var(--accent-strong, #059669);
 }
 
 .calendar-aiu-btn.is-primary:hover {
-  background: #047857;
+  background: var(--accent-strong, #047857);
 }
 
 .calendar-aiu-btn.is-secondary {
@@ -342,7 +342,7 @@ html.dark .calendar-aiu-tag {
   height: 34px;
   border-radius: 8px;
   background: rgba(16, 185, 129, 0.12);
-  color: #059669;
+  color: var(--accent-strong, #059669);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -359,7 +359,7 @@ html.dark .calendar-aiu-tag {
 .calendar-view-badge {
   font-size: 11px;
   font-weight: 700;
-  color: #059669;
+  color: var(--accent-strong, #059669);
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.25);
   padding: 2px 8px;
@@ -449,7 +449,7 @@ html.dark .calendar-aiu-tag {
 }
 
 .calendar-quick-month-btn.is-active {
-  background: #059669;
+  background: var(--accent-strong, #059669);
   color: #ffffff;
   font-weight: 700;
 }
@@ -475,13 +475,13 @@ html.dark .calendar-aiu-tag {
 }
 
 .calendar-action-btn.is-export {
-  background: #059669;
+  background: var(--accent-strong, #059669);
   color: #ffffff;
-  border-color: #059669;
+  border-color: var(--accent-strong, #059669);
 }
 
 .calendar-action-btn.is-export:hover {
-  background: #047857;
+  background: var(--accent-strong, #047857);
 }
 
 /* 5. Filters Bar */
@@ -531,7 +531,7 @@ html.dark .calendar-aiu-tag {
 }
 
 .calendar-search-input:focus {
-  border-color: #059669;
+  border-color: var(--accent-strong, #059669);
   background: var(--surface, #ffffff);
 }
 
@@ -550,7 +550,7 @@ html.dark .calendar-aiu-tag {
 }
 
 .calendar-select:focus {
-  border-color: #059669;
+  border-color: var(--accent-strong, #059669);
 }
 
 .calendar-type-pills {
@@ -591,7 +591,7 @@ html.dark .calendar-aiu-tag {
 
 .calendar-type-pill.is-active-free {
   background: rgba(16, 185, 129, 0.15);
-  color: #059669;
+  color: var(--accent-strong, #059669);
   font-weight: 800;
 }
 
@@ -635,7 +635,7 @@ html.dark .calendar-aiu-tag {
 .calendar-clear-all-btn {
   border: none;
   background: transparent;
-  color: #059669;
+  color: var(--accent-strong, #059669);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -681,7 +681,7 @@ html.dark .calendar-aiu-tag {
 }
 
 .calendar-kpi-val.is-emerald {
-  color: #059669;
+  color: var(--accent-strong, #059669);
 }
 
 .calendar-kpi-val.is-amber {
@@ -753,7 +753,7 @@ html.dark .calendar-aiu-tag {
 }
 
 .calendar-day-cell.is-selected {
-  outline: 2px solid #059669;
+  outline: 2px solid var(--accent-strong, #059669);
   outline-offset: -2px;
   background: rgba(16, 185, 129, 0.06);
 }
@@ -778,7 +778,7 @@ html.dark .calendar-aiu-tag {
 }
 
 .calendar-day-number.is-today {
-  background: #059669;
+  background: var(--accent-strong, #059669);
   color: #ffffff;
 }
 
@@ -795,7 +795,7 @@ html.dark .calendar-aiu-tag {
 }
 
 .calendar-indicator-dot.is-trial {
-  background: #10b981;
+  background: var(--accent, #10b981);
 }
 
 .calendar-indicator-dot.is-deadline {
@@ -849,7 +849,7 @@ html.dark .calendar-aiu-tag {
 
 .calendar-mini-chip.is-trial {
   background: rgba(16, 185, 129, 0.12);
-  color: #047857;
+  color: var(--accent-strong, #047857);
   border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
@@ -971,7 +971,7 @@ html.dark .calendar-mini-chip.is-deadline {
 }
 
 .calendar-agenda-card:hover {
-  border-color: #059669;
+  border-color: var(--accent-strong, #059669);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
@@ -1023,7 +1023,7 @@ html.dark .calendar-mini-chip.is-deadline {
 .calendar-sport-pill {
   font-size: 10.5px;
   font-weight: 700;
-  color: #059669;
+  color: var(--accent-strong, #059669);
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.25);
   padding: 1px 7px;
@@ -1033,7 +1033,7 @@ html.dark .calendar-mini-chip.is-deadline {
 .calendar-fee-pill {
   font-size: 10.5px;
   font-weight: 700;
-  color: #047857;
+  color: var(--accent-strong, #047857);
   background: rgba(16, 185, 129, 0.12);
   padding: 1px 7px;
   border-radius: 6px;
@@ -1096,13 +1096,13 @@ html.dark .calendar-mini-chip.is-deadline {
 }
 
 .calendar-agenda-action-btn.is-primary {
-  background: #059669;
+  background: var(--accent-strong, #059669);
   color: #ffffff;
-  border-color: #059669;
+  border-color: var(--accent-strong, #059669);
 }
 
 .calendar-agenda-action-btn.is-primary:hover {
-  background: #047857;
+  background: var(--accent-strong, #047857);
 }
 
 /* Empty State & Quick Jumps */
@@ -1123,7 +1123,7 @@ html.dark .calendar-mini-chip.is-deadline {
   height: 44px;
   border-radius: 50%;
   background: rgba(16, 185, 129, 0.1);
-  color: #059669;
+  color: var(--accent-strong, #059669);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1167,7 +1167,7 @@ html.dark .calendar-mini-chip.is-deadline {
 }
 
 .calendar-quick-jump-btn:hover {
-  border-color: #059669;
+  border-color: var(--accent-strong, #059669);
   background: rgba(16, 185, 129, 0.08);
-  color: #059669;
+  color: var(--accent-strong, #059669);
 }
