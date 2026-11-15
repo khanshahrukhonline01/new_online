@@ -1,11 +1,11 @@
 .venue-btn-book {
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  background: linear-gradient(135deg, var(--accent-strong, #059669) 0%, var(--accent, #10b981) 100%);
   color: #ffffff !important;
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
 }
 
 .venue-btn-book:hover {
-  background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--accent-strong, #047857) 0%, var(--accent-strong, #059669) 100%);
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
 }
@@ -90,7 +90,7 @@ html.dark .venue-slot-chip {
 }
 
 .venue-slot-chip.selected {
-  border-color: #059669;
+  border-color: var(--accent-strong, #059669);
   background: #ecfdf5;
   color: #065f46;
   font-weight: 700;
@@ -98,7 +98,7 @@ html.dark .venue-slot-chip {
 
 html.dark .venue-slot-chip.selected {
   background: rgba(16, 185, 129, 0.2);
-  border-color: #10b981;
+  border-color: var(--accent, #10b981);
   color: #6ee7b7;
 }
 
