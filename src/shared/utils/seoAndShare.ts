@@ -3,6 +3,7 @@
  * Injects document titles, canonical URLs, OpenGraph/Twitter card meta tags,
  * and Schema.org JSON-LD structured data to maximize organic ranking,
  * vernacular discoverability, and eliminate search engine thin-content penalties.
+ * Optimized for mobile SERP character constraints (<65 chars title) and high-CTR conversion.
  */
 
 export interface PageSeoConfig {
@@ -21,7 +22,7 @@ export const DEFAULT_KEYWORDS = [
   'स्पोर्ट्स ट्रायल', 'क्रिकेट ट्रायल', 'फुटबॉल ट्रायल', 'टर्फ बुकिंग',
   'बैडमिंटन कोर्ट', 'कबड्डी', 'कुश्ती', 'दंगल', 'अखाड़ा', 'लाइव स्कोर',
   'खेळ', 'क्रीडा स्पर्धा', 'मैदान', 'খেলাধুলা', 'விளையாட்டு', 'கால்பந்து',
-  'క్రీడలు', 'ఆటలు', 'ಕ್ರೀಡೆಗಳು', 'ರમતગમત', 'ખેલ મહાકુંભ', 'ਖੇਡਾਂ', 'കായിക',
+  'క్రీడలు', 'ఆటలు', 'ಕ್ರೀಡೆಗಳು', 'ರમતಗમત', 'ખેલ મહાકુંભ', 'ਖੇਡਾਂ', 'കായിക',
   'sports in india', 'indian sports platform', 'turf booking near me',
   'sports academy near me', 'open sports trials india', 'live sports score india'
 ]
@@ -40,19 +41,40 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/') {
     return {
-      title: "KhelGrid (खेलग्रिड) — India's Premier Sports Platform | Play, Book Turfs, Academies, Trials & Live Scores",
-      description: "Discover verified sports academies, book turfs & courts, find open selection trials, join local pickup games, connect with coaches, and follow live scores across 30+ sports in all Indian languages (खेल, खेलकूद, टूर्नामेंट, ट्रायल, अकादमी).",
+      title: "KhelGrid (खेलग्रिड) — India's Grassroots Sports Platform",
+      description: "Discover verified sports academies, book turfs & courts, find open selection trials, join pickup games, and follow live cricket scores across India on KhelGrid.",
       canonicalUrl: 'https://khelgrid.com/',
       keywords: DEFAULT_KEYWORDS,
       ogType: 'website',
-      image: 'https://khelgrid.com/assets/kg-logo.webp'
+      image: 'https://khelgrid.com/assets/kg-logo.webp',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'WebSite',
+            '@id': 'https://khelgrid.com/#website',
+            url: 'https://khelgrid.com',
+            name: 'KhelGrid',
+            alternateName: ['खेलग्रिड', 'Khel Grid', 'Khel', 'KhelGrid Platform', 'Khelo India Sports Platform'],
+            description: "India's premier sports discovery and grassroots athletic network for turfs, academies, trials, and live scores.",
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: {
+                '@type': 'EntryPoint',
+                urlTemplate: 'https://khelgrid.com/search?q={search_term_string}',
+              },
+              'query-input': 'required name=search_term_string',
+            },
+          },
+        ],
+      },
     }
   }
 
   if (cleanPath === '/play') {
     return {
-      title: "Play Sports & Join Pickup Matches Near You · KhelGrid (खेलें और मैच खोजें)",
-      description: "Find and join local sports pickup games, box cricket, futsal, badminton, and pickleball matches across Indian cities. Host your own game or join players nearby on KhelGrid.",
+      title: "Play Sports & Join Pickup Matches · KhelGrid (खेलें)",
+      description: "Find and join local sports pickup games, box cricket, futsal, badminton, and pickleball matches across Indian cities. Host your own game or join players nearby.",
       canonicalUrl: 'https://khelgrid.com/play',
       keywords: ['play sports near me', 'pickup games india', 'box cricket match', 'badminton games near me', 'futsal pickup game', 'join football match', 'खेलें', 'मैच खोजें', 'local sports community', ...DEFAULT_KEYWORDS],
       ogType: 'website'
@@ -61,38 +83,80 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/opportunities' || cleanPath === '/trials' || cleanPath === '/combines' || cleanPath === '/scholarships' || cleanPath === '/camps') {
     return {
-      title: "Sports Trials, Tournaments & Scholarships in India · KhelGrid (ट्रायल और खेल प्रतियोगिता)",
-      description: "Discover verified sports trials, state and national tournaments, SAI NCOE selections, and athletic scholarships across India. Filter by sport, age group, and location.",
+      title: "Sports Trials, Tournaments & Camps 2026 · KhelGrid (ट्रायल)",
+      description: "Discover verified sports selection trials, national tournaments, SAI NCOE camps, and athletic scholarships across Indian states. Filter by sport and age group.",
       canonicalUrl: 'https://khelgrid.com/opportunities',
-      keywords: ['sports trials 2026', 'cricket trials near me', 'football selection trials', 'badminton tournaments india', 'sports scholarships', 'sai ncoe selection trials', 'ट्रायल', 'खेल प्रतियोगिता', 'open sports trials', ...DEFAULT_KEYWORDS],
-      ogType: 'website'
+      keywords: ['sports trials 2026', 'cricket trials near me', 'football selection trials', 'wushu trials 2026', 'kabaddi trials 2026', 'badminton tournaments india', 'sports scholarships', 'sai ncoe selection trials', 'ट्रायल', 'खेल प्रतियोगिता', 'open sports trials', ...DEFAULT_KEYWORDS],
+      ogType: 'website',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'ItemList',
+            '@id': 'https://khelgrid.com/opportunities#list',
+            name: 'Sports Trials, Tournaments & Camps 2026 · KhelGrid (ट्रायल)',
+            description: 'Discover verified sports selection trials, national tournaments, SAI NCOE camps, and athletic scholarships across India.',
+            url: 'https://khelgrid.com/opportunities',
+          },
+        ],
+      },
     }
   }
 
   if (cleanPath === '/venues' || cleanPath === '/book') {
     return {
-      title: "Book Sports Venues, Turfs & Courts Across India · KhelGrid (टर्फ और मैदान बुकिंग)",
-      description: "Find and book verified sports venues, synthetic turfs, badminton wooden courts, swimming pools, tennis courts, and box cricket pitches with hourly slots across India.",
+      title: "Book Sports Turfs & Box Cricket Courts · KhelGrid (टर्फ बुकिंग)",
+      description: "Book verified sports turfs, box cricket pitches, synthetic football grounds, and badminton courts with instant hourly slot booking across India on KhelGrid.",
       canonicalUrl: 'https://khelgrid.com/venues',
-      keywords: ['book turf near me', 'sports turf booking', 'badminton court booking', 'box cricket turf', 'football turf near me', 'swimming pool passes', 'टर्फ बुकिंग', 'मैदान बुकिंग', 'sports ground booking india', ...DEFAULT_KEYWORDS],
-      ogType: 'place'
+      keywords: ['khel turf', 'grid turf booking', 'box cricket turf', 'book turf near me', 'cricket turf near me', 'sports turf booking', 'badminton court booking', 'football turf near me', 'swimming pool passes', 'टर्फ बुकिंग', 'मैदान बुकिंग', 'box cricket ground', 'turf booking app', ...DEFAULT_KEYWORDS],
+      ogType: 'place',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'Service',
+            '@id': 'https://khelgrid.com/venues#service',
+            name: 'KhelGrid Sports Venue & Turf Booking',
+            serviceType: 'Sports Venue & Box Cricket Turf Reservation',
+            description: 'Hourly synthetic turf booking, badminton court reservation, and swimming pool session booking across India.',
+            url: 'https://khelgrid.com/venues',
+            provider: {
+              '@type': 'Organization',
+              name: 'KhelGrid',
+              url: 'https://khelgrid.com',
+            },
+          },
+        ],
+      },
     }
   }
 
   if (cleanPath === '/academies' || cleanPath === '/academy' || cleanPath === '/train') {
     return {
-      title: "Find Verified Sports Academies & Coaching in India · KhelGrid (खेल अकादमी)",
-      description: "Explore verified sports academies, professional coaching centres, cricket academies, badminton institutes, and combat akhadas across India. Check fees, coaches, and admissions.",
+      title: "Sports Academies & SAI Coaching in India · KhelGrid (खेल अकादमी)",
+      description: "Find verified sports academies, Khelo India accredited centers, SAI NCOE training hubs, cricket academies, and wrestling akhadas with fees and admissions.",
       canonicalUrl: 'https://khelgrid.com/academies',
-      keywords: ['sports academy near me', 'cricket academy india', 'badminton coaching centre', 'football training academy', 'tennis academy', 'akhada wrestling', 'खेल अकादमी', 'sports coaching classes', ...DEFAULT_KEYWORDS],
-      ogType: 'website'
+      keywords: ['khelo india academy near me', 'sai ncoe academy', 'sports academy near me', 'cricket academy india', 'sai wrestling academy', 'badminton coaching centre', 'cricket academy kanpur', 'sports academy registration', 'football training academy', 'tennis academy', 'akhada wrestling', 'खेल अकादमी', 'sports coaching classes', ...DEFAULT_KEYWORDS],
+      ogType: 'website',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'ItemList',
+            '@id': 'https://khelgrid.com/academies#list',
+            name: 'Sports Academies & SAI Coaching Centers in India · KhelGrid (खेल अकादमी)',
+            description: 'Explore verified sports academies, Khelo India accredited centers, and SAI NCOE training hubs across India.',
+            url: 'https://khelgrid.com/academies',
+          },
+        ],
+      },
     }
   }
 
   if (cleanPath === '/sports') {
     return {
-      title: "Explore 30+ Sports & Games in India · KhelGrid (सभी खेल व प्रतियोगिताएं)",
-      description: "Explore 30+ Olympic and desi sports across India including Cricket, Football, Badminton, Kabaddi, Athletics, Pickleball, Tennis, Wrestling, and Swimming on KhelGrid.",
+      title: "Explore 34+ Sports & Olympic Games · KhelGrid (सभी खेल)",
+      description: "Explore 34+ Olympic, school, and desi sports in India including Cricket, Football, Badminton, Kabaddi, Wrestling, Athletics, and Pickleball on KhelGrid.",
       canonicalUrl: 'https://khelgrid.com/sports',
       keywords: ['sports in india', 'desi khel', 'olympic sports india', 'cricket', 'badminton', 'football', 'kabaddi', 'kho kho', 'athletics', 'wrestling', 'pickleball', 'सभी खेल', ...DEFAULT_KEYWORDS],
       ogType: 'website'
@@ -131,7 +195,7 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
             '@type': 'WebPage',
             '@id': 'https://khelgrid.com/live#webpage',
             url: 'https://khelgrid.com/live',
-            name: 'Live Cricket Scores, WPL & ICC Match Center · KhelGrid (लाइव स्कोर)',
+            name: 'Live Cricket Scores, WPL & ICC Matches · KhelGrid (लाइव स्कोर)',
             description: "Fastest live cricket scores, WPL Women's Premier League, ICC tournaments, T20 leagues, ball-by-ball commentary, match scorecards, and local tournament updates on KhelGrid.",
             isPartOf: {
               '@type': 'WebSite',
@@ -154,17 +218,50 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/sports-cv' || cleanPath === '/start-from-zero') {
     return {
-      title: "Create Athlete Sports CV & Verified Profile · KhelGrid (स्पोर्ट्स सीवी)",
-      description: "Build a professional, shareable Sports CV and athlete portfolio. Highlight your match stats, trial history, coaching records, and achievements on KhelGrid.",
+      title: "Athlete Sports CV & Khel ID Builder · KhelGrid (खेल आईडी)",
+      description: "Build your verified Athlete Sports CV, digital Khel ID card, and sports portfolio on KhelGrid. Highlight match stats, trial history, and fitness benchmarks.",
       canonicalUrl: 'https://khelgrid.com/sports-cv',
-      keywords: ['sports cv maker', 'athlete resume builder', 'sports portfolio', 'athlete scout id', 'स्पोर्ट्स सीवी', 'athlete profile india', ...DEFAULT_KEYWORDS],
-      ogType: 'profile'
+      keywords: [
+        'khel id',
+        'sports cv',
+        'create sports cv',
+        'sports id card',
+        'athlete resume builder',
+        'khel id registration',
+        'khel id card download',
+        'athlete scout id',
+        'डिजिटल खेल आईडी',
+        'स्पोर्ट्स सीवी',
+        'खेल आईडी',
+        'athlete portfolio india',
+        ...DEFAULT_KEYWORDS,
+      ],
+      ogType: 'profile',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'WebApplication',
+            '@id': 'https://khelgrid.com/sports-cv#app',
+            name: 'Athlete Sports CV & Khel ID Builder · KhelGrid (खेल आईडी)',
+            url: 'https://khelgrid.com/sports-cv',
+            applicationCategory: 'SportsApplication',
+            operatingSystem: 'All',
+            description: 'Build your verified Athlete Sports CV, digital Khel ID card, and sports portfolio on KhelGrid.',
+            offers: {
+              '@type': 'Offer',
+              price: '0',
+              priceCurrency: 'INR',
+            },
+          },
+        ],
+      },
     }
   }
 
   if (cleanPath === '/talent-scanner') {
     return {
-      title: "Grassroots Sports Talent Scanner & Fitness Tests · KhelGrid (टैलेंट स्कैनर)",
+      title: "Sports Talent Scanner & Fitness Tests · KhelGrid (टैलेंट स्कैनर)",
       description: "Benchmark speed, agility, endurance, and vertical jump against national age-group percentiles with KhelGrid's Grassroots Talent Scanner.",
       canonicalUrl: 'https://khelgrid.com/talent-scanner',
       keywords: ['talent scanner sports', 'grassroots fitness test', 'athlete benchmark india', 'sports physical test', 'टैलेंट स्कैनर', ...DEFAULT_KEYWORDS],
@@ -174,27 +271,41 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/khelchronicle') {
     return {
-      title: "KhelChronicle — Sports Science & Open Research Repository · KhelGrid",
-      description: "Open-access sports science, biomechanics, exercise physiology, sports nutrition, and sports medicine preprints and research advancing Indian athletics.",
+      title: "KhelChronicle — Sports Science Research · KhelGrid (खेल विज्ञान)",
+      description: "Diamond Open Access repository for Indian sports science, cricket biomechanics, Yo-Yo test normative benchmarks, and sports medicine preprints on KhelGrid.",
       canonicalUrl: 'https://khelgrid.com/khelchronicle',
-      keywords: ['sports science research', 'khelchronicle', 'sports biomechanics', 'exercise physiology', 'sports medicine india', 'sports nutrition preprints', ...DEFAULT_KEYWORDS],
-      ogType: 'website'
+      keywords: ['khel chronicle', 'sports science research india', 'cricket biomechanics', 'yo-yo test norms indian athletes', 'fast bowling lumbar stress', 'exercise physiology', 'sports medicine preprints', 'खेल विज्ञान शोध', ...DEFAULT_KEYWORDS],
+      ogType: 'website',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'DataCatalog',
+            '@id': 'https://khelgrid.com/khelchronicle#catalog',
+            name: 'KhelChronicle Open Sports Research Archive',
+            url: 'https://khelgrid.com/khelchronicle',
+            description: 'Diamond Open Access repository for sports science, biomechanics, exercise physiology, and sports medicine preprints advancing Indian athletics.',
+            isAccessibleForFree: true,
+            license: 'https://creativecommons.org/licenses/by/4.0/',
+          },
+        ],
+      },
     }
   }
 
   if (cleanPath === '/cities') {
     return {
-      title: "Sports Complexes & Venues Across Major Indian Cities · KhelGrid",
-      description: "Discover top city sports complexes, stadiums, and multi-sport centres across Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, Kolkata, Pune, Ahmedabad, and 16+ metros.",
+      title: "Sports Complexes & Venues in India · KhelGrid (खेल परिसर)",
+      description: "Discover premier sports complexes, SAI stadiums, and multi-sport centres across Delhi NCR, Mumbai, Bengaluru, Hyderabad, Kolkata, Pune, and 53+ Indian cities.",
       canonicalUrl: 'https://khelgrid.com/cities',
-      keywords: ['city sports complexes india', 'stadiums in india', 'bengaluru sports venues', 'delhi sports complex', 'mumbai turf', 'hyderabad badminton', ...DEFAULT_KEYWORDS],
+      keywords: ['sports complexes in delhi', 'bengaluru sports venues', 'stadiums in india', 'delhi sports complex', 'mumbai sports ground', 'hyderabad badminton', 'खेल परिसर', ...DEFAULT_KEYWORDS],
       ogType: 'place'
     }
   }
 
   if (cleanPath === '/search') {
     return {
-      title: "Search Sports, Academies, Venues & Trials Across India · KhelGrid (खोजें)",
+      title: "Search Sports, Turfs, Academies & Trials · KhelGrid (खोजें)",
       description: "Unified global search for sports academies, turf booking, open trials, pickup games, tournaments, coaches, and sports science research across India on KhelGrid.",
       canonicalUrl: 'https://khelgrid.com/search',
       keywords: ['search sports india', 'find turf near me', 'find sports academy', 'sports trial search', 'khelgrid search', ...DEFAULT_KEYWORDS],
@@ -204,17 +315,36 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/tools' || cleanPath === '/sports-tools' || cleanPath.startsWith('/tools/')) {
     return {
-      title: "Athlete Sports Tools, Calculators & Trial Planners · KhelGrid (खेल टूल्स व कैलकुलेटर)",
-      description: "Free interactive sports performance calculators, trial readiness scores, BCCI/SAI age cut-off eligibility, VO2 max tests, and turf cost splitters for Indian athletes and coaches.",
+      title: "Athlete Sports Tools & Trial Calculators · KhelGrid (खेल टूल्स)",
+      description: "Free interactive sports performance calculators, trial readiness scores, BCCI/SAI age cut-off eligibility, VO2 max tests, and turf cost splitters on KhelGrid.",
       canonicalUrl: 'https://khelgrid.com/tools',
       keywords: ['athlete calculators', 'trial readiness score', 'bcci age eligibility calculator', 'vo2 max estimator', 'turf match fee splitter', 'sports cv checklist', 'sports tools india', ...DEFAULT_KEYWORDS],
-      ogType: 'website'
+      ogType: 'website',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'WebApplication',
+            '@id': 'https://khelgrid.com/tools#app',
+            name: 'Athlete Sports Tools & Trial Calculators · KhelGrid (खेल टूल्स)',
+            url: 'https://khelgrid.com/tools',
+            applicationCategory: 'SportsApplication',
+            operatingSystem: 'All',
+            description: 'Free interactive sports performance calculators, trial readiness scores, BCCI/SAI age cut-off eligibility, VO2 max tests, and turf cost splitters.',
+            offers: {
+              '@type': 'Offer',
+              price: '0',
+              priceCurrency: 'INR',
+            },
+          },
+        ],
+      },
     }
   }
 
   if (cleanPath === '/pricing' || cleanPath === '/memberships' || cleanPath === '/pro') {
     return {
-      title: "Pricing & Memberships · KhelGrid (खेलग्रिड सदस्यता व शुल्क)",
+      title: "Pricing & Sports Memberships · KhelGrid (खेलग्रिड सदस्यता)",
       description: "Simple, transparent sports memberships for athletes, sports academies, turf venues, and trial organizers across India. Unlock verified scout badges, admissions CRM, and 0% booking commission.",
       canonicalUrl: 'https://khelgrid.com/pricing',
       keywords: ['sports membership india', 'khelgrid pro athlete', 'academy listing pricing', 'turf booking zero commission', 'trial boost price', 'खेलग्रिड मेम्बरशिप', ...DEFAULT_KEYWORDS],
@@ -224,7 +354,7 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/saved') {
     return {
-      title: "Saved Items & Trial Deadline Planner · KhelGrid (सहेजे गए ट्रायल व अकादमियां)",
+      title: "Saved Trials, Academies & Calendar · KhelGrid (सहेजे गए)",
       description: "Manage your bookmarked selection trials, sports academies, turf venues, pickup games, and KhelChronicle research papers. Track registration deadlines and export to calendar (.ics / Google Calendar).",
       canonicalUrl: 'https://khelgrid.com/saved',
       keywords: ['saved sports trials', 'bookmarked academies', 'trial calendar export', 'sports deadline tracker', 'सहेजे गए ट्रायल', ...DEFAULT_KEYWORDS],
@@ -234,7 +364,7 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/coaches') {
     return {
-      title: "Certified Indian Sports Coaches Directory · KhelGrid (प्रमाणित खेल कोच)",
+      title: "Verified Sports Coaches Directory · KhelGrid (प्रमाणित कोच)",
       description: "Search and connect directly with verified sports coaches across India. Filter by SAI NIS Patiala, BCCI, AIFF, and BWF certifications, transparent monthly coaching fees, and student track records.",
       canonicalUrl: 'https://khelgrid.com/coaches',
       keywords: ['certified sports coaches india', 'cricket coach near me', 'badminton coach bengaluru', 'aiff certified football coach', 'sai nis patiala coach', 'sports coaching fees', 'प्रमाणित खेल कोच', ...DEFAULT_KEYWORDS],
@@ -244,7 +374,7 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/events' || cleanPath === '/tournaments') {
     return {
-      title: "National Events & State Tournaments Calendar · KhelGrid (राष्ट्रीय व राज्य खेल प्रतियोगिताएं)",
+      title: "Tournaments & National Sports Events · KhelGrid (प्रतियोगिताएं)",
       description: "Explore verified Indian sports tournaments, SGFI school games, Khelo India youth competitions, senior national meets, and state ranking events with official rulebooks and prize money.",
       canonicalUrl: 'https://khelgrid.com/events',
       keywords: ['sports tournaments india', 'sgfi national school games', 'khelo india youth games 2026', 'state athletics championship', 'badminton tournament india', 'subroto cup football', 'खेल प्रतियोगिताएं', ...DEFAULT_KEYWORDS],
@@ -254,7 +384,7 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/scout-portal' || cleanPath === '/scout') {
     return {
-      title: "Scout Portal & Verified Athlete Workbench · KhelGrid (स्काउट पोर्टल)",
+      title: "Scout Portal & Athlete Workbench · KhelGrid (स्काउट पोर्टल)",
       description: "Dedicated talent workbench for SAI selectors, NIS Patiala certified coaches, and pro league scouts. Filter verified grassroots athletes by normative biometrics, physical test percentiles, and achievements.",
       canonicalUrl: 'https://khelgrid.com/scout-portal',
       keywords: ['sports talent scouting india', 'sai talent identification', 'nis patiala scout workbench', 'grassroots athlete database', 'yo-yo test percentile', 'स्काउट पोर्टल', ...DEFAULT_KEYWORDS],
@@ -264,7 +394,7 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/verification' || cleanPath === '/verify-athlete') {
     return {
-      title: "Athlete Verification Badge Desk · KhelGrid (खिलाड़ी सत्यापन डेस्क)",
+      title: "Athlete Verification & Badge Desk · KhelGrid (सत्यापन डेस्क)",
       description: "Authenticate age compliance, federation UIDs (AFI, BAI, AIFF, BCCI, SGFI), and state medal certificates. Protect yourself from age-fraud and earn your verified KhelGrid badge.",
       canonicalUrl: 'https://khelgrid.com/verification',
       keywords: ['athlete verification badge', 'afi athlete uid check', 'bai registration verification', 'sports certificate verification', 'age fraud prevention in sports', 'खिलाड़ी सत्यापन', ...DEFAULT_KEYWORDS],

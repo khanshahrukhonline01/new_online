@@ -240,10 +240,10 @@ export default function SportsCvWizard() {
 
   return (
     <section className="content-page sports-cv-page">
-      <p className="eyebrow">ATHLETE TOOLS · VERIFIED PROFILE &amp; PLAYER CARD</p>
-      <h1>Build your sports CV &amp; Player Card.</h1>
+      <p className="eyebrow">ATHLETE TOOLS · DIGITAL KHEL ID (खेल आईडी) &amp; VERIFIED PROFILE</p>
+      <h1>Build your sports CV, digital Khel ID &amp; Player Card.</h1>
       <p className="page-intro">
-        Create an official athlete profile with technique video telemetry and scientific fitness benchmarks. Share your
+        Create your official athlete profile with digital Khel ID, technique video telemetry, and scientific fitness benchmarks. Share your
         custom FIFA-style Player Card with scouts, coaches, and on social media, or save it as a clean PDF.
       </p>
 

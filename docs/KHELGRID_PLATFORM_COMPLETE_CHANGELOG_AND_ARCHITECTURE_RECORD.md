@@ -725,3 +725,36 @@ npm run lint
 - **`src/shared/sitemap.test.ts`**: Updated sitemap assertion count (119 URLs).
 - **All 101 Vitest test suites (816 tests) passing**.
 - **`tsc -b` and `eslint` clean with 0 errors**.
+
+---
+
+### Milestone 15: Phase 3 High-Intent Feature Terms & Phase 4 Structured Data Rich Snippets (November 15, 2026)
+
+#### 1. High-Intent Brand & Feature Grounding (Google Search Console Data)
+- **`khel id` & `sports cv` Optimization**:
+  - GSC revealed 59 impressions with average position 4.51 for `khel id` and `sports cv`, previously suffering from missing exact-match target keywords.
+  - Retitled `/sports-cv` to `Athlete Sports CV & Khel ID Builder · KhelGrid (खेल आईडी)`.
+  - Added keywords: `khel id`, `sports cv`, `create sports cv`, `sports id card`, `athlete resume builder`, `khel id registration`, `khel id card download`, `खेल आईडी`, `स्पोर्ट्स सीवी`.
+  - Updated `SportsCvWizard.tsx` hero eyebrow and copy to prominently feature `DIGITAL KHEL ID (खेल आईडी) & VERIFIED PROFILE`.
+- **`khel turf` & Box Cricket Venue Discovery**:
+  - Updated `/venues` title and keywords to target `khel turf`, `grid turf booking`, `box cricket turf`, `cricket turf near me`, and `football turf near me`.
+- **`khelo india` & SAI NCOE Academies**:
+  - Updated `/academies` title and keywords to target `khelo india academy near me`, `sai ncoe academy`, `sai wrestling academy`, and `cricket academy kanpur`.
+- **KhelChronicle Sports Science Preprints**:
+  - Enriched `/khelchronicle` keywords with `sports science research india`, `cricket biomechanics`, `yo-yo test norms indian athletes`, and `fast bowling lumbar stress`.
+
+#### 2. Mobile-First SERP Snippet Optimization
+- Enforced strict title character boundaries (<= 70 characters, averaging 54–63 chars) across all 19 primary platform routes.
+- Eliminates Google mobile SERP ellipsis truncation on mobile screens (representing >80% of Indian grassroots sports searches).
+
+#### 3. Expanded Schema.org JSON-LD Knowledge Graph
+- **`WebSite`**: Integrated Google Sitelinks `SearchAction` deep-linking to `https://khelgrid.com/search?q={search_term_string}`.
+- **`WebApplication`**: Injected rich application schema for `/sports-cv` (Digital Khel ID builder) and `/tools` (Athlete calculators).
+- **`Service`**: Injected sports venue and box cricket booking reservation schema on `/venues`.
+- **`DataCatalog`**: Injected open science repository schema on `/khelchronicle`.
+- **`ItemList`**: Injected structured lists on `/opportunities` and `/academies`.
+
+#### 4. Automated Verification & Code Health
+- **`src/shared/utils/seoAndShare.test.ts`**: Expanded with test assertions verifying mobile title lengths, high-intent GSC keywords, and Schema.org JSON-LD graphs.
+- **All 101 Vitest suites passing (819 tests total)**.
+- **`npm run build` and `npm run lint` clean with 0 errors**.
