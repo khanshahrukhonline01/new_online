@@ -13,6 +13,29 @@ describe('platform route coverage', () => {
     path => expect(resolveRoute(path).name).toBe('opportunities-index'),
   )
 
+  it.each([
+    '/trial/t-aiu-wushu-inter-university-trials-2026',
+    '/trials/t-kca-u14-cricket-trials-kanpur-2026',
+    '/opportunity/t-sgfi-70th-kabaddi-u17-gorakhpur-2026',
+    '/opportunities/t-up-sports-directorate-junior-basketball-trials-kanpur-2026',
+  ])('%s resolves to the shared opportunity detail page and trial canonical route', path => {
+    const match = resolveRoute(path)
+    expect(match.name).toBe('opportunity-detail')
+    expect(match.canonicalPath).toBe('/trial/:slug')
+    if (match.name === 'opportunity-detail') {
+      expect(match.slug).toBe(path.split('/').at(-1))
+    }
+  })
+
+  it('preserves the existing opportunity application route', () => {
+    expect(resolveRoute('/opportunities/sample-trial/apply')).toEqual({
+      name: 'opportunity-detail',
+      canonicalPath: '/trial/:slug',
+      slug: 'sample-trial',
+      isApply: true,
+    })
+  })
+
   it.each(['/venues', '/book'])(
     '%s opens the venue directory without claiming bookings are live',
     path => expect(resolveRoute(path).name).toBe('venues-index'),
