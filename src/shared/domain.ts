@@ -1,0 +1,292 @@
+export interface Sport {
+  id: string
+  slug: string
+  name: string
+}
+
+export interface Opportunity {
+  id: string
+  slug: string
+  title: string
+  sport_id?: string | null
+  opportunity_type: 'trial' | 'combine' | 'scholarship' | 'camp' | 'job' | 'other'
+  organizer_name: string | null
+  city: string | null
+  venue_name: string | null
+  starts_at: string | null
+  ends_at: string | null
+  application_deadline: string | null
+  source_url: string | null
+  source_name: string | null
+  verification_status: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+  registration_fee?: number
+  available_spots?: number | null
+  age_category?: string | null
+  gender?: string | null
+  eligibility_criteria?: string | null
+  required_documents?: string[]
+  metadata?: Record<string, unknown>
+  is_featured?: boolean
+  sport?: Sport
+}
+
+export interface Venue {
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  city: string
+  state?: string | null
+  address: string | null
+  timezone: string
+  government_facility?: boolean
+  is_featured?: boolean
+  sports?: Sport[]
+  sport?: string
+  phone?: string | null
+  email?: string | null
+  timings?: string | null
+  surface_type?: string | null
+  court_count?: string | null
+  pricing?: string | null
+  facilities?: string[]
+  rules?: string[]
+  rating?: number
+  review_count?: number
+  verification_status?: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+  source_name?: string | null
+  source_url?: string | null
+  affiliation_proof?: string | null
+  reported_count?: number
+}
+
+export interface Academy {
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  city: string
+  state: string | null
+  website_url: string | null
+  public_contact_url: string | null
+  verification_status: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+  is_featured?: boolean
+  sport?: string
+  sports?: Sport[] | string[]
+  address?: string | null
+  phone?: string | null
+  email?: string | null
+  head_coach?: string | null
+  facilities?: string[]
+  age_groups?: string[]
+  timings?: string | null
+  fee_structure?: string | null
+  admission_open?: boolean
+  rating?: number
+  review_count?: number
+  affiliation_proof?: string | null
+  reported_count?: number
+}
+
+export interface ListingReport {
+  id: string
+  entityType: 'academy' | 'venue' | 'opportunity' | 'coach'
+  entityId: string
+  entitySlug: string
+  entityName: string
+  reason: 'fake_trial' | 'impersonation' | 'fake_venue' | 'unauthorized_fee' | 'wrong_contact' | 'other'
+  details: string
+  reporterEmail?: string
+  reporterPhone?: string
+  createdAt: string
+  status: 'pending' | 'investigated' | 'resolved' | 'dismissed'
+}
+
+export interface Coach {
+  id: string
+  slug: string
+  display_name: string
+  name?: string
+  bio: string | null
+  city: string
+  state: string | null
+  website_url: string | null
+  public_contact_url: string | null
+  verification_status: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+  sports?: Sport[]
+  sport?: string
+  sportCategory?: string
+  certification?: string
+  credential_authority?: string
+  credentialAuthority?: string
+  authority_label?: string
+  authorityLabel?: string
+  experience_years?: number
+  experienceYears?: number
+  academy_affiliation?: string
+  academyAffiliation?: string
+  monthly_fee?: string
+  monthlyFee?: string
+  fee_range_category?: string
+  feeRangeCategory?: string
+  student_track_record?: string
+  studentTrackRecord?: string
+  specialties?: string[]
+  languages?: string[]
+  rating?: number
+  review_count?: number
+  reviewCount?: number
+  verified_badge?: string
+  verifiedBadge?: string
+  available_one_on_one?: boolean
+  availableForOneOnOne?: boolean
+  available_batches?: boolean
+  availableForBatches?: boolean
+}
+
+export interface EventItem {
+  id: string
+  slug: string
+  title: string
+  hindi_title?: string
+  hindiTitle?: string
+  sport?: string
+  category?: string
+  sanctioning_body?: string
+  sanctioningBody?: string
+  edition?: string
+  event_type: 'tournament' | 'camp' | 'league' | 'workshop' | 'meetup' | 'other'
+  organizer_name: string | null
+  organizer?: string
+  city: string | null
+  state?: string
+  venue_name: string | null
+  venue?: string
+  starts_at: string
+  startDate?: string
+  ends_at: string | null
+  endDate?: string
+  registration_deadline?: string
+  registrationDeadline?: string
+  source_url: string | null
+  source_name: string | null
+  verification_status: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+  age_categories?: string[]
+  ageCategories?: string[]
+  gender?: string
+  prize_pool?: string
+  prizePool?: string
+  entry_fee?: string
+  entryFee?: string
+  team_or_individual?: string
+  teamOrIndividual?: string
+  official_notice_url?: string
+  officialNoticeUrl?: string
+  rulebook_pdf_url?: string
+  rulebookPdfUrl?: string
+  registration_url?: string
+  registrationUrl?: string
+  contact_phone?: string
+  contactPhone?: string
+  contact_email?: string
+  contactEmail?: string
+  is_featured?: boolean
+  featured?: boolean
+  qualification_requirements?: string[]
+  qualificationRequirements?: string[]
+  description?: string
+}
+
+export interface VideoClip {
+  id: string
+  title: string
+  clipType:
+    | 'bowling-action'
+    | 'sprint-mechanics'
+    | 'jump-power'
+    | 'match-highlight'
+    | 'skill-footwork'
+    | 'batting-stroke'
+    | 'technique-drill'
+    | 'other'
+  videoUrl: string
+  durationSeconds?: number
+  description?: string
+  telemetry?: {
+    metricName: string
+    metricValue: string
+  }[]
+}
+
+export interface PickupGame {
+  id: string
+  slug?: string
+  sport: string
+  emoji?: string
+  skill_level?: 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels'
+  skillLevel?: 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels'
+  venue_name?: string
+  venueName?: string
+  city: string
+  time_label?: string
+  timeLabel?: string
+  host_name?: string
+  hostName?: string
+  price_per_player?: string
+  pricePerPlayer?: string
+  spots_open?: number
+  spotsOpen?: number
+  total_players?: number
+  totalPlayers?: number
+  confirmed_players?: number
+  confirmedPlayers?: number
+  is_featured?: boolean
+  publication_status?: string
+}
+
+export interface AthleteProfile {
+  id: string
+  userId?: string
+  username: string
+  fullName: string
+  sport: string
+  playingPosition: string
+  city: string
+  state?: string
+  dateOfBirth?: string
+  age?: number
+  email?: string
+  phone?: string
+  teamOrAcademy?: string
+  coach?: string
+  experienceYears?: string
+  primaryFootOrHand?: string
+  heightCm?: number
+  weightKg?: number
+  summary?: string
+  achievements: { year: string; event: string; result: string }[]
+  videoClips: VideoClip[]
+  fitnessBenchmarks?: {
+    yoyoIr1Meters?: number
+    sprint30mSeconds?: number
+    cmjHeightCm?: number
+    tier?: string
+    percentileAvg?: number
+  }
+  verificationStatus: 'community' | 'verified' | 'pro'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TrialReminder {
+  id: string
+  trialSlug: string
+  trialTitle: string
+  startsAt?: string | null
+  deadlineDate?: string | null
+  city?: string | null
+  venueName?: string | null
+  notificationType: 'whatsapp' | 'google-calendar' | 'ical'
+  createdAt: string
+}
+

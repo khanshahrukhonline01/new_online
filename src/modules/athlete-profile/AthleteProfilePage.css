@@ -1,0 +1,447 @@
+.athlete-profile-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-bottom: 60px;
+}
+
+.profile-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.breadcrumb-handle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #a7f36b;
+  background: rgba(167, 243, 107, 0.1);
+  border: 1px solid rgba(167, 243, 107, 0.25);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+/* Two-column layout */
+.athlete-profile-layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 36px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .athlete-profile-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+/* Left Column */
+.athlete-card-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.scout-contact-card {
+  background: #091a2b;
+  border: 1px solid rgba(167, 243, 107, 0.22);
+  border-radius: 14px;
+  padding: 18px;
+  color: #e6f1ff;
+}
+
+.scout-contact-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #a7f36b;
+}
+
+.scout-contact-card p {
+  margin: 0 0 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #8fa5be;
+}
+
+.scout-contact-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Right Column Details */
+.athlete-details-column {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.athlete-bio-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 22px;
+}
+
+.bio-topline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.bio-sport-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(167, 243, 107, 0.12);
+  border: 1px solid rgba(167, 243, 107, 0.3);
+  color: #a7f36b;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.bio-verified-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(37, 211, 102, 0.12);
+  border: 1px solid rgba(37, 211, 102, 0.35);
+  color: #25d366;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.athlete-headline {
+  font-size: 36px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.03em;
+  margin: 0 0 6px;
+}
+
+.athlete-role-city {
+  font-size: 16px;
+  color: #8fa5be;
+  margin: 0 0 16px;
+}
+
+.athlete-role-city strong {
+  color: #e6f1ff;
+}
+
+.athlete-summary-text {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #cbe0f5;
+  margin: 0 0 18px;
+}
+
+/* Biometrics Bar */
+.athlete-biometrics-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.bio-chip {
+  display: flex;
+  flex-direction: column;
+  background: #091a2b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px 12px;
+}
+
+.bio-chip .lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #8fa5be;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.bio-chip .val {
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  margin-top: 2px;
+}
+
+/* Section Panels */
+.profile-section-panel {
+  background: #061320;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.section-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  font-size: 18px;
+  color: #fff;
+}
+
+.section-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(167, 243, 107, 0.12);
+  color: #a7f36b;
+  border: 1px solid rgba(167, 243, 107, 0.25);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.tier-badge {
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(229, 192, 123, 0.15);
+  color: #e5c07b;
+  border: 1px solid rgba(229, 192, 123, 0.35);
+  border-radius: 999px;
+  padding: 4px 11px;
+}
+
+.section-intro {
+  font-size: 13px;
+  color: #8fa5be;
+  margin: 0 0 18px;
+  line-height: 1.6;
+}
+
+/* Video Clips Grid */
+.video-clips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.video-clip-card {
+  background: #091a2b;
+  border: 1px solid rgba(167, 243, 107, 0.18);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.clip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.clip-type-tag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #a7f36b;
+  background: rgba(167, 243, 107, 0.1);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.clip-duration {
+  font-size: 11px;
+  color: #8fa5be;
+  font-weight: 600;
+}
+
+.video-clip-card h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: #fff;
+  line-height: 1.35;
+}
+
+.clip-desc {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #8fa5be;
+}
+
+.clip-telemetry-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.telemetry-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(4, 16, 26, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 11px;
+}
+
+.telemetry-pill .t-name {
+  color: #8fa5be;
+}
+
+.telemetry-pill .t-val {
+  color: #a7f36b;
+  font-weight: 700;
+}
+
+.clip-watch-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: #030e18;
+  background: #a7f36b;
+  padding: 7px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.clip-watch-link:hover {
+  background: #c3f798;
+  transform: translateY(-1px);
+}
+
+/* Fitness Benchmarks Grid */
+.fitness-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.fitness-metric-card {
+  background: #091a2b;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.fitness-metric-card .f-title {
+  font-size: 11px;
+  color: #8fa5be;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.fitness-metric-card .f-score {
+  font-size: 26px;
+  font-weight: 900;
+  color: #a7f36b;
+  margin: 6px 0 2px;
+}
+
+.fitness-metric-card .f-sub {
+  font-size: 11px;
+  color: #6a829e;
+}
+
+/* Achievements Timeline */
+.achievements-timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.timeline-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.timeline-year {
+  font-size: 13px;
+  font-weight: 900;
+  color: #e5c07b;
+  background: rgba(229, 192, 123, 0.12);
+  border: 1px solid rgba(229, 192, 123, 0.3);
+  border-radius: 6px;
+  padding: 3px 8px;
+  min-width: 54px;
+  text-align: center;
+}
+
+.timeline-content h4 {
+  margin: 0 0 3px;
+  font-size: 14px;
+  color: #fff;
+}
+
+.timeline-content p {
+  margin: 0;
+  font-size: 12px;
+  color: #a7f36b;
+  font-weight: 600;
+}
+
+/* Credentials */
+.credentials-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cred-item {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.cred-lbl {
+  color: #8fa5be;
+  min-width: 170px;
+}
+
+.cred-val {
+  color: #fff;
+  font-weight: 600;
+}
+
+.empty-subtext {
+  font-size: 12px;
+  color: #6a829e;
+  font-style: italic;
+  margin: 0;
+}

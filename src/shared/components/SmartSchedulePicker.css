@@ -1,0 +1,306 @@
+/* Smart Schedule & Timing Picker Styling */
+
+.smart-schedule-picker-container {
+  margin: 0.75rem 0 1.25rem 0;
+  padding: 1.15rem;
+  background: var(--surface-secondary, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+}
+
+.smart-schedule-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.smart-schedule-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+.smart-schedule-manual-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: 1px dashed #94a3b8;
+  border-radius: 6px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.smart-schedule-manual-toggle:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  border-color: #64748b;
+}
+
+.schedule-step-section {
+  margin-bottom: 1rem;
+}
+
+.schedule-step-badge {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+
+/* Day Selection Chips */
+.schedule-day-chips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 0.5rem;
+}
+
+.schedule-day-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.65rem;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  text-align: center;
+}
+
+.schedule-day-chip:hover {
+  border-color: #15803d;
+  background: #f0fdf4;
+}
+
+.schedule-day-chip.is-selected {
+  border-color: #15803d;
+  background: #ecfdf5;
+  box-shadow: 0 0 0 2px rgba(21, 128, 61, 0.2);
+}
+
+.chip-primary-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.schedule-day-chip.is-selected .chip-primary-label {
+  color: #15803d;
+}
+
+.chip-sub-date {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+.schedule-day-chip.is-selected .chip-sub-date {
+  color: #166534;
+  font-weight: 600;
+}
+
+.custom-date-chip {
+  position: relative;
+  overflow: hidden;
+}
+
+.custom-date-label-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.native-date-hidden-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Time Slot Section */
+.schedule-time-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.session-tab-buttons {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.session-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.session-tab-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.session-tab-btn.is-active {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+/* Slot Chips */
+.schedule-slots-grid {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.schedule-slot-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.85rem;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.schedule-slot-chip:hover {
+  border-color: #15803d;
+  background: #f0fdf4;
+}
+
+.schedule-slot-chip.is-selected {
+  border-color: #15803d;
+  background: #15803d;
+  color: #ffffff;
+}
+
+.custom-time-chip {
+  position: relative;
+  background: #f8fafc;
+}
+
+.custom-time-chip.is-selected {
+  background: #15803d;
+  color: #ffffff;
+}
+
+.native-time-hidden-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Formatted Result Banner */
+.schedule-formatted-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.formatted-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: #166534;
+}
+
+.formatted-banner-info strong {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #14532d;
+  background: #dcfce7;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+.formatted-banner-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #dcfce7;
+  color: #166534;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+}
+
+/* Manual Fallback */
+.schedule-manual-fallback-box {
+  margin-top: 0.5rem;
+}
+
+.schedule-manual-text-input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #ffffff;
+  color: #0f172a;
+  box-sizing: border-box;
+}
+
+.schedule-manual-text-input:focus {
+  outline: none;
+  border-color: #15803d;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.12);
+}
+
+.schedule-manual-hint {
+  display: block;
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-top: 0.4rem;
+}

@@ -1,0 +1,496 @@
+/* KhelGrid Unified Indian Payment Checkout Modal */
+
+.kg-checkout-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: kgFadeIn 0.2s ease-out;
+}
+
+@keyframes kgFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.kg-checkout-dialog {
+  background: var(--surface, #ffffff);
+  color: var(--text, #0f172a);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  animation: kgSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes kgSlideUp {
+  from { transform: translateY(20px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Header */
+.kg-checkout-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kg-checkout-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kg-checkout-emoji-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.kg-checkout-title-wrap h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.kg-checkout-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kg-checkout-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.kg-checkout-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Price Bar */
+.kg-checkout-price-bar {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: #ffffff;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kg-checkout-price-label {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.kg-checkout-amount {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Method Tabs */
+.kg-checkout-methods {
+  display: flex;
+  padding: 12px 24px 0;
+  gap: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.kg-method-btn {
+  flex: 1;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.kg-method-btn:hover {
+  color: #0f172a;
+  background: #f8fafc;
+  border-radius: 8px 8px 0 0;
+}
+
+.kg-method-btn.active {
+  color: #059669;
+  border-bottom-color: #059669;
+}
+
+/* Content Body */
+.kg-checkout-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Customer Fields */
+.kg-customer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .kg-customer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kg-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.kg-field-group label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.kg-input {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #cbd5e1;
+  font-size: 14px;
+  color: #0f172a;
+  outline: none;
+  background: #ffffff;
+  transition: all 0.15s ease;
+}
+
+.kg-input:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+/* UPI Panel */
+.kg-upi-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+}
+
+.kg-upi-qr-wrapper {
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+}
+
+.kg-upi-apps-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kg-upi-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #334155;
+}
+
+.kg-upi-vpa-copy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.kg-upi-vpa-copy strong {
+  color: #059669;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.kg-copy-btn {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #475569;
+}
+
+.kg-copy-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.kg-upi-intent-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.kg-upi-intent-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* Pay at Venue Notice */
+.kg-venue-pay-card {
+  background: #f0fdf4;
+  border: 1.5px dashed #86efac;
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kg-venue-pay-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #166534;
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.kg-venue-pay-body {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #15803d;
+  margin: 0;
+}
+
+.kg-venue-pay-guidelines {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: #166534;
+}
+
+.kg-venue-pay-guidelines li {
+  margin-bottom: 4px;
+}
+
+/* Processing State */
+.kg-checkout-processing {
+  padding: 48px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.kg-spinner-box {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 4px solid #e2e8f0;
+  border-top-color: #059669;
+  animation: kgSpin 0.8s linear infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+@keyframes kgSpin {
+  to { transform: rotate(360deg); }
+}
+
+.kg-checkout-processing h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.kg-checkout-processing p {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* Success Receipt */
+.kg-checkout-success {
+  padding: 32px 24px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.kg-success-icon-badge {
+  width: 68px;
+  height: 68px;
+  background: #dcfce7;
+  color: #16a34a;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px rgba(22, 163, 74, 0.2);
+}
+
+.kg-success-receipt-card {
+  width: 100%;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kg-receipt-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.kg-receipt-row strong {
+  color: #0f172a;
+}
+
+.kg-receipt-ref-code {
+  font-family: monospace;
+  font-weight: 800;
+  color: #059669;
+}
+
+/* Bottom Actions */
+.kg-checkout-footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.kg-btn-cancel {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.kg-btn-cancel:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.kg-btn-pay {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: #ffffff;
+  border: none;
+  padding: 11px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.kg-btn-pay:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+}
+
+.kg-btn-pay:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}

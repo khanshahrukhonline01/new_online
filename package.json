@@ -1,0 +1,47 @@
+{
+  "name": "khelgrid-platform",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build:sitemap": "node --experimental-strip-types scripts/generate-sitemap.mjs",
+    "build:feed": "node --experimental-strip-types scripts/generate-feed.mjs",
+    "build": "node --experimental-strip-types scripts/generate-sitemap.mjs && node --experimental-strip-types scripts/generate-feed.mjs && tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --pretty",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "dev:admin": "vite --config apps/admin/vite.config.ts",
+    "build:admin": "tsc --noEmit -p tsconfig.admin.json && vite build --config apps/admin/vite.config.ts",
+    "typecheck:admin": "tsc --noEmit -p tsconfig.admin.json"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "i18next": "^26.6.0",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-i18next": "^17.1.9",
+    "vite": "^7.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/leaflet": "^1.9.22",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.0",
+    "globals": "^16.0.0",
+    "pg-mem": "^3.0.14",
+    "typescript": "~5.8.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0"
+  }
+}

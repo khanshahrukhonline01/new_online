@@ -1,0 +1,215 @@
+name: CI
+on:
+  push:
+    branches: [main, development/admin-control-center, development/admin-app-separation]
+  pull_request:
+    branches: [main, development/admin-control-center]
+permissions:
+  contents: read
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: khelgrid_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d khelgrid_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/khelgrid_test
+      VITE_SUPABASE_URL: https://example.invalid
+      VITE_SUPABASE_ANON_KEY: test-anon-key
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          
+      - name: Check and install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if command -v psql >/dev/null 2>&1; then
+            echo "PostgreSQL client is already installed:"
+            psql --version
+          else
+            echo "PostgreSQL client is missing."
+            echo "Checking Ubuntu package repository DNS..."
+
+            if ! getent hosts archive.ubuntu.com >/dev/null 2>&1; then
+              echo "::error::Cannot resolve archive.ubuntu.com."
+              echo "Runner DNS/network connectivity must be fixed."
+              exit 1
+            fi
+
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+
+            echo "PostgreSQL client installed:"
+            psql --version
+          fi
+      - name: Seed isolated hosted-schema PostgreSQL fixture
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-7-hosted-schema-fixture.sql
+      - name: Create private listing submission queue
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261029180725_listing_submission_queue.sql
+      - name: Install allowlisted listing moderation RPCs
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261029182618_allowlisted_listing_moderation.sql
+      - name: Harden listing moderator access
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261029182712_harden_listing_moderation_access.sql
+      - name: Enforce invoker-RLS listing moderation
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261029182749_moderation_invoker_rls.sql
+      - name: Apply Phase 5.7 migration in isolated PostgreSQL
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261108160000_phase5_7_hosted_db_reconciliation_legacy_rpc_closure.sql
+      - name: Verify Phase 5.7 migration signatures, grants and booking behavior
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-7-hosted-schema-assertions.sql
+      - name: Apply Phase 5.7.5 secure payment and athlete moderation migration
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261109100000_phase5_7_5_secure_payment_registration_and_athlete_moderation.sql
+      - name: Verify Phase 5.7.5 payment and athlete moderation security
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-7-5-hosted-schema-assertions.sql
+      - name: Apply Phase 5.8.1.4 payment schema compatibility migration
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261109193312_phase5_8_1_4_payment_schema_compatibility.sql
+      - name: Verify Phase 5.8.1.4 paise and webhook lifecycle
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-8-1-4-payment-schema-assertions.sql
+      - name: Apply Phase 5.8.2 Razorpay order creation schema
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110100000_phase5_8_2_razorpay_order_creation.sql
+      - name: Verify Phase 5.8.2 checkout capability and provider order lifecycle
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-8-2-payment-order-assertions.sql
+      - name: Apply Phase 5.8.3 payment verification hardening
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110120000_phase5_8_3_payment_verification_hardening.sql
+      - name: Verify Phase 5.8.3 strict settlement grants and invariants
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-5-8-3-payment-verification-assertions.sql
+      - name: Apply core catalogue and listing integrity hardening
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110143000_phase_core_catalogue_listing_integrity.sql
+      - name: Close residual public catalogue privileges
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110043733_phase_core_catalogue_privilege_closure.sql
+      - name: Restrict listing review RPC execution
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110043804_phase_listing_review_rpc_execute_closure.sql
+      - name: Restrict listing moderator helper execution
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110043836_phase_listing_moderator_helper_execute_grant.sql
+      - name: Verify core catalogue and listing integrity
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-core-catalogue-listing-integrity-assertions.sql
+      - name: Test anonymous, authenticated, moderator and service-role listing boundaries
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-core-catalogue-listing-moderator-flow.sql
+      - name: Apply moderation notifications prerequisite
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110150000_phase_moderation_notifications.sql
+      - name: Apply Phase 3 complete listing moderation and publication migration
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261110160000_phase_3_listing_moderation_publication_system.sql
+      - name: Apply Phase 3.1 publication integrity and admin control panel
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261111100000_phase_3_1_publication_integrity_admin_control_panel.sql
+      - name: Verify Phase 3.1 evidence, role and publication integrity
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-1-integrity-assertions.sql
+      - name: Verify Phase 3 moderation and publication assertions
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-moderation-publication-assertions.sql
+      - name: Test Phase 3 end-to-end moderation lifecycle and publication flow
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-moderation-lifecycle-flow.sql
+      - name: Test Phase 3.1 category-specific publication integrity
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-1-publication-category-flow.sql
+      - name: Remove unsupported seeded coach verification claims
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112120000_require_evidence_for_seeded_coach_profiles.sql
+      - name: Allow anonymous free listing intake
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112125000_allow_anonymous_listing_intake.sql
+      - name: Harden free listing intake validation and rate limiting
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112140000_harden_public_listing_intake_rpc.sql
+      - name: Require verified status for public directory reads
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112130000_require_verified_status_for_public_directory_rls.sql
+      - name: Synchronize verified publication state
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112145000_sync_verified_listing_publication.sql
+      - name: Seed legacy directory review fixtures
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-4-legacy-directory-fixture.sql
+      - name: Queue legacy unverified directory records for review
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261112150000_queue_legacy_unverified_directory_records.sql
+      - name: Reject explicitly labelled test-only legacy venues
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261114120000_reject_test_only_legacy_venues.sql
+      - name: Verify test-only venue records are not publishable
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-b-test-only-data-assertions.sql
+      - name: Unpublish unverified legacy catalogue rows
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261114130000_unpublish_unverified_catalogue_rows.sql
+      - name: Assert every published catalogue row is verified
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-b-published-verified-assertions.sql
+      - name: Assert anonymous users can read verified listings only
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-2-public-directory-verification.sql
+      - name: Test anonymous listing intake validation and rate limiting
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-3-listing-intake-hardening.sql
+      - name: Test legacy directory review queue and verified publication sync
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-3-4-legacy-directory-review.sql
+      - name: Harden Phase B listing trigger functions and helper search paths
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261114100000_phase_b_listing_function_hardening.sql
+      - name: Verify Phase B trigger ACLs and supported intake path
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-b-function-hardening-assertions.sql
+      - name: Add Phase B catalogue and moderation foreign-key indexes
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261114110000_phase_b_listing_fk_indexes.sql
+      - name: Verify Phase B foreign-key indexes
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-b-index-assertions.sql
+      - name: Align isolated PostgreSQL fixture with hosted Phase A schema
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-a-hosted-schema-fixture.sql
+      - name: Apply Phase A security default privilege hardening
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174100_phase_a_security_default_privilege_hardening.sql
+      - name: Apply Phase A sequence privilege correction
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174236_phase_a_sequence_privilege_correction.sql
+      - name: Restrict pickup-game creation to authenticated callers
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174338_phase_a_restrict_authenticated_game_creation.sql
+      - name: Optimize owner RLS auth identity evaluation
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174449_phase_a_rls_initplan_optimization.sql
+      - name: Verify Phase A security privilege boundaries
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-a-security-privilege-assertions.sql
+      - name: Validate SQL migration safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(supabase/migrations/*.sql)
+          if (("${#files[@]}" == 0)); then
+            echo "No SQL migrations found"; exit 1
+          fi
+          for file in "${files[@]}"; do
+            base="$(basename "$file")"
+            if [[ ! "$base" =~ ^[0-9]{14}_[a-z0-9_]+\.sql$ ]]; then
+              echo "Invalid migration filename: $base"; exit 1
+            fi
+            grep -Eiq '^[[:space:]]*begin([;[:space:]]|$)' "$file" || { echo "$base is missing BEGIN"; exit 1; }
+            grep -Eiq '^[[:space:]]*commit[[:space:]]*;' "$file" || { echo "$base is missing COMMIT"; exit 1; }
+            if grep -Eiq '^[[:space:]]*(drop[[:space:]]+(table|schema|database)|truncate([[:space:]]|;))' "$file"; then
+              echo "Potentially destructive statement in $base; require explicit review and an approved exception"; exit 1
+            fi
+          done
+          for check in "npm run typecheck" "npm run lint" "npm run test" "npm run build" "npm run typecheck:admin" "npm run build:admin"; do
+            grep -Fq "$check" .github/workflows/ci.yml || { echo "Required CI check missing: $check"; exit 1; }
+          done
+      - name: Set up Deno for Edge Function type checking
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Typecheck secure payment registration Edge Function
+        run: deno check supabase/functions/register-payment-intent/index.ts
+      - name: Typecheck Razorpay webhook Edge Function
+        run: deno check supabase/functions/razorpay-webhook/index.ts
+      - name: Typecheck Razorpay sandbox order Edge Function
+        run: deno check supabase/functions/create-razorpay-order/index.ts
+      - name: Typecheck Razorpay payment verification Edge Function
+        run: deno check supabase/functions/verify-razorpay-payment/index.ts
+      - name: Test webhook settlement outcome classification
+        run: deno test supabase/functions/_shared/webhookSettlement.deno.ts
+      - name: Test strict Razorpay provider verification
+        run: deno test supabase/functions/_shared/razorpayVerification.deno.ts
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+      - name: Typecheck isolated KhelGrid Admin application
+        run: npm run typecheck:admin
+      - name: Build isolated KhelGrid Admin application against approved development Supabase project
+        run: npm run build:admin
+        env:
+          VITE_SUPABASE_URL: https://hznsbxvovjxvmnchzzqt.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key

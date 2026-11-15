@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+  xmlns:dc="http://purl.org/dc/elements/1.1/"
+  xmlns:prism="http://prismstandard.org/namespaces/basic/2.0/"
+  xmlns:atom="http://www.w3.org/2005/Atom"
+  xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>KhelChronicle Preprints · Open Sports Science Research Archive</title>
+    <link>https://khelgrid.com/khelchronicle</link>
+    <description>Open-access preprint repository for Indian sports science, biomechanics, exercise physiology, sports medicine, sports nutrition, sports analytics, and grassroots athletic benchmarks.</description>
+    <language>en-IN</language>
+    <copyright>Copyright (c) 2026 KhelChronicle authors under Creative Commons CC BY 4.0 International</copyright>
+    <lastBuildDate>Sun, 15 Nov 2026 00:00:00 GMT</lastBuildDate>
+    <docs>https://www.rssboard.org/rss-specification</docs>
+    <generator>KhelChronicle RSS Engine v1.0</generator>
+    <atom:link href="https://khelgrid.com/khelchronicle/feed.xml" rel="self" type="application/rss+xml" />
+    <image>
+      <url>https://khelgrid.com/assets/kg-logo.webp</url>
+      <title>KhelChronicle Preprints · Open Sports Science Research Archive</title>
+      <link>https://khelgrid.com/khelchronicle</link>
+    </image>
+    <item>
+      <title><![CDATA[Kinematic Correlates of Lumbar Spine Stress and Ball Release Velocity in Indian Junior Fast Bowlers: A Multi-Centre Motion Capture Study]]></title>
+      <link>https://khelgrid.com/khelchronicle/kinematic-correlates-lumbar-spine-stress-fast-bowlers</link>
+      <guid isPermaLink="true">https://khelgrid.com/khelchronicle/kinematic-correlates-lumbar-spine-stress-fast-bowlers</guid>
+      <pubDate>Sat, 24 Oct 2026 00:00:00 GMT</pubDate>
+      <category><![CDATA[Sports Biomechanics]]></category>
+      <description><![CDATA[Background: Lumbar bone stress injuries (LBSIs) account for over 35% of time-loss injuries among emerging Indian fast bowlers, particularly during competitive transitions from U-16 to U-19 state championships. While bowling action kinematics have been documented in Western academies, longitudinal kinetic data under Indian subcontinental pitch and climate conditions remain scarce.
+
+Methods: Eighty-five competitive male U-19 pace bowlers (mean age 17.8 ± 0.9 yrs, mean run-up velocity 5.82 ± 0.41 m/s) underwent synchronous 12-camera 250 Hz optical motion capture and dual Kistler force-plate ground reaction force (GRF) analysis during 6-over spell simulations across three regional high-performance centres (Patiala, Bengaluru, and Chennai). Kinematic parameters including front-knee flexion angle at front-foot contact (FFC), peak braking force, shoulder counter-rotation (SCR), and lateral trunk flexion were evaluated against continuous ball velocity measured via Stalker Pro II radar.
+
+Results: Bowlers demonstrating mixed bowling actions with shoulder counter-rotation exceeding 32.5° experienced significantly higher peak vertical GRF (8.4 ± 0.9 BW vs 6.1 ± 0.7 BW, p < 0.001) and elevated lateral lumbar shear forces. A straight front knee at FFC (flexion < 12°) correlated positively with higher release velocity (+4.2 km/h, p = 0.008), but doubled the lumbar rotational impulse when coupled with delayed non-bowling arm pull.
+
+Conclusion: Restricting shoulder counter-rotation below 25° while conditioning the quadriceps-hamstring co-contraction ratio to buffer peak braking forces significantly reduces lumbar spine stress without diminishing competitive ball speed. Coaches must enforce biomechanical screening during state selection combines to identify high-risk action mechanics before bilateral pars interarticularis fractures manifest.]]></description>
+      <dc:creator><![CDATA[Dr. Vikramaditya Rathore (Department of Sports Biomechanics, National Institute of Sports (NIS), Patiala)]]></dc:creator>
+      <dc:creator><![CDATA[Dr. Alok Sen (KhelGrid Sports Biomechanics & Human Performance Lab, Bengaluru)]]></dc:creator>
+      <dc:date>2026-10-24</dc:date>
+      <dc:identifier>https://doi.org/10.51224/khelchronicle.2026.001</dc:identifier>
+      <dc:rights>CC BY-NC-ND 4.0</dc:rights>
+      <dc:relation><![CDATA[https://orcid.org/0000-0002-8941-4412]]></dc:relation>
+      <dc:relation><![CDATA[https://orcid.org/0000-0003-1204-7789]]></dc:relation>
+      <prism:doi>10.51224/khelchronicle.2026.001</prism:doi>
+      <prism:section><![CDATA[Sports Biomechanics]]></prism:section>
+      <prism:publicationDate>2026-10-24</prism:publicationDate>
+      <prism:corporateName>KhelChronicle Open Sports Research Archive</prism:corporateName>
+      <prism:edition>v1.1</prism:edition>
+      <enclosure url="https://khelgrid.com/khelchronicle/kinematic-correlates-lumbar-spine-stress-fast-bowlers.pdf" length="0" type="application/pdf" />
+      <content:encoded><![CDATA[
+        <article>
+          <header>
+            <p><strong>Preprint ID:</strong> KG-2026-001 · <strong>Version:</strong> v1.1</p>
+            <p><strong>Permanent DOI:</strong> <a href="https://doi.org/10.51224/khelchronicle.2026.001">https://doi.org/10.51224/khelchronicle.2026.001</a></p>
+            <p><strong>Discipline:</strong> Sports Biomechanics | <strong>Sport:</strong> Cricket</p>
+            <p><strong>Authors:</strong> Dr. Vikramaditya Rathore, Dr. Alok Sen</p>
+          </header>
+          <section>
+            <h3>Structured Abstract</h3>
+            <p>Background: Lumbar bone stress injuries (LBSIs) account for over 35% of time-loss injuries among emerging Indian fast bowlers, particularly during competitive transitions from U-16 to U-19 state championships. While bowling action kinematics have been documented in Western academies, longitudinal kinetic data under Indian subcontinental pitch and climate conditions remain scarce.</p><p>Methods: Eighty-five competitive male U-19 pace bowlers (mean age 17.8 ± 0.9 yrs, mean run-up velocity 5.82 ± 0.41 m/s) underwent synchronous 12-camera 250 Hz optical motion capture and dual Kistler force-plate ground reaction force (GRF) analysis during 6-over spell simulations across three regional high-performance centres (Patiala, Bengaluru, and Chennai). Kinematic parameters including front-knee flexion angle at front-foot contact (FFC), peak braking force, shoulder counter-rotation (SCR), and lateral trunk flexion were evaluated against continuous ball velocity measured via Stalker Pro II radar.</p><p>Results: Bowlers demonstrating mixed bowling actions with shoulder counter-rotation exceeding 32.5° experienced significantly higher peak vertical GRF (8.4 ± 0.9 BW vs 6.1 ± 0.7 BW, p < 0.001) and elevated lateral lumbar shear forces. A straight front knee at FFC (flexion < 12°) correlated positively with higher release velocity (+4.2 km/h, p = 0.008), but doubled the lumbar rotational impulse when coupled with delayed non-bowling arm pull.</p><p>Conclusion: Restricting shoulder counter-rotation below 25° while conditioning the quadriceps-hamstring co-contraction ratio to buffer peak braking forces significantly reduces lumbar spine stress without diminishing competitive ball speed. Coaches must enforce biomechanical screening during state selection combines to identify high-risk action mechanics before bilateral pars interarticularis fractures manifest.</p>
+          </section>
+          <footer>
+            <p><a href="https://khelgrid.com/khelchronicle/kinematic-correlates-lumbar-spine-stress-fast-bowlers">Read Full Galley on KhelChronicle</a> | <a href="https://khelgrid.com/khelchronicle/kinematic-correlates-lumbar-spine-stress-fast-bowlers.pdf">Download PDF</a></p>
+          </footer>
+        </article>
+      ]]></content:encoded>
+    </item>
+    <item>
+      <title><![CDATA[Normative Physical Fitness Percentiles (Yo-Yo IR1, 30m Sprint, Countermovement Jump) Across 4,800 Grassroots Athletes in 16 Indian Metropolitan and Rural Districts]]></title>
+      <link>https://khelgrid.com/khelchronicle/normative-fitness-percentiles-grassroots-athletes-india</link>
+      <guid isPermaLink="true">https://khelgrid.com/khelchronicle/normative-fitness-percentiles-grassroots-athletes-india</guid>
+      <pubDate>Sun, 18 Oct 2026 00:00:00 GMT</pubDate>
+      <category><![CDATA[Exercise Physiology]]></category>
+      <description><![CDATA[Background: Talent identification in Indian grassroots sports has historically relied upon subjective visual evaluation by scouts, frequently resulting in late talent recognition or selection biases influenced by early biological maturity. The absence of broad, multi-regional normative percentile benchmarks for standardized physical tests has hindered objective coaching intervention.
+
+Methods: Cross-sectional physical conditioning testing was administered to 4,820 competitive grassroots athletes (3,140 male, 1,680 female; ages 12.0 to 22.8 yrs) across 16 major Indian sporting centres (Delhi NCR, Mumbai, Bengaluru, Hyderabad, Pune, Kolkata, Chennai, Ahmedabad, Chandigarh, Bhubaneswar, Lucknow, Jaipur, Bhopal, Kochi, Ranchi, and Dehradun). Evaluated parameters included aerobic intermittent endurance (Yo-Yo Intermittent Recovery Test Level 1), linear acceleration and maximum speed (electronic timing gate 10m and 30m sprints), and vertical jump height (Countermovement Jump [CMJ] via calibrated contact mat).
+
+Results: Centile curves (10th, 25th, 50th, 75th, 90th, and 95th percentiles) were stratified across four standardized age groups (U-14, U-16, U-19, and Senior Open) across major sports disciplines. Male U-16 athletes at the 90th percentile recorded Yo-Yo IR1 distances of ≥ 1,840 meters, 30m sprint times of ≤ 4.08 seconds, and CMJ heights of ≥ 48.2 cm. Regional physiological variations highlighted superior aerobic endurance scores among high-altitude and tribal sporting corridors in Jharkhand and Uttarakhand.
+
+Conclusion: These normative tables establish the first open-access, multi-regional athletic percentile distribution for Indian youth sport. Selectors, academies, and coaches can benchmark individual testing scores against true national percentiles rather than relying on disparate Western athletic databases.]]></description>
+      <dc:creator><![CDATA[Dr. Rajeshwari Nair (Department of Exercise Physiology, Lakshmibai National Institute of Physical Education (LNIPE), Gwalior)]]></dc:creator>
+      <dc:creator><![CDATA[Dr. Alok Sen (KhelGrid Sports Biomechanics & Human Performance Lab, Bengaluru)]]></dc:creator>
+      <dc:date>2026-10-18</dc:date>
+      <dc:identifier>https://doi.org/10.51224/khelchronicle.2026.002</dc:identifier>
+      <dc:rights>CC BY-NC-ND 4.0</dc:rights>
+      <dc:relation><![CDATA[https://orcid.org/0000-0001-9952-3310]]></dc:relation>
+      <dc:relation><![CDATA[https://orcid.org/0000-0003-1204-7789]]></dc:relation>
+      <prism:doi>10.51224/khelchronicle.2026.002</prism:doi>
+      <prism:section><![CDATA[Exercise Physiology]]></prism:section>
+      <prism:publicationDate>2026-10-18</prism:publicationDate>
+      <prism:corporateName>KhelChronicle Open Sports Research Archive</prism:corporateName>
+      <prism:edition>v1.0</prism:edition>
+      <enclosure url="https://khelgrid.com/khelchronicle/normative-fitness-percentiles-grassroots-athletes-india.pdf" length="0" type="application/pdf" />
+      <content:encoded><![CDATA[
+        <article>
+          <header>
+            <p><strong>Preprint ID:</strong> KG-2026-002 · <strong>Version:</strong> v1.0</p>
+            <p><strong>Permanent DOI:</strong> <a href="https://doi.org/10.51224/khelchronicle.2026.002">https://doi.org/10.51224/khelchronicle.2026.002</a></p>
+            <p><strong>Discipline:</strong> Exercise Physiology | <strong>Sport:</strong> Multi-Sport</p>
+            <p><strong>Authors:</strong> Dr. Rajeshwari Nair, Dr. Alok Sen</p>
+          </header>
+          <section>
+            <h3>Structured Abstract</h3>
+            <p>Background: Talent identification in Indian grassroots sports has historically relied upon subjective visual evaluation by scouts, frequently resulting in late talent recognition or selection biases influenced by early biological maturity. The absence of broad, multi-regional normative percentile benchmarks for standardized physical tests has hindered objective coaching intervention.</p><p>Methods: Cross-sectional physical conditioning testing was administered to 4,820 competitive grassroots athletes (3,140 male, 1,680 female; ages 12.0 to 22.8 yrs) across 16 major Indian sporting centres (Delhi NCR, Mumbai, Bengaluru, Hyderabad, Pune, Kolkata, Chennai, Ahmedabad, Chandigarh, Bhubaneswar, Lucknow, Jaipur, Bhopal, Kochi, Ranchi, and Dehradun). Evaluated parameters included aerobic intermittent endurance (Yo-Yo Intermittent Recovery Test Level 1), linear acceleration and maximum speed (electronic timing gate 10m and 30m sprints), and vertical jump height (Countermovement Jump [CMJ] via calibrated contact mat).</p><p>Results: Centile curves (10th, 25th, 50th, 75th, 90th, and 95th percentiles) were stratified across four standardized age groups (U-14, U-16, U-19, and Senior Open) across major sports disciplines. Male U-16 athletes at the 90th percentile recorded Yo-Yo IR1 distances of ≥ 1,840 meters, 30m sprint times of ≤ 4.08 seconds, and CMJ heights of ≥ 48.2 cm. Regional physiological variations highlighted superior aerobic endurance scores among high-altitude and tribal sporting corridors in Jharkhand and Uttarakhand.</p><p>Conclusion: These normative tables establish the first open-access, multi-regional athletic percentile distribution for Indian youth sport. Selectors, academies, and coaches can benchmark individual testing scores against true national percentiles rather than relying on disparate Western athletic databases.</p>
+          </section>
+          <footer>
+            <p><a href="https://khelgrid.com/khelchronicle/normative-fitness-percentiles-grassroots-athletes-india">Read Full Galley on KhelChronicle</a> | <a href="https://khelgrid.com/khelchronicle/normative-fitness-percentiles-grassroots-athletes-india.pdf">Download PDF</a></p>
+          </footer>
+        </article>
+      ]]></content:encoded>
+    </item>
+    <item>
+      <title><![CDATA[Comparative Reliability of TW3 Radiographic Skeletal Age Assessment Versus Dental Maturation (Demirjian Method) in Mitigating Age Fraud in Sub-Junior State Tournaments]]></title>
+      <link>https://khelgrid.com/khelchronicle/tw3-radiographic-bone-age-vs-dental-maturity-age-fraud</link>
+      <guid isPermaLink="true">https://khelgrid.com/khelchronicle/tw3-radiographic-bone-age-vs-dental-maturity-age-fraud</guid>
+      <pubDate>Mon, 12 Oct 2026 00:00:00 GMT</pubDate>
+      <category><![CDATA[Sports Medicine]]></category>
+      <description><![CDATA[Background: Age fraud poses an existential threat to fair play and athletic development in Indian grassroots sport, especially in Under-14 and Under-16 selection combines where overage athletes gain physical advantages over biologically compliant peers. While municipal birth certificates remain legally foundational, document fabrication is prevalent in rural districts. Sports governing bodies frequently resort to radiographic bone-age estimation without standardized diagnostic protocols.
+
+Methods: Three hundred twenty junior athletes (mean documented age 13.6 ± 1.1 yrs) presenting at state championship screening combines underwent dual radiographic evaluation: non-dominant wrist radiograph analyzed via Tanner-Whitehouse 3 (TW3) RUS (Radius, Ulna, Short bones) skeletal scoring, and panoramic dental radiograph evaluated through the Demirjian 7-tooth maturation method. Skeletal and dental age estimates were compared against certified municipal birth records issued within 30 days of birth.
+
+Results: TW3 skeletal age demonstrated a significantly higher correlation with true biological age (r = 0.89, 95% CI 0.86–0.91) and a lower standard error of estimate (SEE = 0.64 years) compared to the Demirjian dental method (r = 0.74, SEE = 1.12 years). In athletes whose birth certificates were registered late (> 1 year post-birth), TW3 revealed that 28.4% exceeded the documented age cutoff by more than 1.5 biological years.
+
+Conclusion: The TW3 RUS skeletal scoring protocol provides the most robust, legally defensible, and reproducible diagnostic standard for sports associations in India. Incorporating digital radiographic protocols alongside municipal digital verification eradicates overage participation while protecting late-maturing genuine athletes from wrongful exclusion.]]></description>
+      <dc:creator><![CDATA[Dr. Pradeep K. Chatterjee (Department of Radiodiagnosis & Sports Medicine, PGIMER Chandigarh)]]></dc:creator>
+      <dc:creator><![CDATA[Dr. Vikramaditya Rathore (Department of Sports Biomechanics, National Institute of Sports (NIS), Patiala)]]></dc:creator>
+      <dc:date>2026-10-12</dc:date>
+      <dc:identifier>https://doi.org/10.51224/khelchronicle.2026.003</dc:identifier>
+      <dc:rights>CC BY-NC-ND 4.0</dc:rights>
+      <dc:relation><![CDATA[https://orcid.org/0000-0002-4419-8104]]></dc:relation>
+      <dc:relation><![CDATA[https://orcid.org/0000-0002-8941-4412]]></dc:relation>
+      <prism:doi>10.51224/khelchronicle.2026.003</prism:doi>
+      <prism:section><![CDATA[Sports Medicine]]></prism:section>
+      <prism:publicationDate>2026-10-12</prism:publicationDate>
+      <prism:corporateName>KhelChronicle Open Sports Research Archive</prism:corporateName>
+      <prism:edition>v1.0</prism:edition>
+      <enclosure url="https://khelgrid.com/khelchronicle/tw3-radiographic-bone-age-vs-dental-maturity-age-fraud.pdf" length="0" type="application/pdf" />
+      <content:encoded><![CDATA[
+        <article>
+          <header>
+            <p><strong>Preprint ID:</strong> KG-2026-003 · <strong>Version:</strong> v1.0</p>
+            <p><strong>Permanent DOI:</strong> <a href="https://doi.org/10.51224/khelchronicle.2026.003">https://doi.org/10.51224/khelchronicle.2026.003</a></p>
+            <p><strong>Discipline:</strong> Sports Medicine | <strong>Sport:</strong> Multi-Sport</p>
+            <p><strong>Authors:</strong> Dr. Pradeep K. Chatterjee, Dr. Vikramaditya Rathore</p>
+          </header>
+          <section>
+            <h3>Structured Abstract</h3>
+            <p>Background: Age fraud poses an existential threat to fair play and athletic development in Indian grassroots sport, especially in Under-14 and Under-16 selection combines where overage athletes gain physical advantages over biologically compliant peers. While municipal birth certificates remain legally foundational, document fabrication is prevalent in rural districts. Sports governing bodies frequently resort to radiographic bone-age estimation without standardized diagnostic protocols.</p><p>Methods: Three hundred twenty junior athletes (mean documented age 13.6 ± 1.1 yrs) presenting at state championship screening combines underwent dual radiographic evaluation: non-dominant wrist radiograph analyzed via Tanner-Whitehouse 3 (TW3) RUS (Radius, Ulna, Short bones) skeletal scoring, and panoramic dental radiograph evaluated through the Demirjian 7-tooth maturation method. Skeletal and dental age estimates were compared against certified municipal birth records issued within 30 days of birth.</p><p>Results: TW3 skeletal age demonstrated a significantly higher correlation with true biological age (r = 0.89, 95% CI 0.86–0.91) and a lower standard error of estimate (SEE = 0.64 years) compared to the Demirjian dental method (r = 0.74, SEE = 1.12 years). In athletes whose birth certificates were registered late (> 1 year post-birth), TW3 revealed that 28.4% exceeded the documented age cutoff by more than 1.5 biological years.</p><p>Conclusion: The TW3 RUS skeletal scoring protocol provides the most robust, legally defensible, and reproducible diagnostic standard for sports associations in India. Incorporating digital radiographic protocols alongside municipal digital verification eradicates overage participation while protecting late-maturing genuine athletes from wrongful exclusion.</p>
+          </section>
+          <footer>
+            <p><a href="https://khelgrid.com/khelchronicle/tw3-radiographic-bone-age-vs-dental-maturity-age-fraud">Read Full Galley on KhelChronicle</a> | <a href="https://khelgrid.com/khelchronicle/tw3-radiographic-bone-age-vs-dental-maturity-age-fraud.pdf">Download PDF</a></p>
+          </footer>
+        </article>
+      ]]></content:encoded>
+    </item>
+    <item>
+      <title><![CDATA[Machine Learning Predictive Modeling for Grassroots Talent Identification in Domestic Cricket: Beyond Traditional Batting Averages]]></title>
+      <link>https://khelgrid.com/khelchronicle/predictive-talent-identification-models-domestic-cricket</link>
+      <guid isPermaLink="true">https://khelgrid.com/khelchronicle/predictive-talent-identification-models-domestic-cricket</guid>
+      <pubDate>Tue, 06 Oct 2026 00:00:00 GMT</pubDate>
+      <category><![CDATA[Sports Analytics]]></category>
+      <description><![CDATA[Background: Traditional cricket talent identification predominantly relies upon aggregate outcome metrics such as batting averages and strike rates recorded across small sample sizes. In competitive age-group selections, these metrics are distorted by match situations, opposition bowling strength, and pitch deterioration.
+
+Methods: Ball-tracking computer vision data and inertial sensor metrics were gathered across 14,200 deliveries bowled during competitive U-16 state selection combine matches. Features including false-shot percentage, boundary-to-dot ratio, seam release consistency, and velocity retention across 4-over spells were trained using an ensemble Gradient Boosting model (XGBoost) to predict selection into final state tournament squads.
+
+Results: The machine learning model predicted subsequent squad retention with an Area Under the Curve (AUC) of 0.88, significantly outperforming traditional batting and bowling averages (AUC = 0.63, p < 0.001). Ball release consistency and control percentage against back-of-a-length deliveries were the two highest feature importance drivers for batters.
+
+Conclusion: Algorithmic performance evaluation provides objective, bias-free decision support for selectors and coaches, democratizing scouting for athletes from remote districts who lack high-profile school team reputations.]]></description>
+      <dc:creator><![CDATA[Ananya Mukherjee (Center for Sports Science & AI, Indian Institute of Technology (IIT) Madras)]]></dc:creator>
+      <dc:creator><![CDATA[Dr. Alok Sen (KhelGrid Sports Biomechanics & Human Performance Lab, Bengaluru)]]></dc:creator>
+      <dc:date>2026-10-06</dc:date>
+      <dc:identifier>https://doi.org/10.51224/khelchronicle.2026.004</dc:identifier>
+      <dc:rights>CC BY-NC-ND 4.0</dc:rights>
+      <dc:relation><![CDATA[https://orcid.org/0000-0003-8821-6544]]></dc:relation>
+      <dc:relation><![CDATA[https://orcid.org/0000-0003-1204-7789]]></dc:relation>
+      <prism:doi>10.51224/khelchronicle.2026.004</prism:doi>
+      <prism:section><![CDATA[Sports Analytics]]></prism:section>
+      <prism:publicationDate>2026-10-06</prism:publicationDate>
+      <prism:corporateName>KhelChronicle Open Sports Research Archive</prism:corporateName>
+      <prism:edition>v1.0</prism:edition>
+      <enclosure url="https://khelgrid.com/khelchronicle/predictive-talent-identification-models-domestic-cricket.pdf" length="0" type="application/pdf" />
+      <content:encoded><![CDATA[
+        <article>
+          <header>
+            <p><strong>Preprint ID:</strong> KG-2026-004 · <strong>Version:</strong> v1.0</p>
+            <p><strong>Permanent DOI:</strong> <a href="https://doi.org/10.51224/khelchronicle.2026.004">https://doi.org/10.51224/khelchronicle.2026.004</a></p>
+            <p><strong>Discipline:</strong> Sports Analytics | <strong>Sport:</strong> Cricket</p>
+            <p><strong>Authors:</strong> Ananya Mukherjee, Dr. Alok Sen</p>
+          </header>
+          <section>
+            <h3>Structured Abstract</h3>
+            <p>Background: Traditional cricket talent identification predominantly relies upon aggregate outcome metrics such as batting averages and strike rates recorded across small sample sizes. In competitive age-group selections, these metrics are distorted by match situations, opposition bowling strength, and pitch deterioration.</p><p>Methods: Ball-tracking computer vision data and inertial sensor metrics were gathered across 14,200 deliveries bowled during competitive U-16 state selection combine matches. Features including false-shot percentage, boundary-to-dot ratio, seam release consistency, and velocity retention across 4-over spells were trained using an ensemble Gradient Boosting model (XGBoost) to predict selection into final state tournament squads.</p><p>Results: The machine learning model predicted subsequent squad retention with an Area Under the Curve (AUC) of 0.88, significantly outperforming traditional batting and bowling averages (AUC = 0.63, p < 0.001). Ball release consistency and control percentage against back-of-a-length deliveries were the two highest feature importance drivers for batters.</p><p>Conclusion: Algorithmic performance evaluation provides objective, bias-free decision support for selectors and coaches, democratizing scouting for athletes from remote districts who lack high-profile school team reputations.</p>
+          </section>
+          <footer>
+            <p><a href="https://khelgrid.com/khelchronicle/predictive-talent-identification-models-domestic-cricket">Read Full Galley on KhelChronicle</a> | <a href="https://khelgrid.com/khelchronicle/predictive-talent-identification-models-domestic-cricket.pdf">Download PDF</a></p>
+          </footer>
+        </article>
+      ]]></content:encoded>
+    </item>
+    <item>
+      <title><![CDATA[Structural and Socioeconomic Barriers to Grassroots Athletic Participation: A Geospatial Analysis of Sports Infrastructure Across Rural India]]></title>
+      <link>https://khelgrid.com/khelchronicle/grassroots-sports-infrastructure-disparities-rural-india</link>
+      <guid isPermaLink="true">https://khelgrid.com/khelchronicle/grassroots-sports-infrastructure-disparities-rural-india</guid>
+      <pubDate>Mon, 28 Sep 2026 00:00:00 GMT</pubDate>
+      <category><![CDATA[Sports Development and Policy]]></category>
+      <description><![CDATA[Background: Despite substantive policy enhancements under the Khelo India scheme and increased state budget allocations, disparities in access to certified coaching and standard sporting facilities persist between tier-1 urban metropolitan hubs and rural farming taluks.
+
+Methods: A geospatial mapping study was conducted across 42 rural districts spanning three leading sporting states (Haryana, Odisha, and Maharashtra). GIS spatial analysis mapped travel time to the nearest certified all-weather synthetic track or Olympic-standard turf against district-level socioeconomic indicators, public transport density, and certified coach availability.
+
+Results: Over 68% of grassroots athletes in rural taluks must travel greater than 38 kilometers (mean transit time: 82 minutes) to reach an accredited sports complex. Female participation plummeted sharply where travel times exceeded 45 minutes due to safety concerns and inadequate public transit.
+
+Conclusion: Decentralizing Khelo India State Centres of Excellence into block-level multi-sport training clusters and subsidizing rural transit vouchers are vital policy interventions to ensure equal talent emergence across non-metro India.]]></description>
+      <dc:creator><![CDATA[Dr. Harendra Singh (Center for Sports Policy and Governance, Delhi University)]]></dc:creator>
+      <dc:creator><![CDATA[Dr. Rajeshwari Nair (Department of Exercise Physiology, Lakshmibai National Institute of Physical Education (LNIPE), Gwalior)]]></dc:creator>
+      <dc:date>2026-09-28</dc:date>
+      <dc:identifier>https://doi.org/10.51224/khelchronicle.2026.005</dc:identifier>
+      <dc:rights>CC BY-NC-ND 4.0</dc:rights>
+      <dc:relation><![CDATA[https://orcid.org/0000-0001-7714-9988]]></dc:relation>
+      <dc:relation><![CDATA[https://orcid.org/0000-0001-9952-3310]]></dc:relation>
+      <prism:doi>10.51224/khelchronicle.2026.005</prism:doi>
+      <prism:section><![CDATA[Sports Development and Policy]]></prism:section>
+      <prism:publicationDate>2026-09-28</prism:publicationDate>
+      <prism:corporateName>KhelChronicle Open Sports Research Archive</prism:corporateName>
+      <prism:edition>v1.0</prism:edition>
+      <enclosure url="https://khelgrid.com/khelchronicle/grassroots-sports-infrastructure-disparities-rural-india.pdf" length="0" type="application/pdf" />
+      <content:encoded><![CDATA[
+        <article>
+          <header>
+            <p><strong>Preprint ID:</strong> KG-2026-005 · <strong>Version:</strong> v1.0</p>
+            <p><strong>Permanent DOI:</strong> <a href="https://doi.org/10.51224/khelchronicle.2026.005">https://doi.org/10.51224/khelchronicle.2026.005</a></p>
+            <p><strong>Discipline:</strong> Sports Development and Policy | <strong>Sport:</strong> Multi-Sport</p>
+            <p><strong>Authors:</strong> Dr. Harendra Singh, Dr. Rajeshwari Nair</p>
+          </header>
+          <section>
+            <h3>Structured Abstract</h3>
+            <p>Background: Despite substantive policy enhancements under the Khelo India scheme and increased state budget allocations, disparities in access to certified coaching and standard sporting facilities persist between tier-1 urban metropolitan hubs and rural farming taluks.</p><p>Methods: A geospatial mapping study was conducted across 42 rural districts spanning three leading sporting states (Haryana, Odisha, and Maharashtra). GIS spatial analysis mapped travel time to the nearest certified all-weather synthetic track or Olympic-standard turf against district-level socioeconomic indicators, public transport density, and certified coach availability.</p><p>Results: Over 68% of grassroots athletes in rural taluks must travel greater than 38 kilometers (mean transit time: 82 minutes) to reach an accredited sports complex. Female participation plummeted sharply where travel times exceeded 45 minutes due to safety concerns and inadequate public transit.</p><p>Conclusion: Decentralizing Khelo India State Centres of Excellence into block-level multi-sport training clusters and subsidizing rural transit vouchers are vital policy interventions to ensure equal talent emergence across non-metro India.</p>
+          </section>
+          <footer>
+            <p><a href="https://khelgrid.com/khelchronicle/grassroots-sports-infrastructure-disparities-rural-india">Read Full Galley on KhelChronicle</a> | <a href="https://khelgrid.com/khelchronicle/grassroots-sports-infrastructure-disparities-rural-india.pdf">Download PDF</a></p>
+          </footer>
+        </article>
+      ]]></content:encoded>
+    </item>
+    <item>
+      <title><![CDATA[High-Altitude Hypoxic Conditioning and Total Hemoglobin Mass Expansion in Subcontinental Distance Runners: A Multi-Elevation Trial at Shillaroo (2,680m)]]></title>
+      <link>https://khelgrid.com/khelchronicle/high-altitude-hypoxic-conditioning-himalayan-runners</link>
+      <guid isPermaLink="true">https://khelgrid.com/khelchronicle/high-altitude-hypoxic-conditioning-himalayan-runners</guid>
+      <pubDate>Wed, 04 Nov 2026 00:00:00 GMT</pubDate>
+      <category><![CDATA[Exercise Physiology]]></category>
+      <description><![CDATA[Background: Aerobic capacity and hematological adaptations in elite distance runners depend critically on environmental hypoxic exposure. While African and European altitude conditioning protocols are extensively documented, empirical data on subcontinental runners residing in the Western Himalayas under natural terrestrial altitude conditions remain scarce. We investigated the effects of a 6-week Live High-Train Low (LHTL) natural altitude residency at the High Altitude Sports Training Centre (HASTC, 2,680m) in Shillaroo, Himachal Pradesh, on total hemoglobin mass (Hbmass), serum erythropoietin (EPO), and subsequent sea-level running performance.
+
+Methods: Forty-four competitive national-level junior distance runners (24 male, 20 female; mean age 18.2 ± 1.1 yrs, sea-level baseline VO2max 66.4 ± 4.2 mL/kg/min) were assigned to either a 6-week LHTL intervention (residence at 2,680m Shillaroo, daily speed sessions at 1,450m Rampur Bushahr) or a normoxic sea-level control group (Patiala, 250m). Total hemoglobin mass was measured via the optimized carbon monoxide (CO) rebreathing method at baseline, week 3, week 6, and 2 weeks post-descent. Physiological parameters including VO2max, submaximal blood lactate thresholds, running economy (VO2 at 16 km/h), and competitive 5,000m track trial times were quantified at sea level before and after the camp.
+
+Results: The LHTL cohort demonstrated a statistically significant +6.8% increase in total Hbmass (from 11.8 ± 0.9 g/kg to 12.6 ± 0.8 g/kg, p < 0.001) compared to +0.4% in sea-level controls. Serum EPO peaked on day 3 at altitude (23.4 ± 4.6 mIU/mL vs baseline 8.9 ± 1.8 mIU/mL) and stabilized by week 3. Post-descent sea-level VO2max improved by +4.3% (p = 0.004) alongside a 14.8-second reduction in 5,000m time trial performance (mean time 14:48.2 vs 15:03.0, p < 0.001). Running economy at submaximal race pace improved by 3.1% with no adverse hematocrit or ferritin depletion under oral iron supplementation.
+
+Conclusion: A 6-week natural LHTL protocol at 2,680m elevation yields robust erythropoietic and hematological adaptations in Indian distance runners, leading to meaningful sea-level endurance performance enhancements. High-altitude centers in the Western Himalayas offer a potent, ecologically valid alternative to artificial hypoxic chambers or overseas altitude camps for national track and field preparation.]]></description>
+      <dc:creator><![CDATA[Dr. Tenzing Norbu (High Altitude Sports Training Centre (HASTC), Sports Authority of India (SAI), Shillaroo)]]></dc:creator>
+      <dc:creator><![CDATA[Dr. Rajeshwari Nair (Department of Exercise Physiology, Lakshmibai National Institute of Physical Education (LNIPE), Gwalior)]]></dc:creator>
+      <dc:date>2026-11-04</dc:date>
+      <dc:identifier>https://doi.org/10.51224/khelchronicle.2026.006</dc:identifier>
+      <dc:rights>CC BY-NC-ND 4.0</dc:rights>
+      <dc:relation><![CDATA[https://orcid.org/0000-0002-3914-7721]]></dc:relation>
+      <dc:relation><![CDATA[https://orcid.org/0000-0001-9952-3310]]></dc:relation>
+      <prism:doi>10.51224/khelchronicle.2026.006</prism:doi>
+      <prism:section><![CDATA[Exercise Physiology]]></prism:section>
+      <prism:publicationDate>2026-11-04</prism:publicationDate>
+      <prism:corporateName>KhelChronicle Open Sports Research Archive</prism:corporateName>
+      <prism:edition>v1.0</prism:edition>
+      <enclosure url="https://khelgrid.com/khelchronicle/high-altitude-hypoxic-conditioning-himalayan-runners.pdf" length="0" type="application/pdf" />
+      <content:encoded><![CDATA[
+        <article>
+          <header>
+            <p><strong>Preprint ID:</strong> KG-2026-006 · <strong>Version:</strong> v1.0</p>
+            <p><strong>Permanent DOI:</strong> <a href="https://doi.org/10.51224/khelchronicle.2026.006">https://doi.org/10.51224/khelchronicle.2026.006</a></p>
+            <p><strong>Discipline:</strong> Exercise Physiology | <strong>Sport:</strong> Athletics & Running</p>
+            <p><strong>Authors:</strong> Dr. Tenzing Norbu, Dr. Rajeshwari Nair</p>
+          </header>
+          <section>
+            <h3>Structured Abstract</h3>
+            <p>Background: Aerobic capacity and hematological adaptations in elite distance runners depend critically on environmental hypoxic exposure. While African and European altitude conditioning protocols are extensively documented, empirical data on subcontinental runners residing in the Western Himalayas under natural terrestrial altitude conditions remain scarce. We investigated the effects of a 6-week Live High-Train Low (LHTL) natural altitude residency at the High Altitude Sports Training Centre (HASTC, 2,680m) in Shillaroo, Himachal Pradesh, on total hemoglobin mass (Hbmass), serum erythropoietin (EPO), and subsequent sea-level running performance.</p><p>Methods: Forty-four competitive national-level junior distance runners (24 male, 20 female; mean age 18.2 ± 1.1 yrs, sea-level baseline VO2max 66.4 ± 4.2 mL/kg/min) were assigned to either a 6-week LHTL intervention (residence at 2,680m Shillaroo, daily speed sessions at 1,450m Rampur Bushahr) or a normoxic sea-level control group (Patiala, 250m). Total hemoglobin mass was measured via the optimized carbon monoxide (CO) rebreathing method at baseline, week 3, week 6, and 2 weeks post-descent. Physiological parameters including VO2max, submaximal blood lactate thresholds, running economy (VO2 at 16 km/h), and competitive 5,000m track trial times were quantified at sea level before and after the camp.</p><p>Results: The LHTL cohort demonstrated a statistically significant +6.8% increase in total Hbmass (from 11.8 ± 0.9 g/kg to 12.6 ± 0.8 g/kg, p < 0.001) compared to +0.4% in sea-level controls. Serum EPO peaked on day 3 at altitude (23.4 ± 4.6 mIU/mL vs baseline 8.9 ± 1.8 mIU/mL) and stabilized by week 3. Post-descent sea-level VO2max improved by +4.3% (p = 0.004) alongside a 14.8-second reduction in 5,000m time trial performance (mean time 14:48.2 vs 15:03.0, p < 0.001). Running economy at submaximal race pace improved by 3.1% with no adverse hematocrit or ferritin depletion under oral iron supplementation.</p><p>Conclusion: A 6-week natural LHTL protocol at 2,680m elevation yields robust erythropoietic and hematological adaptations in Indian distance runners, leading to meaningful sea-level endurance performance enhancements. High-altitude centers in the Western Himalayas offer a potent, ecologically valid alternative to artificial hypoxic chambers or overseas altitude camps for national track and field preparation.</p>
+          </section>
+          <footer>
+            <p><a href="https://khelgrid.com/khelchronicle/high-altitude-hypoxic-conditioning-himalayan-runners">Read Full Galley on KhelChronicle</a> | <a href="https://khelgrid.com/khelchronicle/high-altitude-hypoxic-conditioning-himalayan-runners.pdf">Download PDF</a></p>
+          </footer>
+        </article>
+      ]]></content:encoded>
+    </item>
+    <item>
+      <title><![CDATA[Epidemiological Patterns of Contact and Non-Contact Lower Limb Injuries in Semi-Professional Kabaddi: Comparing Synthetic EVA Mats Versus Traditional Clay Akhadas Under Tournament Match Congestion]]></title>
+      <link>https://khelgrid.com/khelchronicle/injury-epidemiology-match-congestion-kabaddi</link>
+      <guid isPermaLink="true">https://khelgrid.com/khelchronicle/injury-epidemiology-match-congestion-kabaddi</guid>
+      <pubDate>Sun, 08 Nov 2026 00:00:00 GMT</pubDate>
+      <category><![CDATA[Sports Medicine]]></category>
+      <description><![CDATA[Background: Kabaddi is a high-intensity collision sport demanding rapid multi-directional accelerations, evasion maneuvers, and physical tackles. While the nationwide transition from traditional clay akhadas to 25mm Ethylene-Vinyl Acetate (EVA) interlocking synthetic mats has modernized play, it has substantially altered surface coefficient of friction and rotational shoe-surface traction. Simultaneously, tournament schedules frequently compress 4 to 6 matches into 72-hour windows, generating severe acute workload spikes. Epidemiological comparisons between surfaces under match congestion have not previously been quantified in Indian leagues.
+
+Methods: A prospective 3-year multi-cohort injury registry tracked 640 registered semi-professional kabaddi athletes (420 male, 220 female; ages 17 to 26 yrs) across 1,120 official competitive matches. Matches were divided between certified 25mm EVA synthetic mats (n=680) and conditioned clay akhada surfaces (n=440). Standardized injury surveillance protocols compliant with the International Olympic Committee (IOC) consensus statement recorded injury incidence per 1,000 player-match hours, anatomical localization, mechanism (contact collision vs non-contact pivot/catch), and time-loss severity. Daily player load was captured via session-RPE to calculate Acute:Chronic Workload Ratios (ACWR).
+
+Results: The overall injury incidence was significantly higher on synthetic EVA mats than on clay akhadas (54.6 vs 38.2 per 1,000 match hours; relative risk [RR] 1.43, 95% CI 1.22–1.68, p < 0.001). Synthetic mats exhibited markedly greater risk of non-contact lower limb ligament injuries, including anterior cruciate ligament (ACL) tears (5.8 vs 1.9 per 1,000 hrs, RR 3.05, p = 0.002) and lateral ankle/syndesmosis sprains (14.2 vs 7.4 per 1,000 hrs, RR 1.92, p < 0.001), attributed to higher rotational shoe-surface friction. Conversely, clay akhadas produced higher rates of cutaneous abrasions and soft-tissue contusions (16.8 vs 4.2 per 1,000 hrs, p < 0.001). When tournament match congestion induced ACWR > 1.5, injury hazard rose 2.8-fold across both surfaces.
+
+Conclusion: Synthetic EVA mats create elevated rotational traction that predisposes kabaddi raiders and defenders to severe non-contact knee and ankle ligament ruptures, particularly during rapid toe-drag pivots and ankle holds. Mitigating these catastrophic injuries requires floor surface friction standardization, neuromuscular warm-up programs emphasizing eccentric hamstring and ankle stabilization, and mandatory scheduling limits preventing consecutive two-match days.]]></description>
+      <dc:creator><![CDATA[Dr. Sunita Malik (Division of Sports Medicine and Arthroscopy, All India Institute of Medical Sciences (AIIMS), New Delhi)]]></dc:creator>
+      <dc:creator><![CDATA[Dr. Pradeep K. Chatterjee (Department of Radiodiagnosis & Sports Medicine, PGIMER Chandigarh)]]></dc:creator>
+      <dc:date>2026-11-08</dc:date>
+      <dc:identifier>https://doi.org/10.51224/khelchronicle.2026.007</dc:identifier>
+      <dc:rights>CC BY-NC-ND 4.0</dc:rights>
+      <dc:relation><![CDATA[https://orcid.org/0000-0003-4518-9923]]></dc:relation>
+      <dc:relation><![CDATA[https://orcid.org/0000-0002-4419-8104]]></dc:relation>
+      <prism:doi>10.51224/khelchronicle.2026.007</prism:doi>
+      <prism:section><![CDATA[Sports Medicine]]></prism:section>
+      <prism:publicationDate>2026-11-08</prism:publicationDate>
+      <prism:corporateName>KhelChronicle Open Sports Research Archive</prism:corporateName>
+      <prism:edition>v1.0</prism:edition>
+      <enclosure url="https://khelgrid.com/khelchronicle/injury-epidemiology-match-congestion-kabaddi.pdf" length="0" type="application/pdf" />
+      <content:encoded><![CDATA[
+        <article>
+          <header>
+            <p><strong>Preprint ID:</strong> KG-2026-007 · <strong>Version:</strong> v1.0</p>
+            <p><strong>Permanent DOI:</strong> <a href="https://doi.org/10.51224/khelchronicle.2026.007">https://doi.org/10.51224/khelchronicle.2026.007</a></p>
+            <p><strong>Discipline:</strong> Sports Medicine | <strong>Sport:</strong> Kabaddi</p>
+            <p><strong>Authors:</strong> Dr. Sunita Malik, Dr. Pradeep K. Chatterjee</p>
+          </header>
+          <section>
+            <h3>Structured Abstract</h3>
+            <p>Background: Kabaddi is a high-intensity collision sport demanding rapid multi-directional accelerations, evasion maneuvers, and physical tackles. While the nationwide transition from traditional clay akhadas to 25mm Ethylene-Vinyl Acetate (EVA) interlocking synthetic mats has modernized play, it has substantially altered surface coefficient of friction and rotational shoe-surface traction. Simultaneously, tournament schedules frequently compress 4 to 6 matches into 72-hour windows, generating severe acute workload spikes. Epidemiological comparisons between surfaces under match congestion have not previously been quantified in Indian leagues.</p><p>Methods: A prospective 3-year multi-cohort injury registry tracked 640 registered semi-professional kabaddi athletes (420 male, 220 female; ages 17 to 26 yrs) across 1,120 official competitive matches. Matches were divided between certified 25mm EVA synthetic mats (n=680) and conditioned clay akhada surfaces (n=440). Standardized injury surveillance protocols compliant with the International Olympic Committee (IOC) consensus statement recorded injury incidence per 1,000 player-match hours, anatomical localization, mechanism (contact collision vs non-contact pivot/catch), and time-loss severity. Daily player load was captured via session-RPE to calculate Acute:Chronic Workload Ratios (ACWR).</p><p>Results: The overall injury incidence was significantly higher on synthetic EVA mats than on clay akhadas (54.6 vs 38.2 per 1,000 match hours; relative risk [RR] 1.43, 95% CI 1.22–1.68, p < 0.001). Synthetic mats exhibited markedly greater risk of non-contact lower limb ligament injuries, including anterior cruciate ligament (ACL) tears (5.8 vs 1.9 per 1,000 hrs, RR 3.05, p = 0.002) and lateral ankle/syndesmosis sprains (14.2 vs 7.4 per 1,000 hrs, RR 1.92, p < 0.001), attributed to higher rotational shoe-surface friction. Conversely, clay akhadas produced higher rates of cutaneous abrasions and soft-tissue contusions (16.8 vs 4.2 per 1,000 hrs, p < 0.001). When tournament match congestion induced ACWR > 1.5, injury hazard rose 2.8-fold across both surfaces.</p><p>Conclusion: Synthetic EVA mats create elevated rotational traction that predisposes kabaddi raiders and defenders to severe non-contact knee and ankle ligament ruptures, particularly during rapid toe-drag pivots and ankle holds. Mitigating these catastrophic injuries requires floor surface friction standardization, neuromuscular warm-up programs emphasizing eccentric hamstring and ankle stabilization, and mandatory scheduling limits preventing consecutive two-match days.</p>
+          </section>
+          <footer>
+            <p><a href="https://khelgrid.com/khelchronicle/injury-epidemiology-match-congestion-kabaddi">Read Full Galley on KhelChronicle</a> | <a href="https://khelgrid.com/khelchronicle/injury-epidemiology-match-congestion-kabaddi.pdf">Download PDF</a></p>
+          </footer>
+        </article>
+      ]]></content:encoded>
+    </item>
+  </channel>
+</rss>

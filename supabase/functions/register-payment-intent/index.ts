@@ -1,0 +1,280 @@
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { calculateVenueAdvanceDeposit, getCanonicalMembershipPrice, resolveVenueSlotPrice } from '../_shared/paymentPricing.ts'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Vary': 'Origin',
+}
+
+type PaymentType = 'pickup_match' | 'venue_booking' | 'trial_registration' | 'membership'
+type PaymentMethod = 'upi' | 'razorpay' | 'card' | 'netbanking' | 'wallet' | 'pay_at_venue'
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
+function parseInr(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) return Math.round(value * 100) / 100
+  if (typeof value !== 'string') return null
+  const clean = value.trim().toLowerCase()
+  if (clean === 'free' || clean === '₹0' || clean === '0') return 0
+  const match = clean.replace(/,/g, '').match(/\d+(?:\.\d{1,2})?/)
+  if (!match) return null
+  const amount = Number(match[0])
+  return Number.isFinite(amount) && amount >= 0 ? Math.round(amount * 100) / 100 : null
+}
+
+async function sha256(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))
+  return Array.from(new Uint8Array(digest)).map(v => v.toString(16).padStart(2, '0')).join('')
+}
+
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method !== 'POST') return json({ error: 'METHOD_NOT_ALLOWED' }, 405)
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
+  if (!supabaseUrl || !serviceRoleKey || !anonKey) return json({ error: 'SERVER_MISCONFIGURED' }, 503)
+
+  const authHeader = req.headers.get('Authorization') || ''
+  const token = authHeader.replace(/^Bearer\s+/i, '')
+  const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
+  const authClient = createClient(supabaseUrl, anonKey, { auth: { persistSession: false, autoRefreshToken: false } })
+  let userId: string | null = null
+  if (token && token !== anonKey) {
+    const { data } = await authClient.auth.getUser(token)
+    userId = data.user?.id || null
+    if (!userId) return json({ error: 'INVALID_SESSION' }, 401)
+  }
+
+  let body: Record<string, unknown>
+  try {
+    body = await req.json()
+  } catch {
+    return json({ error: 'INVALID_JSON' }, 400)
+  }
+
+  const action = body.action || 'register_payment'
+  if (action === 'register_listing_subscription') {
+    return json({ error: 'DIRECTORY_LISTINGS_ARE_FREE', message: 'Directory listings are free and require evidence review, not payment or a subscription.' }, 410)
+  }
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const rateKey = await sha256([clientIp, userId || 'anonymous', String(body.customer_phone || '')].join(':'))
+
+  const { data: allowed, error: rateError } = await admin.rpc('consume_payment_registration_rate_limit', {
+    p_identifier: rateKey,
+    p_limit: action === 'link_booking' ? 30 : 12,
+    p_window_seconds: 600,
+  })
+  if (rateError || allowed !== true) return json({ error: 'RATE_LIMITED' }, 429)
+
+  // Link a previously reserved venue slot to its pending payment. Matching venue,
+  // phone and amount prevents a caller from attaching an unrelated booking.
+  if (action === 'link_booking') {
+    const orderId = String(body.order_id || '').trim()
+    const bookingId = String(body.booking_id || '').trim()
+    const bookingRef = String(body.booking_ref || '').trim()
+    if (!/^KG_ORD_[A-Z0-9]+_[A-Z0-9]{4,16}$/.test(orderId) || !bookingId || !bookingRef) {
+      return json({ error: 'INVALID_LINK_PARAMETERS' }, 400)
+    }
+    const { data: payment, error: paymentError } = await admin.from('khelgrid_payments')
+      .select('id,item_type,item_id,amount,customer_phone,user_id,status,metadata,target_id')
+      .eq('order_id', orderId).single()
+    const { data: booking, error: bookingError } = await admin.from('venue_bookings')
+      .select('id,booking_ref,venue_id,court_number,total_amount,customer_phone,status,payment_status')
+      .eq('id', bookingId).eq('booking_ref', bookingRef).single()
+    if (paymentError || !payment || bookingError || !booking) return json({ error: 'PAYMENT_OR_BOOKING_NOT_FOUND' }, 404)
+    if (payment.item_type !== 'venue_booking' || payment.status !== 'pending_verification' || (payment.user_id && payment.user_id !== userId) ||
+        (payment.metadata?.booking_ref && payment.metadata.booking_ref !== bookingRef)) return json({ error: 'PAYMENT_NOT_LINKABLE' }, 409)
+    const { data: venue } = await admin.from('venues').select('id,slug').eq('id', payment.item_id).single()
+    if (!venue || venue.slug !== booking.venue_id || booking.status !== 'pending' || booking.payment_status !== 'pending' ||
+        payment.customer_phone !== booking.customer_phone || Number(payment.amount) !== Math.min(300, Number(booking.total_amount)) || Number(payment.metadata?.booking_total_amount) !== Number(booking.total_amount) || Number(payment.metadata?.court_number) !== Number(booking.court_number || 1)) return json({ error: 'BOOKING_PAYMENT_MISMATCH' }, 409)
+    const metadata = { ...(payment.metadata || {}), booking_ref: booking.booking_ref }
+    const { error: updateError } = await admin.from('khelgrid_payments')
+      .update({ target_type: 'venue_booking', target_id: booking.id, metadata })
+      .eq('id', payment.id).eq('status', 'pending_verification')
+    if (updateError) return json({ error: 'BOOKING_LINK_FAILED' }, 500)
+    return json({ success: true, linked: true })
+  }
+
+  if (action !== 'register_payment') {
+    return json({ error: 'UNKNOWN_ACTION' }, 400)
+  }
+
+  const orderId = String(body.order_id || '').trim()
+  const paymentId = String(body.payment_id || '').trim()
+  const customerName = String(body.customer_name || '').trim()
+  const customerPhone = String(body.customer_phone || '').replace(/\D/g, '')
+  const customerEmail = body.customer_email ? String(body.customer_email).trim().toLowerCase() : null
+  const itemType = String(body.item_type || '') as PaymentType
+  const itemId = String(body.item_id || '').trim()
+  const requestedAmount = Number(body.amount)
+  const method = String(body.payment_method || '') as PaymentMethod
+  const idempotencyKey = String(body.idempotency_key || orderId).trim()
+
+  if (!/^KG_ORD_[A-Z0-9]+_[A-Z0-9]{4,16}$/.test(orderId) || !itemId ||
+      customerName.length < 2 || customerPhone.length < 10 ||
+      !Number.isFinite(requestedAmount) || requestedAmount <= 0 ||
+      !['pickup_match','venue_booking','trial_registration','membership'].includes(itemType) ||
+      !['upi','razorpay','pay_at_venue'].includes(method) || !idempotencyKey || idempotencyKey.length > 128) {
+    return json({ error: 'INVALID_PAYMENT_INTENT' }, 400)
+  }
+  const submittedReference = paymentId.startsWith('UPI_UTR_') ? paymentId.slice(8) : paymentId
+  if (method === 'upi' && (!/^[A-Za-z0-9-]{6,64}$/.test(submittedReference))) {
+    return json({ error: 'INVALID_PAYMENT_REFERENCE' }, 400)
+  }
+  if (method === 'upi' && itemType !== 'venue_booking') {
+    return json({ error: 'PAYMENT_TARGET_NOT_SUPPORTED', message: 'Online payment is not enabled for this item until its settlement workflow is available.' }, 409)
+  }
+  if (method === 'pay_at_venue' && !['venue_booking','pickup_match'].includes(itemType)) {
+    return json({ error: 'PAY_AT_VENUE_NOT_SUPPORTED' }, 409)
+  }
+
+  let expectedAmount: number | null = null
+  let itemTitle = ''
+  const targetType = itemType
+  const targetId = itemId
+  const metadata: Record<string, unknown> = {}
+
+  if (itemType === 'membership') {
+    const meta = (body.metadata || {}) as Record<string, unknown>
+    expectedAmount = getCanonicalMembershipPrice(meta)
+    if (expectedAmount === null) return json({ error: 'INVALID_MEMBERSHIP_PLAN' }, 400)
+    itemTitle = `KhelGrid Membership ${String(meta.planId || meta.tierId)}`
+    metadata.plan_id = String(meta.planId || meta.tierId)
+    metadata.tier_id = meta.tierId ? String(meta.tierId) : null
+    metadata.audience = meta.audience ? String(meta.audience) : null
+    metadata.billing_cycle = String(meta.billingCycle)
+  } else if (itemType === 'trial_registration') {
+    const { data, error } = await admin.from('opportunities')
+      .select('id,title,registration_fee,publication_status').eq('id', itemId).single()
+    if (error || !data || data.publication_status !== 'published') return json({ error: 'TRIAL_NOT_AVAILABLE' }, 404)
+    expectedAmount = Number(data.registration_fee)
+    itemTitle = data.title
+  } else if (itemType === 'pickup_match') {
+    const { data, error } = await admin.from('pickup_games')
+      .select('id,sport,price_per_player,publication_status,status').eq('id', itemId).single()
+    if (error || !data || data.publication_status !== 'published' || data.status !== 'open') return json({ error: 'MATCH_NOT_AVAILABLE' }, 404)
+    expectedAmount = parseInr(data.price_per_player)
+    if (expectedAmount === null) return json({ error: 'PRICE_UNRESOLVED' }, 409)
+    itemTitle = `${data.sport} Match Spot`
+  } else if (itemType === 'venue_booking') {
+    const rawCourtNumber = (body.metadata as Record<string, unknown> | undefined)?.courtNumber
+    const courtNumber = Number(rawCourtNumber)
+    if (rawCourtNumber === undefined || rawCourtNumber === null || rawCourtNumber === '' || !Number.isInteger(courtNumber) || courtNumber < 1 || courtNumber > 50) {
+      return json({ error: 'INVALID_COURT' }, 400)
+    }
+    const venueQuery = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(itemId)
+      ? admin.from('venues').select('id,slug,name,slot_hourly_fee,fee_provenance,pricing_status,publication_status').eq('id', itemId)
+      : admin.from('venues').select('id,slug,name,slot_hourly_fee,fee_provenance,pricing_status,publication_status').eq('slug', itemId)
+    const { data, error } = await venueQuery.maybeSingle()
+    if (error || !data || data.publication_status !== 'published') return json({ error: 'VENUE_NOT_AVAILABLE' }, 404)
+    const { data: courts, error: courtError } = await admin.from('venue_courts')
+      .select('name,hourly_price_paise,is_bookable')
+      .eq('venue_id', data.id)
+    if (courtError) return json({ error: 'VENUE_PRICING_LOOKUP_FAILED' }, 500)
+    const resolved = resolveVenueSlotPrice({
+      venue: data,
+      courts: courts || [],
+      courtNumber,
+    })
+    if (!resolved) return json({ error: 'PRICE_UNRESOLVED' }, 409)
+    const depositPaise = calculateVenueAdvanceDeposit(resolved.amountPaise)
+    if (depositPaise === null) return json({ error: 'PRICE_UNRESOLVED' }, 409)
+    expectedAmount = depositPaise / 100
+    itemTitle = `${data.name} Court Slot Advance Deposit`
+    metadata.venue_id = data.id
+    metadata.venue_slug = data.slug
+    metadata.court_number = courtNumber
+    metadata.booking_total_amount = resolved.amountRupees
+    metadata.booking_total_paise = resolved.amountPaise
+    metadata.advance_deposit_paise = depositPaise
+    metadata.balance_payable_at_venue = Math.max(0, resolved.amountRupees - expectedAmount)
+  }
+
+  if (expectedAmount === null || !Number.isFinite(expectedAmount) || expectedAmount <= 0 ||
+      Math.round(expectedAmount * 100) !== Math.round(requestedAmount * 100)) {
+    return json({ error: 'AMOUNT_MISMATCH', message: 'The submitted amount does not match the authoritative server price.' }, 409)
+  }
+
+  const { data: existingByOrder, error: existingError } = await admin.from('khelgrid_payments')
+    .select('id,order_id,amount,item_type,item_id,status,customer_phone,user_id,metadata')
+    .eq('order_id', orderId).maybeSingle()
+  if (existingError) return json({ error: 'PAYMENT_LOOKUP_FAILED' }, 500)
+  const { data: existingByKey, error: keyLookupError } = existingByOrder ? { data: null, error: null } : await admin.from('khelgrid_payments')
+    .select('id,order_id,amount,item_type,item_id,status,customer_phone,user_id,metadata')
+    .eq('idempotency_key', idempotencyKey).maybeSingle()
+  if (keyLookupError) return json({ error: 'PAYMENT_IDEMPOTENCY_LOOKUP_FAILED' }, 500)
+  const existing = existingByOrder || existingByKey
+  if (existing) {
+    if (existing.order_id !== orderId || Number(existing.amount) !== expectedAmount || existing.item_type !== itemType ||
+        existing.item_id !== itemId || existing.customer_phone !== customerPhone || (existing.user_id || null) !== userId ||
+        (existing.metadata?.submitted_reference || null) !== (method === 'upi' ? submittedReference : null)) {
+      return json({ error: 'ORDER_CONFLICT' }, 409)
+    }
+    // Rotate the guest checkout capability only while no provider order exists.
+    // The raw token is returned once; only its SHA-256 digest is stored.
+    const checkoutToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map(v => v.toString(16).padStart(2, '0')).join('')
+    const checkoutTokenHash = await sha256(checkoutToken)
+    if (existing.status !== 'pending_verification') {
+      return json({ success: true, status: existing.status, order_id: orderId, idempotent: true })
+    }
+    const { data: refreshed, error: refreshError } = await admin.from('khelgrid_payments')
+      .update({ checkout_token_hash: checkoutTokenHash })
+      .eq('id', existing.id)
+      .is('provider_order_id', null)
+      .eq('provider_order_status', 'not_created')
+      .select('id')
+      .maybeSingle()
+    if (refreshError || !refreshed) return json({ error: 'CHECKOUT_CAPABILITY_UNAVAILABLE' }, 409)
+    return json({ success: true, status: existing.status, order_id: orderId, checkout_token: checkoutToken, idempotent: true })
+  }
+
+  const online = method !== 'pay_at_venue'
+  const status = online ? 'pending_verification' : 'pay_at_venue'
+  const gateway = method === 'razorpay' ? 'razorpay' : online ? 'upi_direct' : 'pay_at_venue'
+  const checkoutToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map(v => v.toString(16).padStart(2, '0')).join('')
+  const checkoutTokenHash = await sha256(checkoutToken)
+  const { data: payment, error: paymentError } = await admin.from('khelgrid_payments').insert({
+    order_id: orderId,
+    checkout_token_hash: checkoutTokenHash,
+    payment_id: null,
+    user_id: userId,
+    customer_name: customerName,
+    customer_phone: customerPhone,
+    customer_email: customerEmail,
+    amount: expectedAmount,
+    currency: 'INR',
+    item_type: itemType,
+    item_id: itemId,
+    item_title: itemTitle,
+    payment_gateway: gateway,
+    payment_method: method === 'razorpay' ? 'razorpay' : online ? 'upi' : 'pay_at_venue',
+    status,
+    target_type: targetType,
+    target_id: targetId,
+    idempotency_key: idempotencyKey,
+    metadata: { ...metadata, submitted_reference: method === 'upi' ? submittedReference : null, registered_at: new Date().toISOString() },
+  }).select('id,order_id,amount,status').single()
+
+  if (paymentError || !payment) return json({ error: 'PAYMENT_REGISTRATION_FAILED' }, 500)
+  return json({
+    success: true,
+    status,
+    order_id: payment.order_id,
+    amount: payment.amount,
+    checkout_token: online ? checkoutToken : undefined,
+    message: method === 'razorpay' ? 'Payment intent registered. Razorpay sandbox order creation is a separate server-side step.' : online ? 'Payment reference received. Awaiting independent verification.' : 'Pay-at-venue intent registered; no online payment has been collected.',
+  })
+})
