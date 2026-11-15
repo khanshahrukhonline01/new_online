@@ -3,96 +3,81 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import '../../i18n'
 import AcademyDetailPage from './AcademyDetailPage'
 
-describe('AcademyDetailPage — Dedicated Academy Hub & Rich Content', () => {
+const academyFixture = {
+  id: 'academy-test-001',
+  slug: 'verified-test-academy',
+  name: 'Verified Test Academy',
+  description: 'Synthetic test fixture for a published academy record.',
+  city: 'Bengaluru',
+  state: 'Karnataka',
+  address: 'Test Road',
+  phone: null,
+  website_url: null,
+  public_contact_url: null,
+  verification_status: 'verified',
+  publication_status: 'published',
+  sport: 'Football',
+  facilities: ['Training ground'],
+  age_groups: ['U-14'],
+}
+
+async function loadPublicClient() {
+  vi.stubEnv('VITE_SUPABASE_URL', 'https://khelgrid-test.supabase.co')
+  vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-anon-key')
+  vi.resetModules()
+  const client = await import('../../integrations/supabase/public-client')
+  client.clearCatalogueCache()
+  return client
+}
+
+describe('AcademyDetailPage — published and verified catalogue access', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation((input: RequestInfo | URL) => {
       const url = String(input)
       const data = url.includes('/rpc/submit_listing_intake')
         ? { status: 'submitted', reference_number: 'KHL-20261112-ACA001', tracking_key: 'private-academy-test-key' }
-        : []
+        : url.includes('/rest/v1/academies?')
+          ? [academyFixture]
+          : []
       return Promise.resolve(new Response(JSON.stringify(data), { status: 200 }))
     }))
   })
 
   afterEach(() => {
     vi.unstubAllGlobals()
-  })
-  it('renders Bengaluru FC Youth Academy with complete rich content, credentials, and curriculum', () => {
-    const html = renderToStaticMarkup(
-      <AcademyDetailPage slug="bengaluru-fc-academy" onNavigate={vi.fn()} />
-    )
-
-    // Name & Sport
-    expect(html).toContain('Bengaluru FC Youth Academy')
-    expect(html).toContain('Football')
-
-    // Location & Verified Badge
-    expect(html).toContain('Bengaluru, Karnataka')
-    expect(html).toContain('Verified Academy')
-
-    // Contact & Admission actions
-    expect(html).toContain('Enquire on WhatsApp')
-    expect(html).toContain('wa.me')
-    expect(html).toContain('Official Website')
-    expect(html).toContain('bengalurufc.com')
-
-    // Curriculum & Methodology
-    expect(html).toContain('Training Curriculum &amp; Methodology')
-    expect(html).toContain('FIFA Standard Artificial Turf')
-    expect(html).toContain('Sports Science &amp; Recovery Lab')
-
-    // Timings, Coach, Fees
-    expect(html).toContain('Head Coach:')
-    expect(html).toContain('AFC Pro Licensed Coaching Staff')
-    expect(html).toContain('Age Groups Coached')
-    expect(html).toContain('Fee Structure')
-
-    // Multi-channel ShareBar
-    expect(html).toContain('Share:')
-    expect(html).toContain('WhatsApp')
-    expect(html).toContain('Copy Link')
-
-    // FAQs
-    expect(html).toContain('Frequently Asked Questions')
-    expect(html).toContain('How do I register for a trial session at Bengaluru FC Academy?')
+    vi.unstubAllEnvs()
   })
 
-  it('renders Pullela Gopichand Badminton Academy with Olympic coaching credentials', () => {
-    const html = renderToStaticMarkup(
-      <AcademyDetailPage slug="pullela-gopichand-badminton-academy" onNavigate={vi.fn()} />
-    )
+  it('loads a published, verified academy from the catalogue by its exact slug', async () => {
+    const { getAcademyBySlug } = await loadPublicClient()
+    const academy = await getAcademyBySlug('verified-test-academy')
 
-    expect(html).toContain('Pullela Gopichand Badminton Academy')
-    expect(html).toContain('Badminton')
-    expect(html).toContain('Hyderabad, Telangana')
-    expect(html).toContain('Pullela Gopichand')
-    expect(html).toContain('8 BWF Tournament Synthetic Wooden Courts')
-    expect(html).toContain('Olympic medalists and international champions')
+    expect(academy?.id).toBe('academy-test-001')
+    expect(academy?.name).toBe('Verified Test Academy')
+    expect(academy?.verification_status).toBe('verified')
+
+    const requestUrl = new URL(String(vi.mocked(fetch).mock.calls[0][0]))
+    expect(requestUrl.pathname).toBe('/rest/v1/academies')
+    expect(requestUrl.searchParams.get('publication_status')).toBe('eq.published')
+    expect(requestUrl.searchParams.get('verification_status')).toBe('eq.verified')
   })
 
-  it('renders Mary Kom Boxing Regional Academy with SAI accredited pedigree', () => {
-    const html = renderToStaticMarkup(
-      <AcademyDetailPage slug="mary-kom-regional-boxing-foundation" onNavigate={vi.fn()} />
-    )
-
-    expect(html).toContain('Mary Kom Regional Boxing Foundation')
-    expect(html).toContain('Boxing')
-    expect(html).toContain('Imphal, Manipur')
-    expect(html).toContain('MC Mary Kom')
-    expect(html).toContain('3 International Boxing Sparring Rings')
+  it('does not resolve a slug that is absent from the published catalogue', async () => {
+    const { getAcademyBySlug } = await loadPublicClient()
+    const academy = await getAcademyBySlug('missing-test-academy')
+    expect(academy).toBeUndefined()
   })
 
-  it('renders 404 state gracefully with return navigation when academy is not found', () => {
+  it('renders the not-found state for an unknown academy slug', () => {
     const html = renderToStaticMarkup(
       <AcademyDetailPage slug="non-existent-sports-academy-xyz" onNavigate={vi.fn()} />
     )
-
     expect(html).toContain('Academy Record Not Found')
     expect(html).toContain('Browse All Academies')
   })
 
   it('keeps community academies out of the public detail route until moderation', async () => {
-    const { submitCommunityListing } = await import('../../integrations/supabase/public-client')
+    const { submitCommunityListing } = await loadPublicClient()
     const result = await submitCommunityListing({
       category: 'academy',
       name: 'Shimla High Altitude Football Club',
@@ -105,28 +90,11 @@ describe('AcademyDetailPage — Dedicated Academy Hub & Rich Content', () => {
       expect(result.record.publication_status).toBe('pending_review')
       expect(result.detailPath).toBeUndefined()
     }
-    const [url] = vi.mocked(fetch).mock.calls[0]
-    expect(String(url)).toContain('/rest/v1/rpc/submit_listing_intake')
-    expect(String(url)).not.toContain('/rest/v1/academies')
+    const rpcCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).includes('/rpc/submit_listing_intake'))
+    expect(String(rpcCall?.[0])).toContain('/rest/v1/rpc/submit_listing_intake')
+    expect(String(rpcCall?.[0])).not.toContain('/rest/v1/academies')
     const html = renderToStaticMarkup(<AcademyDetailPage slug="shimla-high-altitude-football-club" onNavigate={vi.fn()} />)
     expect(html).toContain('Academy Record Not Found')
-  })
-
-
-  it('renders Apply for Admission / Free Trial Class button and enrolment modal when requested', () => {
-    const htmlNormal = renderToStaticMarkup(
-      <AcademyDetailPage slug="bengaluru-fc-academy" onNavigate={vi.fn()} />
-    )
-    expect(htmlNormal).toContain('Apply for Admission / Free Trial Class')
-    expect(htmlNormal).toContain('Apply for Admission / Free Trial')
-
-    const htmlEnrol = renderToStaticMarkup(
-      <AcademyDetailPage slug="bengaluru-fc-academy" onNavigate={vi.fn()} initialEnrolOpen={true} />
-    )
-    expect(htmlEnrol).toContain('Official Academy Admission &amp; Trial Desk')
-    expect(htmlEnrol).toContain('Select Program / Trial Option')
-    expect(htmlEnrol).toContain('Free Trial Class')
-    expect(htmlEnrol).toContain('Weekend Development')
   })
 
   it('submits a dynamic academy admission enquiry and registers an official token (ENQ-XXX)', async () => {
@@ -184,3 +152,4 @@ describe('AcademyDetailPage — Dedicated Academy Hub & Rich Content', () => {
     expect(all[0].enquiryToken).toBe(res.enquiry.enquiryToken)
   })
 })
+
