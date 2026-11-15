@@ -165,7 +165,8 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
         'football turf booking',
         'KhelGrid sports venues',
       ],
-      jsonLd,
+      robots: venue.verification_status === 'verified' ? undefined : 'noindex, follow',
+      jsonLd: venue.verification_status === 'verified' ? jsonLd : undefined,
     })
 
     return cleanup
