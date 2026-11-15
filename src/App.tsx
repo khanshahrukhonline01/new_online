@@ -192,10 +192,17 @@ export default function App() {
   useEffect(() => {
     const route = resolveRoute(path)
     const baseSeo = getRouteSeoMetadata(path)
-    // Opportunity detail metadata is promoted to indexable only after the
-    // published record has loaded and its source has been reviewed.
-    const seo = route.name === 'opportunity-detail'
-      ? { ...baseSeo, canonicalUrl: `https://khelgrid.com/trial/${encodeURIComponent(route.slug)}`, robots: 'noindex, follow' }
+    // Catalogue detail routes remain noindex until their published + verified
+    // database record has loaded and the page component supplies record metadata.
+    const detailCanonicalPath = route.name === 'opportunity-detail'
+      ? `/trial/${encodeURIComponent(route.slug)}`
+      : route.name === 'venue-detail'
+        ? `/venues/${encodeURIComponent(route.slug)}`
+        : route.name === 'academy-detail'
+          ? `/academies/${encodeURIComponent(route.slug)}`
+          : undefined
+    const seo = detailCanonicalPath
+      ? { ...baseSeo, canonicalUrl: `https://khelgrid.com${detailCanonicalPath}`, robots: 'noindex, follow' }
       : baseSeo
     return updatePageSeoMetadata(seo)
   }, [path])
