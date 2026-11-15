@@ -134,7 +134,6 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
                 setSelectedMatchId(e.target.value);
                 setIsCreatingNew(false);
               }}
-              disabled={isCreatingNew}
               disabled={isCreatingNew || matches.length === 0}
             >
               {matches.length === 0 ? (
