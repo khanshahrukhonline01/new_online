@@ -64,7 +64,7 @@ html.dark .pricing-hero-section {
   padding: 4px 12px;
   border-radius: 9999px;
   background: rgba(16, 185, 129, 0.12);
-  color: #059669;
+  color: var(--accent-strong, #059669);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -138,7 +138,7 @@ html.dark .stat-card {
 .stat-num {
   font-size: 20px;
   font-weight: 800;
-  color: #059669;
+  color: var(--accent-strong, #059669);
   letter-spacing: -0.01em;
 }
 
@@ -230,15 +230,15 @@ html.dark .audience-tab-btn:hover {
 }
 
 .audience-tab-btn.is-active {
-  background: #059669;
-  border-color: #059669;
+  background: var(--accent-strong, #059669);
+  border-color: var(--accent-strong, #059669);
   color: #ffffff;
   box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
 }
 
 html.dark .audience-tab-btn.is-active {
-  background: #10b981;
-  border-color: #10b981;
+  background: var(--accent, #10b981);
+  border-color: var(--accent, #10b981);
   color: #0f172a;
 }
 
@@ -299,7 +299,7 @@ html.dark .toggle-option.is-active {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 9999px;
-  background: #10b981;
+  background: var(--accent, #10b981);
   color: #ffffff;
   text-transform: uppercase;
 }
@@ -324,7 +324,7 @@ html.dark .toggle-option.is-active {
 
 html.dark .success-banner-inner {
   background: #064e3b;
-  border-color: #059669;
+  border-color: var(--accent-strong, #059669);
   color: #dcfce7;
 }
 
@@ -419,7 +419,7 @@ html.dark .pricing-card:hover {
 }
 
 .pricing-card.is-popular {
-  border-color: #059669;
+  border-color: var(--accent-strong, #059669);
   background: linear-gradient(180deg, rgba(16, 185, 129, 0.04) 0%, rgba(255, 255, 255, 0) 100%);
   box-shadow: 0 8px 30px rgba(5, 150, 105, 0.15);
 }
@@ -436,7 +436,7 @@ html.dark .pricing-card.is-popular {
   transform: translateX(-50%);
   padding: 4px 14px;
   border-radius: 9999px;
-  background: #059669;
+  background: var(--accent-strong, #059669);
   color: #ffffff;
   font-size: 11px;
   font-weight: 700;
@@ -536,7 +536,7 @@ html.dark .card-pricing-block {
   padding: 2px 7px;
   border-radius: 9999px;
   background: rgba(16, 185, 129, 0.15);
-  color: #059669;
+  color: var(--accent-strong, #059669);
   font-weight: 700;
   font-size: 11px;
 }
@@ -552,7 +552,7 @@ html.dark .savings-pill {
   padding: 8px 12px;
   border-radius: 10px;
   background: rgba(16, 185, 129, 0.08);
-  color: #059669;
+  color: var(--accent-strong, #059669);
   font-size: 12px;
   font-weight: 700;
   margin-bottom: 16px;
@@ -602,7 +602,7 @@ html.dark .card-features-list li {
 }
 
 .feature-check-icon {
-  color: #059669;
+  color: var(--accent-strong, #059669);
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -631,13 +631,13 @@ html.dark .feature-check-icon {
 }
 
 .card-cta-btn.primary {
-  background: #059669;
+  background: var(--accent-strong, #059669);
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
 }
 
 .card-cta-btn.primary:hover {
-  background: #047857;
+  background: var(--accent-strong, #047857);
   transform: translateY(-1px);
 }
 
@@ -697,7 +697,7 @@ html.dark .pricing-roi-calculator-section {
   padding: 4px 10px;
   border-radius: 9999px;
   background: rgba(16, 185, 129, 0.12);
-  color: #059669;
+  color: var(--accent-strong, #059669);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -771,7 +771,7 @@ html.dark .roi-calculator-workbench {
 .roi-val-tag {
   font-size: 13px;
   font-weight: 700;
-  color: #059669;
+  color: var(--accent-strong, #059669);
 }
 
 html.dark .roi-val-tag {
@@ -815,7 +815,7 @@ html.dark .roi-val-tag {
 .roi-meter-number {
   font-size: clamp(28px, 4vw, 38px);
   font-weight: 900;
-  color: #059669;
+  color: var(--accent-strong, #059669);
   letter-spacing: -0.02em;
   line-height: 1;
 }
@@ -833,7 +833,7 @@ html.dark .roi-meter-number {
 .roi-multiplier-badge {
   padding: 4px 12px;
   border-radius: 9999px;
-  background: #059669;
+  background: var(--accent-strong, #059669);
   color: #ffffff;
   font-size: 12px;
   font-weight: 700;
@@ -884,7 +884,7 @@ html.dark .roi-breakdown-item.total {
 }
 
 .profit-val {
-  color: #059669;
+  color: var(--accent-strong, #059669);
   font-size: 15px;
 }
 
@@ -927,7 +927,7 @@ html.dark .trust-card {
 }
 
 .trust-icon {
-  color: #059669;
+  color: var(--accent-strong, #059669);
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -1029,7 +1029,7 @@ html.dark .testimonial-quote {
   height: 36px;
   border-radius: 9999px;
   background: rgba(16, 185, 129, 0.12);
-  color: #059669;
+  color: var(--accent-strong, #059669);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1051,7 +1051,7 @@ html.dark .author-avatar {
 .author-role {
   display: block;
   font-size: 11px;
-  color: #059669;
+  color: var(--accent-strong, #059669);
   font-weight: 600;
 }
 
@@ -1094,7 +1094,7 @@ html.dark .enterprise-content {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  color: #059669;
+  color: var(--accent-strong, #059669);
   letter-spacing: 0.05em;
 }
 
@@ -1176,7 +1176,7 @@ html.dark .faq-item-card {
 }
 
 .faq-item-card.is-open {
-  border-color: #059669;
+  border-color: var(--accent-strong, #059669);
 }
 
 .faq-question-btn {
@@ -1208,7 +1208,7 @@ html.dark .faq-item-card {
 }
 
 .faq-toggle-icon {
-  color: #059669;
+  color: var(--accent-strong, #059669);
   flex-shrink: 0;
 }
 
@@ -1250,7 +1250,7 @@ html.dark .faq-answer-body {
 }
 .pricing-free-listing-note > svg {
   flex: 0 0 auto;
-  color: #059669;
+  color: var(--accent-strong, #059669);
 }
 .pricing-free-listing-note strong {
   display: block;
