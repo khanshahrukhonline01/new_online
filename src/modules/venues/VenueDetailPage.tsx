@@ -203,7 +203,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
   const sportName = venue.sport || venue.sports?.map(sport => sport.name).join(', ') || 'Sport not specified'
   const fullAddress = venue.address || [venue.city, venue.state].filter(Boolean).join(', ')
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Hi, I found ${venue.name} on KhelGrid and would like to enquire about slot booking availability.`)}`
+  const whatsappUrl = venue.phone ? `https://wa.me/${venue.phone.replace(/\\D/g, '')}?text=${encodeURIComponent(`Hi, I found ${venue.name} on KhelGrid and would like to enquire about availability.`)}` : undefined
 
   const facilitiesList = venue.facilities || []
 
@@ -249,7 +249,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
               <SiteIcon name="alert-triangle" size={14} /> Pending Verification
             </span>
           )}
-          <span className="venue-status-open">⚡ Active Sports Facility</span>
+          <span className="venue-status-open">Published Listing</span>
         </div>
 
         <h1 className="venue-title">{venue.name}</h1>
@@ -287,15 +287,12 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
             <span>Book Turf / Court Slot</span>
           </button>
 
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="venue-btn venue-btn-primary"
-          >
-            <SiteIcon name="message" size={16} />
-            <span>Enquire on WhatsApp</span>
-          </a>
+          {whatsappUrl && (
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-primary">
+              <SiteIcon name="message" size={16} />
+              <span>Contact Venue on WhatsApp</span>
+            </a>
+          )}
 
           {venue.phone && (
             <a href={`tel:${venue.phone.replace(/\s+/g, '')}`} className="venue-btn venue-btn-secondary">
@@ -304,15 +301,12 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
             </a>
           )}
 
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="venue-btn venue-btn-secondary"
-          >
-            <SiteIcon name="map-pin" size={16} />
-            <span>Get Directions</span>
-          </a>
+          {fullAddress && (
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-secondary">
+              <SiteIcon name="map-pin" size={16} />
+              <span>Get Directions</span>
+            </a>
+          )}
 
           {onOpenIntake && (
             <button
@@ -479,9 +473,9 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                 )
               })}
             </div>
-          </section>
+          </section>}
 
-          {/* Community Reviews, Ratings & Media Uploads */}
+          {/* Community Reviews, Ratings & Media Uploads */
           <CommunityReviewsSection
             entityType="venue"
             entityId={venue.id}
@@ -499,15 +493,12 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
             <p>
               Connect directly with {venue.name} management to verify current court availability and hourly slot pricing.
             </p>
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="venue-btn venue-btn-whatsapp-block"
-            >
-              <SiteIcon name="message" size={18} />
-              <span>Enquire on WhatsApp</span>
-            </a>
+            {whatsappUrl && (
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-whatsapp-block">
+                <SiteIcon name="message" size={18} />
+                <span>Contact Venue on WhatsApp</span>
+              </a>
+            )}
 
             {venue.phone && (
               <a href={`tel:${venue.phone.replace(/\s+/g, '')}`} className="venue-btn venue-btn-call-block">
@@ -518,7 +509,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
 
             <div className="venue-disclaimer-note">
               <SiteIcon name="shield-check" size={14} />
-              <span>Direct venue contact · KhelGrid verified arena · 0% commission fees.</span>
+              <span>Published, source-reviewed listing. Confirm booking terms, fees and availability directly with the venue.</span>
             </div>
 
             <button
