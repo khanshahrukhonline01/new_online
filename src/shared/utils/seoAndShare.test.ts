@@ -59,8 +59,12 @@ describe('SEO & SERP Metadata Validation', () => {
     expect(academiesMeta.keywords).toContain('sai ncoe academy')
 
     const liveScoresMeta = getRouteSeoMetadata('/live')
-    expect(liveScoresMeta.keywords).toContain('live cricket score wpl')
-    expect(liveScoresMeta.keywords).toContain('live cricket score icc')
+    expect(liveScoresMeta.keywords).toContain('live cricket score')
+    expect(liveScoresMeta.keywords).toContain('live football score')
+    expect(liveScoresMeta.description).toContain('connected scoreboard feeds')
+    expect(liveScoresMeta.description).not.toContain('Fastest')
+    expect(liveScoresMeta.robots).toBe('noindex, follow')
+    expect(liveScoresMeta.keywords).not.toContain('wpl live score')
 
     const chronicleMeta = getRouteSeoMetadata('/khelchronicle')
     expect(chronicleMeta.keywords).toContain('sports science research india')

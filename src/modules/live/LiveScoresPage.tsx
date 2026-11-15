@@ -23,69 +23,36 @@ const CRICKET_FORMATS: { id: CricketFormat; label: string; icon: string }[] = [
   { id: 'T20', label: 'T20 Matches', icon: '⚡' },
   { id: 'ODI', label: 'ODI Matches', icon: '🏆' },
   { id: 'Test', label: 'Test Series', icon: '🛡️' },
-  { id: 'WPL', label: 'WPL 2026', icon: '🌟' },
+  { id: 'WPL', label: 'WPL', icon: '🌟' },
 ];
 
-function buildLiveScoresJsonLd(matches: SportsMatch[]): Record<string, unknown> {
-  const sportsEvents = matches.slice(0, 10).map((m) => {
-    const isLive = m.status === 'LIVE';
-    const isFinished = m.status === 'FINISHED';
-    return {
-      '@type': isLive ? ['SportsEvent', 'LiveBlogPosting'] : 'SportsEvent',
-      name: `${m.tournament}: ${m.teamA.name} vs ${m.teamB.name}`,
-      sport: m.sport || 'Cricket',
-      eventStatus: isLive
-        ? 'https://schema.org/EventLive'
-        : isFinished
-          ? 'https://schema.org/EventFinished'
-          : 'https://schema.org/EventScheduled',
-      description: `${m.teamA.name} vs ${m.teamB.name} (${m.tournament} ${m.format || ''}). Score: ${m.teamA.score || '0'} vs ${m.teamB.score || '0'}. ${m.statusText || ''}`,
-      homeTeam: {
-        '@type': 'SportsTeam',
-        name: m.teamA.name,
-      },
-      awayTeam: {
-        '@type': 'SportsTeam',
-        name: m.teamB.name,
-      },
-      location: m.venueOrOvers
-        ? {
-            '@type': 'Place',
-            name: m.venueOrOvers,
-            address: {
-              '@type': 'PostalAddress',
-              addressCountry: 'IN',
-            },
-          }
-        : undefined,
-    };
-  });
+export function isExternalScoreboardMatch(match: SportsMatch): boolean {
+  return match.source === 'External ESPN scoreboard feed';
+}
 
+/**
+ * Match cards are not canonical event-detail pages and do not currently carry
+ * complete, independently verified event dates and venue addresses.
+ * Keep only page-level markup until those requirements are met.
+ */
+export function buildLiveScoresJsonLd(): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'WebPage',
-        '@id': 'https://khelgrid.com/live#webpage',
-        url: 'https://khelgrid.com/live',
-        name: 'Live Cricket Scores, WPL & ICC Match Center · KhelGrid (लाइव स्कोर)',
-        description:
-          "Fastest live cricket scores, WPL Women's Premier League, ICC tournaments, T20 leagues, ball-by-ball commentary, match scorecards, and local tournament updates on KhelGrid.",
-        isPartOf: {
-          '@type': 'WebSite',
-          '@id': 'https://khelgrid.com/#website',
-          name: 'KhelGrid',
-          url: 'https://khelgrid.com',
-        },
-        about: [
-          { '@type': 'Thing', name: 'Cricket' },
-          { '@type': 'Thing', name: "Women's Premier League (WPL)" },
-          { '@type': 'Thing', name: 'ICC Cricket' },
-          { '@type': 'Thing', name: 'T20 Cricket' },
-          { '@type': 'Thing', name: 'Live Sports Scores' },
-        ],
-      },
-      ...sportsEvents,
+    '@type': 'WebPage',
+    '@id': 'https://khelgrid.com/live#webpage',
+    url: 'https://khelgrid.com/live',
+    name: 'Live Sports Scores & Match Centre · KhelGrid',
+    description: 'Follow cricket and football score updates when connected scoreboard feeds provide current data.',
+    isPartOf: {
+      '@type': 'WebSite',
+      '@id': 'https://khelgrid.com/#website',
+      name: 'KhelGrid',
+      url: 'https://khelgrid.com',
+    },
+    about: [
+      { '@type': 'Thing', name: 'Cricket' },
+      { '@type': 'Thing', name: 'Football' },
+      { '@type': 'Thing', name: 'Live Sports Scores' },
     ],
   };
 }
@@ -197,42 +164,35 @@ export default function LiveScoresPage({ onNavigate }: LiveScoresPageProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Dynamic document title, meta tags, and Schema.org JSON-LD sync
+  // Only external scoreboard data may influence search metadata. Community-entered
+  // scores remain visible in the UI but are not treated as independently verified feed data.
   useEffect(() => {
-    const liveMatch = matches.find((m) => m.status === 'LIVE');
+    const liveMatch = matches.find((match) => match.status === 'LIVE' && isExternalScoreboardMatch(match));
     const title = liveMatch
-      ? `(LIVE) ${liveMatch.teamA.code} ${liveMatch.teamA.score} vs ${liveMatch.teamB.code} ${liveMatch.teamB.score} · Live Cricket Score | KhelGrid`
-      : 'Live Cricket Scores, WPL & ICC Match Center · KhelGrid (लाइव स्कोर)';
+      ? `(LIVE) ${liveMatch.teamA.code} ${liveMatch.teamA.score} vs ${liveMatch.teamB.code} ${liveMatch.teamB.score} · Live Score | KhelGrid`
+      : 'Live Sports Scores & Match Centre · KhelGrid';
     const description = liveMatch
-      ? `(LIVE) ${liveMatch.teamA.name} ${liveMatch.teamA.score} vs ${liveMatch.teamB.name} ${liveMatch.teamB.score} in ${liveMatch.tournament} (${liveMatch.format || 'Cricket'}). ${liveMatch.statusText || 'Follow live ball-by-ball commentary, match scorecards, and instant sports updates on KhelGrid.'}`
-      : "Fastest live cricket scores, WPL Women's Premier League, ICC tournaments, T20 leagues, ball-by-ball commentary, match scorecards, and local tournament updates on KhelGrid.";
+      ? `Current external scoreboard update: ${liveMatch.teamA.name} ${liveMatch.teamA.score} vs ${liveMatch.teamB.name} ${liveMatch.teamB.score} in ${liveMatch.tournament}. Match status and score may change as the source feed updates.`
+      : 'Follow cricket and football score updates when connected scoreboard feeds provide current data. Community scorekeeper entries are separate from external scoreboard results.';
 
     const cleanup = updatePageSeoMetadata({
       title,
       description,
       canonicalUrl: 'https://khelgrid.com/live',
+      // Keep the route-level exclusion even when live score updates refresh metadata.
+      robots: 'noindex, follow',
       keywords: [
-        'live cricket score wpl',
-        'live cricket score icc',
-        'wpl live score',
-        't20 live score',
         'live cricket score',
-        'live cricket khel',
-        'khel box live match',
-        'khel live score',
-        'today wc cricket match',
-        'ball by ball commentary',
-        'live scorecards cricket',
-        'cricket match center',
-        'wpl 2026 live',
-        'icc live score',
+        'live football score',
+        'live sports scores india',
+        'cricket match centre',
+        'sports score updates',
         'लाइव क्रिकेट स्कोर',
         'लाइव स्कोर',
         ...DEFAULT_KEYWORDS,
       ],
-      jsonLd: buildLiveScoresJsonLd(matches),
+      jsonLd: buildLiveScoresJsonLd(),
     });
-
     return cleanup;
   }, [matches]);
 
@@ -330,7 +290,7 @@ export default function LiveScoresPage({ onNavigate }: LiveScoresPageProps) {
         <p className="eyebrow">KHELGRID · LIVE SPORTS DATA</p>
         <h1>Live Scores & Match Center</h1>
         <p className="live-intro">
-          Real-time international and national scores, ball-by-ball fixtures, and verified grassroots pathways. Track live matches or step onto the turf yourself.
+          Follow cricket and football score updates when connected scoreboard feeds provide current data. Community scorekeeper entries are separate from external scoreboard results.
         </p>
       </header>
 
@@ -365,9 +325,9 @@ export default function LiveScoresPage({ onNavigate }: LiveScoresPageProps) {
             </span>
 
             {isLiveFeedConnected && (
-              <span className="live-btn is-active" title="Connected to official scoreboard feed">
+              <span className="live-btn is-active" title="Connected to external scoreboard feed">
                 <SiteIcon name="activity" size={13} />
-                <span>Live Feed {lastUpdated ? `(${lastUpdated})` : ''}</span>
+                <span>External Feed {lastUpdated ? `(${lastUpdated})` : ''}</span>
               </span>
             )}
 

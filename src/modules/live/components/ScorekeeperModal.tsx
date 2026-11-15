@@ -19,10 +19,10 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
   const [newSport, setNewSport] = useState<SportType>('Cricket');
   const [newTournament, setNewTournament] = useState('');
   const [newVenue, setNewVenue] = useState('');
-  const [newCity, setNewCity] = useState('Bengaluru');
+  const [newCity, setNewCity] = useState('');
   const [newTeamA, setNewTeamA] = useState('');
   const [newTeamB, setNewTeamB] = useState('');
-  const [newHostName, setNewHostName] = useState('Ground Scorer');
+  const [newHostName, setNewHostName] = useState('');
 
   // Active Scoring Input State
   const [customCommentary, setCustomCommentary] = useState('');
@@ -35,19 +35,19 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
 
   const handleCreateMatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTournament.trim() || !newTeamA.trim() || !newTeamB.trim()) {
-      setFeedbackNotice('Please provide tournament name and both team names.');
+    if (!newTournament.trim() || !newTeamA.trim() || !newTeamB.trim() || !newVenue.trim() || !newCity.trim() || !newHostName.trim()) {
+      setFeedbackNotice('Please provide the tournament, both teams, actual venue, city and scorer/host name.');
       return;
     }
 
     const created = await scorekeeperService.createNewMatch({
       sport: newSport,
       tournament: newTournament,
-      venue: newVenue || 'Local Turf Arena',
-      city: newCity || 'Bengaluru',
+      venue: newVenue.trim(),
+      city: newCity.trim(),
       teamAName: newTeamA,
       teamBName: newTeamB,
-      hostName: newHostName,
+      hostName: newHostName.trim(),
     });
 
     const updated = scorekeeperService.getCommunityMatches();
@@ -134,13 +134,17 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
                 setSelectedMatchId(e.target.value);
                 setIsCreatingNew(false);
               }}
-              disabled={isCreatingNew}
+              disabled={isCreatingNew || matches.length === 0}
             >
-              {matches.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.tournament}: {m.teamA.name} ({m.teamA.score}) vs {m.teamB.name} ({m.teamB.score}) — {m.status}
-                </option>
-              ))}
+              {matches.length === 0 ? (
+                <option value="" disabled>No community matches yet — create one to start scoring</option>
+              ) : (
+                matches.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.tournament}: {m.teamA.name} ({m.teamA.score}) vs {m.teamB.name} ({m.teamB.score}) — {m.status}
+                  </option>
+                ))
+              )}
             </select>
             <button
               type="button"
@@ -211,6 +215,7 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
                   placeholder="e.g. FSV Arena Court 1"
                   value={newVenue}
                   onChange={(e) => setNewVenue(e.target.value)}
+                  required
                 />
               </div>
               <div className="form-group">
@@ -221,6 +226,7 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
                   placeholder="e.g. Bengaluru"
                   value={newCity}
                   onChange={(e) => setNewCity(e.target.value)}
+                  required
                 />
               </div>
               <div className="form-group">
@@ -231,6 +237,7 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
                   placeholder="e.g. Coach Ramesh"
                   value={newHostName}
                   onChange={(e) => setNewHostName(e.target.value)}
+                  required
                 />
               </div>
             </div>

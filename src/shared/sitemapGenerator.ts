@@ -77,7 +77,6 @@ export function buildSitemapEntries(catalogues: PublishedSitemapCatalogues = {})
     { loc: `${BASE_URL}/cities`, lastmod: SITEMAP_LASTMOD, changefreq: 'weekly', priority: 0.8 },
     { loc: `${BASE_URL}/talent-scanner`, lastmod: SITEMAP_LASTMOD, changefreq: 'weekly', priority: 0.85 },
     { loc: `${BASE_URL}/sports-cv`, lastmod: SITEMAP_LASTMOD, changefreq: 'weekly', priority: 0.8 },
-    { loc: `${BASE_URL}/live`, lastmod: SITEMAP_LASTMOD, changefreq: 'hourly', priority: 0.9 },
     { loc: `${BASE_URL}/learning-hub`, lastmod: SITEMAP_LASTMOD, changefreq: 'weekly', priority: 0.8 },
     { loc: `${BASE_URL}/guides`, lastmod: SITEMAP_LASTMOD, changefreq: 'weekly', priority: 0.8 },
     { loc: `${BASE_URL}/ai-guide`, lastmod: SITEMAP_LASTMOD, changefreq: 'weekly', priority: 0.8 },
