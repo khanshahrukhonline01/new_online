@@ -40,8 +40,8 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/') {
     return {
-      title: "KhelGrid | Sports Trials, Venues & Athlete Resources in India",
-      description: "Explore published sports trials and opportunities, sports venues, coaching listings, athlete CV tools and KhelChronicle research. Confirm details with organisers and providers.",
+      title: "KhelGrid | Sports Trials, Venues & Athlete CVs",
+      description: "Explore published sports trials, sports venues, athlete CV tools and sports research. Confirm details with organisers and providers.",
       canonicalUrl: 'https://khelgrid.com/',
       keywords: DEFAULT_KEYWORDS,
       ogType: 'website',
