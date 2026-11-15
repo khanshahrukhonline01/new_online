@@ -1127,3 +1127,29 @@ independent of footer height. */
 }
 
 
+
+
+/* User-selectable KhelGrid accent palettes. Brand assets and identity remain unchanged. */
+html[data-accent="green"] {
+  --accent: #10b981;
+  --accent-ink: #052e22;
+  --accent-soft: rgba(16, 185, 129, .13);
+  --green: #10b981;
+  --green-dark: #059669;
+}
+html[data-accent="blue"] {
+  --accent: #2563eb;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(37, 99, 235, .13);
+  --green: #2563eb;
+  --green-dark: #1d4ed8;
+}
+html[data-accent="orange"] {
+  --accent: #f97316;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(249, 115, 22, .14);
+  --green: #f97316;
+  --green-dark: #ea580c;
+}
+html[data-accent="blue"] .nav-link.active,
+html[data-accent="orange"] .nav-link.active { box-shadow: inset 0 -2px var(--accent); }
