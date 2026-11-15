@@ -5,7 +5,7 @@ import type { Opportunity, Sport, Venue } from '../../shared/domain'
 import { AsyncState } from '../../shared/components/AsyncState'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { TrialAlertActions } from '../opportunities/TrialAlertActions'
-import { updatePageSeoMetadata, DEFAULT_KEYWORDS } from '../../shared/utils/seoAndShare'
+import { updatePageSeoMetadata } from '../../shared/utils/seoAndShare'
 import './catalogue-detail.css'
 
 type Kind = 'sport' | 'opportunity' | 'venue'
@@ -22,17 +22,6 @@ export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: 
   }, [kind])
 
   const cleanSlug = slug.replace(/^t-/, '')
-  let record = result.status === 'ready'
-    ? result.data.find(item =>
-        item.slug === cleanSlug ||
-        item.slug === slug ||
-        item.slug.replace(/^t-/, '') === cleanSlug ||
-        `t-${item.slug}` === slug
-      )
-    : undefined
-
-  // Only database rows returned by the published + verified query can become public detail pages.
-  const cleanSlug = slug.replace(/^t-/, '')
   const record = result.status === 'ready' ? result.data.find(item => item.slug === slug || item.slug === cleanSlug || item.slug.replace(/^t-/, '') === cleanSlug) : undefined
 
   useEffect(() => {
@@ -45,12 +34,11 @@ export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: 
     const endDate = opportunity?.ends_at ? new Date(opportunity.ends_at) : null
     const locationName = opportunity?.venue_name || opportunity?.city
     const isSportingEvent = Boolean(opportunity && opportunity.verification_status === 'verified' && ['trial', 'combine', 'camp'].includes(opportunity.opportunity_type) && startDate && !Number.isNaN(startDate.getTime()) && locationName)
-    const pageUrl = canonicalUrl
     const jsonLd = isSportingEvent && opportunity && startDate ? {
       '@context': 'https://schema.org',
       '@graph': [
-        { '@type': 'SportsEvent', name: opportunity.title, startDate: startDate.toISOString(), ...(endDate && !Number.isNaN(endDate.getTime()) ? { endDate: endDate.toISOString() } : {}), url: pageUrl, location: { '@type': 'Place', name: locationName, ...(opportunity.city ? { address: { '@type': 'PostalAddress', addressLocality: opportunity.city, addressCountry: 'IN' } } : {}) }, ...(opportunity.organizer_name ? { organizer: { '@type': 'Organization', name: opportunity.organizer_name } } : {}), ...(typeof opportunity.registration_fee === 'number' && Number.isFinite(opportunity.registration_fee) ? { offers: { '@type': 'Offer', price: String(opportunity.registration_fee), priceCurrency: 'INR', url: opportunity.source_url || pageUrl } } : {}) },
-        { '@type': 'BreadcrumbList', '@id': pageUrl + '#breadcrumb', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Home', item: 'https://khelgrid.com' }, { '@type': 'ListItem', position: 2, name: 'Selection Trials', item: 'https://khelgrid.com/opportunities' }, { '@type': 'ListItem', position: 3, name: opportunity.title, item: pageUrl }] },
+        { '@type': 'SportsEvent', name: opportunity.title, startDate: startDate.toISOString(), ...(endDate && !Number.isNaN(endDate.getTime()) ? { endDate: endDate.toISOString() } : {}), url: canonicalUrl, location: { '@type': 'Place', name: locationName, ...(opportunity.city ? { address: { '@type': 'PostalAddress', addressLocality: opportunity.city, addressCountry: 'IN' } } : {}) }, ...(opportunity.organizer_name ? { organizer: { '@type': 'Organization', name: opportunity.organizer_name } } : {}), ...(typeof opportunity.registration_fee === 'number' && Number.isFinite(opportunity.registration_fee) ? { offers: { '@type': 'Offer', price: String(opportunity.registration_fee), priceCurrency: 'INR', url: opportunity.source_url || canonicalUrl } } : {}) },
+        { '@type': 'BreadcrumbList', '@id': canonicalUrl + '#breadcrumb', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Home', item: 'https://khelgrid.com' }, { '@type': 'ListItem', position: 2, name: 'Selection Trials', item: 'https://khelgrid.com/opportunities' }, { '@type': 'ListItem', position: 3, name: opportunity.title, item: canonicalUrl }] },
       ],
     } : undefined
     return updatePageSeoMetadata({ title: opportunity ? opportunity.title + ' · Sports Trial | KhelGrid' : 'Trial not found · KhelGrid', description, canonicalUrl, robots: opportunity?.verification_status === 'verified' ? undefined : 'noindex, follow', ogType: 'website', jsonLd })
