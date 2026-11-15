@@ -96,3 +96,82 @@ html.dark .khelgrid-admin-app .admin-control textarea {
   .admin-theme-controls label { flex: 1 1 100%; justify-content: space-between; }
   .admin-theme-controls select { flex: 1; }
 }
+
+/* Theme-aware overrides for the full moderation workspace. */
+html[data-accent] .khelgrid-admin-app .admin-control {
+  --kg-emerald: var(--accent);
+  --kg-emerald-soft: var(--accent-soft);
+}
+html[data-accent] .khelgrid-admin-app .admin-control .admin-control-brand-mark {
+  background: var(--accent);
+}
+html[data-accent] .khelgrid-admin-app .admin-control .admin-control-identity > strong,
+html[data-accent] .khelgrid-admin-app .admin-control .admin-control-queue > button.selected,
+html[data-accent] .khelgrid-admin-app .admin-control .admin-control-sidebar > a.active,
+html[data-accent] .khelgrid-admin-app .admin-control .admin-control-sidebar > a:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+html[data-accent] .khelgrid-admin-app .admin-control .admin-control-stat::before,
+html[data-accent] .khelgrid-admin-app .admin-control .admin-control-live i {
+  background: var(--accent);
+}
+html[data-accent] .khelgrid-admin-app .admin-control .admin-control-section-heading .eyebrow,
+html[data-accent] .khelgrid-admin-app .admin-control .admin-control-card .eyebrow,
+html[data-accent] .khelgrid-admin-app .admin-control .admin-control-queue > button > span {
+  color: var(--accent-strong);
+}
+html[data-accent] .khelgrid-admin-app .admin-control button:focus-visible,
+html[data-accent] .khelgrid-admin-app .admin-control a:focus-visible,
+html[data-accent] .khelgrid-admin-app .admin-control input:focus-visible,
+html[data-accent] .khelgrid-admin-app .admin-control select:focus-visible,
+html[data-accent] .khelgrid-admin-app .admin-control textarea:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+html.dark .khelgrid-admin-app .admin-control {
+  --kg-canvas: #0b111b;
+  --kg-ink: #f1f5f9;
+  --kg-muted: #94a3b8;
+  --surface: #111a28;
+  --border-subtle: #263449;
+  --text-primary: #f1f5f9;
+  --text-secondary: #a8b5c7;
+  background: #0b111b;
+  color: #f1f5f9;
+}
+html.dark .khelgrid-admin-app .admin-control .admin-control-stat,
+html.dark .khelgrid-admin-app .admin-control .admin-control-queue,
+html.dark .khelgrid-admin-app .admin-control .admin-control-card,
+html.dark .khelgrid-admin-app .admin-control .admin-control-empty,
+html.dark .khelgrid-admin-app .admin-control .admin-control-login {
+  background: #111a28;
+  border-color: #263449;
+  color: #f1f5f9;
+}
+html.dark .khelgrid-admin-app .admin-control .admin-control-stat strong,
+html.dark .khelgrid-admin-app .admin-control .admin-control-queue h2,
+html.dark .khelgrid-admin-app .admin-control .admin-control-card h2,
+html.dark .khelgrid-admin-app .admin-control .admin-control-card h3,
+html.dark .khelgrid-admin-app .admin-control .admin-control-section-heading h2,
+html.dark .khelgrid-admin-app .admin-control .admin-control-queue > button strong {
+  color: #f8fafc;
+}
+html.dark .khelgrid-admin-app .admin-control input,
+html.dark .khelgrid-admin-app .admin-control select,
+html.dark .khelgrid-admin-app .admin-control textarea {
+  background: #0b111b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+html.dark .khelgrid-admin-app .admin-theme-controls {
+  background: #111a28;
+  border-color: #263449;
+}
+html.dark .khelgrid-admin-app .admin-theme-controls label { color: #f1f5f9; }
+html.dark .khelgrid-admin-app .admin-theme-controls select {
+  background: #0b111b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
