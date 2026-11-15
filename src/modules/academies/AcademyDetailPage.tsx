@@ -62,7 +62,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
     return () => {
       active = false
     }
-  }, [slug]
+  }, [slug])
 
   // Dynamic Community Rating & Review Stats
   useEffect(() => {
@@ -97,7 +97,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
       active = false
       window.removeEventListener('khelgrid:review-added', onReviewAdded)
     }
-  }, [slug, academy?.rating, academy?.review_count]
+  }, [slug, academy?.rating, academy?.review_count])
 
   // SEO & Schema.org Structured Data
   useEffect(() => {
