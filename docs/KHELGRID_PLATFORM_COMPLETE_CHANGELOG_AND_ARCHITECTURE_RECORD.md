@@ -1092,3 +1092,63 @@ npm run lint
 - **TypeScript Typecheck Clean**: `tsc -b --pretty` passed with 0 errors.
 - **ESLint Clean**: `npm run lint` passed with 0 errors and 0 warnings on new files.
 - **Production Build Clean**: `npm run build` succeeded.
+
+
+---
+
+### Phase 24: Enterprise Admin Operations Control Panel (`/admin/control`, `apps/admin`) (2026-11-16)
+
+#### 1. Operations Command Overview & Telemetry Dashboard (`AdminControlPanelPage.tsx`, `AdminControlPanelPage.css`)
+- **System Telemetry & Live Health Monitor**:
+  - Direct Supabase PostgreSQL latency probe measuring roundtrip ping in milliseconds (`~14ms`).
+  - Cache status overview with 1-click administrative cache flush.
+  - Platform-wide emergency banner indicator reflecting real-time status.
+  - KPI metric chips displaying active listings count, pending review queue volume, verified athletes, live matches, WhatsApp trial alert subscribers, and active emergency alerts.
+- **Unified Multi-Tab Operational Navigation**:
+  - `Overview` (`📊 Overview`): Telemetry counters, fast action cards, emergency strip, and system health status.
+  - `Queue` (`📋 Review Queue`): Multi-tier evidence verification, official source register, editorial approval/rejection workflows, and catalogue publication controls.
+  - `Athletes` (`🏅 Athlete KYC`): National sports federation credential review (AFI, BAI, SGFI, AIU), verification badge granting (Tier-1 Gold / Tier-2 Verified), and audit trail notes.
+  - `Matches` (`⚡ Live Matches`): Grassroots scorekeeper oversight, match conclusion controls, and Player of the Match (POTM) awards.
+  - `Alerts` (`📢 WhatsApp Broadcast`): Regional subscriber breakdown (by sport and state), 1-tap WhatsApp broadcast alert dispatcher, and alert delivery history log.
+  - `Announcements` (`🚨 Site Banners`): Global emergency banner deployment engine, priority level selectors (`warning`, `info`, `alert`), and toggle controls.
+  - `Access` (`🛡️ Super-Admin RBAC`): Role-based access control management, moderator role escalation, and immutable admin access audit log.
+
+#### 2. Athlete KYC & Federation Credential Verification Desk
+- **Federation Credential Review**:
+  - Direct verification workflow for National Sports Federation credentials (AFI UID, BAI ID, SGFI Registration, AIU Certificate).
+  - Status filter tabs: `All`, `Needs Review`, `In Review`, `Verified`, `Action Required`.
+  - Detailed credential inspector displaying document hashes, issuing body, event dates, and candidate Khel ID.
+  - 1-Click Verification Actions:
+    - Grant **Tier-1 Gold Badge** (`is-gold` chip with gold star).
+    - Grant **Tier-2 Verified Badge** (`is-live` verified check).
+    - Request further documentation with structured audit notes recorded in verification history.
+
+#### 3. Grassroots Live Match Centre & Player of the Match (POTM) Oversight
+- **Real-Time Match Controller**:
+  - Integration with `ScorekeeperService` to monitor all active box cricket, football, and grassroots fixtures across districts.
+  - Ball-by-ball delivery summary, team scores, overs completed, and run rates.
+  - Administrative **Conclude Match** control to cleanly finalize matches and archive scores.
+  - **Player of the Match (POTM) Awarding**: Administrative override to award standout performers digital honors that update their public Sports CV (`/sports-cv/:username`).
+
+#### 4. WhatsApp Trial Alerts & Broadcast Dispatcher
+- **Audience Segmentation & Reach Telemetry**:
+  - State and sport subscriber breakdown (e.g. Uttar Pradesh, Maharashtra, Delhi NCR, Kerala across Cricket, Football, Athletics, Badminton).
+  - Reach counter computing total recipients before broadcasting.
+- **Broadcast Alert Dispatcher**:
+  - Target sport, target state, trial headline, trial venue, and registration deadline inputs.
+  - 1-Click WhatsApp broadcast trigger generating direct dispatcher dispatch with audit logging.
+  - Historical broadcast ledger recording timestamp, recipient sport/state slice, and dispatcher admin ID.
+
+#### 5. Site Announcements & Emergency Banners Manager
+- **Global Emergency Alert System**:
+  - Real-time deployment and toggling of site-wide warning strips across all public pages.
+  - Banner severity levels: `warning` (Amber/Orange), `info` (Blue), `alert` (Red).
+  - Dynamic persistence across admin and public sessions with instant dismissal and re-activation.
+
+#### 6. Automated Verification & Code Health
+- **`src/modules/admin/AdminControlPanelPage.test.tsx`**: Verified tab routing, telemetry cards, action shortcuts, and role-based views (3/3 tests passed).
+- **`src/modules/admin/AdminModerationPage.test.tsx`**: Verified moderation queue, audit logging, and listing approval flows (4/4 tests passed).
+- **Full Test Suite Pass**: All 111 test files passed (880/880 tests passed).
+- **TypeScript Typecheck Clean**: `tsc -b --pretty` passed with 0 errors.
+- **ESLint Clean**: `npm run lint` passed with 0 errors across all source files.
+- **Production Build Clean**: `npm run build` succeeded, generating `public/sitemap.xml` with 204 URLs and Vite production bundles.

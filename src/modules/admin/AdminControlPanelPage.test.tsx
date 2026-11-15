@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AdminControlPanelPage } from './AdminControlPanelPage'
+import { AdminControlPanelPage, type AdminControlTab } from './AdminControlPanelPage'
 import { getEvidenceChecklist } from './moderationEvidenceChecklist'
 
 describe('AdminControlPanelPage', () => {
@@ -21,5 +21,23 @@ describe('AdminControlPanelPage', () => {
     expect(html).not.toContain('Super-admin access management')
     expect(html).not.toContain('Authorized accounts')
     expect(html).not.toContain('Evidence register')
+  })
+
+  it('exports valid AdminControlTab types covering the platform operations pillars', () => {
+    const expectedTabs: AdminControlTab[] = [
+      'overview',
+      'queue',
+      'athletes',
+      'matches',
+      'alerts',
+      'announcements',
+      'access',
+    ]
+    expect(expectedTabs).toHaveLength(7)
+    expect(expectedTabs).toContain('overview')
+    expect(expectedTabs).toContain('athletes')
+    expect(expectedTabs).toContain('matches')
+    expect(expectedTabs).toContain('alerts')
+    expect(expectedTabs).toContain('announcements')
   })
 })
