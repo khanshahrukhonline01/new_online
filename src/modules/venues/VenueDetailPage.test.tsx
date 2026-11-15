@@ -37,7 +37,7 @@ describe('VenueDetailPage — published and verified catalogue access', () => {
         ? { status: 'submitted', reference_number: 'KHL-20261112-VEN001', tracking_key: 'private-venue-test-key' }
         : url.includes('/rest/v1/venues?')
           ? (() => {
-              const requestedSlug = new URL(url).searchParams.get('slug')?.replace(/^ilike\\./, '')
+              const requestedSlug = new URL(url).searchParams.get('slug')?.replace(/^ilike\./, '')
               return !requestedSlug || requestedSlug.toLowerCase() === venueFixture.slug.toLowerCase()
                 ? [venueFixture]
                 : []
