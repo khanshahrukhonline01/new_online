@@ -36,7 +36,12 @@ describe('VenueDetailPage — published and verified catalogue access', () => {
       const data = url.includes('/rpc/submit_listing_intake')
         ? { status: 'submitted', reference_number: 'KHL-20261112-VEN001', tracking_key: 'private-venue-test-key' }
         : url.includes('/rest/v1/venues?')
-          ? [venueFixture]
+          ? (() => {
+              const requestedSlug = new URL(url).searchParams.get('slug')?.replace(/^ilike\\./, '')
+              return !requestedSlug || requestedSlug.toLowerCase() === venueFixture.slug.toLowerCase()
+                ? [venueFixture]
+                : []
+            })()
           : []
       return Promise.resolve(new Response(JSON.stringify(data), { status: 200 }))
     }))
