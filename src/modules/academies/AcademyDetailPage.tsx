@@ -137,7 +137,8 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
         'youth sports trials',
         'KhelGrid verified academy',
       ],
-      jsonLd,
+      robots: academy.verification_status === 'verified' ? undefined : 'noindex, follow',
+      jsonLd: academy.verification_status === 'verified' ? jsonLd : undefined,
     })
 
     return cleanup
