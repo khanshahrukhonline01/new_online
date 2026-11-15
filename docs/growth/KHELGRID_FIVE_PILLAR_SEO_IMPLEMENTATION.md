@@ -58,6 +58,7 @@ Use the uploaded Search Console export dated 15 November 2026 as the initial com
 
 ### Implemented in this branch
 - Venue metadata describes discovery, not completed booking, live availability or hourly slot transactions.
+- Academy and venue detail lookups no longer fall back to static curated records; direct Supabase detail queries enforce both published and verified status.
 - Academy metadata describes published listings without asserting that every listing is verified.
 - Sitemap detail URLs are no longer sourced from static curated/seed arrays.
 - The build-time sitemap generator can add venue and academy detail URLs only from Supabase rows filtered by both `publication_status = published` and `verification_status = verified`.
