@@ -1,7 +1,7 @@
 # Live Sports Data, Match Center & Search Engine Architecture
 
-**Status:** Operational — Real-Time Multi-Sport Scoreboard Feed with Dynamic SEO & Nominative Fair Use Compliance  
-**Last Updated:** November 15, 2026 (Phase 2 SEO & SERP Optimization Milestone)
+**Status:** Development integration — external scoreboard endpoints and community scorekeeper are present; provider authorization, service-level guarantees, independent verification and production SEO eligibility remain unconfirmed.  
+**Last Updated:** November 15, 2026 (Pillar 2 data-integrity and SEO review)
 
 ---
 
@@ -29,10 +29,13 @@ When a match is in active live play (`status === 'LIVE'`), the client dynamicall
 - **Dynamic Description:** `(LIVE) {TeamA.name} {TeamA.score} vs {TeamB.name} {TeamB.score} in {Tournament} ({Format}). {StatusText}. Follow live ball-by-ball commentary & instant scorecards on KhelGrid.`
 
 ### C. Schema.org JSON-LD Entities
-Every state change automatically updates the DOM `<script id="khelgrid-jsonld" type="application/ld+json">` with:
-1. `WebPage` with `about` entities: `Cricket`, `Women's Premier League (WPL)`, `ICC Cricket`, `T20 Cricket`, `Live Sports Scores`.
-2. `SportsEvent`: For all active, scheduled, and finished matches (including `homeTeam`, `awayTeam`, `sport`, `eventStatus`, and `location`).
-3. `LiveBlogPosting`: For active live matches, enabling Google SERP rich cards and real-time score indicators.
+The live route currently emits page-level `WebPage` metadata only. It does **not** emit `SportsEvent` or `LiveBlogPosting` markup from scoreboard cards because:
+- the cards do not have dedicated canonical event URLs;
+- a display clock/over string is not a venue address;
+- the current feed payload is not yet proven to provide complete, independently verified event dates and locations;
+- provider permissions and eligibility for rich-result markup have not been confirmed.
+
+Add event markup only after the match record has a stable URL, a valid event date, an actual location, reliable status provenance and an approved data-use basis.
 
 ---
 
@@ -54,7 +57,8 @@ Rendered in `LiveScoresPage.tsx` above footer navigation:
 
 ## 4. Verification & Testing Standards
 
-All live sports SEO and engine modules are verified under automated testing:
-- **Unit Suite:** `src/modules/live/live-scores.test.tsx` (LiveSportsEngine singleton, format detection, real feed fetch with attribution, UI rendering, conversion funnel, legal notice presence, and SEO metadata).
-- **Type Checking:** 100% clean compilation via `npx tsc -b`.
-- **Linting:** 0 errors via `npm run lint`.
+The automated suite covers the engine contract, cricket-format detection, scoreboard page rendering, metadata and structured-data policy. The external-feed integration test depends on the provider endpoint being reachable in CI and is not a substitute for provider authorization or a production smoke test.
+
+Pillar 2 adds checks that no fabricated community fixtures are seeded; community entries are not treated as external-feed evidence; the feed indicator reflects external-feed records only; missing team/competition names are not invented; live-page metadata avoids unsupported speed, season and commentary claims; and page-level structured data is used until canonical, complete event records exist.
+
+A green unit suite does not establish provider rights, feed freshness, production availability, or permission to use third-party logos and commentary. Those require separate review.

@@ -70,6 +70,10 @@ export function detectCricketFormat(tournament: string, stage?: string): Cricket
   return 'All';
 }
 
+function isExternalScoreboardMatch(match: SportsMatch): boolean {
+  return match.source === 'External ESPN scoreboard feed';
+}
+
 /**
  * LiveSportsEngine for KhelGrid Platform
  */
@@ -98,7 +102,8 @@ export class LiveSportsEngine {
       const json = await res.json();
       for (const sportObj of json.sports || []) {
         for (const league of sportObj.leagues || []) {
-          const leagueName = league.name || 'International Cricket';
+          const leagueName = league.name?.trim();
+          if (!leagueName) continue;
           for (const ev of league.events || []) {
             const comps = ev.competitors || [];
             if (comps.length < 2) continue;
@@ -129,8 +134,9 @@ export class LiveSportsEngine {
               status = 'FINISHED';
             }
 
-            const teamAName = home.displayName || home.name || 'Team A';
-            const teamBName = away.displayName || away.name || 'Team B';
+            const teamAName = (home.displayName || home.name || '').trim();
+            const teamBName = (away.displayName || away.name || '').trim();
+            if (!teamAName || !teamBName) continue;
 
             const homeScore = home.score?.trim() || (status === 'UPCOMING' ? 'Scheduled' : '-');
             const awayScore = away.score?.trim() || (status === 'UPCOMING' ? 'Scheduled' : '-');
@@ -170,7 +176,8 @@ export class LiveSportsEngine {
                 : undefined,
               highlight,
               format,
-              source: 'Official International Cricket Match Feed',
+              source: 'External ESPN scoreboard feed',
+              sourceUrl: 'https://site.api.espn.com/apis/personalized/v2/scoreboard/header?sport=cricket',
               completedAt: status === 'FINISHED' ? new Date().toISOString() : undefined,
             });
           }
@@ -217,14 +224,16 @@ export class LiveSportsEngine {
             ? 'FT'
             : ev.status?.type?.shortDetail || 'Scheduled';
 
-        const teamAName = home.team?.displayName || home.team?.name || 'Team A';
-        const teamBName = away.team?.displayName || away.team?.name || 'Team B';
+        const teamAName = (home.team?.displayName || home.team?.name || '').trim();
+        const teamBName = (away.team?.displayName || away.team?.name || '').trim();
+        const tournament = ev.league?.name?.trim();
+        if (!teamAName || !teamBName || !tournament) continue;
 
         matches.push({
           id: `football-${ev.id || matches.length + 1}`,
           sport: 'Football',
           status,
-          tournament: ev.league?.name || 'International Football',
+          tournament,
           stage: clock,
           teamA: {
             name: teamAName,
@@ -245,7 +254,8 @@ export class LiveSportsEngine {
             ? new Date(ev.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             : undefined,
           highlight: `${teamAName} vs ${teamBName} · ${comp.venue?.fullName || 'Stadium'}`,
-          source: 'Official Football Match Feed',
+          source: 'External ESPN scoreboard feed',
+          sourceUrl: 'https://site.api.espn.com/apis/personalized/v2/scoreboard/header?sport=soccer',
           completedAt: status === 'FINISHED' ? new Date().toISOString() : undefined,
         });
       }
@@ -327,8 +337,8 @@ export class LiveSportsEngine {
     return {
       matches: filtered,
       lastUpdated: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      sourceSummary: 'Official International Sports Feeds (Display attribution compliant)',
-      isLiveFeedConnected: allMatches.length > 0,
+      sourceSummary: 'External ESPN scoreboard feed and locally stored community scorekeeper entries; community entries are not independently verified.',
+      isLiveFeedConnected: allMatches.some(isExternalScoreboardMatch),
     };
   }
 }
