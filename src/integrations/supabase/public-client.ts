@@ -1,9 +1,5 @@
 import type { Academy, Coach, EventItem, Opportunity, Sport, Venue } from '../../shared/domain'
 import { broadcastRealtimeEvent, getSupabaseClient } from './realtime-client'
-import {
-  getCuratedAcademyBySlug,
-  getCuratedVenueBySlug,
-} from '../../shared/data/curatedEntitiesData'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -477,14 +473,20 @@ export async function getAcademyBySlug(slug: string): Promise<Academy | undefine
   const client = getSupabaseClient()
   if (client) {
     try {
-      const { data } = await client.from('academies').select('*').ilike('slug', clean).maybeSingle()
+      const { data } = await client
+        .from('academies')
+        .select('*')
+        .ilike('slug', clean)
+        .eq('publication_status', 'published')
+        .eq('verification_status', 'verified')
+        .maybeSingle()
       if (data) return data as unknown as Academy
     } catch {
       // ignore
     }
   }
 
-  return getCuratedAcademyBySlug(clean)
+  return undefined
 }
 
 export async function getVenueBySlug(slug: string): Promise<Venue | undefined> {
@@ -500,14 +502,20 @@ export async function getVenueBySlug(slug: string): Promise<Venue | undefined> {
   const client = getSupabaseClient()
   if (client) {
     try {
-      const { data } = await client.from('venues').select('*').ilike('slug', clean).maybeSingle()
+      const { data } = await client
+        .from('venues')
+        .select('*')
+        .ilike('slug', clean)
+        .eq('publication_status', 'published')
+        .eq('verification_status', 'verified')
+        .maybeSingle()
       if (data) return data as unknown as Venue
     } catch {
       // ignore
     }
   }
 
-  return getCuratedVenueBySlug(clean)
+  return undefined
 }
 
 export interface FetchCoachesOptions {
