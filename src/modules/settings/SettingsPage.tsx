@@ -293,6 +293,34 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                 </div>
               </div>
 
+              {/* Accent Colour Selection */}
+              <div className="settings-form-row">
+                <span className="settings-label" id="settings-accent-label">Accent Colour</span>
+                <p className="settings-hint">Choose the highlight colour used across buttons, links, focus states and selected controls. KhelGrid's logo and core identity stay unchanged.</p>
+                <div className="accent-options-grid" role="group" aria-labelledby="settings-accent-label">
+                  {([
+                    ['green', 'Emerald Green', '#10B981'],
+                    ['blue', 'Royal Blue', '#2563EB'],
+                    ['orange', 'Dynamic Orange', '#F97316'],
+                  ] as const).map(([value, label, colour]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`accent-option ${preferences.accent === value ? 'selected' : ''}`}
+                      onClick={() => {
+                        updatePreferences({ accent: value })
+                        showToast(`${label} accent selected`)
+                      }}
+                      aria-pressed={preferences.accent === value}
+                    >
+                      <span className="accent-option-swatch" style={{ backgroundColor: colour }} aria-hidden="true" />
+                      <span>{label}</span>
+                      {preferences.accent === value && <SiteIcon name="check-circle" size={16} />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Language Selection */}
               <div className="settings-form-row">
                 <label htmlFor="settings-language-select" className="settings-label">
