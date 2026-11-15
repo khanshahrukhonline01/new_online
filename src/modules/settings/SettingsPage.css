@@ -243,7 +243,7 @@
 .dark-preview .preview-bar {
   height: 10px;
   border-radius: 4px;
-  background: #10b981;
+  background: var(--accent, #10b981);
   width: 40%;
 }
 
@@ -384,7 +384,7 @@
   padding: 2px 8px;
   border-radius: 999px;
   background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  color: var(--accent, #10b981);
 }
 
 .account-details h3 {
