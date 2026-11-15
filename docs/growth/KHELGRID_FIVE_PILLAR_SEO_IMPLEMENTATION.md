@@ -90,6 +90,12 @@ Use the uploaded Search Console export dated 15 November 2026 as the initial com
 - Do not invent `lastmod` values. Emit them only when a source record provides an actual modification/publication date.
 - Do not change production DNS, domains, database, secrets, or deployment configuration as part of this branch.
 
+## Latest validation findings (15 November 2026)
+
+- The first GitHub Actions run reached the application typecheck after all isolated PostgreSQL security and payment checks passed.
+- That typecheck exposed malformed effect dependency closers in the academy and venue detail pages and an unclosed venue inquiry paragraph. These syntax errors have been corrected on this branch; a new CI run is required to confirm the correction.
+- The current Vercel preview checks remain blocked by the account build-rate limit. No preview build or browser acceptance result is being claimed.
+
 ## Acceptance gate
 
 - [ ] `npm run typecheck`
