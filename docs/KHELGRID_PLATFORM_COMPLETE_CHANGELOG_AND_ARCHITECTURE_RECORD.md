@@ -856,3 +856,51 @@ npm run lint
 - **`src/shared/utils/seoAndShare.test.ts`**: Added test verifying OpenGraph 1200x630 and Twitter card injection (9/9 tests passed).
 - **`src/App.test.tsx`**: Verified shell rendering and image accessibility (31/31 tests passed).
 - **Production Build & Lint**: `npm run build` and `npm run lint` clean with 0 errors.
+
+---
+
+### Milestone 18: Complete Overhaul of Sports CV & Digital Khel ID (खेल आईडी) — 4 Production Pillars (November 15, 2026)
+
+#### 1. Pillar 1: Official Digital Khel ID Scheme & High-Resolution Vector/Raster Visual Card (`PlayerCard.tsx`, `khelId.ts`, `qrCodeGenerator.ts`)
+- **Official Khel ID Scheme**: Standardized format `KG-2026-{STATE}-{SERIAL}` (e.g. `KG-2026-DEL-48291`, `KG-2026-TG-15822`) derived deterministically or seeded randomly from athlete state and unique identifier. Provides a memorable credential replacing sensitive Aadhaar/Govt ID disclosure at open trials.
+- **Pure TypeScript Zero-Dependency QR Code Generator (`src/shared/utils/qrCodeGenerator.ts`)**:
+  - ISO/IEC 18004 compliant pure TypeScript matrix builder with Reed-Solomon Error Correction Code (Level L) and dynamic mask pattern evaluation.
+  - Generates crisp, scalable vector SVG output rendering scannable QR codes pointing directly to `https://khelgrid.com/u/@{username}`.
+- **Dual High-Resolution Visual Card Export (`PlayerCard.tsx`)**:
+  - High-res PNG export (`handleDownloadPng`) utilizing HTML5 canvas scaled at 2x resolution (1260x1860 at 300 DPI equivalent) for print-ready trading card downloads.
+  - Direct SVG export (`handleDownloadSvg`) packaging CSS styles and embedded QR matrix into a standalone vector asset for lossless scaling.
+- **Social & Link Actions**: One-click WhatsApp share link (`https://api.whatsapp.com/send?text=...`) and clipboard link copy.
+
+#### 2. Pillar 2: Trial-Ready Scouting Combine Schema & Physical Biometrics (`SportsCvWizard.tsx`, `domain.ts`, `khelId.ts`)
+- **Federation Registration UID**: Added official federation license/registration fields (BCCI, Athletics Federation of India [AFI], Badminton Association of India [BAI], School Games Federation of India [SGFI], AIFF Central Registration System [CRS], or SAI Khelo India Athlete ID).
+- **Educational Affiliation**: Dedicated input for School, College, or University bonafide institution to verify inter-university and inter-school trial eligibility.
+- **Minor Guardian & Emergency Verification**: Guardian/Parent name, relationship (Father / Mother / Coach / Guardian), and emergency contact phone number to meet SAI safety compliance for youth athletes.
+- **Blood Group Selector**: Standardized dropdown (`A+`, `A-`, `B+`, `B-`, `O+`, `O-`, `AB+`, `AB-`) for trial medical files.
+- **Scientific Combine Fitness Telemetry**:
+  - Yo-Yo Intermittent Recovery 1 (IR1): Level, shuttles, and distance in meters.
+  - 30-Meter Sprint Velocity: Measured in seconds.
+  - Countermovement Jump (CMJ): Measured in centimeters.
+  - Real-time empirical percentile calculations and Tier scoring (Tier 1 National Elite, Tier 2 State Competitive, Tier 3 District / Academy Competitive) based on KhelChronicle normative datasets (`KG-2026-002`).
+
+#### 3. Pillar 3: Official One-Page Selection Trial Resume (Print/PDF) Layout (`SportsCvWizard.tsx`, `sports-cv.css`)
+- **Official SAI / State Directorate Dossier Layout**: Designed to replace handwritten biodata forms at open state and national trials.
+- **Header Section**: Features the athlete's Digital Khel ID (`KG-2026-...`), verification status badge, candidate profile, and camera-scannable QR code verification box.
+- **Four Structured Data Tables**:
+  1. *Physical & Biometric Dossier*: Age, Height, Weight, Blood Group, Primary Sport, Secondary Roles, Dominant Hand/Foot.
+  2. *Educational & Federation Credentials*: Bonafide School/College, Federation UID, District/State Association Affiliations.
+  3. *SAI Normative Fitness Combine Telemetry*: Yo-Yo IR1, 30m Sprint, CMJ, Percentiles, and Overall Fitness Tier.
+  4. *Competitive Match Record & Medal Accolades*: Level (National/State/District/Zonal), Year, Event/Tournament, Result/Medal.
+- **Candidate Statutory Declaration**: Signed declaration of true information with date and candidate signature line.
+- **Trial Selector / Scrutinizer Endorsement Block**: Official verifier sign-off section with verifier designation, signature line, date, and designated official seal/stamp box.
+- **Print CSS Precision (`sports-cv.css`)**: Configured `@page { size: A4 portrait; margin: 8mm 12mm; }` with `break-inside: avoid;` to ensure strict single-page PDF and print output without clipping or multi-page bleed.
+
+#### 4. Pillar 4: Local-First Draft Auto-Save & Zero Data Loss (`SportsCvWizard.tsx`)
+- **Draft Persistence**: Automatically saves all uncommitted form fields to `localStorage` under key `'khelgrid_cv_draft_v2'` on every change.
+- **Auto-Restore & Notification**: Detects saved drafts on mount, populates all form sections seamlessly, and displays an emerald confirmation banner (`"Draft restored from local session"`).
+- **Clear Draft Action**: Includes a "Clear Draft" reset action with user confirmation to wipe saved state when starting fresh.
+
+#### 5. Automated Verification & Code Health
+- **`src/shared/utils/qrCodeGenerator.test.ts`**: Verified 21x21 matrix, 7x7 corner finder patterns, timing patterns, and valid SVG output (2/2 tests passed).
+- **`src/modules/athlete-profile/PlayerCard.test.tsx`**: Verified standardized Khel ID format, QR verification box, and PNG/SVG download actions (3/3 tests passed).
+- **`src/modules/sports-cv/SportsCvWizard.test.tsx`**: Verified `computeFitnessTier` algorithm, all 4 form sections, and the complete selection trial dossier layout (9/9 tests passed).
+- **Build & Quality Assurance**: Production build clean (`npm run build` succeeded) and 0 ESLint errors.

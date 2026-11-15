@@ -264,6 +264,13 @@ export interface AthleteProfile {
   heightCm?: number
   weightKg?: number
   summary?: string
+  khelId?: string
+  federationUid?: string
+  schoolOrCollege?: string
+  bloodGroup?: string
+  guardianName?: string
+  guardianRelation?: string
+  guardianPhone?: string
   achievements: { year: string; event: string; result: string }[]
   videoClips: VideoClip[]
   fitnessBenchmarks?: {

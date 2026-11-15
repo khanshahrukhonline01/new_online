@@ -1,7 +1,9 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import type { AthleteProfile } from '../../shared/domain'
 import { SportIcon } from '../../shared/sports/sportIcons'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { generateQrMatrix, generateQrSvgString } from '../../shared/utils/qrCodeGenerator'
+import { generateKhelId, calculateOverallRating } from '../../shared/utils/khelId'
 import './PlayerCard.css'
 
 export interface PlayerCardProps {
@@ -10,31 +12,14 @@ export interface PlayerCardProps {
   compact?: boolean
 }
 
-/**
- * Calculates a dynamic, realistic athletic rating (OVR 75 - 98)
- * based on empirical fitness benchmarks, experience, and verified achievements.
- */
-function calculateOverallRating(profile: AthleteProfile): number {
-  let score = 82 // Baseline rating for verified grassroots athletes
-  if (profile.fitnessBenchmarks?.percentileAvg) {
-    score = Math.round(75 + (profile.fitnessBenchmarks.percentileAvg * 0.22))
-  } else if (profile.fitnessBenchmarks?.yoyoIr1Meters) {
-    const yoyo = profile.fitnessBenchmarks.yoyoIr1Meters
-    if (yoyo >= 2000) score += 9
-    else if (yoyo >= 1700) score += 6
-    else if (yoyo >= 1400) score += 3
-  }
-  const achBonus = Math.min(6, (profile.achievements || []).length * 2)
-  const clipsBonus = Math.min(3, (profile.videoClips || []).length * 1.5)
-  return Math.min(98, Math.max(76, Math.round(score + achBonus + clipsBonus)))
-}
-
 export function PlayerCard({ profile, showShareActions = true, compact = false }: PlayerCardProps) {
   const [copied, setCopied] = useState(false)
+  const [isDownloadingPng, setIsDownloadingPng] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://khelgrid.com'
   const publicUrl = `${origin}/u/@${profile.username}`
+  const khelId = generateKhelId(profile)
   const ovr = calculateOverallRating(profile)
 
   // Derived ratings for 6 FIFA-style card stats
@@ -51,22 +36,36 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
   const tec = Math.min(96, 82 + (profile.videoClips?.length || 1) * 4)
   const ach = Math.min(99, 80 + (profile.achievements?.length || 0) * 4)
 
+  // Pre-generate scannable QR Code
+  const qrSvgMarkup = useMemo(() => {
+    return generateQrSvgString(publicUrl, { size: 76, color: '#A7F36B', bgColor: 'transparent' })
+  }, [publicUrl])
+
   const handleCopy = () => {
     navigator.clipboard?.writeText(publicUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 2500)
   }
 
-  const shareText = `Check out ${profile.fullName}’s (${profile.sport} — ${profile.playingPosition}) official Athlete Card & Sports CV on KhelGrid:\n${publicUrl}`
+  const shareText = `Check out ${profile.fullName}’s (${profile.sport} — ${profile.playingPosition}) official Athlete Card & Digital Khel ID (${khelId}) on KhelGrid:\n${publicUrl}`
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`
 
-  const handleDownloadCard = () => {
-    // Generate standalone high-res SVG download of the Player Card
-    const cardEl = cardRef.current
-    if (!cardEl) return
+  /**
+   * Constructs the full vector SVG representation of the FIFA Trading Card.
+   */
+  const buildCardSvgString = (): string => {
+    const qrMatrix = generateQrMatrix(publicUrl)
+    const n = qrMatrix.length
+    let qrPaths = ''
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        if (qrMatrix[r][c]) {
+          qrPaths += `M${c},${r}h1v1h-1z `
+        }
+      }
+    }
 
-    const svgData = `
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="580" viewBox="0 0 400 580">
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="620" viewBox="0 0 420 620">
   <defs>
     <linearGradient id="goldBorder" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#E5C07B" />
@@ -74,67 +73,133 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
       <stop offset="100%" stop-color="#D4AF37" />
     </linearGradient>
     <linearGradient id="cardBg" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#091827" />
-      <stop offset="40%" stop-color="#06121E" />
+      <stop offset="0%" stop-color="#0B1C2D" />
+      <stop offset="45%" stop-color="#06121E" />
       <stop offset="100%" stop-color="#030A12" />
     </linearGradient>
   </defs>
 
   <!-- Card Shield Body -->
-  <path d="M 20 40 Q 20 20 40 20 L 360 20 Q 380 20 380 40 L 380 440 L 200 560 L 20 440 Z" fill="url(#cardBg)" stroke="url(#goldBorder)" stroke-width="4" />
+  <path d="M 25 45 Q 25 20 50 20 L 370 20 Q 395 20 395 45 L 395 480 L 210 600 L 25 480 Z" fill="url(#cardBg)" stroke="url(#goldBorder)" stroke-width="4" />
 
-  <!-- Card Header Badge -->
-  <text x="50" y="70" font-family="Arial, sans-serif" font-weight="900" font-size="34" fill="#A7F36B">${ovr}</text>
-  <text x="50" y="92" font-family="Arial, sans-serif" font-weight="700" font-size="14" fill="#E5C07B">${profile.playingPosition.slice(0, 5).toUpperCase()}</text>
-  <text x="50" y="115" font-size="20">🇮🇳</text>
+  <!-- Card Header Rating Badge -->
+  <text x="55" y="70" font-family="Arial, sans-serif" font-weight="900" font-size="36" fill="#A7F36B">${ovr}</text>
+  <text x="55" y="92" font-family="Arial, sans-serif" font-weight="700" font-size="13" fill="#E5C07B">${profile.playingPosition.slice(0, 5).toUpperCase()}</text>
+  <text x="55" y="116" font-size="20">🇮🇳</text>
 
   <!-- Sport & Crest -->
-  <rect x="290" y="45" width="60" height="60" rx="12" fill="#0D2338" stroke="#A7F36B" stroke-width="1.5" />
-  <text x="320" y="82" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#fff" text-anchor="middle">${profile.sport.slice(0, 8)}</text>
+  <rect x="300" y="45" width="65" height="52" rx="10" fill="#0D2338" stroke="#A7F36B" stroke-width="1.5" />
+  <text x="332" y="76" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#FFFFFF" text-anchor="middle">${profile.sport.slice(0, 9)}</text>
 
-  <!-- Player Name -->
-  <text x="200" y="240" font-family="Arial, sans-serif" font-weight="900" font-size="24" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">${profile.fullName.toUpperCase()}</text>
-  <text x="200" y="265" font-family="Arial, sans-serif" font-size="13" font-weight="600" fill="#A7F36B" text-anchor="middle">${profile.playingPosition} · ${profile.city}</text>
-  <text x="200" y="285" font-family="Arial, sans-serif" font-size="11" fill="#8FA5BE" text-anchor="middle">${profile.teamOrAcademy || 'Grassroots Athlete'}</text>
+  <!-- Player Name & Details -->
+  <text x="210" y="215" font-family="Arial, sans-serif" font-weight="900" font-size="22" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">${profile.fullName.toUpperCase()}</text>
+  <text x="210" y="238" font-family="Arial, sans-serif" font-size="13" font-weight="600" fill="#A7F36B" text-anchor="middle">${profile.playingPosition} · ${profile.city}</text>
+  <text x="210" y="258" font-family="Arial, sans-serif" font-size="11" fill="#8FA5BE" text-anchor="middle">${profile.teamOrAcademy || 'Grassroots Athlete'}</text>
 
   <!-- Divider Line -->
-  <line x1="45" y1="305" x2="355" y2="305" stroke="url(#goldBorder)" stroke-width="1.5" opacity="0.6" />
+  <line x1="50" y1="275" x2="370" y2="275" stroke="url(#goldBorder)" stroke-width="1.5" opacity="0.6" />
 
   <!-- 6 FIFA Attributes -->
   <g font-family="Arial, sans-serif" font-weight="bold">
-    <!-- Col 1 -->
-    <text x="75" y="340" font-size="18" fill="#FFF">${pac}</text>
-    <text x="110" y="340" font-size="13" fill="#8FA5BE">PAC</text>
-    <text x="75" y="375" font-size="18" fill="#FFF">${sta}</text>
-    <text x="110" y="375" font-size="13" fill="#8FA5BE">STA</text>
-    <text x="75" y="410" font-size="18" fill="#FFF">${pwr}</text>
-    <text x="110" y="410" font-size="13" fill="#8FA5BE">PWR</text>
+    <text x="80" y="308" font-size="18" fill="#FFF">${pac}</text>
+    <text x="115" y="308" font-size="12" fill="#8FA5BE">PAC</text>
+    <text x="80" y="340" font-size="18" fill="#FFF">${sta}</text>
+    <text x="115" y="340" font-size="12" fill="#8FA5BE">STA</text>
+    <text x="80" y="372" font-size="18" fill="#FFF">${pwr}</text>
+    <text x="115" y="372" font-size="12" fill="#8FA5BE">PWR</text>
 
-    <!-- Col 2 -->
-    <text x="235" y="340" font-size="18" fill="#FFF">${exp}</text>
-    <text x="270" y="340" font-size="13" fill="#8FA5BE">EXP</text>
-    <text x="235" y="375" font-size="18" fill="#FFF">${tec}</text>
-    <text x="270" y="375" font-size="13" fill="#8FA5BE">TEC</text>
-    <text x="235" y="410" font-size="18" fill="#FFF">${ach}</text>
-    <text x="270" y="410" font-size="13" fill="#8FA5BE">ACH</text>
+    <text x="245" y="308" font-size="18" fill="#FFF">${exp}</text>
+    <text x="280" y="308" font-size="12" fill="#8FA5BE">EXP</text>
+    <text x="245" y="340" font-size="18" fill="#FFF">${tec}</text>
+    <text x="280" y="340" font-size="12" fill="#8FA5BE">TEC</text>
+    <text x="245" y="372" font-size="18" fill="#FFF">${ach}</text>
+    <text x="280" y="372" font-size="12" fill="#8FA5BE">ACH</text>
   </g>
 
-  <!-- Verified Seal Footer -->
-  <rect x="70" y="450" width="260" height="28" rx="14" fill="#0D2338" stroke="#A7F36B" stroke-width="1" />
-  <text x="200" y="469" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#A7F36B" text-anchor="middle">✓ KHELGRID VERIFIED ATHLETE · KHEL ID</text>
+  <!-- Digital Khel ID Box -->
+  <rect x="65" y="398" width="290" height="30" rx="8" fill="#0D2338" stroke="#E5C07B" stroke-width="1.2" />
+  <text x="210" y="418" font-family="Arial, sans-serif" font-size="12" font-weight="900" fill="#E5C07B" text-anchor="middle" letter-spacing="1">KHEL ID: ${khelId}</text>
 
-  <!-- Link watermark -->
-  <text x="200" y="525" font-family="Arial, sans-serif" font-size="10" fill="#6A8098" text-anchor="middle">khelgrid.com/u/@${profile.username}</text>
-</svg>
-    `
+  <!-- Embedded Scannable QR Code (Bottom Left) -->
+  <g transform="translate(68, 442)">
+    <rect width="66" height="66" rx="6" fill="#0D2338" stroke="#A7F36B" stroke-width="1" />
+    <g transform="translate(5, 5) scale(${56 / n})">
+      <path d="${qrPaths.trim()}" fill="#A7F36B" shape-rendering="crispEdges" />
+    </g>
+  </g>
 
+  <!-- Verified Seal & Link (Bottom Right) -->
+  <text x="148" y="462" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#A7F36B">✓ KHELGRID VERIFIED</text>
+  <text x="148" y="480" font-family="Arial, sans-serif" font-size="10" fill="#8FA5BE">Scan QR for Scouting Dossier</text>
+  <text x="148" y="498" font-family="Arial, sans-serif" font-size="10" fill="#6A8098">khelgrid.com/u/@${profile.username}</text>
+
+  <!-- Watermark at the Tip -->
+  <text x="210" y="565" font-family="Arial, sans-serif" font-size="9" font-weight="bold" fill="#A7F36B" opacity="0.6" text-anchor="middle">DIGITAL KHEL ID (खेल आईडी)</text>
+</svg>`
+  }
+
+  const handleDownloadSvg = () => {
+    const svgData = buildCardSvgString()
     const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    link.download = `khelgrid-card-${profile.username}.svg`
+    link.download = `khelgrid-id-card-${profile.username}.svg`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(link.href)
+  }
+
+  const handleDownloadPng = () => {
+    setIsDownloadingPng(true)
+    try {
+      const svgData = buildCardSvgString()
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+      const url = URL.createObjectURL(svgBlob)
+
+      const img = new Image()
+      img.onload = () => {
+        // High-res canvas 1260 x 1860 (3x resolution)
+        const canvas = document.createElement('canvas')
+        canvas.width = 1260
+        canvas.height = 1860
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          ctx.imageSmoothingEnabled = true
+          ctx.imageSmoothingQuality = 'high'
+          ctx.drawImage(img, 0, 0, 1260, 1860)
+
+          canvas.toBlob(pngBlob => {
+            if (pngBlob) {
+              const link = document.createElement('a')
+              link.href = URL.createObjectURL(pngBlob)
+              link.download = `khelgrid-id-card-${profile.username}.png`
+              document.body.appendChild(link)
+              link.click()
+              document.body.removeChild(link)
+              URL.revokeObjectURL(link.href)
+            } else {
+              handleDownloadSvg()
+            }
+            URL.revokeObjectURL(url)
+            setIsDownloadingPng(false)
+          }, 'image/png')
+        } else {
+          URL.revokeObjectURL(url)
+          handleDownloadSvg()
+          setIsDownloadingPng(false)
+        }
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        handleDownloadSvg()
+        setIsDownloadingPng(false)
+      }
+      img.src = url
+    } catch {
+      handleDownloadSvg()
+      setIsDownloadingPng(false)
+    }
   }
 
   return (
@@ -177,6 +242,12 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
           {profile.teamOrAcademy && <p className="card-club">{profile.teamOrAcademy}</p>}
         </div>
 
+        {/* Digital Khel ID Chip */}
+        <div className="card-khel-id-badge" title="Official Grassroots Sports ID">
+          <span className="khel-id-label">KHEL ID (खेल आईडी)</span>
+          <span className="khel-id-code">{khelId}</span>
+        </div>
+
         <div className="card-stats-grid">
           <div className="card-stat">
             <span className="stat-val">{pac}</span>
@@ -204,9 +275,18 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
           </div>
         </div>
 
-        <div className="card-footer-branding">
-          <span>KHELGRID · DIGITAL KHEL ID (खेल आईडी)</span>
-          <small className="card-handle">@{profile.username}</small>
+        {/* QR Code Scannable Verification & Footer */}
+        <div className="card-qr-footer">
+          <div
+            className="card-qr-box"
+            title="Scan with phone camera to view athlete profile & scouting dossier"
+            dangerouslySetInnerHTML={{ __html: qrSvgMarkup }}
+          />
+          <div className="card-footer-branding">
+            <span className="branding-title">KHELGRID · DIGITAL KHEL ID</span>
+            <small className="card-handle">@{profile.username}</small>
+            <span className="card-scan-hint">Scan for Live Dossier</span>
+          </div>
         </div>
       </div>
 
@@ -215,11 +295,22 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
         <div className="card-action-tray">
           <button
             type="button"
-            className="card-action-btn btn-download-card"
-            onClick={handleDownloadCard}
-            title="Download high-resolution vector Player Card & Digital Khel ID"
+            className="card-action-btn btn-download-png"
+            onClick={handleDownloadPng}
+            disabled={isDownloadingPng}
+            title="Download high-resolution PNG image of Player Card & Digital Khel ID (1260x1860)"
           >
-            <SiteIcon name="download" size={15} /> Download Card (Khel ID)
+            <SiteIcon name="download" size={15} />{' '}
+            {isDownloadingPng ? 'Generating PNG…' : 'Download Card (PNG)'}
+          </button>
+
+          <button
+            type="button"
+            className="card-action-btn btn-download-svg"
+            onClick={handleDownloadSvg}
+            title="Download crisp vector SVG Player Card & Digital Khel ID"
+          >
+            <SiteIcon name="download" size={15} /> Download (SVG)
           </button>
 
           <a
