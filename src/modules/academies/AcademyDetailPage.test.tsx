@@ -37,7 +37,12 @@ describe('AcademyDetailPage — published and verified catalogue access', () => 
       const data = url.includes('/rpc/submit_listing_intake')
         ? { status: 'submitted', reference_number: 'KHL-20261112-ACA001', tracking_key: 'private-academy-test-key' }
         : url.includes('/rest/v1/academies?')
-          ? [academyFixture]
+          ? (() => {
+              const requestedSlug = new URL(url).searchParams.get('slug')?.replace(/^ilike\\./, '')
+              return !requestedSlug || requestedSlug.toLowerCase() === academyFixture.slug.toLowerCase()
+                ? [academyFixture]
+                : []
+            })()
           : []
       return Promise.resolve(new Response(JSON.stringify(data), { status: 200 }))
     }))
