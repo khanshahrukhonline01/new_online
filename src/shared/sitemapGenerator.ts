@@ -4,7 +4,6 @@ import {
   RESEARCH_PAPERS,
 } from '../modules/khelchronicle/data/khelchronicleData.ts'
 import { TOP_CITY_SPORTS_COMPLEXES } from './components/cityComplexesData.ts'
-import { CURATED_ACADEMIES, CURATED_VENUES } from './data/curatedEntitiesData.ts'
 
 export const BASE_URL = 'https://khelgrid.com'
 
