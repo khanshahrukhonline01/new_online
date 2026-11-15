@@ -12,8 +12,8 @@
 
 ## Architecture
 
-- `src/shared/preferences.ts` owns typed preference values, defaults, local persistence and root DOM application.
-- `src/shared/usePreferences.ts` synchronizes preference updates across mounted consumers and listens for operating-system appearance changes.
+- `src/shared/preferences.ts` owns typed preference values, defaults, defensive validation of persisted values, local persistence and root DOM application.
+- `src/shared/usePreferences.ts` synchronizes preference updates across mounted consumers and browser tabs, and listens for operating-system appearance changes (including older media-query listener APIs).
 - `src/shared/ThemeProvider.tsx` exposes the active theme context to the public and admin applications.
 - `src/styles.css` defines the shared CSS custom-property palettes.
 - Public settings expose all three accent palettes and the three appearance modes.
@@ -33,9 +33,10 @@ Preferences are stored in browser local storage. This survives refreshes on the 
 ## Validation still required before calling this complete
 
 1. Run public and admin TypeScript checks, unit tests, lint and production builds in CI.
-2. Add/complete Playwright coverage for all three accents, Light/Dark/System, refresh persistence, operating-system theme changes and mobile layouts.
+2. Add/complete Playwright coverage for all three accents, Light/Dark/System, refresh persistence, cross-tab updates, operating-system theme changes and mobile layouts.
 3. Visually inspect every public route and the separate admin preview. Some legacy module styles still contain hard-coded green/blue/orange values and require a route-by-route design-token audit before claiming every element recolours consistently.
-4. Verify no changes reached the production Vercel project, production Supabase project, DNS or live domain.
+4. The latest reported Vercel checks for the development branch were blocked by the Hobby-plan `build-rate-limit`; this is not a successful build. Recheck after the limit clears or use the repository CI build results.
+5. Verify no changes reached the production Vercel project, production Supabase project, DNS or live domain.
 
 ## Known limitation
 
