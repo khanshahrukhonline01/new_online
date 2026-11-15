@@ -53,7 +53,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #10b981;
+  background: var(--accent, #10b981);
 }
 
 .kc-draft-actions {
@@ -155,7 +155,7 @@
 }
 
 .kc-step-tab.is-completed {
-  color: #059669;
+  color: var(--accent-strong, #059669);
 }
 
 .kc-step-badge {
@@ -178,7 +178,7 @@
 }
 
 .kc-step-tab.is-completed .kc-step-badge {
-  background: #10b981;
+  background: var(--accent, #10b981);
   color: #ffffff;
 }
 
