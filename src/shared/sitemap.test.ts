@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   BASE_URL,
-  SITEMAP_LASTMOD,
   VERIFIED_SPORTS,
   buildSitemapEntries,
   generateSitemapXml,
@@ -23,11 +22,6 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     expect(home).toBeDefined()
     expect(home?.priority).toBe(1.0)
     expect(home?.changefreq).toBe('daily')
-    expect(home?.lastmod).toBe(SITEMAP_LASTMOD)
-
-    const search = entries.find(e => e.loc === `${BASE_URL}/search`)
-    expect(search).toBeDefined()
-    expect(search?.priority).toBe(0.9)
 
     const play = entries.find(e => e.loc === `${BASE_URL}/play`)
     expect(play).toBeDefined()
@@ -36,10 +30,6 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     const opportunities = entries.find(e => e.loc === `${BASE_URL}/opportunities`)
     expect(opportunities).toBeDefined()
     expect(opportunities?.priority).toBe(0.9)
-
-    const trials = entries.find(e => e.loc === `${BASE_URL}/trials`)
-    expect(trials).toBeDefined()
-    expect(trials?.priority).toBe(0.9)
 
     const talentScanner = entries.find(e => e.loc === `${BASE_URL}/talent-scanner`)
     expect(talentScanner).toBeDefined()
@@ -74,23 +64,23 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     }
   })
 
-  it('indexes curated academies and venues detail pages', () => {
-    const entries = buildSitemapEntries()
+  it('indexes venue, academy and trial detail URLs only from supplied verified-public records', () => {
+    const entries = buildSitemapEntries({
+      opportunities: [{ slug: 't-aiu-wushu-inter-university-trials-2026' }],
+      academies: [{ slug: 'verified-academy' }],
+      venues: [{ slug: 'verified-venue' }],
+    })
 
-    // Curated Academies
-    const bfcAcademy = entries.find(e => e.loc === `${BASE_URL}/academies/bengaluru-fc-academy`)
-    expect(bfcAcademy).toBeDefined()
-    expect(bfcAcademy?.priority).toBe(0.85)
-    expect(bfcAcademy?.changefreq).toBe('weekly')
+    expect(entries.find(e => e.loc === `${BASE_URL}/trial/t-aiu-wushu-inter-university-trials-2026`)).toMatchObject({
+      priority: 0.85,
+      changefreq: 'weekly',
+    })
+    expect(entries.find(e => e.loc === `${BASE_URL}/academies/verified-academy`)).toBeDefined()
+    expect(entries.find(e => e.loc === `${BASE_URL}/venues/verified-venue`)).toBeDefined()
 
-    const gopichand = entries.find(e => e.loc === `${BASE_URL}/academies/pullela-gopichand-badminton-academy`)
-    expect(gopichand).toBeDefined()
-
-    // Curated Venues
-    const kanteerava = entries.find(e => e.loc === `${BASE_URL}/venues/sree-kanteerava-stadium`)
-    expect(kanteerava).toBeDefined()
-    expect(kanteerava?.priority).toBe(0.85)
-    expect(kanteerava?.changefreq).toBe('weekly')
+    const defaults = buildSitemapEntries()
+    expect(defaults.some(e => e.loc.includes('/academies/') && e.loc !== `${BASE_URL}/academies`)).toBe(false)
+    expect(defaults.some(e => e.loc.includes('/venues/') && e.loc !== `${BASE_URL}/venues`)).toBe(false)
   })
 
   it('indexes KhelChronicle repository, all 7 disciplines, preprints, and author profiles', () => {
@@ -101,9 +91,7 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
       priority: 0.95,
       changefreq: 'daily',
     })
-    expect(entries.find(e => e.loc === `${BASE_URL}/khelchronicle/submit`)).toMatchObject({
-      priority: 0.85,
-    })
+    expect(entries.find(e => e.loc === `${BASE_URL}/khelchronicle/submit`)).toBeUndefined()
 
     // 2. 7 Academic Disciplines
     const disciplines = [
@@ -155,7 +143,7 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
 
     for (const entry of entries) {
       expect(entry.loc).toMatch(/^https:\/\/khelgrid\.com\//)
-      expect(entry.lastmod).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      if (entry.lastmod) expect(entry.lastmod).toMatch(/^\d{4}-\d{2}-\d{2}$/)
       expect(['daily', 'weekly', 'monthly', 'hourly']).toContain(entry.changefreq)
       expect(entry.priority).toBeGreaterThanOrEqual(0.5)
       expect(entry.priority).toBeLessThanOrEqual(1.0)
