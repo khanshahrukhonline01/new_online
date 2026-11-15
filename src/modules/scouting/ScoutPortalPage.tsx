@@ -11,6 +11,7 @@ import {
   generateScoutShortlistCsv,
   type ScoutAthlete,
 } from './scoutingData'
+import { getSportRolePreset } from '../../shared/data/sportRolesData'
 import { ScoutConnectModal } from './ScoutConnectModal'
 import './ScoutPortalPage.css'
 
@@ -27,6 +28,9 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
   const [selectedState, setSelectedState] = useState('all')
   const [selectedTier, setSelectedTier] = useState('all')
   const [minPercentile, setMinPercentile] = useState<number>(0)
+  const [selectedTechnicalRole, setSelectedTechnicalRole] = useState('all')
+  const [minYoyo, setMinYoyo] = useState<number>(0)
+  const [maxSprint, setMaxSprint] = useState<number>(0)
   const [sortBy, setSortBy] = useState<
     'percentile-desc' | 'sprint-asc' | 'cmj-desc' | 'yoyo-desc' | 'age-asc' | 'name-asc'
   >('percentile-desc')
@@ -106,6 +110,41 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
     return ['All Sports', ...Array.from(sportsSet).sort()]
   }, [athletes])
 
+  const availableTechnicalRoles = useMemo(() => {
+    const roles = new Set<string>()
+    if (selectedSport !== 'All Sports') {
+      const preset = getSportRolePreset(selectedSport)
+      if (preset) {
+        preset.primaryPositions.forEach(p => roles.add(p))
+        if (preset.technicalFields.bowlingStyles) preset.technicalFields.bowlingStyles.forEach(b => roles.add(b))
+        if (preset.technicalFields.battingStyles) preset.technicalFields.battingStyles.forEach(b => roles.add(b))
+        if (preset.technicalFields.preferredFeet) preset.technicalFields.preferredFeet.forEach(f => roles.add(f))
+        if (preset.technicalFields.tacticalPositions) preset.technicalFields.tacticalPositions.forEach(t => roles.add(t))
+        if (preset.technicalFields.athleticsEvents) preset.technicalFields.athleticsEvents.forEach(e => roles.add(e))
+        if (preset.technicalFields.playingStyles) preset.technicalFields.playingStyles.forEach(s => roles.add(s))
+        if (preset.technicalFields.racketHands) preset.technicalFields.racketHands.forEach(r => roles.add(r))
+        if (preset.technicalFields.signatureMoves) preset.technicalFields.signatureMoves.forEach(m => roles.add(m))
+      }
+    }
+    athletes.forEach(a => {
+      if (selectedSport === 'All Sports' || a.sport === selectedSport) {
+        if (a.tacticalPosition) roles.add(a.tacticalPosition)
+        if (a.bowlingStyle) roles.add(a.bowlingStyle)
+        if (a.battingStyle) roles.add(a.battingStyle)
+        if (a.athleticsEvent) roles.add(a.athleticsEvent)
+        if (a.playingStyle) roles.add(a.playingStyle)
+        if (a.signatureMove) roles.add(a.signatureMove)
+        if (a.technicalIndicators) {
+          a.technicalIndicators.split('·').forEach(part => {
+            const cleaned = part.trim().replace(/^(Batting|Bowling|Event|Position|Style|Move):\s*/i, '')
+            if (cleaned.length > 2 && cleaned.length < 40) roles.add(cleaned)
+          })
+        }
+      }
+    })
+    return ['all', ...Array.from(roles).sort()]
+  }, [athletes, selectedSport])
+
   const filteredAndSortedAthletes = useMemo(() => {
     const filtered = athletes.filter(ath => {
       // Search
@@ -117,7 +156,26 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
         const matchState = ath.state.toLowerCase().includes(q)
         const matchAcad = ath.academy.toLowerCase().includes(q)
         const matchUid = ath.federationUid.toLowerCase().includes(q)
-        if (!matchName && !matchPos && !matchCity && !matchState && !matchAcad && !matchUid) {
+        const matchTech = ath.technicalIndicators?.toLowerCase().includes(q)
+        const matchTactical = ath.tacticalPosition?.toLowerCase().includes(q)
+        const matchBowling = ath.bowlingStyle?.toLowerCase().includes(q)
+        const matchBatting = ath.battingStyle?.toLowerCase().includes(q)
+        const matchEvent = ath.athleticsEvent?.toLowerCase().includes(q)
+        const matchStyle = ath.playingStyle?.toLowerCase().includes(q)
+        if (
+          !matchName &&
+          !matchPos &&
+          !matchCity &&
+          !matchState &&
+          !matchAcad &&
+          !matchUid &&
+          !matchTech &&
+          !matchTactical &&
+          !matchBowling &&
+          !matchBatting &&
+          !matchEvent &&
+          !matchStyle
+        ) {
           return false
         }
       }
@@ -145,6 +203,33 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
       // Percentile
       if (minPercentile > 0 && ath.percentileRank < minPercentile) {
         return false
+      }
+
+      // Technical Role / Spec Filter (Improvement 6)
+      if (selectedTechnicalRole !== 'all') {
+        const target = selectedTechnicalRole.toLowerCase()
+        const matchTechRole =
+          (ath.technicalIndicators?.toLowerCase().includes(target)) ||
+          (ath.primaryPosition.toLowerCase().includes(target)) ||
+          (ath.tacticalPosition?.toLowerCase().includes(target)) ||
+          (ath.bowlingStyle?.toLowerCase().includes(target)) ||
+          (ath.battingStyle?.toLowerCase().includes(target)) ||
+          (ath.athleticsEvent?.toLowerCase().includes(target)) ||
+          (ath.playingStyle?.toLowerCase().includes(target)) ||
+          (ath.signatureMove?.toLowerCase().includes(target))
+        if (!matchTechRole) return false
+      }
+
+      // Combine Benchmarks: Yo-Yo IR1 (Improvement 6)
+      if (minYoyo > 0) {
+        const yoyo = ath.metrics.yoyoIr1Meters ?? 0
+        if (yoyo < minYoyo) return false
+      }
+
+      // Combine Benchmarks: 30m Sprint (Improvement 6)
+      if (maxSprint > 0) {
+        const sprint = ath.metrics.sprint30mSeconds ?? 999
+        if (sprint > maxSprint) return false
       }
 
       return true
@@ -177,7 +262,19 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
           return b.percentileRank - a.percentileRank
       }
     })
-  }, [athletes, searchQuery, selectedSport, selectedAgeGroup, selectedState, selectedTier, minPercentile, sortBy])
+  }, [
+    athletes,
+    searchQuery,
+    selectedSport,
+    selectedAgeGroup,
+    selectedState,
+    selectedTier,
+    minPercentile,
+    selectedTechnicalRole,
+    minYoyo,
+    maxSprint,
+    sortBy,
+  ])
 
   const shortlistedAthletes = useMemo(() => {
     return athletes.filter(a => shortlistIds.includes(a.id))
@@ -238,6 +335,9 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
     setSelectedState('all')
     setSelectedTier('all')
     setMinPercentile(0)
+    setSelectedTechnicalRole('all')
+    setMinYoyo(0)
+    setMaxSprint(0)
     setSortBy('percentile-desc')
   }
 
@@ -248,6 +348,9 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
     selectedState !== 'all' ||
     selectedTier !== 'all' ||
     minPercentile > 0 ||
+    selectedTechnicalRole !== 'all' ||
+    minYoyo > 0 ||
+    maxSprint > 0 ||
     sortBy !== 'percentile-desc'
 
   return (
@@ -358,7 +461,10 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
               role="tab"
               aria-selected={selectedSport === sport}
               className={`scout-sport-chip ${selectedSport === sport ? 'is-active' : ''}`}
-              onClick={() => setSelectedSport(sport)}
+              onClick={() => {
+                setSelectedSport(sport)
+                setSelectedTechnicalRole('all')
+              }}
             >
               {sport}
             </button>
@@ -420,6 +526,50 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
               <option value={75}>Top 25% (75th+ percentile)</option>
               <option value={90}>Top 10% (90th+ percentile)</option>
               <option value={95}>Top 5% Elite (95th+ percentile)</option>
+            </select>
+          </div>
+
+          <div className="scout-dropdown-group">
+            <label htmlFor="scout-tech-role-filter">Technical Role / Spec:</label>
+            <select
+              id="scout-tech-role-filter"
+              value={selectedTechnicalRole}
+              onChange={e => setSelectedTechnicalRole(e.target.value)}
+            >
+              <option value="all">All Technical Roles ({availableTechnicalRoles.length - 1})</option>
+              {availableTechnicalRoles
+                .filter(r => r !== 'all')
+                .map(r => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+            </select>
+          </div>
+
+          <div className="scout-dropdown-group">
+            <label htmlFor="scout-yoyo-filter">Yo-Yo IR1 Combine:</label>
+            <select
+              id="scout-yoyo-filter"
+              value={minYoyo}
+              onChange={e => setMinYoyo(Number(e.target.value))}
+            >
+              <option value={0}>All Endurance Levels</option>
+              <option value={1600}>&ge; 1,600m (District Baseline)</option>
+              <option value={1800}>&ge; 1,800m (State Elite Standard)</option>
+              <option value={2000}>&ge; 2,000m (National Camp Elite)</option>
+            </select>
+          </div>
+
+          <div className="scout-dropdown-group">
+            <label htmlFor="scout-sprint-filter">30m Sprint Combine:</label>
+            <select
+              id="scout-sprint-filter"
+              value={maxSprint}
+              onChange={e => setMaxSprint(Number(e.target.value))}
+            >
+              <option value={0}>All Sprint Speeds</option>
+              <option value={4.2}>&le; 4.20s (Sub-4.2s Fast Acceleration)</option>
+              <option value={4.1}>&le; 4.10s (Sub-4.1s National Level)</option>
+              <option value={4.0}>&le; 4.00s (Sub-4.0s Elite Flight)</option>
             </select>
           </div>
 
@@ -534,6 +684,20 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
                 <div className="scout-position-badge">
                   {ath.primaryPosition}
                 </div>
+
+                {/* Technical Indicators & Role Specialization (Improvement 6) */}
+                {ath.technicalIndicators && (
+                  <div className="scout-tech-badge">
+                    <SiteIcon name="target" size={13} />
+                    <span>{ath.technicalIndicators}</span>
+                  </div>
+                )}
+                {ath.personalBest && (
+                  <div className="scout-pb-line">
+                    <SiteIcon name="award" size={12} />
+                    <span>PB: <strong>{ath.personalBest}</strong>{ath.seasonBest ? ` · SB: ${ath.seasonBest}` : ''}</span>
+                  </div>
+                )}
 
                 {/* Location & Academy */}
                 <div className="scout-loc-line">

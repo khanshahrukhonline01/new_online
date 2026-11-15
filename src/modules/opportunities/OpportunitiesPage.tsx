@@ -124,9 +124,16 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
           const before = toDate ? new Date(toDate + 'T23:59:59.999+05:30').getTime() : Number.POSITIVE_INFINITY
           return (
             (!q ||
-              [item.title, item.organizer_name, item.city, item.venue_name, item.opportunity_type, item.sport?.name].some(value =>
-                value?.toLocaleLowerCase().includes(q),
-              )) &&
+              [
+                item.title,
+                item.organizer_name,
+                item.city,
+                item.venue_name,
+                item.opportunity_type,
+                item.sport?.name,
+                item.eligibility_criteria,
+                item.gender,
+              ].some(value => value?.toLocaleLowerCase().includes(q))) &&
             (!city || (item.city ? (item.city.toLowerCase() === city.toLowerCase() || item.city.toLowerCase().includes(city.toLowerCase()) || city.toLowerCase().includes(item.city.toLowerCase())) : false)) &&
             (!sport || item.sport?.name?.toLowerCase() === sport.toLowerCase()) &&
             (!ageCategory || (

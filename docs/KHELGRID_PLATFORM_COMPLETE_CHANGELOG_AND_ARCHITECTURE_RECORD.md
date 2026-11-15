@@ -929,10 +929,43 @@ npm run lint
   - Displays `.card-tech-role` badge with high-contrast gold styling under the nameplate.
   - Injects technical indicators into the exported high-resolution vector SVG trading card.
 
-#### 7. Automated Verification & Code Health
+#### 7. Direct WhatsApp & PDF Shareable Dossier Export (`SportsCvWizard.tsx`, `sports-cv.css`)
+- **Direct WhatsApp Selection Dossier Transmittal**:
+  - Implemented `dossierShareText` payload formatted with Markdown bullet points and bold headers (`*KhelGrid Official Selection Trial Dossier*`, `• Athlete: {name}`, `• Sport & Role: {sport} — {role}`, `• Digital Khel ID: {khelId}`, `• Dossier Ref: {referenceId} (Rev {rev})`, `• Generated On: {IST}`, `• Official Scrutiny: SAI / State Directorate {season}`, `• Technical: {indicators}`, `• Combine Readiness: {tier}`, and verified public URL).
+  - Generated direct WhatsApp sharing URL (`https://wa.me/?text=...`) accessible from both mobile and desktop.
+  - Added "Copy Dossier Summary" 1-click clipboard action with toast feedback.
+- **Dedicated Dossier Export Toolbar (`.dossier-export-toolbar`)**:
+  - Floating responsive toolbar positioned above the print preview featuring `OFFICIAL TRIAL DOSSIER READY` status badge and active reference metadata.
+  - Three distinct action buttons:
+    1. **"Save / Print PDF (A4)"**: Initiates print preview directly configured for 1-page A4 export.
+    2. **"Share on WhatsApp"**: Opens WhatsApp with pre-formatted selection trial dossier text payload.
+    3. **"Copy Link"**: Copies instant verification link and summary to clipboard.
+- **Embedded Official Verification Seal (`.official-stamp-box`, `.official-trial-seal-svg`)**:
+  - Embedded an authentic multi-ring vector SVG verification seal (`★ KHELGRID ★ SAI / FED SCRUTINY 2026–2027`) within the Chief Selector / Scrutinizer endorsement area.
+  - High-precision vector graphics rendered at 300 DPI for sharp vector rendering in printed resumes and PDF exports.
+
+#### 8. Scout & Academy Direct Search Filtering by Technical Indicators & Combine Benchmarks (`ScoutPortalPage.tsx`, `ScoutPortalPage.css`, `scoutingData.ts`, `TrialApplicationModal.tsx`, `athlete-profile-client.ts`)
+- **Scout Filter Workbench Expansion (`/scout`)**:
+  - **Technical Role / Specialty Filter**: Dynamically populates based on the selected sport's presets (`Cricket`, `Football`, `Athletics`, `Badminton`, `Kabaddi`) plus all verified athlete attributes in the database.
+  - **Yo-Yo IR1 Combine Filter**: Enables scouts to filter candidates by aerobic stamina thresholds (`>= 1,600m District Baseline`, `>= 1,800m State Elite Standard`, `>= 2,000m National Camp Elite`).
+  - **30m Sprint Combine Filter**: Enables scouts to filter candidates by sprint acceleration (`<= 4.20s Fast Acceleration`, `<= 4.10s National Level`, `<= 4.00s Elite Flight`).
+  - Search query matching expanded across `technicalIndicators`, `tacticalPosition`, `bowlingStyle`, `battingStyle`, `athleticsEvent`, and `playingStyle`.
+- **Athlete Card Visual Badges (`.scout-tech-badge`, `.scout-pb-line`)**:
+  - Displays `.scout-tech-badge` with target icon and high-contrast blue styling below position name.
+  - Displays `.scout-pb-line` for track & field athletes with Personal Best (`PB`) and Season Best (`SB`).
+- **CSV Scouting Dossier Export (`generateScoutShortlistCsv`)**:
+  - Added `'Technical Indicators'` column to RFC-4180 CSV export for NIS coaches, state selection committees, and academy scouts.
+- **Selection Trial Applications (`/opportunities`, `TrialApplicationModal.tsx`, `athlete-profile-client.ts`)**:
+  - Added `technicalIndicators?: string` to `TrialApplication` and `SubmitTrialApplicationInput`.
+  - Automatically extracts candidate technical indicators from saved CV draft and renders `.trial-app-tech-badge` in the verified dossier preview.
+  - Opportunities search matching expanded to include `eligibility_criteria` and technical requirements.
+
+#### 9. Automated Verification & Code Health
 - **`src/shared/data/sportRolesData.test.ts`**: Verified presets for Cricket, Football, Athletics, Badminton, Kabaddi, fuzzy sport name matching, and formatted technical strings (6/6 tests passed).
 - **`src/shared/utils/qrCodeGenerator.test.ts`**: Verified 21x21 matrix, 7x7 corner finder patterns, timing patterns, and valid SVG output (2/2 tests passed).
 - **`src/shared/utils/khelId.test.ts`**: Verified Khel ID generation, combine tier calculations, Indian datetime formatting, fresh generation records, and history audit storage (7/7 tests passed).
 - **`src/modules/athlete-profile/PlayerCard.test.tsx`**: Verified standardized Khel ID format, QR verification box, PNG/SVG download actions, dossier reference stamps, and technical scouting attribute chips (5/5 tests passed).
-- **`src/modules/sports-cv/SportsCvWizard.test.tsx`**: Verified `computeFitnessTier` algorithm, all form sections, selection trial dossier layout, returning-user active dossier reference cards, sport presets, and technical indicator dossier rows (12/12 tests passed).
-- **Build & Quality Assurance**: Production build clean (`npm run build` succeeded) and 0 ESLint errors.
+- **`src/modules/sports-cv/SportsCvWizard.test.tsx`**: Verified `computeFitnessTier` algorithm, all form sections, selection trial dossier layout, returning-user active dossier reference cards, sport presets, technical indicator dossier rows, export toolbar, WhatsApp URL, and official verification seal (13/13 tests passed).
+- **`src/modules/scouting/ScoutPortalPage.test.tsx`**: Verified baseline technical attributes, RFC-4180 CSV export with Technical Indicators column, ScoutPortalPage technical filter dropdowns, Yo-Yo / sprint combine thresholds, and `.scout-tech-badge` rendering (13/13 tests passed).
+- **`src/modules/opportunities/OpportunitiesPage.test.tsx` & `TrialAlertActions.test.tsx`**: Verified opportunities catalogue filtering and trial alert actions (3/3 tests passed).
+- **Build & Quality Assurance**: Production build clean (`npm run build` succeeded), TypeScript typecheck clean (`tsc -b --pretty` with 0 errors), and 0 ESLint errors.

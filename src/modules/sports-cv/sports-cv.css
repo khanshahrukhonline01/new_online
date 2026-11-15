@@ -476,6 +476,102 @@
   font-weight: normal;
 }
 
+/* Dossier Quick Share & Export Action Toolbar (Improvement 5) */
+.dossier-export-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  margin: 32px 0 16px;
+  background: linear-gradient(135deg, #091a2c 0%, #0d2842 100%);
+  border: 1.5px solid rgba(167, 243, 107, 0.4);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+}
+
+.toolbar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.toolbar-badge {
+  font-size: 11px;
+  font-weight: 800;
+  color: #a7f36b;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.toolbar-sub {
+  font-size: 12.5px;
+  color: #cbd5e1;
+}
+
+.toolbar-sub strong {
+  font-family: monospace, ui-monospace, sans-serif;
+  color: #e5c07b;
+}
+
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.dossier-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 9px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-print-pdf {
+  background: #a7f36b;
+  color: #030e18;
+  border: 1px solid #a7f36b;
+}
+
+.btn-print-pdf:hover {
+  background: #c3f798;
+  transform: translateY(-1px);
+}
+
+.btn-whatsapp-dossier,
+.btn-whatsapp-dossier-action {
+  background: #25d366 !important;
+  color: #ffffff !important;
+  border: 1px solid #20ba5a !important;
+  text-decoration: none !important;
+}
+
+.btn-whatsapp-dossier:hover,
+.btn-whatsapp-dossier-action:hover {
+  background: #1ebe5d !important;
+  transform: translateY(-1px);
+}
+
+.btn-copy-dossier {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-copy-dossier:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
 /* ==========================================================================
    Pillar 3: Official Selection Trial Dossier (Print / PDF Preview)
    ========================================================================== */
@@ -1031,21 +1127,36 @@
 }
 
 .official-stamp-box {
-  width: 100px;
-  height: 52px;
-  border: 1px dashed #94a3b8;
+  width: 96px;
+  height: 96px;
+  border: 1px dashed rgba(8, 123, 69, 0.4);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  border-radius: 4px;
+  border-radius: 8px;
+  background: rgba(8, 123, 69, 0.03);
+  padding: 4px;
 }
 
-.official-stamp-box span {
-  font-size: 8px;
-  font-weight: 700;
-  color: #94a3b8;
+.stamp-seal-svg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.official-trial-seal-svg {
+  display: block;
+}
+
+.stamp-seal-caption {
+  font-size: 7.5px;
+  font-weight: 800;
+  color: #087b45;
   letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-top: 2px;
 }
 
 .selector-sig-box {

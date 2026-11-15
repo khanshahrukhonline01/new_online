@@ -393,6 +393,88 @@ export default function SportsCvWizard() {
     setPublishMessage(`Restored active dossier reference to #${record.referenceId} (${record.formattedDateTime}).`)
   }
 
+  const [dossierCopied, setDossierCopied] = useState(false)
+
+  // Sport Role Preset & Technical Indicators (Improvement 4 & 6)
+  const sportPreset = useMemo(() => {
+    return getSportRolePreset(cv.sport || 'Cricket')
+  }, [cv.sport])
+
+  const technicalIndicatorsString = useMemo(() => {
+    return formatTechnicalIndicators({
+      sport: cv.sport,
+      battingStyle: cv.battingStyle,
+      bowlingStyle: cv.bowlingStyle,
+      preferredFoot: cv.preferredFoot,
+      tacticalPosition: cv.tacticalPosition,
+      athleticsEvent: cv.athleticsEvent,
+      personalBest: cv.personalBest,
+      seasonBest: cv.seasonBest,
+      playingStyle: cv.playingStyle,
+      racketHand: cv.racketHand,
+      signatureMove: cv.signatureMove,
+      primaryFootOrHand: cv.primaryFootOrHand,
+    })
+  }, [
+    cv.sport,
+    cv.battingStyle,
+    cv.bowlingStyle,
+    cv.preferredFoot,
+    cv.tacticalPosition,
+    cv.athleticsEvent,
+    cv.personalBest,
+    cv.seasonBest,
+    cv.playingStyle,
+    cv.racketHand,
+    cv.signatureMove,
+    cv.primaryFootOrHand,
+  ])
+
+  // WhatsApp share payload for the official selection trial dossier (Improvement 5)
+  const dossierShareText = useMemo(() => {
+    const athleteName = cv.fullName.trim() || 'Athlete'
+    const sportName = cv.sport.trim() || 'Sports'
+    const role = cv.playingPosition.trim() || 'Candidate'
+    const tech =
+      technicalIndicatorsString && technicalIndicatorsString !== '—'
+        ? `\n• Technical: ${technicalIndicatorsString}`
+        : ''
+    const tier = cv.fitnessBenchmarks.tier
+      ? `\n• Combine Readiness: ${cv.fitnessBenchmarks.tier} (${cv.fitnessBenchmarks.percentileAvg || 80}th Percentile)`
+      : ''
+
+    return (
+      `*KhelGrid Official Selection Trial Dossier*\n\n` +
+      `• *Athlete:* ${athleteName}\n` +
+      `• *Sport & Role:* ${sportName} — ${role}\n` +
+      `• *Digital Khel ID:* ${activeKhelId}\n` +
+      `• *Dossier Ref:* ${activeDossierRecord.referenceId} (Rev ${activeDossierRecord.revisionNumber})\n` +
+      `• *Generated On:* ${activeDossierRecord.formattedDateTime}\n` +
+      `• *Official Scrutiny:* SAI / State Directorate ${activeDossierRecord.season}` +
+      `${tech}${tier}\n\n` +
+      `*View Verified Dossier & Video Telemetry:*\n${dossierPublicUrl}`
+    )
+  }, [
+    cv.fullName,
+    cv.sport,
+    cv.playingPosition,
+    activeKhelId,
+    activeDossierRecord,
+    technicalIndicatorsString,
+    cv.fitnessBenchmarks,
+    dossierPublicUrl,
+  ])
+
+  const whatsappDossierUrl = `https://wa.me/?text=${encodeURIComponent(dossierShareText)}`
+
+  const handleCopyDossierSummary = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(dossierShareText)
+      setDossierCopied(true)
+      setTimeout(() => setDossierCopied(false), 2500)
+    }
+  }
+
   const handleClearDraft = () => {
     try {
       getSafeStorage().removeItem(DRAFT_STORAGE_KEY)
@@ -502,41 +584,6 @@ export default function SportsCvWizard() {
   const printQrSvg = useMemo(() => {
     return generateQrSvgString(dossierPublicUrl, { size: 92, color: '#0B1C2D', bgColor: '#FFFFFF' })
   }, [dossierPublicUrl])
-
-  // Sport Role Preset & Technical Indicators
-  const sportPreset = useMemo(() => {
-    return getSportRolePreset(cv.sport || 'Cricket')
-  }, [cv.sport])
-
-  const technicalIndicatorsString = useMemo(() => {
-    return formatTechnicalIndicators({
-      sport: cv.sport,
-      battingStyle: cv.battingStyle,
-      bowlingStyle: cv.bowlingStyle,
-      preferredFoot: cv.preferredFoot,
-      tacticalPosition: cv.tacticalPosition,
-      athleticsEvent: cv.athleticsEvent,
-      personalBest: cv.personalBest,
-      seasonBest: cv.seasonBest,
-      playingStyle: cv.playingStyle,
-      racketHand: cv.racketHand,
-      signatureMove: cv.signatureMove,
-      primaryFootOrHand: cv.primaryFootOrHand,
-    })
-  }, [
-    cv.sport,
-    cv.battingStyle,
-    cv.bowlingStyle,
-    cv.preferredFoot,
-    cv.tacticalPosition,
-    cv.athleticsEvent,
-    cv.personalBest,
-    cv.seasonBest,
-    cv.playingStyle,
-    cv.racketHand,
-    cv.signatureMove,
-    cv.primaryFootOrHand,
-  ])
 
   // Calculated athlete age
   const calculatedAge = useMemo(() => {
@@ -1427,6 +1474,16 @@ export default function SportsCvWizard() {
             <SiteIcon name="download" size={17} /> Preview &amp; Print Selection Resume (PDF)
           </button>
 
+          <a
+            href={whatsappDossierUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="secondary-link btn-whatsapp-dossier-action"
+            title="Directly send verified trial dossier to NIS coaches and selectors via WhatsApp"
+          >
+            <SiteIcon name="share" size={16} /> Share Dossier on WhatsApp
+          </a>
+
           <button
             type="button"
             className="secondary-link btn-clear-form"
@@ -1495,6 +1552,46 @@ export default function SportsCvWizard() {
           showShareActions={true}
         />
       </section>
+
+      {/* Dossier Quick Share & Export Action Toolbar (Improvement 5) */}
+      <div className="dossier-export-toolbar no-print" aria-label="Selection Trial Dossier Export Actions">
+        <div className="toolbar-info">
+          <span className="toolbar-badge">OFFICIAL TRIAL DOSSIER READY</span>
+          <span className="toolbar-sub">
+            Reference: <strong>{activeDossierRecord.referenceId}</strong> (Rev {activeDossierRecord.revisionNumber}) · {activeDossierRecord.formattedDateTime}
+          </span>
+        </div>
+        <div className="toolbar-actions">
+          <button
+            type="button"
+            className="dossier-action-btn btn-print-pdf"
+            onClick={() => {
+              setSavedForPrint(true)
+              window.setTimeout(() => window.print(), 80)
+            }}
+            title="Open print dialog to save 1-page selection resume (PDF)"
+          >
+            <SiteIcon name="download" size={15} /> Save / Print PDF (A4)
+          </button>
+          <a
+            href={whatsappDossierUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="dossier-action-btn btn-whatsapp-dossier"
+            title="Share verified selection trial dossier with NIS coaches and selectors via WhatsApp"
+          >
+            <SiteIcon name="share" size={15} /> Share on WhatsApp
+          </a>
+          <button
+            type="button"
+            className="dossier-action-btn btn-copy-dossier"
+            onClick={handleCopyDossierSummary}
+            title="Copy formatted dossier summary and verification link to clipboard"
+          >
+            <SiteIcon name="copy" size={15} /> {dossierCopied ? 'Copied to Clipboard!' : 'Copy Dossier Link'}
+          </button>
+        </div>
+      </div>
 
       {/* Pillar 3: Professional One-Page Selection Trial Resume (Print/PDF Layout) */}
       <section className="cv-print-preview" aria-label="Athlete Selection Trial Dossier">
@@ -1733,8 +1830,26 @@ export default function SportsCvWizard() {
               </div>
             </div>
             <div className="stamp-signature-area">
-              <div className="official-stamp-box">
-                <span>OFFICIAL STAMP / SEAL</span>
+              <div className="official-stamp-box" title="SAI & Directorate Trial Scrutiny Seal">
+                <div className="stamp-seal-svg">
+                  <svg viewBox="0 0 100 100" width="76" height="76" className="official-trial-seal-svg" aria-label="Official Verification Seal">
+                    <circle cx="50" cy="50" r="46" fill="none" stroke="#087B45" strokeWidth="2.5" strokeDasharray="3 2" />
+                    <circle cx="50" cy="50" r="39" fill="none" stroke="#087B45" strokeWidth="1.2" />
+                    <text x="50" y="32" fontSize="6.5" fontWeight="900" fill="#087B45" textAnchor="middle" letterSpacing="0.8">
+                      ★ KHELGRID ★
+                    </text>
+                    <text x="50" y="48" fontSize="8" fontWeight="900" fill="#0B1C2D" textAnchor="middle" letterSpacing="0.5">
+                      SAI / FED
+                    </text>
+                    <text x="50" y="60" fontSize="7" fontWeight="bold" fill="#087B45" textAnchor="middle">
+                      SCRUTINY
+                    </text>
+                    <text x="50" y="71" fontSize="5.5" fontWeight="700" fill="#64748B" textAnchor="middle">
+                      {activeDossierRecord.season}
+                    </text>
+                  </svg>
+                </div>
+                <span className="stamp-seal-caption">OFFICIAL STAMP / SEAL</span>
               </div>
               <div className="selector-sig-box">
                 <span className="sig-line" />

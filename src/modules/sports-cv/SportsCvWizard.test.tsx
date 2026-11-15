@@ -187,5 +187,22 @@ describe('SportsCvWizard — 4 Pillars: Digital Khel ID, Combine Benchmarks & Tr
       expect(html).toContain('TECHNICAL SCOUTING INDICATORS:')
       expect(html).toContain('Batting: Right-Hand Bat (RHB) · Bowling: Right-Arm Fast (135+ km/h)')
     })
+
+    it('renders dossier export toolbar with Print PDF, WhatsApp Share, and official verification seal (Improvement 5)', () => {
+      const html = renderToStaticMarkup(<SportsCvWizard />)
+
+      // Export toolbar
+      expect(html).toContain('dossier-export-toolbar')
+      expect(html).toContain('OFFICIAL TRIAL DOSSIER READY')
+      expect(html).toContain('Save / Print PDF (A4)')
+      expect(html).toContain('Share on WhatsApp')
+      expect(html).toContain('https://wa.me/?text=')
+
+      // Official trial verification SVG seal
+      expect(html).toContain('official-trial-seal-svg')
+      expect(html).toContain('KHELGRID')
+      expect(html).toContain('SAI / FED')
+      expect(html).toContain('SCRUTINY')
+    })
   })
 })

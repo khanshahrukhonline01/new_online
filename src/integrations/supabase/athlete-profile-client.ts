@@ -629,6 +629,7 @@ export interface TrialApplication {
   athleteEmail?: string
   ageCategory?: string
   playingPosition?: string
+  technicalIndicators?: string
   summary?: string
   fitnessBenchmarks?: {
     yoyoIr1Meters?: number
@@ -657,6 +658,7 @@ export interface SubmitTrialApplicationInput {
   athleteEmail?: string
   ageCategory?: string
   playingPosition?: string
+  technicalIndicators?: string
   summary?: string
   fitnessBenchmarks?: {
     yoyoIr1Meters?: number
@@ -690,6 +692,7 @@ export async function submitTrialApplication(
     athleteEmail: input.athleteEmail?.trim(),
     ageCategory: input.ageCategory,
     playingPosition: input.playingPosition,
+    technicalIndicators: input.technicalIndicators,
     summary: input.summary,
     fitnessBenchmarks: input.fitnessBenchmarks,
     videoClipsCount: input.videoClipsCount || 0,
