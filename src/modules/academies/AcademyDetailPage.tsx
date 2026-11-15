@@ -280,15 +280,12 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
             </a>
           )}
 
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="academy-btn academy-btn-secondary"
-          >
-            <SiteIcon name="map-pin" size={16} />
-            <span>Get Directions</span>
-          </a>
+          {mapsUrl && (
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="academy-btn academy-btn-secondary">
+              <SiteIcon name="map-pin" size={16} />
+              <span>Get Directions</span>
+            </a>
+          )}
 
           {academy.website_url && (
             <a
@@ -415,15 +412,12 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
                   <p>{fullAddress}</p>
                 </div>
               </div>
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="academy-btn academy-btn-primary location-directions-btn"
-              >
-                <SiteIcon name="map" size={16} />
-                <span>Open in Google Maps</span>
-              </a>
+              {mapsUrl && (
+                <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="academy-btn academy-btn-primary location-directions-btn">
+                  <SiteIcon name="map" size={16} />
+                  <span>Open in Google Maps</span>
+                </a>
+              )}
             </div>
           </section>
 
