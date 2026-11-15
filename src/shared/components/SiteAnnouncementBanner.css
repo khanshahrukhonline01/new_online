@@ -21,7 +21,7 @@
   border: 1px solid rgba(16, 185, 129, 0.4);
 }
 .site-announcement-banner.tone-emerald .announcement-cta {
-  background: #10b981;
+  background: var(--accent, #10b981);
   color: #022c22;
 }
 .site-announcement-banner.tone-emerald .announcement-live-dot {
