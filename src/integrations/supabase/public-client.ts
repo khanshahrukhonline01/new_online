@@ -341,6 +341,14 @@ export async function getOpportunities(): Promise<CatalogueResult<Opportunity>> 
   return result
 }
 
+/**
+ * Database-only lookup for public opportunity detail pages.
+ * The underlying query filters to published + verified rows.
+ */
+export async function getPublishedVerifiedOpportunities(): Promise<CatalogueResult<Opportunity>> {
+  return fetchOpportunitiesCatalogue()
+}
+
 async function fetchVenuesCatalogue(): Promise<CatalogueResult<Venue>> {
   const enrichedFields =
     'id,slug,name,description,city,state,address,phone,email,timezone,government_facility,is_featured,timings,surface_type,court_count,pricing,facilities,rules,rating,review_count,faqs,verification_status,source_name,source_url,sport'

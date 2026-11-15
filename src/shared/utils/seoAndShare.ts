@@ -85,26 +85,14 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/opportunities' || cleanPath === '/trials' || cleanPath === '/combines' || cleanPath === '/scholarships' || cleanPath === '/camps') {
     return {
-      title: "Sports Trials, Tournaments & Camps 2026 · KhelGrid (ट्रायल)",
-      description: "Discover verified sports selection trials, national tournaments, SAI NCOE camps, and athletic scholarships across Indian states. Filter by sport and age group.",
+      title: 'Sports Trials & Opportunities in India · KhelGrid',
+      description: "Explore published sports trials, combines, camps and scholarships. Review each listing's source, dates and eligibility, and confirm current details with the organiser before applying.",
       canonicalUrl: 'https://khelgrid.com/opportunities',
-      keywords: ['sports trials 2026', 'cricket trials near me', 'football selection trials', 'wushu trials 2026', 'kabaddi trials 2026', 'badminton tournaments india', 'sports scholarships', 'sai ncoe selection trials', 'ट्रायल', 'खेल प्रतियोगिता', 'open sports trials', ...DEFAULT_KEYWORDS],
+      keywords: ['sports trials india', 'cricket trials', 'football selection trials', 'sports combines india', 'sports camps india', 'sports scholarships india', 'ट्रायल', 'खेल प्रतियोगिता', 'open sports trials', ...DEFAULT_KEYWORDS],
       ogType: 'website',
-      jsonLd: {
-        '@context': 'https://schema.org',
-        '@graph': [
-          {
-            '@type': 'ItemList',
-            '@id': 'https://khelgrid.com/opportunities#list',
-            name: 'Sports Trials, Tournaments & Camps 2026 · KhelGrid (ट्रायल)',
-            description: 'Discover verified sports selection trials, national tournaments, SAI NCOE camps, and athletic scholarships across India.',
-            url: 'https://khelgrid.com/opportunities',
-          },
-        ],
-      },
+      jsonLd: { '@context': 'https://schema.org', '@type': 'ItemList', '@id': 'https://khelgrid.com/opportunities#list', name: 'Published Sports Trials & Opportunities · KhelGrid', description: 'Published sports trials, combines, camps and scholarships. Confirm current details with each organiser.', url: 'https://khelgrid.com/opportunities' },
     }
   }
-
   if (cleanPath === '/venues' || cleanPath === '/book') {
     return {
       title: "Book Sports Turfs & Box Cricket Courts · KhelGrid (टर्फ बुकिंग)",
