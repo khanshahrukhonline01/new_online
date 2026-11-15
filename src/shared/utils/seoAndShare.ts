@@ -204,10 +204,23 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
     }
   }
 
+  const athleteRoute = cleanPath.match(/^\/(?:u|athlete)\/([^/]+)$/i)
+  if (athleteRoute) {
+    const handle = athleteRoute[1].replace(/^@+/, '').toLowerCase().replace(/[^a-z0-9-]/g, '')
+    return {
+      title: 'Athlete Profile · KhelGrid',
+      description: 'KhelGrid athlete profile pages are being prepared with privacy and consent controls. Create a private Sports CV draft in the meantime.',
+      canonicalUrl: `https://khelgrid.com/u/${handle}`,
+      robots: 'noindex, nofollow',
+      ogType: 'profile',
+      keywords: ['athlete profile', 'sports cv', 'KhelGrid'],
+    }
+  }
+
   if (cleanPath === '/sports-cv' || cleanPath === '/start-from-zero') {
     return {
       title: "Athlete Sports CV & Khel ID Builder · KhelGrid (खेल आईडी)",
-      description: "Build your verified Athlete Sports CV, digital Khel ID card, and sports portfolio on KhelGrid. Highlight match stats, trial history, and fitness benchmarks.",
+      description: "Create a Sports CV draft and KhelGrid ID display card. Organize your sports background, achievements, and performance details in one place.",
       canonicalUrl: 'https://khelgrid.com/sports-cv',
       keywords: [
         'khel id',
@@ -235,7 +248,7 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
             url: 'https://khelgrid.com/sports-cv',
             applicationCategory: 'SportsApplication',
             operatingSystem: 'All',
-            description: 'Build your verified Athlete Sports CV, digital Khel ID card, and sports portfolio on KhelGrid.',
+            description: 'Create a Sports CV draft and KhelGrid ID display card. Organize your sports background, achievements, and performance details in one place.',
             offers: {
               '@type': 'Offer',
               price: '0',

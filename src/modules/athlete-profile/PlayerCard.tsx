@@ -19,7 +19,9 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
   const cardRef = useRef<HTMLDivElement>(null)
 
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://khelgrid.com'
-  const publicUrl = `${origin}/u/@${profile.username}`
+  const publicUrl = profile.publicProfileEligible === true
+    ? `${origin}/u/@${profile.username}`
+    : `${origin}/sports-cv`
   const khelId = generateKhelId(profile)
   const ovr = calculateOverallRating(profile)
 
@@ -66,7 +68,7 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
     setTimeout(() => setCopied(false), 2500)
   }
 
-  const shareText = `Check out ${profile.fullName}’s (${profile.sport} — ${profile.playingPosition}) official Athlete Card & Digital Khel ID (${khelId}) on KhelGrid:\n${publicUrl}`
+  const shareText = `Check out ${profile.fullName}’s (${profile.sport} — ${profile.playingPosition}) Athlete Card & Khel ID display reference (${khelId}) on KhelGrid:\n${publicUrl}`
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`
 
   /**
@@ -153,9 +155,9 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
   </g>
 
   <!-- Verified Seal & Link (Bottom Right) -->
-  <text x="148" y="462" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#A7F36B">✓ KHELGRID VERIFIED</text>
+  <text x="148" y="462" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#A7F36B">KHELGRID ATHLETE CARD</text>
   <text x="148" y="480" font-family="Arial, sans-serif" font-size="10" fill="#8FA5BE">Scan QR for Scouting Dossier</text>
-  <text x="148" y="498" font-family="Arial, sans-serif" font-size="10" fill="#6A8098">khelgrid.com/u/@${profile.username}</text>
+  <text x="148" y="498" font-family="Arial, sans-serif" font-size="10" fill="#6A8098">khelgrid.com${profile.publicProfileEligible === true ? `/u/@${profile.username}` : '/sports-cv'}</text>
 
   <!-- Watermark at the Tip -->
   ${
@@ -256,8 +258,8 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
           <div className="athlete-avatar-circle">
             <SiteIcon name="user-round" size={64} />
           </div>
-          {profile.verificationStatus === 'verified' && (
-            <span className="card-verified-chip" title="KhelGrid Source Verified">
+          {profile.verificationTrusted === true && (
+            <span className="card-verified-chip" title="Verification confirmed by KhelGrid moderation">
               <SiteIcon name="badge-check" size={14} /> Verified
             </span>
           )}
@@ -277,7 +279,7 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
         </div>
 
         {/* Digital Khel ID Chip */}
-        <div className="card-khel-id-badge" title="Official Grassroots Sports ID">
+        <div className="card-khel-id-badge" title="KhelGrid display reference — not a government ID">
           <span className="khel-id-label">KHEL ID (खेल आईडी)</span>
           <span className="khel-id-code">{khelId}</span>
         </div>
@@ -320,13 +322,13 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
         <div className="card-qr-footer">
           <div
             className="card-qr-box"
-            title="Scan with phone camera to view athlete profile & scouting dossier"
+            title="Scan to open the KhelGrid Sports CV builder unless a public profile is available"
             dangerouslySetInnerHTML={{ __html: qrSvgMarkup }}
           />
           <div className="card-footer-branding">
             <span className="branding-title">KHELGRID · DIGITAL KHEL ID</span>
             <small className="card-handle">@{profile.username}</small>
-            <span className="card-scan-hint">Scan for Live Dossier</span>
+            <span className="card-scan-hint">Scan to open KhelGrid</span>
           </div>
         </div>
       </div>

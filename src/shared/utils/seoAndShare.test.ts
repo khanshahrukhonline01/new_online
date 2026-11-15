@@ -8,6 +8,22 @@ describe('SEO & SERP Metadata Validation', () => {
     expect(metadata.canonicalUrl).toBe('https://khelgrid.com/admin/control')
   })
 
+  it.each(['/u/@rohit-verma', '/u/priya-nair', '/athlete/@arjun-singh'])(
+    'keeps athlete profile routes non-indexable until privacy gates are proven: %s',
+    path => {
+      const meta = getRouteSeoMetadata(path)
+      expect(meta.robots).toBe('noindex, nofollow')
+      expect(meta.jsonLd).toBeUndefined()
+      expect(meta.canonicalUrl).toMatch(/^https:\/\/khelgrid\.com\/u\//)
+    },
+  )
+
+  it('uses truthful, non-verification language for the Sports CV builder', () => {
+    const meta = getRouteSeoMetadata('/sports-cv')
+    expect(meta.description).not.toMatch(/verified|official/i)
+    expect(JSON.stringify(meta.jsonLd)).not.toMatch(/verified Athlete Sports CV/i)
+  })
+
   it('keeps public catalogue routes indexable', () => {
     expect(getRouteSeoMetadata('/venues').robots).toBeUndefined()
   })

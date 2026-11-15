@@ -1,6 +1,6 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import type { AthleteProfile } from '../../shared/domain'
-import { getAthleteProfile, SHOWCASE_ATHLETE_PROFILES, normalizeUsername } from '../../integrations/supabase/athlete-profile-client'
+import { getAthleteProfile } from '../../integrations/supabase/athlete-profile-client'
 import { PlayerCard } from './PlayerCard'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { SportIcon } from '../../shared/sports/sportIcons'
@@ -12,9 +12,7 @@ export interface AthleteProfilePageProps {
 }
 
 export default function AthleteProfilePage({ username, onNavigate }: AthleteProfilePageProps) {
-  const [profile, setProfile] = useState<AthleteProfile | null | undefined>(
-    () => SHOWCASE_ATHLETE_PROFILES[normalizeUsername(username)] ?? undefined,
-  )
+  const [profile, setProfile] = useState<AthleteProfile | null | undefined>(undefined)
 
   useEffect(() => {
     let active = true
@@ -38,7 +36,7 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
         <div className="state-panel" role="status">
           <span className="state-symbol">…</span>
           <h3>Loading athlete profile…</h3>
-          <p>Retrieving verified credentials, telemetry, and sporting background.</p>
+          <p>Retrieving the public athlete profile.</p>
         </div>
       </section>
     )
@@ -51,8 +49,8 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
           <span className="state-symbol">○</span>
           <h3>Athlete Profile Not Found</h3>
           <p>
-            No published athlete profile was found for handle <code>@{username}</code>. You can create your own
-            official Sports CV and Player Card today for free.
+            No public athlete profile is currently available for handle <code>@{username}</code>. You can create your own
+            private Sports CV draft while public profile publishing is being prepared.
           </p>
           <a className="primary-link" href="/sports-cv" onClick={e => handleLink(e, '/sports-cv')}>
             Build Your Athlete CV <SiteIcon name="arrow-up-right" size={16} />
@@ -105,9 +103,11 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
               <span className="bio-sport-pill">
                 <SportIcon name={profile.sport} size={20} /> {profile.sport}
               </span>
-              <span className="bio-verified-pill">
-                <SiteIcon name="badge-check" size={15} /> Verified Sports CV
-              </span>
+              {profile.verificationTrusted === true && (
+                <span className="bio-verified-pill">
+                  <SiteIcon name="badge-check" size={15} /> KhelGrid-verified profile
+                </span>
+              )}
             </div>
 
             <h1 className="athlete-headline">{profile.fullName}</h1>

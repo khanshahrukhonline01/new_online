@@ -1545,7 +1545,7 @@ export default function SportsCvWizard() {
             achievements: cv.achievements.filter(a => a.event.trim()),
             videoClips: cv.videoClips,
             fitnessBenchmarks: cv.fitnessBenchmarks,
-            verificationStatus: 'verified',
+            verificationStatus: 'community',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           }}

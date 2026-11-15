@@ -294,6 +294,10 @@ export interface AthleteProfile {
     percentileAvg?: number
   }
   verificationStatus: 'community' | 'verified' | 'pro'
+  /** True only when a trusted server projection confirms moderator verification. */
+  verificationTrusted?: boolean
+  /** True only when a server-side consent gate authorizes public profile display. */
+  publicProfileEligible?: boolean
   createdAt: string
   updatedAt: string
 }
