@@ -1,8 +1,26 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const isProductionDeployment = process.env.VERCEL_ENV === 'production'
+const robotsContent = isProductionDeployment ? 'index, follow' : 'noindex, nofollow'
+
+function deploymentRobotsPlugin() {
+  return {
+    name: 'khelgrid-deployment-robots',
+    transformIndexHtml(html: string) {
+      return html.replace(
+        /<meta name="(robots|googlebot|bingbot)" content="[^"]*"\s*\/?\s*>/g,
+        (_tag, name: string) => `<meta name="${name}" content="${robotsContent}" />`,
+      )
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), deploymentRobotsPlugin()],
+  define: {
+    __KHELGRID_INDEXABLE__: JSON.stringify(isProductionDeployment),
+  },
   server: {
     port: 3000,
     strictPort: false,
@@ -45,4 +63,3 @@ export default defineConfig({
     },
   },
 })
-
