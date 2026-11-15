@@ -3,100 +3,80 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import '../../i18n'
 import VenueDetailPage from './VenueDetailPage'
 
-describe('VenueDetailPage — Dedicated Venue Hub & Court Specifications', () => {
+const venueFixture = {
+  id: 'venue-test-001',
+  slug: 'verified-test-venue',
+  name: 'Verified Test Sports Venue',
+  description: 'Synthetic test fixture for a published venue record.',
+  city: 'Delhi',
+  state: 'Delhi',
+  address: 'Test Road',
+  timezone: 'Asia/Kolkata',
+  phone: null,
+  verification_status: 'verified',
+  publication_status: 'published',
+  sport: 'Football',
+  surface_type: 'Synthetic test surface',
+  facilities: ['Training pitch'],
+}
+
+async function loadPublicClient() {
+  vi.stubEnv('VITE_SUPABASE_URL', 'https://khelgrid-test.supabase.co')
+  vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-anon-key')
+  vi.resetModules()
+  const client = await import('../../integrations/supabase/public-client')
+  client.clearCatalogueCache()
+  return client
+}
+
+describe('VenueDetailPage — published and verified catalogue access', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation((input: RequestInfo | URL) => {
       const url = String(input)
       const data = url.includes('/rpc/submit_listing_intake')
         ? { status: 'submitted', reference_number: 'KHL-20261112-VEN001', tracking_key: 'private-venue-test-key' }
-        : []
+        : url.includes('/rest/v1/venues?')
+          ? [venueFixture]
+          : []
       return Promise.resolve(new Response(JSON.stringify(data), { status: 200 }))
     }))
   })
 
   afterEach(() => {
     vi.unstubAllGlobals()
-  })
-  it('renders Sree Kanteerava Stadium with surface specs, amenities, directions, and pickup action', () => {
-    const onOpenIntakeMock = vi.fn()
-    const html = renderToStaticMarkup(
-      <VenueDetailPage
-        slug="sree-kanteerava-stadium"
-        onNavigate={vi.fn()}
-        onOpenIntake={onOpenIntakeMock}
-      />
-    )
-
-    // Name & Sport
-    expect(html).toContain('Sree Kanteerava Stadium')
-    expect(html).toContain('Athletics &amp; Football')
-    expect(html).toContain('Bengaluru')
-
-    // Government verification badge
-    expect(html).toContain('Government Sports Facility')
-    expect(html).toContain('Active Sports Facility')
-
-    // Action buttons
-    expect(html).toContain('Enquire on WhatsApp')
-    expect(html).toContain('Call Venue')
-    expect(html).toContain('Get Directions')
-    expect(html).toContain('Host a Pickup Game Here')
-
-    // Surface & Specifications
-    expect(html).toContain('Playing Surface')
-    expect(html).toContain('IAAF Certified Synthetic Track')
-    expect(html).toContain('Courts &amp; Pitches')
-    expect(html).toContain('Estimated Slot Rates')
-
-    // Amenities & Features
-    expect(html).toContain('Amenities &amp; Features')
-    expect(html).toContain('8-Lane Synthetic Athletic Track')
-    expect(html).toContain('25,000 Capacity Stadium Seating')
-
-    // Ground Guidelines
-    expect(html).toContain('Ground Rules &amp; Guidelines')
-    expect(html).toContain('Spikes with max 6mm length allowed on synthetic track')
-
-    // ShareBar & FAQs
-    expect(html).toContain('Share:')
-    expect(html).toContain('Frequently Asked Questions')
-    expect(html).toContain('Is the track open for general public morning jogging?')
+    vi.unstubAllEnvs()
   })
 
-  it('renders Jawaharlal Nehru Stadium in Delhi with SAI credentials', () => {
-    const html = renderToStaticMarkup(
-      <VenueDetailPage slug="jawaharlal-nehru-stadium" onNavigate={vi.fn()} />
-    )
+  it('loads a published, verified venue from the catalogue by its exact slug', async () => {
+    const { getVenueBySlug } = await loadPublicClient()
+    const venue = await getVenueBySlug('verified-test-venue')
 
-    expect(html).toContain('Jawaharlal Nehru Stadium')
-    expect(html).toContain('Delhi')
-    expect(html).toContain('Government Sports Facility')
-    expect(html).toContain('Olympic Standard Mondo Track &amp; Hybrid Grass Pitch')
-    expect(html).toContain('Olympic Regulation Mondo Athletics Track')
+    expect(venue?.id).toBe('venue-test-001')
+    expect(venue?.name).toBe('Verified Test Sports Venue')
+    expect(venue?.verification_status).toBe('verified')
+
+    const requestUrl = new URL(String(vi.mocked(fetch).mock.calls[0][0]))
+    expect(requestUrl.pathname).toBe('/rest/v1/venues')
+    expect(requestUrl.searchParams.get('publication_status')).toBe('eq.published')
+    expect(requestUrl.searchParams.get('verification_status')).toBe('eq.verified')
   })
 
-  it('renders Cooperage Football Ground in Mumbai with FIFA 2-star turf', () => {
-    const html = renderToStaticMarkup(
-      <VenueDetailPage slug="cooperage-football-ground" onNavigate={vi.fn()} />
-    )
-
-    expect(html).toContain('Cooperage Football Ground')
-    expect(html).toContain('Mumbai')
-    expect(html).toContain('FIFA 2-Star Quality Pro Artificial Turf')
-    expect(html).toContain('LED Floodlights for Night Matches')
+  it('does not resolve a slug that is absent from the published catalogue', async () => {
+    const { getVenueBySlug } = await loadPublicClient()
+    const venue = await getVenueBySlug('missing-test-venue')
+    expect(venue).toBeUndefined()
   })
 
-  it('renders 404 not found state gracefully when venue slug does not exist', () => {
+  it('renders the not-found state for an unknown venue slug', () => {
     const html = renderToStaticMarkup(
       <VenueDetailPage slug="unknown-sports-ground-999" onNavigate={vi.fn()} />
     )
-
     expect(html).toContain('Venue Record Not Found')
     expect(html).toContain('Browse All Venues')
   })
 
   it('keeps community venues out of the public detail route until moderation', async () => {
-    const { submitCommunityListing } = await import('../../integrations/supabase/public-client')
+    const { submitCommunityListing } = await loadPublicClient()
     const result = await submitCommunityListing({
       category: 'venue',
       name: 'Ranchi Sector 4 Community Box Turf',
@@ -109,11 +89,10 @@ describe('VenueDetailPage — Dedicated Venue Hub & Court Specifications', () =>
       expect(result.record.publication_status).toBe('pending_review')
       expect(result.detailPath).toBeUndefined()
     }
-    const [url] = vi.mocked(fetch).mock.calls[0]
-    expect(String(url)).toContain('/rest/v1/rpc/submit_listing_intake')
-    expect(String(url)).not.toContain('/rest/v1/venues')
+    const rpcCall = vi.mocked(fetch).mock.calls.find(([url]) => String(url).includes('/rpc/submit_listing_intake'))
+    expect(String(rpcCall?.[0])).toContain('/rest/v1/rpc/submit_listing_intake')
+    expect(String(rpcCall?.[0])).not.toContain('/rest/v1/venues')
     const html = renderToStaticMarkup(<VenueDetailPage slug="ranchi-sector-4-community-box-turf" onNavigate={vi.fn()} />)
     expect(html).toContain('Venue Record Not Found')
   })
-
 })
