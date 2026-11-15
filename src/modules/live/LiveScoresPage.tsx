@@ -3,6 +3,7 @@ import type { SportsMatch, SportType, MatchStatus, CricketFormat } from './types
 import { liveSportsEngine } from './services/liveSportsEngine';
 import { soundService } from './utils/soundChime';
 import { SiteIcon } from '../../shared/components/SiteIcon';
+import { updatePageSeoMetadata, DEFAULT_KEYWORDS } from '../../shared/utils/seoAndShare';
 import { FanPollWidget } from './components/FanPollWidget';
 import { SpectatorGatewayBar } from './components/SpectatorGatewayBar';
 import { AthleteDiscoveryCard, TurfBookingCard } from './components/ConversionInterstitials';
@@ -24,6 +25,70 @@ const CRICKET_FORMATS: { id: CricketFormat; label: string; icon: string }[] = [
   { id: 'Test', label: 'Test Series', icon: '🛡️' },
   { id: 'WPL', label: 'WPL 2026', icon: '🌟' },
 ];
+
+function buildLiveScoresJsonLd(matches: SportsMatch[]): Record<string, unknown> {
+  const sportsEvents = matches.slice(0, 10).map((m) => {
+    const isLive = m.status === 'LIVE';
+    const isFinished = m.status === 'FINISHED';
+    return {
+      '@type': isLive ? ['SportsEvent', 'LiveBlogPosting'] : 'SportsEvent',
+      name: `${m.tournament}: ${m.teamA.name} vs ${m.teamB.name}`,
+      sport: m.sport || 'Cricket',
+      eventStatus: isLive
+        ? 'https://schema.org/EventLive'
+        : isFinished
+          ? 'https://schema.org/EventFinished'
+          : 'https://schema.org/EventScheduled',
+      description: `${m.teamA.name} vs ${m.teamB.name} (${m.tournament} ${m.format || ''}). Score: ${m.teamA.score || '0'} vs ${m.teamB.score || '0'}. ${m.statusText || ''}`,
+      homeTeam: {
+        '@type': 'SportsTeam',
+        name: m.teamA.name,
+      },
+      awayTeam: {
+        '@type': 'SportsTeam',
+        name: m.teamB.name,
+      },
+      location: m.venueOrOvers
+        ? {
+            '@type': 'Place',
+            name: m.venueOrOvers,
+            address: {
+              '@type': 'PostalAddress',
+              addressCountry: 'IN',
+            },
+          }
+        : undefined,
+    };
+  });
+
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebPage',
+        '@id': 'https://khelgrid.com/live#webpage',
+        url: 'https://khelgrid.com/live',
+        name: 'Live Cricket Scores, WPL & ICC Match Center · KhelGrid (लाइव स्कोर)',
+        description:
+          "Fastest live cricket scores, WPL Women's Premier League, ICC tournaments, T20 leagues, ball-by-ball commentary, match scorecards, and local tournament updates on KhelGrid.",
+        isPartOf: {
+          '@type': 'WebSite',
+          '@id': 'https://khelgrid.com/#website',
+          name: 'KhelGrid',
+          url: 'https://khelgrid.com',
+        },
+        about: [
+          { '@type': 'Thing', name: 'Cricket' },
+          { '@type': 'Thing', name: "Women's Premier League (WPL)" },
+          { '@type': 'Thing', name: 'ICC Cricket' },
+          { '@type': 'Thing', name: 'T20 Cricket' },
+          { '@type': 'Thing', name: 'Live Sports Scores' },
+        ],
+      },
+      ...sportsEvents,
+    ],
+  };
+}
 
 interface LiveScoresPageProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void;
@@ -132,14 +197,43 @@ export default function LiveScoresPage({ onNavigate }: LiveScoresPageProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Dynamic document title sync
+  // Dynamic document title, meta tags, and Schema.org JSON-LD sync
   useEffect(() => {
     const liveMatch = matches.find((m) => m.status === 'LIVE');
-    if (liveMatch) {
-      document.title = `(LIVE) ${liveMatch.teamA.code} ${liveMatch.teamA.score} vs ${liveMatch.teamB.code} ${liveMatch.teamB.score} · KhelGrid`;
-    } else {
-      document.title = 'Live Scores & Match Center · KhelGrid';
-    }
+    const title = liveMatch
+      ? `(LIVE) ${liveMatch.teamA.code} ${liveMatch.teamA.score} vs ${liveMatch.teamB.code} ${liveMatch.teamB.score} · Live Cricket Score | KhelGrid`
+      : 'Live Cricket Scores, WPL & ICC Match Center · KhelGrid (लाइव स्कोर)';
+    const description = liveMatch
+      ? `(LIVE) ${liveMatch.teamA.name} ${liveMatch.teamA.score} vs ${liveMatch.teamB.name} ${liveMatch.teamB.score} in ${liveMatch.tournament} (${liveMatch.format || 'Cricket'}). ${liveMatch.statusText || 'Follow live ball-by-ball commentary, match scorecards, and instant sports updates on KhelGrid.'}`
+      : "Fastest live cricket scores, WPL Women's Premier League, ICC tournaments, T20 leagues, ball-by-ball commentary, match scorecards, and local tournament updates on KhelGrid.";
+
+    const cleanup = updatePageSeoMetadata({
+      title,
+      description,
+      canonicalUrl: 'https://khelgrid.com/live',
+      keywords: [
+        'live cricket score wpl',
+        'live cricket score icc',
+        'wpl live score',
+        't20 live score',
+        'live cricket score',
+        'live cricket khel',
+        'khel box live match',
+        'khel live score',
+        'today wc cricket match',
+        'ball by ball commentary',
+        'live scorecards cricket',
+        'cricket match center',
+        'wpl 2026 live',
+        'icc live score',
+        'लाइव क्रिकेट स्कोर',
+        'लाइव स्कोर',
+        ...DEFAULT_KEYWORDS,
+      ],
+      jsonLd: buildLiveScoresJsonLd(matches),
+    });
+
+    return cleanup;
   }, [matches]);
 
   // Sound toggle handler
@@ -524,6 +618,17 @@ export default function LiveScoresPage({ onNavigate }: LiveScoresPageProps) {
           </div>
         </div>
       </div>
+
+      {/* STATUTORY NOMINATIVE FAIR USE & TRADEMARK LEGAL NOTICE */}
+      <footer className="live-scores-legal-card" role="note" aria-label="Statutory Nominative Fair Use and Trademark Notice">
+        <div className="live-scores-legal-badge">
+          <SiteIcon name="shield-check" size={14} />
+          <span>Statutory Nominative Fair Use &amp; Trademark Attribution Notice</span>
+        </div>
+        <p className="live-scores-legal-text">
+          All tournament designations, series marks, team names, logos, and athletic federation identifiers (including WPL, ICC, BCCI, IPL, and franchise team names) are the intellectual property of their respective governing bodies and commercial rights holders. KhelGrid displays real-time match scores, ball-by-ball commentary, and match statistics strictly for factual informational, sports journalism, and public grassroots awareness under the <strong>Doctrine of Nominative Fair Use (Section 30 of the Indian Trade Marks Act, 1999)</strong> and <strong>Current Events Reporting (Section 52 of the Copyright Act, 1957)</strong>. KhelGrid is an independent digital sports platform and is not affiliated with, sponsored by, or officially endorsed by the Board of Control for Cricket in India (BCCI), International Cricket Council (ICC), or any tournament franchise.
+        </p>
+      </footer>
 
       {/* 11. MATCH DETAIL MODAL */}
       <MatchDetailModal

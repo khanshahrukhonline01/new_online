@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import LiveScoresPage from './LiveScoresPage';
 import { liveSportsEngine, detectCricketFormat } from './services/liveSportsEngine';
+import { getRouteSeoMetadata } from '../../shared/utils/seoAndShare';
 
 describe('LiveSportsEngine', () => {
   it('provides a singleton instance with getScores method', () => {
@@ -72,5 +73,23 @@ describe('LiveScoresPage component', () => {
     expect(html).toContain('For Athletes &amp; Aspirants');
     expect(html).toContain('Play &amp; Compete');
     expect(html).toContain('Academies &amp; Hosts');
+
+    // Statutory Nominative Fair Use Legal Notice
+    expect(html).toContain('Statutory Nominative Fair Use &amp; Trademark Attribution Notice');
+    expect(html).toContain('Doctrine of Nominative Fair Use (Section 30 of the Indian Trade Marks Act, 1999)');
+  });
+
+  it('supplies high-CTR SEO metadata and Schema.org for live cricket, WPL and ICC', () => {
+    const seo = getRouteSeoMetadata('/live');
+    expect(seo.title).toBe('Live Cricket Scores, WPL & ICC Match Center · KhelGrid (लाइव स्कोर)');
+    expect(seo.description).toContain("WPL Women's Premier League");
+    expect(seo.description).toContain('ball-by-ball commentary');
+    expect(seo.keywords).toContain('live cricket score wpl');
+    expect(seo.keywords).toContain('live cricket score icc');
+    expect(seo.keywords).toContain('wpl live score');
+    expect(seo.jsonLd).toBeDefined();
+
+    const scoresSeo = getRouteSeoMetadata('/live-scores');
+    expect(scoresSeo.title).toBe('Live Cricket Scores, WPL & ICC Match Center · KhelGrid (लाइव स्कोर)');
   });
 });

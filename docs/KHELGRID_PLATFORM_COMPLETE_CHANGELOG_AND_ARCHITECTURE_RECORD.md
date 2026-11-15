@@ -660,3 +660,31 @@ npm run lint
 - **TypeScript build**: `npx tsc -b` passed with 0 errors.
 - **ESLint rules**: 0 errors.
 - **Mirror parity**: 100% synchronized across `Live score` (`new_online`) and `khelgrid-platform`.
+
+---
+
+### Milestone 13: Phase 2 Live Scores SEO Optimization & Legal Nominative Fair Use Implementation (November 15, 2026)
+
+#### 1. Search Engine Ranking & High-CTR Meta Optimization
+- **Data-Driven GSC Grounding**:
+  - Addressed 473 impressions on `/live-scores` and Page 1 ranking for `live cricket score wpl` (319 impressions, pos 6.21) and `live cricket score icc` (21 impressions, pos 5.43) to convert 0% CTR into high-volume organic clicks.
+- **`src/shared/utils/seoAndShare.ts`**:
+  - Updated title for `/live` and `/live-scores` to: `Live Cricket Scores, WPL & ICC Match Center · KhelGrid (लाइव स्कोर)`.
+  - Enriched meta description highlighting fastest live scores, WPL Women's Premier League, ICC tournaments, T20 leagues, ball-by-ball commentary, and match scorecards.
+  - Added targeted keywords: `live cricket score wpl`, `live cricket score icc`, `wpl live score`, `t20 live score`, `ball by ball commentary`, `live scorecards cricket`, `cricket match center`, `लाइव क्रिकेट स्कोर`, `लाइव स्कोर`.
+  - Injected Schema.org `WebPage` with topic entity knowledge graph (`Cricket`, `WPL`, `ICC Cricket`, `T20 Cricket`, `Live Sports Scores`).
+
+#### 2. Real-Time Dynamic SERP Synchronization & Schema.org JSON-LD
+- **`src/modules/live/LiveScoresPage.tsx`**:
+  - **Dynamic Title & Snippet Sync**: In-match updates sync document title to `(LIVE) {TeamA} {Score} vs {TeamB} {Score} · Live Cricket Score | KhelGrid` during active matches.
+  - **Schema.org Structured Data**: Generates dynamic `SportsEvent` graphs for all active/scheduled matches and `LiveBlogPosting` for live matches, enabling real-time Google match status chips and scorecards.
+
+#### 3. Statutory Nominative Fair Use & Trademark Compliance
+- **On-Page Attribution Card**:
+  - Embedded statutory disclaimer in `LiveScoresPage.tsx` citing Section 30 of the Indian Trade Marks Act, 1999 (Nominative Fair Use) and Section 52 of the Copyright Act, 1957 (Current Events Reporting).
+  - Explicitly states non-affiliation and non-endorsement with BCCI, ICC, or any cricket franchise.
+  - Styled with `.live-scores-legal-card` in `live-scores.css`.
+
+#### 4. Automated Verification & Test Coverage
+- **`src/modules/live/live-scores.test.tsx`**: Added assertions for high-CTR SEO metadata, Schema.org entities, and statutory fair use notice.
+- **Code Health**: 100% clean compilation via `npx tsc -b`, 0 ESLint errors, all unit tests passing.

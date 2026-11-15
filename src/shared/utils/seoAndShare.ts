@@ -101,11 +101,54 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/live' || cleanPath === '/live-scores') {
     return {
-      title: "Live Sports Scores, Match Updates & Commentary · KhelGrid (लाइव स्कोर)",
-      description: "Follow real-time sports scores, match centers, and live updates across cricket, football, badminton, and multi-sport tournaments in India on KhelGrid.",
+      title: "Live Cricket Scores, WPL & ICC Match Center · KhelGrid (लाइव स्कोर)",
+      description: "Fastest live cricket scores, WPL Women's Premier League, ICC tournaments, T20 leagues, ball-by-ball commentary, match scorecards, and local tournament updates on KhelGrid.",
       canonicalUrl: 'https://khelgrid.com/live',
-      keywords: ['live sports score india', 'live cricket score', 'football live score', 'badminton match score', 'sports match center', 'लाइव स्कोर', 'sports updates', ...DEFAULT_KEYWORDS],
-      ogType: 'website'
+      keywords: [
+        'live cricket score wpl',
+        'live cricket score icc',
+        'wpl live score',
+        't20 live score',
+        'live cricket score',
+        'live cricket khel',
+        'khel box live match',
+        'khel live score',
+        'today wc cricket match',
+        'ball by ball commentary',
+        'live scorecards cricket',
+        'cricket match center',
+        'wpl 2026 live',
+        'icc live score',
+        'लाइव क्रिकेट स्कोर',
+        'लाइव स्कोर',
+        ...DEFAULT_KEYWORDS,
+      ],
+      ogType: 'website',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'WebPage',
+            '@id': 'https://khelgrid.com/live#webpage',
+            url: 'https://khelgrid.com/live',
+            name: 'Live Cricket Scores, WPL & ICC Match Center · KhelGrid (लाइव स्कोर)',
+            description: "Fastest live cricket scores, WPL Women's Premier League, ICC tournaments, T20 leagues, ball-by-ball commentary, match scorecards, and local tournament updates on KhelGrid.",
+            isPartOf: {
+              '@type': 'WebSite',
+              '@id': 'https://khelgrid.com/#website',
+              name: 'KhelGrid',
+              url: 'https://khelgrid.com',
+            },
+            about: [
+              { '@type': 'Thing', name: 'Cricket' },
+              { '@type': 'Thing', name: "Women's Premier League (WPL)" },
+              { '@type': 'Thing', name: 'ICC Cricket' },
+              { '@type': 'Thing', name: 'T20 Cricket' },
+              { '@type': 'Thing', name: 'Live Sports Scores' },
+            ],
+          },
+        ],
+      },
     }
   }
 
