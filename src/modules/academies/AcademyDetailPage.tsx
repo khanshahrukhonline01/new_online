@@ -147,7 +147,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
     return (
       <div className="content-page academy-loading-container" role="status">
         <div className="academy-loading-spinner" />
-        <p>Loading academy profile and verified credentials…</p>
+        <p>Loading published academy details…</p>
       </div>
     )
   }
@@ -215,7 +215,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
               <SiteIcon name="alert-triangle" size={14} /> Pending Verification
             </span>
           )}
-          {academy.admission_open !== false && (
+          {academy.admission_open === true && (
             <span className="academy-status-open">🟢 Admissions Open</span>
           )}
         </div>
@@ -227,11 +227,13 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
             <SiteIcon name="map-pin" size={16} />
             <span>{academy.city}{academy.state ? `, ${academy.state}` : ''}</span>
           </span>
-          <span className="academy-meta-item">
-            <SiteIcon name="star" size={15} />
-            <span className="academy-rating">{liveRating} ★</span>
-            <span className="academy-reviews">({liveReviewCount} reviews)</span>
-          </span>
+          {liveReviewCount > 0 && (
+            <span className="academy-meta-item">
+              <SiteIcon name="star" size={15} />
+              <span className="academy-rating">{liveRating} ★</span>
+              <span className="academy-reviews">({liveReviewCount} reviews)</span>
+            </span>
+          )}
           {academy.head_coach && (
             <span className="academy-meta-item">
               <SiteIcon name="award" size={16} />
@@ -260,19 +262,16 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
               onClick={() => setIsEnrolModalOpen(true)}
             >
               <SiteIcon name="award" size={16} />
-              <span>Apply for Admission / Free Trial Class</span>
+              <span>Send Admission Enquiry</span>
             </button>
           )}
 
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="academy-btn academy-btn-primary"
-          >
-            <SiteIcon name="message" size={16} />
-            <span>Enquire on WhatsApp</span>
-          </a>
+          {contactUrl && (
+            <a href={contactUrl} target="_blank" rel="noopener noreferrer" className="academy-btn academy-btn-primary">
+              <SiteIcon name="external-link" size={16} />
+              <span>Contact Academy</span>
+            </a>
+          )}
 
           {academy.phone && (
             <a href={`tel:${academy.phone.replace(/\s+/g, '')}`} className="academy-btn academy-btn-secondary">
@@ -361,8 +360,8 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
           <strong className="highlight-value">{feeText}</strong>
         </div>
         <div className="highlight-card">
-          <span className="highlight-label">Curriculum Standard</span>
-          <strong className="highlight-value">Federation Aligned Tactical Progression</strong>
+          <span className="highlight-label">Training Focus</span>
+          <strong className="highlight-value">{academy.curriculum_highlights?.slice(0, 2).join(' · ') || 'Not provided'}</strong>
         </div>
       </section>
 
@@ -373,13 +372,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
           <section className="academy-section">
             <h2>About {academy.name}</h2>
             <div className="academy-prose">
-              <p>{academy.description}</p>
-              <p>
-                Athlete development at {academy.name} emphasizes age-appropriate physical conditioning,
-                biomechanically sound skill fundamentals, match intelligence, and sportsman spirit.
-                Trainees receive continuous feedback, tactical evaluations, and opportunities to compete
-                in recognized district, state, and national tournaments.
-              </p>
+              {academy.description && <p>{academy.description}</p>}
             </div>
           </section>
 
@@ -398,8 +391,8 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
             </section>
           )}
 
-          {/* Facilities & Amenities */}
-          <section className="academy-section">
+          {/* Facilities are shown only when supplied in the published record. */}
+          {facilitiesList.length > 0 && <section className="academy-section">
             <h2>Facilities &amp; Infrastructure</h2>
             <div className="academy-facilities-grid">
               {facilitiesList.map((facility, index) => (
@@ -409,7 +402,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
                 </div>
               ))}
             </div>
-          </section>
+          </section>}
 
           {/* Location & Maps Section */}
           <section className="academy-section">
@@ -434,8 +427,8 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
             </div>
           </section>
 
-          {/* FAQs Accordion */}
-          <section className="academy-section academy-faqs">
+          {/* FAQs are shown only when supplied in the published record. */}
+          {faqs.length > 0 && <section className="academy-section academy-faqs">
             <h2>Frequently Asked Questions</h2>
             <div className="faq-accordion-list">
               {faqs.map((faq, index) => {
@@ -460,7 +453,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
                 )
               })}
             </div>
-          </section>
+          </section>}
 
           {/* Community Reviews, Ratings & Media Uploads */}
           <CommunityReviewsSection
@@ -478,7 +471,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
           <div className="academy-inquiry-box">
             <h3>Interested in Joining?</h3>
             <p>
-              Apply directly with your Sports CV for batch admission or a complimentary trial session with the coaching staff.
+              Send an enquiry to ask the academy about its programmes, admissions and trial options.
             </p>
 
             {isEnquired ? (
@@ -504,19 +497,16 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
                 onClick={() => setIsEnrolModalOpen(true)}
               >
                 <SiteIcon name="award" size={18} />
-                <span>Apply for Admission / Free Trial</span>
+                <span>Send Admission Enquiry</span>
               </button>
             )}
 
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="academy-btn academy-btn-whatsapp-block"
-            >
-              <SiteIcon name="message" size={18} />
-              <span>Message on WhatsApp</span>
-            </a>
+            {contactUrl && (
+              <a href={contactUrl} target="_blank" rel="noopener noreferrer" className="academy-btn academy-btn-whatsapp-block">
+                <SiteIcon name="external-link" size={18} />
+                <span>Contact Academy</span>
+              </a>
+            )}
 
             {academy.phone && (
               <a href={`tel:${academy.phone.replace(/\s+/g, '')}`} className="academy-btn academy-btn-call-block">
@@ -527,7 +517,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
 
             <div className="academy-disclaimer-note">
               <SiteIcon name="shield-check" size={14} />
-              <span>Verified KhelGrid Listing · Direct coach access with 0% platform surcharge.</span>
+              <span>Published, source-reviewed listing. Confirm coaching, admission terms and fees directly with the academy.</span>
             </div>
 
             <button
