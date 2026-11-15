@@ -1,11 +1,16 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import SportsCvWizard from './SportsCvWizard'
-import { computeFitnessTier } from '../../shared/utils/khelId'
+import {
+  computeFitnessTier,
+  saveGenerationRecord,
+  clearGenerationRecords,
+} from '../../shared/utils/khelId'
 
 describe('SportsCvWizard — 4 Pillars: Digital Khel ID, Combine Benchmarks & Trial Dossier', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    clearGenerationRecords()
   })
 
   describe('Pillar 2: computeFitnessTier (Combine Metrics Algorithm)', () => {
@@ -113,6 +118,38 @@ describe('SportsCvWizard — 4 Pillars: Digital Khel ID, Combine Benchmarks & Tr
       expect(html).toContain('Designation / Federation:')
       expect(html).toContain('OFFICIAL STAMP / SEAL')
       expect(html).toContain('Selector / Scrutinizer Signature')
+
+      // Dossier Reference & Audit Strip
+      expect(html).toContain('DOSSIER REFERENCE:')
+      expect(html).toContain('KG-DOS-')
+      expect(html).toContain('GENERATED ON:')
+      expect(html).toContain('OFFICIAL SCRUTINY:')
+    })
+
+    it('renders Active Dossier Reference card when a returning user has a stored generation record', () => {
+      saveGenerationRecord({
+        referenceId: 'KG-DOS-20261115-99AB',
+        revisionNumber: 2,
+        generatedAt: '2026-11-15T14:40:00.000Z',
+        formattedDateTime: '15 Nov 2026, 02:40 PM IST',
+        season: '2026–2027',
+        khelId: 'KG-2026-DEL-48291',
+        athleteName: 'Rohit Verma',
+        sport: 'Cricket',
+      })
+
+      const html = renderToStaticMarkup(<SportsCvWizard />)
+
+      // Returning user reference card
+      expect(html).toContain('OFFICIAL SELECTION DOSSIER REFERENCE')
+      expect(html).toContain('KG-DOS-20261115-99AB')
+      expect(html).toContain('Revision 2 (Fresh Release)')
+      expect(html).toContain('15 Nov 2026, 02:40 PM IST')
+      expect(html).toContain('Generate Fresh Dossier (New Ref &amp; Time)')
+
+      // Print preview reflects the stored reference
+      expect(html).toContain('KG-DOS-20261115-99AB')
+      expect(html).toContain('Revision 2')
     })
   })
 })

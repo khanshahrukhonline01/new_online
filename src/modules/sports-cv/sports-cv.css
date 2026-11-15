@@ -512,6 +512,270 @@
   word-break: break-all;
 }
 
+/* ==========================================================================
+   Active Dossier Generation Reference & Audit Card (Returning Athletes)
+   ========================================================================== */
+.active-dossier-reference-card {
+  background: linear-gradient(135deg, #071626 0%, #0d2740 100%);
+  border: 1.5px solid rgba(167, 243, 107, 0.45);
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  color: #ffffff;
+}
+
+.dossier-ref-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ref-badge-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #a7f36b;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ref-main-code {
+  margin: 4px 0 0;
+  font-size: 24px;
+  font-weight: 900;
+  font-family: monospace, ui-monospace, sans-serif;
+  color: #e5c07b;
+  letter-spacing: 0.06em;
+}
+
+.dossier-ref-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-generate-fresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #a7f36b;
+  color: #06121e;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn-generate-fresh:hover {
+  background: #bbf789;
+  transform: translateY(-1px);
+}
+
+.btn-history-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+}
+
+.btn-history-toggle:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.dossier-ref-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+@media (max-width: 900px) {
+  .dossier-ref-meta-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 550px) {
+  .dossier-ref-meta-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ref-meta-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ref-cell-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ref-cell-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* History Drawer & Table */
+.dossier-history-drawer {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dossier-history-drawer h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #a7f36b;
+}
+
+.history-subtitle {
+  margin: 4px 0 12px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.dossier-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.dossier-history-table th {
+  text-align: left;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.dossier-history-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.current-ref-row {
+  background: rgba(167, 243, 107, 0.08);
+}
+
+.current-ref-tag {
+  display: inline-block;
+  margin-left: 6px;
+  background: #a7f36b;
+  color: #06121e;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.mono-ref {
+  font-family: monospace, ui-monospace, sans-serif;
+  color: #e5c07b;
+  font-weight: 700;
+}
+
+.btn-restore-ref {
+  background: transparent;
+  color: #a7f36b;
+  border: 1px solid rgba(167, 243, 107, 0.4);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.btn-restore-ref:hover {
+  background: rgba(167, 243, 107, 0.15);
+}
+
+/* Dossier Audit Strip inside Print Selection Resume */
+.dossier-audit-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 12px 0 16px;
+}
+
+.audit-strip-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.audit-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.audit-code {
+  font-family: monospace, ui-monospace, sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  color: #0b1c2d;
+}
+
+.audit-rev {
+  font-size: 9px;
+  color: #087b45;
+  font-weight: 700;
+}
+
+.audit-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dossier-cert-reference-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  color: #475569;
+  background: #e2e8f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-family: monospace, ui-monospace, sans-serif;
+}
+
 .dossier-empty-note {
   font-size: 12px;
   color: #64748b;
@@ -747,5 +1011,27 @@
   .selector-endorsement-box {
     border: 1px solid #94a3b8 !important;
     background: #ffffff !important;
+  }
+
+  .active-dossier-reference-card {
+    display: none !important;
+  }
+
+  .dossier-audit-strip {
+    border: 1px solid #000 !important;
+    background: #f8fafc !important;
+    margin: 8px 0 12px !important;
+    padding: 6px 10px !important;
+  }
+
+  .dossier-audit-strip strong,
+  .dossier-audit-strip span {
+    color: #000 !important;
+  }
+
+  .dossier-cert-reference-line {
+    border: 1px solid #cbd5e1 !important;
+    background: #f8fafc !important;
+    color: #000 !important;
   }
 }

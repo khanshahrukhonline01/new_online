@@ -134,6 +134,11 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
   <text x="148" y="498" font-family="Arial, sans-serif" font-size="10" fill="#6A8098">khelgrid.com/u/@${profile.username}</text>
 
   <!-- Watermark at the Tip -->
+  ${
+    profile.dossierReference
+      ? `<text x="210" y="548" font-family="Arial, sans-serif" font-size="8" fill="#8FA5BE" opacity="0.85" text-anchor="middle">REF: ${profile.dossierReference}</text>`
+      : ''
+  }
   <text x="210" y="565" font-family="Arial, sans-serif" font-size="9" font-weight="bold" fill="#A7F36B" opacity="0.6" text-anchor="middle">DIGITAL KHEL ID (खेल आईडी)</text>
 </svg>`
   }
@@ -247,6 +252,13 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
           <span className="khel-id-label">KHEL ID (खेल आईडी)</span>
           <span className="khel-id-code">{khelId}</span>
         </div>
+
+        {profile.dossierReference && (
+          <div className="card-dossier-ref-tag" title="Official Dossier Generation Reference">
+            <span>DOSSIER REF: {profile.dossierReference}</span>
+            {profile.dossierGeneratedAt && <span> · {profile.dossierGeneratedAt.split(',')[0]}</span>}
+          </div>
+        )}
 
         <div className="card-stats-grid">
           <div className="card-stat">
