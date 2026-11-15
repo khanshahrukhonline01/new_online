@@ -68,21 +68,48 @@ describe('SEO & SERP Metadata Validation', () => {
   })
 
   it('provides structured Schema.org JSON-LD data for discovery on major routes', () => {
+    // 1. WebSite with Google Sitelinks SearchAction
     const homeMeta = getRouteSeoMetadata('/')
     expect(homeMeta.jsonLd).toBeDefined()
     expect(JSON.stringify(homeMeta.jsonLd)).toContain('SearchAction')
+    expect(JSON.stringify(homeMeta.jsonLd)).toContain('https://khelgrid.com/search?q={search_term_string}')
 
+    // 2. WebApplication schema for /sports-cv (Digital Khel ID builder) and /tools (Athlete calculators)
     const sportsCvMeta = getRouteSeoMetadata('/sports-cv')
     expect(sportsCvMeta.jsonLd).toBeDefined()
     expect(JSON.stringify(sportsCvMeta.jsonLd)).toContain('WebApplication')
     expect(JSON.stringify(sportsCvMeta.jsonLd)).toContain('Athlete Sports CV & Khel ID Builder')
 
+    const toolsMeta = getRouteSeoMetadata('/tools')
+    expect(toolsMeta.jsonLd).toBeDefined()
+    expect(JSON.stringify(toolsMeta.jsonLd)).toContain('WebApplication')
+    expect(JSON.stringify(toolsMeta.jsonLd)).toContain('Athlete Sports Tools & Trial Calculators')
+
+    // 3. Service schema for sports venue and box cricket reservations on /venues
     const venuesMeta = getRouteSeoMetadata('/venues')
     expect(venuesMeta.jsonLd).toBeDefined()
     expect(JSON.stringify(venuesMeta.jsonLd)).toContain('Service')
+    expect(JSON.stringify(venuesMeta.jsonLd)).toContain('Sports Venue & Box Cricket Turf Reservation')
 
+    // 4. DataCatalog schema for open-access preprints on /khelchronicle
     const chronicleMeta = getRouteSeoMetadata('/khelchronicle')
     expect(chronicleMeta.jsonLd).toBeDefined()
     expect(JSON.stringify(chronicleMeta.jsonLd)).toContain('DataCatalog')
+    expect(JSON.stringify(chronicleMeta.jsonLd)).toContain('KhelChronicle Open Sports Research Archive')
+
+    // 5. ItemList schema on /opportunities and /academies
+    const oppsMeta = getRouteSeoMetadata('/opportunities')
+    expect(oppsMeta.jsonLd).toBeDefined()
+    expect(JSON.stringify(oppsMeta.jsonLd)).toContain('ItemList')
+
+    const academiesMeta = getRouteSeoMetadata('/academies')
+    expect(academiesMeta.jsonLd).toBeDefined()
+    expect(JSON.stringify(academiesMeta.jsonLd)).toContain('ItemList')
+
+    // 6. Additional ItemList schemas on /sports, /coaches, /events, /cities
+    expect(JSON.stringify(getRouteSeoMetadata('/sports').jsonLd)).toContain('ItemList')
+    expect(JSON.stringify(getRouteSeoMetadata('/coaches').jsonLd)).toContain('ItemList')
+    expect(JSON.stringify(getRouteSeoMetadata('/events').jsonLd)).toContain('ItemList')
+    expect(JSON.stringify(getRouteSeoMetadata('/cities').jsonLd)).toContain('ItemList')
   })
 })

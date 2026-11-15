@@ -159,7 +159,19 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
       description: "Explore 34+ Olympic, school, and desi sports in India including Cricket, Football, Badminton, Kabaddi, Wrestling, Athletics, and Pickleball on KhelGrid.",
       canonicalUrl: 'https://khelgrid.com/sports',
       keywords: ['sports in india', 'desi khel', 'olympic sports india', 'cricket', 'badminton', 'football', 'kabaddi', 'kho kho', 'athletics', 'wrestling', 'pickleball', 'सभी खेल', ...DEFAULT_KEYWORDS],
-      ogType: 'website'
+      ogType: 'website',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'ItemList',
+            '@id': 'https://khelgrid.com/sports#list',
+            name: 'Explore 34+ Sports & Olympic Games · KhelGrid (सभी खेल)',
+            description: 'Explore 34+ Olympic, school, and desi sports in India including Cricket, Football, Badminton, Kabaddi, Wrestling, Athletics, and Pickleball on KhelGrid.',
+            url: 'https://khelgrid.com/sports',
+          },
+        ],
+      },
     }
   }
 
@@ -195,7 +207,7 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
             '@type': 'WebPage',
             '@id': 'https://khelgrid.com/live#webpage',
             url: 'https://khelgrid.com/live',
-            name: 'Live Cricket Scores, WPL & ICC Matches · KhelGrid (लाइव स्कोर)',
+            name: 'Live Cricket Scores, WPL & ICC Match Center · KhelGrid (लाइव स्कोर)',
             description: "Fastest live cricket scores, WPL Women's Premier League, ICC tournaments, T20 leagues, ball-by-ball commentary, match scorecards, and local tournament updates on KhelGrid.",
             isPartOf: {
               '@type': 'WebSite',
@@ -299,7 +311,19 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
       description: "Discover premier sports complexes, SAI stadiums, and multi-sport centres across Delhi NCR, Mumbai, Bengaluru, Hyderabad, Kolkata, Pune, and 53+ Indian cities.",
       canonicalUrl: 'https://khelgrid.com/cities',
       keywords: ['sports complexes in delhi', 'bengaluru sports venues', 'stadiums in india', 'delhi sports complex', 'mumbai sports ground', 'hyderabad badminton', 'खेल परिसर', ...DEFAULT_KEYWORDS],
-      ogType: 'place'
+      ogType: 'place',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'ItemList',
+            '@id': 'https://khelgrid.com/cities#list',
+            name: 'Sports Complexes & Venues in India · KhelGrid (खेल परिसर)',
+            description: 'Discover premier sports complexes, SAI stadiums, and multi-sport centres across Delhi NCR, Mumbai, Bengaluru, Hyderabad, Kolkata, Pune, and 53+ Indian cities.',
+            url: 'https://khelgrid.com/cities',
+          },
+        ],
+      },
     }
   }
 
@@ -309,7 +333,18 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
       description: "Unified global search for sports academies, turf booking, open trials, pickup games, tournaments, coaches, and sports science research across India on KhelGrid.",
       canonicalUrl: 'https://khelgrid.com/search',
       keywords: ['search sports india', 'find turf near me', 'find sports academy', 'sports trial search', 'khelgrid search', ...DEFAULT_KEYWORDS],
-      ogType: 'website'
+      ogType: 'website',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'SearchResultsPage',
+            '@id': 'https://khelgrid.com/search#webpage',
+            name: 'Search Sports, Turfs, Academies & Trials · KhelGrid (खोजें)',
+            url: 'https://khelgrid.com/search',
+          },
+        ],
+      },
     }
   }
 
@@ -368,7 +403,19 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
       description: "Search and connect directly with verified sports coaches across India. Filter by SAI NIS Patiala, BCCI, AIFF, and BWF certifications, transparent monthly coaching fees, and student track records.",
       canonicalUrl: 'https://khelgrid.com/coaches',
       keywords: ['certified sports coaches india', 'cricket coach near me', 'badminton coach bengaluru', 'aiff certified football coach', 'sai nis patiala coach', 'sports coaching fees', 'प्रमाणित खेल कोच', ...DEFAULT_KEYWORDS],
-      ogType: 'website'
+      ogType: 'website',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'ItemList',
+            '@id': 'https://khelgrid.com/coaches#list',
+            name: 'Verified Sports Coaches Directory · KhelGrid (प्रमाणित कोच)',
+            description: 'Search and connect directly with verified sports coaches across India certified by SAI NIS Patiala, BCCI, AIFF, and BWF.',
+            url: 'https://khelgrid.com/coaches',
+          },
+        ],
+      },
     }
   }
 
@@ -378,7 +425,19 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
       description: "Explore verified Indian sports tournaments, SGFI school games, Khelo India youth competitions, senior national meets, and state ranking events with official rulebooks and prize money.",
       canonicalUrl: 'https://khelgrid.com/events',
       keywords: ['sports tournaments india', 'sgfi national school games', 'khelo india youth games 2026', 'state athletics championship', 'badminton tournament india', 'subroto cup football', 'खेल प्रतियोगिताएं', ...DEFAULT_KEYWORDS],
-      ogType: 'website'
+      ogType: 'website',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'ItemList',
+            '@id': 'https://khelgrid.com/events#list',
+            name: 'Tournaments & National Sports Events · KhelGrid (प्रतियोगिताएं)',
+            description: 'Explore verified Indian sports tournaments, SGFI school games, Khelo India youth competitions, senior national meets, and state ranking events.',
+            url: 'https://khelgrid.com/events',
+          },
+        ],
+      },
     }
   }
 
@@ -388,7 +447,21 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
       description: "Dedicated talent workbench for SAI selectors, NIS Patiala certified coaches, and pro league scouts. Filter verified grassroots athletes by normative biometrics, physical test percentiles, and achievements.",
       canonicalUrl: 'https://khelgrid.com/scout-portal',
       keywords: ['sports talent scouting india', 'sai talent identification', 'nis patiala scout workbench', 'grassroots athlete database', 'yo-yo test percentile', 'स्काउट पोर्टल', ...DEFAULT_KEYWORDS],
-      ogType: 'website'
+      ogType: 'website',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'WebApplication',
+            '@id': 'https://khelgrid.com/scout-portal#app',
+            name: 'Scout Portal & Athlete Workbench · KhelGrid (स्काउट पोर्टल)',
+            url: 'https://khelgrid.com/scout-portal',
+            applicationCategory: 'SportsApplication',
+            operatingSystem: 'All',
+            description: 'Dedicated talent workbench for SAI selectors, NIS Patiala certified coaches, and pro league scouts.',
+          },
+        ],
+      },
     }
   }
 
@@ -398,7 +471,25 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
       description: "Authenticate age compliance, federation UIDs (AFI, BAI, AIFF, BCCI, SGFI), and state medal certificates. Protect yourself from age-fraud and earn your verified KhelGrid badge.",
       canonicalUrl: 'https://khelgrid.com/verification',
       keywords: ['athlete verification badge', 'afi athlete uid check', 'bai registration verification', 'sports certificate verification', 'age fraud prevention in sports', 'खिलाड़ी सत्यापन', ...DEFAULT_KEYWORDS],
-      ogType: 'website'
+      ogType: 'website',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'Service',
+            '@id': 'https://khelgrid.com/verification#service',
+            name: 'Athlete Verification & Badge Desk · KhelGrid (सत्यापन डेस्क)',
+            serviceType: 'Sports Credential & Age Verification Service',
+            description: 'Authenticate age compliance, federation UIDs, and state medal certificates to eliminate age-fraud in Indian sports.',
+            url: 'https://khelgrid.com/verification',
+            provider: {
+              '@type': 'Organization',
+              name: 'KhelGrid',
+              url: 'https://khelgrid.com',
+            },
+          },
+        ],
+      },
     }
   }
 

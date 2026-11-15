@@ -747,12 +747,25 @@ npm run lint
 - Enforced strict title character boundaries (<= 70 characters, averaging 54–63 chars) across all 19 primary platform routes.
 - Eliminates Google mobile SERP ellipsis truncation on mobile screens (representing >80% of Indian grassroots sports searches).
 
-#### 3. Expanded Schema.org JSON-LD Knowledge Graph
-- **`WebSite`**: Integrated Google Sitelinks `SearchAction` deep-linking to `https://khelgrid.com/search?q={search_term_string}`.
-- **`WebApplication`**: Injected rich application schema for `/sports-cv` (Digital Khel ID builder) and `/tools` (Athlete calculators).
-- **`Service`**: Injected sports venue and box cricket booking reservation schema on `/venues`.
-- **`DataCatalog`**: Injected open science repository schema on `/khelchronicle`.
-- **`ItemList`**: Injected structured lists on `/opportunities` and `/academies`.
+#### 3. Expanded Schema.org JSON-LD Knowledge Graph & Mobile SERP Character Limits (Phase 4)
+- **`WebSite` with Google Sitelinks SearchAction**:
+  - Attached `@type: 'WebSite'` with `potentialAction: SearchAction` pointing to `https://khelgrid.com/search?q={search_term_string}` on root route `/`.
+- **`WebApplication` Schema**:
+  - `/sports-cv`: Configured `applicationCategory: SportsApplication` for the Athlete Sports CV & Digital Khel ID Builder.
+  - `/tools`: Configured `applicationCategory: SportsApplication` for Athlete Sports Tools, Yo-Yo test percentiles, and trial age eligibility calculators.
+  - `/scout-portal`: Injected `WebApplication` schema for talent identification workbench for SAI selectors and pro scouts.
+- **`Service` Schema**:
+  - `/venues`: Injected `Service` schema for Sports Venue & Box Cricket Turf Reservation with provider credentials.
+  - `/verification`: Injected `Service` schema for Athlete Credential & Age Verification Service to protect athletes from fraud.
+- **`DataCatalog` Schema**:
+  - `/khelchronicle`: Injected open science repository knowledge graph for peer-reviewed preprints and athlete kinematics datasets.
+- **`ItemList` Directory Schemas**:
+  - Injected structured Schema.org `ItemList` entities for `/opportunities`, `/academies`, `/sports`, `/coaches`, `/events`, and `/cities`.
+- **`SearchResultsPage` Schema**:
+  - Injected search results page graph for `/search`.
+- **Mobile SERP Title Character Limits**:
+  - Enforced strict length bounds (52–67 characters, all <= 70 characters) across all 19 primary platform routes to eliminate mobile truncation (>80% Indian sports traffic).
+  - Validated by unit test assertions across every route in `seoAndShare.test.ts`.
 
 #### 4. High-Intent On-Page UI & FAQ Schema Integration
 - **`PlayerCard.tsx`**: Updated athlete card footer to explicitly display `KHELGRID · DIGITAL KHEL ID (खेल आईडी)` and button action `Download Card (Khel ID)`.
