@@ -61,30 +61,30 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/opportunities' || cleanPath === '/trials' || cleanPath === '/combines' || cleanPath === '/scholarships' || cleanPath === '/camps') {
     return {
-      title: "Sports Trials, Tournaments & Scholarships in India · KhelGrid (ट्रायल और खेल प्रतियोगिता)",
-      description: "Discover verified sports trials, state and national tournaments, SAI NCOE selections, and athletic scholarships across India. Filter by sport, age group, and location.",
+      title: "Sports Trials & Opportunities in India · KhelGrid (खेल ट्रायल)",
+      description: "Explore published sports trials, competitions, camps and scholarships. Check each listing's source, dates, eligibility and application details with the organiser before applying.",
       canonicalUrl: 'https://khelgrid.com/opportunities',
-      keywords: ['sports trials 2026', 'cricket trials near me', 'football selection trials', 'badminton tournaments india', 'sports scholarships', 'sai ncoe selection trials', 'ट्रायल', 'खेल प्रतियोगिता', 'open sports trials', ...DEFAULT_KEYWORDS],
+      keywords: ['sports trials india', 'cricket trials', 'football selection trials', 'badminton tournaments india', 'sports scholarships india', 'ट्रायल', 'खेल प्रतियोगिता', 'open sports trials', ...DEFAULT_KEYWORDS],
       ogType: 'website'
     }
   }
 
   if (cleanPath === '/venues' || cleanPath === '/book') {
     return {
-      title: "Book Sports Venues, Turfs & Courts Across India · KhelGrid (टर्फ और मैदान बुकिंग)",
-      description: "Find and book verified sports venues, synthetic turfs, badminton wooden courts, swimming pools, tennis courts, and box cricket pitches with hourly slots across India.",
+      title: "Sports Venues, Turfs & Grounds in India · KhelGrid",
+      description: "Discover published sports venue information, including location, facilities and available contact details. Confirm access, pricing and availability directly with each venue.",
       canonicalUrl: 'https://khelgrid.com/venues',
-      keywords: ['book turf near me', 'sports turf booking', 'badminton court booking', 'box cricket turf', 'football turf near me', 'swimming pool passes', 'टर्फ बुकिंग', 'मैदान बुकिंग', 'sports ground booking india', ...DEFAULT_KEYWORDS],
+      keywords: ['sports venues india', 'sports turf', 'box cricket ground', 'football turf', 'badminton court', 'sports ground', 'टर्फ', 'खेल मैदान', ...DEFAULT_KEYWORDS],
       ogType: 'place'
     }
   }
 
   if (cleanPath === '/academies' || cleanPath === '/academy' || cleanPath === '/train') {
     return {
-      title: "Find Verified Sports Academies & Coaching in India · KhelGrid (खेल अकादमी)",
-      description: "Explore verified sports academies, professional coaching centres, cricket academies, badminton institutes, and combat akhadas across India. Check fees, coaches, and admissions.",
+      title: "Sports Academies & Coaching in India · KhelGrid (खेल अकादमी)",
+      description: "Explore published sports academy and coaching listings. Review the sports, location and available programme information, then confirm coaches, fees and admissions directly with the academy.",
       canonicalUrl: 'https://khelgrid.com/academies',
-      keywords: ['sports academy near me', 'cricket academy india', 'badminton coaching centre', 'football training academy', 'tennis academy', 'akhada wrestling', 'खेल अकादमी', 'sports coaching classes', ...DEFAULT_KEYWORDS],
+      keywords: ['sports academy india', 'cricket academy', 'badminton coaching', 'football training academy', 'tennis academy', 'wrestling akhada', 'खेल अकादमी', 'sports coaching', ...DEFAULT_KEYWORDS],
       ogType: 'website'
     }
   }
@@ -101,20 +101,21 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
 
   if (cleanPath === '/live' || cleanPath === '/live-scores') {
     return {
-      title: "Live Sports Scores, Match Updates & Commentary · KhelGrid (लाइव स्कोर)",
-      description: "Follow real-time sports scores, match centers, and live updates across cricket, football, badminton, and multi-sport tournaments in India on KhelGrid.",
+      title: "Sports Match Centre · KhelGrid",
+      description: "Explore the KhelGrid sports match centre. Live score coverage is shown only when a connected, current match-data source is available.",
       canonicalUrl: 'https://khelgrid.com/live',
-      keywords: ['live sports score india', 'live cricket score', 'football live score', 'badminton match score', 'sports match center', 'लाइव स्कोर', 'sports updates', ...DEFAULT_KEYWORDS],
+      robots: 'noindex, follow',
+      keywords: ['sports match centre', 'sports scores', 'लाइव स्कोर', ...DEFAULT_KEYWORDS],
       ogType: 'website'
     }
   }
 
   if (cleanPath === '/sports-cv' || cleanPath === '/start-from-zero') {
     return {
-      title: "Create Athlete Sports CV & Verified Profile · KhelGrid (स्पोर्ट्स सीवी)",
-      description: "Build a professional, shareable Sports CV and athlete portfolio. Highlight your match stats, trial history, coaching records, and achievements on KhelGrid.",
+      title: "Create an Athlete Sports CV · KhelGrid (खिलाड़ी स्पोर्ट्स CV)",
+      description: "Prepare a structured athlete CV to present your sporting background, experience, achievements and goals. Athlete-entered information is not an independently verified credential.",
       canonicalUrl: 'https://khelgrid.com/sports-cv',
-      keywords: ['sports cv maker', 'athlete resume builder', 'sports portfolio', 'athlete scout id', 'स्पोर्ट्स सीवी', 'athlete profile india', ...DEFAULT_KEYWORDS],
+      keywords: ['sports cv maker', 'athlete resume builder', 'sports portfolio', 'athlete profile india', 'स्पोर्ट्स सीवी', 'खिलाड़ी प्रोफाइल', ...DEFAULT_KEYWORDS],
       ogType: 'profile'
     }
   }
