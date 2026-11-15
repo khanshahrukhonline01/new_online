@@ -1,8 +1,10 @@
 import { AdminControlPanelPage } from '../../../src/modules/admin/AdminControlPanelPage'
+import { usePreferences } from '../../../src/shared/usePreferences'
 
 const DEVELOPMENT_SUPABASE_URL = 'https://hznsbxvovjxvmnchzzqt.supabase.co'
 
 export function AdminApp() {
+  const { preferences, updatePreferences } = usePreferences()
   const configuredUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
 
   if (configuredUrl !== DEVELOPMENT_SUPABASE_URL) {
@@ -17,6 +19,24 @@ export function AdminApp() {
 
   return (
     <main className="khelgrid-admin-app" aria-label="KhelGrid private administration">
+      <div className="admin-theme-controls" aria-label="Appearance preferences">
+        <label>
+          Accent colour
+          <select value={preferences.accent} onChange={event => updatePreferences({ accent: event.target.value as 'green' | 'blue' | 'orange' })}>
+            <option value="green">Emerald Green</option>
+            <option value="blue">Royal Blue</option>
+            <option value="orange">Dynamic Orange</option>
+          </select>
+        </label>
+        <label>
+          Appearance
+          <select value={preferences.theme} onChange={event => updatePreferences({ theme: event.target.value as 'light' | 'dark' | 'system' })}>
+            <option value="system">System default</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+      </div>
       <AdminControlPanelPage />
     </main>
   )
