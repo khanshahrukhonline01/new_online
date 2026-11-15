@@ -11,6 +11,11 @@ import './catalogue-detail.css'
 type Kind = 'sport' | 'opportunity' | 'venue'
 type RecordValue = Sport | Opportunity | Venue
 
+export function resolveCatalogueRecordBySlug<T extends { slug: string }>(items: T[], slug: string): T | undefined {
+  const cleanSlug = slug.replace(/^t-/, '')
+  return items.find(item => item.slug === slug || item.slug === cleanSlug || item.slug.replace(/^t-/, '') === cleanSlug)
+}
+
 export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: string }) {
   const [result, setResult] = useState<CatalogueResult<RecordValue> | { status: 'loading'; data: [] }>({ status: 'loading', data: [] })
 
@@ -22,7 +27,7 @@ export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: 
   }, [kind])
 
   const cleanSlug = slug.replace(/^t-/, '')
-  const record = result.status === 'ready' ? result.data.find(item => item.slug === slug || item.slug === cleanSlug || item.slug.replace(/^t-/, '') === cleanSlug) : undefined
+  const record = result.status === 'ready' ? resolveCatalogueRecordBySlug(result.data, slug) : undefined
 
   useEffect(() => {
     if (kind !== 'opportunity' || result.status === 'loading') return
@@ -46,7 +51,7 @@ export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: 
   const back = kind === 'sport' ? '/sports' : kind === 'opportunity' ? '/opportunities' : '/venues'
   const heading = kind === 'sport' ? 'Sport details' : kind === 'opportunity' ? 'Opportunity details' : 'Venue details'
 
-  // If record is found from curated fallback, treat state as ready
+  // A detail record is ready only when returned by the published, verified catalogue query.
   const effectiveState = record ? 'ready' : result.status
 
   return (
@@ -80,7 +85,7 @@ export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: 
   )
 }
 
-function OpportunityDetail({ item }: { item: Opportunity }) {
+export function OpportunityDetail({ item }: { item: Opportunity }) {
   const date = (value: string | null) => {
     if (!value) return 'Not provided'
     const parsed = new Date(value)
