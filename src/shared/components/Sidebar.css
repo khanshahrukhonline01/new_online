@@ -700,11 +700,11 @@ html.dark .sidebar-mobile-close:hover {
   color: #f8fafc;
 }
 html.dark .sidebar-mobile-add-btn {
-  background: #10b981;
+  background: var(--accent, #10b981);
   color: #022c1b;
 }
 html.dark .sidebar-mobile-add-btn:hover {
-  background: #059669;
+  background: var(--accent-strong, #059669);
 }
 html.dark .mobile-quick-chip {
   background: #172336;
@@ -717,7 +717,7 @@ html.dark .mobile-quick-chip:hover {
 }
 html.dark .mobile-quick-chip.is-active {
   background: rgba(16, 185, 129, 0.18);
-  border-color: #059669;
+  border-color: var(--accent-strong, #059669);
   color: #34d399;
 }
 html.dark .mobile-drawer .sidebar-module + .sidebar-module {
@@ -751,7 +751,7 @@ html.dark .mobile-drawer .sidebar-link.is-active {
   color: #34d399;
   background: rgba(16, 185, 129, 0.16);
   border-color: rgba(16, 185, 129, 0.3);
-  box-shadow: inset 3.5px 0 0 #10b981;
+  box-shadow: inset 3.5px 0 0 var(--accent, #10b981);
 }
 html.dark .mobile-drawer .sidebar-link.is-disabled {
   color: #475569;
@@ -789,7 +789,7 @@ html.dark .mobile-drawer .sidebar-intake-btn {
   border-color: rgba(16, 185, 129, 0.3);
 }
 html.dark .mobile-drawer .sidebar-intake-btn:hover {
-  background: #10b981;
+  background: var(--accent, #10b981);
   color: #ffffff;
 }
 html.dark .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-bottom {
@@ -808,7 +808,7 @@ html.dark .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sideb
   border-color: rgba(16, 185, 129, 0.3);
 }
 html.dark .foundation-v1 .app-workspace > .app-sidebar:not(.is-collapsed) .sidebar-intake-btn:hover {
-  background: #10b981;
+  background: var(--accent, #10b981);
   color: #ffffff;
 }
 html.dark .mobile-bottom-nav {
