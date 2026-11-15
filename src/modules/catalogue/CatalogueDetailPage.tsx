@@ -5,6 +5,7 @@ import type { Opportunity, Sport, Venue } from '../../shared/domain'
 import { AsyncState } from '../../shared/components/AsyncState'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { TrialAlertActions } from '../opportunities/TrialAlertActions'
+import { updatePageSeoMetadata } from '../../shared/utils/seoAndShare'
 import './catalogue-detail.css'
 
 type Kind = 'sport' | 'opportunity' | 'venue'
@@ -18,7 +19,36 @@ export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: 
     load.then(value => { if (active) setResult(value as CatalogueResult<RecordValue>) })
     return () => { active = false }
   }, [kind])
-  const record = result.status === 'ready' ? result.data.find(item => item.slug === slug) : undefined
+  const record = result.status === 'ready'
+    ? result.data.find(item => item.slug === slug) ??
+      (kind === 'opportunity'
+        ? result.data.find(item => item.slug.replace(/^t-/, '') === slug.replace(/^t-/, ''))
+        : undefined)
+    : undefined
+
+  useEffect(() => {
+    if (kind !== 'opportunity' || result.status !== 'ready') return
+
+    const opportunity = record as Opportunity | undefined
+    const canonicalUrl = `https://khelgrid.com/trial/${encodeURIComponent(slug)}`
+    const description = opportunity
+      ? [
+          opportunity.title,
+          opportunity.sport?.name,
+          opportunity.city,
+          opportunity.organizer_name,
+          opportunity.source_name ? `Source: ${opportunity.source_name}` : 'Confirm details with the organiser',
+        ].filter(Boolean).join(' · ').slice(0, 160)
+      : 'This sports trial or opportunity is not currently available in the published KhelGrid catalogue.'
+
+    return updatePageSeoMetadata({
+      title: opportunity ? `${opportunity.title} · Sports Trial | KhelGrid` : 'Trial not found · KhelGrid',
+      description,
+      canonicalUrl,
+      robots: opportunity?.verification_status === 'verified' ? undefined : 'noindex, follow',
+      ogType: 'website',
+    })
+  }, [kind, record, result.status, slug])
   const back = kind === 'sport' ? '/sports' : kind === 'opportunity' ? '/opportunities' : '/venues'
   const heading = kind === 'sport' ? 'Sport details' : kind === 'opportunity' ? 'Opportunity details' : 'Venue details'
   return <section className="content-page catalogue-detail-page">
