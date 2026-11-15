@@ -63,7 +63,7 @@
   width: 72px;
   height: 72px;
   border-radius: 18px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--accent, #10b981) 0%, var(--accent-strong, #059669) 100%);
   color: #ffffff;
   font-size: 28px;
   font-weight: 800;
@@ -169,13 +169,13 @@
 }
 
 .user-dash-btn.primary {
-  background: #10b981;
+  background: var(--accent, #10b981);
   color: #022c1b;
   box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
 }
 
 .user-dash-btn.primary:hover {
-  background: #059669;
+  background: var(--accent-strong, #059669);
   color: #ffffff;
   transform: translateY(-1px);
 }
@@ -318,7 +318,7 @@
 
 .user-dash-kpi-card:hover {
   transform: translateY(-2px);
-  border-color: #10b981;
+  border-color: var(--accent, #10b981);
   box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12);
 }
 
@@ -491,7 +491,7 @@
 }
 
 .user-action-tile:hover {
-  border-color: #10b981;
+  border-color: var(--accent, #10b981);
   background: #f0fdf4;
   transform: translateY(-1px);
 }
@@ -650,7 +650,7 @@ html.dark .user-action-tile {
 
 html.dark .user-action-tile:hover {
   background: #1e2e46;
-  border-color: #10b981;
+  border-color: var(--accent, #10b981);
 }
 
 html.dark .user-action-tile-body strong {
@@ -773,7 +773,7 @@ html.dark .user-dash-breadcrumb .current {
   font-family: monospace;
   font-size: 11px;
   font-weight: 700;
-  color: #10b981;
+  color: var(--accent, #10b981);
   background: rgba(16, 185, 129, 0.1);
   padding: 2px 6px;
   border-radius: 4px;
