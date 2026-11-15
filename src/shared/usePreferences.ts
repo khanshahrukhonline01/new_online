@@ -36,13 +36,26 @@ export function usePreferences() {
       }
     }
 
+    function handleStorageChange(event: StorageEvent) {
+      if (event.key === null || event.key === 'khelgrid-user-preferences' || event.key === 'khelgrid-theme') {
+        const current = getStoredPreferences()
+        setPreferences(current)
+        applyThemeToDOM(current.theme, current.accent)
+        applyAccessibilityToDOM(current.reducedMotion)
+      }
+    }
+
     window.addEventListener('khelgrid-preferences-change', handlePreferencesChange)
+    window.addEventListener('storage', handleStorageChange)
     const media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null
-    media?.addEventListener?.('change', handleSystemThemeChange)
+    if (media?.addEventListener) media.addEventListener('change', handleSystemThemeChange)
+    else media?.addListener?.(handleSystemThemeChange)
 
     return () => {
       window.removeEventListener('khelgrid-preferences-change', handlePreferencesChange)
-      media?.removeEventListener?.('change', handleSystemThemeChange)
+      window.removeEventListener('storage', handleStorageChange)
+      if (media?.removeEventListener) media.removeEventListener('change', handleSystemThemeChange)
+      else media?.removeListener?.(handleSystemThemeChange)
     }
   }, [preferences.theme, preferences.accent, preferences.reducedMotion])
 
