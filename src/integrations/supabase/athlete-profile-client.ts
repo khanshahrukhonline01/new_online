@@ -68,6 +68,17 @@ export const SHOWCASE_ATHLETE_PROFILES: Record<string, AthleteProfile> = {
       tier: 'Tier 1 — Elite National Candidate',
       percentileAvg: 88,
     },
+    coachEndorsement: {
+      endorsed: true,
+      coachName: 'Coach Zaheer Farooq',
+      coachLicense: 'NIS Patiala Senior Diploma · BCCI Level 2',
+      coachDesignation: 'Head Pace Bowling Coach',
+      organizationOrAcademy: 'Sonnet Cricket Club & Delhi State Selection Observer',
+      endorsementStatement:
+        'Biomechanical delivery stride and release velocity (135+ km/h) physically validated during Delhi state pace camp. Recommended for national junior camp selection.',
+      endorsedAt: '2026-10-25T11:30:00Z',
+      endorsementRef: 'END-NIS-DEL-2026-8812',
+    },
     verificationStatus: 'verified',
     createdAt: '2026-10-15T10:00:00Z',
     updatedAt: '2026-10-30T14:00:00Z',
@@ -939,4 +950,75 @@ export function isAcademyEnquirySubmitted(academySlug: string): boolean {
   const enquiries = getUserAcademyEnquiries()
   return enquiries.some(e => e.academySlug.toLowerCase() === academySlug.toLowerCase())
 }
+
+export interface SaveCoachEndorsementInput {
+  username: string
+  coachName: string
+  coachLicense: string
+  coachDesignation?: string
+  organizationOrAcademy?: string
+  endorsementStatement?: string
+}
+
+export async function saveCoachEndorsement(
+  input: SaveCoachEndorsementInput,
+): Promise<{ status: 'endorsed'; profile: AthleteProfile; message: string }> {
+  const normalized = normalizeUsername(input.username)
+  const existing = (await getAthleteProfile(normalized)) || SHOWCASE_ATHLETE_PROFILES[normalized]
+  const now = new Date().toISOString()
+  const licenseClean = input.coachLicense.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'NIS'
+  const ref = `END-${licenseClean}-${Date.now().toString(36).slice(-5).toUpperCase()}`
+
+  const endorsement = {
+    endorsed: true,
+    coachName: input.coachName.trim(),
+    coachLicense: input.coachLicense.trim(),
+    coachDesignation: input.coachDesignation?.trim() || 'Certified Sports Coach',
+    organizationOrAcademy: input.organizationOrAcademy?.trim() || 'Verified Sports Academy',
+    endorsementStatement:
+      input.endorsementStatement?.trim() || 'Candidate metrics and sporting credentials reviewed and officially endorsed.',
+    endorsedAt: now,
+    endorsementRef: ref,
+  }
+
+  const updated: AthleteProfile = existing
+    ? {
+        ...existing,
+        coachEndorsement: endorsement,
+        verificationStatus: 'verified',
+        updatedAt: now,
+      }
+    : {
+        id: `prof-${normalized}`,
+        username: normalized,
+        fullName: normalized.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        sport: 'Multi-Sport',
+        playingPosition: 'Athlete',
+        city: 'India',
+        summary: 'Grassroots verified athlete on KhelGrid.',
+        achievements: [],
+        videoClips: [],
+        coachEndorsement: endorsement,
+        verificationStatus: 'verified',
+        createdAt: now,
+        updatedAt: now,
+      }
+
+  saveLocalProfile(updated)
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('khelgrid:coach-endorsed', {
+        detail: { profile: updated, endorsement },
+      }),
+    )
+  }
+
+  return {
+    status: 'endorsed',
+    profile: updated,
+    message: `Coach endorsement successfully registered! Reference ID: #${ref}`,
+  }
+}
+
 

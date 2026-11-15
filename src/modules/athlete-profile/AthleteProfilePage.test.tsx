@@ -13,6 +13,10 @@ describe('AthleteProfilePage', () => {
     expect(html).toContain('Run-up &amp; 135 km/h Outswinger Release')
     expect(html).toContain('135.2 km/h')
     expect(html).toContain('Scientific Fitness Benchmarks')
+    expect(html).toContain('NORMATIVE COMBINE RADAR')
+    expect(html).toContain('★ NIS COACH ENDORSED')
+    expect(html).toContain('Coach Zaheer Farooq')
+    expect(html).toContain('Selection Trial Dossier (PDF)')
     expect(html).toContain('Scout &amp; Academy Connect')
   })
 

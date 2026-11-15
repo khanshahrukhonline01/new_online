@@ -1,0 +1,197 @@
+/* Combine Radar / Spider Chart Styles */
+
+.combine-radar-container {
+  background: var(--surface-card, #0f172a);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.radar-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.radar-header-title h4 {
+  margin: 0.25rem 0 0 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.radar-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+}
+
+.radar-cohort-tag {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+}
+
+.radar-svg-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: visible;
+  padding: 0.5rem 0;
+}
+
+.combine-radar-svg {
+  overflow: visible;
+  max-width: 100%;
+  height: auto;
+}
+
+.radar-grid-ring {
+  transition: stroke 0.2s ease;
+}
+
+.radar-athlete-polygon {
+  filter: drop-shadow(0 0 12px rgba(16, 185, 129, 0.4));
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.radar-vertex-node {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  outline: none;
+}
+
+.radar-vertex-node:hover,
+.radar-vertex-node.is-active {
+  transform-origin: center;
+  filter: drop-shadow(0 0 8px #38bdf8);
+}
+
+.radar-vertex-node:hover circle:first-child,
+.radar-vertex-node.is-active circle:first-child {
+  r: 7.5;
+  stroke: #38bdf8;
+}
+
+.radar-axis-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.radar-axis-val {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.radar-details-box {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  background: rgba(11, 15, 23, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+}
+
+.radar-active-metric {
+  width: 100%;
+  animation: radarFadeIn 0.2s ease-out;
+}
+
+@keyframes radarFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.active-metric-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.active-metric-top strong {
+  font-size: 0.95rem;
+  color: #38bdf8;
+}
+
+.active-score-pill {
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  padding: 0.15rem 0.55rem;
+  border-radius: 9999px;
+}
+
+.active-desc {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  margin: 0 0 0.35rem 0;
+  line-height: 1.4;
+}
+
+.active-value-line {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.active-value-line strong {
+  color: #10b981;
+}
+
+.radar-composite-summary {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.composite-ovr-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #cbd5e1;
+}
+
+.ovr-text {
+  font-size: 1.15rem;
+  color: #fbbf24;
+  font-weight: 900;
+}
+
+.radar-help-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}

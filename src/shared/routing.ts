@@ -69,8 +69,14 @@ export function resolveRoute(pathname: string): RouteMatch {
     const slug = path.slice(prefix.length)
     if (slug && !slug.includes('/')) return { name: 'sport-detail', canonicalPath: '/sports/:slug', slug: decodeURIComponentSafe(slug) }
   }
-  if (path.startsWith('/u/') || path.startsWith('/athlete/')) {
-    const prefix = path.startsWith('/u/') ? '/u/' : '/athlete/'
+  if (path.startsWith('/u/') || path.startsWith('/athlete/') || path.startsWith('/sports-cv/') || path.startsWith('/cv/')) {
+    const prefix = path.startsWith('/u/')
+      ? '/u/'
+      : path.startsWith('/athlete/')
+        ? '/athlete/'
+        : path.startsWith('/sports-cv/')
+          ? '/sports-cv/'
+          : '/cv/'
     const handle = path.slice(prefix.length)
     if (handle && !handle.includes('/')) {
       const clean = handle.replace(/^@+/, '')

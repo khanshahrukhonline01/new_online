@@ -969,3 +969,70 @@ npm run lint
 - **`src/modules/scouting/ScoutPortalPage.test.tsx`**: Verified baseline technical attributes, RFC-4180 CSV export with Technical Indicators column, ScoutPortalPage technical filter dropdowns, Yo-Yo / sprint combine thresholds, and `.scout-tech-badge` rendering (13/13 tests passed).
 - **`src/modules/opportunities/OpportunitiesPage.test.tsx` & `TrialAlertActions.test.tsx`**: Verified opportunities catalogue filtering and trial alert actions (3/3 tests passed).
 - **Build & Quality Assurance**: Production build clean (`npm run build` succeeded), TypeScript typecheck clean (`tsc -b --pretty` with 0 errors), and 0 ESLint errors.
+
+---
+
+### Phase 22: Public Sports CV Microsite, 3D Player Card, Combine Radar, Video Telemetry HUD, Coach Endorsement Relay & Local City SEO (2026-11-15)
+
+#### 1. Public Sports CV Microsite & Rich Social Cards (`/sports-cv/:username`, `/u/:username`, `/cv/:username`)
+- **Route Normalization & Aliases (`routing.ts`, `routing.test.ts`)**:
+  - Expanded route matcher to support `/sports-cv/:username` and `/cv/:username` alongside `/u/:username` and `/athlete/:username`, resolving seamlessly to `athlete-profile`.
+  - Backwards-compatible URL resolution maintaining shareability across WhatsApp, Twitter/X, Instagram, and selection trial applications.
+- **3D-Perspective Player Card Tilt (`PlayerCard.tsx`, `PlayerCard.css`)**:
+  - Interactive mousemove and touchmove 3D perspective rotation with dynamic angle calculations (`rotateX`, `rotateY`).
+  - Dynamic glare sheen overlay that responds to cursor angle.
+  - Automatically resets smoothly on `mouseLeave`.
+  - Added official gold `★ NIS Coach Endorsed` chip underneath the avatar circle on the FIFA card shield.
+- **6-Axis Normative Combine Radar/Spider Chart (`CombineRadarChart.tsx`, `CombineRadarChart.css`)**:
+  - Pure vector SVG polygon calculation with no external heavy charting libraries.
+  - 6 calibrated physical performance axes:
+    1. **Speed**: 30m sprint acceleration & first-step velocity (calibrated from `sprint30mSeconds`).
+    2. **Endurance**: Yo-Yo IR1 aerobic capacity & recovery (calibrated from `yoyoIr1Meters`).
+    3. **Power**: Vertical Jump Countermovement Jump (calibrated from `cmjHeightCm`).
+    4. **Agility**: Acceleration and deceleration power index.
+    5. **Stamina**: Estimated VO2 Max aerobic capacity (e.g. `52.9 ml/kg`).
+    6. **Technique & Telemetry**: Evaluated from attached video clips, telemetry depth, and verification status.
+  - Interactive data vertex nodes with hover/focus inspection states displaying official test benchmarks and national cohort context (`Cohort: SAI National Juniors`).
+  - Web concentric polygonal grid rings with subtle glowing gradients.
+- **Dynamic Profile SEO & OpenGraph Preview Tags (`seoAndShare.ts`, `seoAndShare.test.ts`)**:
+  - Added dynamic route resolver for `/sports-cv/:username`, `/u/:username`, `/cv/:username`, and `/athlete/:username`.
+  - Generates mobile-optimized SERP title: `{Name} ({Sport}) · {KhelId} | KhelGrid` (<= 70 chars).
+  - OpenGraph `ogType: 'profile'` with 1200x630 social card tags for rich previews on WhatsApp, Twitter/X, and Instagram.
+  - Schema.org structured data graph injecting `ProfilePage`, `Person` (with athlete identifier, jobTitle, address, and description), and `BreadcrumbList`.
+
+#### 2. Coach Video Verification & Telemetry Endorsement (`VideoTelemetryOverlay.tsx`, `CoachEndorsementModal.tsx`, `AthleteProfilePage.tsx`, `athlete-profile-client.ts`)
+- **Broadcast Match Footage HUD Telemetry (`VideoTelemetryOverlay.tsx`, `VideoTelemetryOverlay.css`)**:
+  - Visual broadcast HUD overlay over athlete video clips featuring:
+    - Glowing `TELEMETRY ACTIVE` recording indicator with split stopwatch timer.
+    - Prominent primary metric badge (e.g. `Release Speed: 135.2 km/h` or `Smash Speed: 312 km/h`).
+    - Biomechanical laboratory verification seal (`★ KHELGRID BIOMECHANICS LAB`).
+    - Crosshair and grid overlay styling.
+    - Telemetry pill grid for secondary metrics: Seam Deviation (`2.8° Outswing`), Approach Velocity (`6.4 m/s`), Release Height (`2.14 m`), Target Accuracy (`84%`).
+  - Full-screen video telemetry player modal with live YouTube embed support and toggleable HUD overlay.
+- **1-Tap WhatsApp Coach Verification Relay & Signature Intake (`CoachEndorsementModal.tsx`, `CoachEndorsementModal.css`, `athlete-profile-client.ts`)**:
+  - **1-Tap WhatsApp Relay**: Generates a pre-formatted WhatsApp invite link (`Namaste Coach, Please review and officially endorse my KhelGrid Sports CV & combine benchmarks for upcoming selection trials: https://khelgrid.com/sports-cv/{username}?endorse=1`).
+  - **Accredited Verification Intake**: Coaches can directly validate candidate performance with license selection (`NIS Patiala Senior Diploma`, `BCCI Level 1/2`, `AIFF A/B/C-Diploma`, `BAI Certified Senior Coach`, `AFI Senior Athletics Coach`, `SAI High Performance Coach`).
+  - **Persistent Endorsement Audit**: Stores endorsement reference ID (`END-NIS-...`), coach name, designation, organization, and official recommendation statement in local cache and Supabase backend.
+  - **Visual Endorsement Display**: Displays a prominent gold `★ NIS COACH ENDORSED` badge on `AthleteProfilePage`, `PlayerCard`, and printable dossier resume.
+
+#### 3. Phase 5 SEO — Local Multi-City Hubs & Long-Tail Geo Keywords (`seoAndShare.ts`, `seoAndShare.test.ts`)
+- **Expanded Long-Tail Geo Keywords**:
+  - Enriched dynamic `/cities/:slug` and `/city/:slug` routes with high-volume search intent keywords across Indian Tier-1 and Tier-2 sports hubs (Kanpur, Meerut, Kozhikode, Delhi NCR, Hyderabad, Bengaluru, Ranchi, Kolhapur, Lucknow, etc.):
+    - `"cricket turf near me"`, `"box cricket turf {city}"`, `"badminton coaching near me {city}"`, `"football trials {state} 2026"`, `"sports hostel {city}"`, `"sai training center {city}"`, `"turf booking {city}"`.
+- **Schema.org Multi-Entity Structured Data**:
+  - Upgraded city hub JSON-LD graph to combine:
+    1. `SportsActivityLocation`: Physical facility coordinates and locality mapping.
+    2. `SportsClub`: Grassroots clubs, academies, and coaching network entity.
+    3. `LocalBusiness`: Local sports directory, turf hourly booking services, and currency support.
+    4. `BreadcrumbList`: Complete hierarchical breadcrumb trail (`Home > Cities > {City} Sports Hub`).
+
+#### 4. Automated Verification & Code Health
+- **`src/modules/athlete-profile/CombineRadarChart.test.tsx`**: Verified 6-axis polygon calculations, normative benchmarks, and fallback states (2/2 tests passed).
+- **`src/modules/athlete-profile/VideoTelemetryOverlay.test.tsx`**: Verified broadcast HUD overlay, radar velocity badges, and telemetry pills (1/1 test passed).
+- **`src/modules/athlete-profile/CoachEndorsementModal.test.tsx`**: Verified closed state null check, WhatsApp relay invite generation, and coach license options (2/2 tests passed).
+- **`src/modules/athlete-profile/PlayerCard.test.tsx`**: Verified standardized Khel ID, OVR calculations, 3D card tilt structure, and NIS coach endorsement chip (6/6 tests passed).
+- **`src/modules/athlete-profile/AthleteProfilePage.test.tsx`**: Verified video telemetry grid, combine radar chart, NIS coach endorsement banner, and selection dossier link (3/3 tests passed).
+- **`src/shared/routing.test.ts`**: Verified `/sports-cv/:username` and `/cv/:username` routing (77/77 tests passed).
+- **`src/shared/utils/seoAndShare.test.ts`**: Verified dynamic athlete profile SEO, ProfilePage + Person schema, OpenGraph profile card, and enriched city sports hub keywords (11/11 tests passed).
+- **Full Test Suite Pass**: All 108 test files passed (871/871 tests passed).
+- **Production Build & Lint Clean**: `tsc -b --pretty` passed with 0 errors, `eslint .` passed with 0 errors, and `npm run build` succeeded.

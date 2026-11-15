@@ -74,4 +74,13 @@ describe('PlayerCard (FIFA Trading Card Component & Digital Khel ID)', () => {
     expect(html).toContain('card-tech-role')
     expect(html).toContain('Batting: Left-Hand Bat (LHB) · Bowling: Right-Arm Fast (135+ km/h)')
   })
+
+  it('renders official NIS coach endorsement chip when profile has coachEndorsement', () => {
+    const profile = SHOWCASE_ATHLETE_PROFILES['rohit-verma']
+    const html = renderToStaticMarkup(<PlayerCard profile={profile} />)
+
+    expect(html).toContain('card-coach-endorsed-chip')
+    expect(html).toContain('NIS Coach Endorsed')
+    expect(html).toContain('Coach Zaheer Farooq')
+  })
 })

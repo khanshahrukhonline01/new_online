@@ -155,5 +155,15 @@ describe('platform route coverage', () => {
       canonicalPath: '/u/:username',
       username: 'arjun-singh',
     })
+    expect(resolveRoute('/sports-cv/rohit-verma')).toEqual({
+      name: 'athlete-profile',
+      canonicalPath: '/u/:username',
+      username: 'rohit-verma',
+    })
+    expect(resolveRoute('/cv/@aarav-choudhary')).toEqual({
+      name: 'athlete-profile',
+      canonicalPath: '/u/:username',
+      username: 'aarav-choudhary',
+    })
   })
 })

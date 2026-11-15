@@ -16,7 +16,30 @@ export interface PlayerCardProps {
 export function PlayerCard({ profile, showShareActions = true, compact = false }: PlayerCardProps) {
   const [copied, setCopied] = useState(false)
   const [isDownloadingPng, setIsDownloadingPng] = useState(false)
+  const [tiltStyle, setTiltStyle] = useState<React.CSSProperties>({})
   const cardRef = useRef<HTMLDivElement>(null)
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return
+    const rect = cardRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const centerX = rect.width / 2
+    const centerY = rect.height / 2
+    const rotateX = ((y - centerY) / centerY) * -12
+    const rotateY = ((x - centerX) / centerX) * 12
+    setTiltStyle({
+      transform: `perspective(1000px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) scale3d(1.02, 1.02, 1.02)`,
+      transition: 'transform 0.08s ease-out',
+    })
+  }
+
+  const handleMouseLeave = () => {
+    setTiltStyle({
+      transform: 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
+      transition: 'transform 0.4s ease-out',
+    })
+  }
 
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://khelgrid.com'
   const publicUrl = `${origin}/u/@${profile.username}`
@@ -234,7 +257,13 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
   return (
     <div className={`player-card-container ${compact ? 'is-compact' : ''}`}>
       {/* Visual FIFA Style Shield Card */}
-      <div className="player-shield-card" ref={cardRef}>
+      <div
+        className="player-shield-card"
+        ref={cardRef}
+        style={tiltStyle}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
         <div className="card-glare" />
 
         <div className="card-topline">
@@ -259,6 +288,14 @@ export function PlayerCard({ profile, showShareActions = true, compact = false }
           {profile.verificationStatus === 'verified' && (
             <span className="card-verified-chip" title="KhelGrid Source Verified">
               <SiteIcon name="badge-check" size={14} /> Verified
+            </span>
+          )}
+          {profile.coachEndorsement?.endorsed && (
+            <span
+              className="card-coach-endorsed-chip"
+              title={`Officially endorsed by ${profile.coachEndorsement.coachName} (${profile.coachEndorsement.coachLicense})`}
+            >
+              <SiteIcon name="award" size={13} /> NIS Coach Endorsed
             </span>
           )}
         </div>

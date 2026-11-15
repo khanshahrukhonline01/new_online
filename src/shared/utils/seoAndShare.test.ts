@@ -239,4 +239,49 @@ describe('SEO & SERP Metadata Validation', () => {
       globalThis.document = originalDocument
     }
   })
+
+  it('resolves dynamic athlete profile and sports-cv routes with ProfilePage + Person schema and OpenGraph profile type', () => {
+    const rohitMeta = getRouteSeoMetadata('/sports-cv/rohit-verma')
+    expect(rohitMeta.title).toContain('Rohit Verma')
+    expect(rohitMeta.title).toContain('Cricket')
+    expect(rohitMeta.title).toContain('KG-2026-DEL-')
+    expect(rohitMeta.title.length).toBeLessThanOrEqual(70)
+    expect(rohitMeta.canonicalUrl).toBe('https://khelgrid.com/sports-cv/rohit-verma')
+    expect(rohitMeta.ogType).toBe('profile')
+    expect(rohitMeta.keywords).toContain('Rohit Verma')
+    expect(rohitMeta.keywords).toContain('sports cv')
+    expect(rohitMeta.keywords).toContain('khel id card')
+    expect(rohitMeta.keywords).toContain('coach endorsement')
+
+    // Schema.org validation
+    const jsonLdStr = JSON.stringify(rohitMeta.jsonLd)
+    expect(jsonLdStr).toContain('ProfilePage')
+    expect(jsonLdStr).toContain('Person')
+    expect(jsonLdStr).toContain('Rohit Verma')
+    expect(jsonLdStr).toContain('Right-Arm Fast Bowler')
+    expect(jsonLdStr).toContain('BreadcrumbList')
+
+    // Test alternate alias routes: /u/rohit-verma and /cv/rohit-verma
+    const uMeta = getRouteSeoMetadata('/u/rohit-verma')
+    expect(uMeta.title).toBe(rohitMeta.title)
+    expect(uMeta.canonicalUrl).toBe('https://khelgrid.com/sports-cv/rohit-verma')
+
+    const cvMeta = getRouteSeoMetadata('/cv/rohit-verma')
+    expect(cvMeta.title).toBe(rohitMeta.title)
+  })
+
+  it('enriches city sports hubs with long-tail geo keywords, SportsClub, and LocalBusiness schema', () => {
+    const kanpurMeta = getRouteSeoMetadata('/cities/kanpur')
+    expect(kanpurMeta.keywords).toContain('cricket turf near me')
+    expect(kanpurMeta.keywords).toContain('box cricket turf kanpur')
+    expect(kanpurMeta.keywords).toContain('badminton coaching near me kanpur')
+    expect(kanpurMeta.keywords).toContain('sports hostel kanpur')
+    expect(kanpurMeta.keywords).toContain('sai training center kanpur')
+
+    const jsonLdStr = JSON.stringify(kanpurMeta.jsonLd)
+    expect(jsonLdStr).toContain('SportsActivityLocation')
+    expect(jsonLdStr).toContain('SportsClub')
+    expect(jsonLdStr).toContain('LocalBusiness')
+    expect(jsonLdStr).toContain('BreadcrumbList')
+  })
 })
