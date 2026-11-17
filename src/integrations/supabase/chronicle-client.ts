@@ -1,10 +1,5 @@
 import {
-  RESEARCH_AUTHORS,
   RESEARCH_CATEGORIES,
-  RESEARCH_PAPERS,
-  getPaperBySlug,
-  getPapersByAuthor,
-  searchPapers,
   type ResearchAuthor,
   type ResearchCategory,
   type ResearchPaper,
@@ -55,6 +50,7 @@ interface DbPaperRow {
   date_modified?: string | null
   version?: string
   status?: 'preprint' | 'screened' | 'published'
+  publication_status?: string
   license?: string
   reading_time_minutes?: number
   downloads_count?: number
@@ -98,29 +94,40 @@ function resolveSupabaseAnonKey(): string {
   return (envKey !== undefined ? envKey : anonKey || '') as string
 }
 
-function mapDbRowToResearchPaper(
-  row: DbPaperRow,
-  authors: ResearchAuthor[] = [],
-  categoryName?: string
-): ResearchPaper {
-  const localMatch = RESEARCH_PAPERS.find(p => p.paperId === row.paper_id || p.slug === row.slug)
-  const categorySlug = row.category || row.category_slug || localMatch?.category || 'sports-biomechanics'
-  const cat = RESEARCH_CATEGORIES.find(c => c.slug === categorySlug)
+function isCompletePublicResearchRow(row: DbPaperRow): boolean {
+  return Boolean(
+    row.publication_status === 'published' &&
+    row.id &&
+    row.paper_id &&
+    row.slug &&
+    row.title &&
+    row.category &&
+    row.author_name &&
+    row.author_affiliation &&
+    row.date_published &&
+    row.license &&
+    row.abstract?.background &&
+    row.abstract?.methods &&
+    row.abstract?.results &&
+    row.abstract?.conclusion &&
+    Array.isArray(row.sections) &&
+    row.sections.length > 0 &&
+    Array.isArray(row.keywords) &&
+    row.keywords.length > 0 &&
+    row.ethics_statement &&
+    row.data_availability &&
+    row.funding_statement &&
+    row.conflicts_of_interest &&
+    Array.isArray(row.references) &&
+    row.references.length > 0
+  )
+}
 
-  if (localMatch) {
-    return {
-      ...localMatch,
-      title: row.title || localMatch.title,
-      category: categorySlug,
-      categoryName: categoryName || cat?.name || localMatch.categoryName,
-      datePublished: row.date_published || localMatch.datePublished,
-      readingTimeMinutes: row.reading_time_minutes || localMatch.readingTimeMinutes,
-    }
-  }
-
-  const authorName = row.author_name || 'Verified Sports Scientist'
-  const affiliation = row.author_affiliation || 'National Institute of Sports'
-  const summaryText = row.summary || 'Empirical sports science preprint deposited in KhelChronicle archive.'
+function mapDbRowToResearchPaper(row: DbPaperRow): ResearchPaper {
+  const categorySlug = row.category || row.category_slug || 'sports-biomechanics'
+  const category = RESEARCH_CATEGORIES.find(item => item.slug === categorySlug)
+  const authorName = row.author_name as string
+  const affiliation = row.author_affiliation as string
 
   return {
     id: row.id,
@@ -129,43 +136,36 @@ function mapDbRowToResearchPaper(
     title: row.title,
     subtitle: row.subtitle || undefined,
     category: categorySlug,
-    categoryName: categoryName || cat?.name || categorySlug,
-    sport: row.sport || 'Multi-Sport & Grassroots',
-    sportSlug: row.sport_slug || 'multi-sport',
-    authors: authors.length > 0 ? authors : [
-      {
-        id: `author-${row.paper_id.toLowerCase()}`,
-        name: authorName,
-        slug: authorName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-        affiliation,
-        role: 'Research Contributor',
-        bio: `${authorName} conducts sports performance research at ${affiliation}.`,
-      },
-    ],
-    datePublished: row.date_published || new Date().toISOString().slice(0, 10),
+    categoryName: category?.name || categorySlug,
+    sport: row.sport || undefined,
+    sportSlug: row.sport_slug || undefined,
+    authors: [{
+      id: `author-${row.paper_id.toLowerCase()}`,
+      name: authorName,
+      slug: authorName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      affiliation,
+      role: 'Author',
+      bio: 'Author listed on this manuscript.',
+    }],
+    datePublished: row.date_published as string,
     dateModified: row.date_modified || undefined,
     version: row.version || 'v1.0',
-    status: row.status || 'screened',
-    license: row.license || 'CC BY-NC-ND 4.0',
+    status: 'published',
+    license: row.license as string,
     readingTimeMinutes: row.reading_time_minutes || 10,
     metrics: {
-      downloads: row.downloads_count || 120,
-      views: row.views_count || 450,
-      citations: row.citations_count || 2,
+      downloads: row.downloads_count ?? 0,
+      views: row.views_count ?? 0,
+      citations: row.citations_count ?? 0,
     },
-    abstract: row.abstract || {
-      background: summaryText,
-      methods: 'Standardized empirical field testing and movement screening.',
-      results: summaryText,
-      conclusion: 'Supports objective coaching standards and talent identification across Indian sports.',
-    },
-    keywords: Array.isArray(row.keywords) ? row.keywords : ['Sports Science', 'India'],
-    sections: Array.isArray(row.sections) ? row.sections : [],
-    ethicsStatement: row.ethics_statement || 'Institutional Ethics Committee review on file with KhelChronicle editorial screening desk.',
-    dataAvailability: row.data_availability || 'Data deposited in KhelChronicle repository under accession.',
-    fundingStatement: row.funding_statement || 'Self-funded / Institutional research.',
-    conflictsOfInterest: row.conflicts_of_interest || 'None declared.',
-    references: Array.isArray(row.references) ? row.references : [],
+    abstract: row.abstract as ResearchPaper['abstract'],
+    keywords: row.keywords as string[],
+    sections: row.sections as ResearchPaper['sections'],
+    ethicsStatement: row.ethics_statement as string,
+    dataAvailability: row.data_availability as string,
+    fundingStatement: row.funding_statement as string,
+    conflictsOfInterest: row.conflicts_of_interest as string,
+    references: row.references as ResearchPaper['references'],
     connectedKhelGridLinks: Array.isArray(row.connected_links) ? row.connected_links : [],
   }
 }
@@ -226,21 +226,20 @@ export async function getChroniclePapers(
 ): Promise<ChronicleCatalogueResult<ResearchPaper[]>> {
   const baseUrl = resolveSupabaseBaseUrl()
   if (!baseUrl) {
-    const localFiltered = searchPapers(searchQuery || '', categoryFilter, sportFilter)
-    return { status: 'unconfigured', data: localFiltered }
+    return { status: 'unconfigured', data: [], message: 'The research archive is not configured.' }
   }
 
   try {
     const params = new URLSearchParams({
       select: '*',
+      publication_status: 'eq.published',
     })
-
     if (categoryFilter && categoryFilter !== 'all') {
       params.append('category', `eq.${categoryFilter}`)
     }
 
     const url = `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/chronicle_papers?${params.toString()}`
-    const res = await fetch(url, {
+    const response = await fetch(url, {
       headers: {
         apikey: resolveSupabaseAnonKey(),
         Authorization: `Bearer ${resolveSupabaseAnonKey()}`,
@@ -248,57 +247,28 @@ export async function getChroniclePapers(
       },
     })
 
-    if (!res.ok) {
-      const fallback = searchPapers(searchQuery || '', categoryFilter, sportFilter)
-      return { status: 'unavailable', data: fallback, message: 'Database query failed; showing cached preprints.' }
+    if (!response.ok) {
+      return { status: 'unavailable', data: [], message: 'The research archive could not be reached.' }
     }
 
-    const rows: DbPaperRow[] = await res.json()
-    if (Array.isArray(rows)) {
-      const dbPapers = rows.map(r => {
-        // Resolve authors from seed or default
-        const localMatch = RESEARCH_PAPERS.find(p => p.paperId === r.paper_id || p.slug === r.slug)
-        const authors = localMatch ? localMatch.authors : []
-        return mapDbRowToResearchPaper(r, authors)
+    const rows = await response.json() as DbPaperRow[]
+    const completeRows = Array.isArray(rows) ? rows.filter(isCompletePublicResearchRow) : []
+    let papers = completeRows.map(mapDbRowToResearchPaper)
+
+    if (sportFilter && sportFilter !== 'all') {
+      papers = papers.filter(paper => paper.sportSlug?.toLowerCase() === sportFilter.toLowerCase())
+    }
+    if (searchQuery?.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      papers = papers.filter(paper => {
+        const searchable = `${paper.title} ${paper.subtitle || ''} ${paper.paperId} ${paper.sport || ''} ${paper.keywords.join(' ')} ${paper.authors.map(author => author.name).join(' ')}`.toLowerCase()
+        return searchable.includes(query)
       })
-
-      // Include all repository research papers, letting DB rows override metrics or status if present
-      const dbPaperIds = new Set(dbPapers.map(p => p.paperId.toLowerCase()))
-      const dbSlugs = new Set(dbPapers.map(p => p.slug.toLowerCase()))
-
-      const localRemaining = RESEARCH_PAPERS.filter(
-        p =>
-          !dbPaperIds.has(p.paperId.toLowerCase()) &&
-          !dbSlugs.has(p.slug.toLowerCase()) &&
-          (!categoryFilter || categoryFilter === 'all' || p.category === categoryFilter)
-      )
-
-      let papers = [...dbPapers, ...localRemaining]
-
-      if (categoryFilter && categoryFilter !== 'all') {
-        papers = papers.filter(p => p.category === categoryFilter)
-      }
-
-      if (sportFilter && sportFilter !== 'all') {
-        papers = papers.filter(p => p.sportSlug?.toLowerCase() === sportFilter.toLowerCase())
-      }
-
-      if (searchQuery && searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim()
-        papers = papers.filter(p => {
-          const space = `${p.title} ${p.subtitle || ''} ${p.paperId} ${p.sport || ''} ${p.keywords.join(' ')} ${p.authors.map(a => a.name).join(' ')}`.toLowerCase()
-          return space.includes(q)
-        })
-      }
-
-      return { status: 'ready', data: papers, source: 'supabase' }
     }
 
-    const localFallback = searchPapers(searchQuery || '', categoryFilter, sportFilter)
-    return { status: 'ready', data: localFallback, source: 'fallback' }
+    return { status: 'ready', data: papers, source: 'supabase' }
   } catch {
-    const fallback = searchPapers(searchQuery || '', categoryFilter, sportFilter)
-    return { status: 'unavailable', data: fallback, message: 'Network error connecting to research database.' }
+    return { status: 'unavailable', data: [], message: 'The research archive could not be reached.' }
   }
 }
 
@@ -306,20 +276,20 @@ export async function getChroniclePapers(
  * Fetch a single research paper by slug or accession ID.
  */
 export async function getChroniclePaperBySlug(slug: string): Promise<ChronicleCatalogueResult<ResearchPaper | null>> {
-  const local = getPaperBySlug(slug)
   const baseUrl = resolveSupabaseBaseUrl()
   if (!baseUrl) {
-    return { status: 'unconfigured', data: local || null }
+    return { status: 'unconfigured', data: null, message: 'The research archive is not configured.' }
   }
 
   try {
     const query = new URLSearchParams({
       select: '*',
+      publication_status: 'eq.published',
       or: `(slug.eq.${slug},paper_id.eq.${slug.toUpperCase()})`,
       limit: '1',
     })
     const url = `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/chronicle_papers?${query.toString()}`
-    const res = await fetch(url, {
+    const response = await fetch(url, {
       headers: {
         apikey: resolveSupabaseAnonKey(),
         Authorization: `Bearer ${resolveSupabaseAnonKey()}`,
@@ -327,20 +297,19 @@ export async function getChroniclePaperBySlug(slug: string): Promise<ChronicleCa
       },
     })
 
-    if (!res.ok) {
-      return { status: 'unavailable', data: local || null, message: 'Failed to retrieve paper from database.' }
+    if (!response.ok) {
+      return { status: 'unavailable', data: null, message: 'The research manuscript could not be retrieved.' }
     }
 
-    const rows: DbPaperRow[] = await res.json()
-    if (Array.isArray(rows) && rows.length > 0) {
-      const authors = local ? local.authors : []
-      const paper = mapDbRowToResearchPaper(rows[0], authors)
-      return { status: 'ready', data: paper, source: 'supabase' }
+    const rows = await response.json() as DbPaperRow[]
+    const row = Array.isArray(rows) ? rows[0] : undefined
+    if (!row || !isCompletePublicResearchRow(row)) {
+      return { status: 'ready', data: null, source: 'supabase' }
     }
 
-    return { status: 'ready', data: local || null, source: 'fallback' }
+    return { status: 'ready', data: mapDbRowToResearchPaper(row), source: 'supabase' }
   } catch {
-    return { status: 'unavailable', data: local || null, message: 'Could not connect to research database.' }
+    return { status: 'unavailable', data: null, message: 'The research manuscript could not be retrieved.' }
   }
 }
 
@@ -350,48 +319,45 @@ export async function getChroniclePaperBySlug(slug: string): Promise<ChronicleCa
 export async function getChronicleAuthorBySlug(
   authorSlug: string
 ): Promise<ChronicleCatalogueResult<{ author: ResearchAuthor; papers: ResearchPaper[] } | null>> {
-  const localAuthor = Object.values(RESEARCH_AUTHORS).find(a => a.slug === authorSlug)
-  const localPapers = getPapersByAuthor(authorSlug)
-
-  const fallbackData = localAuthor ? { author: localAuthor, papers: localPapers } : null
   const baseUrl = resolveSupabaseBaseUrl()
   if (!baseUrl) {
-    return { status: 'unconfigured', data: fallbackData }
+    return { status: 'unconfigured', data: null, message: 'The research archive is not configured.' }
   }
 
   try {
-    const url = `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/chronicle_authors?slug=eq.${authorSlug}&limit=1`
-    const res = await fetch(url, {
+    const url = `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/chronicle_authors?slug=eq.${encodeURIComponent(authorSlug)}&limit=1`
+    const response = await fetch(url, {
       headers: {
         apikey: resolveSupabaseAnonKey(),
         Authorization: `Bearer ${resolveSupabaseAnonKey()}`,
         Accept: 'application/json',
       },
     })
-
-    if (!res.ok) {
-      return { status: 'unavailable', data: fallbackData, message: 'Database author lookup failed.' }
+    if (!response.ok) {
+      return { status: 'unavailable', data: null, message: 'The research author could not be retrieved.' }
     }
 
-    const rows = await res.json()
-    if (Array.isArray(rows) && rows.length > 0) {
-      const a = rows[0]
-      const author: ResearchAuthor = {
-        id: a.id,
-        name: a.name,
-        slug: a.slug,
-        affiliation: a.affiliation,
-        role: a.role,
-        orcid: a.orcid || undefined,
-        bio: a.bio,
-        email: a.email || undefined,
-      }
-      return { status: 'ready', data: { author, papers: localPapers }, source: 'supabase' }
+    const rows = await response.json()
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return { status: 'ready', data: null, source: 'supabase' }
     }
 
-    return { status: 'ready', data: fallbackData, source: 'fallback' }
+    const row = rows[0]
+    const author: ResearchAuthor = {
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      affiliation: row.affiliation,
+      role: row.role,
+      orcid: row.orcid || undefined,
+      bio: row.bio || '',
+      email: row.email || undefined,
+    }
+    const papersResult = await getChroniclePapers()
+    const papers = papersResult.data.filter(paper => paper.authors.some(item => item.slug === authorSlug))
+    return { status: 'ready', data: { author, papers }, source: 'supabase' }
   } catch {
-    return { status: 'unavailable', data: fallbackData, message: 'Network error retrieving author profile.' }
+    return { status: 'unavailable', data: null, message: 'The research author could not be retrieved.' }
   }
 }
 
