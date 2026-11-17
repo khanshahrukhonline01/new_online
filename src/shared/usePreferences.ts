@@ -10,6 +10,8 @@ import {
   applyAccessibilityToDOM,
 } from './preferences'
 
+export type { ColorTheme, ThemeMode, UserPreferences } from './preferences'
+
 export function usePreferences() {
   const [preferences, setPreferences] = useState<UserPreferences>(() => {
     return getStoredPreferences()
@@ -17,7 +19,7 @@ export function usePreferences() {
 
   useEffect(() => {
     // Initial DOM synchronization
-    applyThemeToDOM(preferences.theme)
+    applyThemeToDOM(preferences.theme, preferences.colorTheme)
     applyAccessibilityToDOM(preferences.reducedMotion)
 
     function handlePreferencesChange(event: Event) {
@@ -32,7 +34,7 @@ export function usePreferences() {
     function handleSystemThemeChange() {
       const current = getStoredPreferences()
       if (current.theme === 'system') {
-        applyThemeToDOM('system')
+        applyThemeToDOM('system', current.colorTheme)
       }
     }
 
@@ -44,7 +46,7 @@ export function usePreferences() {
       window.removeEventListener('khelgrid-preferences-change', handlePreferencesChange)
       media?.removeEventListener?.('change', handleSystemThemeChange)
     }
-  }, [preferences.theme, preferences.reducedMotion])
+  }, [preferences.theme, preferences.colorTheme, preferences.reducedMotion])
 
   const updatePreferences = useCallback((updates: Partial<UserPreferences>) => {
     const updated = savePreferences(updates)

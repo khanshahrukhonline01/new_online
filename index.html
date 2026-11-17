@@ -168,6 +168,12 @@
         }
       }catch(e){};
       try{
+        var c=localStorage.getItem('khelgrid-color-theme')||'green';
+        if(c==='blue'||c==='orange'||c==='green'){
+          document.documentElement.setAttribute('data-color-theme', c);
+        }
+      }catch(e){};
+      try{
         var m=localStorage.getItem('khelgrid-reduced-motion')==='true';
         if(m){
           document.documentElement.setAttribute('data-reduced-motion','true');

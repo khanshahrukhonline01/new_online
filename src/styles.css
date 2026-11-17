@@ -59,6 +59,77 @@ html.dark {
   --shadow-header: 0 3px 18px rgba(0, 0, 0, 0.45);
 }
 
+/* Color Accent Themes (Default: Green, Alternatives: Blue, Orange) */
+:root,
+html[data-color-theme="green"] {
+  --accent: #07964f;
+  --accent-hover: #067a41;
+  --accent-ink: #ffffff;
+  --accent-soft: #e8f7ef;
+  --accent-border: #a7f3d0;
+  --accent-glow: rgba(7, 150, 79, 0.25);
+  --green: #07964f;
+  --green-dark: #067a41;
+}
+
+html.dark,
+html.dark[data-color-theme="green"] {
+  --accent: #10b981;
+  --accent-hover: #059669;
+  --accent-ink: #042f2e;
+  --accent-soft: rgba(16, 185, 129, 0.15);
+  --accent-border: rgba(16, 185, 129, 0.35);
+  --accent-glow: rgba(16, 185, 129, 0.3);
+  --green: #10b981;
+  --green-dark: #059669;
+}
+
+/* Blue Color Theme (High-Energy Sapphire / Electric Ocean) */
+html[data-color-theme="blue"] {
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-ink: #ffffff;
+  --accent-soft: #eff6ff;
+  --accent-border: #bfdbfe;
+  --accent-glow: rgba(37, 99, 235, 0.25);
+  --green: #2563eb;
+  --green-dark: #1d4ed8;
+}
+
+html.dark[data-color-theme="blue"] {
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(59, 130, 246, 0.18);
+  --accent-border: rgba(59, 130, 246, 0.4);
+  --accent-glow: rgba(59, 130, 246, 0.35);
+  --green: #3b82f6;
+  --green-dark: #2563eb;
+}
+
+/* Orange Color Theme (Sports Saffron / Blaze Orange) */
+html[data-color-theme="orange"] {
+  --accent: #ea580c;
+  --accent-hover: #c2410c;
+  --accent-ink: #ffffff;
+  --accent-soft: #fff7ed;
+  --accent-border: #fed7aa;
+  --accent-glow: rgba(234, 88, 12, 0.25);
+  --green: #ea580c;
+  --green-dark: #c2410c;
+}
+
+html.dark[data-color-theme="orange"] {
+  --accent: #f97316;
+  --accent-hover: #ea580c;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(249, 115, 22, 0.18);
+  --accent-border: rgba(249, 115, 22, 0.4);
+  --accent-glow: rgba(249, 115, 22, 0.35);
+  --green: #f97316;
+  --green-dark: #ea580c;
+}
+
 html.dark body {
   background: var(--page);
   color: var(--text);
