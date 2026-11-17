@@ -27,7 +27,7 @@ export interface ManuscriptSubmissionInput {
   full_text_or_url: string
   supplementary_url?: string
   data_availability: string
-  ethics_clearance_number?: string
+  ethics_clearance_number: string
   human_ethics_confirmed: boolean
   minor_consent_confirmed: boolean
   license_type: 'cc-by-4.0' | 'cc-by-nc-nd-4.0'
@@ -393,8 +393,14 @@ export async function submitChronicleManuscript(
   if (!['cc-by-4.0', 'cc-by-nc-nd-4.0'].includes(input.license_type)) {
     return { status: 'unavailable', message: 'Please select a supported Creative Commons licence.' }
   }
-  if (!input.article_type || !input.data_availability) {
-    return { status: 'unavailable', message: 'Article type and data availability statement are required.' }
+  if (!['preprint', 'protocol', 'review', 'dataset', 'casestudy'].includes(input.article_type)) {
+    return { status: 'unavailable', message: 'Please select a supported manuscript type.' }
+  }
+  if (!['open_access', 'upon_request', 'de_identified', 'restricted'].includes(input.data_availability)) {
+    return { status: 'unavailable', message: 'Please select a supported data availability statement.' }
+  }
+  if (!input.ethics_clearance_number?.trim()) {
+    return { status: 'unavailable', message: 'Institutional ethics clearance number or documented not-applicable declaration is required.' }
   }
 
   let manuscriptUrl: URL
@@ -459,6 +465,7 @@ export async function submitChronicleManuscript(
           human_ethics_confirmed: true,
           minor_consent_confirmed: true,
           license_type: input.license_type,
+          license_confirmed: true,
           status: 'pending_review',
         }),
       }
