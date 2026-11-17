@@ -142,6 +142,7 @@ export function AdminModerationPage({
   }, [activeTab, categoryFilter, searchTerm, sortBy, sortDir])
 
   const loadChronicleQueue = useCallback(async () => {
+    setError('')
     try {
       const data = await getChronicleModerationQueue({
         status: chronicleActiveTab !== 'all' ? chronicleActiveTab : undefined,
@@ -160,9 +161,9 @@ export function AdminModerationPage({
   }, [initialQueue, loadQueue])
 
   useEffect(() => {
-    if (initialChronicleQueue !== undefined) return
+    if (initialChronicleQueue !== undefined || !queue || activeDesk !== 'chronicle') return
     void loadChronicleQueue()
-  }, [initialChronicleQueue, loadChronicleQueue])
+  }, [initialChronicleQueue, queue, activeDesk, loadChronicleQueue])
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
