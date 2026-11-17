@@ -405,7 +405,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
         full_text_or_url: fullTextOrUrl,
         supplementary_url: supplementaryUrl || undefined,
         data_availability: dataAvailability,
-        ethics_clearance_number: ethicsClearanceNumber || undefined,
+        ethics_clearance_number: ethicsClearanceNumber,
         human_ethics_confirmed: ethicsDeclaration,
         minor_consent_confirmed: minorConsentDeclaration,
         license_type: licenseType,
@@ -1086,8 +1086,9 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                   <input
                     id="iec-approval-number"
                     type="text"
+                    required
                     className="kc-input-text"
-                    placeholder="Enter institutional approval protocol or ethics committee reference"
+                    placeholder="Enter institutional approval protocol or documented not-applicable declaration"
                     value={ethicsClearanceNumber}
                     onChange={e => setEthicsClearanceNumber(e.target.value)}
                   />
@@ -1133,8 +1134,8 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       className="kc-checkbox-input"
                     />
                     <div>
-                      <strong>Diamond Open Access License *</strong>: I agree to license this preprint under an open
-                      access Creative Commons license with zero embargo and zero author fees.
+                      <strong>Manuscript licence declaration *</strong>: I confirm I have the rights to grant the selected
+                      Creative Commons licence and understand that it will apply to the public manuscript if approved.
                     </div>
                   </label>
                 </div>
@@ -1148,7 +1149,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       onClick={() => setLicenseType('cc-by-nc-nd-4.0')}
                     >
                       <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0f172a', marginBottom: '4px' }}>
-                        CC BY-NC-ND 4.0 (Recommended for Preprints)
+                        CC BY-NC-ND 4.0
                       </div>
                       <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
                         Allows download and sharing with attribution; prohibits commercial reuse and derivative alterations.
@@ -1159,7 +1160,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       onClick={() => setLicenseType('cc-by-4.0')}
                     >
                       <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0f172a', marginBottom: '4px' }}>
-                        CC BY 4.0 (Unrestricted Open Access)
+                        CC BY 4.0 (Attribution)
                       </div>
                       <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
                         Allows full reuse, distribution, and remixing as long as original authors receive proper attribution.
