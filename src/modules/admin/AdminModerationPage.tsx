@@ -285,7 +285,9 @@ export function AdminModerationPage({
 
   const canApproveManuscript = (item: ChronicleModerationSubmission) => Boolean(
     item.submissionId &&
+    ['preprint', 'protocol', 'review', 'dataset', 'casestudy'].includes(item.articleType || '') &&
     item.fullTextOrUrl?.startsWith('https://') &&
+    (!item.supplementaryUrl || item.supplementaryUrl.startsWith('https://')) &&
     item.abstract.trim().length >= 50 &&
     item.keywords?.trim() &&
     item.dataAvailability &&
