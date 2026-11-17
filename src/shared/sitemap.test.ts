@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   BASE_URL,
-  SITEMAP_LASTMOD,
   VERIFIED_SPORTS,
   buildSitemapEntries,
   generateSitemapXml,
@@ -23,7 +22,7 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     expect(home).toBeDefined()
     expect(home?.priority).toBe(1.0)
     expect(home?.changefreq).toBe('daily')
-    expect(home?.lastmod).toBe(SITEMAP_LASTMOD)
+    expect(home?.lastmod).toBeUndefined()
 
     const search = entries.find(e => e.loc === `${BASE_URL}/search`)
     expect(search).toBeDefined()
