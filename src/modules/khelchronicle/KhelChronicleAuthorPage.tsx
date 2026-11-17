@@ -1,10 +1,7 @@
-import { useMemo, type MouseEvent } from 'react'
+import { useState, useEffect, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import {
-  RESEARCH_AUTHORS,
-  getPapersByAuthor,
-  type ResearchAuthor,
-} from './data/khelchronicleData'
+import type { ResearchAuthor, ResearchPaper } from './data/khelchronicleData'
+import { getChronicleAuthorBySlug } from '../../integrations/supabase/chronicle-client'
 import './khelchronicle.css'
 
 interface KhelChronicleAuthorPageProps {
@@ -13,19 +10,35 @@ interface KhelChronicleAuthorPageProps {
 }
 
 export function KhelChronicleAuthorPage({ authorSlug, onNavigate }: KhelChronicleAuthorPageProps) {
-  const author: ResearchAuthor | undefined = useMemo(() => {
-    return RESEARCH_AUTHORS[authorSlug.toLowerCase()] || Object.values(RESEARCH_AUTHORS)[0]
-  }, [authorSlug])
+  const [author, setAuthor] = useState<ResearchAuthor | null | undefined>(undefined)
+  const [authoredPapers, setAuthoredPapers] = useState<ResearchPaper[]>([])
 
-  const authoredPapers = useMemo(() => {
-    if (!author) return []
-    return getPapersByAuthor(author.slug)
-  }, [author])
+  useEffect(() => {
+    let active = true
+    setAuthor(undefined)
+    getChronicleAuthorBySlug(authorSlug).then(result => {
+      if (active) {
+        setAuthor(result.data?.author ?? null)
+        setAuthoredPapers(result.data?.papers ?? [])
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [authorSlug])
 
   const handleLink = (e: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (onNavigate) {
       onNavigate(e, href)
     }
+  }
+
+  if (author === undefined) {
+    return <div className="kc-root" style={{ padding: '48px 16px', textAlign: 'center' }}><h2>Checking author record…</h2></div>
+  }
+
+  if (author === null) {
+    return <div className="kc-root" style={{ padding: '48px 16px', textAlign: 'center' }}><h2>Researcher profile not found</h2><p>Only author records linked to approved public manuscripts are shown.</p><a href="/khelchronicle">Back to KhelChronicle</a></div>
   }
 
   return (
@@ -49,7 +62,7 @@ export function KhelChronicleAuthorPage({ authorSlug, onNavigate }: KhelChronicl
             <span>KhelChronicle Researcher Profile</span>
           </span>
           <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-            Test Profile / Demo Data
+            Author record
           </span>
           {author?.orcid && (
             <a
