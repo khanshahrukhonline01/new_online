@@ -21,7 +21,7 @@ describe('KhelChronicle Supabase database integration client', () => {
     vi.resetModules()
   })
 
-  describe('Unconfigured development mode fallback', () => {
+  describe('Unconfigured fail-closed mode', () => {
     it('returns local categories when Supabase is unconfigured', async () => {
       const client = await loadClient('', '')
       const result = await client.getChronicleCategories()
@@ -31,39 +31,35 @@ describe('KhelChronicle Supabase database integration client', () => {
       expect(fetch).not.toHaveBeenCalled()
     })
 
-    it('returns filtered local preprints when Supabase is unconfigured', async () => {
+    it('returns no public manuscripts when Supabase is unconfigured', async () => {
       const client = await loadClient('', '')
       const result = await client.getChroniclePapers('sports-biomechanics')
       expect(result.status).toBe('unconfigured')
-      expect(result.data.length).toBeGreaterThan(0)
-      expect(result.data.every(p => p.category === 'sports-biomechanics')).toBe(true)
+      expect(result.data).toEqual([])
       expect(fetch).not.toHaveBeenCalled()
     })
 
-    it('searches papers locally when Supabase is unconfigured', async () => {
+    it('does not search synthetic papers when Supabase is unconfigured', async () => {
       const client = await loadClient('', '')
       const result = await client.getChroniclePapers(undefined, 'Lumbar Spine')
       expect(result.status).toBe('unconfigured')
-      expect(result.data.length).toBeGreaterThan(0)
-      expect(result.data[0].title).toContain('Lumbar Spine')
+      expect(result.data).toEqual([])
       expect(fetch).not.toHaveBeenCalled()
     })
 
-    it('fetches paper by slug locally when unconfigured', async () => {
+    it('does not expose a seeded paper by slug when unconfigured', async () => {
       const client = await loadClient('', '')
       const result = await client.getChroniclePaperBySlug('KG-2026-001')
       expect(result.status).toBe('unconfigured')
-      expect(result.data).toBeDefined()
-      expect(result.data?.paperId).toBe('KG-2026-001')
+      expect(result.data).toBeNull()
       expect(fetch).not.toHaveBeenCalled()
     })
 
-    it('fetches author profile locally when unconfigured', async () => {
+    it('does not expose seeded author profiles when unconfigured', async () => {
       const client = await loadClient('', '')
       const result = await client.getChronicleAuthorBySlug('dr-vikramaditya-rathore')
       expect(result.status).toBe('unconfigured')
-      expect(result.data?.author.name).toBe('Dr. Vikramaditya Rathore')
-      expect(result.data?.papers.length).toBeGreaterThan(0)
+      expect(result.data).toBeNull()
       expect(fetch).not.toHaveBeenCalled()
     })
   })
@@ -181,7 +177,7 @@ describe('KhelChronicle Supabase database integration client', () => {
   })
 
   describe('Configured database queries and RPC calls', () => {
-    it('queries chronicle_papers with category and status filters', async () => {
+    it('queries only complete published chronicle_papers with category and publication status filters', async () => {
       vi.mocked(fetch).mockResolvedValueOnce(
         new Response(
           JSON.stringify([
@@ -190,7 +186,11 @@ describe('KhelChronicle Supabase database integration client', () => {
               paper_id: 'KG-2026-001',
               slug: 'kinematic-correlates-lumbar-spine-stress-fast-bowlers',
               title: 'Kinematic Correlates of Lumbar Spine Stress in Indian Fast Bowlers',
+              category: 'sports-biomechanics',
               category_slug: 'sports-biomechanics',
+              author_name: 'Dr. Test Researcher',
+              author_affiliation: 'Test Sports Science Institute',
+              publication_status: 'published',
               date_published: '2026-10-24',
               version: 'v1.1',
               status: 'screened',
@@ -206,6 +206,12 @@ describe('KhelChronicle Supabase database integration client', () => {
                 conclusion: 'Restricting counter-rotation reduces stress...',
               },
               keywords: ['Fast Bowling Biomechanics'],
+              sections: [{ title: 'Methods', paragraphs: ['A complete methods section.'] }],
+              ethics_statement: 'Ethics review documented.',
+              data_availability: 'De-identified data available under request.',
+              funding_statement: 'No external funding.',
+              conflicts_of_interest: 'No conflicts declared.',
+              references: [{ id: 1, text: 'A verified reference.' }],
             },
           ]),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -221,6 +227,7 @@ describe('KhelChronicle Supabase database integration client', () => {
       const url = vi.mocked(fetch).mock.calls[0][0] as string
       expect(url).toContain('/rest/v1/chronicle_papers')
       expect(url).toContain('category=eq.sports-biomechanics')
+      expect(url).toContain('publication_status=eq.published')
     })
 
     it('records paper views via database RPC', async () => {
