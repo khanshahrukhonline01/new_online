@@ -146,6 +146,10 @@ export function AdminModerationPage({
   const loadChronicleQueue = useCallback(async () => {
     setError('')
     try {
+      const profile = await getModerationAccessProfile()
+      if (!profile || !profile.is_active || profile.role !== 'super_admin') {
+        throw new Error('Only active KhelGrid super-admins can access the Chronicle editorial queue.')
+      }
       const data = await getChronicleModerationQueue({
         status: chronicleActiveTab !== 'all' ? chronicleActiveTab : undefined,
         category: chronicleCategoryFilter !== 'all' ? chronicleCategoryFilter : undefined,
