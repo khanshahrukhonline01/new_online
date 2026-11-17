@@ -656,7 +656,7 @@ export const DEFAULT_MODERATION_SUBMISSIONS: ChronicleModerationSubmission[] = [
     humanEthicsConfirmed: true,
     minorConsentConfirmed: true,
     licenseType: 'cc-by-nc-nd-4.0',
-    status: 'changes_requested',
+    status: 'revision_requested',
     correctionRequest: 'Please provide the institutional ethics clearance approval number and clarify the validation methodology for the food frequency questionnaire.',
     editorialNotes: 'Strong grassroots relevance. Needs explicit ethics committee reference.',
     createdAt: '2026-11-10T11:00:00Z',
