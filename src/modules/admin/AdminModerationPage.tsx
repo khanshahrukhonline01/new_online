@@ -18,7 +18,6 @@ import {
 } from '../../integrations/supabase/public-client'
 import {
   getChronicleModerationQueue,
-  getLocalModerationQueue,
   startManuscriptReview,
   requestManuscriptCorrections,
   approveManuscript,
@@ -34,7 +33,7 @@ type TabFilter =
   | 'all'
   | 'pending_review'
   | 'under_review'
-  | 'changes_requested'
+  | 'revision_requested'
   | 'resubmitted'
   | 'approved'
   | 'published'
@@ -92,24 +91,22 @@ export function AdminModerationPage({
   const [targetSlug, setTargetSlug] = useState('')
 
   // Chronicle Manuscripts State
-  const [chronicleQueue, setChronicleQueue] = useState<ChronicleModerationQueueResult | null>(() => {
-    if (initialChronicleQueue !== undefined) return initialChronicleQueue
-    const queue = getLocalModerationQueue()
-    return {
-      submissions: queue,
+  const [chronicleQueue, setChronicleQueue] = useState<ChronicleModerationQueueResult | null>(
+    initialChronicleQueue ?? {
+      submissions: [],
       stats: {
-        pendingCount: queue.filter(s => s.status === 'pending_review').length,
-        underReviewCount: queue.filter(s => s.status === 'under_review').length,
-        changesRequestedCount: queue.filter(s => s.status === 'changes_requested').length,
-        approvedCount: queue.filter(s => s.status === 'approved').length,
-        publishedCount: queue.filter(s => s.status === 'published').length,
-        rejectedCount: queue.filter(s => s.status === 'rejected').length,
-        totalCount: queue.length,
+        pendingCount: 0,
+        underReviewCount: 0,
+        changesRequestedCount: 0,
+        approvedCount: 0,
+        publishedCount: 0,
+        rejectedCount: 0,
+        totalCount: 0,
       },
     }
-  })
+  )
   const [chronicleActiveTab, setChronicleActiveTab] = useState<
-    'all' | 'pending_review' | 'under_review' | 'changes_requested' | 'approved' | 'published' | 'rejected'
+    'all' | 'pending_review' | 'under_review' | 'revision_requested' | 'approved' | 'published' | 'rejected'
   >('pending_review')
   const [chronicleSearchTerm, setChronicleSearchTerm] = useState('')
   const [chronicleCategoryFilter, setChronicleCategoryFilter] = useState('all')
@@ -152,8 +149,8 @@ export function AdminModerationPage({
         search: chronicleSearchTerm.trim() || undefined,
       })
       setChronicleQueue(data)
-    } catch {
-      // non-fatal in offline mode
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not load the protected Chronicle editorial queue.')
     }
   }, [chronicleActiveTab, chronicleCategoryFilter, chronicleSearchTerm])
 
@@ -180,6 +177,7 @@ export function AdminModerationPage({
       }
       setPassword('')
       await loadQueue()
+      await loadChronicleQueue()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Sign-in failed.')
     } finally {
@@ -190,6 +188,8 @@ export function AdminModerationPage({
   const handleSignOut = async () => {
     await signOut()
     setQueue(null)
+    setChronicleQueue(null)
+    setSelectedManuscript(null)
     setSelectedItem(null)
     setNotice('Signed out of the moderation desk.')
   }
@@ -499,8 +499,8 @@ export function AdminModerationPage({
             </button>
             <button
               type="button"
-              className={`admin-tab-btn ${activeTab === 'changes_requested' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('changes_requested'); setPage(1) }}
+              className={`admin-tab-btn ${activeTab === 'revision_requested' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('revision_requested'); setPage(1) }}
             >
               Changes Requested <span className="admin-tab-badge">{queue.stats.changesRequestedCount ?? 0}</span>
             </button>
@@ -1115,8 +1115,8 @@ export function AdminModerationPage({
             </button>
             <button
               type="button"
-              className={`admin-tab-btn ${chronicleActiveTab === 'changes_requested' ? 'active' : ''}`}
-              onClick={() => { setChronicleActiveTab('changes_requested'); setChroniclePage(1) }}
+              className={`admin-tab-btn ${chronicleActiveTab === 'revision_requested' ? 'active' : ''}`}
+              onClick={() => { setChronicleActiveTab('revision_requested'); setChroniclePage(1) }}
             >
               Revisions Requested <span className="admin-tab-badge">{chronicleQueue?.stats.changesRequestedCount ?? 0}</span>
             </button>
@@ -1296,14 +1296,10 @@ export function AdminModerationPage({
                       <button
                         type="button"
                         className="admin-btn admin-btn-publish"
-                        onClick={() => {
-                          setSelectedManuscript(sub)
-                          setManuscriptActionDialog('publish')
-                          setManuscriptTargetSlug('')
-                          setManuscriptTargetPaperId('')
-                        }}
+                        disabled
+                        title="A complete manuscript publication editor is required before public publishing is enabled."
                       >
-                        <SiteIcon name="arrow-up-right" size={14} /> Publish to Archive
+                        <SiteIcon name="lock" size={14} /> Publication editor required
                       </button>
                     )}
 
@@ -1634,9 +1630,10 @@ export function AdminModerationPage({
                       <button
                         type="button"
                         className="admin-btn admin-btn-publish"
-                        onClick={() => setManuscriptActionDialog('publish')}
+                        disabled
+                        title="A complete manuscript publication editor is required before public publishing is enabled."
                       >
-                        Publish to Archive
+                        Publication editor required
                       </button>
                     )}
                     {selectedManuscript.status !== 'published' && selectedManuscript.status !== 'rejected' && (
