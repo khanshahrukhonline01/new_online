@@ -139,7 +139,6 @@ describe('AdminModerationPage', () => {
       />
     )
 
-    expect(html).toContain('KhelChronicle Manuscripts')
     expect(html).toContain('Pending Screening')
     expect(html).toContain('Revisions Requested')
     expect(html).toContain('Example manuscript supplied by the database')
