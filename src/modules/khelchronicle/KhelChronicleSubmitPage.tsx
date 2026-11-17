@@ -966,10 +966,9 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
 
               {/* STEP 4: Manuscript Files & Supplementary Datasets */}
               <div className={`kc-step-panel ${currentStep === 4 ? 'is-active' : ''}`}>
-                <h2 className="kc-step-heading">Step 4: Manuscript File &amp; Supplementary Data</h2>
+                <h2 className="kc-step-heading">Step 4: Manuscript Link &amp; Supplementary Data</h2>
                 <p className="kc-step-desc">
-                  Upload your preprint PDF or Word document, or provide a link to an open science repository (e.g.,
-                  Zenodo, GitHub, OSF).
+                  Direct file storage is not enabled yet. Provide a secure HTTPS link to the complete manuscript and, if applicable, a separate HTTPS link to supplementary data.
                 </p>
 
                 {/* Drag and drop zone */}
