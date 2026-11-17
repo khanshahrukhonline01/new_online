@@ -71,20 +71,38 @@ export type AdminControlTab =
   | 'announcements'
   | 'access'
 
-export function AdminControlPanelPage() {
-  const [profile, setProfile] = useState<ModerationAccessProfile | null>(null)
-  const [signedIn, setSignedIn] = useState(false)
-  const [activeTab, setActiveTab] = useState<AdminControlTab>('overview')
+export interface AdminControlPanelPageProps {
+  initialProfile?: ModerationAccessProfile | null
+  initialSignedIn?: boolean
+  initialLoading?: boolean
+  initialQueue?: AdminModerationQueue | null
+  initialAccounts?: ListingModeratorAccount[]
+  initialAccessAudits?: ListingModeratorAccessAudit[]
+  initialTab?: AdminControlTab
+}
+
+export function AdminControlPanelPage({
+  initialProfile,
+  initialSignedIn,
+  initialLoading,
+  initialQueue,
+  initialAccounts,
+  initialAccessAudits,
+  initialTab,
+}: AdminControlPanelPageProps = {}) {
+  const [profile, setProfile] = useState<ModerationAccessProfile | null>(initialProfile ?? null)
+  const [signedIn, setSignedIn] = useState(initialSignedIn ?? false)
+  const [activeTab, setActiveTab] = useState<AdminControlTab>(initialTab ?? 'overview')
 
   // Listing queue state
-  const [queue, setQueue] = useState<AdminModerationQueue | null>(null)
+  const [queue, setQueue] = useState<AdminModerationQueue | null>(initialQueue ?? null)
   const [queueSearch, setQueueSearch] = useState('')
   const [selected, setSelected] = useState<ModeratorQueueItem | null>(null)
   const [evidence, setEvidence] = useState<ListingEvidenceItem[]>([])
-  const [accounts, setAccounts] = useState<ListingModeratorAccount[]>([])
-  const [accessAudits, setAccessAudits] = useState<ListingModeratorAccessAudit[]>([])
+  const [accounts, setAccounts] = useState<ListingModeratorAccount[]>(initialAccounts ?? [])
+  const [accessAudits, setAccessAudits] = useState<ListingModeratorAccessAudit[]>(initialAccessAudits ?? [])
   const [verificationStates, setVerificationStates] = useState<Record<string, string>>({})
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(initialLoading ?? (initialProfile === undefined && initialSignedIn === undefined))
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -196,7 +214,11 @@ export function AdminControlPanelPage() {
     }
   }, [])
 
-  useEffect(() => { void refresh() }, [refresh])
+  useEffect(() => {
+    if (initialProfile === undefined && initialSignedIn === undefined) {
+      void refresh()
+    }
+  }, [refresh, initialProfile, initialSignedIn])
 
   const queueItems = queue?.pendingSubmissions ?? []
   const queueCounts = {

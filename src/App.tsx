@@ -60,8 +60,6 @@ const CoachesPage = lazy(() => import('./modules/coaches/CoachesPage'))
 const EventsPage = lazy(() => import('./modules/events/EventsPage'))
 const ScoutPortalPage = lazy(() => import('./modules/scouting/ScoutPortalPage'))
 const AthleteVerificationPage = lazy(() => import('./modules/verification/AthleteVerificationPage'))
-const AdminModerationPage = lazy(() => import('./modules/admin/AdminModerationPage').then(module => ({ default: module.AdminModerationPage })))
-const AdminControlPanelPage = lazy(() => import('./modules/admin/AdminControlPanelPage').then(module => ({ default: module.AdminControlPanelPage })))
 
 // Code-split heavyweight modal dialogs
 const NotificationCenterDrawer = lazy(() => import('./shared/components/NotificationCenterDrawer'))
@@ -293,8 +291,6 @@ export default function App() {
       else if (match.canonicalPath === '/events') page = <EventsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/scout-portal') page = <ScoutPortalPage onNavigate={navigate} />
       else if (match.canonicalPath === '/verification') page = <AthleteVerificationPage onNavigate={navigate} />
-      else if (match.canonicalPath === '/admin' || match.canonicalPath === '/moderation') page = <AdminModerationPage />
-      else if (match.canonicalPath === '/admin/control') page = <AdminControlPanelPage />
       else if (match.canonicalPath === '/calendar') page = <SportsCalendarPage onNavigate={navigate} />
       else if (match.canonicalPath === '/tools' || match.canonicalPath === '/sports-tools' || match.canonicalPath.startsWith('/tools/')) page = <SportsToolsPage onNavigate={navigate} initialToolSlug={match.canonicalPath.startsWith('/tools/') ? match.canonicalPath.slice('/tools/'.length) : undefined} />
       else if (match.canonicalPath === '/live' || match.canonicalPath === '/live-scores') page = <LiveScoresPage onNavigate={navigate} />

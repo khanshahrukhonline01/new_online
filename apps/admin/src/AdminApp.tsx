@@ -3,7 +3,7 @@ import { AdminControlPanelPage } from '../../../src/modules/admin/AdminControlPa
 const DEVELOPMENT_SUPABASE_URL = 'https://hznsbxvovjxvmnchzzqt.supabase.co'
 
 export function AdminApp() {
-  const configuredUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
+  const configuredUrl = (import.meta.env.VITE_SUPABASE_URL || DEVELOPMENT_SUPABASE_URL)?.replace(/\/$/, '')
 
   if (configuredUrl !== DEVELOPMENT_SUPABASE_URL) {
     return (

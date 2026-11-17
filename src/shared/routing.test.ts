@@ -124,13 +124,10 @@ describe('platform route coverage', () => {
     })
   })
 
-  it('routes the restricted moderator and super-admin control panel', () => {
-    expect(resolveRoute('/admin/control')).toEqual({
-      name: 'feature',
-      canonicalPath: '/admin/control',
-      slug: 'Moderator & Super Admin Control Panel',
-    })
-    expect(resolveRoute('/admin')).toMatchObject({ name: 'feature', canonicalPath: '/admin' })
+  it('isolates the public application by returning not-found for former admin routes', () => {
+    expect(resolveRoute('/admin/control').name).toBe('not-found')
+    expect(resolveRoute('/admin').name).toBe('not-found')
+    expect(resolveRoute('/moderation').name).toBe('not-found')
   })
 
   it('normalizes trailing slashes and preserves unknown-route handling', () => {
