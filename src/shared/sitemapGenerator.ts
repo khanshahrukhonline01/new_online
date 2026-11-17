@@ -82,6 +82,11 @@ export function buildSitemapEntries(catalogues: PublishedSitemapCatalogues = {})
     { loc: `${BASE_URL}/ai-guide`, lastmod: SITEMAP_LASTMOD, changefreq: 'weekly', priority: 0.8 },
     { loc: `${BASE_URL}/community`, lastmod: SITEMAP_LASTMOD, changefreq: 'daily', priority: 0.8 },
     { loc: `${BASE_URL}/tools`, lastmod: SITEMAP_LASTMOD, changefreq: 'weekly', priority: 0.8 },
+    { loc: `${BASE_URL}/mobile-app`, lastmod: SITEMAP_LASTMOD, changefreq: 'monthly', priority: 0.8 },
+    { loc: `${BASE_URL}/careers`, lastmod: SITEMAP_LASTMOD, changefreq: 'monthly', priority: 0.75 },
+    { loc: `${BASE_URL}/referrals`, lastmod: SITEMAP_LASTMOD, changefreq: 'monthly', priority: 0.75 },
+    { loc: `${BASE_URL}/submit-listing`, lastmod: SITEMAP_LASTMOD, changefreq: 'weekly', priority: 0.85 },
+    { loc: `${BASE_URL}/submit-listing/email`, lastmod: SITEMAP_LASTMOD, changefreq: 'weekly', priority: 0.8 },
   )
 
   // 2. All 22 Sports Directories
@@ -173,12 +178,18 @@ export function buildSitemapEntries(catalogues: PublishedSitemapCatalogues = {})
   const policies = [
     '/about',
     '/trust',
+    '/contact',
     '/privacy',
     '/terms',
+    '/cookies',
     '/editorial-policy',
     '/open-science-policy',
     '/ipr-policy',
-    '/contact',
+    '/verification-policy',
+    '/correction-policy',
+    '/posh-policy',
+    '/workplace-policy',
+    '/cancellation-policy',
   ]
   for (const policy of policies) {
     entries.push({

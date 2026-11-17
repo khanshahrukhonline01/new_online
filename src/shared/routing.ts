@@ -33,7 +33,7 @@ const khelchronicleCategories = new Set([
 ])
 const featurePages: Record<string, string> = {
   '/dashboard': 'My Dashboard', '/host': 'Host & Partner Dashboard', '/partner-dashboard': 'Host & Partner Dashboard', '/live': 'Live Scores', '/live-scores': 'Live Scores', '/play': 'Play · Find Games',
-  '/coaches': 'Coaches Directory', '/events': 'Events & Tournaments',
+  '/coaches': 'Coaches Directory', '/events': 'Events & Tournaments', '/tournaments': 'Events & Tournaments',
   '/stats': 'Athlete Statistics', '/sports-cv': 'Sports CV Wizard', '/talent-scanner': 'Talent Scanner',
   '/scout-portal': 'Scout Portal', '/verification': 'Athlete Verification',
   '/learning': 'Sports & Learning Hub', '/learning-hub': 'Sports & Learning Hub', '/guides': 'Sports Guides', '/ai-guide': 'AI Sports Guide',
@@ -50,7 +50,7 @@ const featurePages: Record<string, string> = {
   '/settings': 'Account Settings', '/notifications': 'Notifications', '/login': 'Login',
   '/signup': 'Create Account', '/forgot-password': 'Password Recovery', '/book': 'Venue Booking',
   '/profile': 'Athlete Profile', '/my-profile': 'My Profile', '/saved': 'Saved Items',
-  '/referrals': 'Referrals', '/help': 'Help & Support', '/help-feedback': 'Help & Feedback', '/submit-listing': 'Suggest a Listing', '/submit-listing/email': 'Direct Email Listing Request', '/list/email': 'Direct Email Listing Request', '/track-submission': 'Track Submission', '/track': 'Track Submission',
+  '/referrals': 'Referrals', '/help': 'Help & Support', '/support': 'Help & Support', '/help-feedback': 'Help & Feedback', '/submit-listing': 'Suggest a Listing', '/submit-listing/email': 'Direct Email Listing Request', '/list/email': 'Direct Email Listing Request', '/track-submission': 'Track Submission', '/track': 'Track Submission',
   '/start-from-zero': 'Start From Zero — Sports CV',
 }
 

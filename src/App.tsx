@@ -21,7 +21,12 @@ import {
 import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAndShare'
 
 // Code-split route components via React.lazy()
+const AboutPage = lazy(() => import('./modules/about/AboutPage'))
+const TrustPage = lazy(() => import('./modules/trust/TrustPage'))
 const HelpFeedbackPage = lazy(() => import('./modules/help/HelpFeedbackPage'))
+const MobileAppPage = lazy(() => import('./modules/mobile-app/MobileAppPage'))
+const CareersPage = lazy(() => import('./modules/careers/CareersPage'))
+const ReferralsPage = lazy(() => import('./modules/referrals/ReferralsPage'))
 const PlayPage = lazy(() => import('./modules/play/PlayPage'))
 const SportsCvWizard = lazy(() => import('./modules/sports-cv/SportsCvWizard'))
 const OpportunitiesPage = lazy(() => import('./modules/opportunities/OpportunitiesPage'))
@@ -283,21 +288,28 @@ export default function App() {
       } else if (match.canonicalPath === '/host' || match.canonicalPath === '/partner-dashboard') {
         page = <HostDashboardPage onNavigate={navigate} onOpenIntake={openListingSubmission} />
       }
-      else if (match.canonicalPath === '/help-feedback') page = <HelpFeedbackPage />
-      else if (match.canonicalPath === '/sports-cv') page = <SportsCvWizard />
+      else if (match.canonicalPath === '/about') page = <AboutPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/trust') page = <TrustPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/help-feedback' || match.canonicalPath === '/contact' || match.canonicalPath === '/help' || match.canonicalPath === '/support') page = <HelpFeedbackPage />
+      else if (match.canonicalPath === '/sports-cv' || match.canonicalPath === '/start-from-zero') page = <SportsCvWizard />
       else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} onOpenAuth={tab => { setAuthModalTab(tab || 'signup'); setAuthModalOpen(true) }} />
-      else if (match.canonicalPath === '/play') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openListingSubmission('pickup_game')} />
+      else if (match.canonicalPath === '/play' || match.canonicalPath === '/community') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openListingSubmission('pickup_game')} />
       else if (match.canonicalPath === '/coaches') page = <CoachesPage onNavigate={navigate} onOpenCoachIntake={() => openListingSubmission('coach')} />
-      else if (match.canonicalPath === '/events') page = <EventsPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/events' || match.canonicalPath === '/tournaments') page = <EventsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/scout-portal') page = <ScoutPortalPage onNavigate={navigate} />
       else if (match.canonicalPath === '/verification') page = <AthleteVerificationPage onNavigate={navigate} />
       else if (match.canonicalPath === '/calendar') page = <SportsCalendarPage onNavigate={navigate} />
-      else if (match.canonicalPath === '/tools' || match.canonicalPath === '/sports-tools' || match.canonicalPath.startsWith('/tools/')) page = <SportsToolsPage onNavigate={navigate} initialToolSlug={match.canonicalPath.startsWith('/tools/') ? match.canonicalPath.slice('/tools/'.length) : undefined} />
+      else if (match.canonicalPath === '/tools' || match.canonicalPath === '/sports-tools' || match.canonicalPath === '/stats' || match.canonicalPath.startsWith('/tools/')) page = <SportsToolsPage onNavigate={navigate} initialToolSlug={match.canonicalPath === '/stats' ? 'athlete-benchmarks' : match.canonicalPath.startsWith('/tools/') ? match.canonicalPath.slice('/tools/'.length) : undefined} />
       else if (match.canonicalPath === '/live' || match.canonicalPath === '/live-scores') page = <LiveScoresPage onNavigate={navigate} />
       else if (match.canonicalPath === '/submit-listing' || match.canonicalPath === '/list') page = <ListingSubmissionPage />
       else if (match.canonicalPath === '/submit-listing/email' || match.canonicalPath === '/list/email') page = <ListingSubmissionPage defaultTab="email" />
       else if (match.canonicalPath === '/track-submission' || match.canonicalPath === '/track') page = <ListingSubmissionPage defaultTab="track" />
-      else if (match.canonicalPath === '/learning' || match.canonicalPath === '/learning-hub') page = <LearningHubPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/learning' || match.canonicalPath === '/learning-hub' || match.canonicalPath === '/guides' || match.canonicalPath === '/ai-guide') page = <LearningHubPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/mobile-app') page = <MobileAppPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/careers') page = <CareersPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/referrals') page = <ReferralsPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/book') page = <VenuesPage onOpenIntake={() => openListingSubmission('venue')} onNavigate={navigate} />
+      else if (match.canonicalPath === '/train') page = <AcademiesPage onOpenIntake={() => openListingSubmission('academy')} onNavigate={navigate} />
       else if (match.canonicalPath === '/notifications') page = (
         <section className="content-page">
           <p className="eyebrow">YOUR UPDATES &amp; ALERTS</p>
@@ -720,7 +732,7 @@ export default function App() {
         </a>
       </nav>
       <div className="footer-legal">
-        <p>Development build · live feeds and account services are not connected yet · Not a booking or live-score service</p>
+        <p>Independent grassroots sports network · live feeds and account services are not connected yet · Not a booking or live-score service</p>
         <p><span>{IPR_NOTICE_HEADING}</span><span>AI use</span><span>Copyright notice</span><span>© KhelGrid</span></p>
       </div>
     </footer>

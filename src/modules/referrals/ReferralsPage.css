@@ -1,0 +1,195 @@
+.referrals-page {
+  max-width: 1050px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4.5rem;
+  color: var(--color-text, #1e293b);
+  line-height: 1.7;
+}
+
+.referrals-hero {
+  margin-bottom: 3.5rem;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  padding-bottom: 2.5rem;
+}
+
+.referrals-eyebrow {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary, #059669);
+  margin-bottom: 0.75rem;
+}
+
+.referrals-title {
+  font-size: 2.35rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--color-heading, #0f172a);
+  margin-bottom: 1.25rem;
+}
+
+.referrals-lead {
+  font-size: 1.15rem;
+  color: var(--color-text-muted, #475569);
+  max-width: 850px;
+  margin-bottom: 2rem;
+}
+
+.invite-share-card {
+  background: var(--color-card-bg, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 12px;
+  padding: 1.75rem;
+  max-width: 650px;
+}
+
+.share-label {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-heading, #0f172a);
+  margin-bottom: 0.5rem;
+}
+
+.share-input-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.share-input {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--color-border, #cbd5e1);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: var(--color-bg, #ffffff);
+  color: var(--color-heading, #0f172a);
+}
+
+.copy-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--color-primary, #059669);
+  color: #ffffff;
+  border: none;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.copy-link-btn:hover {
+  opacity: 0.92;
+}
+
+.share-buttons-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.social-share-btn {
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.whatsapp-btn {
+  background: #25d366;
+  color: #ffffff;
+}
+
+.whatsapp-btn:hover {
+  background: #20bd5a;
+}
+
+.telegram-btn {
+  background: #229ed9;
+  color: #ffffff;
+}
+
+.telegram-btn:hover {
+  background: #1e8ec3;
+}
+
+.referrals-section {
+  margin-bottom: 3.5rem;
+}
+
+.impact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.impact-card {
+  background: var(--color-card-bg, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.impact-icon-box {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: var(--color-badge-bg, rgba(5, 150, 105, 0.1));
+  color: var(--color-primary, #059669);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.impact-card h3 {
+  font-size: 1.12rem;
+  font-weight: 750;
+  color: var(--color-heading, #0f172a);
+  margin: 0 0 0.5rem;
+}
+
+.impact-card p {
+  font-size: 0.92rem;
+  color: var(--color-text-muted, #475569);
+  margin: 0;
+}
+
+.ambassador-panel {
+  background: var(--color-card-bg, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 14px;
+  padding: 2.25rem;
+}
+
+.ambassador-panel a {
+  color: var(--color-primary, #059669);
+  font-weight: 600;
+}
+
+.ambassador-cta-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .referrals-page {
+    padding: 1.75rem 1rem 3.5rem;
+  }
+  .referrals-title {
+    font-size: 1.85rem;
+  }
+  .share-input-row {
+    flex-direction: column;
+  }
+}
