@@ -295,6 +295,7 @@ export default function App() {
       else if (match.canonicalPath === '/tools' || match.canonicalPath === '/sports-tools' || match.canonicalPath.startsWith('/tools/')) page = <SportsToolsPage onNavigate={navigate} initialToolSlug={match.canonicalPath.startsWith('/tools/') ? match.canonicalPath.slice('/tools/'.length) : undefined} />
       else if (match.canonicalPath === '/live' || match.canonicalPath === '/live-scores') page = <LiveScoresPage onNavigate={navigate} />
       else if (match.canonicalPath === '/submit-listing' || match.canonicalPath === '/list') page = <ListingSubmissionPage />
+      else if (match.canonicalPath === '/submit-listing/email' || match.canonicalPath === '/list/email') page = <ListingSubmissionPage defaultTab="email" />
       else if (match.canonicalPath === '/track-submission' || match.canonicalPath === '/track') page = <ListingSubmissionPage defaultTab="track" />
       else if (match.canonicalPath === '/learning' || match.canonicalPath === '/learning-hub') page = <LearningHubPage onNavigate={navigate} />
       else if (match.canonicalPath === '/notifications') page = (

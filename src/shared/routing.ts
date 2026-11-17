@@ -50,7 +50,7 @@ const featurePages: Record<string, string> = {
   '/settings': 'Account Settings', '/notifications': 'Notifications', '/login': 'Login',
   '/signup': 'Create Account', '/forgot-password': 'Password Recovery', '/book': 'Venue Booking',
   '/profile': 'Athlete Profile', '/my-profile': 'My Profile', '/saved': 'Saved Items',
-  '/referrals': 'Referrals', '/help': 'Help & Support', '/help-feedback': 'Help & Feedback', '/submit-listing': 'Suggest a Listing', '/track-submission': 'Track Submission', '/track': 'Track Submission',
+  '/referrals': 'Referrals', '/help': 'Help & Support', '/help-feedback': 'Help & Feedback', '/submit-listing': 'Suggest a Listing', '/submit-listing/email': 'Direct Email Listing Request', '/list/email': 'Direct Email Listing Request', '/track-submission': 'Track Submission', '/track': 'Track Submission',
   '/start-from-zero': 'Start From Zero — Sports CV',
 }
 

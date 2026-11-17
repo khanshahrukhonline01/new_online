@@ -20,11 +20,60 @@ const listingTypes: Array<{ id: ListingSubmissionInput['listing_type']; label: s
 ]
 
 export interface ListingSubmissionPageProps {
-  defaultTab?: 'submit' | 'track'
+  defaultTab?: 'submit' | 'track' | 'email'
+}
+
+export function buildListingDirectEmail(params: {
+  category: string
+  title: string
+  city: string
+  contactName?: string
+  contactPhone?: string
+  sourceUrl?: string
+  details?: string
+  submitterEmail?: string
+}) {
+  const categoryLabel = listingTypes.find(t => t.id === params.category)?.label || params.category
+  const cleanTitle = params.title.trim()
+  const subject = `[KhelGrid Registration Request] - ${categoryLabel} - ${cleanTitle || 'New Listing'}`
+
+  const body = [
+    `Dear KhelGrid Onboarding & Moderation Team,`,
+    ``,
+    `I am requesting registration for a sports listing on KhelGrid (khelgrid.com).`,
+    ``,
+    `=== LISTING INFORMATION ===`,
+    `Listing Category: ${categoryLabel}`,
+    `Listing Title / Official Name: ${cleanTitle || '[Please specify official name]'}`,
+    `City / Locality / Address: ${params.city.trim() || '[Please specify full address or city]'}`,
+    `Official Website / Social / Proof Link: ${params.sourceUrl?.trim() || 'N/A'}`,
+    ``,
+    `=== DESCRIPTION & FACILITIES ===`,
+    `${params.details?.trim() || '[Please specify sports offered, timings, facilities, coach qualifications, or trial dates]'}`,
+    ``,
+    `=== SUBMITTER / CONTACT DETAILS ===`,
+    `Contact Person Name: ${params.contactName?.trim() || '[Your Name]'}`,
+    `Phone / WhatsApp: ${params.contactPhone?.trim() || '[Your Phone/WhatsApp]'}`,
+    `Contact Email: ${params.submitterEmail?.trim() || '[Your Email]'}`,
+    ``,
+    `Please review and register this listing directly on KhelGrid.`,
+    ``,
+    `Thank you!`
+  ].join('\n')
+
+  const mailtoUrl = `mailto:khelgrid@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+
+  return { subject, body, mailtoUrl }
 }
 
 export default function ListingSubmissionPage({ defaultTab = 'submit' }: ListingSubmissionPageProps) {
-  const [activeTab, setActiveTab] = useState<'submit' | 'track'>(defaultTab)
+  const [activeTab, setActiveTab] = useState<'submit' | 'track' | 'email'>(() => {
+    if (typeof window === 'undefined') return defaultTab
+    const mode = new URLSearchParams(window.location.search).get('mode')
+    if (mode === 'email' || mode === 'mail' || mode === 'direct') return 'email'
+    if (mode === 'track') return 'track'
+    return defaultTab
+  })
 
   // Submission Form State
   const [kind, setKind] = useState<ListingSubmissionInput['listing_type']>(() => {
@@ -41,6 +90,17 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
   const [submitterEmail, setSubmitterEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+
+  // Direct Email Concierge Desk State
+  const [emailKind, setEmailKind] = useState<ListingSubmissionInput['listing_type']>(kind)
+  const [emailTitle, setEmailTitle] = useState('')
+  const [emailCity, setEmailCity] = useState('')
+  const [emailContactName, setEmailContactName] = useState('')
+  const [emailContactPhone, setEmailContactPhone] = useState('')
+  const [emailSourceUrl, setEmailSourceUrl] = useState('')
+  const [emailDetails, setEmailDetails] = useState('')
+  const [emailSubmitterEmail, setEmailSubmitterEmail] = useState('')
+  const [copiedEmail, setCopiedEmail] = useState(false)
 
   // Submission Result State
   const [submittedData, setSubmittedData] = useState<{
@@ -65,10 +125,14 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
   const [resubmitDetails, setResubmitDetails] = useState('')
   const [resubmitting, setResubmitting] = useState(false)
 
-  // Auto-fill from query params (?ref=...&key=...)
+  // Auto-fill from query params (?ref=...&key=... or ?mode=email)
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
+    const mode = params.get('mode') || params.get('tab')
+    if (mode === 'email' || mode === 'mail' || mode === 'direct') {
+      setActiveTab('email')
+    }
     const ref = params.get('ref') || params.get('reference')
     const key = params.get('key') || params.get('tracking_key')
     if (ref) {
@@ -250,6 +314,13 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
         >
           <SiteIcon name="search" size={16} /> Track Submission Status
         </button>
+        <button
+          type="button"
+          className={`listing-tab-btn ${activeTab === 'email' ? 'active' : ''}`}
+          onClick={() => setActiveTab('email')}
+        >
+          <SiteIcon name="mail" size={16} /> Direct Email (khelgrid@gmail.com)
+        </button>
       </nav>
 
       {/* Tab 1: Submit Form */}
@@ -395,9 +466,35 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
             </fieldset>
 
             {submitError && (
-              <p className="state-panel state-unavailable" role="alert">
-                {submitError}
-              </p>
+              <div className="listing-fallback-alert" role="alert">
+                <p className="state-panel state-unavailable">
+                  {submitError}
+                </p>
+                <div className="listing-fallback-email-box">
+                  <div className="listing-fallback-email-header">
+                    <SiteIcon name="mail" size={20} />
+                    <div>
+                      <strong>Moderation queue delayed or offline? Direct Email Registration:</strong>
+                      <p>
+                        You can immediately email your listing registration request directly to <strong>khelgrid@gmail.com</strong> for manual onboarding across all sports categories.
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    className="primary-link listing-direct-email-btn"
+                    href={buildListingDirectEmail({
+                      category: kind,
+                      title,
+                      city,
+                      sourceUrl,
+                      details,
+                      submitterEmail,
+                    }).mailtoUrl}
+                  >
+                    <SiteIcon name="arrow-up-right" size={16} /> Send Email Directly to khelgrid@gmail.com
+                  </a>
+                </div>
+              </div>
             )}
 
             <div className="cv-actions">
@@ -406,6 +503,34 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
               </button>
             </div>
           </form>
+
+          {/* Direct Concierge Email Banner */}
+          <div className="listing-direct-email-banner">
+            <div className="listing-direct-email-banner-content">
+              <span className="listing-email-badge"><SiteIcon name="mail" size={20} /></span>
+              <div>
+                <strong>Direct Registration Route via Email (khelgrid@gmail.com)</strong>
+                <p>
+                  Need fast-track registration or is online moderation taking time? You can send your sports listing request directly to <strong>khelgrid@gmail.com</strong> for any category (Academies, Venues, Coaches, Trials, Events, Pickup Games, Sports).
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="secondary-link listing-email-switch-btn"
+              onClick={() => {
+                setEmailKind(kind)
+                setEmailTitle(title)
+                setEmailCity(city)
+                setEmailSourceUrl(sourceUrl)
+                setEmailDetails(details)
+                setEmailSubmitterEmail(submitterEmail)
+                setActiveTab('email')
+              }}
+            >
+              Open Direct Email Desk &rarr;
+            </button>
+          </div>
 
           <div className="state-panel state-unavailable" style={{ marginTop: '2rem' }}>
             <div className="state-symbol">!</div>
@@ -643,6 +768,197 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Tab 3: Direct Email Registration Desk */}
+      {activeTab === 'email' && (
+        <div className="listing-email-card" role="region" aria-label="Direct Email Registration Desk">
+          <div className="listing-email-header">
+            <span className="listing-email-header-icon">
+              <SiteIcon name="mail" size={26} />
+            </span>
+            <div>
+              <h2>Direct Email Registration Desk · khelgrid@gmail.com</h2>
+              <p>
+                If the online moderation database is undergoing maintenance or taking time, or if you prefer direct concierge onboarding, you can send your listing registration request directly to <strong>khelgrid@gmail.com</strong> for manual review across all 7 sports categories.
+              </p>
+            </div>
+          </div>
+
+          <div className="cv-field-grid" style={{ marginTop: '1.5rem' }}>
+            <label>
+              Listing Category *
+              <select
+                value={emailKind}
+                onChange={e => setEmailKind(e.target.value as ListingSubmissionInput['listing_type'])}
+              >
+                {listingTypes.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Listing Title / Organization Name *
+              <input
+                required
+                value={emailTitle}
+                onChange={e => setEmailTitle(e.target.value)}
+                placeholder={emailKind === 'venue' ? 'e.g. Whitefield Arena & Football Turf' : emailKind === 'coach' ? 'e.g. Coach Sandeep Patil (BCCI Level 2)' : emailKind === 'opportunity' ? 'e.g. National U-19 Football Selection Combine' : 'Official Listing Name'}
+              />
+            </label>
+
+            <label>
+              City &amp; Full Locality / Address *
+              <input
+                required
+                value={emailCity}
+                onChange={e => setEmailCity(e.target.value)}
+                placeholder="e.g. Sector 29, Gurugram, Haryana"
+              />
+            </label>
+
+            <label>
+              Contact Person Name *
+              <input
+                required
+                value={emailContactName}
+                onChange={e => setEmailContactName(e.target.value)}
+                placeholder="e.g. Academy Director / Coach / Host Name"
+              />
+            </label>
+
+            <label>
+              Phone / WhatsApp Number *
+              <input
+                required
+                type="tel"
+                value={emailContactPhone}
+                onChange={e => setEmailContactPhone(e.target.value)}
+                placeholder="+91 98765 43210"
+              />
+            </label>
+
+            <label>
+              Your Contact Email (optional)
+              <input
+                type="email"
+                value={emailSubmitterEmail}
+                onChange={e => setEmailSubmitterEmail(e.target.value)}
+                placeholder="your-email@example.com"
+              />
+            </label>
+
+            <label style={{ gridColumn: '1 / -1' }}>
+              Official Website / Social Proof / Registration URL
+              <input
+                type="url"
+                value={emailSourceUrl}
+                onChange={e => setEmailSourceUrl(e.target.value)}
+                placeholder="https://... (e.g. Instagram handle, website, or federation document)"
+              />
+            </label>
+          </div>
+
+          <label style={{ display: 'block', marginTop: '1rem' }}>
+            Facilities, Operating Hours, Age Groups, Fees &amp; Key Specifications
+            <textarea
+              rows={4}
+              value={emailDetails}
+              onChange={e => setEmailDetails(e.target.value)}
+              placeholder="Include courts/pitches, amenities, floodlights, parking, batch timings, fees, eligibility criteria, or coach certifications..."
+            />
+          </label>
+
+          {/* Email Preview & Send Section */}
+          <div className="listing-email-preview-box">
+            <div className="listing-email-preview-bar">
+              <div>
+                <small style={{ color: '#047857', fontWeight: 800, textTransform: 'uppercase', display: 'block' }}>RECIPIENT</small>
+                <strong style={{ fontSize: '1.05rem', color: '#065f46' }}>khelgrid@gmail.com</strong>
+              </div>
+              <div style={{ marginTop: '0.4rem' }}>
+                <small style={{ color: '#047857', fontWeight: 800, textTransform: 'uppercase', display: 'block' }}>SUBJECT LINE</small>
+                <span style={{ fontWeight: 650, color: '#1f2937' }}>
+                  {buildListingDirectEmail({
+                    category: emailKind,
+                    title: emailTitle,
+                    city: emailCity,
+                    contactName: emailContactName,
+                    contactPhone: emailContactPhone,
+                    sourceUrl: emailSourceUrl,
+                    details: emailDetails,
+                    submitterEmail: emailSubmitterEmail,
+                  }).subject}
+                </span>
+              </div>
+            </div>
+
+            <pre className="listing-email-preview-body">
+              {buildListingDirectEmail({
+                category: emailKind,
+                title: emailTitle,
+                city: emailCity,
+                contactName: emailContactName,
+                contactPhone: emailContactPhone,
+                sourceUrl: emailSourceUrl,
+                details: emailDetails,
+                submitterEmail: emailSubmitterEmail,
+              }).body}
+            </pre>
+          </div>
+
+          <div className="listing-email-actions">
+            <a
+              href={buildListingDirectEmail({
+                category: emailKind,
+                title: emailTitle,
+                city: emailCity,
+                contactName: emailContactName,
+                contactPhone: emailContactPhone,
+                sourceUrl: emailSourceUrl,
+                details: emailDetails,
+                submitterEmail: emailSubmitterEmail,
+              }).mailtoUrl}
+              className="primary-link listing-send-email-btn"
+            >
+              <SiteIcon name="arrow-up-right" size={18} /> Send Direct Email to khelgrid@gmail.com
+            </a>
+
+            <button
+              type="button"
+              className="secondary-link"
+              onClick={() => {
+                const text = buildListingDirectEmail({
+                  category: emailKind,
+                  title: emailTitle,
+                  city: emailCity,
+                  contactName: emailContactName,
+                  contactPhone: emailContactPhone,
+                  sourceUrl: emailSourceUrl,
+                  details: emailDetails,
+                  submitterEmail: emailSubmitterEmail,
+                }).body
+                if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                  void navigator.clipboard.writeText(text)
+                  setCopiedEmail(true)
+                  setTimeout(() => setCopiedEmail(false), 3000)
+                }
+              }}
+            >
+              <SiteIcon name="copy" size={16} /> {copiedEmail ? '✓ Copied Template to Clipboard!' : 'Copy Email Template'}
+            </button>
+          </div>
+
+          <div className="listing-email-footer-note">
+            <SiteIcon name="shield-check" size={18} />
+            <span>
+              All registration emails sent to <strong>khelgrid@gmail.com</strong> are reviewed directly by the KhelGrid platform operations team. Verified submissions are published with full attribution across the relevant public directory.
+            </span>
+          </div>
         </div>
       )}
     </section>
