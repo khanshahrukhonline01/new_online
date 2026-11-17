@@ -231,7 +231,8 @@ export function normalizeUsername(input: string): string {
  * has a reviewed consent schema and a consent-gated public projection RPC.
  * Do not fall back to local drafts, showcase fixtures, or browser auth metadata.
  */
-export async function getAthleteProfile(_username: string): Promise<AthleteProfile | null> {
+export async function getAthleteProfile(username: string): Promise<AthleteProfile | null> {
+  if (!username.trim()) return null
   return null
 }
 
@@ -254,8 +255,11 @@ export interface SaveCoachEndorsementInput {
 }
 
 export async function saveCoachEndorsement(
-  _input: SaveCoachEndorsementInput,
+  input: SaveCoachEndorsementInput,
 ): Promise<{ status: 'endorsed'; profile: AthleteProfile; message: string }> {
+  if (!input.username.trim() || !input.coachName.trim() || !input.coachLicense.trim()) {
+    throw new Error('Athlete username, coach name, and coach credentials are required.')
+  }
   throw new Error(
     'Coach endorsements are temporarily paused until secure coach identity verification is available. No endorsement or verification badge has been recorded.',
   )
@@ -273,13 +277,12 @@ export type PublishProfileResult =
  * into Supabase and local cache.
  */
 export async function publishAthleteProfile(
-  _input: PublishProfileInput,
+  input: PublishProfileInput,
 ): Promise<PublishProfileResult> {
-  return {
-    status: 'error',
-    message:
-      'Public athlete profile publishing is temporarily paused while consent, verification, and database access controls are being reconciled. Your Sports CV draft remains available on this device.',
-  }
+  const message = !input.username.trim()
+    ? 'A valid athlete username is required. Your Sports CV draft remains available on this device.'
+    : 'Public athlete profile publishing is temporarily paused while consent, verification, and database access controls are being reconciled. Your Sports CV draft remains available on this device.'
+  return { status: 'error', message }
 }
 
 /**
