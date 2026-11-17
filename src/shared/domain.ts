@@ -51,6 +51,7 @@ export interface Venue {
   pricing?: string | null
   facilities?: string[]
   rules?: string[]
+  faqs?: Array<{ question: string; answer: string }>
   rating?: number
   review_count?: number
   verification_status?: 'unverified' | 'pending_review' | 'verified' | 'rejected'
@@ -81,6 +82,8 @@ export interface Academy {
   age_groups?: string[]
   timings?: string | null
   fee_structure?: string | null
+  curriculum_highlights?: string[]
+  faqs?: Array<{ question: string; answer: string }>
   admission_open?: boolean
   rating?: number
   review_count?: number
