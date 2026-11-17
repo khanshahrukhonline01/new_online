@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getPublishedVerifiedOpportunities, getSports, getVenues } from '../../integrations/supabase/public-client'
+import { getOpportunities, getSports, getVenues } from '../../integrations/supabase/public-client'
 import type { CatalogueResult } from '../../integrations/supabase/public-client'
 import type { Opportunity, Sport, Venue } from '../../shared/domain'
 import { AsyncState } from '../../shared/components/AsyncState'
@@ -11,176 +11,131 @@ import './catalogue-detail.css'
 type Kind = 'sport' | 'opportunity' | 'venue'
 type RecordValue = Sport | Opportunity | Venue
 
-export function resolveCatalogueRecordBySlug<T extends { slug: string }>(items: T[], slug: string): T | undefined {
-  const cleanSlug = slug.replace(/^t-/, '')
-  return items.find(item => item.slug === slug || item.slug === cleanSlug || item.slug.replace(/^t-/, '') === cleanSlug)
-}
-
 export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: string }) {
   const [result, setResult] = useState<CatalogueResult<RecordValue> | { status: 'loading'; data: [] }>({ status: 'loading', data: [] })
-
   useEffect(() => {
     let active = true
-    const load = kind === 'sport' ? getSports() : kind === 'opportunity' ? getPublishedVerifiedOpportunities() : getVenues()
+    const load = kind === 'sport' ? getSports() : kind === 'opportunity' ? getOpportunities() : getVenues()
     load.then(value => { if (active) setResult(value as CatalogueResult<RecordValue>) })
     return () => { active = false }
   }, [kind])
-
-  const cleanSlug = slug.replace(/^t-/, '')
-  const record = result.status === 'ready' ? resolveCatalogueRecordBySlug(result.data, slug) : undefined
+  const record = result.status === 'ready'
+    ? result.data.find(item => item.slug === slug) ??
+      (kind === 'opportunity'
+        ? result.data.find(item => item.slug.replace(/^t-/, '') === slug.replace(/^t-/, ''))
+        : undefined)
+    : undefined
 
   useEffect(() => {
-    if (kind !== 'opportunity' || result.status === 'loading') return
+    if (kind !== 'opportunity' || result.status !== 'ready') return
+
     const opportunity = record as Opportunity | undefined
-    const canonicalSlug = opportunity?.slug ?? cleanSlug
-    const canonicalUrl = 'https://khelgrid.com/trial/' + encodeURIComponent(canonicalSlug)
-    const description = opportunity ? [opportunity.title, opportunity.sport?.name, opportunity.city, opportunity.organizer_name, opportunity.source_name ? 'Source: ' + opportunity.source_name : 'Confirm details with the organiser'].filter(Boolean).join(' · ').slice(0, 160) : 'This sports trial or opportunity is not currently available in the published KhelGrid catalogue.'
+    const canonicalSlug = opportunity?.slug ?? slug
+    const canonicalUrl = `https://khelgrid.com/trial/${encodeURIComponent(canonicalSlug)}`
+    const description = opportunity
+      ? [
+          opportunity.title,
+          opportunity.sport?.name,
+          opportunity.city,
+          opportunity.organizer_name,
+          opportunity.source_name ? `Source: ${opportunity.source_name}` : 'Confirm details with the organiser',
+        ].filter(Boolean).join(' · ').slice(0, 160)
+      : 'This sports trial or opportunity is not currently available in the published KhelGrid catalogue.'
+
     const startDate = opportunity?.starts_at ? new Date(opportunity.starts_at) : null
     const endDate = opportunity?.ends_at ? new Date(opportunity.ends_at) : null
     const locationName = opportunity?.venue_name || opportunity?.city
-    const isSportingEvent = Boolean(opportunity && opportunity.verification_status === 'verified' && ['trial', 'combine', 'camp'].includes(opportunity.opportunity_type) && startDate && !Number.isNaN(startDate.getTime()) && locationName)
-    const jsonLd = isSportingEvent && opportunity && startDate ? {
-      '@context': 'https://schema.org',
-      '@graph': [
-        { '@type': 'SportsEvent', name: opportunity.title, startDate: startDate.toISOString(), ...(endDate && !Number.isNaN(endDate.getTime()) ? { endDate: endDate.toISOString() } : {}), url: canonicalUrl, location: { '@type': 'Place', name: locationName, ...(opportunity.city ? { address: { '@type': 'PostalAddress', addressLocality: opportunity.city, addressCountry: 'IN' } } : {}) }, ...(opportunity.organizer_name ? { organizer: { '@type': 'Organization', name: opportunity.organizer_name } } : {}), ...(typeof opportunity.registration_fee === 'number' && Number.isFinite(opportunity.registration_fee) ? { offers: { '@type': 'Offer', price: String(opportunity.registration_fee), priceCurrency: 'INR', url: opportunity.source_url || canonicalUrl } } : {}) },
-        { '@type': 'BreadcrumbList', '@id': canonicalUrl + '#breadcrumb', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Home', item: 'https://khelgrid.com' }, { '@type': 'ListItem', position: 2, name: 'Selection Trials', item: 'https://khelgrid.com/opportunities' }, { '@type': 'ListItem', position: 3, name: opportunity.title, item: canonicalUrl }] },
-      ],
-    } : undefined
-    return updatePageSeoMetadata({ title: opportunity ? opportunity.title + ' · Sports Trial | KhelGrid' : 'Trial not found · KhelGrid', description, canonicalUrl, robots: opportunity?.verification_status === 'verified' ? undefined : 'noindex, follow', ogType: 'website', jsonLd })
-  }, [kind, record, result.status, slug, cleanSlug])
+    const isSportingEvent = Boolean(
+      opportunity &&
+      opportunity.verification_status === 'verified' &&
+      ['trial', 'combine', 'camp'].includes(opportunity.opportunity_type) &&
+      startDate &&
+      !Number.isNaN(startDate.getTime()) &&
+      locationName,
+    )
+    const jsonLd = isSportingEvent && opportunity && startDate
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'SportsEvent',
+          name: opportunity.title,
+          startDate: startDate.toISOString(),
+          ...(endDate && !Number.isNaN(endDate.getTime()) ? { endDate: endDate.toISOString() } : {}),
+          url: canonicalUrl,
+          location: {
+            '@type': 'Place',
+            name: locationName,
+            ...(opportunity.city ? {
+              address: {
+                '@type': 'PostalAddress',
+                addressLocality: opportunity.city,
+                addressCountry: 'IN',
+              },
+            } : {}),
+          },
+          ...(opportunity.organizer_name ? {
+            organizer: { '@type': 'Organization', name: opportunity.organizer_name },
+          } : {}),
+          ...(typeof opportunity.registration_fee === 'number' && Number.isFinite(opportunity.registration_fee) ? {
+            offers: {
+              '@type': 'Offer',
+              price: String(opportunity.registration_fee),
+              priceCurrency: 'INR',
+              url: opportunity.source_url || canonicalUrl,
+            },
+          } : {}),
+        }
+      : undefined
+
+    return updatePageSeoMetadata({
+      title: opportunity ? `${opportunity.title} · Sports Trial | KhelGrid` : 'Trial not found · KhelGrid',
+      description,
+      canonicalUrl,
+      robots: opportunity?.verification_status === 'verified' ? undefined : 'noindex, follow',
+      ogType: 'website',
+      jsonLd,
+    })
+  }, [kind, record, result.status, slug])
   const back = kind === 'sport' ? '/sports' : kind === 'opportunity' ? '/opportunities' : '/venues'
   const heading = kind === 'sport' ? 'Sport details' : kind === 'opportunity' ? 'Opportunity details' : 'Venue details'
-
-  // A detail record is ready only when returned by the published, verified catalogue query.
-  const effectiveState = record ? 'ready' : result.status
-
-  return (
-    <section className="content-page catalogue-detail-page">
-      <a className="text-link" href={back}>
-        <SiteIcon name="arrow-left" size={15} /> Back to {kind === 'sport' ? 'sports' : kind === 'opportunity' ? 'opportunities' : 'venues'}
-      </a>
-      <p className="eyebrow">{heading.toUpperCase()}</p>
-      <AsyncState state={effectiveState} message={result.status === 'unavailable' && !record ? result.message : undefined}>
-        {!record ? (
-          <div className="state-panel" role="status">
-            <span className="state-symbol">○</span>
-            <h3>Published record not found</h3>
-            <p>This item is not currently available in the public catalogue. It may have been unpublished or its address may have changed.</p>
-            <a className="primary-link" href={back}>Browse published records</a>
-          </div>
-        ) : kind === 'sport' ? (
-          <article className="catalogue-detail-card">
-            <span className="card-kicker">SPORT</span>
-            <h1>{(record as Sport).name}</h1>
-            <p className="page-intro">This sport is listed in KhelGrid’s published sports catalogue.</p>
-            <p>Record slug: <code>{record.slug}</code></p>
-          </article>
-        ) : kind === 'opportunity' ? (
-          <OpportunityDetail item={record as Opportunity} />
-        ) : (
-          <VenueDetail item={record as Venue} />
-        )}
-      </AsyncState>
-    </section>
-  )
+  return <section className="content-page catalogue-detail-page">
+    <a className="text-link" href={back}><SiteIcon name="arrow-left" size={15} /> Back to {kind === 'sport' ? 'sports' : kind === 'opportunity' ? 'opportunities' : 'venues'}</a>
+    <p className="eyebrow">{heading.toUpperCase()}</p>
+    <AsyncState state={result.status} message={result.status === 'unavailable' ? result.message : undefined}>
+      {!record ? <div className="state-panel" role="status"><span className="state-symbol">○</span><h3>Published record not found</h3><p>This item is not currently available in the public catalogue. It may have been unpublished or its address may have changed.</p><a className="primary-link" href={back}>Browse published records</a></div> :
+        kind === 'sport' ? <article className="catalogue-detail-card"><span className="card-kicker">SPORT</span><h1>{(record as Sport).name}</h1><p className="page-intro">This sport is listed in KhelGrid’s published sports catalogue.</p><p>Record slug: <code>{record.slug}</code></p></article> :
+        kind === 'opportunity' ? <OpportunityDetail item={record as Opportunity} /> : <VenueDetail item={record as Venue} />}
+    </AsyncState>
+  </section>
 }
 
-export function OpportunityDetail({ item }: { item: Opportunity }) {
+function OpportunityDetail({ item }: { item: Opportunity }) {
   const date = (value: string | null) => {
     if (!value) return 'Not provided'
     const parsed = new Date(value)
     return Number.isNaN(parsed.getTime()) ? 'Not provided' : new Intl.DateTimeFormat('en-IN', { dateStyle: 'long', timeZone: 'Asia/Kolkata' }).format(parsed)
   }
-
-  return (
-    <article className="catalogue-detail-card">
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
-        <span className="card-kicker" style={{ margin: 0 }}>{item.opportunity_type.replace('_', ' ')}</span>
-        {Boolean(item.registration_fee && item.registration_fee > 0) && (
-          <span className="tag" style={{ color: '#d97706', borderColor: 'rgba(217,119,6,0.3)', background: 'rgba(217,119,6,0.08)', fontSize: '12px', padding: '3px 8px', borderRadius: '6px' }}>
-            ₹{item.registration_fee} Entry Fee
-          </span>
-        )}
-        {item.registration_fee === 0 && (
-          <span className="tag" style={{ color: '#16a34a', borderColor: 'rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)', fontSize: '12px', padding: '3px 8px', borderRadius: '6px', fontWeight: 700 }}>
-            ₹0 Free Entry
-          </span>
-        )}
-        {item.age_category && (
-          <span className="tag" style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', opacity: 0.9 }}>
-            {item.age_category}
-          </span>
-        )}
-        {item.available_spots && (
-          <span className="tag" style={{ color: '#2563eb', borderColor: 'rgba(37,99,235,0.3)', background: 'rgba(37,99,235,0.08)', fontSize: '12px', padding: '3px 8px', borderRadius: '6px' }}>
-            {item.available_spots} Spots Available
-          </span>
-        )}
-      </div>
-
-      <h1>{item.title}</h1>
-      <p className="page-intro">{[item.organizer_name, item.city, item.venue_name].filter(Boolean).join(' · ') || 'Organizer and location details have not been provided.'}</p>
-
-      <dl className="detail-facts">
-        <div><dt>Start date</dt><dd>{date(item.starts_at)}</dd></div>
-        <div><dt>End date</dt><dd>{date(item.ends_at)}</dd></div>
-        <div><dt>Application deadline</dt><dd>{date(item.application_deadline)}</dd></div>
-        <div><dt>Source status</dt><dd>{item.verification_status === 'verified' ? 'Source reviewed' : item.verification_status === 'pending_review' ? 'Pending review' : item.verification_status === 'rejected' ? 'Rejected' : 'Not verified'}</dd></div>
-      </dl>
-
-      {item.eligibility_criteria && (
-        <div style={{ marginTop: '20px', padding: '16px', background: 'var(--surface, #f9fafb)', borderRadius: '8px', border: '1px solid var(--line, #e5e7eb)' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Eligibility Criteria</h3>
-          <p style={{ margin: 0, fontSize: '13.5px', lineHeight: 1.6 }}>{item.eligibility_criteria}</p>
-        </div>
-      )}
-
-      {item.required_documents && item.required_documents.length > 0 && (
-        <div style={{ marginTop: '16px', padding: '16px', background: 'var(--surface, #f9fafb)', borderRadius: '8px', border: '1px solid var(--line, #e5e7eb)' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Required Verification Documents</h3>
-          <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', lineHeight: 1.6 }}>
-            {item.required_documents.map((doc, idx) => (
-              <li key={idx} style={{ marginBottom: '4px' }}>{doc}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <p className="detail-disclaimer" style={{ marginTop: '20px' }}>
-        Confirm eligibility, dates, fees and registration status with the organiser before applying. KhelGrid does not guarantee that this opportunity is still open.
-      </p>
-
-      {item.source_url ? (
-        <a className="primary-link" href={item.source_url} target="_blank" rel="noopener noreferrer">
-          Open organiser source <SiteIcon name="external-link" size={15}/>
-        </a>
-      ) : (
-        <p>Original source link has not been provided.</p>
-      )}
-
-      <TrialAlertActions
-        title={item.title}
-        slug={item.slug}
-        startsAt={item.starts_at}
-        deadlineDate={item.application_deadline}
-        city={item.city}
-        venueName={item.venue_name}
-      />
-    </article>
-  )
+  return <article className="catalogue-detail-card">
+    <span className="card-kicker">{item.opportunity_type.replace('_', ' ')}</span><h1>{item.title}</h1>
+    <p className="page-intro">{[item.organizer_name, item.city, item.venue_name].filter(Boolean).join(' · ') || 'Organizer and location details have not been provided.'}</p>
+    <dl className="detail-facts"><div><dt>Start date</dt><dd>{date(item.starts_at)}</dd></div><div><dt>End date</dt><dd>{date(item.ends_at)}</dd></div><div><dt>Application deadline</dt><dd>{date(item.application_deadline)}</dd></div><div><dt>Source status</dt><dd>{item.verification_status === 'verified' ? 'Source reviewed' : item.verification_status === 'pending_review' ? 'Pending review' : item.verification_status === 'rejected' ? 'Rejected' : 'Not verified'}</dd></div></dl>
+    <p className="detail-disclaimer">Confirm eligibility, dates, fees and registration status with the organiser before applying. KhelGrid does not guarantee that this opportunity is still open.</p>
+    {item.source_url ? <a className="primary-link" href={item.source_url} target="_blank" rel="noopener noreferrer">Open organiser source <SiteIcon name="external-link" size={15}/></a> : <p>Original source link has not been provided.</p>}
+    <TrialAlertActions
+      title={item.title}
+      slug={item.slug}
+      startsAt={item.starts_at}
+      deadlineDate={item.application_deadline}
+      city={item.city}
+      venueName={item.venue_name}
+    />
+  </article>
 }
 
 function VenueDetail({ item }: { item: Venue }) {
-  return (
-    <article className="catalogue-detail-card">
-      <span className="card-kicker">VENUE</span>
-      <h1>{item.name}</h1>
-      <p className="page-intro"><SiteIcon name="map-pin" size={17}/> {item.city}</p>
-      {item.address && <p>{item.address}</p>}
-      {item.description && <p>{item.description}</p>}
-      <div className="detail-disclaimer">
-        <SiteIcon name="info" size={16}/> Booking, court-level prices and live availability are not connected. Contact the venue directly to confirm access, fees and hours.
-      </div>
-    </article>
-  )
+  return <article className="catalogue-detail-card">
+    <span className="card-kicker">VENUE</span><h1>{item.name}</h1>
+    <p className="page-intro"><SiteIcon name="map-pin" size={17}/> {item.city}</p>
+    {item.address && <p>{item.address}</p>}{item.description && <p>{item.description}</p>}
+    <div className="detail-disclaimer"><SiteIcon name="info" size={16}/> Booking, court-level prices and live availability are not connected. Contact the venue directly to confirm access, fees and hours.</div>
+  </article>
 }

@@ -1,12 +1,11 @@
 import { useState, useEffect, type MouseEvent } from 'react'
-import { getAcademyBySlug, getAcademies, getCommunityAcademyBySlug, getReviews, computeReviewStats } from '../../integrations/supabase/public-client'
+import { getAcademyBySlug, getAcademies, getReviews, computeReviewStats } from '../../integrations/supabase/public-client'
 import type { Academy } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { ShareBar } from '../../shared/components/ShareBar'
 import { BookmarkButton } from '../../shared/components/BookmarkButton'
 import { createAcademySavedItem } from '../../shared/services/savedService'
 import { updatePageSeoMetadata } from '../../shared/utils/seoAndShare'
-import { getCuratedAcademyBySlug, type CuratedAcademy } from '../../shared/data/curatedEntitiesData'
 import ReportListingModal from '../../shared/components/ReportListingModal'
 import VerificationClaimModal from '../../shared/components/VerificationClaimModal'
 import { CommunityReviewsSection } from '../../shared/components/CommunityReviewsSection'
@@ -23,17 +22,16 @@ export interface AcademyDetailPageProps {
 
 export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }: AcademyDetailPageProps) {
   const isServer = typeof window === 'undefined'
-  const initialCurated = getCuratedAcademyBySlug(slug) || getCommunityAcademyBySlug(slug)
-  const [academy, setAcademy] = useState<Academy | CuratedAcademy | null>(initialCurated || null)
+  const [academy, setAcademy] = useState<Academy | null>(null)
   const [related, setRelated] = useState<Academy[]>([])
-  const [loading, setLoading] = useState(!initialCurated && !isServer)
+  const [loading, setLoading] = useState(!isServer)
   const [openFaq, setOpenFaq] = useState<number | null>(0)
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false)
   const [isEnrolModalOpen, setIsEnrolModalOpen] = useState(Boolean(initialEnrolOpen))
   const [isEnquired, setIsEnquired] = useState(() => isAcademyEnquirySubmitted(slug))
-  const [liveRating, setLiveRating] = useState<number>(() => initialCurated?.rating || 4.9)
-  const [liveReviewCount, setLiveReviewCount] = useState<number>(() => initialCurated?.review_count || 128)
+  const [liveRating, setLiveRating] = useState<number>(0)
+  const [liveReviewCount, setLiveReviewCount] = useState<number>(0)
 
   useEffect(() => {
     const onEnquiryUpdated = () => {
@@ -47,17 +45,10 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
 
   useEffect(() => {
     let active = true
-    if (!initialCurated) setLoading(true)
-
+    setLoading(true)
     getAcademyBySlug(slug).then(found => {
       if (!active) return
-      if (found) {
-        setAcademy(found)
-      } else {
-        // Fallback check
-        const curated = getCuratedAcademyBySlug(slug)
-        setAcademy(curated || null)
-      }
+      setAcademy(found ?? null)
       setLoading(false)
     })
 
@@ -71,7 +62,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
     return () => {
       active = false
     }
-  }, [slug, initialCurated])
+  }, [slug])
 
   // Dynamic Community Rating & Review Stats
   useEffect(() => {
@@ -82,11 +73,11 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
         if (active && res.data && res.data.length > 0) {
           const stats = computeReviewStats(res.data)
           if (stats.totalReviews > 0) {
-            const baselineR = initialCurated?.rating || 4.9
-            const baselineC = initialCurated?.review_count || 128
+            const baselineR = academy?.rating ?? 0
+            const baselineC = academy?.review_count ?? 0
             const communitySum = stats.averageRating * stats.totalReviews
-            const totalCount = baselineC + stats.totalReviews - Math.min(stats.totalReviews, 2)
-            const newAvg = Number(((baselineR * baselineC + communitySum) / (baselineC + stats.totalReviews)).toFixed(1))
+            const totalCount = baselineC + stats.totalReviews
+            const newAvg = baselineC > 0 ? Number(((baselineR * baselineC + communitySum) / totalCount).toFixed(1)) : stats.averageRating
             setLiveRating(newAvg)
             setLiveReviewCount(totalCount)
           }
@@ -106,61 +97,31 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
       active = false
       window.removeEventListener('khelgrid:review-added', onReviewAdded)
     }
-  }, [slug, initialCurated?.rating, initialCurated?.review_count])
+  }, [slug, academy?.rating, academy?.review_count])
 
   // SEO & Schema.org Structured Data
   useEffect(() => {
     if (!academy) return
 
-    const pageTitle = `${academy.name} · Sports Academy in ${academy.city} | KhelGrid`
-    const pageDesc = academy.description || `Explore ${academy.name} in ${academy.city}, India. Certified coaching, facilities, age groups, timings, and admission enquiry on KhelGrid.`
+    const pageTitle = `${academy.name} — Sports Academy in ${academy.city} | KhelGrid`
+    const pageDesc = academy.description || `${academy.name} in ${academy.city}. Confirm programmes, coaching, admissions and fees directly with the academy.`
     const pageUrl = `https://khelgrid.com/academies/${academy.slug}`
 
     const jsonLd = {
       '@context': 'https://schema.org',
-      '@graph': [
-        {
-          '@type': 'SportsClub',
-          '@id': `${pageUrl}#club`,
-          name: academy.name,
-          description: pageDesc,
-          url: pageUrl,
-          address: {
-            '@type': 'PostalAddress',
-            addressLocality: academy.city,
-            addressRegion: academy.state || 'India',
-            addressCountry: 'IN',
-            streetAddress: (academy as CuratedAcademy).address || `${academy.name}, ${academy.city}`,
-          },
-          telephone: (academy as CuratedAcademy).phone || undefined,
-          sport: (academy as CuratedAcademy).sport || 'Multi-Sport',
-          priceRange: '₹₹',
-        },
-        {
-          '@type': 'BreadcrumbList',
-          '@id': `${pageUrl}#breadcrumb`,
-          itemListElement: [
-            {
-              '@type': 'ListItem',
-              position: 1,
-              name: 'Home',
-              item: 'https://khelgrid.com',
-            },
-            {
-              '@type': 'ListItem',
-              position: 2,
-              name: 'Sports Academies',
-              item: 'https://khelgrid.com/academies',
-            },
-            {
-              '@type': 'ListItem',
-              position: 3,
-              name: academy.name,
-              item: pageUrl,
-            },
-          ],
-        },
-      ],
+      '@type': 'SportsClub',
+      name: academy.name,
+      description: pageDesc,
+      url: pageUrl,
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: academy.city,
+        ...(academy.state ? { addressRegion: academy.state } : {}),
+        addressCountry: 'IN',
+        ...(academy.address ? { streetAddress: academy.address } : {}),
+      },
+      ...(academy.phone ? { telephone: academy.phone } : {}),
+      ...(academy.sport ? { sport: academy.sport } : {}),
     }
 
     const cleanup = updatePageSeoMetadata({
@@ -171,15 +132,13 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
       keywords: [
         academy.name,
         `${academy.name} ${academy.city}`,
-        `${(academy as CuratedAcademy).sport || 'Sports'} academy in ${academy.city}`,
-        `cricket academy ${academy.city}`,
-        'khelo india academy near me',
-        `sports coaching ${academy.city}`,
+        `${academy.sport || 'Sports'} academy in ${academy.city}`,
         'sports academy admission',
         'youth sports trials',
         'KhelGrid verified academy',
       ],
-      jsonLd,
+      robots: academy.verification_status === 'verified' ? undefined : 'noindex, follow',
+      jsonLd: academy.verification_status === 'verified' ? jsonLd : undefined,
     })
 
     return cleanup
@@ -189,7 +148,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
     return (
       <div className="content-page academy-loading-container" role="status">
         <div className="academy-loading-spinner" />
-        <p>Loading academy profile and verified credentials…</p>
+        <p>Loading published academy details…</p>
       </div>
     )
   }
@@ -216,47 +175,18 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
     )
   }
 
-  const curated = academy as Partial<CuratedAcademy>
-  const sportName = curated.sport || 'Multi-Sport'
-  const fullAddress = curated.address || `${academy.name}, ${academy.city}${academy.state ? `, ${academy.state}` : ''}`
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`
-  const whatsappUrl =
-    curated.public_contact_url ||
-    `https://wa.me/?text=${encodeURIComponent(`Hi, I found ${academy.name} on KhelGrid and would like to enquire about trial sessions and admission.`)}`
+  const sportName = academy.sport || academy.sports?.map(sport => typeof sport === 'string' ? sport : sport.name).join(', ') || 'Sport not specified'
+  const fullAddress = academy.address || [academy.city, academy.state].filter(Boolean).join(', ')
+  const mapsUrl = fullAddress ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}` : undefined
+  const contactUrl = academy.public_contact_url || academy.website_url || undefined
 
-  const facilitiesList = curated.facilities || [
-    'Regulation Playing Ground / Turf',
-    'Floodlights for Evening Batches',
-    'Certified Coaching Staff',
-    'Changing Rooms & Washrooms',
-    'First Aid & Ice Support',
-    'Drinking Water Station',
-    'Player Lockers',
-    'Visitor Parking',
-  ]
+  const facilitiesList = academy.facilities || []
 
-  const ageGroupsList = curated.age_groups || ['Under-10 Grassroots', 'Under-14 Sub-Junior', 'Under-17 Junior', 'Open Senior']
-  const timingsText = curated.timings || 'Morning: 6:00 AM – 8:30 AM | Evening: 4:30 PM – 7:00 PM (Tuesday – Sunday)'
-  const feeText = curated.fee_structure || 'Contact academy directly for current batch fees and trial sessions'
+  const ageGroupsList = academy.age_groups || []
+  const timingsText = academy.timings || 'Not provided'
+  const feeText = academy.fee_structure || 'Contact academy to confirm current fees'
 
-  const faqs = curated.faqs || [
-    {
-      question: `How can I register for a trial session at ${academy.name}?`,
-      answer: `You can reach out directly via WhatsApp using the 'Enquire on WhatsApp' button above or call the front desk. Trial sessions are usually scheduled during weekday morning or evening training slots.`,
-    },
-    {
-      question: `What age groups are accepted for training?`,
-      answer: `${academy.name} accepts boys and girls across ${ageGroupsList.join(', ')}. Athletes are grouped by age category and skill level to ensure appropriate developmental pacing.`,
-    },
-    {
-      question: `What equipment and attire should athletes bring?`,
-      answer: `Athletes should wear standard athletic attire, sport-appropriate shoes (turf shoes or non-marking court shoes as required), shin guards/protective gear, and bring personal hydration bottles.`,
-    },
-    {
-      question: `Are there merit-based scholarships or fee concessions?`,
-      answer: `Outstanding athletes who excel in district and state tournaments or show exceptional potential during trial assessments are eligible for academy fee concessions and equipment sponsorship.`,
-    },
-  ]
+  const faqs = academy.faqs || []
 
   return (
     <article className="content-page academy-detail-page">
@@ -286,7 +216,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
               <SiteIcon name="alert-triangle" size={14} /> Pending Verification
             </span>
           )}
-          {curated.admission_open !== false && (
+          {academy.admission_open === true && (
             <span className="academy-status-open">🟢 Admissions Open</span>
           )}
         </div>
@@ -298,15 +228,17 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
             <SiteIcon name="map-pin" size={16} />
             <span>{academy.city}{academy.state ? `, ${academy.state}` : ''}</span>
           </span>
-          <span className="academy-meta-item">
-            <SiteIcon name="star" size={15} />
-            <span className="academy-rating">{liveRating} ★</span>
-            <span className="academy-reviews">({liveReviewCount} reviews)</span>
-          </span>
-          {curated.head_coach && (
+          {liveReviewCount > 0 && (
+            <span className="academy-meta-item">
+              <SiteIcon name="star" size={15} />
+              <span className="academy-rating">{liveRating} ★</span>
+              <span className="academy-reviews">({liveReviewCount} reviews)</span>
+            </span>
+          )}
+          {academy.head_coach && (
             <span className="academy-meta-item">
               <SiteIcon name="award" size={16} />
-              <span>Head Coach: <strong>{curated.head_coach}</strong></span>
+              <span>Head Coach: <strong>{academy.head_coach}</strong></span>
             </span>
           )}
         </div>
@@ -331,36 +263,30 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
               onClick={() => setIsEnrolModalOpen(true)}
             >
               <SiteIcon name="award" size={16} />
-              <span>Apply for Admission / Free Trial Class</span>
+              <span>Send Admission Enquiry</span>
             </button>
           )}
 
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="academy-btn academy-btn-primary"
-          >
-            <SiteIcon name="message" size={16} />
-            <span>Enquire on WhatsApp</span>
-          </a>
+          {contactUrl && (
+            <a href={contactUrl} target="_blank" rel="noopener noreferrer" className="academy-btn academy-btn-primary">
+              <SiteIcon name="external-link" size={16} />
+              <span>Contact Academy</span>
+            </a>
+          )}
 
-          {curated.phone && (
-            <a href={`tel:${curated.phone.replace(/\s+/g, '')}`} className="academy-btn academy-btn-secondary">
+          {academy.phone && (
+            <a href={`tel:${academy.phone.replace(/\s+/g, '')}`} className="academy-btn academy-btn-secondary">
               <SiteIcon name="phone" size={16} />
               <span>Call Direct</span>
             </a>
           )}
 
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="academy-btn academy-btn-secondary"
-          >
-            <SiteIcon name="map-pin" size={16} />
-            <span>Get Directions</span>
-          </a>
+          {mapsUrl && (
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="academy-btn academy-btn-secondary">
+              <SiteIcon name="map-pin" size={16} />
+              <span>Get Directions</span>
+            </a>
+          )}
 
           {academy.website_url && (
             <a
@@ -432,8 +358,8 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
           <strong className="highlight-value">{feeText}</strong>
         </div>
         <div className="highlight-card">
-          <span className="highlight-label">Curriculum Standard</span>
-          <strong className="highlight-value">Federation Aligned Tactical Progression</strong>
+          <span className="highlight-label">Training Focus</span>
+          <strong className="highlight-value">{academy.curriculum_highlights?.slice(0, 2).join(' · ') || 'Not provided'}</strong>
         </div>
       </section>
 
@@ -444,22 +370,16 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
           <section className="academy-section">
             <h2>About {academy.name}</h2>
             <div className="academy-prose">
-              <p>{academy.description}</p>
-              <p>
-                Athlete development at {academy.name} emphasizes age-appropriate physical conditioning,
-                biomechanically sound skill fundamentals, match intelligence, and sportsman spirit.
-                Trainees receive continuous feedback, tactical evaluations, and opportunities to compete
-                in recognized district, state, and national tournaments.
-              </p>
+              {academy.description && <p>{academy.description}</p>}
             </div>
           </section>
 
           {/* Curriculum Highlights */}
-          {curated.curriculum_highlights && curated.curriculum_highlights.length > 0 && (
+          {academy.curriculum_highlights && academy.curriculum_highlights.length > 0 && (
             <section className="academy-section">
               <h3>Training Curriculum &amp; Methodology</h3>
               <ul className="academy-curriculum-list">
-                {curated.curriculum_highlights.map((point, index) => (
+                {academy.curriculum_highlights.map((point, index) => (
                   <li key={index}>
                     <SiteIcon name="check" size={16} />
                     <span>{point}</span>
@@ -469,8 +389,8 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
             </section>
           )}
 
-          {/* Facilities & Amenities */}
-          <section className="academy-section">
+          {/* Facilities are shown only when supplied in the published record. */}
+          {facilitiesList.length > 0 && <section className="academy-section">
             <h2>Facilities &amp; Infrastructure</h2>
             <div className="academy-facilities-grid">
               {facilitiesList.map((facility, index) => (
@@ -480,7 +400,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
                 </div>
               ))}
             </div>
-          </section>
+          </section>}
 
           {/* Location & Maps Section */}
           <section className="academy-section">
@@ -493,20 +413,17 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
                   <p>{fullAddress}</p>
                 </div>
               </div>
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="academy-btn academy-btn-primary location-directions-btn"
-              >
-                <SiteIcon name="map" size={16} />
-                <span>Open in Google Maps</span>
-              </a>
+              {mapsUrl && (
+                <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="academy-btn academy-btn-primary location-directions-btn">
+                  <SiteIcon name="map" size={16} />
+                  <span>Open in Google Maps</span>
+                </a>
+              )}
             </div>
           </section>
 
-          {/* FAQs Accordion */}
-          <section className="academy-section academy-faqs">
+          {/* FAQs are shown only when supplied in the published record. */}
+          {faqs.length > 0 && <section className="academy-section academy-faqs">
             <h2>Frequently Asked Questions</h2>
             <div className="faq-accordion-list">
               {faqs.map((faq, index) => {
@@ -531,7 +448,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
                 )
               })}
             </div>
-          </section>
+          </section>}
 
           {/* Community Reviews, Ratings & Media Uploads */}
           <CommunityReviewsSection
@@ -549,7 +466,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
           <div className="academy-inquiry-box">
             <h3>Interested in Joining?</h3>
             <p>
-              Apply directly with your Sports CV for batch admission or a complimentary trial session with the coaching staff.
+              Send an enquiry to ask the academy about its programmes, admissions and trial options.
             </p>
 
             {isEnquired ? (
@@ -575,30 +492,27 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
                 onClick={() => setIsEnrolModalOpen(true)}
               >
                 <SiteIcon name="award" size={18} />
-                <span>Apply for Admission / Free Trial</span>
+                <span>Send Admission Enquiry</span>
               </button>
             )}
 
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="academy-btn academy-btn-whatsapp-block"
-            >
-              <SiteIcon name="message" size={18} />
-              <span>Message on WhatsApp</span>
-            </a>
+            {contactUrl && (
+              <a href={contactUrl} target="_blank" rel="noopener noreferrer" className="academy-btn academy-btn-whatsapp-block">
+                <SiteIcon name="external-link" size={18} />
+                <span>Contact Academy</span>
+              </a>
+            )}
 
-            {curated.phone && (
-              <a href={`tel:${curated.phone.replace(/\s+/g, '')}`} className="academy-btn academy-btn-call-block">
+            {academy.phone && (
+              <a href={`tel:${academy.phone.replace(/\s+/g, '')}`} className="academy-btn academy-btn-call-block">
                 <SiteIcon name="phone" size={17} />
-                <span>Call {curated.phone}</span>
+                <span>Call {academy.phone}</span>
               </a>
             )}
 
             <div className="academy-disclaimer-note">
               <SiteIcon name="shield-check" size={14} />
-              <span>Verified KhelGrid Listing · Direct coach access with 0% platform surcharge.</span>
+              <span>Published, source-reviewed listing. Confirm coaching, admission terms and fees directly with the academy.</span>
             </div>
 
             <button

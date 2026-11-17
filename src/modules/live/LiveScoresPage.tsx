@@ -3,7 +3,6 @@ import type { SportsMatch, SportType, MatchStatus, CricketFormat } from './types
 import { liveSportsEngine } from './services/liveSportsEngine';
 import { soundService } from './utils/soundChime';
 import { SiteIcon } from '../../shared/components/SiteIcon';
-import { updatePageSeoMetadata, DEFAULT_KEYWORDS } from '../../shared/utils/seoAndShare';
 import { FanPollWidget } from './components/FanPollWidget';
 import { SpectatorGatewayBar } from './components/SpectatorGatewayBar';
 import { AthleteDiscoveryCard, TurfBookingCard } from './components/ConversionInterstitials';
@@ -23,39 +22,8 @@ const CRICKET_FORMATS: { id: CricketFormat; label: string; icon: string }[] = [
   { id: 'T20', label: 'T20 Matches', icon: '⚡' },
   { id: 'ODI', label: 'ODI Matches', icon: '🏆' },
   { id: 'Test', label: 'Test Series', icon: '🛡️' },
-  { id: 'WPL', label: 'WPL', icon: '🌟' },
+  { id: 'WPL', label: 'WPL 2026', icon: '🌟' },
 ];
-
-export function isExternalScoreboardMatch(match: SportsMatch): boolean {
-  return match.source === 'External ESPN scoreboard feed';
-}
-
-/**
- * Match cards are not canonical event-detail pages and do not currently carry
- * complete, independently verified event dates and venue addresses.
- * Keep only page-level markup until those requirements are met.
- */
-export function buildLiveScoresJsonLd(): Record<string, unknown> {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'WebPage',
-    '@id': 'https://khelgrid.com/live#webpage',
-    url: 'https://khelgrid.com/live',
-    name: 'Live Sports Scores & Match Centre · KhelGrid',
-    description: 'Follow cricket and football score updates when connected scoreboard feeds provide current data.',
-    isPartOf: {
-      '@type': 'WebSite',
-      '@id': 'https://khelgrid.com/#website',
-      name: 'KhelGrid',
-      url: 'https://khelgrid.com',
-    },
-    about: [
-      { '@type': 'Thing', name: 'Cricket' },
-      { '@type': 'Thing', name: 'Football' },
-      { '@type': 'Thing', name: 'Live Sports Scores' },
-    ],
-  };
-}
 
 interface LiveScoresPageProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void;
@@ -164,36 +132,14 @@ export default function LiveScoresPage({ onNavigate }: LiveScoresPageProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Only external scoreboard data may influence search metadata. Community-entered
-  // scores remain visible in the UI but are not treated as independently verified feed data.
+  // Dynamic document title sync
   useEffect(() => {
-    const liveMatch = matches.find((match) => match.status === 'LIVE' && isExternalScoreboardMatch(match));
-    const title = liveMatch
-      ? `(LIVE) ${liveMatch.teamA.code} ${liveMatch.teamA.score} vs ${liveMatch.teamB.code} ${liveMatch.teamB.score} · Live Score | KhelGrid`
-      : 'Live Sports Scores & Match Centre · KhelGrid';
-    const description = liveMatch
-      ? `Current external scoreboard update: ${liveMatch.teamA.name} ${liveMatch.teamA.score} vs ${liveMatch.teamB.name} ${liveMatch.teamB.score} in ${liveMatch.tournament}. Match status and score may change as the source feed updates.`
-      : 'Follow cricket and football score updates when connected scoreboard feeds provide current data. Community scorekeeper entries are separate from external scoreboard results.';
-
-    const cleanup = updatePageSeoMetadata({
-      title,
-      description,
-      canonicalUrl: 'https://khelgrid.com/live',
-      // Keep the route-level exclusion even when live score updates refresh metadata.
-      robots: 'noindex, follow',
-      keywords: [
-        'live cricket score',
-        'live football score',
-        'live sports scores india',
-        'cricket match centre',
-        'sports score updates',
-        'लाइव क्रिकेट स्कोर',
-        'लाइव स्कोर',
-        ...DEFAULT_KEYWORDS,
-      ],
-      jsonLd: buildLiveScoresJsonLd(),
-    });
-    return cleanup;
+    const liveMatch = matches.find((m) => m.status === 'LIVE');
+    if (liveMatch) {
+      document.title = `(LIVE) ${liveMatch.teamA.code} ${liveMatch.teamA.score} vs ${liveMatch.teamB.code} ${liveMatch.teamB.score} · KhelGrid`;
+    } else {
+      document.title = 'Live Scores & Match Center · KhelGrid';
+    }
   }, [matches]);
 
   // Sound toggle handler
@@ -290,7 +236,7 @@ export default function LiveScoresPage({ onNavigate }: LiveScoresPageProps) {
         <p className="eyebrow">KHELGRID · LIVE SPORTS DATA</p>
         <h1>Live Scores & Match Center</h1>
         <p className="live-intro">
-          Follow cricket and football score updates when connected scoreboard feeds provide current data. Community scorekeeper entries are separate from external scoreboard results.
+          Real-time international and national scores, ball-by-ball fixtures, and verified grassroots pathways. Track live matches or step onto the turf yourself.
         </p>
       </header>
 
@@ -325,9 +271,9 @@ export default function LiveScoresPage({ onNavigate }: LiveScoresPageProps) {
             </span>
 
             {isLiveFeedConnected && (
-              <span className="live-btn is-active" title="Connected to external scoreboard feed">
+              <span className="live-btn is-active" title="Connected to official scoreboard feed">
                 <SiteIcon name="activity" size={13} />
-                <span>External Feed {lastUpdated ? `(${lastUpdated})` : ''}</span>
+                <span>Live Feed {lastUpdated ? `(${lastUpdated})` : ''}</span>
               </span>
             )}
 
@@ -578,17 +524,6 @@ export default function LiveScoresPage({ onNavigate }: LiveScoresPageProps) {
           </div>
         </div>
       </div>
-
-      {/* STATUTORY NOMINATIVE FAIR USE & TRADEMARK LEGAL NOTICE */}
-      <footer className="live-scores-legal-card" role="note" aria-label="Statutory Nominative Fair Use and Trademark Notice">
-        <div className="live-scores-legal-badge">
-          <SiteIcon name="shield-check" size={14} />
-          <span>Statutory Nominative Fair Use &amp; Trademark Attribution Notice</span>
-        </div>
-        <p className="live-scores-legal-text">
-          All tournament designations, series marks, team names, logos, and athletic federation identifiers (including WPL, ICC, BCCI, IPL, and franchise team names) are the intellectual property of their respective governing bodies and commercial rights holders. KhelGrid displays real-time match scores, ball-by-ball commentary, and match statistics strictly for factual informational, sports journalism, and public grassroots awareness under the <strong>Doctrine of Nominative Fair Use (Section 30 of the Indian Trade Marks Act, 1999)</strong> and <strong>Current Events Reporting (Section 52 of the Copyright Act, 1957)</strong>. KhelGrid is an independent digital sports platform and is not affiliated with, sponsored by, or officially endorsed by the Board of Control for Cricket in India (BCCI), International Cricket Council (ICC), or any tournament franchise.
-        </p>
-      </footer>
 
       {/* 11. MATCH DETAIL MODAL */}
       <MatchDetailModal
