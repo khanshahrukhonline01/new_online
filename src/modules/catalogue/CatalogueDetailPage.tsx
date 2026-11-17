@@ -11,6 +11,11 @@ import './catalogue-detail.css'
 type Kind = 'sport' | 'opportunity' | 'venue'
 type RecordValue = Sport | Opportunity | Venue
 
+export function resolveCatalogueRecordBySlug<T extends { slug: string }>(records: readonly T[], slug: string): T | undefined {
+  return records.find(item => item.slug === slug) ??
+    records.find(item => item.slug.replace(/^t-/, '') === slug.replace(/^t-/, ''))
+}
+
 export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: string }) {
   const [result, setResult] = useState<CatalogueResult<RecordValue> | { status: 'loading'; data: [] }>({ status: 'loading', data: [] })
   useEffect(() => {
@@ -20,10 +25,9 @@ export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: 
     return () => { active = false }
   }, [kind])
   const record = result.status === 'ready'
-    ? result.data.find(item => item.slug === slug) ??
-      (kind === 'opportunity'
-        ? result.data.find(item => item.slug.replace(/^t-/, '') === slug.replace(/^t-/, ''))
-        : undefined)
+    ? (kind === 'opportunity'
+        ? resolveCatalogueRecordBySlug(result.data, slug)
+        : result.data.find(item => item.slug === slug))
     : undefined
 
   useEffect(() => {
@@ -108,7 +112,7 @@ export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: 
   </section>
 }
 
-function OpportunityDetail({ item }: { item: Opportunity }) {
+export function OpportunityDetail({ item }: { item: Opportunity }) {
   const date = (value: string | null) => {
     if (!value) return 'Not provided'
     const parsed = new Date(value)
