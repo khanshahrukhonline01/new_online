@@ -23,6 +23,7 @@ VALUES ('Existing pending submission', 'sports-biomechanics', 'Existing Author',
         'Existing Institute', 'Existing abstract preserved during additive schema migration.');
 
 \ir ../../supabase/migrations/20261117130000_khelchronicle_submission_and_publication_schema.sql
+\ir ../../supabase/migrations/20261117140000_khelchronicle_intake_validation.sql
 
 DO $$
 DECLARE
@@ -40,7 +41,7 @@ BEGIN
     ('submission_id'),('article_type'),('orcid'),('co_authors'),('keywords'),
     ('full_text_or_url'),('supplementary_url'),('data_availability'),
     ('ethics_clearance_number'),('human_ethics_confirmed'),('minor_consent_confirmed'),
-    ('license_type'),('updated_at'),('reviewed_at'),('reviewed_by'),('review_notes')
+    ('license_type'),('license_confirmed'),('updated_at'),('reviewed_at'),('reviewed_by'),('review_notes')
   ) AS required(column_name)
   WHERE NOT EXISTS (
     SELECT 1 FROM information_schema.columns c
@@ -59,7 +60,8 @@ BEGIN
      OR position('human_ethics_confirmed' in insert_check)=0
      OR position('minor_consent_confirmed' in insert_check)=0
      OR position('full_text_or_url' in insert_check)=0
-     OR position('license_type' in insert_check)=0 THEN
+     OR position('license_type' in insert_check)=0
+     OR position('license_confirmed' in insert_check)=0 THEN
     RAISE EXCEPTION 'Public Chronicle intake policy does not enforce required fields';
   END IF;
 
@@ -87,6 +89,23 @@ BEGIN
     RAISE EXCEPTION 'Chronicle admin paper publication policy is missing';
   END IF;
 
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgrelid='public.chronicle_submissions'::regclass
+      AND tgname='chronicle_submission_review_guard' AND NOT tgisinternal
+  ) THEN
+    RAISE EXCEPTION 'Chronicle submission approval guard trigger is missing';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgrelid='public.chronicle_papers'::regclass
+      AND tgname='chronicle_paper_publication_guard' AND NOT tgisinternal
+  ) THEN
+    RAISE EXCEPTION 'Chronicle paper publication guard trigger is missing';
+  END IF;
+
   IF NOT has_table_privilege('anon','public.chronicle_submissions','INSERT')
      OR has_table_privilege('anon','public.chronicle_submissions','SELECT') THEN
     RAISE EXCEPTION 'Public submission role grants are too broad or too restrictive';
@@ -95,6 +114,43 @@ BEGIN
   IF NOT has_table_privilege('authenticated','public.chronicle_submissions','SELECT')
      OR NOT has_table_privilege('authenticated','public.chronicle_submissions','UPDATE') THEN
     RAISE EXCEPTION 'Authenticated admin role lacks Chronicle moderation grants';
+  END IF;
+END
+$$;
+
+
+DO $$
+DECLARE denied boolean := false;
+BEGIN
+  BEGIN
+    UPDATE public.chronicle_submissions
+    SET status='approved'
+    WHERE title='Existing pending submission';
+  EXCEPTION WHEN OTHERS THEN
+    IF position('cannot be approved' in SQLERRM) > 0 THEN
+      denied := true;
+    ELSE
+      RAISE;
+    END IF;
+  END;
+  IF NOT denied THEN
+    RAISE EXCEPTION 'Legacy Chronicle submission was approved without required evidence';
+  END IF;
+
+  denied := false;
+  BEGIN
+    UPDATE public.chronicle_papers
+    SET publication_status='published'
+    WHERE paper_id='KG-2026-001';
+  EXCEPTION WHEN OTHERS THEN
+    IF position('cannot be published' in SQLERRM) > 0 THEN
+      denied := true;
+    ELSE
+      RAISE;
+    END IF;
+  END;
+  IF NOT denied THEN
+    RAISE EXCEPTION 'Incomplete Chronicle paper was published';
   END IF;
 END
 $$;
