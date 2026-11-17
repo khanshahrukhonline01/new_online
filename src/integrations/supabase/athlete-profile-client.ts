@@ -237,6 +237,31 @@ export async function getAthleteProfile(_username: string): Promise<AthleteProfi
 
 export const getAthleteProfileByUsername = getAthleteProfile
 
+
+/**
+ * Coach endorsements are intentionally disabled until a trusted, authenticated
+ * server workflow can validate coach identity and enforce moderation.
+ *
+ * Never create a local endorsement or mark an athlete verified from browser input.
+ */
+export interface SaveCoachEndorsementInput {
+  username: string
+  coachName: string
+  coachLicense: string
+  coachDesignation?: string
+  organizationOrAcademy?: string
+  endorsementStatement?: string
+}
+
+export async function saveCoachEndorsement(
+  _input: SaveCoachEndorsementInput,
+): Promise<{ status: 'endorsed'; profile: AthleteProfile; message: string }> {
+  throw new Error(
+    'Coach endorsements are temporarily paused until secure coach identity verification is available. No endorsement or verification badge has been recorded.',
+  )
+}
+
+
 export type PublishProfileInput = Omit<AthleteProfile, 'id' | 'createdAt' | 'updatedAt' | 'verificationStatus'>
 
 export type PublishProfileResult =
