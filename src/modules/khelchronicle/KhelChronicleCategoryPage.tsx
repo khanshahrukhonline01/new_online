@@ -45,6 +45,10 @@ export function KhelChronicleCategoryPage({ categorySlug, onNavigate }: KhelChro
     }
   }
 
+  if (!category) {
+    return <div className="kc-root" style={{ padding: '48px 16px', textAlign: 'center' }}><h2>Research discipline not found</h2><a href="/khelchronicle">Back to KhelChronicle</a></div>
+  }
+
   return (
     <div className="kc-root">
       {/* Breadcrumb */}
@@ -118,7 +122,7 @@ export function KhelChronicleCategoryPage({ categorySlug, onNavigate }: KhelChro
                   <span className="kc-paper-ver-tag">{paper.version}</span>
                   <span className="kc-paper-category-tag">{paper.categoryName}</span>
                   <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-                    Test Data
+                    Published manuscript
                   </span>
                   <span className="kc-paper-date">{paper.datePublished}</span>
                 </div>
