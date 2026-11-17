@@ -1,3 +1,4 @@
+import { getSupabaseClient } from './realtime-client'
 import {
   RESEARCH_CATEGORIES,
   type ResearchAuthor,
@@ -558,7 +559,14 @@ export interface ChronicleModerationSubmission {
   humanEthicsConfirmed: boolean
   minorConsentConfirmed: boolean
   licenseType?: string
-  status: 'pending_review' | 'under_review' | 'changes_requested' | 'approved' | 'published' | 'rejected'
+  licenseConfirmed?: boolean
+  dataAvailability?: string
+  ethicsClearanceNumber?: string
+  supplementaryUrl?: string
+  reviewNotes?: string
+  reviewedBy?: string
+  reviewedAt?: string
+  status: 'pending_review' | 'under_review' | 'revision_requested' | 'approved' | 'published' | 'rejected'
   editorialNotes?: string
   rejectionReason?: string
   correctionRequest?: string
@@ -680,199 +688,189 @@ export const DEFAULT_MODERATION_SUBMISSIONS: ChronicleModerationSubmission[] = [
 let inMemoryModerationQueue: ChronicleModerationSubmission[] = [...DEFAULT_MODERATION_SUBMISSIONS]
 
 export function getLocalModerationQueue(): ChronicleModerationSubmission[] {
-  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
-    try {
-      const raw = localStorage.getItem(CHRONICLE_QUEUE_STORAGE_KEY)
-      if (!raw) {
-        localStorage.setItem(CHRONICLE_QUEUE_STORAGE_KEY, JSON.stringify(DEFAULT_MODERATION_SUBMISSIONS))
-        return [...DEFAULT_MODERATION_SUBMISSIONS]
-      }
-      const parsed = JSON.parse(raw)
-      return Array.isArray(parsed) && parsed.length > 0 ? parsed : [...DEFAULT_MODERATION_SUBMISSIONS]
-    } catch {
-      return inMemoryModerationQueue
-    }
-  }
-  return inMemoryModerationQueue
+  // Legacy localStorage fixtures are intentionally not used for moderation.
+  // Existing browser data is left untouched, but never presented as a real queue.
+  return []
 }
 
-export function saveLocalModerationQueue(queue: ChronicleModerationSubmission[]): void {
-  inMemoryModerationQueue = queue
-  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
-    try {
-      localStorage.setItem(CHRONICLE_QUEUE_STORAGE_KEY, JSON.stringify(queue))
-    } catch {
-      // ignore
-    }
+export function saveLocalModerationQueue(_queue: ChronicleModerationSubmission[]): void {
+  // No local persistence: the moderation queue is authoritative in Supabase.
+}
+
+function mapDbRowToChronicleSubmission(row: Record<string, unknown>): ChronicleModerationSubmission {
+  const category = String(row.category || '')
+  const categoryName = RESEARCH_CATEGORIES.find(item => item.slug === category)?.name || category
+  return {
+    id: String(row.id || ''),
+    submissionId: String(row.submission_id || ''),
+    title: String(row.title || ''),
+    category,
+    categoryName,
+    authorName: String(row.author_name || ''),
+    authorEmail: String(row.author_email || ''),
+    affiliation: String(row.affiliation || ''),
+    orcid: row.orcid ? String(row.orcid) : undefined,
+    coAuthors: row.co_authors ? String(row.co_authors) : undefined,
+    abstract: String(row.abstract || ''),
+    keywords: row.keywords ? String(row.keywords) : undefined,
+    fullTextOrUrl: row.full_text_or_url ? String(row.full_text_or_url) : undefined,
+    supplementaryUrl: row.supplementary_url ? String(row.supplementary_url) : undefined,
+    dataAvailability: row.data_availability ? String(row.data_availability) : undefined,
+    ethicsClearanceNumber: row.ethics_clearance_number ? String(row.ethics_clearance_number) : undefined,
+    humanEthicsConfirmed: row.human_ethics_confirmed === true,
+    minorConsentConfirmed: row.minor_consent_confirmed === true,
+    licenseType: row.license_type ? String(row.license_type) : undefined,
+    licenseConfirmed: row.license_confirmed === true,
+    status: String(row.status || 'pending_review') as ChronicleModerationSubmission['status'],
+    editorialNotes: row.review_notes ? String(row.review_notes) : undefined,
+    reviewNotes: row.review_notes ? String(row.review_notes) : undefined,
+    reviewedBy: row.reviewed_by ? String(row.reviewed_by) : undefined,
+    reviewedAt: row.reviewed_at ? String(row.reviewed_at) : undefined,
+    createdAt: String(row.created_at || ''),
+    updatedAt: String(row.updated_at || row.created_at || ''),
   }
 }
 
-/**
- * Fetch KhelChronicle manuscripts for the editorial moderation desk.
- */
-export async function getChronicleModerationQueue(
-  filters?: ChronicleModerationQueueFilters
-): Promise<ChronicleModerationQueueResult> {
-  const queue = getLocalModerationQueue()
+function buildChronicleQueueResult(queue: ChronicleModerationSubmission[], filters?: ChronicleModerationQueueFilters): ChronicleModerationQueueResult {
   let filtered = queue
-
   if (filters?.status && filters.status !== 'all') {
-    filtered = filtered.filter(s => s.status === filters.status)
+    const status = filters.status === 'changes_requested' ? 'revision_requested' : filters.status
+    filtered = filtered.filter(item => item.status === status)
   }
   if (filters?.category && filters.category !== 'all') {
-    filtered = filtered.filter(s => s.category === filters.category)
+    filtered = filtered.filter(item => item.category === filters.category)
   }
-  if (filters?.search && filters.search.trim()) {
-    const q = filters.search.toLowerCase()
-    filtered = filtered.filter(s =>
-      s.title.toLowerCase().includes(q) ||
-      s.authorName.toLowerCase().includes(q) ||
-      s.affiliation.toLowerCase().includes(q) ||
-      s.submissionId.toLowerCase().includes(q)
+  if (filters?.search?.trim()) {
+    const q = filters.search.toLowerCase().trim()
+    filtered = filtered.filter(item =>
+      item.title.toLowerCase().includes(q) ||
+      item.authorName.toLowerCase().includes(q) ||
+      item.affiliation.toLowerCase().includes(q) ||
+      item.submissionId.toLowerCase().includes(q)
     )
   }
 
   return {
     submissions: filtered,
     stats: {
-      pendingCount: queue.filter(s => s.status === 'pending_review').length,
-      underReviewCount: queue.filter(s => s.status === 'under_review').length,
-      changesRequestedCount: queue.filter(s => s.status === 'changes_requested').length,
-      approvedCount: queue.filter(s => s.status === 'approved').length,
-      publishedCount: queue.filter(s => s.status === 'published').length,
-      rejectedCount: queue.filter(s => s.status === 'rejected').length,
+      pendingCount: queue.filter(item => item.status === 'pending_review').length,
+      underReviewCount: queue.filter(item => item.status === 'under_review').length,
+      changesRequestedCount: queue.filter(item => item.status === 'revision_requested').length,
+      approvedCount: queue.filter(item => item.status === 'approved').length,
+      publishedCount: queue.filter(item => item.status === 'published').length,
+      rejectedCount: queue.filter(item => item.status === 'rejected').length,
       totalCount: queue.length,
     },
   }
 }
 
 /**
- * Claim or start review for a submitted manuscript.
+ * Fetch the private editorial queue from Supabase. RLS allows only authorized
+ * KhelGrid administrators to read these records; no local/demo fallback exists.
  */
-export async function startManuscriptReview(
-  id: string,
-  reviewerName = 'Authorized Editorial Moderator'
-): Promise<ChronicleModerationSubmission> {
-  const queue = getLocalModerationQueue()
-  const index = queue.findIndex(s => s.id === id || s.submissionId === id)
-  if (index === -1) throw new Error('Manuscript submission not found.')
+export async function getChronicleModerationQueue(
+  filters?: ChronicleModerationQueueFilters
+): Promise<ChronicleModerationQueueResult> {
+  const client = getSupabaseClient()
+  if (!client) throw new Error('The development authentication service is not configured.')
 
-  queue[index] = {
-    ...queue[index],
-    status: 'under_review',
-    assignedEditor: reviewerName,
-    updatedAt: new Date().toISOString(),
-  }
-  saveLocalModerationQueue(queue)
-  return queue[index]
+  const { data: authData, error: authError } = await client.auth.getUser()
+  if (authError || !authData.user) throw new Error('Sign in with an authorized administrator account to view the Chronicle queue.')
+
+  const { data, error } = await client
+    .from('chronicle_submissions')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(error.message || 'Could not load the private Chronicle moderation queue.')
+  const queue = (data || []).map(row => mapDbRowToChronicleSubmission(row as Record<string, unknown>))
+  return buildChronicleQueueResult(queue, filters)
 }
 
-/**
- * Request corrections or revisions from the submitting author.
- */
+/** Claim or start review for a submitted manuscript. */
+export async function startManuscriptReview(
+  id: string,
+  _reviewerName = 'Authorized Editorial Moderator'
+): Promise<ChronicleModerationSubmission> {
+  const client = getSupabaseClient()
+  if (!client) throw new Error('The development authentication service is not configured.')
+  const { data, error } = await client
+    .from('chronicle_submissions')
+    .update({ status: 'under_review' })
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message || 'Could not start manuscript review.')
+  return mapDbRowToChronicleSubmission(data as Record<string, unknown>)
+}
+
+/** Request author revisions and retain the reason in the private review notes. */
 export async function requestManuscriptCorrections(
   id: string,
   message: string,
-  notes?: string
+  _notes?: string
 ): Promise<ChronicleModerationSubmission> {
   if (!message || message.trim().length < 10) {
     throw new Error('A revision message of at least 10 characters is required for the author.')
   }
-  const queue = getLocalModerationQueue()
-  const index = queue.findIndex(s => s.id === id || s.submissionId === id)
-  if (index === -1) throw new Error('Manuscript submission not found.')
-
-  queue[index] = {
-    ...queue[index],
-    status: 'changes_requested',
-    correctionRequest: message.trim(),
-    editorialNotes: notes?.trim() || queue[index].editorialNotes,
-    updatedAt: new Date().toISOString(),
-  }
-  saveLocalModerationQueue(queue)
-  return queue[index]
+  const client = getSupabaseClient()
+  if (!client) throw new Error('The development authentication service is not configured.')
+  const { data, error } = await client
+    .from('chronicle_submissions')
+    .update({ status: 'revision_requested', review_notes: message.trim() })
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message || 'Could not request manuscript revisions.')
+  return mapDbRowToChronicleSubmission(data as Record<string, unknown>)
 }
 
-/**
- * Approve a manuscript for publication.
- */
+/** Approve only after the database trigger validates all intake evidence. */
 export async function approveManuscript(
   id: string,
   notes?: string
 ): Promise<ChronicleModerationSubmission> {
-  const queue = getLocalModerationQueue()
-  const index = queue.findIndex(s => s.id === id || s.submissionId === id)
-  if (index === -1) throw new Error('Manuscript submission not found.')
-
-  queue[index] = {
-    ...queue[index],
-    status: 'approved',
-    editorialNotes: notes?.trim() || queue[index].editorialNotes,
-    updatedAt: new Date().toISOString(),
-  }
-  saveLocalModerationQueue(queue)
-  return queue[index]
+  const client = getSupabaseClient()
+  if (!client) throw new Error('The development authentication service is not configured.')
+  const update = notes?.trim() ? { status: 'approved', review_notes: notes.trim() } : { status: 'approved' }
+  const { data, error } = await client
+    .from('chronicle_submissions')
+    .update(update)
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message || 'The manuscript could not be approved. Check the required consent and manuscript fields.')
+  return mapDbRowToChronicleSubmission(data as Record<string, unknown>)
 }
 
-/**
- * Reject a manuscript with explicit reason.
- */
+/** Reject with an explicit editorial reason. */
 export async function rejectManuscript(
   id: string,
   reason: string,
-  notes?: string
+  _notes?: string
 ): Promise<ChronicleModerationSubmission> {
-  if (!reason || !reason.trim()) {
-    throw new Error('A reason for rejection must be provided to the author.')
-  }
-  const queue = getLocalModerationQueue()
-  const index = queue.findIndex(s => s.id === id || s.submissionId === id)
-  if (index === -1) throw new Error('Manuscript submission not found.')
-
-  queue[index] = {
-    ...queue[index],
-    status: 'rejected',
-    rejectionReason: reason.trim(),
-    editorialNotes: notes?.trim() || queue[index].editorialNotes,
-    updatedAt: new Date().toISOString(),
-  }
-  saveLocalModerationQueue(queue)
-  return queue[index]
+  if (!reason || !reason.trim()) throw new Error('A reason for rejection must be provided to the author.')
+  const client = getSupabaseClient()
+  if (!client) throw new Error('The development authentication service is not configured.')
+  const { data, error } = await client
+    .from('chronicle_submissions')
+    .update({ status: 'rejected', review_notes: reason.trim() })
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message || 'Could not reject manuscript submission.')
+  return mapDbRowToChronicleSubmission(data as Record<string, unknown>)
 }
 
 /**
- * Formally publish an approved manuscript into the KhelChronicle research archive.
+ * Public publishing is intentionally disabled until a complete manuscript
+ * editor can create all required publication metadata. Never mark a local
+ * submission as published without inserting a real, complete paper record.
  */
 export async function publishManuscriptToArchive(
-  id: string,
-  targetSlug?: string,
-  targetPaperId?: string
+  _id: string,
+  _targetSlug?: string,
+  _targetPaperId?: string
 ): Promise<{ success: boolean; paperId: string; slug: string }> {
-  const queue = getLocalModerationQueue()
-  const index = queue.findIndex(s => s.id === id || s.submissionId === id)
-  if (index === -1) throw new Error('Manuscript submission not found.')
-
-  const sub = queue[index]
-  const generatedPaperId = targetPaperId?.trim() || `KG-2026-00${Math.floor(Math.random() * 90) + 10}`
-  const generatedSlug =
-    targetSlug?.trim() ||
-    sub.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-
-  queue[index] = {
-    ...sub,
-    status: 'published',
-    publishedPaperId: generatedPaperId,
-    publishedSlug: generatedSlug,
-    updatedAt: new Date().toISOString(),
-  }
-  saveLocalModerationQueue(queue)
-
-  return {
-    success: true,
-    paperId: generatedPaperId,
-    slug: generatedSlug,
-  }
+  throw new Error('Public publishing is not enabled yet. A complete manuscript publication editor is required before this submission can appear in the archive.')
 }
