@@ -8,6 +8,7 @@ CREATE TABLE public.chronicle_papers (
   category text NOT NULL,
   author_name text NOT NULL,
   author_affiliation text NOT NULL,
+  date_published date,
   summary text NOT NULL,
   publication_status text NOT NULL DEFAULT 'published'
 );
