@@ -556,6 +556,7 @@ export interface ChronicleModerationSubmission {
   abstract: string
   keywords?: string
   fullTextOrUrl?: string
+  articleType?: string
   humanEthicsConfirmed: boolean
   minorConsentConfirmed: boolean
   licenseType?: string
@@ -714,6 +715,7 @@ function mapDbRowToChronicleSubmission(row: Record<string, unknown>): ChronicleM
     abstract: String(row.abstract || ''),
     keywords: row.keywords ? String(row.keywords) : undefined,
     fullTextOrUrl: row.full_text_or_url ? String(row.full_text_or_url) : undefined,
+    articleType: row.article_type ? String(row.article_type) : undefined,
     supplementaryUrl: row.supplementary_url ? String(row.supplementary_url) : undefined,
     dataAvailability: row.data_availability ? String(row.data_availability) : undefined,
     ethicsClearanceNumber: row.ethics_clearance_number ? String(row.ethics_clearance_number) : undefined,
