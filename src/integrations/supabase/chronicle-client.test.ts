@@ -190,6 +190,7 @@ describe('KhelChronicle Supabase database integration client', () => {
               category_slug: 'sports-biomechanics',
               author_name: 'Dr. Test Researcher',
               author_affiliation: 'Test Sports Science Institute',
+              authors: [{ id: 'author-1', name: 'Dr. Test Researcher', slug: 'dr-test-researcher', affiliation: 'Test Sports Science Institute', role: 'Author', bio: 'Test author.' }],
               publication_status: 'published',
               date_published: '2026-10-24',
               version: 'v1.1',
