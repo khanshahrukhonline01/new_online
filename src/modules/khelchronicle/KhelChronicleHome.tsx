@@ -191,7 +191,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
           onClick={() => setSelectedCategory('all')}
         >
           <span>All Disciplines</span>
-          <small>({RESEARCH_PAPERS.length})</small>
+          <small>({papers.length})</small>
         </button>
         {RESEARCH_CATEGORIES.map(cat => {
           const count = papers.filter(p => p.category === cat.slug).length
@@ -303,7 +303,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
               : `${RESEARCH_CATEGORIES.find(c => c.slug === selectedCategory)?.name || 'Discipline'} Preprints`}
           </h2>
           <span style={{ fontSize: '13px', color: '#64748b' }}>
-            Showing {filteredPapers.length} of {RESEARCH_PAPERS.length} papers
+            Showing {filteredPapers.length} of {papers.length} papers
           </span>
         </div>
 
