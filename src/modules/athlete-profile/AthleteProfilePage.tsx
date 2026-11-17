@@ -1,6 +1,6 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import type { AthleteProfile } from '../../shared/domain'
-import { getAthleteProfile, SHOWCASE_ATHLETE_PROFILES, normalizeUsername } from '../../integrations/supabase/athlete-profile-client'
+import { getAthleteProfile } from '../../integrations/supabase/athlete-profile-client'
 import { PlayerCard } from './PlayerCard'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { SportIcon } from '../../shared/sports/sportIcons'
@@ -12,9 +12,7 @@ export interface AthleteProfilePageProps {
 }
 
 export default function AthleteProfilePage({ username, onNavigate }: AthleteProfilePageProps) {
-  const [profile, setProfile] = useState<AthleteProfile | null | undefined>(
-    () => SHOWCASE_ATHLETE_PROFILES[normalizeUsername(username)] ?? undefined,
-  )
+  const [profile, setProfile] = useState<AthleteProfile | null | undefined>(undefined)
 
   useEffect(() => {
     let active = true
