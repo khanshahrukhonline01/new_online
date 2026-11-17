@@ -1105,8 +1105,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       className="kc-checkbox-input"
                     />
                     <div>
-                      <strong>Human Subjects &amp; Ethics Declaration *</strong>: I confirm this research was conducted
-                      in compliance with the Declaration of Helsinki and Institutional Ethics Committee clearance.
+                      <strong>Human Subjects &amp; Ethics Declaration *</strong>: I confirm that human-participant research has appropriate IEC/IRB clearance, or that formal review is documented as not applicable.
                     </div>
                   </label>
 
@@ -1119,9 +1118,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       className="kc-checkbox-input"
                     />
                     <div>
-                      <strong>Youth &amp; Minor Athletes Protection *</strong>: If research involves junior/school
-                      athletes under 18 years, informed written parental/guardian consent was documented in accordance
-                      with Indian POCSO and anti-fraud guidelines.
+                      <strong>Youth &amp; Minor Athletes Protection *</strong>: I confirm either that no participants under 18 are included, or that informed written parental/guardian consent is documented for every minor participant, in accordance with applicable Indian law.
                     </div>
                   </label>
 
