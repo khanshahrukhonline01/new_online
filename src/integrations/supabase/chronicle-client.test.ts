@@ -278,71 +278,39 @@ describe('KhelChronicle Supabase database integration client', () => {
   })
 
   describe('KhelChronicle Editorial Moderation Desk', () => {
-    it('fetches default moderation queue with stats and baseline submissions', async () => {
+    it('requires the authenticated Supabase database and never falls back to local demo submissions', async () => {
       const client = await loadClient('', '')
-      const queue = await client.getChronicleModerationQueue()
-      expect(queue.submissions.length).toBeGreaterThanOrEqual(4)
-      expect(queue.stats.totalCount).toBeGreaterThanOrEqual(4)
-      expect(queue.stats.pendingCount).toBeGreaterThanOrEqual(1)
-      expect(queue.submissions.some(s => s.submissionId === 'KG-SUB-KC82A1-94F2')).toBe(true)
+      await expect(client.getChronicleModerationQueue()).rejects.toThrow('not configured')
+      expect(client.getLocalModerationQueue()).toEqual([])
     })
 
-    it('filters moderation queue by status, category, and keyword search', async () => {
+    it('requires a meaningful revision message', async () => {
       const client = await loadClient('', '')
-      const pending = await client.getChronicleModerationQueue({ status: 'pending_review' })
-      expect(pending.submissions.every(s => s.status === 'pending_review')).toBe(true)
-
-      const biomech = await client.getChronicleModerationQueue({ category: 'sports-biomechanics' })
-      expect(biomech.submissions.every(s => s.category === 'sports-biomechanics')).toBe(true)
-
-      const search = await client.getChronicleModerationQueue({ search: 'Tenzing' })
-      expect(search.submissions.length).toBe(1)
-      expect(search.submissions[0].authorName).toContain('Tenzing Norbu')
+      await expect(client.requestManuscriptCorrections('submission-id', 'Short')).rejects.toThrow('at least 10 characters')
     })
 
-    it('supports full lifecycle: review, request corrections, approve, reject, and publish', async () => {
+    it('requires a rejection reason', async () => {
       const client = await loadClient('', '')
-      const queue = await client.getChronicleModerationQueue()
-      const target = queue.submissions[0]
-
-      // Start review
-      const underReview = await client.startManuscriptReview(target.id, 'Dr. Editor')
-      expect(underReview.status).toBe('under_review')
-      expect(underReview.assignedEditor).toBe('Dr. Editor')
-
-      // Request corrections (validation: at least 10 chars)
-      await expect(client.requestManuscriptCorrections(target.id, 'Short')).rejects.toThrow('at least 10 characters')
-      const corrections = await client.requestManuscriptCorrections(target.id, 'Please update the IRB ethics clearance number.')
-      expect(corrections.status).toBe('changes_requested')
-      expect(corrections.correctionRequest).toContain('IRB ethics clearance')
-
-      // Approve
-      const approved = await client.approveManuscript(target.id, 'Rigorous study.')
-      expect(approved.status).toBe('approved')
-
-      // Publish to archive
-      const published = await client.publishManuscriptToArchive(target.id, 'himalayan-track-adaptation', 'KG-2026-006')
-      expect(published.success).toBe(true)
-      expect(published.paperId).toBe('KG-2026-006')
-      expect(published.slug).toBe('himalayan-track-adaptation')
-
-      // Reject (validation: reason required)
-      await expect(client.rejectManuscript(target.id, '')).rejects.toThrow('reason for rejection must be provided')
-      const rejected = await client.rejectManuscript(target.id, 'Outside the scope of sports science.')
-      expect(rejected.status).toBe('rejected')
-      expect(rejected.rejectionReason).toContain('Outside the scope')
+      await expect(client.rejectManuscript('submission-id', '')).rejects.toThrow('reason for rejection')
     })
 
-    it('does not save manuscript submissions locally when the database is unconfigured', async () => {
+    it('does not allow publication until a complete manuscript editor exists', async () => {
       const client = await loadClient('', '')
-      const subRes = await client.submitChronicleManuscript({
+      await expect(
+        client.publishManuscriptToArchive('submission-id', 'example-paper', 'KG-2026-999')
+      ).rejects.toThrow('not enabled yet')
+    })
+
+    it('does not save a manuscript submission into a local moderation queue when Supabase is unconfigured', async () => {
+      const client = await loadClient('', '')
+      const result = await client.submitChronicleManuscript({
         manuscript_title: 'Hydration and Electrolyte Kinetics in Rural Indian Wrestlers',
         category_slug: 'sports-nutrition',
         primary_author_name: 'Dr. Ramesh Chander',
         primary_author_email: 'ramesh.chander@haryanaakhada.org',
         primary_author_affiliation: 'Chhatrasal Akhada Sports Medicine Cell',
-        ethics_clearance_number: 'TEST-ETHICS-001',
         article_type: 'preprint',
+        ethics_clearance_number: 'TEST-ETHICS-001',
         abstract_text: 'A structured evaluation of sodium loss, plasma osmolality, and acute dehydration recovery in 45 traditional mud pit pehlwans.',
         keywords: 'Wrestling, Pehlwani, Dehydration, Electrolytes',
         full_text_or_url: 'https://zenodo.org/record/99887766',
@@ -353,12 +321,11 @@ describe('KhelChronicle Supabase database integration client', () => {
         license_confirmed: true,
       })
 
-      expect(subRes.status).toBe('unconfigured')
-      if (subRes.status === 'unconfigured') {
-        expect(subRes.message).toContain('No submission was saved')
+      expect(result.status).toBe('unconfigured')
+      if (result.status === 'unconfigured') {
+        expect(result.message).toContain('No submission was saved')
       }
-      const queue = await client.getChronicleModerationQueue({ search: 'Rural Indian Wrestlers' })
-      expect(queue.submissions.some(item => item.title.includes('Rural Indian Wrestlers'))).toBe(false)
+      expect(client.getLocalModerationQueue()).toEqual([])
     })
   })
 })
