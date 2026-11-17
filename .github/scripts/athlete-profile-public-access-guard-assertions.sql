@@ -22,6 +22,7 @@ GRANT EXECUTE ON FUNCTION public.get_athlete_public_cv(text)
 
 -- Apply the real migration under test.
 \ir ../../supabase/migrations/20261117103000_athlete_profile_public_access_guard.sql
+\ir ../../supabase/migrations/20261117120000_athlete_profile_policy_helper.sql
 
 DO $$
 BEGIN
