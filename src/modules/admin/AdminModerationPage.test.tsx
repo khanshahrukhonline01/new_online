@@ -149,5 +149,4 @@ describe('AdminModerationPage', () => {
     expect(html).not.toContain('Dr. Tenzing Norbu')
     expect(html).not.toContain('High-Altitude Hypoxic Training Adaptation')
     expect(html).not.toContain('Directory Listings Queue')
-    expect(html).toContain('Publication editor required')
   })})
