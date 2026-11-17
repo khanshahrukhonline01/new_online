@@ -175,3 +175,32 @@ html.dark .khelgrid-admin-app .admin-theme-controls select {
   border-color: #334155;
   color: #f1f5f9;
 }
+
+.admin-app-area-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: .75rem clamp(.75rem, 2vw, 2rem);
+  border-bottom: 1px solid var(--border-subtle, #dbe3ed);
+  background: var(--surface, #fff);
+}
+.admin-app-area-nav button {
+  min-height: 42px;
+  padding: .65rem 1rem;
+  border: 1px solid var(--border-subtle, #dbe3ed);
+  border-radius: .65rem;
+  background: transparent;
+  color: var(--text, #0b192c);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.admin-app-area-nav button.active {
+  border-color: var(--kg-admin-accent);
+  background: var(--kg-admin-accent-soft);
+  color: var(--kg-admin-accent);
+}
+.admin-app-area-nav button:focus-visible {
+  outline: 2px solid var(--kg-admin-accent);
+  outline-offset: 2px;
+}
