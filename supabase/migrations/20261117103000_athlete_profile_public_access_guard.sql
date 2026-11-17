@@ -19,11 +19,10 @@ BEGIN
       FOR SELECT
       TO anon, authenticated
       USING (
-        auth.uid() IS NOT NULL
-        AND (
-          user_id = auth.uid()
-          OR public.is_pickup_game_admin()
-        )
+        CASE
+          WHEN auth.uid() IS NULL THEN false
+          ELSE user_id = auth.uid() OR public.is_pickup_game_admin()
+        END
       );
   END IF;
 END
