@@ -52,12 +52,14 @@ export interface AdminModerationPageProps {
   initialQueue?: AdminModerationQueue | null
   initialDesk?: 'listings' | 'chronicle'
   initialChronicleQueue?: ChronicleModerationQueueResult | null
+  hideDeskSwitcher?: boolean
 }
 
 export function AdminModerationPage({
   initialQueue,
   initialDesk = 'listings',
   initialChronicleQueue,
+  hideDeskSwitcher = false,
 }: AdminModerationPageProps = {}) {
   const [activeDesk, setActiveDesk] = useState<'listings' | 'chronicle'>(initialDesk)
   const [queue, setQueue] = useState<AdminModerationQueue | null>(initialQueue ?? null)
@@ -411,31 +413,33 @@ export function AdminModerationPage({
           )}
         </div>
 
-        {/* Desk Switcher */}
-        <div className="admin-desk-switcher" role="tablist" aria-label="Moderation desk mode">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeDesk === 'listings'}
-            className={`admin-desk-btn ${activeDesk === 'listings' ? 'active' : ''}`}
-            onClick={() => setActiveDesk('listings')}
-          >
-            <SiteIcon name="file-text" size={16} />
-            <span>Directory Listings Queue</span>
-            <span className="admin-desk-badge">{queue?.stats.pendingSubmissionsCount ?? 0}</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeDesk === 'chronicle'}
-            className={`admin-desk-btn ${activeDesk === 'chronicle' ? 'active' : ''}`}
-            onClick={() => { setActiveDesk('chronicle'); void loadChronicleQueue() }}
-          >
-            <SiteIcon name="award" size={16} />
-            <span>KhelChronicle Manuscripts</span>
-            <span className="admin-desk-badge chronicle">{chronicleQueue?.stats.pendingCount ?? 0}</span>
-          </button>
-        </div>
+        {!hideDeskSwitcher && (
+          <div className="admin-desk-switcher" role="tablist" aria-label="Moderation desk mode">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeDesk === 'listings'}
+              className={`admin-desk-btn ${activeDesk === 'listings' ? 'active' : ''}`}
+              onClick={() => setActiveDesk('listings')}
+            >
+              <SiteIcon name="file-text" size={16} />
+              <span>Directory Listings Queue</span>
+              <span className="admin-desk-badge">{queue?.stats.pendingSubmissionsCount ?? 0}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeDesk === 'chronicle'}
+              className={`admin-desk-btn ${activeDesk === 'chronicle' ? 'active' : ''}`}
+              onClick={() => { setActiveDesk('chronicle'); void loadChronicleQueue() }}
+            >
+              <SiteIcon name="award" size={16} />
+              <span>KhelChronicle Manuscripts</span>
+              <span className="admin-desk-badge chronicle">{chronicleQueue?.stats.pendingCount ?? 0}</span>
+            </button>
+          </div>
+  
+        )}
       </header>
 
       {error && (
