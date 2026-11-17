@@ -75,12 +75,21 @@ describe('PlayerCard (FIFA Trading Card Component & Digital Khel ID)', () => {
     expect(html).toContain('Batting: Left-Hand Bat (LHB) · Bowling: Right-Arm Fast (135+ km/h)')
   })
 
-  it('renders official NIS coach endorsement chip when profile has coachEndorsement', () => {
-    const profile = SHOWCASE_ATHLETE_PROFILES['rohit-verma']
+  it('does not display a coach endorsement supplied only by client-side profile data', () => {
+    const profile = {
+      ...SHOWCASE_ATHLETE_PROFILES['rohit-verma'],
+      coachEndorsement: {
+        endorsed: true,
+        coachName: 'Coach Zaheer Farooq',
+        coachLicense: 'NIS-EXAMPLE-001',
+      },
+    }
     const html = renderToStaticMarkup(<PlayerCard profile={profile} />)
 
-    expect(html).toContain('card-coach-endorsed-chip')
-    expect(html).toContain('NIS Coach Endorsed')
-    expect(html).toContain('Coach Zaheer Farooq')
+    // Endorsement claims must come from a trusted server projection, not
+    // showcase fixtures or arbitrary browser-provided profile fields.
+    expect(html).not.toContain('card-coach-endorsed-chip')
+    expect(html).not.toContain('NIS Coach Endorsed')
+    expect(html).not.toContain('Coach Zaheer Farooq')
   })
 })
