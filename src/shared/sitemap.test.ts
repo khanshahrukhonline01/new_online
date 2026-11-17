@@ -24,9 +24,8 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     expect(home?.changefreq).toBe('daily')
     expect(home?.lastmod).toBeUndefined()
 
-    const search = entries.find(e => e.loc === `${BASE_URL}/search`)
-    expect(search).toBeDefined()
-    expect(search?.priority).toBe(0.9)
+    // Search is a user-driven utility route, not a stable crawl landing page.
+    expect(entries.some(e => e.loc === `${BASE_URL}/search`)).toBe(false)
 
     const play = entries.find(e => e.loc === `${BASE_URL}/play`)
     expect(play).toBeDefined()
@@ -102,9 +101,8 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
       priority: 0.95,
       changefreq: 'daily',
     })
-    expect(entries.find(e => e.loc === `${BASE_URL}/khelchronicle/submit`)).toMatchObject({
-      priority: 0.85,
-    })
+    // Submission is an intake workflow, not a public research record.
+    expect(entries.some(e => e.loc === `${BASE_URL}/khelchronicle/submit`)).toBe(false)
 
     // 2. 7 Academic Disciplines
     const disciplines = [
