@@ -45,6 +45,7 @@ interface DbPaperRow {
   category_slug?: string
   author_name?: string
   author_affiliation?: string
+  authors?: ResearchAuthor[]
   summary?: string
   date_published?: string
   date_modified?: string | null
@@ -104,7 +105,11 @@ function isCompletePublicResearchRow(row: DbPaperRow): boolean {
     row.category &&
     row.author_name &&
     row.author_affiliation &&
+    Array.isArray(row.authors) &&
+    row.authors.length > 0 &&
+    row.authors.every(author => Boolean(author.name && author.affiliation)) &&
     row.date_published &&
+    row.version &&
     row.license &&
     row.abstract?.background &&
     row.abstract?.methods &&
@@ -126,9 +131,6 @@ function isCompletePublicResearchRow(row: DbPaperRow): boolean {
 function mapDbRowToResearchPaper(row: DbPaperRow): ResearchPaper {
   const categorySlug = row.category || row.category_slug || 'sports-biomechanics'
   const category = RESEARCH_CATEGORIES.find(item => item.slug === categorySlug)
-  const authorName = row.author_name as string
-  const affiliation = row.author_affiliation as string
-
   return {
     id: row.id,
     paperId: row.paper_id,
@@ -139,14 +141,7 @@ function mapDbRowToResearchPaper(row: DbPaperRow): ResearchPaper {
     categoryName: category?.name || categorySlug,
     sport: row.sport || undefined,
     sportSlug: row.sport_slug || undefined,
-    authors: [{
-      id: `author-${row.paper_id.toLowerCase()}`,
-      name: authorName,
-      slug: authorName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      affiliation,
-      role: 'Author',
-      bio: 'Author listed on this manuscript.',
-    }],
+    authors: row.authors as ResearchAuthor[],
     datePublished: row.date_published as string,
     dateModified: row.date_modified || undefined,
     version: row.version || 'v1.0',
