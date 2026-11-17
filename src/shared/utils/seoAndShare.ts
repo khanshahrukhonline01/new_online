@@ -49,7 +49,7 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
     }
   }
 
-  if (cleanPath === '/play') {
+  if (cleanPath === '/play/lacrosse-sixes') {\n    return {\n      title: 'Lacrosse Sixes Arcade Game · KhelGrid',\n      description: 'Play a fast, original KhelGrid lacrosse-inspired arcade challenge with movement, dodging, passing, shooting and a timed score attack.',\n      canonicalUrl: 'https://khelgrid.com/play/lacrosse-sixes',\n      keywords: ['lacrosse game', 'lacrosse sixes', 'sports arcade game', 'KhelGrid games', ...DEFAULT_KEYWORDS],\n      ogType: 'website',\n      robots: 'noindex, nofollow',\n    }\n  }\n\n  if (cleanPath === '/play') {
     return {
       title: "Play Sports & Join Pickup Matches Near You · KhelGrid (खेलें और मैच खोजें)",
       description: "Find and join local sports pickup games, box cricket, futsal, badminton, and pickleball matches across Indian cities. Host your own game or join players nearby on KhelGrid.",
