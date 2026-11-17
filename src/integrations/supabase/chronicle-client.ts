@@ -374,7 +374,7 @@ export async function submitChronicleManuscript(
   if (!input.primary_author_name || input.primary_author_name.trim().length < 2) {
     return { status: 'unavailable', message: 'Primary author name is required.' }
   }
-  const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$/
+  const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
   if (!input.primary_author_email || !emailRegex.test(input.primary_author_email.trim())) {
     return { status: 'unavailable', message: 'Please provide a valid author email address.' }
   }
@@ -430,7 +430,7 @@ export async function submitChronicleManuscript(
 
   try {
     const res = await fetch(
-      `${baseUrl.origin}${baseUrl.pathname.replace(/\\/$/, '')}/rest/v1/chronicle_submissions`,
+      `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/chronicle_submissions`,
       {
         method: 'POST',
         headers: {
