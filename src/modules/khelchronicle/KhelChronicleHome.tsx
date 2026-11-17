@@ -3,8 +3,6 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
   RESEARCH_CATEGORIES,
   RESEARCH_SPORTS,
-  RESEARCH_PAPERS,
-  searchPapers,
   type ResearchPaper,
 } from './data/khelchronicleData'
 import { getChroniclePapers } from '../../integrations/supabase/chronicle-client'
@@ -20,7 +18,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState(initialCategory)
   const [selectedSport, setSelectedSport] = useState('all')
-  const [papers, setPapers] = useState<ResearchPaper[]>(() => searchPapers('', initialCategory, 'all'))
+  const [papers, setPapers] = useState<ResearchPaper[]>([])
 
   useEffect(() => {
     let active = true
@@ -43,7 +41,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
   const filteredPapers = papers
 
   const featuredPaper = useMemo<ResearchPaper | undefined>(() => {
-    return filteredPapers[0] || RESEARCH_PAPERS[0]
+    return filteredPapers[0]
   }, [filteredPapers])
 
   const repositorySchema = useMemo(() => {
@@ -51,14 +49,14 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
       '@context': 'https://schema.org',
       '@type': 'DataCatalog',
       name: 'KhelChronicle — Open Sports Research and Preprint Archive',
-      description: 'An open-access research repository for sports biomechanics, exercise physiology, youth athletic development, and Indian sports policy.',
+      description: 'A research and preprint archive. Only complete manuscripts with editorial approval are listed.',
       url: 'https://www.khelgrid.com/khelchronicle',
       publisher: {
         '@type': 'Organization',
         name: 'KhelGrid',
         url: 'https://www.khelgrid.com',
       },
-      dataset: RESEARCH_PAPERS.map(p => ({
+      dataset: filteredPapers.map(p => ({
         '@type': 'ScholarlyArticle',
         name: p.title,
         url: `https://www.khelgrid.com/khelchronicle/${p.slug}`,
@@ -67,7 +65,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
         author: p.authors.map(a => ({ '@type': 'Person', name: a.name })),
       })),
     }
-  }, [])
+  }, [filteredPapers])
 
   return (
     <div className="kc-root">
@@ -83,10 +81,9 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
             <SiteIcon name="award" size={13} />
             <span>KhelChronicle · Open Sports Research Archive</span>
           </span>
-          <span className="kc-badge-open-access">Diamond Open Access</span>
-          <span className="kc-badge-open-access">CC BY-NC-ND 4.0</span>
+          <span className="kc-badge-open-access">Editorial screening required</span>
           <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-            Test Data Only
+            No public manuscripts until review
           </span>
         </div>
 
@@ -94,10 +91,10 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
           Open Research in Sports and Human Performance.
         </h1>
         <p className="kc-hero-subtitle">
-          An open-access preprint and technical research repository dedicated to Indian sports biomechanics, exercise physiology, talent scouting analytics, and grassroots athletic development.
+          A research and preprint archive for Indian sports biomechanics, exercise physiology, talent analytics, and grassroots athletic development. Manuscripts appear publicly only after editorial review of the complete research record, author details, ethics, data availability, and licensing.
         </p>
 
-        {/* Test Data Disclaimer Banner */}
+        {/* Public research availability notice */}
         <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderLeft: '4px solid #f59e0b', padding: '10px 14px', borderRadius: '6px', fontSize: '13px', color: '#92400e', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <SiteIcon name="info" size={16} />
           <span><strong>Demonstration Mode:</strong> The research preprints, normative athlete percentiles, and author affiliations displayed here are <strong>sample test data</strong> created for platform development, demonstration, and staging verification.</span>
@@ -226,7 +223,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
             )}
             <span className="kc-paper-category-tag">{featuredPaper.categoryName}</span>
             <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-              Test Data
+              Editorial review required
             </span>
             <span className="kc-paper-date">Published {featuredPaper.datePublished}</span>
           </div>
@@ -313,8 +310,8 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
         {filteredPapers.length === 0 ? (
           <div style={{ padding: '48px 24px', textAlign: 'center', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
             <SiteIcon name="search" size={28} style={{ color: '#94a3b8', marginBottom: '10px' }} />
-            <h3 style={{ margin: '0 0 6px', fontSize: '16px', color: '#0f172a' }}>No research preprints matched your criteria</h3>
-            <p style={{ margin: 0, fontSize: '13.5px', color: '#64748b' }}>Try broadening your search query or switching disciplines.</p>
+            <h3 style={{ margin: '0 0 6px', fontSize: '16px', color: '#0f172a' }}>No reviewed public manuscripts are available yet</h3>
+            <p style={{ margin: 0, fontSize: '13.5px', color: '#64748b' }}>New submissions remain private while the editorial team verifies the complete manuscript, authorship, ethics statement, data availability, references, and publication licence.</p>
           </div>
         ) : (
           <div className="kc-papers-grid">
