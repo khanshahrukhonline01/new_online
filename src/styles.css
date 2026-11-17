@@ -1197,4 +1197,42 @@ independent of footer height. */
   }
 }
 
+/* Venue Card Actions & Direct WhatsApp Availability Inquiry */
+.venue-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 14px;
+}
+
+.venue-card-actions .card-action {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.venue-whatsapp-action {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px !important;
+  background: linear-gradient(135deg, #25D366, #128C7E) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(37, 211, 102, 0.4) !important;
+  border-radius: 8px !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
+  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.25);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.venue-whatsapp-action:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  color: #ffffff !important;
+}
+
+
 
