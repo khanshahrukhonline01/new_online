@@ -280,6 +280,19 @@ export function AdminModerationPage({
     }
   }
 
+  const canApproveManuscript = (item: ChronicleModerationSubmission) => Boolean(
+    item.submissionId &&
+    item.fullTextOrUrl?.startsWith('https://') &&
+    item.abstract.trim().length >= 50 &&
+    item.keywords?.trim() &&
+    item.dataAvailability &&
+    item.ethicsClearanceNumber?.trim() &&
+    item.humanEthicsConfirmed &&
+    item.minorConsentConfirmed &&
+    item.licenseType &&
+    item.licenseConfirmed
+  )
+
   const handleStartChronicleReview = async (item: ChronicleModerationSubmission) => {
     setBusyId(item.id)
     setError('')
@@ -1287,6 +1300,8 @@ export function AdminModerationPage({
                       <button
                         type="button"
                         className="admin-btn admin-btn-approve"
+                        disabled={!canApproveManuscript(sub)}
+                        title={!canApproveManuscript(sub) ? 'Required manuscript link, ethics, consent, keywords, data and licence declarations are incomplete.' : undefined}
                         onClick={() => {
                           setSelectedManuscript(sub)
                           setManuscriptActionDialog('approve')
@@ -1626,6 +1641,8 @@ export function AdminModerationPage({
                       <button
                         type="button"
                         className="admin-btn admin-btn-approve"
+                        disabled={!canApproveManuscript(selectedManuscript)}
+                        title={!canApproveManuscript(selectedManuscript) ? 'Required manuscript link, ethics, consent, keywords, data and licence declarations are incomplete.' : undefined}
                         onClick={() => setManuscriptActionDialog('approve')}
                       >
                         Approve Manuscript
