@@ -596,8 +596,7 @@ export interface ChronicleModerationQueueResult {
   }
 }
 
-const CHRONICLE_QUEUE_STORAGE_KEY = 'khelchronicle_moderation_queue_v1'
-
+/** Synthetic Chronicle queue fixtures for tests only; never shown in moderation UI. */
 export const DEFAULT_MODERATION_SUBMISSIONS: ChronicleModerationSubmission[] = [
   {
     id: 'sub-kc-001',
@@ -685,7 +684,7 @@ export const DEFAULT_MODERATION_SUBMISSIONS: ChronicleModerationSubmission[] = [
   },
 ]
 
-let inMemoryModerationQueue: ChronicleModerationSubmission[] = [...DEFAULT_MODERATION_SUBMISSIONS]
+let inMemoryModerationQueue: ChronicleModerationSubmission[] = []
 
 export function getLocalModerationQueue(): ChronicleModerationSubmission[] {
   // Legacy localStorage fixtures are intentionally not used for moderation.
@@ -693,8 +692,9 @@ export function getLocalModerationQueue(): ChronicleModerationSubmission[] {
   return []
 }
 
-export function saveLocalModerationQueue(_queue: ChronicleModerationSubmission[]): void {
-  // No local persistence: the moderation queue is authoritative in Supabase.
+export function saveLocalModerationQueue(queue: ChronicleModerationSubmission[]): void {
+  // In-memory compatibility helper only; never persists or supplies the live queue.
+  inMemoryModerationQueue = queue
 }
 
 function mapDbRowToChronicleSubmission(row: Record<string, unknown>): ChronicleModerationSubmission {
