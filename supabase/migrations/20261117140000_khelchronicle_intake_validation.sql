@@ -56,8 +56,8 @@ BEGIN
     END IF;
   END IF;
 
-  IF NEW.status = 'rejected' AND coalesce(btrim(NEW.review_notes), '') = '' THEN
-    RAISE EXCEPTION 'A reason is required when rejecting a Chronicle submission';
+  IF NEW.status IN ('rejected', 'revision_requested') AND coalesce(btrim(NEW.review_notes), '') = '' THEN
+    RAISE EXCEPTION 'A reason is required when rejecting or requesting revisions to a Chronicle submission';
   END IF;
 
   IF NEW.status IS DISTINCT FROM OLD.status THEN
@@ -84,5 +84,95 @@ BEGIN
   END IF;
 END
 $trigger$;
+
+
+REVOKE ALL ON FUNCTION public.validate_chronicle_submission_review()
+  FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.validate_chronicle_paper_publication()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $function$
+BEGIN
+  IF NEW.publication_status = 'published' THEN
+    IF NEW.paper_id IS NULL OR btrim(NEW.paper_id) = ''
+       OR NEW.slug IS NULL OR btrim(NEW.slug) = ''
+       OR NEW.title IS NULL OR btrim(NEW.title) = ''
+       OR NEW.category IS NULL OR btrim(NEW.category) = ''
+       OR NEW.author_name IS NULL OR btrim(NEW.author_name) = ''
+       OR NEW.author_affiliation IS NULL OR btrim(NEW.author_affiliation) = ''
+       OR NEW.date_published IS NULL
+       OR NEW.version IS NULL OR btrim(NEW.version) = ''
+       OR NEW.license NOT IN ('CC BY 4.0', 'CC BY-NC-ND 4.0', 'cc-by-4.0', 'cc-by-nc-nd-4.0')
+       OR NEW.ethics_statement IS NULL OR btrim(NEW.ethics_statement) = ''
+       OR NEW.data_availability IS NULL OR btrim(NEW.data_availability) = ''
+       OR NEW.funding_statement IS NULL OR btrim(NEW.funding_statement) = ''
+       OR NEW.conflicts_of_interest IS NULL OR btrim(NEW.conflicts_of_interest) = ''
+       OR NEW.keywords IS NULL OR cardinality(NEW.keywords) = 0 THEN
+      RAISE EXCEPTION 'Chronicle paper cannot be published until all required manuscript metadata and declarations are complete';
+    END IF;
+
+    IF jsonb_typeof(NEW.authors) IS DISTINCT FROM 'array' THEN
+      RAISE EXCEPTION 'Chronicle paper requires a structured author list';
+    END IF;
+    IF jsonb_array_length(NEW.authors) = 0 THEN
+      RAISE EXCEPTION 'Chronicle paper requires at least one author';
+    END IF;
+    IF EXISTS (
+      SELECT 1 FROM jsonb_array_elements(NEW.authors) AS author
+      WHERE coalesce(btrim(author->>'name'), '') = ''
+         OR coalesce(btrim(author->>'affiliation'), '') = ''
+    ) THEN
+      RAISE EXCEPTION 'Every Chronicle author must have a name and affiliation';
+    END IF;
+
+    IF jsonb_typeof(NEW.abstract) IS DISTINCT FROM 'object'
+       OR coalesce(btrim(NEW.abstract->>'background'), '') = ''
+       OR coalesce(btrim(NEW.abstract->>'methods'), '') = ''
+       OR coalesce(btrim(NEW.abstract->>'results'), '') = ''
+       OR coalesce(btrim(NEW.abstract->>'conclusion'), '') = '' THEN
+      RAISE EXCEPTION 'Chronicle paper requires a complete structured abstract';
+    END IF;
+
+    IF jsonb_typeof(NEW.sections) IS DISTINCT FROM 'array'
+       OR jsonb_array_length(NEW.sections) = 0 THEN
+      RAISE EXCEPTION 'Chronicle paper requires full manuscript sections';
+    END IF;
+
+    IF jsonb_typeof(NEW.reference_list) IS DISTINCT FROM 'array'
+       OR jsonb_array_length(NEW.reference_list) = 0 THEN
+      RAISE EXCEPTION 'Chronicle paper requires a reference list';
+    END IF;
+  END IF;
+
+  NEW.updated_at := now();
+  IF NEW.publication_status = 'published'
+     AND (TG_OP = 'INSERT' OR OLD.publication_status IS DISTINCT FROM 'published') THEN
+    NEW.reviewed_at := now();
+    NEW.reviewed_by := auth.uid();
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.validate_chronicle_paper_publication()
+  FROM PUBLIC, anon, authenticated, service_role;
+
+DO $paper_trigger$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgrelid = 'public.chronicle_papers'::regclass
+      AND tgname = 'chronicle_paper_publication_guard'
+      AND NOT tgisinternal
+  ) THEN
+    CREATE TRIGGER chronicle_paper_publication_guard
+      BEFORE INSERT OR UPDATE ON public.chronicle_papers
+      FOR EACH ROW
+      EXECUTE FUNCTION public.validate_chronicle_paper_publication();
+  END IF;
+END
+$paper_trigger$;
 
 COMMIT;
