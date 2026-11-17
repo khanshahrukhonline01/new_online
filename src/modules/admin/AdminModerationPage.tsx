@@ -33,7 +33,7 @@ type TabFilter =
   | 'all'
   | 'pending_review'
   | 'under_review'
-  | 'revision_requested'
+  | 'changes_requested'
   | 'resubmitted'
   | 'approved'
   | 'published'
