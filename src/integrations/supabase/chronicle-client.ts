@@ -724,6 +724,8 @@ function mapDbRowToChronicleSubmission(row: Record<string, unknown>): ChronicleM
     status: String(row.status || 'pending_review') as ChronicleModerationSubmission['status'],
     editorialNotes: row.review_notes ? String(row.review_notes) : undefined,
     reviewNotes: row.review_notes ? String(row.review_notes) : undefined,
+    correctionRequest: row.status === 'revision_requested' && row.review_notes ? String(row.review_notes) : undefined,
+    rejectionReason: row.status === 'rejected' && row.review_notes ? String(row.review_notes) : undefined,
     reviewedBy: row.reviewed_by ? String(row.reviewed_by) : undefined,
     reviewedAt: row.reviewed_at ? String(row.reviewed_at) : undefined,
     createdAt: String(row.created_at || ''),
