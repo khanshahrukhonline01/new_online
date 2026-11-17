@@ -9,7 +9,7 @@ describe('CatalogueDetailPage opportunity presentation', () => {
     const html = renderToStaticMarkup(<OpportunityDetail item={item} />)
 
     expect(html).toContain(item.title)
-    if (item.organizer_name) expect(html).toContain(item.organizer_name)
+    if (item.organizer_name) expect(html).toContain(item.organizer_name.replace(/&/g, '&amp;'))
     if (item.city) expect(html).toContain(item.city)
     expect(html).toContain('Confirm eligibility, dates, fees and registration status with the organiser')
     expect(html).not.toContain('128 Spots Available')
