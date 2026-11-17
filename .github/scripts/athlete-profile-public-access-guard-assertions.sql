@@ -80,8 +80,7 @@ VALUES ('ci-athlete-guard-test', 'CI Athlete Guard', 'Athletics',
 
 SET LOCAL ROLE anon;
 SELECT count(*) = 0 AS anon_denied
-FROM public.athlete_profiles WHERE username = 'ci-athlete-guard-test';
-\gset
+FROM public.athlete_profiles WHERE username = 'ci-athlete-guard-test'\gset
 \if :anon_denied
   \echo 'PASS: anonymous profile read denied'
 \else
@@ -93,8 +92,7 @@ RESET ROLE;
 SET LOCAL request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
 SET LOCAL ROLE authenticated;
 SELECT count(*) = 1 AS owner_allowed
-FROM public.athlete_profiles WHERE username = 'ci-athlete-guard-test';
-\gset
+FROM public.athlete_profiles WHERE username = 'ci-athlete-guard-test'\gset
 \if :owner_allowed
   \echo 'PASS: profile owner can read own profile'
 \else
@@ -106,8 +104,7 @@ RESET ROLE;
 SET LOCAL request.jwt.claim.sub = '22222222-2222-4222-8222-222222222222';
 SET LOCAL ROLE authenticated;
 SELECT count(*) = 0 AS other_user_denied
-FROM public.athlete_profiles WHERE username = 'ci-athlete-guard-test';
-\gset
+FROM public.athlete_profiles WHERE username = 'ci-athlete-guard-test'\gset
 \if :other_user_denied
   \echo 'PASS: other authenticated user cannot read profile'
 \else
@@ -120,8 +117,7 @@ SET LOCAL request.jwt.claim.sub = '33333333-3333-4333-8333-333333333333';
 SET LOCAL test.is_pickup_game_admin = 'true';
 SET LOCAL ROLE authenticated;
 SELECT count(*) = 1 AS admin_allowed
-FROM public.athlete_profiles WHERE username = 'ci-athlete-guard-test';
-\gset
+FROM public.athlete_profiles WHERE username = 'ci-athlete-guard-test'\gset
 \if :admin_allowed
   \echo 'PASS: authorized administrator can read profile'
 \else
