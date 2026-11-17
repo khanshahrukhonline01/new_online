@@ -75,7 +75,11 @@ describe('KhelChronicle Supabase database integration client', () => {
         primary_author_affiliation: 'Test University',
         abstract_text: 'A'.repeat(60),
         keywords: 'test',
-        full_text_or_url: '',
+        article_type: 'preprint',
+        full_text_or_url: 'https://example.com/paper.pdf',
+        data_availability: 'open_access',
+        license_type: 'cc-by-nc-nd-4.0',
+        license_confirmed: true,
         human_ethics_confirmed: true,
         minor_consent_confirmed: true,
       })
@@ -94,7 +98,11 @@ describe('KhelChronicle Supabase database integration client', () => {
         primary_author_affiliation: 'Test University',
         abstract_text: 'A'.repeat(60),
         keywords: 'test',
-        full_text_or_url: '',
+        article_type: 'preprint',
+        full_text_or_url: 'https://example.com/paper.pdf',
+        data_availability: 'open_access',
+        license_type: 'cc-by-nc-nd-4.0',
+        license_confirmed: true,
         human_ethics_confirmed: true,
         minor_consent_confirmed: true,
       })
@@ -113,12 +121,16 @@ describe('KhelChronicle Supabase database integration client', () => {
         primary_author_affiliation: 'Test University',
         abstract_text: 'A'.repeat(60),
         keywords: 'test',
-        full_text_or_url: '',
+        article_type: 'preprint',
+        full_text_or_url: 'https://example.com/paper.pdf',
+        data_availability: 'open_access',
+        license_type: 'cc-by-nc-nd-4.0',
+        license_confirmed: true,
         human_ethics_confirmed: false,
         minor_consent_confirmed: true,
       })
       expect(res.status).toBe('unavailable')
-      expect(res.message).toContain('Ethics confirmation')
+      expect(res.message).toContain('human-subjects and minor-athlete consent')
       expect(fetch).not.toHaveBeenCalled()
     })
 
@@ -132,7 +144,11 @@ describe('KhelChronicle Supabase database integration client', () => {
         primary_author_affiliation: 'Test University',
         abstract_text: 'A'.repeat(60),
         keywords: 'test',
+        article_type: 'preprint',
         full_text_or_url: 'http://insecure-site.com/paper.pdf',
+        data_availability: 'open_access',
+        license_type: 'cc-by-nc-nd-4.0',
+        license_confirmed: true,
         human_ethics_confirmed: true,
         minor_consent_confirmed: true,
       })
@@ -160,7 +176,11 @@ describe('KhelChronicle Supabase database integration client', () => {
         co_authors: 'Dr. Alok Sen (SAI NCOE Bengaluru)',
         abstract_text: 'Background: Sprint acceleration testing is critical for talent scouting in athletics and field games. Methods: 40 junior sprinters tested across dual-beam wireless photocells. Results: High ICC of 0.94. Conclusion: Highly reproducible.',
         keywords: 'Sprint Acceleration, Photocells, Testing Reliability',
+        article_type: 'preprint',
         full_text_or_url: 'https://zenodo.org/record/1234567',
+        data_availability: 'open_access',
+        license_type: 'cc-by-nc-nd-4.0',
+        license_confirmed: true,
         human_ethics_confirmed: true,
         minor_consent_confirmed: true,
       })
