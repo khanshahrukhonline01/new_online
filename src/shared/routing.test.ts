@@ -72,7 +72,7 @@ describe('platform route coverage', () => {
 
   it.each([
     '/sports-cv', '/submit-listing', '/stats', '/talent-scanner', '/scout-portal', '/verification',
-    '/live', '/play', '/coaches', '/events', '/calendar',
+    '/live', '/play', '/play/lacrosse-sixes', '/coaches', '/events', '/calendar',
     '/learning', '/guides', '/ai-guide', '/community', '/tools',
     '/dashboard', '/profile', '/my-profile', '/saved', '/settings', '/notifications',
     '/login', '/signup', '/forgot-password', '/about', '/contact', '/partners', '/careers', '/trust',
@@ -88,7 +88,7 @@ describe('platform route coverage', () => {
     }
   })
 
-  it('routes KhelChronicle repository pages correctly', () => {
+  it('routes the playable Lacrosse Sixes arcade game inside Play & Match Center', () => {\n    expect(resolveRoute('/play/lacrosse-sixes')).toMatchObject({\n      name: 'feature', canonicalPath: '/play/lacrosse-sixes', slug: 'Lacrosse Sixes Arcade Game',\n    })\n    expect(resolveRoute('/play/lacrosse-sixes/').name).toBe('feature')\n  })\n\n  it('routes KhelChronicle repository pages correctly', () => {
     expect(resolveRoute('/khelchronicle').name).toBe('khelchronicle-index')
     expect(resolveRoute('/chronicle').name).toBe('khelchronicle-index')
     expect(resolveRoute('/khelchronicle/submit').name).toBe('khelchronicle-submit')
