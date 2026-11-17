@@ -212,7 +212,7 @@ describe('KhelChronicle Supabase database integration client', () => {
               data_availability: 'De-identified data available under request.',
               funding_statement: 'No external funding.',
               conflicts_of_interest: 'No conflicts declared.',
-              references: [{ id: 1, text: 'A verified reference.' }],
+              reference_list: [{ id: 1, text: 'A verified reference.' }],
             },
           ]),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
