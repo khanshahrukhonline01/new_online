@@ -2,36 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import AthleteProfilePage from './AthleteProfilePage'
 
-describe('AthleteProfilePage', () => {
-  it('renders showcase profile for Rohit Verma with bowling action telemetry, biometrics, and player card', () => {
-    const html = renderToStaticMarkup(<AthleteProfilePage username="rohit-verma" />)
-    expect(html).toContain('Rohit Verma')
-    expect(html).toContain('@rohit-verma')
-    expect(html).toContain('Right-Arm Fast Bowler')
-    expect(html).toContain('Sonnet Cricket Club')
-    expect(html).toContain('Video &amp; Technique Telemetry')
-    expect(html).toContain('Run-up &amp; 135 km/h Outswinger Release')
-    expect(html).toContain('135.2 km/h')
-    expect(html).toContain('Scientific Fitness Benchmarks')
-    expect(html).toContain('NORMATIVE COMBINE RADAR')
-    expect(html).toContain('★ NIS COACH ENDORSED')
-    expect(html).toContain('Coach Zaheer Farooq')
-    expect(html).toContain('Selection Trial Dossier (PDF)')
-    expect(html).toContain('Scout &amp; Academy Connect')
-  })
-
-  it('renders showcase profile for Priya Nair with badminton jump smash telemetry', () => {
-    const html = renderToStaticMarkup(<AthleteProfilePage username="priya-nair" />)
-    expect(html).toContain('Priya Nair')
-    expect(html).toContain('@priya-nair')
-    expect(html).toContain('Badminton')
-    expect(html).toContain('Rear-Court Jump Smash')
-    expect(html).toContain('312 km/h')
-    expect(html).toContain('Pullela Gopichand Badminton Academy')
-  })
-
-  it('renders loading or unconfigured fallback state gracefully for unrecognised handle', () => {
-    const html = renderToStaticMarkup(<AthleteProfilePage username="unknown-ghost-athlete-123" />)
-    expect(html).toContain('Loading athlete profile')
-  })
+// Conflict resolution: preserve the fail-closed public-profile privacy tests.
+describe('AthleteProfilePage public privacy boundary', () => {
+  it.each(['rohit-verma', 'priya-nair', 'arjun-singh', 'unknown-ghost-athlete-123'])(
+    'does not render showcase or browser-local athlete data for %s',
+    username => {
+      const html = renderToStaticMarkup(<AthleteProfilePage username={username} />)
+      expect(html).toContain('Loading athlete profile')
+      expect(html).not.toContain('Rohit Verma')
+      expect(html).not.toContain('Priya Nair')
+      expect(html).not.toContain('Verified Sports CV')
+      expect(html).not.toContain('135.2 km/h')
+    },
+  )
 })

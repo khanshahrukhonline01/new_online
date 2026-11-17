@@ -7,8 +7,6 @@
  */
 
 import { ALL_INDIAN_CITIES } from '../components/citiesData'
-import { generateKhelId } from './khelId'
-import { SHOWCASE_ATHLETE_PROFILES } from '../../integrations/supabase/athlete-profile-client'
 
 export interface PageSeoConfig {
   title: string
@@ -206,10 +204,23 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
     }
   }
 
+  const athleteRoute = cleanPath.match(/^\/(?:u|athlete)\/([^/]+)$/i)
+  if (athleteRoute) {
+    const handle = athleteRoute[1].replace(/^@+/, '').toLowerCase().replace(/[^a-z0-9-]/g, '')
+    return {
+      title: 'Athlete Profile · KhelGrid',
+      description: 'KhelGrid athlete profile pages are being prepared with privacy and consent controls. Create a private Sports CV draft in the meantime.',
+      canonicalUrl: `https://khelgrid.com/u/${handle}`,
+      robots: 'noindex, nofollow',
+      ogType: 'profile',
+      keywords: ['athlete profile', 'sports cv', 'KhelGrid'],
+    }
+  }
+
   if (cleanPath === '/sports-cv' || cleanPath === '/start-from-zero') {
     return {
       title: "Athlete Sports CV & Khel ID Builder · KhelGrid (खेल आईडी)",
-      description: "Build your verified Athlete Sports CV, digital Khel ID card, and sports portfolio on KhelGrid. Highlight match stats, trial history, and fitness benchmarks.",
+      description: "Create a Sports CV draft and KhelGrid ID display card. Organize your sports background, achievements, and performance details in one place.",
       canonicalUrl: 'https://khelgrid.com/sports-cv',
       keywords: [
         'khel id',
@@ -237,7 +248,7 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
             url: 'https://khelgrid.com/sports-cv',
             applicationCategory: 'SportsApplication',
             operatingSystem: 'All',
-            description: 'Build your verified Athlete Sports CV, digital Khel ID card, and sports portfolio on KhelGrid.',
+            description: 'Create a Sports CV draft and KhelGrid ID display card. Organize your sports background, achievements, and performance details in one place.',
             offers: {
               '@type': 'Offer',
               price: '0',
@@ -497,15 +508,8 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
           `sports complex ${cityName.toLowerCase()}`,
           `badminton court ${cityName.toLowerCase()}`,
           `sports trials ${cityName.toLowerCase()}`,
-          `box cricket turf ${cityName.toLowerCase()}`,
-          `cricket turf near me`,
-          `badminton coaching near me ${cityName.toLowerCase()}`,
-          `football trials ${stateName.toLowerCase()} 2026`,
-          `football trials ${cityName.toLowerCase()}`,
           `box cricket ${cityName.toLowerCase()}`,
           `turf near me ${cityName.toLowerCase()}`,
-          `sports hostel ${cityName.toLowerCase()}`,
-          `sai training center ${cityName.toLowerCase()}`,
           `khelo india ${cityName.toLowerCase()}`,
           `sports in ${cityName.toLowerCase()}`,
           `${cityName.toLowerCase()} sports hub`,
@@ -530,34 +534,6 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
               },
             },
             {
-              '@type': 'SportsClub',
-              '@id': `${canonicalUrl}#sportsclub`,
-              name: `${cityName} Sports Clubs & Academies · KhelGrid`,
-              description: `Verified sports academies, football coaching centers, and cricket clubs in ${cityName}, ${stateName}.`,
-              url: canonicalUrl,
-              address: {
-                '@type': 'PostalAddress',
-                addressLocality: cityName,
-                addressRegion: stateName,
-                addressCountry: 'IN',
-              },
-            },
-            {
-              '@type': 'LocalBusiness',
-              '@id': `${canonicalUrl}#localbusiness`,
-              name: `KhelGrid ${cityName} Sports Directory & Turf Hub`,
-              description: `Local sports facility directory, synthetic pitch hourly booking, and selection trials in ${cityName}, ${stateName}.`,
-              url: canonicalUrl,
-              address: {
-                '@type': 'PostalAddress',
-                addressLocality: cityName,
-                addressRegion: stateName,
-                addressCountry: 'IN',
-              },
-              currenciesAccepted: 'INR',
-              priceRange: '₹₹',
-            },
-            {
               '@type': 'BreadcrumbList',
               '@id': `${canonicalUrl}#breadcrumb`,
               itemListElement: [
@@ -577,98 +553,6 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
                   '@type': 'ListItem',
                   position: 3,
                   name: `${cityName} Sports Hub`,
-                  item: canonicalUrl,
-                },
-              ],
-            },
-          ],
-        },
-      }
-    }
-  }
-
-  // Dynamic Athlete Profiles & Public Sports CV Microsite (/sports-cv/:username, /u/:username, /cv/:username, /athlete/:username)
-  const profileMatch = cleanPath.match(/^\/(sports-cv|u|cv|athlete)\/([^/]+)/)
-  if (profileMatch) {
-    const rawUsername = decodeURIComponent(profileMatch[2]).trim().toLowerCase()
-    if (rawUsername) {
-      const profile = SHOWCASE_ATHLETE_PROFILES[rawUsername]
-      const displayName = profile?.fullName || rawUsername.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
-      const sport = profile?.sport || 'Multi-Sport'
-      const position = profile?.playingPosition || 'Grassroots Athlete'
-      const khelId = profile ? generateKhelId(profile) : generateKhelId({ state: 'India', username: rawUsername })
-      const cityState = profile ? `${profile.city}, ${profile.state}` : 'India'
-      const canonicalUrl = `https://khelgrid.com/sports-cv/${rawUsername}`
-      const title = `${displayName} (${sport}) · ${khelId} | KhelGrid`
-      const description = `Official verified sports CV for ${displayName} (${sport} - ${position}) from ${cityState} on KhelGrid. Review physical combine benchmarks, match highlight video telemetry, and NIS coach endorsement.`
-
-      return {
-        title,
-        description,
-        canonicalUrl,
-        keywords: [
-          displayName,
-          `${displayName} sports cv`,
-          `${displayName} athlete profile`,
-          `${displayName} khel id`,
-          sport,
-          position,
-          khelId,
-          'sports cv',
-          'khel id card',
-          'verified athlete profile',
-          'grassroots athlete portfolio',
-          'combine benchmarks',
-          'coach endorsement',
-          ...DEFAULT_KEYWORDS,
-        ],
-        ogType: 'profile',
-        image: 'https://khelgrid.com/assets/kg-logo.webp',
-        jsonLd: {
-          '@context': 'https://schema.org',
-          '@graph': [
-            {
-              '@type': 'ProfilePage',
-              '@id': `${canonicalUrl}#profilepage`,
-              url: canonicalUrl,
-              name: `${displayName} · Sports CV & Athlete Profile | KhelGrid`,
-              description,
-              mainEntity: {
-                '@type': 'Person',
-                '@id': `${canonicalUrl}#person`,
-                name: displayName,
-                identifier: khelId,
-                jobTitle: `${sport} - ${position}`,
-                description: profile?.summary || description,
-                url: canonicalUrl,
-                address: {
-                  '@type': 'PostalAddress',
-                  addressLocality: profile?.city || 'India',
-                  addressRegion: profile?.state || 'India',
-                  addressCountry: 'IN',
-                },
-              },
-            },
-            {
-              '@type': 'BreadcrumbList',
-              '@id': `${canonicalUrl}#breadcrumb`,
-              itemListElement: [
-                {
-                  '@type': 'ListItem',
-                  position: 1,
-                  name: 'Home',
-                  item: 'https://khelgrid.com',
-                },
-                {
-                  '@type': 'ListItem',
-                  position: 2,
-                  name: 'Sports CV',
-                  item: 'https://khelgrid.com/sports-cv',
-                },
-                {
-                  '@type': 'ListItem',
-                  position: 3,
-                  name: displayName,
                   item: canonicalUrl,
                 },
               ],

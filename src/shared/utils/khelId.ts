@@ -33,9 +33,10 @@ export const INDIAN_STATE_CODES: Record<string, string> = {
 }
 
 /**
- * Generates an official, permanent Digital Khel ID (खेल आईडी)
+ * Generates a KhelGrid display reference from the athlete handle.
+ * This hash-derived value is not globally unique, not an identity credential,
+ * and must not be used as an authorization key or proof of verification.
  * Format: KG-2026-{STATE_CODE}-{SERIAL}
- * e.g. KG-2026-DEL-48291
  */
 export function generateKhelId(profile: { state?: string; username: string; khelId?: string }): string {
   if (profile.khelId && profile.khelId.startsWith('KG-')) {

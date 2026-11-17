@@ -1,16 +1,7 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import type { AthleteProfile } from '../../shared/domain'
-import {
-  getAthleteProfile,
-  SHOWCASE_ATHLETE_PROFILES,
-  normalizeUsername,
-} from '../../integrations/supabase/athlete-profile-client'
+import { getAthleteProfile } from '../../integrations/supabase/athlete-profile-client'
 import { PlayerCard } from './PlayerCard'
-import { CombineRadarChart } from './CombineRadarChart'
-import { VideoTelemetryOverlay } from './VideoTelemetryOverlay'
-import { CoachEndorsementModal } from './CoachEndorsementModal'
-import { updatePageSeoMetadata, DEFAULT_KEYWORDS } from '../../shared/utils/seoAndShare'
-import { generateKhelId } from '../../shared/utils/khelId'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { SportIcon } from '../../shared/sports/sportIcons'
 import './AthleteProfilePage.css'
@@ -20,11 +11,10 @@ export interface AthleteProfilePageProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
+// Conflict resolution: retain the privacy-first implementation from this branch.
+// Public profile rendering stays fail-closed until the consent-gated server projection is approved.
 export default function AthleteProfilePage({ username, onNavigate }: AthleteProfilePageProps) {
-  const [profile, setProfile] = useState<AthleteProfile | null | undefined>(
-    () => SHOWCASE_ATHLETE_PROFILES[normalizeUsername(username)] ?? undefined,
-  )
-  const [isEndorsementModalOpen, setIsEndorsementModalOpen] = useState(false)
+  const [profile, setProfile] = useState<AthleteProfile | null | undefined>(undefined)
 
   useEffect(() => {
     let active = true
@@ -35,68 +25,6 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
       active = false
     }
   }, [username])
-
-  // Real-time Mobile SERP Title and Head Tags Sync for Athlete Microsite
-  useEffect(() => {
-    if (!profile) return
-    const khelId = generateKhelId(profile)
-    const title = `${profile.fullName} (${profile.sport} - ${profile.playingPosition}) · Khel ID ${khelId} | KhelGrid`
-    const description = `${profile.summary || `Verified Athlete Sports CV for ${profile.fullName} on KhelGrid.`} Physical benchmarks: ${profile.fitnessBenchmarks?.percentileAvg || 80}th percentile (${profile.fitnessBenchmarks?.tier || 'Verified Candidate'}).`
-    const canonicalUrl = `https://khelgrid.com/sports-cv/${profile.username}`
-
-    const cleanup = updatePageSeoMetadata({
-      title,
-      description,
-      canonicalUrl,
-      keywords: [
-        `${profile.fullName.toLowerCase()} sports cv`,
-        `${profile.fullName.toLowerCase()} athlete profile`,
-        `${profile.sport.toLowerCase()} trials`,
-        `${profile.playingPosition.toLowerCase()}`,
-        `khel id ${khelId.toLowerCase()}`,
-        `${profile.city.toLowerCase()} sports`,
-        ...DEFAULT_KEYWORDS,
-      ],
-      ogType: 'profile',
-      jsonLd: {
-        '@context': 'https://schema.org',
-        '@graph': [
-          {
-            '@type': 'ProfilePage',
-            '@id': `${canonicalUrl}#webpage`,
-            url: canonicalUrl,
-            name: title,
-            description,
-            mainEntity: {
-              '@type': 'Person',
-              '@id': `${canonicalUrl}#person`,
-              name: profile.fullName,
-              identifier: khelId,
-              jobTitle: profile.playingPosition,
-              description: profile.summary,
-              address: {
-                '@type': 'PostalAddress',
-                addressLocality: profile.city,
-                addressRegion: profile.state || 'India',
-                addressCountry: 'IN',
-              },
-            },
-          },
-          {
-            '@type': 'BreadcrumbList',
-            '@id': `${canonicalUrl}#breadcrumb`,
-            itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://khelgrid.com' },
-              { '@type': 'ListItem', position: 2, name: 'Sports CV', item: 'https://khelgrid.com/sports-cv' },
-              { '@type': 'ListItem', position: 3, name: profile.fullName, item: canonicalUrl },
-            ],
-          },
-        ],
-      },
-    })
-
-    return cleanup
-  }, [profile])
 
   const handleLink = (event: MouseEvent<HTMLAnchorElement>, path: string) => {
     if (onNavigate) {
@@ -110,7 +38,7 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
         <div className="state-panel" role="status">
           <span className="state-symbol">…</span>
           <h3>Loading athlete profile…</h3>
-          <p>Retrieving verified credentials, telemetry, and sporting background.</p>
+          <p>Retrieving the public athlete profile.</p>
         </div>
       </section>
     )
@@ -123,8 +51,8 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
           <span className="state-symbol">○</span>
           <h3>Athlete Profile Not Found</h3>
           <p>
-            No published athlete profile was found for handle <code>@{username}</code>. You can create your own
-            official Sports CV and Player Card today for free.
+            No public athlete profile is currently available for handle <code>@{username}</code>. You can create your own
+            private Sports CV draft while public profile publishing is being prepared.
           </p>
           <a className="primary-link" href="/sports-cv" onClick={e => handleLink(e, '/sports-cv')}>
             Build Your Athlete CV <SiteIcon name="arrow-up-right" size={16} />
@@ -137,7 +65,6 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
   const clips = profile.videoClips || []
   const achievements = profile.achievements || []
   const fitness = profile.fitnessBenchmarks
-  const khelId = generateKhelId(profile)
 
   return (
     <section className="content-page athlete-profile-page">
@@ -147,69 +74,12 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
           <SiteIcon name="arrow-left" size={15} /> Athlete Network
         </a>
         <span className="breadcrumb-handle">@{profile.username}</span>
-        <span className="breadcrumb-khel-id">
-          <SiteIcon name="badge-check" size={13} /> {khelId}
-        </span>
       </div>
 
       <div className="athlete-profile-layout">
-        {/* Left Column: Official Trading Card & Selector Actions */}
+        {/* Left Column: Official Trading Card */}
         <aside className="athlete-card-column">
           <PlayerCard profile={profile} />
-
-          {/* Quick Trial Dossier PDF Export Link */}
-          <a
-            className="profile-action-btn btn-export-dossier-pdf"
-            href={`/sports-cv?user=${profile.username}`}
-            onClick={e => handleLink(e, `/sports-cv?user=${profile.username}`)}
-            title="Open official 1-page Selection Trial Dossier"
-          >
-            <SiteIcon name="download" size={16} />
-            <span>Selection Trial Dossier (PDF)</span>
-          </a>
-
-          {/* Coach Endorsement Status Card */}
-          {profile.coachEndorsement?.endorsed ? (
-            <div className="coach-endorsed-banner" aria-label="NIS Coach Endorsement Details">
-              <div className="endorsed-badge-top">
-                <SiteIcon name="award" size={16} />
-                <span>★ NIS COACH ENDORSED</span>
-              </div>
-              <p className="endorsed-by">
-                Endorsed by <strong>{profile.coachEndorsement.coachName}</strong>
-              </p>
-              <span className="endorsed-license">{profile.coachEndorsement.coachLicense}</span>
-              {profile.coachEndorsement.organizationOrAcademy && (
-                <span className="endorsed-org">{profile.coachEndorsement.organizationOrAcademy}</span>
-              )}
-              {profile.coachEndorsement.endorsementStatement && (
-                <blockquote className="endorsed-quote">
-                  &ldquo;{profile.coachEndorsement.endorsementStatement}&rdquo;
-                </blockquote>
-              )}
-              <div className="endorsed-footer-strip">
-                <span className="endorsed-ref">Ref: #{profile.coachEndorsement.endorsementRef}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="coach-endorse-prompt-card">
-              <h4>
-                <SiteIcon name="award" size={16} /> Coach Endorsement
-              </h4>
-              <p>
-                Have your certified NIS Patiala, BCCI, or AIFF coach endorse your combine metrics to boost trial
-                selection ranking.
-              </p>
-              <button
-                type="button"
-                className="btn-request-endorsement"
-                onClick={() => setIsEndorsementModalOpen(true)}
-              >
-                <SiteIcon name="award" size={15} />
-                <span>Request / Sign Coach Endorsement</span>
-              </button>
-            </div>
-          )}
 
           <div className="scout-contact-card">
             <h3>
@@ -235,12 +105,9 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
               <span className="bio-sport-pill">
                 <SportIcon name={profile.sport} size={20} /> {profile.sport}
               </span>
-              <span className="bio-verified-pill">
-                <SiteIcon name="badge-check" size={15} /> Verified Sports CV
-              </span>
-              {profile.coachEndorsement?.endorsed && (
-                <span className="bio-coach-endorsed-pill">
-                  <SiteIcon name="award" size={14} /> NIS Coach Endorsed
+              {profile.verificationTrusted === true && (
+                <span className="bio-verified-pill">
+                  <SiteIcon name="badge-check" size={15} /> KhelGrid-verified profile
                 </span>
               )}
             </div>
@@ -288,7 +155,7 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
             </div>
           </header>
 
-          {/* Section 1: Video & Telemetry Clips Gallery with HUD Overlays */}
+          {/* Section 1: Video & Telemetry Clips Gallery */}
           <section className="profile-section-panel">
             <div className="section-header">
               <h2>
@@ -303,12 +170,41 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
             {clips.length ? (
               <div className="video-clips-grid">
                 {clips.map(clip => (
-                  <VideoTelemetryOverlay
-                    key={clip.id}
-                    clip={clip}
-                    athleteName={profile.fullName}
-                    sport={profile.sport}
-                  />
+                  <article className="video-clip-card" key={clip.id}>
+                    <div className="clip-header">
+                      <span className="clip-type-tag">
+                        {clip.clipType.replace(/-/g, ' ').toUpperCase()}
+                      </span>
+                      {clip.durationSeconds && (
+                        <span className="clip-duration">{clip.durationSeconds}s</span>
+                      )}
+                    </div>
+
+                    <h3>{clip.title}</h3>
+                    {clip.description && <p className="clip-desc">{clip.description}</p>}
+
+                    {/* Telemetry Chips */}
+                    {clip.telemetry && clip.telemetry.length > 0 && (
+                      <div className="clip-telemetry-row">
+                        {clip.telemetry.map((t, idx) => (
+                          <div className="telemetry-pill" key={idx}>
+                            <span className="t-name">{t.metricName}:</span>
+                            <span className="t-val">{t.metricValue}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <a
+                      className="clip-watch-link"
+                      href={clip.videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <SiteIcon name="play" size={15} /> Watch Technique Clip{' '}
+                      <SiteIcon name="external-link" size={13} />
+                    </a>
+                  </article>
                 ))}
               </div>
             ) : (
@@ -316,12 +212,12 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
             )}
           </section>
 
-          {/* Section 2: Talent Scanner Normative Fitness Benchmark & Spider Radar */}
+          {/* Section 2: Talent Scanner Normative Fitness Benchmark (KG-2026-002) */}
           {fitness && (
             <section className="profile-section-panel">
               <div className="section-header">
                 <h2>
-                  <SiteIcon name="activity" size={20} /> Scientific Fitness Benchmarks &amp; Combine Radar
+                  <SiteIcon name="activity" size={20} /> Scientific Fitness Benchmarks
                 </h2>
                 {fitness.tier && <span className="tier-badge">{fitness.tier}</span>}
               </div>
@@ -355,9 +251,6 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
                   </div>
                 )}
               </div>
-
-              {/* Interactive Normative Combine Spider/Radar Chart */}
-              <CombineRadarChart profile={profile} />
             </section>
           )}
 
@@ -365,7 +258,7 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
           <section className="profile-section-panel">
             <div className="section-header">
               <h2>
-                <SiteIcon name="trophy" size={20} /> Competition Achievements &amp; Medal Ledger
+                <SiteIcon name="trophy" size={20} /> Competition Achievements
               </h2>
             </div>
 
@@ -382,7 +275,7 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
                 ))}
               </ul>
             ) : (
-              <p className="empty-subtext">No tournament achievements listed yet.</p>
+              <p className="empty-subtext">No achievements entered yet.</p>
             )}
           </section>
 
@@ -408,15 +301,6 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
           </section>
         </main>
       </div>
-
-      {/* Coach Endorsement Modal */}
-      <CoachEndorsementModal
-        profile={profile}
-        isOpen={isEndorsementModalOpen}
-        onClose={() => setIsEndorsementModalOpen(false)}
-        onSuccess={updated => setProfile(updated)}
-      />
     </section>
   )
 }
-
