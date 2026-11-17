@@ -1241,16 +1241,16 @@ export function AdminModerationPage({
                   <div className="admin-ethics-row">
                     {sub.humanEthicsConfirmed && (
                       <span className="admin-ethics-badge ok">
-                        <SiteIcon name="shield-check" size={12} /> IRB Human Ethics Certified
+                        <SiteIcon name="shield-check" size={12} /> Ethics declaration submitted
                       </span>
                     )}
                     {sub.minorConsentConfirmed && (
                       <span className="admin-ethics-badge ok">
-                        <SiteIcon name="check-circle" size={12} /> Minor Consent Verified
+                        <SiteIcon name="check-circle" size={12} /> Minor-consent declaration submitted
                       </span>
                     )}
                     <span className="admin-ethics-badge license">
-                      <SiteIcon name="award" size={12} /> Diamond Open Access (No APC)
+                      <SiteIcon name="award" size={12} /> Licence: {sub.licenseType || 'not supplied'} · {sub.licenseConfirmed ? 'author confirmed' : 'not confirmed'}
                     </span>
                   </div>
 
