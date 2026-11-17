@@ -9,18 +9,34 @@ const DEVELOPMENT_SUPABASE_URL = 'https://hznsbxvovjxvmnchzzqt.supabase.co'
 const DEVELOPMENT_SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bnNieHZvdmp4dm1uY2h6enF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MDU2NzIsImV4cCI6MjEwODQ4MTY3Mn0.CGMlJ8sM5yDPE1gd9Eydhmwf-bBCoxDJIaSTh133OpQ'
 
+function resolveAdminSupabaseUrl(): string {
+  const explicit = process.env.VITE_ADMIN_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
+  if (explicit && !explicit.includes('example.invalid')) return explicit
+
+  const standard = process.env.VITE_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
+  if (standard && standard.includes('hznsbxvovjxvmnchzzqt')) return standard
+
+  return DEVELOPMENT_SUPABASE_URL
+}
+
+function resolveAdminAnonKey(): string {
+  const explicit = process.env.VITE_ADMIN_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '')
+  if (explicit && explicit !== 'example' && explicit.length > 50) return explicit
+
+  const standard = process.env.VITE_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '')
+  if (standard && standard.length > 50 && standard !== 'example') return standard
+
+  return DEVELOPMENT_SUPABASE_ANON_KEY
+}
+
 export default defineConfig({
   root: adminRoot,
   envDir: resolve(adminRoot, '../..'),
   publicDir: resolve(adminRoot, '../../public'),
   plugins: [react()],
   define: {
-    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(
-      process.env.VITE_SUPABASE_URL || DEVELOPMENT_SUPABASE_URL,
-    ),
-    'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(
-      process.env.VITE_SUPABASE_ANON_KEY || DEVELOPMENT_SUPABASE_ANON_KEY,
-    ),
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(resolveAdminSupabaseUrl()),
+    'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(resolveAdminAnonKey()),
   },
   server: {
     host: '127.0.0.1',

@@ -1,11 +1,28 @@
+import { useEffect, useState } from 'react'
 import { AdminControlPanelPage } from '../../../src/modules/admin/AdminControlPanelPage'
+import { AdminModerationPage } from '../../../src/modules/admin/AdminModerationPage'
+import { SiteIcon } from '../../../src/shared/components/SiteIcon'
 
 const DEVELOPMENT_SUPABASE_URL = 'https://hznsbxvovjxvmnchzzqt.supabase.co'
 
 export function AdminApp() {
-  const configuredUrl = (import.meta.env.VITE_SUPABASE_URL || DEVELOPMENT_SUPABASE_URL)?.replace(/\/$/, '')
+  const configuredUrl = (import.meta.env.VITE_SUPABASE_URL || DEVELOPMENT_SUPABASE_URL)
+    ?.toString()
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .replace(/\/$/, '')
 
-  if (configuredUrl !== DEVELOPMENT_SUPABASE_URL) {
+  const [activeWorkspace, setActiveWorkspace] = useState<'command' | 'moderation_desk'>('command')
+
+  useEffect(() => {
+    document.title = 'KhelGrid Admin Operations · admin.khelgrid.com'
+  }, [])
+
+  const isApproved =
+    Boolean(configuredUrl) &&
+    (configuredUrl === DEVELOPMENT_SUPABASE_URL || configuredUrl.includes('hznsbxvovjxvmnchzzqt'))
+
+  if (!isApproved) {
     return (
       <main className="khelgrid-admin-app khelgrid-admin-config-error" role="alert">
         <h1>KhelGrid Admin is unavailable</h1>
@@ -17,7 +34,51 @@ export function AdminApp() {
 
   return (
     <main className="khelgrid-admin-app" aria-label="KhelGrid private administration">
-      <AdminControlPanelPage />
+      {/* Executive Operations Topbar */}
+      <header className="admin-shell-topbar">
+        <div className="admin-shell-brand">
+          <span className="admin-shell-badge-mark">KG</span>
+          <div>
+            <span className="admin-shell-title">KhelGrid Admin Operations</span>
+            <span className="admin-shell-sub">admin.khelgrid.com</span>
+          </div>
+        </div>
+
+        <nav className="admin-shell-nav" aria-label="Admin views">
+          <button
+            type="button"
+            className={`admin-shell-tab-btn ${activeWorkspace === 'command' ? 'is-active' : ''}`}
+            onClick={() => setActiveWorkspace('command')}
+          >
+            <SiteIcon name="activity" size={15} />
+            <span>Command Centre</span>
+          </button>
+          <button
+            type="button"
+            className={`admin-shell-tab-btn ${activeWorkspace === 'moderation_desk' ? 'is-active' : ''}`}
+            onClick={() => setActiveWorkspace('moderation_desk')}
+          >
+            <SiteIcon name="check-circle" size={15} />
+            <span>Listing &amp; Chronicle Desk</span>
+          </button>
+        </nav>
+
+        <div className="admin-shell-meta">
+          <span className="admin-shell-db-indicator">
+            <span className="admin-shell-status-dot" />
+            <span>Dev Database (hznsbxvovjxvmnchzzqt)</span>
+          </span>
+        </div>
+      </header>
+
+      {/* Main Admin Workspace View */}
+      <div className="admin-shell-content">
+        {activeWorkspace === 'command' ? (
+          <AdminControlPanelPage />
+        ) : (
+          <AdminModerationPage />
+        )}
+      </div>
     </main>
   )
 }

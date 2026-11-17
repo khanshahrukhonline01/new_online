@@ -208,18 +208,47 @@ describe('AdminControlPanelPage Acceptance & Role Boundaries', () => {
     const expectedTabs: AdminControlTab[] = [
       'overview',
       'queue',
+      'chronicle',
       'athletes',
       'matches',
       'alerts',
       'announcements',
       'access',
     ]
-    expect(expectedTabs).toHaveLength(7)
+    expect(expectedTabs).toHaveLength(8)
     expect(expectedTabs).toContain('overview')
+    expect(expectedTabs).toContain('queue')
+    expect(expectedTabs).toContain('chronicle')
     expect(expectedTabs).toContain('athletes')
     expect(expectedTabs).toContain('matches')
     expect(expectedTabs).toContain('alerts')
     expect(expectedTabs).toContain('announcements')
     expect(expectedTabs).toContain('access')
+  })
+
+  it('7. KhelChronicle Research Manuscripts Desk: renders manuscript queue, ethical clearance, and editorial actions', () => {
+    const moderatorProfile: ModerationAccessProfile = {
+      user_id: '00000000-0000-4000-8000-000000000001',
+      role: 'moderator',
+      is_active: true,
+    }
+    const html = renderToStaticMarkup(
+      <AdminControlPanelPage
+        initialSignedIn={true}
+        initialProfile={moderatorProfile}
+        initialLoading={false}
+        initialTab="chronicle"
+      />,
+    )
+
+    // Scientific manuscript operations desk
+    expect(html).toContain('Research Manuscripts')
+    expect(html).toContain('KhelChronicle Research Manuscripts &amp; Editorial Screening')
+    expect(html).toContain('Awaiting Screening')
+    expect(html).toContain('Under Peer Review')
+    expect(html).toContain('Approved for Archive')
+    expect(html).toContain('Published Preprints')
+    expect(html).toContain('Rapid 48-Hour editorial desk')
+    expect(html).toContain('Manuscript Queue')
   })
 })

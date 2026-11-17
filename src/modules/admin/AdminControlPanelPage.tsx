@@ -28,6 +28,15 @@ import {
   type ModerationAccessProfile,
   type ModeratorQueueItem,
 } from '../../integrations/supabase/public-client'
+import {
+  getLocalModerationQueue,
+  startManuscriptReview,
+  approveManuscript,
+  rejectManuscript,
+  publishManuscriptToArchive,
+  type ChronicleModerationSubmission,
+  type ChronicleModerationQueueResult,
+} from '../../integrations/supabase/chronicle-client'
 import './AdminControlPanelPage.css'
 import { getEvidenceChecklist } from './moderationEvidenceChecklist'
 import { SiteIcon } from '../../shared/components/SiteIcon'
@@ -65,6 +74,7 @@ const fieldSets: Record<string, Array<[string, string]>> = {
 export type AdminControlTab =
   | 'overview'
   | 'queue'
+  | 'chronicle'
   | 'athletes'
   | 'matches'
   | 'alerts'
@@ -76,6 +86,7 @@ export interface AdminControlPanelPageProps {
   initialSignedIn?: boolean
   initialLoading?: boolean
   initialQueue?: AdminModerationQueue | null
+  initialChronicleQueue?: ChronicleModerationQueueResult | null
   initialAccounts?: ListingModeratorAccount[]
   initialAccessAudits?: ListingModeratorAccessAudit[]
   initialTab?: AdminControlTab
@@ -86,6 +97,7 @@ export function AdminControlPanelPage({
   initialSignedIn,
   initialLoading,
   initialQueue,
+  initialChronicleQueue,
   initialAccounts,
   initialAccessAudits,
   initialTab,
@@ -171,6 +183,138 @@ export function AdminControlPanelPage({
   const [newAnnTone, setNewAnnTone] = useState<'emerald' | 'amber' | 'indigo' | 'rose' | 'cyan'>('amber')
   const [newAnnCtaLabel, setNewAnnCtaLabel] = useState('View Circular')
   const [newAnnCtaUrl, setNewAnnCtaUrl] = useState('/opportunities')
+
+  // KhelChronicle Manuscripts Desk
+  const [chronicleQueue, setChronicleQueue] = useState<ChronicleModerationQueueResult | null>(() => {
+    if (initialChronicleQueue !== undefined) return initialChronicleQueue
+    const q = getLocalModerationQueue()
+    return {
+      submissions: q,
+      stats: {
+        pendingCount: q.filter(s => s.status === 'pending_review').length,
+        underReviewCount: q.filter(s => s.status === 'under_review').length,
+        changesRequestedCount: q.filter(s => s.status === 'changes_requested').length,
+        approvedCount: q.filter(s => s.status === 'approved').length,
+        publishedCount: q.filter(s => s.status === 'published').length,
+        rejectedCount: q.filter(s => s.status === 'rejected').length,
+        totalCount: q.length,
+      },
+    }
+  })
+  const [selectedManuscript, setSelectedManuscript] = useState<ChronicleModerationSubmission | null>(null)
+  const [chronicleFilter, setChronicleFilter] = useState<'all' | 'pending_review' | 'under_review' | 'approved' | 'published' | 'rejected'>('all')
+  const [manuscriptNotes, setManuscriptNotes] = useState('')
+  const [manuscriptSlug, setManuscriptSlug] = useState('')
+
+  const handleStartManuscriptScreening = async (sub: ChronicleModerationSubmission) => {
+    setBusy(true); setError(''); setNotice('')
+    try {
+      await startManuscriptReview(sub.id)
+      setNotice(`Started editorial screening for manuscript "${sub.title}".`)
+      const q = getLocalModerationQueue()
+      setChronicleQueue({
+        submissions: q,
+        stats: {
+          pendingCount: q.filter(s => s.status === 'pending_review').length,
+          underReviewCount: q.filter(s => s.status === 'under_review').length,
+          changesRequestedCount: q.filter(s => s.status === 'changes_requested').length,
+          approvedCount: q.filter(s => s.status === 'approved').length,
+          publishedCount: q.filter(s => s.status === 'published').length,
+          rejectedCount: q.filter(s => s.status === 'rejected').length,
+          totalCount: q.length,
+        },
+      })
+      setSelectedManuscript(prev => prev ? { ...prev, status: 'under_review' } : prev)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not start review.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleApproveManuscript = async (subId: string) => {
+    setBusy(true); setError(''); setNotice('')
+    try {
+      await approveManuscript(subId, manuscriptNotes.trim() || undefined)
+      setNotice('Manuscript approved for publication in KhelChronicle archive.')
+      const q = getLocalModerationQueue()
+      setChronicleQueue({
+        submissions: q,
+        stats: {
+          pendingCount: q.filter(s => s.status === 'pending_review').length,
+          underReviewCount: q.filter(s => s.status === 'under_review').length,
+          changesRequestedCount: q.filter(s => s.status === 'changes_requested').length,
+          approvedCount: q.filter(s => s.status === 'approved').length,
+          publishedCount: q.filter(s => s.status === 'published').length,
+          rejectedCount: q.filter(s => s.status === 'rejected').length,
+          totalCount: q.length,
+        },
+      })
+      setSelectedManuscript(prev => prev ? { ...prev, status: 'approved' } : prev)
+      setManuscriptNotes('')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not approve manuscript.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handlePublishManuscript = async (subId: string) => {
+    setBusy(true); setError(''); setNotice('')
+    try {
+      const res = await publishManuscriptToArchive(subId, manuscriptSlug.trim() || undefined)
+      setNotice(`Published manuscript to KhelChronicle archive with ID "${res.paperId}" and DOI!`)
+      const q = getLocalModerationQueue()
+      setChronicleQueue({
+        submissions: q,
+        stats: {
+          pendingCount: q.filter(s => s.status === 'pending_review').length,
+          underReviewCount: q.filter(s => s.status === 'under_review').length,
+          changesRequestedCount: q.filter(s => s.status === 'changes_requested').length,
+          approvedCount: q.filter(s => s.status === 'approved').length,
+          publishedCount: q.filter(s => s.status === 'published').length,
+          rejectedCount: q.filter(s => s.status === 'rejected').length,
+          totalCount: q.length,
+        },
+      })
+      setSelectedManuscript(prev => prev ? { ...prev, status: 'published' } : prev)
+      setManuscriptSlug('')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not publish manuscript.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleRejectManuscript = async (subId: string, reason: string) => {
+    if (!reason.trim()) {
+      setError('A rejection reason is required for the author.')
+      return
+    }
+    setBusy(true); setError(''); setNotice('')
+    try {
+      await rejectManuscript(subId, reason.trim())
+      setNotice('Manuscript rejected. The editorial explanation was recorded.')
+      const q = getLocalModerationQueue()
+      setChronicleQueue({
+        submissions: q,
+        stats: {
+          pendingCount: q.filter(s => s.status === 'pending_review').length,
+          underReviewCount: q.filter(s => s.status === 'under_review').length,
+          changesRequestedCount: q.filter(s => s.status === 'changes_requested').length,
+          approvedCount: q.filter(s => s.status === 'approved').length,
+          publishedCount: q.filter(s => s.status === 'published').length,
+          rejectedCount: q.filter(s => s.status === 'rejected').length,
+          totalCount: q.length,
+        },
+      })
+      setSelectedManuscript(prev => prev ? { ...prev, status: 'rejected' } : prev)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not reject manuscript.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -624,6 +768,18 @@ export function AdminControlPanelPage({
 
           <button
             type="button"
+            className={`admin-control-nav-item ${activeTab === 'chronicle' ? 'active' : ''}`}
+            onClick={() => setActiveTab('chronicle')}
+          >
+            <SiteIcon name="file-text" size={16} />
+            <span>Research Manuscripts</span>
+            {Boolean(chronicleQueue?.stats.pendingCount) && (
+              <span className="admin-nav-badge">{chronicleQueue?.stats.pendingCount}</span>
+            )}
+          </button>
+
+          <button
+            type="button"
             className={`admin-control-nav-item ${activeTab === 'athletes' ? 'active' : ''}`}
             onClick={() => setActiveTab('athletes')}
           >
@@ -926,6 +1082,189 @@ export function AdminControlPanelPage({
                 )}
               </div>
             </div>
+          )}
+
+          {/* TAB: KHELCHRONICLE RESEARCH MANUSCRIPTS DESK */}
+          {activeTab === 'chronicle' && (
+            <section className="admin-control-chronicle" aria-label="Research Manuscripts Desk">
+              <div className="admin-control-section-heading">
+                <div>
+                  <p className="eyebrow">OPEN SPORTS SCIENCE REPOSITORY</p>
+                  <h2>KhelChronicle Research Manuscripts &amp; Editorial Screening</h2>
+                </div>
+                <span>Total Manuscripts: {chronicleQueue?.stats.totalCount || 0}</span>
+              </div>
+
+              <div className="admin-telemetry-banner">
+                <div className="admin-telemetry-card">
+                  <span>Awaiting Screening</span>
+                  <strong>{chronicleQueue?.stats.pendingCount || 0}</strong>
+                  <small>Rapid 48-Hour editorial desk</small>
+                </div>
+                <div className="admin-telemetry-card">
+                  <span>Under Peer Review</span>
+                  <strong>{chronicleQueue?.stats.underReviewCount || 0}</strong>
+                  <small>Open science review cycle</small>
+                </div>
+                <div className="admin-telemetry-card">
+                  <span>Approved for Archive</span>
+                  <strong>{chronicleQueue?.stats.approvedCount || 0}</strong>
+                  <small>Ready for DOI issuance</small>
+                </div>
+                <div className="admin-telemetry-card">
+                  <span>Published Preprints</span>
+                  <strong>{chronicleQueue?.stats.publishedCount || 0}</strong>
+                  <small>Indexed with CC BY 4.0</small>
+                </div>
+              </div>
+
+              <div className="admin-filter-bar">
+                {(['all', 'pending_review', 'under_review', 'approved', 'published', 'rejected'] as const).map(tab => (
+                  <button
+                    type="button"
+                    key={tab}
+                    className={`admin-filter-btn ${chronicleFilter === tab ? 'is-active' : ''}`}
+                    onClick={() => setChronicleFilter(tab)}
+                  >
+                    {tab.replace('_', ' ').toUpperCase()} ({
+                      tab === 'all'
+                        ? chronicleQueue?.submissions.length || 0
+                        : (chronicleQueue?.submissions || []).filter(s => s.status === tab).length
+                    })
+                  </button>
+                ))}
+              </div>
+
+              <div className="admin-control-layout">
+                <div className="admin-control-queue">
+                  <h2>Manuscript Queue</h2>
+                  {(chronicleQueue?.submissions || [])
+                    .filter(s => chronicleFilter === 'all' || s.status === chronicleFilter)
+                    .map(sub => (
+                      <button
+                        type="button"
+                        key={sub.id}
+                        className={`admin-control-queue-item ${selectedManuscript?.id === sub.id ? 'selected' : ''}`}
+                        onClick={() => {
+                          setSelectedManuscript(sub)
+                          setManuscriptNotes('')
+                          setManuscriptSlug(sub.publishedSlug || '')
+                        }}
+                      >
+                        <strong>{sub.title}</strong>
+                        <span>{sub.authorName} ({sub.affiliation || 'Author'})</span>
+                        <small>{sub.category} · <span className={`admin-badge is-${sub.status}`}>{sub.status}</span></small>
+                      </button>
+                    ))}
+                  {(chronicleQueue?.submissions || []).filter(s => chronicleFilter === 'all' || s.status === chronicleFilter).length === 0 && (
+                    <p style={{ padding: '1rem', color: '#64748b' }}>No manuscripts matching this filter.</p>
+                  )}
+                </div>
+
+                <div className="admin-control-workspace">
+                  {selectedManuscript ? (
+                    <>
+                      <div className="admin-control-card">
+                        <p className="eyebrow">MANUSCRIPT DETAILS · {selectedManuscript.id}</p>
+                        <h3>{selectedManuscript.title}</h3>
+                        <p><strong>Primary Author:</strong> {selectedManuscript.authorName} ({selectedManuscript.authorEmail})</p>
+                        <p><strong>Affiliation:</strong> {selectedManuscript.affiliation || 'Not specified'}</p>
+                        {selectedManuscript.orcid && <p><strong>ORCID:</strong> <code>{selectedManuscript.orcid}</code></p>}
+                        {selectedManuscript.coAuthors && <p><strong>Co-Authors:</strong> {selectedManuscript.coAuthors}</p>}
+                        <p><strong>Category Discipline:</strong> {selectedManuscript.category}</p>
+                        <p><strong>Keywords:</strong> {selectedManuscript.keywords || 'None'}</p>
+                        
+                        <div style={{ margin: '1rem 0', padding: '0.85rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem' }}>Structured Abstract</h4>
+                          <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.6, color: '#334155' }}>{selectedManuscript.abstract}</p>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', margin: '0.75rem 0' }}>
+                          <div style={{ padding: '0.65rem', background: selectedManuscript.humanEthicsConfirmed ? '#ecfdf5' : '#fef2f2', border: '1px solid', borderColor: selectedManuscript.humanEthicsConfirmed ? '#a7f3d0' : '#fecaca', borderRadius: '6px' }}>
+                            <strong style={{ fontSize: '0.8rem', color: selectedManuscript.humanEthicsConfirmed ? '#047857' : '#b91c1c' }}>
+                              {selectedManuscript.humanEthicsConfirmed ? '✓ Human Ethics IEC Clearance Confirmed' : '⚠ Ethics Clearance Pending'}
+                            </strong>
+                          </div>
+                          <div style={{ padding: '0.65rem', background: selectedManuscript.minorConsentConfirmed ? '#ecfdf5' : '#f8fafc', border: '1px solid', borderColor: selectedManuscript.minorConsentConfirmed ? '#a7f3d0' : '#e2e8f0', borderRadius: '6px' }}>
+                            <strong style={{ fontSize: '0.8rem', color: selectedManuscript.minorConsentConfirmed ? '#047857' : '#64748b' }}>
+                              {selectedManuscript.minorConsentConfirmed ? '✓ POCSO Minor Consent Verified' : 'No Minors in Study / Standard Cohort'}
+                            </strong>
+                          </div>
+                        </div>
+
+                        <label className="admin-control-full">
+                          Editorial Feedback &amp; Verification Notes
+                          <textarea
+                            value={manuscriptNotes}
+                            onChange={e => setManuscriptNotes(e.target.value)}
+                            placeholder="Add notes for the peer screening audit trail..."
+                          />
+                        </label>
+
+                        <div className="admin-control-actions">
+                          {selectedManuscript.status === 'pending_review' && (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => void handleStartManuscriptScreening(selectedManuscript)}
+                              style={{ background: '#0284c7' }}
+                            >
+                              Start Editorial Screening
+                            </button>
+                          )}
+                          {['pending_review', 'under_review'].includes(selectedManuscript.status) && (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => void handleApproveManuscript(selectedManuscript.id)}
+                              style={{ background: '#047857' }}
+                            >
+                              Approve for Publication
+                            </button>
+                          )}
+                          {selectedManuscript.status === 'approved' && (
+                            <div style={{ display: 'flex', gap: '0.5rem', width: '100%', alignItems: 'center' }}>
+                              <input
+                                type="text"
+                                value={manuscriptSlug}
+                                onChange={e => setManuscriptSlug(e.target.value)}
+                                placeholder="Archive Slug (e.g. fast-bowler-lumbar-stress)"
+                                style={{ flex: 1 }}
+                              />
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => void handlePublishManuscript(selectedManuscript.id)}
+                                style={{ background: '#059669', whiteSpace: 'nowrap' }}
+                              >
+                                Issue DOI &amp; Publish
+                              </button>
+                            </div>
+                          )}
+                          {selectedManuscript.status !== 'rejected' && selectedManuscript.status !== 'published' && (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => {
+                                const reason = window.prompt('Enter rejection / revision rationale for author:')
+                                if (reason) void handleRejectManuscript(selectedManuscript.id, reason)
+                              }}
+                              style={{ background: '#b91c1c' }}
+                            >
+                              Reject Manuscript
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="admin-control-empty">
+                      <p>Select a research manuscript from the queue to inspect methodology, ethical clearance, and perform editorial actions.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
           )}
 
           {/* TAB 3: ATHLETE KYC & CV VERIFICATION DESK */}
