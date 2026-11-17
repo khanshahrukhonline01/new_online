@@ -126,9 +126,9 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
 
       <DirectoryCallout
         variant="chronicle"
-        tag="Diamond Open Access"
-        title="Sports Science Research · Zero APC"
-        description="Publish preprints with zero submission fees, CC BY licensing, and permanent citation indexing."
+        tag="Editorial screening"
+        title="Sports Science Research · Open Submissions"
+        description="Submit manuscripts for editorial screening. Public listing requires a complete research record, verified authorship, ethics and data statements, references, and publication approval."
         buttonLabel="Submit Paper"
         buttonHref="/khelchronicle/submit"
         onNavigate={onNavigate}
@@ -137,20 +137,20 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
       {/* Stats Row */}
       <div className="kc-stats-row" aria-label="Repository statistics">
         <div className="kc-stat-card">
-          <div className="kc-stat-val">{RESEARCH_PAPERS.length}</div>
+          <div className="kc-stat-val">{papers.length}</div>
           <div className="kc-stat-lbl">Active Preprints</div>
         </div>
         <div className="kc-stat-card">
-          <div className="kc-stat-val">4,800+</div>
-          <div className="kc-stat-lbl">Athletes Benchmarked</div>
+          <div className="kc-stat-val">{papers.filter(p => p.sections.length > 0).length}</div>
+          <div className="kc-stat-lbl">Complete manuscripts</div>
         </div>
         <div className="kc-stat-card">
           <div className="kc-stat-val">7</div>
           <div className="kc-stat-lbl">Research Disciplines</div>
         </div>
         <div className="kc-stat-card">
-          <div className="kc-stat-val">100%</div>
-          <div className="kc-stat-lbl">Diamond Open Access</div>
+          <div className="kc-stat-val">Required</div>
+          <div className="kc-stat-lbl">Editorial approval</div>
         </div>
       </div>
 
@@ -164,7 +164,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
           {RESEARCH_SPORTS.map(sp => {
             const count = sp.slug === 'all'
               ? RESEARCH_PAPERS.length
-              : RESEARCH_PAPERS.filter(p => p.sportSlug === sp.slug).length
+              : papers.filter(p => p.sportSlug === sp.slug).length
             const isActive = selectedSport === sp.slug
             return (
               <button
@@ -327,7 +327,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
                   )}
                   <span className="kc-paper-category-tag">{paper.categoryName}</span>
                   <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-                    Test Data
+                    Published manuscript
                   </span>
                   <span className="kc-paper-date">{paper.datePublished}</span>
                 </div>
