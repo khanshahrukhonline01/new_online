@@ -36,7 +36,7 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
         <div className="state-panel" role="status">
           <span className="state-symbol">…</span>
           <h3>Loading athlete profile…</h3>
-          <p>Retrieving verified credentials, telemetry, and sporting background.</p>
+          <p>Checking whether a consented public athlete profile is available.</p>
         </div>
       </section>
     )
