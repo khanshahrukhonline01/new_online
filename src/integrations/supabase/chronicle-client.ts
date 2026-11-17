@@ -21,16 +21,22 @@ export interface ManuscriptSubmissionInput {
   primary_author_affiliation: string
   orcid?: string
   co_authors?: string
+  article_type: string
   abstract_text: string
   keywords: string
   full_text_or_url: string
+  supplementary_url?: string
+  data_availability: string
+  ethics_clearance_number?: string
   human_ethics_confirmed: boolean
   minor_consent_confirmed: boolean
+  license_type: 'cc-by-4.0' | 'cc-by-nc-nd-4.0'
+  license_confirmed: boolean
 }
 
 export type ManuscriptSubmissionResult =
   | { status: 'submitted'; submissionId: string; message?: string }
-  | { status: 'unconfigured'; submissionId: string; message: string }
+  | { status: 'unconfigured'; message: string }
   | { status: 'unavailable'; message: string }
 
 interface DbPaperRow {
@@ -362,14 +368,13 @@ export async function getChronicleAuthorBySlug(
 export async function submitChronicleManuscript(
   input: ManuscriptSubmissionInput
 ): Promise<ManuscriptSubmissionResult> {
-  // Input validations
   if (!input.manuscript_title || input.manuscript_title.trim().length < 5) {
     return { status: 'unavailable', message: 'Manuscript title must be at least 5 characters.' }
   }
   if (!input.primary_author_name || input.primary_author_name.trim().length < 2) {
     return { status: 'unavailable', message: 'Primary author name is required.' }
   }
-  const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
+  const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$/
   if (!input.primary_author_email || !emailRegex.test(input.primary_author_email.trim())) {
     return { status: 'unavailable', message: 'Please provide a valid author email address.' }
   }
@@ -379,62 +384,53 @@ export async function submitChronicleManuscript(
   if (!input.abstract_text || input.abstract_text.trim().length < 50) {
     return { status: 'unavailable', message: 'Please provide an abstract of at least 50 characters.' }
   }
-  if (!input.human_ethics_confirmed) {
-    return { status: 'unavailable', message: 'Ethics confirmation (Declaration of Helsinki / IRB approval) is mandatory.' }
+  if (!input.human_ethics_confirmed || !input.minor_consent_confirmed) {
+    return { status: 'unavailable', message: 'Required human-subjects and minor-athlete consent declarations must be confirmed.' }
   }
-  if (!input.minor_consent_confirmed) {
-    return { status: 'unavailable', message: 'Guardian/parental consent confirmation for minor athletes is mandatory.' }
+  if (!input.license_confirmed) {
+    return { status: 'unavailable', message: 'Please explicitly confirm the selected manuscript licence.' }
+  }
+  if (!['cc-by-4.0', 'cc-by-nc-nd-4.0'].includes(input.license_type)) {
+    return { status: 'unavailable', message: 'Please select a supported Creative Commons licence.' }
+  }
+  if (!input.article_type || !input.data_availability) {
+    return { status: 'unavailable', message: 'Article type and data availability statement are required.' }
   }
 
-  // If URL provided in full_text_or_url, check it starts with https://
-  const trimmedUrl = input.full_text_or_url.trim()
-  if (trimmedUrl.startsWith('http://')) {
-    return { status: 'unavailable', message: 'Full text manuscript link must use secure HTTPS.' }
+  let manuscriptUrl: URL
+  try {
+    manuscriptUrl = new URL(input.full_text_or_url.trim())
+  } catch {
+    return { status: 'unavailable', message: 'Please provide a secure HTTPS link to the complete manuscript. Direct file upload is not available yet.' }
+  }
+  if (manuscriptUrl.protocol !== 'https:') {
+    return { status: 'unavailable', message: 'Full-text manuscript links must use HTTPS.' }
+  }
+
+  if (input.supplementary_url?.trim()) {
+    try {
+      if (new URL(input.supplementary_url.trim()).protocol !== 'https:') {
+        return { status: 'unavailable', message: 'Supplementary data links must use HTTPS.' }
+      }
+    } catch {
+      return { status: 'unavailable', message: 'Please provide a valid HTTPS supplementary data link.' }
+    }
   }
 
   const baseUrl = resolveSupabaseBaseUrl()
-  const generatedId = `KG-SUB-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
-
-  // Record submission into moderation queue storage (available for Admin Moderation Desk)
-  try {
-    const queue = getLocalModerationQueue()
-    const newSubmission: ChronicleModerationSubmission = {
-      id: `sub-kc-${Date.now()}`,
-      submissionId: generatedId,
-      title: input.manuscript_title.trim(),
-      category: input.category_slug,
-      categoryName: RESEARCH_CATEGORIES.find(c => c.slug === input.category_slug)?.name || input.category_slug,
-      authorName: input.primary_author_name.trim(),
-      authorEmail: input.primary_author_email.trim(),
-      affiliation: input.primary_author_affiliation.trim(),
-      orcid: input.orcid?.trim() || undefined,
-      coAuthors: input.co_authors?.trim() || undefined,
-      abstract: input.abstract_text.trim(),
-      keywords: input.keywords?.trim() || undefined,
-      fullTextOrUrl: input.full_text_or_url?.trim() || undefined,
-      humanEthicsConfirmed: input.human_ethics_confirmed,
-      minorConsentConfirmed: input.minor_consent_confirmed,
-      licenseType: 'cc-by-nc-nd-4.0',
-      status: 'pending_review',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    saveLocalModerationQueue([newSubmission, ...queue])
-  } catch {
-    // Non-fatal if localStorage is restricted
-  }
-
   if (!baseUrl) {
     return {
       status: 'unconfigured',
-      submissionId: generatedId,
-      message: 'Supabase database is unconfigured in development. Submission logged locally to intake queue.',
+      message: 'The KhelChronicle submission server is not configured. No submission was saved; your draft has been retained on this device.',
     }
   }
 
+  const randomId = globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  const generatedId = `KG-SUB-${randomId.toUpperCase()}`
+
   try {
     const res = await fetch(
-      `${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}/rest/v1/chronicle_submissions`,
+      `${baseUrl.origin}${baseUrl.pathname.replace(/\\/$/, '')}/rest/v1/chronicle_submissions`,
       {
         method: 'POST',
         headers: {
@@ -445,12 +441,24 @@ export async function submitChronicleManuscript(
           Prefer: 'return=minimal',
         },
         body: JSON.stringify({
+          submission_id: generatedId,
+          article_type: input.article_type,
           title: input.manuscript_title.trim(),
           category: input.category_slug,
           author_name: input.primary_author_name.trim(),
           author_email: input.primary_author_email.trim(),
           affiliation: input.primary_author_affiliation.trim(),
+          orcid: input.orcid?.trim() || null,
+          co_authors: input.co_authors?.trim() || null,
           abstract: input.abstract_text.trim(),
+          keywords: input.keywords.trim(),
+          full_text_or_url: manuscriptUrl.toString(),
+          supplementary_url: input.supplementary_url?.trim() || null,
+          data_availability: input.data_availability,
+          ethics_clearance_number: input.ethics_clearance_number?.trim() || null,
+          human_ethics_confirmed: true,
+          minor_consent_confirmed: true,
+          license_type: input.license_type,
           status: 'pending_review',
         }),
       }
@@ -460,12 +468,12 @@ export async function submitChronicleManuscript(
       if (res.status === 404) {
         return {
           status: 'unavailable',
-          message: 'The KhelChronicle submission queue table is not installed in this database yet. Please apply setup_khelchronicle.sql.',
+          message: 'The KhelChronicle submission schema is not installed in this development database yet.',
         }
       }
       return {
         status: 'unavailable',
-        message: 'Could not record manuscript submission. Please check database permissions or try again later.',
+        message: 'Could not record manuscript submission. Please check the required fields and try again later.',
       }
     }
 
@@ -473,7 +481,7 @@ export async function submitChronicleManuscript(
   } catch {
     return {
       status: 'unavailable',
-      message: 'Could not connect to the KhelChronicle submission server. Check network connection.',
+      message: 'Could not connect to the KhelChronicle submission server. Check your network connection.',
     }
   }
 }
