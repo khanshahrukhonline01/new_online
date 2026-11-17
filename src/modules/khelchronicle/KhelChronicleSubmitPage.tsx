@@ -974,13 +974,13 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
 
                 {/* Drag and drop zone */}
                 <div className="kc-field-group">
-                  <label className="kc-field-label">Preprint File Upload (PDF or DOCX, max 25MB)</label>
+                  <label className="kc-field-label">Direct manuscript upload (not available yet)</label>
                   <div
                     className={`kc-dropzone ${isDragging ? 'is-dragover' : ''}`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => setErrorMessage('Direct file upload is not available yet. Please paste a secure HTTPS manuscript link below.')}
                   >
                     <input
                       ref={fileInputRef}
@@ -1012,11 +1012,9 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     ) : (
                       <>
                         <SiteIcon name="upload" size={32} className="kc-dropzone-icon" />
-                        <div className="kc-dropzone-title">Drag &amp; Drop Manuscript File Here</div>
-                        <div className="kc-dropzone-subtitle">or click to browse from your device (.pdf, .docx)</div>
-                        <span className="kc-btn-secondary" style={{ pointerEvents: 'none' }}>
-                          Browse Files
-                        </span>
+                        <div className="kc-dropzone-title">Direct file upload is not enabled</div>
+                        <div className="kc-dropzone-subtitle">Please provide a secure HTTPS manuscript link in the field below.</div>
+                        
                       </>
                     )}
                   </div>
