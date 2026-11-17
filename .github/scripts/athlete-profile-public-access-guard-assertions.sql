@@ -72,6 +72,8 @@ BEGIN
 END
 $$;
 
+GRANT SELECT ON TABLE public.athlete_profiles TO anon, authenticated;
+
 INSERT INTO public.athlete_profiles (username, full_name, sport, user_id, publication_status)
 VALUES ('ci-athlete-guard-test', 'CI Athlete Guard', 'Athletics',
         '11111111-1111-4111-8111-111111111111', 'published');
