@@ -247,15 +247,9 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     }
   }
 
-  const processSelectedFile = (file: File) => {
-    const sizeInMb = (file.size / (1024 * 1024)).toFixed(2)
-    setUploadedFile({
-      name: file.name,
-      size: `${sizeInMb} MB`,
-    })
-    if (!fullTextOrUrl) {
-      setFullTextOrUrl(`Uploaded file: ${file.name} (${sizeInMb} MB)`)
-    }
+  const processSelectedFile = (_file: File) => {
+    setUploadedFile(null)
+    setErrorMessage('Direct file upload is not available yet. Please provide a secure HTTPS link to the complete manuscript.')
   }
 
   // Download official manuscript template
@@ -405,25 +399,24 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
         primary_author_affiliation: primaryAuthorAffiliation,
         orcid: orcid.trim() || undefined,
         co_authors: consolidatedCoAuthors || undefined,
+        article_type: articleType,
         abstract_text: abstract,
-        keywords: keywords,
-        full_text_or_url: fullTextOrUrl || 'Uploaded via KhelChronicle Intake Dropzone',
+        keywords,
+        full_text_or_url: fullTextOrUrl,
+        supplementary_url: supplementaryUrl || undefined,
+        data_availability: dataAvailability,
+        ethics_clearance_number: ethicsClearanceNumber || undefined,
         human_ethics_confirmed: ethicsDeclaration,
         minor_consent_confirmed: minorConsentDeclaration,
+        license_type: licenseType,
+        license_confirmed: licenseDeclaration,
       })
 
       if (res.status === 'submitted') {
         setSubmissionId(res.submissionId)
         setSubmissionNotice('Manuscript successfully entered into the KhelChronicle peer-screening database queue.')
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem(STORAGE_DRAFT_KEY)
-        }
       } else if (res.status === 'unconfigured') {
-        setSubmissionId(res.submissionId)
         setSubmissionNotice(res.message)
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem(STORAGE_DRAFT_KEY)
-        }
       } else {
         setErrorMessage(res.message)
       }
@@ -993,6 +986,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       ref={fileInputRef}
                       type="file"
                       accept=".pdf,.docx"
+                      disabled
                       style={{ display: 'none' }}
                       onChange={handleFileInputChange}
                     />
@@ -1001,7 +995,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                         <SiteIcon name="file-text" size={24} style={{ color: '#0284c7' }} />
                         <div className="kc-file-info">
                           <div className="kc-file-name">{uploadedFile.name}</div>
-                          <div className="kc-file-meta">{uploadedFile.size} · Ready for intake</div>
+                          <div className="kc-file-meta">{uploadedFile.size} · File selection is not connected to secure storage</div>
                         </div>
                         <button
                           type="button"
@@ -1034,9 +1028,10 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                   </label>
                   <input
                     id="manuscript-url"
-                    type="text"
+                    type="url"
+                    required
                     className="kc-input-text"
-                    placeholder="https://drive.google.com/... or https://arxiv.org/abs/... or https://zenodo.org/..."
+                    placeholder="https://... (required complete manuscript link)"
                     value={fullTextOrUrl}
                     onChange={e => setFullTextOrUrl(e.target.value)}
                   />
