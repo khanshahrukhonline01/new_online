@@ -268,7 +268,7 @@ export function updatePageSeoMetadata(config: PageSeoConfig): () => void {
   }
 
   setMetaTag('name', 'description', config.description)
-  const robots = __KHELGRID_INDEXABLE__
+  const robots = import.meta.env.VITE_SITE_INDEXABLE === 'true'
     ? (config.robots || 'index, follow')
     : 'noindex, nofollow'
   setMetaTag('name', 'robots', robots)
