@@ -74,23 +74,11 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     }
   })
 
-  it('indexes curated academies and venues detail pages', () => {
-    const entries = buildSitemapEntries()
-
-    // Curated Academies
-    const bfcAcademy = entries.find(e => e.loc === `${BASE_URL}/academies/bengaluru-fc-academy`)
-    expect(bfcAcademy).toBeDefined()
-    expect(bfcAcademy?.priority).toBe(0.85)
-    expect(bfcAcademy?.changefreq).toBe('weekly')
-
-    const gopichand = entries.find(e => e.loc === `${BASE_URL}/academies/pullela-gopichand-badminton-academy`)
-    expect(gopichand).toBeDefined()
-
-    // Curated Venues
-    const kanteerava = entries.find(e => e.loc === `${BASE_URL}/venues/sree-kanteerava-stadium`)
-    expect(kanteerava).toBeDefined()
-    expect(kanteerava?.priority).toBe(0.85)
-    expect(kanteerava?.changefreq).toBe('weekly')
+  it('does not index curated academy or venue detail records without a published database snapshot', () => {
+    const urls = buildSitemapEntries().map(entry => entry.loc)
+    expect(urls).not.toContain(`${BASE_URL}/academies/bengaluru-fc-academy`)
+    expect(urls).not.toContain(`${BASE_URL}/academies/pullela-gopichand-badminton-academy`)
+    expect(urls).not.toContain(`${BASE_URL}/venues/sree-kanteerava-stadium`)
   })
 
   it('includes trial detail URLs only from the published-and-verified snapshot', () => {
