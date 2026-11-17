@@ -91,7 +91,6 @@ export default function LacrosseSixesPage() {
       return
     }
     setShots(value => value + 1)
-    const target = { x: 5, y: 50 }
     const blocked = defendersRef.current.some(defender => distance(defender, playerRef.current) < 10)
     if (blocked) {
       setHasBall(false)
@@ -105,7 +104,6 @@ export default function LacrosseSixesPage() {
     setBall(initialBall)
     setDefenders(initialDefenders)
     setMessage('GOAL! Reset in possession — score another.')
-    void target
   }, [running, finished])
 
   const pass = useCallback(() => {
