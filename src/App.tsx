@@ -23,6 +23,7 @@ import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAn
 // Code-split route components via React.lazy()
 const HelpFeedbackPage = lazy(() => import('./modules/help/HelpFeedbackPage'))
 const PlayPage = lazy(() => import('./modules/play/PlayPage'))
+const LacrosseSixesPage = lazy(() => import('./modules/games/LacrosseSixesPage'))
 const SportsCvWizard = lazy(() => import('./modules/sports-cv/SportsCvWizard'))
 const OpportunitiesPage = lazy(() => import('./modules/opportunities/OpportunitiesPage'))
 const VenuesPage = lazy(() => import('./modules/venues/VenuesPage'))
@@ -289,6 +290,7 @@ export default function App() {
       else if (match.canonicalPath === '/sports-cv') page = <SportsCvWizard />
       else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} onOpenAuth={tab => { setAuthModalTab(tab || 'signup'); setAuthModalOpen(true) }} />
       else if (match.canonicalPath === '/play') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openListingSubmission('pickup_game')} />
+      else if (match.canonicalPath === '/play/lacrosse-sixes') page = <LacrosseSixesPage />
       else if (match.canonicalPath === '/coaches') page = <CoachesPage onNavigate={navigate} onOpenCoachIntake={() => openListingSubmission('coach')} />
       else if (match.canonicalPath === '/events') page = <EventsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/scout-portal') page = <ScoutPortalPage onNavigate={navigate} />
