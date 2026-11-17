@@ -116,7 +116,7 @@ export function KhelChronicleAuthorPage({ authorSlug, onNavigate }: KhelChronicl
                 <span className="kc-paper-ver-tag">{paper.version}</span>
                 <span className="kc-paper-category-tag">{paper.categoryName}</span>
                 <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-                  Test Data
+                  Published manuscript
                 </span>
                 <span className="kc-paper-date">{paper.datePublished}</span>
               </div>
