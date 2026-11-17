@@ -76,7 +76,7 @@ ALTER TABLE public.chronicle_papers
   ADD COLUMN IF NOT EXISTS data_availability text,
   ADD COLUMN IF NOT EXISTS funding_statement text,
   ADD COLUMN IF NOT EXISTS conflicts_of_interest text,
-  ADD COLUMN IF NOT EXISTS references jsonb,
+  ADD COLUMN IF NOT EXISTS reference_list jsonb,
   ADD COLUMN IF NOT EXISTS connected_links jsonb,
   ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now(),
   ADD COLUMN IF NOT EXISTS reviewed_at timestamptz,
