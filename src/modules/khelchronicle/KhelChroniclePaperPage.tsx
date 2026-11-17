@@ -1,14 +1,11 @@
 import { useState, useMemo, useEffect, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
-  getPaperBySlug,
   generateCitations,
-  getRelatedPapers,
   generateRisCitation,
-  RESEARCH_PAPERS,
   type ResearchPaper,
 } from './data/khelchronicleData'
-import { recordPaperView, recordPaperDownload } from '../../integrations/supabase/chronicle-client'
+import { getChroniclePaperBySlug, recordPaperView, recordPaperDownload } from '../../integrations/supabase/chronicle-client'
 import { AcademicDataChart } from './components/AcademicDataChart'
 import './khelchronicle.css'
 
@@ -18,8 +15,17 @@ interface KhelChroniclePaperPageProps {
 }
 
 export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperPageProps) {
-  const paper: ResearchPaper | undefined = useMemo(() => {
-    return getPaperBySlug(slug) || RESEARCH_PAPERS[0]
+  const [paper, setPaper] = useState<ResearchPaper | null | undefined>(undefined)
+
+  useEffect(() => {
+    let active = true
+    setPaper(undefined)
+    getChroniclePaperBySlug(slug).then(result => {
+      if (active) setPaper(result.data)
+    })
+    return () => {
+      active = false
+    }
   }, [slug])
 
   useEffect(() => {
@@ -52,10 +58,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
     return generateCitations(paper)
   }, [paper])
 
-  const relatedPapers = useMemo(() => {
-    if (!paper) return []
-    return getRelatedPapers(paper, 3)
-  }, [paper])
+  const relatedPapers: ResearchPaper[] = []
 
   const copyCitation = () => {
     const textToCopy = citations[citationFormat]
@@ -111,7 +114,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
       datePublished: paper.datePublished,
       dateModified: paper.dateModified || paper.datePublished,
       version: paper.version,
-      license: 'https://creativecommons.org/licenses/by-nc-nd/4.0/',
+      license: paper.license,
       author: paper.authors.map(a => ({
         '@type': 'Person',
         name: a.name,
@@ -130,7 +133,16 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
     }
   }, [paper])
 
-  if (!paper) {
+  if (paper === undefined) {
+    return (
+      <div className="kc-root" style={{ padding: '48px 16px', textAlign: 'center' }}>
+        <h2>Checking manuscript publication status…</h2>
+        <p>Only complete manuscripts approved for public release can be opened.</p>
+      </div>
+    )
+  }
+
+  if (paper === null) {
     return (
       <div className="kc-root" style={{ padding: '48px 16px', textAlign: 'center' }}>
         <h2>Research Paper Not Found</h2>
@@ -149,7 +161,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
         <div className="kc-print-branding">
           <div className="kc-print-logo-row">
             <span className="kc-print-journal-name">KHELCHRONICLE OPEN SPORTS RESEARCH ARCHIVE</span>
-            <span className="kc-print-badge">Diamond Open Access · CC BY-NC-ND 4.0</span>
+            <span className="kc-print-badge">Open Access · {paper.license}</span>
           </div>
           <div className="kc-print-meta-row">
             <span><strong>Preprint Accession:</strong> {paper.paperId}</span>
