@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import {
   BASELINE_SCOUT_ATHLETES,
@@ -195,9 +195,16 @@ describe('Scout Portal Module', () => {
     })
 
     it('getScoutAthletes does not publish showcase or local draft profiles as public scout records', async () => {
-      const athletes = await getScoutAthletes()
-
-      expect(athletes).toEqual([])
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [],
+      }))
+      try {
+        const athletes = await getScoutAthletes(true)
+        expect(athletes).toEqual([])
+      } finally {
+        vi.unstubAllGlobals()
+      }
     })
   })
 })
