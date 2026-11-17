@@ -161,7 +161,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
         <div className="kc-print-branding">
           <div className="kc-print-logo-row">
             <span className="kc-print-journal-name">KHELCHRONICLE OPEN SPORTS RESEARCH ARCHIVE</span>
-            <span className="kc-print-badge">Open Access · {paper.license}</span>
+            <span className="kc-print-badge">Licence: {paper.license}</span>
           </div>
           <div className="kc-print-meta-row">
             <span><strong>Preprint Accession:</strong> {paper.paperId}</span>
@@ -219,10 +219,10 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
             )}
             <span className="kc-paper-category-tag">{paper.categoryName}</span>
             <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-              Test Data Only
+              Published manuscript
             </span>
             <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#dcfce7', color: '#15803d' }}>
-              Diamond Open Access
+              {paper.license}
             </span>
             <span className="kc-paper-date">Published {paper.datePublished}</span>
           </div>
@@ -470,7 +470,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
                   onClick={e => handleLink(e, '/khelchronicle')}
                   className="kc-related-browse-all"
                 >
-                  Browse All Archive ({RESEARCH_PAPERS.length} Papers) →
+                  Browse All Archive ({relatedPapers.length} Papers) →
                 </a>
               </div>
               <div className="kc-related-grid">
