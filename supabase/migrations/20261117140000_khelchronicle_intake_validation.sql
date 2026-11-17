@@ -37,10 +37,12 @@ AS $function$
 BEGIN
   IF NEW.status = 'approved' AND OLD.status IS DISTINCT FROM 'approved' THEN
     IF NEW.submission_id IS NULL
+       OR NEW.article_type IS NULL
        OR NEW.article_type NOT IN ('preprint', 'protocol', 'review', 'dataset', 'casestudy')
        OR NEW.full_text_or_url IS NULL
        OR NEW.full_text_or_url NOT LIKE 'https://%'
        OR (NEW.supplementary_url IS NOT NULL AND NEW.supplementary_url NOT LIKE 'https://%')
+       OR NEW.data_availability IS NULL
        OR NEW.data_availability NOT IN ('open_access', 'upon_request', 'de_identified', 'restricted')
        OR NEW.ethics_clearance_number IS NULL
        OR btrim(NEW.ethics_clearance_number) = ''
@@ -50,6 +52,7 @@ BEGIN
        OR btrim(NEW.keywords) = ''
        OR NEW.human_ethics_confirmed IS NOT TRUE
        OR NEW.minor_consent_confirmed IS NOT TRUE
+       OR NEW.license_type IS NULL
        OR NEW.license_type NOT IN ('cc-by-4.0', 'cc-by-nc-nd-4.0')
        OR NEW.license_confirmed IS NOT TRUE THEN
       RAISE EXCEPTION 'Chronicle submission cannot be approved until all manuscript, ethics, consent, and licence requirements are complete';
@@ -104,6 +107,7 @@ BEGIN
        OR NEW.author_affiliation IS NULL OR btrim(NEW.author_affiliation) = ''
        OR NEW.date_published IS NULL
        OR NEW.version IS NULL OR btrim(NEW.version) = ''
+       OR NEW.license IS NULL
        OR NEW.license NOT IN ('CC BY 4.0', 'CC BY-NC-ND 4.0', 'cc-by-4.0', 'cc-by-nc-nd-4.0')
        OR NEW.ethics_statement IS NULL OR btrim(NEW.ethics_statement) = ''
        OR NEW.data_availability IS NULL OR btrim(NEW.data_availability) = ''
@@ -135,22 +139,30 @@ BEGIN
       RAISE EXCEPTION 'Chronicle paper requires a complete structured abstract';
     END IF;
 
-    IF jsonb_typeof(NEW.sections) IS DISTINCT FROM 'array'
-       OR jsonb_array_length(NEW.sections) = 0 THEN
+    IF jsonb_typeof(NEW.sections) IS DISTINCT FROM 'array' THEN
+      RAISE EXCEPTION 'Chronicle paper requires full manuscript sections';
+    END IF;
+    IF jsonb_array_length(NEW.sections) = 0 THEN
       RAISE EXCEPTION 'Chronicle paper requires full manuscript sections';
     END IF;
 
-    IF jsonb_typeof(NEW.reference_list) IS DISTINCT FROM 'array'
-       OR jsonb_array_length(NEW.reference_list) = 0 THEN
+    IF jsonb_typeof(NEW.reference_list) IS DISTINCT FROM 'array' THEN
+      RAISE EXCEPTION 'Chronicle paper requires a reference list';
+    END IF;
+    IF jsonb_array_length(NEW.reference_list) = 0 THEN
       RAISE EXCEPTION 'Chronicle paper requires a reference list';
     END IF;
   END IF;
 
   NEW.updated_at := now();
-  IF NEW.publication_status = 'published'
-     AND (TG_OP = 'INSERT' OR OLD.publication_status IS DISTINCT FROM 'published') THEN
-    NEW.reviewed_at := now();
-    NEW.reviewed_by := auth.uid();
+  IF NEW.publication_status = 'published' THEN
+    IF TG_OP = 'INSERT' THEN
+      NEW.reviewed_at := now();
+      NEW.reviewed_by := auth.uid();
+    ELSIF OLD.publication_status IS DISTINCT FROM 'published' THEN
+      NEW.reviewed_at := now();
+      NEW.reviewed_by := auth.uid();
+    END IF;
   END IF;
   RETURN NEW;
 END;
