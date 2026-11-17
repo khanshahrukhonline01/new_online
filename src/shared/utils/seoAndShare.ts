@@ -471,6 +471,149 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
     }
   }
 
+  if (cleanPath === '/about') {
+    return {
+      title: "About KhelGrid — India's Premier Sports Discovery Network",
+      description: "Learn about KhelGrid's mission to democratize grassroots sports discovery, selection trials, verified venue infrastructure, and open sports science across 53 Indian cities.",
+      canonicalUrl: 'https://khelgrid.com/about',
+      keywords: ['about khelgrid', 'khelgrid mission', 'indian sports platform', 'grassroots athletic network', 'sports discovery india', ...DEFAULT_KEYWORDS],
+      ogType: 'website',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'AboutPage',
+            '@id': 'https://khelgrid.com/about#page',
+            url: 'https://khelgrid.com/about',
+            name: "About KhelGrid — India's Premier Sports Discovery Network",
+            description: "Learn about KhelGrid's mission to democratize grassroots sports discovery, selection trials, verified venue infrastructure, and open sports science across 53 Indian cities.",
+            mainEntity: {
+              '@type': 'SportsOrganization',
+              name: 'KhelGrid',
+              alternateName: 'खेलग्रिड',
+              url: 'https://khelgrid.com',
+              logo: 'https://khelgrid.com/assets/kg-logo.webp',
+              email: 'khelgrid@gmail.com',
+              areaServed: 'IN',
+              description: 'Public digital infrastructure for Indian sports, selection trials, turf discovery, and open sports science.',
+            },
+          },
+        ],
+      },
+    }
+  }
+
+  if (cleanPath === '/trust') {
+    return {
+      title: 'Trust, Safety & Athlete Safeguarding Center · KhelGrid',
+      description: "Discover KhelGrid's 5-pillar trust framework: zero-fee selection trial anti-fraud guarantees, POCSO minor athlete safeguarding, and 24-48h grievance redressal.",
+      canonicalUrl: 'https://khelgrid.com/trust',
+      keywords: ['sports trust center', 'trial scam prevention', 'pocso sports compliance', 'athlete safeguarding india', 'khelgrid verification', ...DEFAULT_KEYWORDS],
+      ogType: 'website',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'WebPage',
+            '@id': 'https://khelgrid.com/trust#page',
+            url: 'https://khelgrid.com/trust',
+            name: 'Trust, Safety & Athlete Safeguarding Center · KhelGrid',
+            description: "Discover KhelGrid's 5-pillar trust framework: zero-fee selection trial anti-fraud guarantees, POCSO minor athlete safeguarding, and 24-48h grievance redressal.",
+          },
+        ],
+      },
+    }
+  }
+
+  if (cleanPath === '/contact' || cleanPath === '/help' || cleanPath === '/support' || cleanPath === '/help-feedback') {
+    return {
+      title: 'Contact & Support Desk · KhelGrid (संपर्क एवं सहायता)',
+      description: "Connect with KhelGrid's sports operations team in India. Submit listing corrections, venue updates, trial reports, or partnership inquiries with 24-48h response SLAs.",
+      canonicalUrl: 'https://khelgrid.com/contact',
+      keywords: ['contact khelgrid', 'khelgrid support', 'sports help desk india', 'khelgrid email', 'listing correction', ...DEFAULT_KEYWORDS],
+      ogType: 'website',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'ContactPage',
+            '@id': 'https://khelgrid.com/contact#page',
+            url: 'https://khelgrid.com/contact',
+            name: 'Contact & Support Desk · KhelGrid (संपर्क एवं सहायता)',
+            description: "Connect with KhelGrid's sports operations team in India.",
+            mainEntity: {
+              '@type': 'ContactPoint',
+              email: 'khelgrid@gmail.com',
+              contactType: 'customer support',
+              areaServed: 'IN',
+              availableLanguage: ['en', 'hi'],
+            },
+          },
+        ],
+      },
+    }
+  }
+
+  if (cleanPath === '/mobile-app') {
+    return {
+      title: 'KhelGrid Mobile App — Install Progressive Web App (PWA)',
+      description: 'Install KhelGrid on Android and iOS in 10 seconds. Enjoy ultra-fast offline access to sports trials, turf bookings, and your digital Athlete Sports CV.',
+      canonicalUrl: 'https://khelgrid.com/mobile-app',
+      keywords: ['khelgrid app', 'sports pwa india', 'download khelgrid apk', 'mobile sports app', ...DEFAULT_KEYWORDS],
+      ogType: 'website',
+    }
+  }
+
+  if (cleanPath === '/careers') {
+    return {
+      title: 'Careers & Community Roles at KhelGrid · Join Our Mission',
+      description: 'Explore open roles for grassroots sports scouts across 53 Indian cities, sports science research fellows for KhelChronicle, and platform engineers.',
+      canonicalUrl: 'https://khelgrid.com/careers',
+      keywords: ['sports careers india', 'sports scouting jobs', 'sports science fellowship', 'khelgrid careers', ...DEFAULT_KEYWORDS],
+      ogType: 'website',
+    }
+  }
+
+  if (cleanPath === '/referrals') {
+    return {
+      title: 'Invite Teammates, Academies & Coaches · KhelGrid Community',
+      description: 'Share KhelGrid with your sporting community. Protect peers from trial scams, equip squads with a Sports CV, and become a Campus Ambassador.',
+      canonicalUrl: 'https://khelgrid.com/referrals',
+      keywords: ['invite teammates', 'sports community india', 'khelgrid ambassador', 'grassroots referral', ...DEFAULT_KEYWORDS],
+      ogType: 'website',
+    }
+  }
+
+  if (cleanPath === '/privacy') {
+    return {
+      title: 'Privacy Policy · KhelGrid (DPDP Act 2023 Compliant)',
+      description: "Official Privacy Policy of KhelGrid Platform in compliance with India's Digital Personal Data Protection Act, 2023, Google AdSense, and POCSO minor safeguarding.",
+      canonicalUrl: 'https://khelgrid.com/privacy',
+      keywords: ['khelgrid privacy policy', 'dpdp act compliance', 'sports platform privacy', ...DEFAULT_KEYWORDS],
+      ogType: 'website',
+    }
+  }
+
+  if (cleanPath === '/terms') {
+    return {
+      title: 'Terms of Use & Acceptable Use Policy · KhelGrid',
+      description: 'Official Terms of Use governing access to KhelGrid sports discovery directories, venue listings, selection trials, and open research repositories.',
+      canonicalUrl: 'https://khelgrid.com/terms',
+      keywords: ['khelgrid terms of use', 'sports platform terms', ...DEFAULT_KEYWORDS],
+      ogType: 'website',
+    }
+  }
+
+  if (cleanPath === '/cookies') {
+    return {
+      title: 'Cookie & Device Storage Policy · KhelGrid',
+      description: 'Learn how KhelGrid uses essential, preference, analytics, and advertising cookies, and how to manage your choices.',
+      canonicalUrl: 'https://khelgrid.com/cookies',
+      keywords: ['khelgrid cookie policy', 'cookie settings', ...DEFAULT_KEYWORDS],
+      ogType: 'website',
+    }
+  }
+
   // Dynamic City Sports Hubs (/cities/:slug and /city/:slug)
   if (cleanPath.startsWith('/cities/') || cleanPath.startsWith('/city/')) {
     const slug = cleanPath.startsWith('/cities/')

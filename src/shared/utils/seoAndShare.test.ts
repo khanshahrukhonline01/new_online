@@ -33,6 +33,15 @@ describe('SEO & SERP Metadata Validation', () => {
       '/events',
       '/scout-portal',
       '/verification',
+      '/about',
+      '/trust',
+      '/contact',
+      '/mobile-app',
+      '/careers',
+      '/referrals',
+      '/privacy',
+      '/terms',
+      '/cookies',
     ]
 
     for (const route of coreRoutes) {
@@ -283,5 +292,32 @@ describe('SEO & SERP Metadata Validation', () => {
     expect(jsonLdStr).toContain('SportsClub')
     expect(jsonLdStr).toContain('LocalBusiness')
     expect(jsonLdStr).toContain('BreadcrumbList')
+  })
+
+  it('enriches publisher and trust hubs with AboutPage, SportsOrganization, and ContactPage schemas', () => {
+    const aboutMeta = getRouteSeoMetadata('/about')
+    expect(aboutMeta.title).toBe("About KhelGrid — India's Premier Sports Discovery Network")
+    const aboutJson = JSON.stringify(aboutMeta.jsonLd)
+    expect(aboutJson).toContain('AboutPage')
+    expect(aboutJson).toContain('SportsOrganization')
+    expect(aboutJson).toContain('khelgrid@gmail.com')
+
+    const trustMeta = getRouteSeoMetadata('/trust')
+    expect(trustMeta.title).toBe('Trust, Safety & Athlete Safeguarding Center · KhelGrid')
+    const trustJson = JSON.stringify(trustMeta.jsonLd)
+    expect(trustJson).toContain('Trust, Safety & Athlete Safeguarding Center')
+
+    const contactMeta = getRouteSeoMetadata('/contact')
+    expect(contactMeta.title).toBe('Contact & Support Desk · KhelGrid (संपर्क एवं सहायता)')
+    const contactJson = JSON.stringify(contactMeta.jsonLd)
+    expect(contactJson).toContain('ContactPage')
+    expect(contactJson).toContain('ContactPoint')
+    expect(contactJson).toContain('khelgrid@gmail.com')
+
+    const mobileMeta = getRouteSeoMetadata('/mobile-app')
+    expect(mobileMeta.title).toBe('KhelGrid Mobile App — Install Progressive Web App (PWA)')
+
+    const privacyMeta = getRouteSeoMetadata('/privacy')
+    expect(privacyMeta.title).toBe('Privacy Policy · KhelGrid (DPDP Act 2023 Compliant)')
   })
 })
