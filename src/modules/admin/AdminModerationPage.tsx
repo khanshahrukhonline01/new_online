@@ -180,7 +180,6 @@ export function AdminModerationPage({
       }
       setPassword('')
       await loadQueue()
-      await loadChronicleQueue()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Sign-in failed.')
     } finally {
