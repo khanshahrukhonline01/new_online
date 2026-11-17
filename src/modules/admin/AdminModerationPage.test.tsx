@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { AdminModerationPage } from './AdminModerationPage'
 import * as client from '../../integrations/supabase/public-client'
+import type { ChronicleModerationQueueResult } from '../../integrations/supabase/chronicle-client'
 
 describe('AdminModerationPage', () => {
   afterEach(() => {
@@ -82,7 +83,7 @@ describe('AdminModerationPage', () => {
     expect(html).toContain('KhelChronicle Manuscripts')
   })
 
-  it('renders KhelChronicle Manuscripts desk with research disciplines, author affiliations, and ethics badges', () => {
+  it('renders only database-provided Chronicle submissions and supports a Chronicle-only admin view', () => {
     const mockQueue: client.AdminModerationQueue = {
       pendingSubmissions: [],
       stats: {
@@ -99,25 +100,54 @@ describe('AdminModerationPage', () => {
         unpublishedCount: 0,
       },
     }
+    const mockChronicleQueue: ChronicleModerationQueueResult = {
+      submissions: [{
+        id: '00000000-0000-4000-8000-000000000091',
+        submissionId: 'KG-SUB-TEST-0091',
+        title: 'Example manuscript supplied by the database',
+        category: 'sports-biomechanics',
+        categoryName: 'Sports Biomechanics',
+        authorName: 'Dr. Example Researcher',
+        authorEmail: 'researcher@example.test',
+        affiliation: 'Example Sports Science Institute',
+        abstract: 'A complete test abstract supplied by a controlled unit-test fixture.',
+        humanEthicsConfirmed: true,
+        minorConsentConfirmed: true,
+        licenseType: 'cc-by-nc-nd-4.0',
+        licenseConfirmed: true,
+        status: 'pending_review',
+        createdAt: '2026-11-17T08:00:00Z',
+        updatedAt: '2026-11-17T08:00:00Z',
+      }],
+      stats: {
+        pendingCount: 1,
+        underReviewCount: 0,
+        changesRequestedCount: 0,
+        approvedCount: 0,
+        publishedCount: 0,
+        rejectedCount: 0,
+        totalCount: 1,
+      },
+    }
 
     const html = renderToStaticMarkup(
-      <AdminModerationPage initialQueue={mockQueue} initialDesk="chronicle" />
+      <AdminModerationPage
+        initialQueue={mockQueue}
+        initialChronicleQueue={mockChronicleQueue}
+        initialDesk="chronicle"
+        hideDeskSwitcher
+      />
     )
 
     expect(html).toContain('KhelChronicle Manuscripts')
     expect(html).toContain('Pending Screening')
-    expect(html).toContain('Under Review')
     expect(html).toContain('Revisions Requested')
-    expect(html).toContain('Approved (Preprints)')
-    expect(html).toContain('Published Archive')
-    expect(html).toContain('All Disciplines')
-    expect(html).toContain('Sports Biomechanics')
-    expect(html).toContain('Exercise Physiology')
-    expect(html).toContain('High-Altitude Hypoxic Training Adaptation')
-    expect(html).toContain('Dr. Tenzing Norbu')
-    expect(html).toContain('Shillaroo')
-    expect(html).toContain('IRB Human Ethics Certified')
-    expect(html).toContain('Minor Consent Verified')
-    expect(html).toContain('Diamond Open Access (No APC)')
-  })
-})
+    expect(html).toContain('Example manuscript supplied by the database')
+    expect(html).toContain('Dr. Example Researcher')
+    expect(html).toContain('Example Sports Science Institute')
+    expect(html).toContain('KG-SUB-TEST-0091')
+    expect(html).not.toContain('Dr. Tenzing Norbu')
+    expect(html).not.toContain('High-Altitude Hypoxic Training Adaptation')
+    expect(html).not.toContain('Directory Listings Queue')
+    expect(html).toContain('Publication editor required')
+  })})
