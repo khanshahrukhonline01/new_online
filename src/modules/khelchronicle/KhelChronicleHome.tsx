@@ -145,7 +145,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
           <div className="kc-stat-lbl">Complete manuscripts</div>
         </div>
         <div className="kc-stat-card">
-          <div className="kc-stat-val">7</div>
+          <div className="kc-stat-val">{RESEARCH_CATEGORIES.length}</div>
           <div className="kc-stat-lbl">Research Disciplines</div>
         </div>
         <div className="kc-stat-card">
@@ -163,7 +163,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
         <div className="kc-sports-pills-row">
           {RESEARCH_SPORTS.map(sp => {
             const count = sp.slug === 'all'
-              ? RESEARCH_PAPERS.length
+              ? papers.length
               : papers.filter(p => p.sportSlug === sp.slug).length
             const isActive = selectedSport === sp.slug
             return (
@@ -194,7 +194,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
           <small>({RESEARCH_PAPERS.length})</small>
         </button>
         {RESEARCH_CATEGORIES.map(cat => {
-          const count = RESEARCH_PAPERS.filter(p => p.category === cat.slug).length
+          const count = papers.filter(p => p.category === cat.slug).length
           const isActive = selectedCategory === cat.slug
           return (
             <button
