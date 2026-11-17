@@ -157,6 +157,7 @@ export const RESEARCH_SPORTS: ResearchSportFilter[] = [
   { id: 'sport-multisport', name: 'Multi-Sport & Grassroots', slug: 'multi-sport', icon: 'medal', emoji: '🎯' },
 ]
 
+/** Synthetic author fixtures for unit tests only; not verified real researchers. */
 export const RESEARCH_AUTHORS: Record<string, ResearchAuthor> = {
   'dr-vikramaditya-rathore': {
     id: 'auth-1',
@@ -240,6 +241,7 @@ export const RESEARCH_AUTHORS: Record<string, ResearchAuthor> = {
   },
 }
 
+/** Synthetic manuscript fixtures for unit tests only; never publish these as real research. */
 export const RESEARCH_PAPERS: ResearchPaper[] = [
   {
     id: 'paper-1',
