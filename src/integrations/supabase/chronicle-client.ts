@@ -69,7 +69,7 @@ interface DbPaperRow {
   data_availability?: string | null
   funding_statement?: string | null
   conflicts_of_interest?: string | null
-  references?: ResearchPaper['references']
+  reference_list?: ResearchPaper['references']
   connected_links?: ResearchPaper['connectedKhelGridLinks']
 }
 
@@ -123,8 +123,8 @@ function isCompletePublicResearchRow(row: DbPaperRow): boolean {
     row.data_availability &&
     row.funding_statement &&
     row.conflicts_of_interest &&
-    Array.isArray(row.references) &&
-    row.references.length > 0
+    Array.isArray(row.reference_list) &&
+    row.reference_list.length > 0
   )
 }
 
@@ -160,7 +160,7 @@ function mapDbRowToResearchPaper(row: DbPaperRow): ResearchPaper {
     dataAvailability: row.data_availability as string,
     fundingStatement: row.funding_statement as string,
     conflictsOfInterest: row.conflicts_of_interest as string,
-    references: row.references as ResearchPaper['references'],
+    references: row.reference_list as ResearchPaper['references'],
     connectedKhelGridLinks: Array.isArray(row.connected_links) ? row.connected_links : [],
   }
 }
