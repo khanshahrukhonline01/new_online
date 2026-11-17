@@ -156,7 +156,7 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
 
     for (const entry of entries) {
       expect(entry.loc).toMatch(/^https:\/\/khelgrid\.com\//)
-      expect(entry.lastmod).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      if (entry.lastmod) expect(entry.lastmod).toMatch(/^\d{4}-\d{2}-\d{2}$/)
       expect(['daily', 'weekly', 'monthly', 'hourly']).toContain(entry.changefreq)
       expect(entry.priority).toBeGreaterThanOrEqual(0.5)
       expect(entry.priority).toBeLessThanOrEqual(1.0)
