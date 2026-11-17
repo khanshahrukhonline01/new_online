@@ -328,7 +328,7 @@ describe('KhelChronicle Supabase database integration client', () => {
       expect(rejected.rejectionReason).toContain('Outside the scope')
     })
 
-    it('automatically records manuscript submissions into the moderation desk queue', async () => {
+    it('does not save manuscript submissions locally when the database is unconfigured', async () => {
       const client = await loadClient('', '')
       const subRes = await client.submitChronicleManuscript({
         manuscript_title: 'Hydration and Electrolyte Kinetics in Rural Indian Wrestlers',
@@ -336,21 +336,23 @@ describe('KhelChronicle Supabase database integration client', () => {
         primary_author_name: 'Dr. Ramesh Chander',
         primary_author_email: 'ramesh.chander@haryanaakhada.org',
         primary_author_affiliation: 'Chhatrasal Akhada Sports Medicine Cell',
+        article_type: 'preprint',
         abstract_text: 'A structured evaluation of sodium loss, plasma osmolality, and acute dehydration recovery in 45 traditional mud pit pehlwans.',
         keywords: 'Wrestling, Pehlwani, Dehydration, Electrolytes',
         full_text_or_url: 'https://zenodo.org/record/99887766',
+        data_availability: 'open_access',
         human_ethics_confirmed: true,
         minor_consent_confirmed: true,
+        license_type: 'cc-by-nc-nd-4.0',
+        license_confirmed: true,
       })
 
-      expect(subRes.status).not.toBe('unavailable')
-      if ('submissionId' in subRes) {
-        expect(subRes.submissionId).toBeDefined()
+      expect(subRes.status).toBe('unconfigured')
+      if (subRes.status === 'unconfigured') {
+        expect(subRes.message).toContain('No submission was saved')
       }
-      const queue = await client.getChronicleModerationQueue({ search: 'Wrestlers' })
-      expect(queue.submissions.length).toBeGreaterThanOrEqual(1)
-      expect(queue.submissions[0].title).toContain('Rural Indian Wrestlers')
-      expect(queue.submissions[0].status).toBe('pending_review')
+      const queue = await client.getChronicleModerationQueue({ search: 'Rural Indian Wrestlers' })
+      expect(queue.submissions.some(item => item.title.includes('Rural Indian Wrestlers'))).toBe(false)
     })
   })
 })
