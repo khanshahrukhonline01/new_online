@@ -38,6 +38,7 @@ export interface ScoutAthlete {
   videoClipsCount?: number
 }
 
+/** Synthetic UI/test fixtures only; never treat these records as real or verified athletes. */
 export const BASELINE_SCOUT_ATHLETES: ScoutAthlete[] = [
   {
     id: 'scout-ath-01',
