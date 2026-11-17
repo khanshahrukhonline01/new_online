@@ -11,6 +11,8 @@ export interface AthleteProfilePageProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
+// Conflict resolution: retain the privacy-first implementation from this branch.
+// Public profile rendering stays fail-closed until the consent-gated server projection is approved.
 export default function AthleteProfilePage({ username, onNavigate }: AthleteProfilePageProps) {
   const [profile, setProfile] = useState<AthleteProfile | null | undefined>(undefined)
 
