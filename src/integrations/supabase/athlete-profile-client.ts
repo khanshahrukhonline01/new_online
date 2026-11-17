@@ -68,17 +68,6 @@ export const SHOWCASE_ATHLETE_PROFILES: Record<string, AthleteProfile> = {
       tier: 'Tier 1 — Elite National Candidate',
       percentileAvg: 88,
     },
-    coachEndorsement: {
-      endorsed: true,
-      coachName: 'Coach Zaheer Farooq',
-      coachLicense: 'NIS Patiala Senior Diploma · BCCI Level 2',
-      coachDesignation: 'Head Pace Bowling Coach',
-      organizationOrAcademy: 'Sonnet Cricket Club & Delhi State Selection Observer',
-      endorsementStatement:
-        'Biomechanical delivery stride and release velocity (135+ km/h) physically validated during Delhi state pace camp. Recommended for national junior camp selection.',
-      endorsedAt: '2026-10-25T11:30:00Z',
-      endorsementRef: 'END-NIS-DEL-2026-8812',
-    },
     verificationStatus: 'verified',
     createdAt: '2026-10-15T10:00:00Z',
     updatedAt: '2026-10-30T14:00:00Z',
@@ -237,94 +226,12 @@ export function normalizeUsername(input: string): string {
  * Retrieve public athlete profile by username/handle from Supabase,
  * with automatic fallback to local showcase/storage.
  */
-export async function getAthleteProfile(username: string): Promise<AthleteProfile | null> {
-  const clean = normalizeUsername(username)
-
-  if (supabaseUrl && anonKey) {
-    try {
-      const response = await fetch(
-        `${supabaseUrl}/rest/v1/athlete_profiles?username=eq.${encodeURIComponent(clean)}&publication_status=eq.published&limit=1`,
-        {
-          headers: {
-            apikey: anonKey,
-            Authorization: `Bearer ${anonKey}`,
-            Accept: 'application/json',
-          },
-        },
-      )
-      if (response.ok) {
-        const rows = (await response.json()) as unknown[]
-        if (Array.isArray(rows) && rows.length > 0) {
-          const row = rows[0] as Record<string, unknown>
-          return {
-            id: String(row.id ?? clean),
-            userId: row.user_id ? String(row.user_id) : undefined,
-            username: String(row.username ?? clean),
-            fullName: String(row.full_name ?? 'Athlete'),
-            sport: String(row.sport ?? 'All-Rounder'),
-            playingPosition: String(row.playing_position ?? 'Athlete'),
-            city: String(row.city ?? 'India'),
-            state: row.state ? String(row.state) : undefined,
-            dateOfBirth: row.date_of_birth ? String(row.date_of_birth) : undefined,
-            teamOrAcademy: row.team_or_academy ? String(row.team_or_academy) : undefined,
-            coach: row.coach ? String(row.coach) : undefined,
-            experienceYears: row.experience_years ? String(row.experience_years) : undefined,
-            primaryFootOrHand: row.primary_foot_or_hand ? String(row.primary_foot_or_hand) : undefined,
-            heightCm: typeof row.height_cm === 'number' ? row.height_cm : undefined,
-            weightKg: typeof row.weight_kg === 'number' ? row.weight_kg : undefined,
-            summary: row.summary ? String(row.summary) : undefined,
-            achievements: Array.isArray(row.achievements) ? (row.achievements as AthleteProfile['achievements']) : [],
-            videoClips: Array.isArray(row.video_clips) ? (row.video_clips as AthleteProfile['videoClips']) : [],
-            fitnessBenchmarks: row.fitness_benchmarks as AthleteProfile['fitnessBenchmarks'],
-            verificationStatus: (row.verification_status as AthleteProfile['verificationStatus']) ?? 'community',
-            createdAt: String(row.created_at ?? new Date().toISOString()),
-            updatedAt: String(row.updated_at ?? new Date().toISOString()),
-          }
-        }
-      }
-    } catch {
-      // Fallback to local profile on network or config errors
-    }
-  }
-
-  const locals = getLocalProfiles()
-  if (locals[clean]) return locals[clean]
-
-  // Synthesize profile for authenticated user if matching handle
-  if (typeof window !== 'undefined') {
-    try {
-      const rawUser = window.localStorage.getItem('khelgrid_auth_user')
-      if (rawUser) {
-        const authUser = JSON.parse(rawUser) as Record<string, unknown>
-        const fullName = String(authUser.fullName || authUser.name || '').trim()
-        const userHandle = normalizeUsername(fullName)
-        const emailHandle = normalizeUsername(String(authUser.email || '').split('@')[0])
-        if ((fullName && userHandle === clean) || (emailHandle && emailHandle === clean)) {
-          const preferredSports = Array.isArray(authUser.preferredSports) ? (authUser.preferredSports as string[]) : []
-          return {
-            id: String(authUser.id || `prof-${clean}`),
-            userId: authUser.id ? String(authUser.id) : undefined,
-            username: clean,
-            fullName: fullName || 'Verified Athlete',
-            sport: preferredSports[0] || 'Multi-Sport',
-            playingPosition: authUser.role === 'coach' ? 'Head Coach' : authUser.role === 'host' ? 'Venue Partner' : 'Athlete',
-            city: String(authUser.city || 'India'),
-            summary: typeof authUser.bio === 'string' && authUser.bio
-              ? authUser.bio
-              : `Passionate ${preferredSports[0] || 'sports'} athlete on KhelGrid. Building verified Sports CV and tracking selection trials.`,
-            achievements: [],
-            videoClips: [],
-            verificationStatus: authUser.isVerified ? 'verified' : 'community',
-            createdAt: String(authUser.createdAt || new Date().toISOString()),
-            updatedAt: String(authUser.updatedAt || new Date().toISOString()),
-          }
-        }
-      }
-    } catch {
-      // Ignore storage errors
-    }
-  }
-
+/**
+ * Public athlete discovery remains fail-closed until the development database
+ * has a reviewed consent schema and a consent-gated public projection RPC.
+ * Do not fall back to local drafts, showcase fixtures, or browser auth metadata.
+ */
+export async function getAthleteProfile(_username: string): Promise<AthleteProfile | null> {
   return null
 }
 
@@ -341,75 +248,13 @@ export type PublishProfileResult =
  * into Supabase and local cache.
  */
 export async function publishAthleteProfile(
-  input: PublishProfileInput,
+  _input: PublishProfileInput,
 ): Promise<PublishProfileResult> {
-  const username = normalizeUsername(input.username || input.fullName)
-  if (username.length < 3) {
-    return { status: 'error', message: 'Handle must be at least 3 characters long.' }
+  return {
+    status: 'error',
+    message:
+      'Public athlete profile publishing is temporarily paused while consent, verification, and database access controls are being reconciled. Your Sports CV draft remains available on this device.',
   }
-
-  const now = new Date().toISOString()
-  const profile: AthleteProfile = {
-    ...input,
-    id: `prof-${username}-${Date.now().toString(36)}`,
-    username,
-    fullName: input.fullName.trim() || 'Athlete',
-    sport: input.sport.trim() || 'General Athletics',
-    playingPosition: input.playingPosition.trim() || 'Athlete',
-    city: input.city.trim() || 'India',
-    achievements: input.achievements || [],
-    videoClips: input.videoClips || [],
-    verificationStatus: 'verified',
-    createdAt: now,
-    updatedAt: now,
-  }
-
-  saveLocalProfile(profile)
-
-  if (supabaseUrl && anonKey) {
-    try {
-      const payload = {
-        user_id: input.userId || null,
-        username: profile.username,
-        full_name: profile.fullName,
-        sport: profile.sport,
-        playing_position: profile.playingPosition,
-        city: profile.city,
-        state: profile.state,
-        date_of_birth: profile.dateOfBirth || null,
-        team_or_academy: profile.teamOrAcademy || null,
-        coach: profile.coach || null,
-        experience_years: profile.experienceYears || null,
-        primary_foot_or_hand: profile.primaryFootOrHand || null,
-        height_cm: profile.heightCm || null,
-        weight_kg: profile.weightKg || null,
-        summary: profile.summary || null,
-        achievements: profile.achievements,
-        video_clips: profile.videoClips,
-        fitness_benchmarks: profile.fitnessBenchmarks || {},
-        verification_status: 'verified',
-        publication_status: 'published',
-      }
-
-      await fetch(`${supabaseUrl}/rest/v1/athlete_profiles`, {
-        method: 'POST',
-        headers: {
-          apikey: anonKey,
-          Authorization: `Bearer ${anonKey}`,
-          'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates',
-        },
-        body: JSON.stringify(payload),
-      })
-    } catch {
-      // Local profile is persisted even if network write fails
-    }
-  }
-
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://khelgrid.com'
-  const publicUrl = `${origin}/u/@${username}`
-
-  return { status: 'published', profile, publicUrl }
 }
 
 /**
@@ -950,75 +795,4 @@ export function isAcademyEnquirySubmitted(academySlug: string): boolean {
   const enquiries = getUserAcademyEnquiries()
   return enquiries.some(e => e.academySlug.toLowerCase() === academySlug.toLowerCase())
 }
-
-export interface SaveCoachEndorsementInput {
-  username: string
-  coachName: string
-  coachLicense: string
-  coachDesignation?: string
-  organizationOrAcademy?: string
-  endorsementStatement?: string
-}
-
-export async function saveCoachEndorsement(
-  input: SaveCoachEndorsementInput,
-): Promise<{ status: 'endorsed'; profile: AthleteProfile; message: string }> {
-  const normalized = normalizeUsername(input.username)
-  const existing = (await getAthleteProfile(normalized)) || SHOWCASE_ATHLETE_PROFILES[normalized]
-  const now = new Date().toISOString()
-  const licenseClean = input.coachLicense.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'NIS'
-  const ref = `END-${licenseClean}-${Date.now().toString(36).slice(-5).toUpperCase()}`
-
-  const endorsement = {
-    endorsed: true,
-    coachName: input.coachName.trim(),
-    coachLicense: input.coachLicense.trim(),
-    coachDesignation: input.coachDesignation?.trim() || 'Certified Sports Coach',
-    organizationOrAcademy: input.organizationOrAcademy?.trim() || 'Verified Sports Academy',
-    endorsementStatement:
-      input.endorsementStatement?.trim() || 'Candidate metrics and sporting credentials reviewed and officially endorsed.',
-    endorsedAt: now,
-    endorsementRef: ref,
-  }
-
-  const updated: AthleteProfile = existing
-    ? {
-        ...existing,
-        coachEndorsement: endorsement,
-        verificationStatus: 'verified',
-        updatedAt: now,
-      }
-    : {
-        id: `prof-${normalized}`,
-        username: normalized,
-        fullName: normalized.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        sport: 'Multi-Sport',
-        playingPosition: 'Athlete',
-        city: 'India',
-        summary: 'Grassroots verified athlete on KhelGrid.',
-        achievements: [],
-        videoClips: [],
-        coachEndorsement: endorsement,
-        verificationStatus: 'verified',
-        createdAt: now,
-        updatedAt: now,
-      }
-
-  saveLocalProfile(updated)
-
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent('khelgrid:coach-endorsed', {
-        detail: { profile: updated, endorsement },
-      }),
-    )
-  }
-
-  return {
-    status: 'endorsed',
-    profile: updated,
-    message: `Coach endorsement successfully registered! Reference ID: #${ref}`,
-  }
-}
-
 

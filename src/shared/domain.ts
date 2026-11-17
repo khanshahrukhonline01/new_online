@@ -293,17 +293,11 @@ export interface AthleteProfile {
     tier?: string
     percentileAvg?: number
   }
-  coachEndorsement?: {
-    endorsed: boolean
-    coachName: string
-    coachLicense: string
-    coachDesignation?: string
-    organizationOrAcademy?: string
-    endorsementStatement?: string
-    endorsedAt: string
-    endorsementRef: string
-  }
   verificationStatus: 'community' | 'verified' | 'pro'
+  /** True only when a trusted server projection confirms moderator verification. */
+  verificationTrusted?: boolean
+  /** True only when a server-side consent gate authorizes public profile display. */
+  publicProfileEligible?: boolean
   createdAt: string
   updatedAt: string
 }
