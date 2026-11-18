@@ -1,5 +1,7 @@
 \set ON_ERROR_STOP on
 
+DROP TABLE IF EXISTS public.chronicle_papers CASCADE;
+
 CREATE TABLE public.chronicle_papers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   paper_id text NOT NULL UNIQUE,
