@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { signInWithEmail, signOut } from '../../integrations/supabase/auth-client'
+import {
+  signInWithEmail,
+  signOut,
+  sendPasswordReset,
+  updatePassword,
+  parseAuthUrlCallback,
+  clearAuthUrlHash,
+} from '../../integrations/supabase/auth-client'
 import { getSupabaseClient } from '../../integrations/supabase/realtime-client'
 import {
   addListingEvidence,
@@ -67,6 +74,12 @@ export function AdminControlPanelPage() {
   const [notice, setNotice] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [authMode, setAuthMode] = useState<'login' | 'forgot_password' | 'set_new_password'>('login')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [inAppNewPassword, setInAppNewPassword] = useState('')
+  const [inAppConfirmPassword, setInAppConfirmPassword] = useState('')
   const [evidenceType, setEvidenceType] = useState('official_source')
   const [evidenceUrl, setEvidenceUrl] = useState('')
   const [evidenceDescription, setEvidenceDescription] = useState('')
@@ -138,6 +151,15 @@ export function AdminControlPanelPage() {
   }, [])
 
   useEffect(() => { void refresh() }, [refresh])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const callbackInfo = parseAuthUrlCallback()
+    if (callbackInfo.type === 'recovery') {
+      setAuthMode('set_new_password')
+      setNotice('Please set a new secure password for your moderator account.')
+    }
+  }, [])
   useEffect(() => {
     const client = getSupabaseClient()
     if (!client) return
@@ -247,6 +269,84 @@ export function AdminControlPanelPage() {
       await refresh()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Sign-in failed.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleRequestPasswordReset = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const redirectUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}${window.location.pathname}`
+        : undefined
+      const res = await sendPasswordReset(email, redirectUrl)
+      if (!res.success) {
+        setError(res.message || 'Could not send reset email.')
+      } else {
+        setNotice(res.message || 'Password reset instructions have been sent. Please check your inbox.')
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not request password reset.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleSaveNewPassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters long.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match. Please verify and try again.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const res = await updatePassword(newPassword)
+      if (!res.success) throw new Error(res.message || 'Could not update password.')
+      setNotice('Password updated successfully! You can now sign in with your new password.')
+      setNewPassword('')
+      setConfirmPassword('')
+      clearAuthUrlHash()
+      setAuthMode('login')
+      await refresh()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not update password.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleInAppPasswordChange = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (inAppNewPassword.length < 6) {
+      setError('Password must be at least 6 characters long.')
+      return
+    }
+    if (inAppNewPassword !== inAppConfirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const res = await updatePassword(inAppNewPassword)
+      if (!res.success) throw new Error(res.message || 'Could not update password.')
+      setNotice('Your password has been changed successfully.')
+      setInAppNewPassword('')
+      setInAppConfirmPassword('')
+      setIsChangingPassword(false)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not update password.')
     } finally {
       setBusy(false)
     }
@@ -388,13 +488,99 @@ export function AdminControlPanelPage() {
 
   if (loading) return <section className="content-page admin-control"><p>Checking secure moderation access…</p></section>
 
+  if (authMode === 'set_new_password') return (
+    <section className="content-page admin-control">
+      <p className="eyebrow">KHELGRID · RESTRICTED OPERATIONS</p>
+      <h1>Set New Moderator Password</h1>
+      {error && <p role="alert" className="admin-control-error">{error}</p>}
+      {notice && <p role="status" className="admin-control-notice">{notice}</p>}
+      <p>Create a secure new password for your moderator account (minimum 6 characters).</p>
+      <form className="admin-control-login" onSubmit={handleSaveNewPassword}>
+        <label>
+          New Password
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={e => setNewPassword(e.target.value)}
+            placeholder="At least 6 characters"
+            required
+            minLength={6}
+          />
+        </label>
+        <label>
+          Confirm New Password
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            placeholder="Re-type new password"
+            required
+            minLength={6}
+          />
+        </label>
+        <button disabled={busy}>{busy ? 'Updating…' : 'Save new password'}</button>
+        <button
+          type="button"
+          className="admin-secondary-btn"
+          onClick={() => {
+            setAuthMode('login')
+            setError('')
+            setNotice('')
+          }}
+        >
+          ← Back to sign in
+        </button>
+      </form>
+    </section>
+  )
+
+  if (authMode === 'forgot_password') return (
+    <section className="content-page admin-control">
+      <p className="eyebrow">KHELGRID · RESTRICTED OPERATIONS</p>
+      <h1>Reset Moderator Password</h1>
+      {error && <p role="alert" className="admin-control-error">{error}</p>}
+      {notice && <p role="status" className="admin-control-notice">{notice}</p>}
+      <p>Enter your authorized moderator email address. We will send a secure password reset link directly to your inbox.</p>
+      <form className="admin-control-login" onSubmit={handleRequestPasswordReset}>
+        <label>
+          Moderator email
+          <input
+            type="email"
+            autoComplete="username"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="khelgrid@gmail.com"
+            required
+          />
+        </label>
+        <button disabled={busy}>{busy ? 'Sending…' : 'Send password reset link'}</button>
+        <button
+          type="button"
+          className="admin-secondary-btn"
+          onClick={() => {
+            setAuthMode('login')
+            setError('')
+            setNotice('')
+          }}
+        >
+          ← Back to sign in
+        </button>
+      </form>
+    </section>
+  )
+
   if (signedIn && !profile?.is_active) return (
     <section className="content-page admin-control" aria-labelledby="admin-control-denied-title">
       <p className="eyebrow">KHELGRID · RESTRICTED OPERATIONS</p>
       <h1 id="admin-control-denied-title">Access not authorized</h1>
       <p role="alert" className="admin-control-error">You are signed in, but this account is not an active KhelGrid moderator. The private queue and evidence records are unavailable to your account.</p>
       <p>Ask an existing super-admin to grant access if you have an approved moderation responsibility.</p>
-      <button type="button" onClick={async () => { await signOut(); setSignedIn(false); setProfile(null) }}>Sign out</button>
+      <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+        <button type="button" onClick={() => setAuthMode('set_new_password')}>Set / Update password</button>
+        <button type="button" onClick={async () => { await signOut(); setSignedIn(false); setProfile(null) }}>Sign out</button>
+      </div>
     </section>
   )
 
@@ -403,11 +589,25 @@ export function AdminControlPanelPage() {
       <p className="eyebrow">KHELGRID · RESTRICTED OPERATIONS</p>
       <h1>Moderator &amp; Super Admin Control Panel</h1>
       {error && <p role="alert" className="admin-control-error">{error}</p>}
+      {notice && <p role="status" className="admin-control-notice">{notice}</p>}
       <p>Sign in with an individually authorized development moderator account. Public registration does not grant access.</p>
       <form className="admin-control-login" onSubmit={handleSignIn}>
         <label>Moderator email<input type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} required /></label>
         <label>Password<input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required /></label>
         <button disabled={busy}>{busy ? 'Checking…' : 'Sign in securely'}</button>
+        <div className="admin-control-login-links">
+          <button
+            type="button"
+            className="admin-text-link"
+            onClick={() => {
+              setAuthMode('forgot_password')
+              setError('')
+              setNotice('')
+            }}
+          >
+            Forgot password? Reset via email →
+          </button>
+        </div>
       </form>
     </section>
   )
@@ -416,7 +616,7 @@ export function AdminControlPanelPage() {
     <section className="content-page admin-control">
       <header className="admin-control-header">
         <div className="admin-control-brand"><span className="admin-control-brand-mark">KG</span><div><p className="eyebrow">KHELGRID / OPERATIONS</p><h1>Control Centre</h1><p>Private workspace for verification, moderation and platform governance.</p></div></div>
-        <div className="admin-control-identity"><span className="admin-control-live"><i /> Development workspace</span><strong>{profile.role.replace('_', ' ')}</strong><button type="button" onClick={() => void refresh()} disabled={loading || busy}>↻ Refresh</button><button type="button" onClick={async () => { await signOut(); setSignedIn(false); setProfile(null); setQueue(null); setSelected(null); setEvidence([]); setAccounts([]); setAccessAudits([]); setVerificationStates({}); setError(''); setNotice('') }}>Sign out</button></div>
+        <div className="admin-control-identity"><span className="admin-control-live"><i /> Development workspace</span><strong>{profile.role.replace('_', ' ')}</strong><button type="button" onClick={() => void refresh()} disabled={loading || busy}>↻ Refresh</button><button type="button" onClick={() => setIsChangingPassword(true)} disabled={loading || busy}>Change password</button><button type="button" onClick={async () => { await signOut(); setSignedIn(false); setProfile(null); setQueue(null); setSelected(null); setEvidence([]); setAccounts([]); setAccessAudits([]); setVerificationStates({}); setError(''); setNotice('') }}>Sign out</button></div>
       </header>
       <div className="admin-control-shell">
         <nav className="admin-control-sidebar" aria-label="Control centre sections">
@@ -431,6 +631,54 @@ export function AdminControlPanelPage() {
         <div className="admin-control-main">
       {error && <p role="alert" className="admin-control-error">{error}</p>}
       {notice && <p role="status" className="admin-control-notice">{notice}</p>}
+      {isChangingPassword && (
+        <section className="admin-control-card" style={{ maxWidth: '560px', marginBottom: '1.25rem' }} aria-label="Change password">
+          <h3>Change Moderator Password</h3>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary,#64748b)', margin: '0.35rem 0 1rem' }}>
+            Set a new secure password for your currently active session (minimum 6 characters).
+          </p>
+          <form className="admin-control-form" onSubmit={handleInAppPasswordChange}>
+            <label>
+              New Password
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={inAppNewPassword}
+                onChange={e => setInAppNewPassword(e.target.value)}
+                required
+                minLength={6}
+                placeholder="At least 6 characters"
+              />
+            </label>
+            <label>
+              Confirm New Password
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={inAppConfirmPassword}
+                onChange={e => setInAppConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+                placeholder="Re-type new password"
+              />
+            </label>
+            <div className="admin-control-actions">
+              <button type="submit" disabled={busy}>{busy ? 'Updating…' : 'Save New Password'}</button>
+              <button
+                type="button"
+                className="admin-secondary-btn"
+                onClick={() => {
+                  setIsChangingPassword(false)
+                  setInAppNewPassword('')
+                  setInAppConfirmPassword('')
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
       <section id="overview" className="admin-control-overview-section" aria-label="Live moderation overview">
         <div className="admin-control-section-heading"><div><p className="eyebrow">AT A GLANCE</p><h2>Moderation overview</h2></div><span>Queue snapshot · {queueItems.length} loaded records</span></div>
         <div className="admin-control-overview">

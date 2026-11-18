@@ -31,7 +31,9 @@ const khelchronicleCategories = new Set([
   'sports-analytics',
   'sports-policy',
 ])
+
 const featurePages: Record<string, string> = {
+  '/play/lacrosse-sixes': 'Lacrosse Sixes Arcade Game',
   '/dashboard': 'My Dashboard', '/host': 'Host & Partner Dashboard', '/partner-dashboard': 'Host & Partner Dashboard', '/live': 'Live Scores', '/live-scores': 'Live Scores', '/play': 'Play · Find Games',
   '/coaches': 'Coaches Directory', '/events': 'Events & Tournaments', '/tournaments': 'Events & Tournaments',
   '/stats': 'Athlete Statistics', '/sports-cv': 'Sports CV Wizard', '/talent-scanner': 'Talent Scanner',

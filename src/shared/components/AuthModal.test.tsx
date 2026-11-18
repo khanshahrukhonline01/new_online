@@ -97,4 +97,20 @@ describe('AuthModal Component', () => {
     expect(html).toContain('Email verification link is invalid or has expired.')
     expect(html).toContain('Already verified? Sign in with password')
   })
+
+  it('6. renders create a new password form in set_new_password mode', () => {
+    const html = renderToStaticMarkup(
+      <AuthModal
+        isOpen={true}
+        initialTab="set_new_password"
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(html).toContain('Create a New Password')
+    expect(html).toContain('New Password')
+    expect(html).toContain('Confirm New Password')
+    expect(html).toContain('Save New Password &amp; Sign In')
+    expect(html).toContain('Back to Sign In')
+  })
 })

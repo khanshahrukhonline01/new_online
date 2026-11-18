@@ -1,11 +1,7 @@
-import { useMemo, useState, type MouseEvent } from 'react'
+import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import {
-  RESEARCH_AUTHORS,
-  getPapersByAuthor,
-  type ResearchAuthor,
-  type ResearchPaper,
-} from './data/khelchronicleData'
+import type { ResearchAuthor, ResearchPaper } from './data/khelchronicleData'
+import { getChronicleAuthorBySlug } from '../../integrations/supabase/chronicle-client'
 import { KhelChroniclePaperCard } from './components/KhelChroniclePaperCard'
 import { AcademicGalleyModal } from './components/AcademicGalleyModal'
 import { CitationExportModal } from './components/CitationExportModal'
@@ -17,14 +13,22 @@ interface KhelChronicleAuthorPageProps {
 }
 
 export function KhelChronicleAuthorPage({ authorSlug, onNavigate }: KhelChronicleAuthorPageProps) {
-  const author: ResearchAuthor | undefined = useMemo(() => {
-    return RESEARCH_AUTHORS[authorSlug.toLowerCase()] || Object.values(RESEARCH_AUTHORS)[0]
-  }, [authorSlug])
+  const [author, setAuthor] = useState<ResearchAuthor | null | undefined>(undefined)
+  const [authoredPapers, setAuthoredPapers] = useState<ResearchPaper[]>([])
 
-  const authoredPapers = useMemo(() => {
-    if (!author) return []
-    return getPapersByAuthor(author.slug)
-  }, [author])
+  useEffect(() => {
+    let active = true
+    setAuthor(undefined)
+    getChronicleAuthorBySlug(authorSlug).then(result => {
+      if (active) {
+        setAuthor(result.data?.author ?? null)
+        setAuthoredPapers(result.data?.papers ?? [])
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [authorSlug])
 
   // Scholar impact metrics dynamically computed
   const authorMetrics = useMemo(() => {
@@ -82,6 +86,14 @@ export function KhelChronicleAuthorPage({ authorSlug, onNavigate }: KhelChronicl
     }
   }
 
+  if (author === undefined) {
+    return <div className="kc-root" style={{ padding: '48px 16px', textAlign: 'center' }}><h2>Checking author record…</h2></div>
+  }
+
+  if (author === null) {
+    return <div className="kc-root" style={{ padding: '48px 16px', textAlign: 'center' }}><h2>Researcher profile not found</h2><p>Only author records linked to approved public manuscripts are shown.</p><a href="/khelchronicle">Back to KhelChronicle</a></div>
+  }
+
   return (
     <div className="kc-root">
       {/* Breadcrumb */}
@@ -101,6 +113,9 @@ export function KhelChronicleAuthorPage({ authorSlug, onNavigate }: KhelChronicl
           <span className="kc-badge-archive">
             <SiteIcon name="award" size={13} />
             <span>KhelChronicle Researcher Profile</span>
+          </span>
+          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+            Author record
           </span>
           <span className="kc-badge-open-access">
             Verified Institutional Investigator

@@ -240,3 +240,9 @@
 .admin-control-state-row strong{color:#0b192c;text-align:right;text-transform:capitalize}
 .admin-control-next-step>p:last-child{margin-top:1rem;font-size:.78rem;line-height:1.55}
 @media(max-width:900px){.admin-control-detail-grid{grid-template-columns:1fr}}
+
+.admin-control-login-links{display:flex;justify-content:center;margin-top:.75rem}
+.admin-text-link{background:none!important;border:none!important;color:#047857!important;font-size:.85rem;padding:0!important;cursor:pointer;text-decoration:none;font-weight:600}
+.admin-text-link:hover{text-decoration:underline}
+.admin-secondary-btn{background:#475569!important;border:1px solid #334155!important;color:#fff!important}
+.admin-secondary-btn:hover{background:#334155!important}

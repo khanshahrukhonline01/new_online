@@ -15,6 +15,7 @@ supabase/
 │   ├── 20261030170000_seed_live_khelgrid_academies.sql
 │   ├── 20261030180000_khelchronicle_research_repository.sql
 │   ├── 20261031100000_seed_remaining_sports_catalogue.sql
+│   ├── 20261118100000_add_lacrosse_sport_catalogue.sql
 │   ├── 20261031120000_create_athlete_profiles.sql
 │   ├── 20261031130000_create_trial_reminders.sql
 │   ├── 20261031140000_create_venue_sports.sql
@@ -71,7 +72,7 @@ If you are setting up a new Supabase environment or executing queries manually i
 | **01** | `seeds/01_setup_academies.sql` | Creates `public.academies` and `public.academy_sports` tables, RLS policies, indexes, and initial verified academies. |
 | **02** | `seeds/02_setup_coaches.sql` | Creates `public.coaches`, `public.coach_sports`, and `public.coach_academies` tables, RLS policies, and Dronacharya coaches. |
 | **03** | `seeds/03_setup_events.sql` | Creates `public.events` table, RLS policies, and national tournaments (Khelo India, Santosh Trophy, Senior Nationals). |
-| **04** | `seeds/04_seed_all_276_academies.sql` | Inserts all 276 verified academies across 90+ Indian cities and maps them to sports across the 34-sport taxonomy. |
+| **04** | `seeds/04_seed_all_276_academies.sql` | Inserts all 276 verified academies across 90+ Indian cities and maps them to sports across the 35-sport taxonomy. |
 | **05** | `seeds/05_seed_khelchronicle_research.sql` | Creates `public.chronicle_papers` & `public.chronicle_submissions`, RLS policies, and seeds flagship preprints. |
 | **06** | `seeds/06_seed_athlete_profiles.sql` | Creates `public.athlete_profiles` (with `user_id` auth reference), RLS policies, and seeds flagship grassroots athletes. |
 | **07** | `seeds/07_seed_trial_reminders.sql` | Creates `public.trial_reminders`, RLS policies, indexes, and seeds trial deadline notification queues. |

@@ -24,6 +24,7 @@ import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAn
 const AboutPage = lazy(() => import('./modules/about/AboutPage'))
 const TrustPage = lazy(() => import('./modules/trust/TrustPage'))
 const HelpFeedbackPage = lazy(() => import('./modules/help/HelpFeedbackPage'))
+const LacrosseSixesPage = lazy(() => import('./modules/games/LacrosseSixesPage'))
 const MobileAppPage = lazy(() => import('./modules/mobile-app/MobileAppPage'))
 const CareersPage = lazy(() => import('./modules/careers/CareersPage'))
 const ReferralsPage = lazy(() => import('./modules/referrals/ReferralsPage'))
@@ -72,6 +73,7 @@ const SpotlightSearchModal = lazy(() => import('./shared/components/SpotlightSea
 const FeedbackSupportModal = lazy(() => import('./shared/components/FeedbackSupportModal'))
 const UserConsentModal = lazy(() => import('./shared/components/UserConsentModal'))
 const GoProModal = lazy(() => import('./shared/components/GoProModal'))
+import type { AuthModalTab } from './shared/components/AuthModal'
 const AuthModal = lazy(() => import('./shared/components/AuthModal'))
 
 function PageFallbackLoader() {
@@ -109,7 +111,7 @@ export default function App() {
   const [consentInitialTab, setConsentInitialTab] = useState<'sports_pass' | 'rules_privacy'>('sports_pass')
   const [goProModalOpen, setGoProModalOpen] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
-  const [authModalTab, setAuthModalTab] = useState<'login' | 'signup' | 'forgot_password' | 'expired_link'>('login')
+  const [authModalTab, setAuthModalTab] = useState<AuthModalTab>('login')
   const [authModalError, setAuthModalError] = useState<string | undefined>(undefined)
   const [authUser, setAuthUser] = useState<AuthUserProfile | null>(() => getStoredAuthUser())
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -143,8 +145,8 @@ export default function App() {
       setAuthModalOpen(true)
       clearAuthUrlHash()
     } else if (callbackInfo.type === 'recovery') {
-      setAuthModalTab('forgot_password')
-      setAuthModalError('Please enter a new password for your account.')
+      setAuthModalTab('set_new_password')
+      setAuthModalError('')
       setAuthModalOpen(true)
       clearAuthUrlHash()
     } else if (callbackInfo.type === 'signup_confirmed') {
@@ -293,6 +295,7 @@ export default function App() {
       else if (match.canonicalPath === '/help-feedback' || match.canonicalPath === '/contact' || match.canonicalPath === '/help' || match.canonicalPath === '/support') page = <HelpFeedbackPage />
       else if (match.canonicalPath === '/sports-cv' || match.canonicalPath === '/start-from-zero') page = <SportsCvWizard />
       else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} onOpenAuth={tab => { setAuthModalTab(tab || 'signup'); setAuthModalOpen(true) }} />
+      else if (match.canonicalPath === '/play/lacrosse-sixes') page = <LacrosseSixesPage />
       else if (match.canonicalPath === '/play' || match.canonicalPath === '/community') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openListingSubmission('pickup_game')} />
       else if (match.canonicalPath === '/coaches') page = <CoachesPage onNavigate={navigate} onOpenCoachIntake={() => openListingSubmission('coach')} />
       else if (match.canonicalPath === '/events' || match.canonicalPath === '/tournaments') page = <EventsPage onNavigate={navigate} />

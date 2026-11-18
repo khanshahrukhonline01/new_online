@@ -1,16 +1,16 @@
 import { useState, useMemo, useEffect, type MouseEvent, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
-  getPaperBySlug,
   generateCitations,
-  getRelatedPapers,
   generateRisCitation,
   getPaperComments,
+  getRelatedPapers,
   RESEARCH_PAPERS,
   type ResearchPaper,
   type PaperComment,
 } from './data/khelchronicleData'
 import {
+  getChroniclePaperBySlug,
   recordPaperView,
   recordPaperDownload,
   getChroniclePaperComments,
@@ -24,13 +24,24 @@ import './khelchronicle.css'
 
 interface KhelChroniclePaperPageProps {
   slug: string
+  initialPaper?: ResearchPaper
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
-export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperPageProps) {
-  const paper: ResearchPaper | undefined = useMemo(() => {
-    return getPaperBySlug(slug) || RESEARCH_PAPERS[0]
-  }, [slug])
+export function KhelChroniclePaperPage({ slug, initialPaper, onNavigate }: KhelChroniclePaperPageProps) {
+  const [paper, setPaper] = useState<ResearchPaper | null | undefined>(initialPaper ?? undefined)
+
+  useEffect(() => {
+    if (initialPaper) return
+    let active = true
+    setPaper(undefined)
+    getChroniclePaperBySlug(slug).then(result => {
+      if (active) setPaper(result.data)
+    })
+    return () => {
+      active = false
+    }
+  }, [slug, initialPaper])
 
   useEffect(() => {
     if (paper) {
@@ -322,7 +333,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
           datePublished: paper.datePublished,
           dateModified: paper.dateModified || paper.datePublished,
           version: paper.version,
-          license: 'https://creativecommons.org/licenses/by/4.0/',
+          license: paper.license || 'https://creativecommons.org/licenses/by/4.0/',
           sameAs: `https://doi.org/${doi}`,
           author: paper.authors.map(a => ({
             '@type': 'Person',
@@ -374,7 +385,16 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
     }
   }, [paper, doi])
 
-  if (!paper) {
+  if (paper === undefined) {
+    return (
+      <div className="kc-root" style={{ padding: '48px 16px', textAlign: 'center' }}>
+        <h2>Checking manuscript publication status…</h2>
+        <p>Only complete manuscripts approved for public release can be opened.</p>
+      </div>
+    )
+  }
+
+  if (paper === null) {
     return (
       <div className="kc-root" style={{ padding: '48px 16px', textAlign: 'center' }}>
         <h2>Research Paper Not Found</h2>
@@ -393,7 +413,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
         <div className="kc-print-branding">
           <div className="kc-print-logo-row">
             <span className="kc-print-journal-name">KHELCHRONICLE OPEN SPORTS RESEARCH ARCHIVE</span>
-            <span className="kc-print-badge">Diamond Open Access · CC BY 4.0</span>
+            <span className="kc-print-badge">Diamond Open Access · {paper.license || 'CC BY 4.0'}</span>
           </div>
           <div className="kc-print-meta-row">
             <span><strong>Preprint Accession:</strong> {paper.paperId}</span>
@@ -529,13 +549,16 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
               </span>
             )}
             <span className="kc-paper-category-tag">{paper.categoryName}</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+              Published manuscript
+            </span>
             {paper.methodologyLabel && (
               <span className="kc-paper-method-tag">
                 {paper.methodologyLabel}
               </span>
             )}
             <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#dcfce7', color: '#15803d' }}>
-              Diamond Open Access · CC BY 4.0
+              {paper.license ? `Diamond Open Access · ${paper.license}` : 'Diamond Open Access · CC BY 4.0'}
             </span>
             <span className="kc-paper-date">Published {paper.datePublished}</span>
           </div>

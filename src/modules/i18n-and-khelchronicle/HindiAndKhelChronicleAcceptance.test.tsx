@@ -91,7 +91,7 @@ describe('Pillar 5 Acceptance: Hindi Localization & KhelChronicle Academic Repos
       const html = renderToStaticMarkup(<KhelChronicleHome />)
 
       expect(html).toContain('KhelChronicle · Open Sports Research Archive')
-      expect(html).toContain('Diamond Open Access')
+      expect(html).toContain('100% Open Access')
       expect(html).toContain('CC BY 4.0')
       expect(html).toContain('application/ld+json')
       expect(html).toContain('DataCatalog')
@@ -104,7 +104,7 @@ describe('Pillar 5 Acceptance: Hindi Localization & KhelChronicle Academic Repos
       const firstPaper = RESEARCH_PAPERS[0]
       expect(firstPaper).toBeDefined()
 
-      const html = renderToStaticMarkup(<KhelChroniclePaperPage slug={firstPaper.slug} />)
+      const html = renderToStaticMarkup(<KhelChroniclePaperPage slug={firstPaper.slug} initialPaper={firstPaper} />)
 
       // Identifiers & Peer Review status
       expect(html).toContain(firstPaper.paperId)
@@ -125,9 +125,9 @@ describe('Pillar 5 Acceptance: Hindi Localization & KhelChronicle Academic Repos
       const html = renderToStaticMarkup(<KhelChronicleCategoryPage categorySlug="sports-biomechanics" />)
 
       expect(html).toContain('Sports Biomechanics')
-      expect(html).toContain('Curated Scientific Discipline')
+      expect(html).toContain('Research Discipline')
       expect(html).toContain('Diamond Open Access (CC BY 4.0)')
-      expect(html).toContain('KG-2026-001')
+      expect(html).toContain('Checking approved public manuscripts')
     })
 
     it('renders manuscript submission page with 5-step stepper, ethics and Diamond Open Access pledges', () => {

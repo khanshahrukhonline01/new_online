@@ -1,4 +1,4 @@
-html:has(.khelgrid-admin-app) { color-scheme: light; }
+html:has(.khelgrid-admin-app) { color-scheme: light dark; }
 body:has(.khelgrid-admin-app) { min-width: 320px; min-height: 100vh; background: #f5f7fa; margin: 0; padding: 0; }
 .khelgrid-admin-app { min-height: 100vh; display: flex; flex-direction: column; }
 .khelgrid-admin-config-error { display: grid; align-content: center; justify-items: start; gap: 0.75rem; min-height: 100vh; padding: clamp(1.5rem, 5vw, 4rem); color: #0B192C; }
@@ -99,6 +99,36 @@ body:has(.khelgrid-admin-app) { min-width: 320px; min-height: 100vh; background:
   gap: 0.85rem;
 }
 
+.admin-theme-inline {
+  display: flex;
+  align-items: center;
+}
+
+.admin-theme-inline label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+  color: #94a3b8;
+  font-weight: 650;
+}
+
+.admin-theme-inline select {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.74rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.admin-theme-inline select option {
+  background: #0b192c;
+  color: #f8fafc;
+}
+
 .admin-shell-db-indicator {
   display: inline-flex;
   align-items: center;
@@ -136,5 +166,55 @@ body:has(.khelgrid-admin-app) { min-width: 320px; min-height: 100vh; background:
   }
   .admin-shell-meta {
     justify-content: center;
+  }
+}
+
+/* Dark mode theme token overrides */
+html.dark body:has(.khelgrid-admin-app) {
+  background: #0b111b;
+}
+
+html.dark .khelgrid-admin-app .admin-control {
+  --kg-canvas: #0b111b;
+  --kg-ink: #f1f5f9;
+  --kg-muted: #94a3b8;
+  --border-subtle: #263449;
+  background: var(--kg-canvas);
+  color: var(--kg-ink);
+}
+
+html.dark .khelgrid-admin-app .admin-control .admin-control-stat,
+html.dark .khelgrid-admin-app .admin-control .admin-control-queue,
+html.dark .khelgrid-admin-app .admin-control .admin-control-card,
+html.dark .khelgrid-admin-app .admin-control .admin-control-empty,
+html.dark .khelgrid-admin-app .admin-control .admin-control-sidebar,
+html.dark .khelgrid-admin-app .admin-control .admin-control-login {
+  background: #111a28;
+  border-color: #263449;
+  color: #f1f5f9;
+}
+
+html.dark .khelgrid-admin-app .admin-control .admin-control-stat strong,
+html.dark .khelgrid-admin-app .admin-control .admin-control-queue h2,
+html.dark .khelgrid-admin-app .admin-control .admin-control-card h2,
+html.dark .khelgrid-admin-app .admin-control .admin-control-card h3,
+html.dark .khelgrid-admin-app .admin-control .admin-control-section-heading h2,
+html.dark .khelgrid-admin-app .admin-control .admin-control-queue > button strong {
+  color: #f8fafc;
+}
+
+html.dark .khelgrid-admin-app .admin-control input,
+html.dark .khelgrid-admin-app .admin-control select,
+html.dark .khelgrid-admin-app .admin-control textarea {
+  background: #0b111b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .khelgrid-admin-app *, .khelgrid-admin-app *::before, .khelgrid-admin-app *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
   }
 }

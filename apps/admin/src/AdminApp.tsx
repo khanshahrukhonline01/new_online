@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { AdminControlPanelPage } from '../../../src/modules/admin/AdminControlPanelPage'
 import { AdminModerationPage } from '../../../src/modules/admin/AdminModerationPage'
 import { SiteIcon } from '../../../src/shared/components/SiteIcon'
+import { usePreferences } from '../../../src/shared/usePreferences'
 
 const DEVELOPMENT_SUPABASE_URL = 'https://hznsbxvovjxvmnchzzqt.supabase.co'
 
 export function AdminApp() {
+  const { preferences, updatePreferences } = usePreferences()
   const configuredUrl = (import.meta.env.VITE_SUPABASE_URL || DEVELOPMENT_SUPABASE_URL)
     ?.toString()
     .trim()
@@ -64,6 +66,16 @@ export function AdminApp() {
         </nav>
 
         <div className="admin-shell-meta">
+          <div className="admin-theme-inline" aria-label="Appearance preferences">
+            <label>
+              Theme
+              <select value={preferences.theme} onChange={event => updatePreferences({ theme: event.target.value as 'light' | 'dark' | 'system' })}>
+                <option value="system">System default</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </label>
+          </div>
           <span className="admin-shell-db-indicator">
             <span className="admin-shell-status-dot" />
             <span>Dev Database (hznsbxvovjxvmnchzzqt)</span>

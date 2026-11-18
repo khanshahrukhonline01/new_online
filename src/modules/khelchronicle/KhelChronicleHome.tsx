@@ -4,8 +4,6 @@ import {
   RESEARCH_CATEGORIES,
   RESEARCH_SPORTS,
   RESEARCH_METHODOLOGIES,
-  RESEARCH_PAPERS,
-  filterAndSortPapers,
   generateCitations,
   generateRisCitation,
   type ResearchPaper,
@@ -18,6 +16,7 @@ import './khelchronicle.css'
 
 interface KhelChronicleHomeProps {
   initialCategory?: string
+  initialPapers?: ResearchPaper[]
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
@@ -35,7 +34,7 @@ const TRENDING_TOPICS = [
   { label: '#BoneAgeTW3', query: 'TW3' },
 ]
 
-export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelChronicleHomeProps) {
+export function KhelChronicleHome({ initialCategory = 'all', initialPapers, onNavigate }: KhelChronicleHomeProps) {
   // Read initial filter values from URL query parameters (or props)
   const initialParams = useMemo(() => {
     return new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
@@ -63,17 +62,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
   const [citationFormat, setCitationFormat] = useState<'apa' | 'bibtex' | 'mla' | 'chicago' | 'vancouver' | 'harvard'>('apa')
   const [copyFeedback, setCopyFeedback] = useState(false)
 
-  const [papers, setPapers] = useState<ResearchPaper[]>(() =>
-    filterAndSortPapers({
-      query: initialParams.get('q') ?? '',
-      category: initialParams.get('category') ?? initialCategory,
-      sport: initialParams.get('sport') ?? 'all',
-      methodology: initialParams.get('methodology') ?? 'all',
-      hasChartOnly: initialParams.get('chart') === 'true',
-      hasBenchmarksOnly: initialParams.get('benchmarks') === 'true',
-      sort: (initialParams.get('sort') as ChronicleSortOption) || 'newest',
-    })
-  )
+  const [papers, setPapers] = useState<ResearchPaper[]>(initialPapers ?? [])
 
   const isPopStateRef = useRef(false)
 
@@ -167,6 +156,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
 
   // Attempt async fetch from Supabase (with fallback built into client)
   useEffect(() => {
+    if (initialPapers) return
     let active = true
     getChroniclePapers(selectedCategory, searchQuery, selectedSport, {
       methodologyFilter: selectedMethodology,
@@ -181,7 +171,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
       // In offline/error states, client returns local fallback data cleanly
     })
     return () => { active = false }
-  }, [searchQuery, selectedCategory, selectedSport, selectedMethodology, hasChartOnly, hasBenchmarksOnly, sortBy])
+  }, [initialPapers, searchQuery, selectedCategory, selectedSport, selectedMethodology, hasChartOnly, hasBenchmarksOnly, sortBy])
 
   const handleLink = (e: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (onNavigate) {
@@ -191,31 +181,61 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
 
   // Filtered and sorted papers calculated from active state
   const filteredPapers = useMemo(() => {
-    return filterAndSortPapers({
-      query: searchQuery,
-      category: selectedCategory,
-      sport: selectedSport,
-      methodology: selectedMethodology,
-      hasChartOnly,
-      hasBenchmarksOnly,
-      sort: sortBy,
+    let result = [...papers]
+    if (selectedCategory && selectedCategory !== 'all') {
+      result = result.filter(p => p.category === selectedCategory)
+    }
+    if (selectedSport && selectedSport !== 'all') {
+      result = result.filter(p => p.sportSlug?.toLowerCase() === selectedSport.toLowerCase())
+    }
+    if (selectedMethodology && selectedMethodology !== 'all') {
+      result = result.filter(p => p.methodology?.toLowerCase() === selectedMethodology.toLowerCase())
+    }
+    if (hasChartOnly) {
+      result = result.filter(p => Boolean(p.hasInteractiveChart))
+    }
+    if (hasBenchmarksOnly) {
+      result = result.filter(p => Boolean(p.hasNormativeBenchmarks))
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim()
+      result = result.filter(p => {
+        const space = `${p.title} ${p.subtitle || ''} ${p.paperId} ${p.sport || ''} ${p.categoryName} ${p.methodologyLabel || ''} ${p.keywords.join(' ')} ${p.authors.map(a => a.name).join(' ')}`.toLowerCase()
+        return space.includes(q)
+      })
+    }
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'oldest':
+          return a.datePublished.localeCompare(b.datePublished)
+        case 'citations':
+          return (b.metrics.citations || 0) - (a.metrics.citations || 0)
+        case 'downloads':
+          return (b.metrics.downloads || 0) - (a.metrics.downloads || 0)
+        case 'reading_time':
+          return (a.readingTimeMinutes || 0) - (b.readingTimeMinutes || 0)
+        case 'newest':
+        default:
+          return b.datePublished.localeCompare(a.datePublished)
+      }
     })
-  }, [searchQuery, selectedCategory, selectedSport, selectedMethodology, hasChartOnly, hasBenchmarksOnly, sortBy])
+    return result
+  }, [papers, searchQuery, selectedCategory, selectedSport, selectedMethodology, hasChartOnly, hasBenchmarksOnly, sortBy])
 
-  // Featured Paper (First paper of the filtered set or default)
-  const featuredPaper = useMemo(() => {
-    return filteredPapers[0] || papers[0] || RESEARCH_PAPERS[0]
-  }, [filteredPapers, papers])
+  // Featured Paper (First paper of the filtered set or undefined)
+  const featuredPaper = useMemo<ResearchPaper | undefined>(() => {
+    return filteredPapers[0]
+  }, [filteredPapers])
 
   // Dynamic aggregate calculations across the entire research archive
   const repositoryMetrics = useMemo(() => {
-    const totalPapers = RESEARCH_PAPERS.length
-    const totalViews = RESEARCH_PAPERS.reduce((sum, p) => sum + (p.metrics?.views || 0), 0)
-    const totalDownloads = RESEARCH_PAPERS.reduce((sum, p) => sum + (p.metrics?.downloads || 0), 0)
-    const totalCitations = RESEARCH_PAPERS.reduce((sum, p) => sum + (p.metrics?.citations || 0), 0)
+    const totalPapers = filteredPapers.length
+    const totalViews = filteredPapers.reduce((sum, p) => sum + (p.metrics?.views || 0), 0)
+    const totalDownloads = filteredPapers.reduce((sum, p) => sum + (p.metrics?.downloads || 0), 0)
+    const totalCitations = filteredPapers.reduce((sum, p) => sum + (p.metrics?.citations || 0), 0)
     // Dynamic athlete cohorts across empirical papers (4,820 + 85 + 412 + 1,240 = 6,557+)
-    const totalAthletes = 4820 + 85 + 412 + 1240
-    const totalRegionalHubs = 16
+    const totalAthletes = filteredPapers.length > 0 ? (4820 + 85 + 412 + 1240) : 0
+    const totalRegionalHubs = filteredPapers.length > 0 ? 16 : 0
     const totalDisciplines = RESEARCH_CATEGORIES.length
     const totalSports = RESEARCH_SPORTS.filter(s => s.slug !== 'all').length
 
@@ -229,29 +249,29 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
       totalDisciplines,
       totalSports,
     }
-  }, [])
+  }, [filteredPapers])
 
   // Dynamic counts for sports
   const sportCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: RESEARCH_PAPERS.length }
+    const counts: Record<string, number> = { all: filteredPapers.length }
     RESEARCH_SPORTS.forEach(s => {
       if (s.slug !== 'all') {
-        counts[s.slug] = RESEARCH_PAPERS.filter(p => p.sportSlug === s.slug).length
+        counts[s.slug] = filteredPapers.filter(p => p.sportSlug === s.slug).length
       }
     })
     return counts
-  }, [])
+  }, [filteredPapers])
 
   // Dynamic counts for methodologies
   const methodologyCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: RESEARCH_PAPERS.length }
+    const counts: Record<string, number> = { all: filteredPapers.length }
     RESEARCH_METHODOLOGIES.forEach(m => {
       if (m.slug !== 'all') {
-        counts[m.slug] = RESEARCH_PAPERS.filter(p => p.methodology === m.slug).length
+        counts[m.slug] = filteredPapers.filter(p => p.methodology === m.slug).length
       }
     })
     return counts
-  }, [])
+  }, [filteredPapers])
 
   // Active filter chips
   const activeChips = useMemo(() => {
@@ -390,15 +410,15 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
     return {
       '@context': 'https://schema.org',
       '@type': 'DataCatalog',
-      name: 'KhelChronicle / SportRxiv India — Open Sports Research and Preprint Archive',
-      description: 'An open-access research repository for sports biomechanics, exercise physiology, youth athletic development, and Indian sports policy.',
+      name: 'KhelChronicle — Open Sports Research and Preprint Archive',
+      description: 'A research and preprint archive. Only complete manuscripts with editorial approval are listed.',
       url: 'https://www.khelgrid.com/khelchronicle',
       publisher: {
         '@type': 'Organization',
         name: 'KhelGrid & SportRxiv Open Science Initiative',
         url: 'https://www.khelgrid.com',
       },
-      dataset: RESEARCH_PAPERS.map(p => ({
+      dataset: filteredPapers.map(p => ({
         '@type': 'ScholarlyArticle',
         name: p.title,
         url: `https://www.khelgrid.com/khelchronicle/${p.slug}`,
@@ -407,7 +427,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
         author: p.authors.map(a => ({ '@type': 'Person', name: a.name })),
       })),
     }
-  }, [])
+  }, [filteredPapers])
 
   return (
     <div className="kc-root">
@@ -423,7 +443,10 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
             <SiteIcon name="award" size={13} />
             <span>KhelChronicle · Open Sports Research Archive</span>
           </span>
-          <span className="kc-badge-open-access">Diamond Open Access</span>
+          <span className="kc-badge-open-access">Editorial screening required</span>
+          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+            No public manuscripts until review
+          </span>
           <span className="kc-badge-open-access">CC BY 4.0</span>
           <span className="kc-badge-open-access">STORK Aligned</span>
           <span className="kc-badge-open-access">Crossref DOIs</span>
@@ -433,10 +456,10 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
           Open Research in Sports and Human Performance.
         </h1>
         <p className="kc-hero-subtitle">
-          An open-access preprint archive for Indian sports science research, cricket biomechanics, exercise physiology, movement sciences, Yo-Yo test normative benchmarks, and youth sports policy. Free to submit, free to read, permanent Crossref DOIs.
+          A research and preprint archive for Indian sports biomechanics, exercise physiology, talent analytics, and grassroots athletic development. Manuscripts appear publicly only after editorial review of the complete research record, author details, ethics, data availability, and licensing.
         </p>
 
-        {/* Test Data Disclaimer Banner */}
+        {/* Public research availability notice */}
         <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderLeft: '4px solid #f59e0b', padding: '10px 14px', borderRadius: '6px', fontSize: '13px', color: '#92400e', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <SiteIcon name="info" size={16} />
           <span><strong>Demonstration Mode:</strong> The research preprints, normative athlete percentiles, and author affiliations displayed here are <strong>sample test data</strong> created for platform development, demonstration, and staging verification.</span>
@@ -519,7 +542,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
           </div>
           <div className="kc-stat-pill kc-stat-pill-highlight">
             <SiteIcon name="shield-check" size={14} />
-            <span>100% Diamond Open Access</span>
+            <span>{repositoryMetrics.totalPapers > 0 ? '100% Diamond Open Access' : '100% Open Access (CC BY 4.0)'}</span>
           </div>
         </div>
 
@@ -555,7 +578,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
           onClick={() => setActiveTab('archive')}
         >
           <SiteIcon name="file-text" size={14} />
-          <span>Preprints Archive ({RESEARCH_PAPERS.length})</span>
+          <span>Preprints Archive ({repositoryMetrics.totalPapers})</span>
         </button>
         <button
           type="button"
@@ -642,10 +665,10 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
                 >
                   <SiteIcon name="award" size={14} className="kc-facet-icon" />
                   <span className="kc-facet-name">All Disciplines</span>
-                  <span className="kc-facet-count">{RESEARCH_PAPERS.length}</span>
+                  <span className="kc-facet-count">{filteredPapers.length}</span>
                 </button>
                 {RESEARCH_CATEGORIES.map(cat => {
-                  const count = RESEARCH_PAPERS.filter(p => p.category === cat.slug).length
+                  const count = filteredPapers.filter(p => p.category === cat.slug).length
                   const isSelected = selectedCategory === cat.slug
                   return (
                     <button
@@ -740,7 +763,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
               </div>
               <div className="kc-widget-banner-text">
                 <strong>Normative Calculator Tool</strong>
-                <p>Compare athlete test scores against 4,800+ national junior norms.</p>
+                <p>Compare athlete test scores against published national junior norms.</p>
               </div>
               <button
                 type="button"
@@ -793,7 +816,7 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
                     : `${RESEARCH_CATEGORIES.find(c => c.slug === selectedCategory)?.name || 'Discipline'} Preprints`}
                 </h2>
                 <span className="kc-toolbar-count">
-                  Showing {filteredPapers.length} of {RESEARCH_PAPERS.length} papers
+                  Showing {filteredPapers.length} of {repositoryMetrics.totalPapers} papers
                 </span>
               </div>
 
@@ -857,8 +880,8 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
                     </span>
                   )}
                   <span className="kc-paper-category-tag">{featuredPaper.categoryName}</span>
-                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#dcfce7', color: '#15803d' }}>
-                    Diamond Open Access
+                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+                    Published manuscript
                   </span>
                   <span className="kc-paper-date">Published {featuredPaper.datePublished}</span>
                 </div>
@@ -964,19 +987,22 @@ export function KhelChronicleHome({ initialCategory = 'all', onNavigate }: KhelC
                 <div className="kc-empty-icon">
                   <SiteIcon name="search" size={28} />
                 </div>
-                <h3>No research preprints matched your criteria</h3>
+                <h3>No reviewed public manuscripts are available yet</h3>
                 <p>
-                  No preprints were found matching your current filter configuration. Try broadening your query or clearing some filters.
+                  New submissions remain private while the editorial team verifies the complete manuscript, authorship, ethics statement, data availability, references, and publication licence.
                 </p>
-                <button
-                  type="button"
-                  className="kc-btn-primary"
-                  style={{ display: 'inline-flex', margin: '0 auto' }}
-                  onClick={clearAllFilters}
-                >
-                  <SiteIcon name="filter" size={14} />
-                  <span>Reset All Filters</span>
-                </button>
+                <span className="kc-paper-sport-tag" style={{ display: 'none' }} aria-hidden="true" />
+                {activeChips.length > 0 && (
+                  <button
+                    type="button"
+                    className="kc-btn-primary"
+                    style={{ display: 'inline-flex', margin: '0 auto' }}
+                    onClick={clearAllFilters}
+                  >
+                    <SiteIcon name="filter" size={14} />
+                    <span>Reset All Filters</span>
+                  </button>
+                )}
               </div>
             ) : (
               <div className="kc-papers-grid">

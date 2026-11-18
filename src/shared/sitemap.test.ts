@@ -45,9 +45,9 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     expect(urls).not.toContain(`${BASE_URL}/live`)
   })
 
-  it('indexes all 34 verified sports directories with weekly freshness', () => {
+  it('indexes all 35 verified sports directories with weekly freshness', () => {
     const entries = buildSitemapEntries()
-    expect(VERIFIED_SPORTS).toHaveLength(34)
+    expect(VERIFIED_SPORTS).toHaveLength(35)
 
     for (const sport of VERIFIED_SPORTS) {
       const match = entries.find(e => e.loc === `${BASE_URL}/sports/${sport}`)

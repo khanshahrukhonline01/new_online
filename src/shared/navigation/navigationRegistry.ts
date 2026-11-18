@@ -51,6 +51,7 @@ export const navigationModules: NavigationModule[] = [
     icon: 'trophy',
     items: [
       { id: 'find-games', label: 'Play · Find games', href: '/play', icon: 'sports', module: 'play-train', available: true },
+      { id: 'lacrosse-sixes', label: 'Lacrosse Sixes Game', href: '/play/lacrosse-sixes', icon: 'trophy', module: 'play-train', available: true },
       { id: 'coaches', label: 'Coaches Directory', href: '/coaches', icon: 'users', module: 'play-train', available: true },
       { id: 'academies', label: 'Sports Academies', href: '/academies', icon: 'building', module: 'play-train', available: true },
       { id: 'events', label: 'Events & Tournaments', href: '/events', icon: 'calendar', module: 'play-train', available: true },

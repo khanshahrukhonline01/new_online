@@ -8,16 +8,16 @@ describe('AdminApp Root Shell & Dual Workspace Navigation', () => {
     try {
       const html = renderToStaticMarkup(<AdminApp />)
       expect(html).toContain('khelgrid-admin-app')
-    expect(html).not.toContain('KhelGrid Admin is unavailable')
+      expect(html).not.toContain('KhelGrid Admin is unavailable')
 
-    // Topbar brand and telemetry
-    expect(html).toContain('KhelGrid Admin Operations')
-    expect(html).toContain('admin.khelgrid.com')
-    expect(html).toContain('Dev Database (hznsbxvovjxvmnchzzqt)')
+      // Topbar brand and telemetry
+      expect(html).toContain('KhelGrid Admin Operations')
+      expect(html).toContain('admin.khelgrid.com')
+      expect(html).toContain('Dev Database (hznsbxvovjxvmnchzzqt)')
 
-    // Workspace navigation tabs
-    expect(html).toContain('Command Centre')
-    expect(html).toContain('Listing &amp; Chronicle Desk')
+      // Workspace navigation tabs
+      expect(html).toContain('Command Centre')
+      expect(html).toContain('Listing &amp; Chronicle Desk')
 
       // Initial default workspace state
       expect(html).toContain('Checking secure moderation access')

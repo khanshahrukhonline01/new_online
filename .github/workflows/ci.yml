@@ -162,7 +162,7 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174449_phase_a_rls_initplan_optimization.sql
       - name: Verify Phase A security privilege boundaries
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-a-security-privilege-assertions.sql
-      - name: Verify athlete public access guard
+      - name: Verify athlete public access guard and role boundaries
         if: hashFiles('.github/scripts/athlete-profile-public-access-guard-assertions.sql') != ''
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/athlete-profile-public-access-guard-assertions.sql
       - name: Verify KhelChronicle seed publication gate

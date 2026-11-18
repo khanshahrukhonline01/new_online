@@ -113,6 +113,7 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
     { id: 'football', label: 'Football Academies', icon: 'sports', active: sport === 'Football', onClick: () => setSport(prev => prev === 'Football' ? '' : 'Football') },
     { id: 'badminton', label: 'Badminton Academies', icon: 'sports', active: sport === 'Badminton', onClick: () => setSport(prev => prev === 'Badminton' ? '' : 'Badminton') },
     { id: 'boxing', label: 'Boxing Academies', icon: 'sports', active: sport === 'Boxing', onClick: () => setSport(prev => prev === 'Boxing' ? '' : 'Boxing') },
+    { id: 'lacrosse', label: 'Lacrosse Academies', icon: 'sports', active: sport === 'Lacrosse', onClick: () => setSport(prev => prev === 'Lacrosse' ? '' : 'Lacrosse') },
     { id: 'bengaluru', label: 'Bengaluru', icon: 'map-pin', active: city === 'Bengaluru', onClick: () => setCity(prev => prev === 'Bengaluru' ? '' : 'Bengaluru') },
     { id: 'hyderabad', label: 'Hyderabad', icon: 'map-pin', active: city === 'Hyderabad', onClick: () => setCity(prev => prev === 'Hyderabad' ? '' : 'Hyderabad') },
   ]
