@@ -4,8 +4,10 @@ import { AdminApp } from './AdminApp'
 
 describe('AdminApp Root Shell & Dual Workspace Navigation', () => {
   it('renders the executive admin topbar and command centre when configured for the approved development database', () => {
-    const html = renderToStaticMarkup(<AdminApp />)
-    expect(html).toContain('khelgrid-admin-app')
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://hznsbxvovjxvmnchzzqt.supabase.co')
+    try {
+      const html = renderToStaticMarkup(<AdminApp />)
+      expect(html).toContain('khelgrid-admin-app')
     expect(html).not.toContain('KhelGrid Admin is unavailable')
 
     // Topbar brand and telemetry
@@ -17,8 +19,11 @@ describe('AdminApp Root Shell & Dual Workspace Navigation', () => {
     expect(html).toContain('Command Centre')
     expect(html).toContain('Listing &amp; Chronicle Desk')
 
-    // Initial default workspace state
-    expect(html).toContain('Checking secure moderation access')
+      // Initial default workspace state
+      expect(html).toContain('Checking secure moderation access')
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 
   it('fails closed and blocks access if configured against an unauthorized or production database URL', () => {

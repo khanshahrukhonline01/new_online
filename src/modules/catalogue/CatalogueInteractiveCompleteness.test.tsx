@@ -58,16 +58,15 @@ describe('Catalogue Completeness & Interactive User Workflows', () => {
     expect(html).toContain('Map')
   })
 
-  it('2. Venue Detail Hub: renders surface specifications, court amenities, and instant booking modal trigger', () => {
+  it('2. Venue Detail Hub: does not expose unseeded venue fixtures or booking controls', () => {
     const html = renderToStaticMarkup(
       <VenueDetailPage slug="sree-kanteerava-stadium-bengaluru" initialBookingOpen={true} />,
     )
 
-    expect(html).toContain('Sree Kanteerava Stadium')
-    expect(html).toContain('Bengaluru')
-    expect(html).toContain('Proceed to Payment')
-    expect(html).toContain('Select Date')
-    expect(html).toContain('Select Time Slot')
+    expect(html).toContain('Venue Record Not Found')
+    expect(html).not.toContain('Sree Kanteerava Stadium')
+    expect(html).not.toContain('Proceed to Payment')
+    expect(html).not.toContain('Select Time Slot')
   })
 
   it('3. Academies Catalogue: renders grassroots academy cards, accredited coaching pedigree, and trial admission modal', () => {
@@ -87,12 +86,10 @@ describe('Catalogue Completeness & Interactive User Workflows', () => {
       <AcademyDetailPage slug="bengaluru-fc-academy" initialEnrolOpen={true} />,
     )
 
-    expect(html).toContain('Bengaluru FC Youth Academy')
-    expect(html).toContain('Football')
-    expect(html).toContain('Bengaluru, Karnataka')
-    expect(html).toContain('Verified Academy')
-    expect(html).toContain('Enquire on WhatsApp')
-    expect(html).toContain('Training Curriculum &amp; Methodology')
+    expect(html).toContain('Academy Record Not Found')
+    expect(html).not.toContain('Bengaluru FC Youth Academy')
+    expect(html).not.toContain('Verified Academy')
+    expect(html).not.toContain('Training Curriculum &amp; Methodology')
   })
 
   it('5. Coaches Directory: renders credential filters (BCCI/NIS/AFC), fee ranges, and direct coaching inquiry desk', () => {
