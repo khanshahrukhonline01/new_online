@@ -41,21 +41,21 @@
 
 Test distinct identities and sessions:
 
-1. Anonymous visitor: admin shell may render only a safe sign-in surface; no private data.
-2. Ordinary authenticated user: explicit access denied; protected RPCs return authorization errors.
-3. Active moderator: permitted queue, evidence, verification and editorial workflows.
-4. Super-admin: moderator management and access audit; last active super-admin protection.
-5. Expired/revoked session: protected state cleared and re-authentication required.
+- [x] Anonymous visitor: admin shell may render only a safe sign-in surface; no private data.
+- [x] Ordinary authenticated user: explicit access denied; protected RPCs return authorization errors.
+- [x] Active moderator: permitted queue, evidence, verification and editorial workflows.
+- [x] Super-admin: moderator management and access audit; last active super-admin protection.
+- [x] Expired/revoked session: protected state cleared and re-authentication required.
 
 **Exit:** Browser tests plus database/RPC tests pass for all identities.
 
 ## Phase 4 — Public application decoupling
 
-- [ ] Remove the admin route and admin page imports from public app routing.
-- [ ] Remove any admin-specific links and stale route metadata from public app.
-- [ ] Ensure sitemap excludes all admin paths.
-- [ ] Preserve a neutral fallback for the old public route.
-- [ ] Run full public route, SEO, navigation and regression suites.
+- [x] Remove the admin route and admin page imports from public app routing.
+- [x] Remove any admin-specific links and stale route metadata from public app.
+- [x] Ensure sitemap excludes all admin paths.
+- [x] Preserve a neutral fallback for the old public route.
+- [x] Run full public route, SEO, navigation and regression suites.
 
 **Exit:** Public app contains no admin operations entry point or private UI.
 

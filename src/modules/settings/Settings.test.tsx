@@ -35,6 +35,7 @@ describe('Settings & Preferences System', () => {
   it('provides comprehensive default preferences', () => {
     const prefs = getStoredPreferences()
     expect(prefs.theme).toBe(DEFAULT_PREFERENCES.theme)
+    expect(prefs.colorTheme).toBe('green')
     expect(prefs.language).toBe('en')
     expect(prefs.preferredCity).toBe('All India')
     expect(prefs.soundAlerts).toBe(true)
@@ -51,17 +52,20 @@ describe('Settings & Preferences System', () => {
   it('persists preference updates and returns updated state', () => {
     const updated = savePreferences({
       theme: 'dark',
+      colorTheme: 'blue',
       language: 'hi',
       preferredCity: 'Delhi NCR',
       soundAlerts: false,
     })
     expect(updated.theme).toBe('dark')
+    expect(updated.colorTheme).toBe('blue')
     expect(updated.language).toBe('hi')
     expect(updated.preferredCity).toBe('Delhi NCR')
     expect(updated.soundAlerts).toBe(false)
 
     const reloaded = getStoredPreferences()
     expect(reloaded.theme).toBe('dark')
+    expect(reloaded.colorTheme).toBe('blue')
     expect(reloaded.language).toBe('hi')
     expect(reloaded.preferredCity).toBe('Delhi NCR')
     expect(reloaded.soundAlerts).toBe(false)
@@ -113,6 +117,10 @@ describe('Settings & Preferences System', () => {
     expect(html).toContain('Light Mode')
     expect(html).toContain('Dark Mode')
     expect(html).toContain('System Default')
+    expect(html).toContain('Brand Color Palette')
+    expect(html).toContain('Green (Emerald)')
+    expect(html).toContain('Blue (Sapphire)')
+    expect(html).toContain('Orange (Saffron)')
     expect(html).toContain('Application Language / भाषा')
     expect(html).toContain('Reduced Motion')
     expect(html).toContain('Compact Display Mode')

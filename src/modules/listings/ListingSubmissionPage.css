@@ -267,6 +267,198 @@
 .listing-submission-page .cv-actions .primary-link {
   min-height: 46px;
 }
+
+/* Fallback direct email alert when submit fails */
+.listing-fallback-alert {
+  margin: 1.25rem 0;
+}
+.listing-fallback-email-box {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-top: 0.75rem;
+}
+.listing-fallback-email-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #065f46;
+  margin-bottom: 0.5rem;
+}
+.listing-fallback-email-box p {
+  color: #374151;
+  font-size: 0.92rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+}
+.listing-direct-email-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #059669 !important;
+  color: #ffffff !important;
+  text-decoration: none;
+  font-weight: 700;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: background 0.15s ease;
+}
+.listing-direct-email-btn:hover {
+  background: #047857 !important;
+}
+
+/* Direct Concierge Banner in Tab 1 */
+.listing-direct-email-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin: 1.5rem 0;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+}
+.listing-direct-email-banner-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex: 1;
+  min-width: 260px;
+}
+.listing-email-badge {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #0284c7;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+.listing-direct-email-banner strong {
+  display: block;
+  font-size: 1rem;
+  color: #0f172a;
+  margin-bottom: 0.25rem;
+}
+.listing-direct-email-banner p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #475569;
+  line-height: 1.5;
+}
+.listing-email-switch-btn {
+  padding: 0.65rem 1.15rem;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Direct Email Desk Card (Tab 3) */
+.listing-email-card {
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 16px;
+  padding: clamp(1.25rem, 3.5vw, 2.25rem);
+  box-shadow: 0 8px 28px rgba(11, 25, 44, 0.045);
+  margin-top: 1rem;
+}
+.listing-email-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  border-bottom: 1px solid var(--border-subtle, #e2e8f0);
+  padding-bottom: 1.25rem;
+}
+.listing-email-header-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: #10b981;
+  color: #042f2e;
+  flex-shrink: 0;
+}
+.listing-email-header h2 {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.25rem, 2.5vw, 1.6rem);
+  color: #0b192c;
+}
+.listing-email-header p {
+  margin: 0;
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+/* Live Email Preview Box */
+.listing-email-preview-box {
+  margin-top: 1.75rem;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.listing-email-preview-bar {
+  background: #ecfdf5;
+  border-bottom: 1px solid #a7f3d0;
+  padding: 0.85rem 1.25rem;
+}
+.listing-email-preview-body {
+  margin: 0;
+  padding: 1.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #334155;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #ffffff;
+}
+
+/* Actions Row */
+.listing-email-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 1.5rem;
+}
+.listing-send-email-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #059669 !important;
+  color: #ffffff !important;
+  text-decoration: none;
+  font-weight: 750;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+.listing-send-email-btn:hover {
+  background: #047857 !important;
+}
+.listing-email-footer-note {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+  padding: 0.85rem 1rem;
+  background: #f1f5f9;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
 @media (max-width: 640px) {
   .listing-free-banner {
     padding: 0.95rem;

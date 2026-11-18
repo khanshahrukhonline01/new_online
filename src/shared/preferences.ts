@@ -7,6 +7,7 @@
 import { changeAppLanguage } from '../i18n'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
+export type ColorTheme = 'green' | 'blue' | 'orange'
 export type EmailFrequency = 'daily' | 'weekly' | 'monthly' | 'never'
 export type ProfileVisibility = 'public' | 'scouts_only' | 'private'
 
@@ -69,6 +70,7 @@ export const ALL_SPORTS_DISCIPLINES = [
 
 export interface UserPreferences {
   theme: ThemeMode
+  colorTheme: ColorTheme
   language: string
   preferredCity: string
   soundAlerts: boolean
@@ -84,6 +86,7 @@ export interface UserPreferences {
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'light',
+  colorTheme: 'green',
   language: 'en',
   preferredCity: 'All India',
   soundAlerts: true,
@@ -99,6 +102,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
 
 const STORAGE_KEY = 'khelgrid-user-preferences'
 const THEME_STORAGE_KEY = 'khelgrid-theme'
+const COLOR_THEME_STORAGE_KEY = 'khelgrid-color-theme'
 const LANG_STORAGE_KEY = 'khelgrid-lang'
 
 export function getStoredPreferences(): UserPreferences {
@@ -106,6 +110,7 @@ export function getStoredPreferences(): UserPreferences {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     const legacyTheme = (localStorage.getItem(THEME_STORAGE_KEY) || localStorage.getItem('theme')) as ThemeMode | null
+    const legacyColorTheme = (localStorage.getItem(COLOR_THEME_STORAGE_KEY) || localStorage.getItem('color-theme')) as ColorTheme | null
     const legacyLang = localStorage.getItem(LANG_STORAGE_KEY)
 
     const parsed: Partial<UserPreferences> = raw ? JSON.parse(raw) : {}
@@ -113,6 +118,7 @@ export function getStoredPreferences(): UserPreferences {
       ...DEFAULT_PREFERENCES,
       ...parsed,
       theme: parsed.theme || legacyTheme || DEFAULT_PREFERENCES.theme,
+      colorTheme: parsed.colorTheme || legacyColorTheme || DEFAULT_PREFERENCES.colorTheme,
       language: parsed.language || legacyLang || DEFAULT_PREFERENCES.language,
     }
   } catch {
@@ -130,11 +136,14 @@ export function savePreferences(updates: Partial<UserPreferences>): UserPreferen
       if (updates.theme) {
         localStorage.setItem(THEME_STORAGE_KEY, updates.theme)
       }
+      if (updates.colorTheme) {
+        localStorage.setItem(COLOR_THEME_STORAGE_KEY, updates.colorTheme)
+      }
       if (updates.language) {
         localStorage.setItem(LANG_STORAGE_KEY, updates.language)
         changeAppLanguage(updates.language)
       }
-      applyThemeToDOM(next.theme)
+      applyThemeToDOM(next.theme, next.colorTheme)
       applyAccessibilityToDOM(next.reducedMotion)
       if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
         window.dispatchEvent(new CustomEvent('khelgrid-preferences-change', { detail: next }))
@@ -156,7 +165,7 @@ export function resolveEffectiveTheme(theme: ThemeMode): 'light' | 'dark' {
   return 'light'
 }
 
-export function applyThemeToDOM(theme: ThemeMode): void {
+export function applyThemeToDOM(theme: ThemeMode, colorTheme: ColorTheme = 'green'): void {
   if (typeof document === 'undefined') return
   const effective = resolveEffectiveTheme(theme)
   const root = document.documentElement
@@ -170,6 +179,9 @@ export function applyThemeToDOM(theme: ThemeMode): void {
     root.classList.add('light')
     root.style.colorScheme = 'light'
   }
+
+  const validColor = colorTheme === 'blue' || colorTheme === 'orange' ? colorTheme : 'green'
+  root.setAttribute('data-color-theme', validColor)
 
   // Meta theme-color for browser address bar styling
   const metaTheme = document.querySelector('meta[name="theme-color"]')
