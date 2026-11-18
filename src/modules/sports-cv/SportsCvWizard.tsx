@@ -804,7 +804,7 @@ export default function SportsCvWizard() {
                   maxLength={80}
                   value={cv.sport}
                   onChange={e => update('sport', e.target.value)}
-                  placeholder="e.g. Cricket, Football, Athletics, Badminton, Kabaddi"
+                  placeholder="e.g. Cricket, Football, Athletics, Badminton, Kabaddi, Lacrosse"
                 />
               </label>
               <div className="popular-sports-tray" aria-label="Quick Select Sport">

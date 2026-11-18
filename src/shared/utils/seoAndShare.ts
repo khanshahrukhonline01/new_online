@@ -49,6 +49,17 @@ export function getRouteSeoMetadata(pathname: string): PageSeoConfig {
     }
   }
 
+  if (cleanPath === '/play/lacrosse-sixes') {
+    return {
+      title: 'Lacrosse Sixes Arcade Game · KhelGrid',
+      description: 'Play a fast, original KhelGrid lacrosse-inspired arcade challenge with movement, dodging, passing, shooting and a timed score attack.',
+      canonicalUrl: 'https://khelgrid.com/play/lacrosse-sixes',
+      keywords: ['lacrosse game', 'lacrosse sixes', 'sports arcade game', 'KhelGrid games', ...DEFAULT_KEYWORDS],
+      ogType: 'website',
+      robots: 'noindex, nofollow',
+    }
+  }
+
   if (cleanPath === '/play') {
     return {
       title: "Play Sports & Join Pickup Matches Near You · KhelGrid (खेलें और मैच खोजें)",

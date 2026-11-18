@@ -13,9 +13,9 @@ describe('SportsPage and Sports Catalogue Consistency', () => {
     expect(html).toContain('Explore the sports currently published on KhelGrid.')
   })
 
-  it('contains all 34 verified sports in ALL_SPORTS_DATA catalog', () => {
+  it('contains all 35 verified sports in ALL_SPORTS_DATA catalog', () => {
     const slugs = getAllSportSlugs()
-    expect(slugs).toHaveLength(34)
+    expect(slugs).toHaveLength(35)
     expect(VERIFIED_SPORTS).toHaveLength(34)
 
     for (const sport of VERIFIED_SPORTS) {
@@ -27,7 +27,7 @@ describe('SportsPage and Sports Catalogue Consistency', () => {
   })
 
   it('maintains 1-to-1 parity between sportIconManifest and VERIFIED_SPORTS', () => {
-    expect(sportIconManifest).toHaveLength(34)
+    expect(sportIconManifest).toHaveLength(35)
     for (const sport of VERIFIED_SPORTS) {
       const iconId = getSportIconId(sport)
       expect(iconId).toBeDefined()
