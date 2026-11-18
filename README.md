@@ -87,7 +87,7 @@ The carousel is a presentation-only feature and does not change catalogue, venue
 Implemented and verified production routes:
 - `/` — Homepage with isolated sports hero carousel, video drills, and curated sports books.
 - `/dashboard` — Dedicated Athlete & User Dashboard with real-time KPI ribbon, Player Card, confirmed match RSVPs, and saved trial deadlines.
-- `/sports` and `/sports/:slug` — Complete 34-sport Olympic/national discipline directory.
+- `/sports` and `/sports/:slug` — Complete 35-sport Olympic/national discipline directory.
 - `/opportunities` and `/opportunities/:slug` — Dynamic trial discovery with deadline alerts and Google Calendar / .ics sync.
 - `/venues` and `/venues/:slug` — Venue directory with 1-tap GPS "Near Me" radius filters, Haversine distance calculator, and interactive Leaflet map view.
 - `/academies` and `/academies/:slug` — Verified academy directory with SAI NCOE accreditation badges.

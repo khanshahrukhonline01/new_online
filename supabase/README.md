@@ -15,6 +15,7 @@ supabase/
 │   ├── 20261030170000_seed_live_khelgrid_academies.sql
 │   ├── 20261030180000_khelchronicle_research_repository.sql
 │   ├── 20261031100000_seed_remaining_sports_catalogue.sql
+│   ├── 20261118100000_add_lacrosse_sport_catalogue.sql
 │   ├── 20261031120000_create_athlete_profiles.sql
 │   ├── 20261031130000_create_trial_reminders.sql
 │   ├── 20261031140000_create_venue_sports.sql
