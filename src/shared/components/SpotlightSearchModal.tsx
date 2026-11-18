@@ -40,6 +40,7 @@ const POPULAR_SEARCH_CHIPS = [
   { label: '📍 Delhi Hub', query: 'Delhi' },
   { label: '📍 Bengaluru Hub', query: 'Bengaluru' },
   { label: '⚡ Pickleball Games', query: 'Pickleball' },
+  { label: '🥍 Lacrosse Sixes', query: 'Lacrosse' },
   { label: '📋 Sports CV Wizard', href: '/sports-cv' },
   { label: '📊 Live Match Center', href: '/live' },
 ]

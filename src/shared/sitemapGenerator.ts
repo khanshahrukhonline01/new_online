@@ -27,6 +27,7 @@ export const VERIFIED_SPORTS = [
   'handball',
   'hockey',
   'judo',
+  'lacrosse',
   'kabaddi',
   'karate',
   'martial-arts',

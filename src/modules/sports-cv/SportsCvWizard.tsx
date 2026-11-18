@@ -320,7 +320,7 @@ export default function SportsCvWizard() {
                 maxLength={80}
                 value={cv.sport}
                 onChange={e => update('sport', e.target.value)}
-                placeholder="e.g. Cricket, Athletics, Badminton"
+                placeholder="e.g. Cricket, Athletics, Badminton, Lacrosse"
               />
             </label>
 
