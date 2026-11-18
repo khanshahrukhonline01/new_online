@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import {
   BASELINE_SCOUT_ATHLETES,
@@ -56,19 +56,20 @@ describe('Scout Portal Module', () => {
     expect(list).toContain(athId)
   })
 
-  it('renders ScoutPortalPage markup with metrics, sort, and athlete cards', () => {
+  it('renders ScoutPortalPage without unconsented sample athlete records or unsupported claims', () => {
     const markup = renderToStaticMarkup(<ScoutPortalPage />)
 
-    expect(markup).toContain('Scout Portal &amp; Verified Athlete Workbench.')
-    expect(markup).toContain('850+')
+    expect(markup).toContain('Scout Portal &amp; Athlete Discovery')
+    expect(markup).toContain('Consent-eligible public profiles')
     expect(markup).toContain('Scouting Book')
     expect(markup).toContain('Export CSV')
     expect(markup).toContain('Print / PDF')
     expect(markup).toContain('Performance Sort:')
     expect(markup).toContain('City / State:')
-    expect(markup).toContain('Aarav Choudhary')
-    expect(markup).toContain('Connect with Coach')
-    expect(markup).toContain('National Grassroots Normative Rank')
+    expect(markup).toContain('No public athlete profiles are currently available')
+    expect(markup).not.toContain('Aarav Choudhary')
+    expect(markup).not.toContain('850+')
+    expect(markup).not.toContain('0-Fraud')
   })
 
   it('renders ScoutConnectModal when open with POCSO standard notice', () => {
@@ -193,13 +194,17 @@ describe('Scout Portal Module', () => {
       expect(athlete.metrics.yoyoIr1Meters).toBe(2100)
     })
 
-    it('getScoutAthletes returns merged deduplicated candidates including showcase profiles', async () => {
-      const athletes = await getScoutAthletes()
-
-      expect(athletes.length).toBeGreaterThanOrEqual(13)
-      // Contains both showcase athlete and baseline scout athlete
-      expect(athletes.some(a => a.name.includes('Aarav') || a.name.includes('Rohit'))).toBe(true)
-      expect(athletes.some(a => a.name.includes('Priya') || a.name.includes('Tanvi'))).toBe(true)
+    it('getScoutAthletes does not publish showcase or local draft profiles as public scout records', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [],
+      }))
+      try {
+        const athletes = await getScoutAthletes(true)
+        expect(athletes).toEqual([])
+      } finally {
+        vi.unstubAllGlobals()
+      }
     })
   })
 })

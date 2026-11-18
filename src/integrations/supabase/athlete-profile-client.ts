@@ -7,8 +7,9 @@ const LOCAL_STORAGE_PROFILES_KEY = 'khelgrid_athlete_profiles_cache'
 const LOCAL_STORAGE_REMINDERS_KEY = 'khelgrid_trial_reminders_cache'
 
 /**
- * Pre-seeded high-performance showcase profiles demonstrating
- * real Indian grassroots athletes with video telemetry and normative test percentiles.
+ * SYNTHETIC TEST FIXTURES ONLY. These sample identities, achievements, biometrics,
+ * contacts and video links are not verified real athletes and must never be shown
+ * as public profiles, scouting records, or evidence of KhelGrid verification.
  */
 export const SHOWCASE_ATHLETE_PROFILES: Record<string, AthleteProfile> = {
   'rohit-verma': {
