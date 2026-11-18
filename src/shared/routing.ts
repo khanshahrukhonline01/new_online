@@ -4,7 +4,7 @@ export type RouteMatch =
   | { name: 'sport-detail'; canonicalPath: '/sports/:slug'; slug: string }
   | { name: 'athlete-profile'; canonicalPath: '/u/:username'; username: string }
   | { name: 'opportunities-index'; canonicalPath: '/opportunities'; alias?: string }
-  | { name: 'opportunity-detail'; canonicalPath: '/trial/:slug'; slug: string; isApply?: boolean }
+  | { name: 'opportunity-detail'; canonicalPath: '/opportunities/:slug'; slug: string; isApply?: boolean }
   | { name: 'academies-index'; canonicalPath: '/academies'; alias?: string }
   | { name: 'academy-detail'; canonicalPath: '/academies/:slug'; slug: string; isEnrol?: boolean }
   | { name: 'venues-index'; canonicalPath: '/venues'; alias?: string }
@@ -22,7 +22,6 @@ export type RouteMatch =
   | { name: 'not-found'; canonicalPath: '/404' }
 
 const opportunityAliases = new Set(['/trials', '/combines', '/scholarships', '/camps'])
-const opportunityDetailPrefixes = ['/trial/', '/trials/', '/opportunity/', '/opportunities/'] as const
 const khelchronicleCategories = new Set([
   'sports-biomechanics',
   'exercise-physiology',
@@ -34,7 +33,7 @@ const khelchronicleCategories = new Set([
 ])
 const featurePages: Record<string, string> = {
   '/dashboard': 'My Dashboard', '/host': 'Host & Partner Dashboard', '/partner-dashboard': 'Host & Partner Dashboard', '/live': 'Live Scores', '/live-scores': 'Live Scores', '/play': 'Play · Find Games',
-  '/coaches': 'Coaches Directory', '/events': 'Events & Tournaments',
+  '/coaches': 'Coaches Directory', '/events': 'Events & Tournaments', '/tournaments': 'Events & Tournaments',
   '/stats': 'Athlete Statistics', '/sports-cv': 'Sports CV Wizard', '/talent-scanner': 'Talent Scanner',
   '/scout-portal': 'Scout Portal', '/verification': 'Athlete Verification',
   '/learning': 'Sports & Learning Hub', '/learning-hub': 'Sports & Learning Hub', '/guides': 'Sports Guides', '/ai-guide': 'AI Sports Guide',
@@ -51,9 +50,7 @@ const featurePages: Record<string, string> = {
   '/settings': 'Account Settings', '/notifications': 'Notifications', '/login': 'Login',
   '/signup': 'Create Account', '/forgot-password': 'Password Recovery', '/book': 'Venue Booking',
   '/profile': 'Athlete Profile', '/my-profile': 'My Profile', '/saved': 'Saved Items',
-  '/referrals': 'Referrals', '/help': 'Help & Support', '/help-feedback': 'Help & Feedback', '/submit-listing': 'Suggest a Listing', '/track-submission': 'Track Submission', '/track': 'Track Submission',
-  '/admin': 'Admin Moderation Desk', '/moderation': 'Admin Moderation Desk',
-  '/admin/control': 'Moderator & Super Admin Control Panel',
+  '/referrals': 'Referrals', '/help': 'Help & Support', '/support': 'Help & Support', '/help-feedback': 'Help & Feedback', '/submit-listing': 'Suggest a Listing', '/submit-listing/email': 'Direct Email Listing Request', '/list/email': 'Direct Email Listing Request', '/track-submission': 'Track Submission', '/track': 'Track Submission',
   '/start-from-zero': 'Start From Zero — Sports CV',
 }
 
@@ -70,8 +67,14 @@ export function resolveRoute(pathname: string): RouteMatch {
     const slug = path.slice(prefix.length)
     if (slug && !slug.includes('/')) return { name: 'sport-detail', canonicalPath: '/sports/:slug', slug: decodeURIComponentSafe(slug) }
   }
-  if (path.startsWith('/u/') || path.startsWith('/athlete/')) {
-    const prefix = path.startsWith('/u/') ? '/u/' : '/athlete/'
+  if (path.startsWith('/u/') || path.startsWith('/athlete/') || path.startsWith('/sports-cv/') || path.startsWith('/cv/')) {
+    const prefix = path.startsWith('/u/')
+      ? '/u/'
+      : path.startsWith('/athlete/')
+        ? '/athlete/'
+        : path.startsWith('/sports-cv/')
+          ? '/sports-cv/'
+          : '/cv/'
     const handle = path.slice(prefix.length)
     if (handle && !handle.includes('/')) {
       const clean = handle.replace(/^@+/, '')
@@ -79,15 +82,39 @@ export function resolveRoute(pathname: string): RouteMatch {
     }
   }
   if (path === '/opportunities' || opportunityAliases.has(path)) return { name: 'opportunities-index', canonicalPath: '/opportunities', ...(path === '/opportunities' ? {} : { alias: path }) }
-  const opportunityPrefix = opportunityDetailPrefixes.find(prefix => path.startsWith(prefix))
-  if (opportunityPrefix) {
-    const rest = path.slice(opportunityPrefix.length)
-    if (opportunityPrefix === '/opportunities/' && rest.endsWith('/apply')) {
-      const slug = rest.slice(0, -('/apply'.length))
-      if (slug && !slug.includes('/')) return { name: 'opportunity-detail', canonicalPath: '/trial/:slug', slug: decodeURIComponentSafe(slug), isApply: true }
+  if (
+    path.startsWith('/opportunities/') ||
+    path.startsWith('/opportunity/') ||
+    path.startsWith('/trials/') ||
+    path.startsWith('/trial/')
+  ) {
+    const prefix = path.startsWith('/opportunities/')
+      ? '/opportunities/'
+      : path.startsWith('/opportunity/')
+        ? '/opportunity/'
+        : path.startsWith('/trials/')
+          ? '/trials/'
+          : '/trial/'
+    const rest = path.slice(prefix.length)
+    if (rest.endsWith('/apply')) {
+      const rawSlug = rest.slice(0, -('/apply'.length))
+      if (rawSlug && !rawSlug.includes('/')) {
+        const cleanSlug = decodeURIComponentSafe(rawSlug).replace(/^t-/, '')
+        return {
+          name: 'opportunity-detail',
+          canonicalPath: '/opportunities/:slug',
+          slug: cleanSlug,
+          isApply: true,
+        }
+      }
     }
     if (rest && !rest.includes('/')) {
-      return { name: 'opportunity-detail', canonicalPath: '/trial/:slug', slug: decodeURIComponentSafe(rest) }
+      const cleanSlug = decodeURIComponentSafe(rest).replace(/^t-/, '')
+      return {
+        name: 'opportunity-detail',
+        canonicalPath: '/opportunities/:slug',
+        slug: cleanSlug,
+      }
     }
   }
   if (path === '/academies' || path === '/academy' || path === '/train') return { name: 'academies-index', canonicalPath: '/academies', ...(path === '/academies' ? {} : { alias: path }) }

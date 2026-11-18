@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import VenuesPage from './VenuesPage'
+import { buildVenueWhatsAppInquiryUrl } from './venueGeoUtils'
 
 // Mock getVenues from public-client
 vi.mock('../../integrations/supabase/public-client', () => ({
@@ -62,5 +63,23 @@ describe('VenuesPage', () => {
     expect(html).toContain('Sport')
     expect(html).toContain('City')
     expect(html).toContain('Facility type')
+  })
+
+  it('buildVenueWhatsAppInquiryUrl constructs prefilled WhatsApp URL with venue name, city, sport, and date', () => {
+    const venue = { name: 'Dhyan Chand AstroTurf Complex', city: 'Lucknow', sport: 'Hockey' }
+    const url = buildVenueWhatsAppInquiryUrl(venue, 'Hockey')
+
+    expect(url).toContain('https://wa.me/?text=')
+    expect(url).toContain('Dhyan%20Chand%20AstroTurf%20Complex')
+    expect(url).toContain('Lucknow')
+    expect(url).toContain('Hockey')
+    expect(url).toContain('availability')
+  })
+
+  it('renders Check Availability on WhatsApp button for venue inquiries', () => {
+    const venue = { name: 'Kickoff Turf Arena', city: 'Mumbai', sport: 'Football' }
+    const url = buildVenueWhatsAppInquiryUrl(venue)
+    expect(url).toContain('Kickoff%20Turf%20Arena')
+    expect(url).toContain('Mumbai')
   })
 })

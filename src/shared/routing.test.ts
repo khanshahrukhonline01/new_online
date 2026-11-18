@@ -14,26 +14,21 @@ describe('platform route coverage', () => {
   )
 
   it.each([
-    '/trial/t-aiu-wushu-inter-university-trials-2026',
-    '/trials/t-kca-u14-cricket-trials-kanpur-2026',
-    '/opportunity/t-sgfi-70th-kabaddi-u17-gorakhpur-2026',
-    '/opportunities/t-up-sports-directorate-junior-basketball-trials-kanpur-2026',
-  ])('%s resolves to the shared opportunity detail page and trial canonical route', path => {
+    ['/trial/t-aiu-wushu-inter-university-trials-2026', 'aiu-wushu-inter-university-trials-2026'],
+    ['/trials/t-kca-u14-cricket-trials-kanpur-2026', 'kca-u14-cricket-trials-kanpur-2026'],
+    ['/trial/t-sgfi-70th-kabaddi-u17-gorakhpur-2026', 'sgfi-70th-kabaddi-u17-gorakhpur-2026'],
+    ['/opportunities/up-sports-directorate-junior-basketball-trials-kanpur-2026', 'up-sports-directorate-junior-basketball-trials-kanpur-2026'],
+    ['/trial/t-kca-u14-cricket-trials-kanpur-2026/apply', 'kca-u14-cricket-trials-kanpur-2026'],
+  ])('%s routes to opportunity-detail for %s preserving GSC ranking', (path, expectedSlug) => {
     const match = resolveRoute(path)
     expect(match.name).toBe('opportunity-detail')
-    expect(match.canonicalPath).toBe('/trial/:slug')
+    expect(match.canonicalPath).toBe('/opportunities/:slug')
     if (match.name === 'opportunity-detail') {
-      expect(match.slug).toBe(path.split('/').at(-1))
+      expect(match.slug).toBe(expectedSlug)
+      if (path.endsWith('/apply')) {
+        expect(match.isApply).toBe(true)
+      }
     }
-  })
-
-  it('preserves the existing opportunity application route', () => {
-    expect(resolveRoute('/opportunities/sample-trial/apply')).toEqual({
-      name: 'opportunity-detail',
-      canonicalPath: '/trial/:slug',
-      slug: 'sample-trial',
-      isApply: true,
-    })
   })
 
   it.each(['/venues', '/book'])(
@@ -129,13 +124,10 @@ describe('platform route coverage', () => {
     })
   })
 
-  it('routes the restricted moderator and super-admin control panel', () => {
-    expect(resolveRoute('/admin/control')).toEqual({
-      name: 'feature',
-      canonicalPath: '/admin/control',
-      slug: 'Moderator & Super Admin Control Panel',
-    })
-    expect(resolveRoute('/admin')).toMatchObject({ name: 'feature', canonicalPath: '/admin' })
+  it('isolates the public application by returning not-found for former admin routes', () => {
+    expect(resolveRoute('/admin/control').name).toBe('not-found')
+    expect(resolveRoute('/admin').name).toBe('not-found')
+    expect(resolveRoute('/moderation').name).toBe('not-found')
   })
 
   it('normalizes trailing slashes and preserves unknown-route handling', () => {
@@ -159,6 +151,16 @@ describe('platform route coverage', () => {
       name: 'athlete-profile',
       canonicalPath: '/u/:username',
       username: 'arjun-singh',
+    })
+    expect(resolveRoute('/sports-cv/rohit-verma')).toEqual({
+      name: 'athlete-profile',
+      canonicalPath: '/u/:username',
+      username: 'rohit-verma',
+    })
+    expect(resolveRoute('/cv/@aarav-choudhary')).toEqual({
+      name: 'athlete-profile',
+      canonicalPath: '/u/:username',
+      username: 'aarav-choudhary',
     })
   })
 })

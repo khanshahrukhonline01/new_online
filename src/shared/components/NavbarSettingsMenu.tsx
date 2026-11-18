@@ -8,6 +8,7 @@ import {
   INDIAN_SPORTS_CITIES,
   playTestAlertChime,
   type ThemeMode,
+  type ColorTheme,
 } from '../preferences'
 import { changeAppLanguage } from '../../i18n'
 import './NavbarSettingsMenu.css'
@@ -78,6 +79,11 @@ export default function NavbarSettingsMenu({ onNavigate, onOpenFeedback }: Navba
   function handleThemeChange(theme: ThemeMode) {
     updatePreferences({ theme })
     showToast(`Theme set to ${theme.charAt(0).toUpperCase() + theme.slice(1)}`)
+  }
+
+  function handleColorThemeChange(colorTheme: ColorTheme) {
+    updatePreferences({ colorTheme })
+    showToast(`Color theme set to ${colorTheme.charAt(0).toUpperCase() + colorTheme.slice(1)}`)
   }
 
   function handleLanguageChange(code: string, name: string, nativeName: string) {
@@ -180,6 +186,55 @@ export default function NavbarSettingsMenu({ onNavigate, onOpenFeedback }: Navba
               >
                 <SiteIcon name="monitor" size={15} />
                 <span>{t('system', 'System')}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="settings-menu-divider" />
+
+          {/* Section 1b: Brand Color Accent Switcher */}
+          <div className="settings-menu-section">
+            <div className="settings-section-heading">
+              <span>{t('colorTheme', 'Color Theme')}</span>
+              <span className="settings-badge-subtle">
+                {(preferences.colorTheme || 'green').charAt(0).toUpperCase() + (preferences.colorTheme || 'green').slice(1)}
+              </span>
+            </div>
+            <div
+              id="navbar-settings-color-switcher"
+              className="color-theme-switcher"
+              role="radiogroup"
+              aria-label="Color theme switcher"
+            >
+              <button
+                type="button"
+                className={`color-theme-btn green ${preferences.colorTheme === 'green' ? 'active' : ''}`}
+                onClick={() => handleColorThemeChange('green')}
+                aria-checked={preferences.colorTheme === 'green'}
+                title="Green — Grassroots Emerald"
+              >
+                <span className="color-swatch green-swatch" />
+                <span>Green</span>
+              </button>
+              <button
+                type="button"
+                className={`color-theme-btn blue ${preferences.colorTheme === 'blue' ? 'active' : ''}`}
+                onClick={() => handleColorThemeChange('blue')}
+                aria-checked={preferences.colorTheme === 'blue'}
+                title="Blue — Electric Sapphire"
+              >
+                <span className="color-swatch blue-swatch" />
+                <span>Blue</span>
+              </button>
+              <button
+                type="button"
+                className={`color-theme-btn orange ${preferences.colorTheme === 'orange' ? 'active' : ''}`}
+                onClick={() => handleColorThemeChange('orange')}
+                aria-checked={preferences.colorTheme === 'orange'}
+                title="Orange — Sports Saffron"
+              >
+                <span className="color-swatch orange-swatch" />
+                <span>Orange</span>
               </button>
             </div>
           </div>

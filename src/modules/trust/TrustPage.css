@@ -1,0 +1,274 @@
+.trust-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4.5rem;
+  color: var(--color-text, #1e293b);
+  line-height: 1.7;
+}
+
+.trust-hero {
+  margin-bottom: 3.5rem;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  padding-bottom: 2.5rem;
+}
+
+.trust-eyebrow {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary, #059669);
+  margin-bottom: 0.75rem;
+}
+
+.trust-title {
+  font-size: 2.35rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--color-heading, #0f172a);
+  margin-bottom: 1.25rem;
+}
+
+.trust-lead {
+  font-size: 1.18rem;
+  color: var(--color-text-muted, #475569);
+  max-width: 900px;
+  margin-bottom: 2rem;
+}
+
+.trust-summary-banner {
+  background: var(--color-badge-bg, rgba(5, 150, 105, 0.08));
+  border: 1px solid rgba(5, 150, 105, 0.25);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.banner-icon-box {
+  color: var(--color-primary, #059669);
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+
+.banner-text strong {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-heading, #0f172a);
+  margin-bottom: 0.35rem;
+}
+
+.banner-text p {
+  margin: 0;
+  font-size: 0.98rem;
+  color: var(--color-text, #334155);
+}
+
+.banner-text a {
+  color: var(--color-primary, #059669);
+  font-weight: 600;
+}
+
+.trust-section {
+  margin-bottom: 3.5rem;
+}
+
+.trust-section-header {
+  margin-bottom: 1.75rem;
+}
+
+.trust-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-primary, #059669);
+  background: var(--color-badge-bg, rgba(5, 150, 105, 0.1));
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+
+.trust-section-header h2 {
+  font-size: 1.75rem;
+  font-weight: 750;
+  color: var(--color-heading, #0f172a);
+  margin: 0;
+}
+
+.trust-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.75rem;
+}
+
+.trust-card {
+  background: var(--color-card-bg, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 12px;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.trust-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  padding-bottom: 0.85rem;
+}
+
+.trust-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--color-badge-bg, rgba(5, 150, 105, 0.1));
+  color: var(--color-primary, #059669);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.trust-card-header h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-heading, #0f172a);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.trust-card-body p {
+  font-size: 0.95rem;
+  color: var(--color-text-muted, #475569);
+  margin-bottom: 1rem;
+}
+
+.trust-card-body h4 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--color-heading, #0f172a);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 1rem 0 0.5rem;
+}
+
+.trust-card-body ul {
+  margin: 0 0 0 1.25rem;
+  padding: 0;
+  list-style-type: disc;
+}
+
+.trust-card-body li {
+  font-size: 0.92rem;
+  color: var(--color-text, #334155);
+  margin-bottom: 0.5rem;
+  line-height: 1.55;
+}
+
+.trust-card-body li strong {
+  color: var(--color-heading, #0f172a);
+}
+
+.trust-grievance-section {
+  background: var(--color-card-bg, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 14px;
+  padding: 2.25rem;
+}
+
+.sla-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  margin: 1.75rem 0 2rem;
+}
+
+.sla-card {
+  background: var(--color-card-bg, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+.sla-time {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-primary, #059669);
+  background: var(--color-badge-bg, rgba(5, 150, 105, 0.1));
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  margin-bottom: 0.6rem;
+}
+
+.sla-card h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-heading, #0f172a);
+  margin: 0 0 0.45rem;
+}
+
+.sla-card p {
+  font-size: 0.9rem;
+  color: var(--color-text-muted, #64748b);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.trust-contact-box {
+  border-top: 1px solid var(--color-border, #e2e8f0);
+  padding-top: 1.5rem;
+}
+
+.trust-contact-box h3 {
+  font-size: 1.2rem;
+  font-weight: 750;
+  color: var(--color-heading, #0f172a);
+  margin: 0 0 0.85rem;
+}
+
+.trust-contact-box p {
+  font-size: 0.98rem;
+  margin: 0.35rem 0;
+  color: var(--color-text, #334155);
+}
+
+.trust-contact-box a {
+  color: var(--color-primary, #059669);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.trust-contact-box a:hover {
+  text-decoration: underline;
+}
+
+.trust-quick-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .trust-page {
+    padding: 1.75rem 1rem 3.5rem;
+  }
+  .trust-title {
+    font-size: 1.85rem;
+  }
+  .trust-lead {
+    font-size: 1.05rem;
+  }
+  .trust-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .trust-grievance-section {
+    padding: 1.5rem;
+  }
+}
