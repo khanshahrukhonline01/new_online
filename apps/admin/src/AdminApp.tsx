@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { AdminModerationPage } from '../../../src/modules/admin/AdminModerationPage'
 import { AdminControlPanelPage } from '../../../src/modules/admin/AdminControlPanelPage'
 import { usePreferences } from '../../../src/shared/usePreferences'
 
@@ -5,6 +7,7 @@ const DEVELOPMENT_SUPABASE_URL = 'https://hznsbxvovjxvmnchzzqt.supabase.co'
 
 export function AdminApp() {
   const { preferences, updatePreferences } = usePreferences()
+  const [activeArea, setActiveArea] = useState<'listings' | 'chronicle'>('listings')
   const configuredUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
 
   if (configuredUrl !== DEVELOPMENT_SUPABASE_URL) {
@@ -37,7 +40,11 @@ export function AdminApp() {
           </select>
         </label>
       </div>
-      <AdminControlPanelPage />
+      <nav className="admin-app-area-nav" aria-label="Administration sections">
+        <button type="button" aria-current={activeArea === 'listings' ? 'page' : undefined} className={activeArea === 'listings' ? 'active' : ''} onClick={() => setActiveArea('listings')}>Listings &amp; Verification</button>
+        <button type="button" aria-current={activeArea === 'chronicle' ? 'page' : undefined} className={activeArea === 'chronicle' ? 'active' : ''} onClick={() => setActiveArea('chronicle')}>KhelChronicle Editorial</button>
+      </nav>
+      {activeArea === 'listings' ? <AdminControlPanelPage /> : <AdminModerationPage initialDesk="chronicle" hideDeskSwitcher />}
     </main>
   )
 }

@@ -21,7 +21,7 @@ describe('KhelChronicle Supabase database integration client', () => {
     vi.resetModules()
   })
 
-  describe('Unconfigured development mode fallback', () => {
+  describe('Unconfigured fail-closed mode', () => {
     it('returns local categories when Supabase is unconfigured', async () => {
       const client = await loadClient('', '')
       const result = await client.getChronicleCategories()
@@ -31,39 +31,35 @@ describe('KhelChronicle Supabase database integration client', () => {
       expect(fetch).not.toHaveBeenCalled()
     })
 
-    it('returns filtered local preprints when Supabase is unconfigured', async () => {
+    it('returns no public manuscripts when Supabase is unconfigured', async () => {
       const client = await loadClient('', '')
       const result = await client.getChroniclePapers('sports-biomechanics')
       expect(result.status).toBe('unconfigured')
-      expect(result.data.length).toBeGreaterThan(0)
-      expect(result.data.every(p => p.category === 'sports-biomechanics')).toBe(true)
+      expect(result.data).toEqual([])
       expect(fetch).not.toHaveBeenCalled()
     })
 
-    it('searches papers locally when Supabase is unconfigured', async () => {
+    it('does not search synthetic papers when Supabase is unconfigured', async () => {
       const client = await loadClient('', '')
       const result = await client.getChroniclePapers(undefined, 'Lumbar Spine')
       expect(result.status).toBe('unconfigured')
-      expect(result.data.length).toBeGreaterThan(0)
-      expect(result.data[0].title).toContain('Lumbar Spine')
+      expect(result.data).toEqual([])
       expect(fetch).not.toHaveBeenCalled()
     })
 
-    it('fetches paper by slug locally when unconfigured', async () => {
+    it('does not expose a seeded paper by slug when unconfigured', async () => {
       const client = await loadClient('', '')
       const result = await client.getChroniclePaperBySlug('KG-2026-001')
       expect(result.status).toBe('unconfigured')
-      expect(result.data).toBeDefined()
-      expect(result.data?.paperId).toBe('KG-2026-001')
+      expect(result.data).toBeNull()
       expect(fetch).not.toHaveBeenCalled()
     })
 
-    it('fetches author profile locally when unconfigured', async () => {
+    it('does not expose seeded author profiles when unconfigured', async () => {
       const client = await loadClient('', '')
       const result = await client.getChronicleAuthorBySlug('dr-vikramaditya-rathore')
       expect(result.status).toBe('unconfigured')
-      expect(result.data?.author.name).toBe('Dr. Vikramaditya Rathore')
-      expect(result.data?.papers.length).toBeGreaterThan(0)
+      expect(result.data).toBeNull()
       expect(fetch).not.toHaveBeenCalled()
     })
   })
@@ -77,9 +73,14 @@ describe('KhelChronicle Supabase database integration client', () => {
         primary_author_name: 'Dr. Test',
         primary_author_email: 'test@example.com',
         primary_author_affiliation: 'Test University',
+        ethics_clearance_number: 'TEST-ETHICS-001',
         abstract_text: 'A'.repeat(60),
         keywords: 'test',
-        full_text_or_url: '',
+        article_type: 'preprint',
+        full_text_or_url: 'https://example.com/paper.pdf',
+        data_availability: 'open_access',
+        license_type: 'cc-by-nc-nd-4.0',
+        license_confirmed: true,
         human_ethics_confirmed: true,
         minor_consent_confirmed: true,
       })
@@ -96,9 +97,14 @@ describe('KhelChronicle Supabase database integration client', () => {
         primary_author_name: 'Dr. Test',
         primary_author_email: 'not-an-email',
         primary_author_affiliation: 'Test University',
+        ethics_clearance_number: 'TEST-ETHICS-001',
         abstract_text: 'A'.repeat(60),
         keywords: 'test',
-        full_text_or_url: '',
+        article_type: 'preprint',
+        full_text_or_url: 'https://example.com/paper.pdf',
+        data_availability: 'open_access',
+        license_type: 'cc-by-nc-nd-4.0',
+        license_confirmed: true,
         human_ethics_confirmed: true,
         minor_consent_confirmed: true,
       })
@@ -115,14 +121,19 @@ describe('KhelChronicle Supabase database integration client', () => {
         primary_author_name: 'Dr. Test',
         primary_author_email: 'test@example.com',
         primary_author_affiliation: 'Test University',
+        ethics_clearance_number: 'TEST-ETHICS-001',
         abstract_text: 'A'.repeat(60),
         keywords: 'test',
-        full_text_or_url: '',
+        article_type: 'preprint',
+        full_text_or_url: 'https://example.com/paper.pdf',
+        data_availability: 'open_access',
+        license_type: 'cc-by-nc-nd-4.0',
+        license_confirmed: true,
         human_ethics_confirmed: false,
         minor_consent_confirmed: true,
       })
       expect(res.status).toBe('unavailable')
-      expect(res.message).toContain('Ethics confirmation')
+      expect(res.message).toContain('human-subjects and minor-athlete consent')
       expect(fetch).not.toHaveBeenCalled()
     })
 
@@ -134,9 +145,14 @@ describe('KhelChronicle Supabase database integration client', () => {
         primary_author_name: 'Dr. Test',
         primary_author_email: 'test@example.com',
         primary_author_affiliation: 'Test University',
+        ethics_clearance_number: 'TEST-ETHICS-001',
         abstract_text: 'A'.repeat(60),
         keywords: 'test',
+        article_type: 'preprint',
         full_text_or_url: 'http://insecure-site.com/paper.pdf',
+        data_availability: 'open_access',
+        license_type: 'cc-by-nc-nd-4.0',
+        license_confirmed: true,
         human_ethics_confirmed: true,
         minor_consent_confirmed: true,
       })
@@ -160,11 +176,16 @@ describe('KhelChronicle Supabase database integration client', () => {
         primary_author_name: 'Dr. Rajeshwari Nair',
         primary_author_email: 'nair@lnipe.edu.in',
         primary_author_affiliation: 'LNIPE Gwalior',
+        ethics_clearance_number: 'TEST-ETHICS-001',
         orcid: '0000-0003-1120-459X',
         co_authors: 'Dr. Alok Sen (SAI NCOE Bengaluru)',
         abstract_text: 'Background: Sprint acceleration testing is critical for talent scouting in athletics and field games. Methods: 40 junior sprinters tested across dual-beam wireless photocells. Results: High ICC of 0.94. Conclusion: Highly reproducible.',
         keywords: 'Sprint Acceleration, Photocells, Testing Reliability',
+        article_type: 'preprint',
         full_text_or_url: 'https://zenodo.org/record/1234567',
+        data_availability: 'open_access',
+        license_type: 'cc-by-nc-nd-4.0',
+        license_confirmed: true,
         human_ethics_confirmed: true,
         minor_consent_confirmed: true,
       })
@@ -181,7 +202,7 @@ describe('KhelChronicle Supabase database integration client', () => {
   })
 
   describe('Configured database queries and RPC calls', () => {
-    it('queries chronicle_papers with category and status filters', async () => {
+    it('queries only complete published chronicle_papers with category and publication status filters', async () => {
       vi.mocked(fetch).mockResolvedValueOnce(
         new Response(
           JSON.stringify([
@@ -190,7 +211,12 @@ describe('KhelChronicle Supabase database integration client', () => {
               paper_id: 'KG-2026-001',
               slug: 'kinematic-correlates-lumbar-spine-stress-fast-bowlers',
               title: 'Kinematic Correlates of Lumbar Spine Stress in Indian Fast Bowlers',
+              category: 'sports-biomechanics',
               category_slug: 'sports-biomechanics',
+              author_name: 'Dr. Test Researcher',
+              author_affiliation: 'Test Sports Science Institute',
+              authors: [{ id: 'author-1', name: 'Dr. Test Researcher', slug: 'dr-test-researcher', affiliation: 'Test Sports Science Institute', role: 'Author', bio: 'Test author.' }],
+              publication_status: 'published',
               date_published: '2026-10-24',
               version: 'v1.1',
               status: 'screened',
@@ -206,6 +232,12 @@ describe('KhelChronicle Supabase database integration client', () => {
                 conclusion: 'Restricting counter-rotation reduces stress...',
               },
               keywords: ['Fast Bowling Biomechanics'],
+              sections: [{ title: 'Methods', paragraphs: ['A complete methods section.'] }],
+              ethics_statement: 'Ethics review documented.',
+              data_availability: 'De-identified data available under request.',
+              funding_statement: 'No external funding.',
+              conflicts_of_interest: 'No conflicts declared.',
+              reference_list: [{ id: 1, text: 'A verified reference.' }],
             },
           ]),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -221,6 +253,7 @@ describe('KhelChronicle Supabase database integration client', () => {
       const url = vi.mocked(fetch).mock.calls[0][0] as string
       expect(url).toContain('/rest/v1/chronicle_papers')
       expect(url).toContain('category=eq.sports-biomechanics')
+      expect(url).toContain('publication_status=eq.published')
     })
 
     it('records paper views via database RPC', async () => {
@@ -245,84 +278,54 @@ describe('KhelChronicle Supabase database integration client', () => {
   })
 
   describe('KhelChronicle Editorial Moderation Desk', () => {
-    it('fetches default moderation queue with stats and baseline submissions', async () => {
+    it('requires the authenticated Supabase database and never falls back to local demo submissions', async () => {
       const client = await loadClient('', '')
-      const queue = await client.getChronicleModerationQueue()
-      expect(queue.submissions.length).toBeGreaterThanOrEqual(4)
-      expect(queue.stats.totalCount).toBeGreaterThanOrEqual(4)
-      expect(queue.stats.pendingCount).toBeGreaterThanOrEqual(1)
-      expect(queue.submissions.some(s => s.submissionId === 'KG-SUB-KC82A1-94F2')).toBe(true)
+      await expect(client.getChronicleModerationQueue()).rejects.toThrow('not configured')
+      expect(client.getLocalModerationQueue()).toEqual([])
     })
 
-    it('filters moderation queue by status, category, and keyword search', async () => {
+    it('requires a meaningful revision message', async () => {
       const client = await loadClient('', '')
-      const pending = await client.getChronicleModerationQueue({ status: 'pending_review' })
-      expect(pending.submissions.every(s => s.status === 'pending_review')).toBe(true)
-
-      const biomech = await client.getChronicleModerationQueue({ category: 'sports-biomechanics' })
-      expect(biomech.submissions.every(s => s.category === 'sports-biomechanics')).toBe(true)
-
-      const search = await client.getChronicleModerationQueue({ search: 'Tenzing' })
-      expect(search.submissions.length).toBe(1)
-      expect(search.submissions[0].authorName).toContain('Tenzing Norbu')
+      await expect(client.requestManuscriptCorrections('submission-id', 'Short')).rejects.toThrow('at least 10 characters')
     })
 
-    it('supports full lifecycle: review, request corrections, approve, reject, and publish', async () => {
+    it('requires a rejection reason', async () => {
       const client = await loadClient('', '')
-      const queue = await client.getChronicleModerationQueue()
-      const target = queue.submissions[0]
-
-      // Start review
-      const underReview = await client.startManuscriptReview(target.id, 'Dr. Editor')
-      expect(underReview.status).toBe('under_review')
-      expect(underReview.assignedEditor).toBe('Dr. Editor')
-
-      // Request corrections (validation: at least 10 chars)
-      await expect(client.requestManuscriptCorrections(target.id, 'Short')).rejects.toThrow('at least 10 characters')
-      const corrections = await client.requestManuscriptCorrections(target.id, 'Please update the IRB ethics clearance number.')
-      expect(corrections.status).toBe('changes_requested')
-      expect(corrections.correctionRequest).toContain('IRB ethics clearance')
-
-      // Approve
-      const approved = await client.approveManuscript(target.id, 'Rigorous study.')
-      expect(approved.status).toBe('approved')
-
-      // Publish to archive
-      const published = await client.publishManuscriptToArchive(target.id, 'himalayan-track-adaptation', 'KG-2026-006')
-      expect(published.success).toBe(true)
-      expect(published.paperId).toBe('KG-2026-006')
-      expect(published.slug).toBe('himalayan-track-adaptation')
-
-      // Reject (validation: reason required)
-      await expect(client.rejectManuscript(target.id, '')).rejects.toThrow('reason for rejection must be provided')
-      const rejected = await client.rejectManuscript(target.id, 'Outside the scope of sports science.')
-      expect(rejected.status).toBe('rejected')
-      expect(rejected.rejectionReason).toContain('Outside the scope')
+      await expect(client.rejectManuscript('submission-id', '')).rejects.toThrow('reason for rejection')
     })
 
-    it('automatically records manuscript submissions into the moderation desk queue', async () => {
+    it('does not allow publication until a complete manuscript editor exists', async () => {
       const client = await loadClient('', '')
-      const subRes = await client.submitChronicleManuscript({
+      await expect(
+        client.publishManuscriptToArchive('submission-id', 'example-paper', 'KG-2026-999')
+      ).rejects.toThrow('not enabled yet')
+    })
+
+    it('does not save a manuscript submission into a local moderation queue when Supabase is unconfigured', async () => {
+      const client = await loadClient('', '')
+      const result = await client.submitChronicleManuscript({
         manuscript_title: 'Hydration and Electrolyte Kinetics in Rural Indian Wrestlers',
         category_slug: 'sports-nutrition',
         primary_author_name: 'Dr. Ramesh Chander',
         primary_author_email: 'ramesh.chander@haryanaakhada.org',
         primary_author_affiliation: 'Chhatrasal Akhada Sports Medicine Cell',
+        article_type: 'preprint',
+        ethics_clearance_number: 'TEST-ETHICS-001',
         abstract_text: 'A structured evaluation of sodium loss, plasma osmolality, and acute dehydration recovery in 45 traditional mud pit pehlwans.',
         keywords: 'Wrestling, Pehlwani, Dehydration, Electrolytes',
         full_text_or_url: 'https://zenodo.org/record/99887766',
+        data_availability: 'open_access',
         human_ethics_confirmed: true,
         minor_consent_confirmed: true,
+        license_type: 'cc-by-nc-nd-4.0',
+        license_confirmed: true,
       })
 
-      expect(subRes.status).not.toBe('unavailable')
-      if ('submissionId' in subRes) {
-        expect(subRes.submissionId).toBeDefined()
+      expect(result.status).toBe('unconfigured')
+      if (result.status === 'unconfigured') {
+        expect(result.message).toContain('No submission was saved')
       }
-      const queue = await client.getChronicleModerationQueue({ search: 'Wrestlers' })
-      expect(queue.submissions.length).toBeGreaterThanOrEqual(1)
-      expect(queue.submissions[0].title).toContain('Rural Indian Wrestlers')
-      expect(queue.submissions[0].status).toBe('pending_review')
+      expect(client.getLocalModerationQueue()).toEqual([])
     })
   })
 })

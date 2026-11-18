@@ -247,15 +247,9 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     }
   }
 
-  const processSelectedFile = (file: File) => {
-    const sizeInMb = (file.size / (1024 * 1024)).toFixed(2)
-    setUploadedFile({
-      name: file.name,
-      size: `${sizeInMb} MB`,
-    })
-    if (!fullTextOrUrl) {
-      setFullTextOrUrl(`Uploaded file: ${file.name} (${sizeInMb} MB)`)
-    }
+  const processSelectedFile = (_file: File) => {
+    setUploadedFile(null)
+    setErrorMessage('Direct file upload is not available yet. Please provide a secure HTTPS link to the complete manuscript.')
   }
 
   // Download official manuscript template
@@ -405,25 +399,24 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
         primary_author_affiliation: primaryAuthorAffiliation,
         orcid: orcid.trim() || undefined,
         co_authors: consolidatedCoAuthors || undefined,
+        article_type: articleType,
         abstract_text: abstract,
-        keywords: keywords,
-        full_text_or_url: fullTextOrUrl || 'Uploaded via KhelChronicle Intake Dropzone',
+        keywords,
+        full_text_or_url: fullTextOrUrl,
+        supplementary_url: supplementaryUrl || undefined,
+        data_availability: dataAvailability,
+        ethics_clearance_number: ethicsClearanceNumber,
         human_ethics_confirmed: ethicsDeclaration,
         minor_consent_confirmed: minorConsentDeclaration,
+        license_type: licenseType,
+        license_confirmed: licenseDeclaration,
       })
 
       if (res.status === 'submitted') {
         setSubmissionId(res.submissionId)
         setSubmissionNotice('Manuscript successfully entered into the KhelChronicle peer-screening database queue.')
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem(STORAGE_DRAFT_KEY)
-        }
       } else if (res.status === 'unconfigured') {
-        setSubmissionId(res.submissionId)
         setSubmissionNotice(res.message)
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem(STORAGE_DRAFT_KEY)
-        }
       } else {
         setErrorMessage(res.message)
       }
@@ -973,26 +966,26 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
 
               {/* STEP 4: Manuscript Files & Supplementary Datasets */}
               <div className={`kc-step-panel ${currentStep === 4 ? 'is-active' : ''}`}>
-                <h2 className="kc-step-heading">Step 4: Manuscript File &amp; Supplementary Data</h2>
+                <h2 className="kc-step-heading">Step 4: Manuscript Link &amp; Supplementary Data</h2>
                 <p className="kc-step-desc">
-                  Upload your preprint PDF or Word document, or provide a link to an open science repository (e.g.,
-                  Zenodo, GitHub, OSF).
+                  Direct file storage is not enabled yet. Provide a secure HTTPS link to the complete manuscript and, if applicable, a separate HTTPS link to supplementary data.
                 </p>
 
                 {/* Drag and drop zone */}
                 <div className="kc-field-group">
-                  <label className="kc-field-label">Preprint File Upload (PDF or DOCX, max 25MB)</label>
+                  <label className="kc-field-label">Direct manuscript upload (not available yet)</label>
                   <div
                     className={`kc-dropzone ${isDragging ? 'is-dragover' : ''}`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => setErrorMessage('Direct file upload is not available yet. Please paste a secure HTTPS manuscript link below.')}
                   >
                     <input
                       ref={fileInputRef}
                       type="file"
                       accept=".pdf,.docx"
+                      disabled
                       style={{ display: 'none' }}
                       onChange={handleFileInputChange}
                     />
@@ -1001,7 +994,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                         <SiteIcon name="file-text" size={24} style={{ color: '#0284c7' }} />
                         <div className="kc-file-info">
                           <div className="kc-file-name">{uploadedFile.name}</div>
-                          <div className="kc-file-meta">{uploadedFile.size} · Ready for intake</div>
+                          <div className="kc-file-meta">{uploadedFile.size} · File selection is not connected to secure storage</div>
                         </div>
                         <button
                           type="button"
@@ -1018,11 +1011,9 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     ) : (
                       <>
                         <SiteIcon name="upload" size={32} className="kc-dropzone-icon" />
-                        <div className="kc-dropzone-title">Drag &amp; Drop Manuscript File Here</div>
-                        <div className="kc-dropzone-subtitle">or click to browse from your device (.pdf, .docx)</div>
-                        <span className="kc-btn-secondary" style={{ pointerEvents: 'none' }}>
-                          Browse Files
-                        </span>
+                        <div className="kc-dropzone-title">Direct file upload is not enabled</div>
+                        <div className="kc-dropzone-subtitle">Please provide a secure HTTPS manuscript link in the field below.</div>
+                        
                       </>
                     )}
                   </div>
@@ -1034,9 +1025,10 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                   </label>
                   <input
                     id="manuscript-url"
-                    type="text"
+                    type="url"
+                    required
                     className="kc-input-text"
-                    placeholder="https://drive.google.com/... or https://arxiv.org/abs/... or https://zenodo.org/..."
+                    placeholder="https://... (required complete manuscript link)"
                     value={fullTextOrUrl}
                     onChange={e => setFullTextOrUrl(e.target.value)}
                   />
@@ -1093,8 +1085,9 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                   <input
                     id="iec-approval-number"
                     type="text"
+                    required
                     className="kc-input-text"
-                    placeholder="Enter institutional approval protocol or ethics committee reference"
+                    placeholder="Enter institutional approval protocol or documented not-applicable declaration"
                     value={ethicsClearanceNumber}
                     onChange={e => setEthicsClearanceNumber(e.target.value)}
                   />
@@ -1111,8 +1104,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       className="kc-checkbox-input"
                     />
                     <div>
-                      <strong>Human Subjects &amp; Ethics Declaration *</strong>: I confirm this research was conducted
-                      in compliance with the Declaration of Helsinki and Institutional Ethics Committee clearance.
+                      <strong>Human Subjects &amp; Ethics Declaration *</strong>: I confirm that human-participant research has appropriate IEC/IRB clearance, or that formal review is documented as not applicable.
                     </div>
                   </label>
 
@@ -1125,9 +1117,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       className="kc-checkbox-input"
                     />
                     <div>
-                      <strong>Youth &amp; Minor Athletes Protection *</strong>: If research involves junior/school
-                      athletes under 18 years, informed written parental/guardian consent was documented in accordance
-                      with Indian POCSO and anti-fraud guidelines.
+                      <strong>Youth &amp; Minor Athletes Protection *</strong>: I confirm either that no participants under 18 are included, or that informed written parental/guardian consent is documented for every minor participant, in accordance with applicable Indian law.
                     </div>
                   </label>
 
@@ -1140,8 +1130,8 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       className="kc-checkbox-input"
                     />
                     <div>
-                      <strong>Diamond Open Access License *</strong>: I agree to license this preprint under an open
-                      access Creative Commons license with zero embargo and zero author fees.
+                      <strong>Manuscript licence declaration *</strong>: I confirm I have the rights to grant the selected
+                      Creative Commons licence and understand that it will apply to the public manuscript if approved.
                     </div>
                   </label>
                 </div>
@@ -1155,7 +1145,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       onClick={() => setLicenseType('cc-by-nc-nd-4.0')}
                     >
                       <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0f172a', marginBottom: '4px' }}>
-                        CC BY-NC-ND 4.0 (Recommended for Preprints)
+                        CC BY-NC-ND 4.0
                       </div>
                       <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
                         Allows download and sharing with attribution; prohibits commercial reuse and derivative alterations.
@@ -1166,7 +1156,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       onClick={() => setLicenseType('cc-by-4.0')}
                     >
                       <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0f172a', marginBottom: '4px' }}>
-                        CC BY 4.0 (Unrestricted Open Access)
+                        CC BY 4.0 (Attribution)
                       </div>
                       <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
                         Allows full reuse, distribution, and remixing as long as original authors receive proper attribution.

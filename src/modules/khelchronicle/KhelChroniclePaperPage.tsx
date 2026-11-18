@@ -1,14 +1,11 @@
 import { useState, useMemo, useEffect, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
-  getPaperBySlug,
   generateCitations,
-  getRelatedPapers,
   generateRisCitation,
-  RESEARCH_PAPERS,
   type ResearchPaper,
 } from './data/khelchronicleData'
-import { recordPaperView, recordPaperDownload } from '../../integrations/supabase/chronicle-client'
+import { getChroniclePaperBySlug, recordPaperView, recordPaperDownload } from '../../integrations/supabase/chronicle-client'
 import { AcademicDataChart } from './components/AcademicDataChart'
 import './khelchronicle.css'
 
@@ -18,8 +15,17 @@ interface KhelChroniclePaperPageProps {
 }
 
 export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperPageProps) {
-  const paper: ResearchPaper | undefined = useMemo(() => {
-    return getPaperBySlug(slug) || RESEARCH_PAPERS[0]
+  const [paper, setPaper] = useState<ResearchPaper | null | undefined>(undefined)
+
+  useEffect(() => {
+    let active = true
+    setPaper(undefined)
+    getChroniclePaperBySlug(slug).then(result => {
+      if (active) setPaper(result.data)
+    })
+    return () => {
+      active = false
+    }
   }, [slug])
 
   useEffect(() => {
@@ -52,10 +58,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
     return generateCitations(paper)
   }, [paper])
 
-  const relatedPapers = useMemo(() => {
-    if (!paper) return []
-    return getRelatedPapers(paper, 3)
-  }, [paper])
+  const relatedPapers: ResearchPaper[] = []
 
   const copyCitation = () => {
     const textToCopy = citations[citationFormat]
@@ -111,7 +114,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
       datePublished: paper.datePublished,
       dateModified: paper.dateModified || paper.datePublished,
       version: paper.version,
-      license: 'https://creativecommons.org/licenses/by-nc-nd/4.0/',
+      license: paper.license,
       author: paper.authors.map(a => ({
         '@type': 'Person',
         name: a.name,
@@ -130,7 +133,16 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
     }
   }, [paper])
 
-  if (!paper) {
+  if (paper === undefined) {
+    return (
+      <div className="kc-root" style={{ padding: '48px 16px', textAlign: 'center' }}>
+        <h2>Checking manuscript publication status…</h2>
+        <p>Only complete manuscripts approved for public release can be opened.</p>
+      </div>
+    )
+  }
+
+  if (paper === null) {
     return (
       <div className="kc-root" style={{ padding: '48px 16px', textAlign: 'center' }}>
         <h2>Research Paper Not Found</h2>
@@ -149,7 +161,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
         <div className="kc-print-branding">
           <div className="kc-print-logo-row">
             <span className="kc-print-journal-name">KHELCHRONICLE OPEN SPORTS RESEARCH ARCHIVE</span>
-            <span className="kc-print-badge">Diamond Open Access · CC BY-NC-ND 4.0</span>
+            <span className="kc-print-badge">Licence: {paper.license}</span>
           </div>
           <div className="kc-print-meta-row">
             <span><strong>Preprint Accession:</strong> {paper.paperId}</span>
@@ -207,10 +219,10 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
             )}
             <span className="kc-paper-category-tag">{paper.categoryName}</span>
             <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-              Test Data Only
+              Published manuscript
             </span>
             <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#dcfce7', color: '#15803d' }}>
-              Diamond Open Access
+              {paper.license}
             </span>
             <span className="kc-paper-date">Published {paper.datePublished}</span>
           </div>
@@ -458,7 +470,7 @@ export function KhelChroniclePaperPage({ slug, onNavigate }: KhelChroniclePaperP
                   onClick={e => handleLink(e, '/khelchronicle')}
                   className="kc-related-browse-all"
                 >
-                  Browse All Archive ({RESEARCH_PAPERS.length} Papers) →
+                  Browse All Archive ({relatedPapers.length} Papers) →
                 </a>
               </div>
               <div className="kc-related-grid">
