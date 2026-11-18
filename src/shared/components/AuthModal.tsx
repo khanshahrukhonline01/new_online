@@ -4,13 +4,14 @@ import {
   signInWithEmail,
   signUpWithEmail,
   sendPasswordReset,
+  updatePassword,
   resendVerificationEmail,
   type UserRole,
   type AuthUserProfile,
 } from '../../integrations/supabase/auth-client'
 import './AuthModal.css'
 
-export type AuthModalTab = 'login' | 'signup' | 'forgot_password' | 'expired_link'
+export type AuthModalTab = 'login' | 'signup' | 'forgot_password' | 'expired_link' | 'set_new_password'
 
 export interface AuthModalProps {
   isOpen: boolean
@@ -97,6 +98,8 @@ export default function AuthModal({
   // Form Fields
   const [email, setEmail] = useState(initialEmail || '')
   const [password, setPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [role, setRole] = useState<UserRole>('athlete')
   const [city, setCity] = useState('Delhi NCR')
@@ -242,6 +245,40 @@ export default function AuthModal({
       }
     } catch {
       setErrorMsg('Failed to request password reset.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleSetNewPasswordSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (newPassword.length < 6) {
+      setErrorMsg('Password must be at least 6 characters long.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setErrorMsg('Passwords do not match. Please verify and try again.')
+      return
+    }
+    setErrorMsg('')
+    setSuccessMsg('')
+    setSubmitting(true)
+
+    try {
+      const res = await updatePassword(newPassword)
+      if (res.success) {
+        setSuccessMsg(res.message || 'Password updated successfully! You can now sign in.')
+        setTimeout(() => {
+          setTab('login')
+          setPassword('')
+          setNewPassword('')
+          setConfirmPassword('')
+        }, 1500)
+      } else {
+        setErrorMsg(res.message || 'Could not update password.')
+      }
+    } catch {
+      setErrorMsg('Failed to update password. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -728,6 +765,74 @@ export default function AuthModal({
 
             <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
               {submitting ? 'Sending Instructions…' : 'Send Reset Instructions'}
+            </button>
+
+            <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <button
+                type="button"
+                className="kg-text-link"
+                onClick={() => setTab('login')}
+              >
+                ← Back to Sign In
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* TAB: SET NEW PASSWORD */}
+        {tab === 'set_new_password' && (
+          <form className="kg-auth-form" onSubmit={handleSetNewPasswordSubmit}>
+            <h2 id="kg-auth-title" className="kg-auth-title">
+              Create a New Password
+            </h2>
+            <p className="kg-auth-subtitle">
+              Enter and confirm your new secure password below (minimum 6 characters) to update your KhelGrid account.
+            </p>
+
+            <div className="kg-auth-field">
+              <label htmlFor="kg-new-password">New Password</label>
+              <div className="kg-auth-input-wrap">
+                <SiteIcon name="shield-check" size={16} className="kg-input-icon" />
+                <input
+                  id="kg-new-password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  placeholder="At least 6 characters"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className="kg-password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <SiteIcon name={showPassword ? 'eye-off' : 'eye'} size={15} />
+                </button>
+              </div>
+            </div>
+
+            <div className="kg-auth-field">
+              <label htmlFor="kg-confirm-password">Confirm New Password</label>
+              <div className="kg-auth-input-wrap">
+                <SiteIcon name="shield-check" size={16} className="kg-input-icon" />
+                <input
+                  id="kg-confirm-password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  placeholder="Re-type new password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
+              {submitting ? 'Updating Password…' : 'Save New Password & Sign In'}
             </button>
 
             <div style={{ textAlign: 'center', marginTop: 16 }}>

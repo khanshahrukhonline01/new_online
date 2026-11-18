@@ -417,7 +417,10 @@ export async function signInWithEmail(input: SignInInput): Promise<AuthResult> {
  * Sends a password recovery email with open-redirect protection.
  * Returns a generic confirmation message to prevent user enumeration attacks.
  */
-export async function sendPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+export async function sendPasswordReset(
+  email: string,
+  redirectToOverride?: string
+): Promise<{ success: boolean; message: string }> {
   const cleanEmail = email ? email.trim().toLowerCase() : ''
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
   if (!cleanEmail || !emailRegex.test(cleanEmail)) {
@@ -433,11 +436,16 @@ export async function sendPasswordReset(email: string): Promise<{ success: boole
   }
 
   try {
-    const redirectPath = getSafeRedirectUrl('/login?type=recovery')
-    const redirectUrl =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}${redirectPath}`
-        : `https://khelgrid.com${redirectPath}`
+    let redirectUrl: string
+    if (redirectToOverride) {
+      redirectUrl = redirectToOverride
+    } else {
+      const redirectPath = getSafeRedirectUrl('/login?type=recovery')
+      redirectUrl =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}${redirectPath}`
+          : `https://khelgrid.com${redirectPath}`
+    }
 
     const { error } = await client.auth.resetPasswordForEmail(cleanEmail, {
       redirectTo: redirectUrl,

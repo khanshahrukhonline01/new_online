@@ -70,6 +70,7 @@ const SpotlightSearchModal = lazy(() => import('./shared/components/SpotlightSea
 const FeedbackSupportModal = lazy(() => import('./shared/components/FeedbackSupportModal'))
 const UserConsentModal = lazy(() => import('./shared/components/UserConsentModal'))
 const GoProModal = lazy(() => import('./shared/components/GoProModal'))
+import type { AuthModalTab } from './shared/components/AuthModal'
 const AuthModal = lazy(() => import('./shared/components/AuthModal'))
 
 function PageFallbackLoader() {
@@ -107,7 +108,7 @@ export default function App() {
   const [consentInitialTab, setConsentInitialTab] = useState<'sports_pass' | 'rules_privacy'>('sports_pass')
   const [goProModalOpen, setGoProModalOpen] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
-  const [authModalTab, setAuthModalTab] = useState<'login' | 'signup' | 'forgot_password' | 'expired_link'>('login')
+  const [authModalTab, setAuthModalTab] = useState<AuthModalTab>('login')
   const [authModalError, setAuthModalError] = useState<string | undefined>(undefined)
   const [authUser, setAuthUser] = useState<AuthUserProfile | null>(() => getStoredAuthUser())
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -141,8 +142,8 @@ export default function App() {
       setAuthModalOpen(true)
       clearAuthUrlHash()
     } else if (callbackInfo.type === 'recovery') {
-      setAuthModalTab('forgot_password')
-      setAuthModalError('Please enter a new password for your account.')
+      setAuthModalTab('set_new_password')
+      setAuthModalError('')
       setAuthModalOpen(true)
       clearAuthUrlHash()
     } else if (callbackInfo.type === 'signup_confirmed') {
