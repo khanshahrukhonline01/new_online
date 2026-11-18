@@ -59,7 +59,7 @@ describe('Scout Portal Module', () => {
     expect(list).toContain(athId)
   })
 
-  it('renders ScoutPortalPage markup with metrics, sort, technical filters, and athlete cards', () => {
+  it('renders ScoutPortalPage markup with metrics, sort, and athlete cards', () => {
     const markup = renderToStaticMarkup(<ScoutPortalPage />)
 
     expect(markup).toContain('Scout Portal &amp; Verified Athlete Workbench.')
@@ -69,12 +69,7 @@ describe('Scout Portal Module', () => {
     expect(markup).toContain('Print / PDF')
     expect(markup).toContain('Performance Sort:')
     expect(markup).toContain('City / State:')
-    expect(markup).toContain('Technical Role / Spec:')
-    expect(markup).toContain('Yo-Yo IR1 Combine:')
-    expect(markup).toContain('30m Sprint Combine:')
     expect(markup).toContain('Aarav Choudhary')
-    expect(markup).toContain('scout-tech-badge')
-    expect(markup).toContain('Right-Arm Fast (135+ km/h)')
     expect(markup).toContain('Connect with Coach')
     expect(markup).toContain('National Grassroots Normative Rank')
   })

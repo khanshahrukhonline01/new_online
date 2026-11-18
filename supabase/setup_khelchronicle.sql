@@ -47,8 +47,8 @@ create policy "chronicle_submissions_public_insert" on public.chronicle_submissi
 grant select on public.chronicle_papers to anon, authenticated;
 grant insert on public.chronicle_submissions to anon, authenticated;
 
--- 4. Initial Seed (3 Flagship Preprints)
-insert into public.chronicle_papers (paper_id, slug, title, category, author_name, author_affiliation, summary)
+-- 4. Synthetic seed placeholders (editorial review only; never publish automatically)
+insert into public.chronicle_papers (paper_id, slug, title, category, author_name, author_affiliation, summary, publication_status)
 values
   (
     'KG-2026-001',
@@ -57,7 +57,8 @@ values
     'sports-biomechanics',
     'Dr. Vikramaditya Rathore',
     'National Institute of Sports (NIS), Patiala',
-    'Restricting pelvic-shoulder separation under 30 degrees during front-foot contact slashes lumbar bone stress fractures by 68 percent.'
+    'Restricting pelvic-shoulder separation under 30 degrees during front-foot contact slashes lumbar bone stress fractures by 68 percent.',
+    'pending_review'
   ),
   (
     'KG-2026-002',
@@ -66,7 +67,8 @@ values
     'exercise-physiology',
     'Dr. Rajeshwari Nair',
     'LNIPE Gwalior',
-    'Establishes the first national normative distribution. Male U-16 90th percentile is Yo-Yo IR1 >= 1,840m, 30m sprint <= 4.08s, CMJ >= 48.2cm.'
+    'Establishes the first national normative distribution. Male U-16 90th percentile is Yo-Yo IR1 >= 1,840m, 30m sprint <= 4.08s, CMJ >= 48.2cm.',
+    'pending_review'
   ),
   (
     'KG-2026-004',
@@ -75,7 +77,8 @@ values
     'sports-analytics',
     'Ananya Mukherjee',
     'IIT Madras Sports Analytics Hub',
-    'XGBoost ensemble model achieves 0.88 ROC-AUC for U-16 state selection prediction by tracking ball release consistency and control percentage.'
+    'XGBoost ensemble model achieves 0.88 ROC-AUC for U-16 state selection prediction by tracking ball release consistency and control percentage.',
+    'pending_review'
   )
 on conflict (paper_id) do nothing;
 

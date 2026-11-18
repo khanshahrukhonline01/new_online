@@ -1,6 +1,7 @@
-import type { MouseEvent } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { RESEARCH_PAPERS } from './data/khelchronicleData'
+import type { ResearchPaper } from './data/khelchronicleData'
+import { getChroniclePapers } from '../../integrations/supabase/chronicle-client'
 import './khelchronicle.css'
 
 interface KhelChronicleDispatchStripProps {
@@ -8,7 +9,21 @@ interface KhelChronicleDispatchStripProps {
 }
 
 export function KhelChronicleDispatchStrip({ onNavigate }: KhelChronicleDispatchStripProps) {
-  const latestPaper = RESEARCH_PAPERS[0]
+  const [latestPaper, setLatestPaper] = useState<ResearchPaper | null>(null)
+  const [paperCount, setPaperCount] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    getChroniclePapers().then(result => {
+      if (active) {
+        setLatestPaper(result.data[0] ?? null)
+        setPaperCount(result.data.length)
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const handleLink = (e: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (onNavigate) {
@@ -34,6 +49,9 @@ export function KhelChronicleDispatchStrip({ onNavigate }: KhelChronicleDispatch
             <span className="kc-paper-id-tag">{latestPaper.paperId}</span>
             <span className="kc-paper-category-tag">{latestPaper.categoryName}</span>
             <span className="kc-paper-ver-tag">{latestPaper.version}</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+              Published
+            </span>
             <span className="kc-badge-open-access">
               Open Access · CC BY 4.0
             </span>
@@ -68,7 +86,7 @@ export function KhelChronicleDispatchStrip({ onNavigate }: KhelChronicleDispatch
             className="kc-strip-link"
             onClick={e => handleLink(e, '/khelchronicle')}
           >
-            <span>Explore Archive ({RESEARCH_PAPERS.length} Papers)</span>
+            <span>Explore Archive ({paperCount} Papers)</span>
             <SiteIcon name="chevron-right" size={14} />
           </a>
         </div>

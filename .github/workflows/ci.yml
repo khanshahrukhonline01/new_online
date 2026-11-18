@@ -164,6 +164,10 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-a-security-privilege-assertions.sql
       - name: Verify athlete public access guard and role boundaries
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/athlete-profile-public-access-guard-assertions.sql
+      - name: Verify KhelChronicle seed publication gate
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/khelchronicle-seed-publication-gate-assertions.sql
+      - name: Verify KhelChronicle submission and editorial schema
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/khelchronicle-submission-schema-assertions.sql
       - name: Validate SQL migration safety
         shell: bash
         run: |

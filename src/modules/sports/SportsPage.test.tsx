@@ -16,7 +16,7 @@ describe('SportsPage and Sports Catalogue Consistency', () => {
   it('contains all 35 verified sports in ALL_SPORTS_DATA catalog', () => {
     const slugs = getAllSportSlugs()
     expect(slugs).toHaveLength(35)
-    expect(VERIFIED_SPORTS).toHaveLength(34)
+    expect(VERIFIED_SPORTS).toHaveLength(35)
 
     for (const sport of VERIFIED_SPORTS) {
       expect(ALL_SPORTS_DATA[sport]).toBeDefined()

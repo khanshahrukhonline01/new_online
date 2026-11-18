@@ -250,6 +250,7 @@ export const RESEARCH_METHODOLOGIES: ResearchMethodology[] = [
 
 export type ChronicleSortOption = 'newest' | 'oldest' | 'citations' | 'downloads' | 'reading_time'
 
+/** Synthetic author fixtures for unit tests only; not verified real researchers. */
 export const RESEARCH_AUTHORS: Record<string, ResearchAuthor> = {
   'dr-vikramaditya-rathore': {
     id: 'auth-1',
@@ -333,6 +334,7 @@ export const RESEARCH_AUTHORS: Record<string, ResearchAuthor> = {
   },
 }
 
+/** Synthetic manuscript fixtures for unit tests only; never publish these as real research. */
 export const RESEARCH_PAPERS: ResearchPaper[] = [
   {
     id: 'paper-1',

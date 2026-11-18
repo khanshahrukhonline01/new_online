@@ -1,11 +1,11 @@
-import { useMemo, useState, type MouseEvent } from 'react'
+import { useMemo, useState, useEffect, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
   RESEARCH_CATEGORIES,
-  getPapersByCategory,
   type ResearchCategory,
   type ResearchPaper,
 } from './data/khelchronicleData'
+import { getChroniclePapers } from '../../integrations/supabase/chronicle-client'
 import { KhelChroniclePaperCard } from './components/KhelChroniclePaperCard'
 import { AcademicGalleyModal } from './components/AcademicGalleyModal'
 import { CitationExportModal } from './components/CitationExportModal'
@@ -18,12 +18,28 @@ interface KhelChronicleCategoryPageProps {
 
 export function KhelChronicleCategoryPage({ categorySlug, onNavigate }: KhelChronicleCategoryPageProps) {
   const category: ResearchCategory | undefined = useMemo(() => {
-    return RESEARCH_CATEGORIES.find(c => c.slug === categorySlug.toLowerCase()) || RESEARCH_CATEGORIES[0]
+    return RESEARCH_CATEGORIES.find(c => c.slug === categorySlug.toLowerCase())
   }, [categorySlug])
 
-  const papers = useMemo(() => {
-    if (!category) return []
-    return getPapersByCategory(category.slug)
+  const [papers, setPapers] = useState<ResearchPaper[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    if (!category) {
+      setPapers([])
+      setIsLoading(false)
+      return
+    }
+    setIsLoading(true)
+    getChroniclePapers(category.slug).then(result => {
+      if (active) setPapers(result.data)
+    }).finally(() => {
+      if (active) setIsLoading(false)
+    })
+    return () => {
+      active = false
+    }
   }, [category])
 
   // Dynamically computed metrics for this scientific discipline
@@ -68,6 +84,10 @@ export function KhelChronicleCategoryPage({ categorySlug, onNavigate }: KhelChro
     }
   }
 
+  if (!category) {
+    return <div className="kc-root" style={{ padding: '48px 16px', textAlign: 'center' }}><h2>Research discipline not found</h2><a href="/khelchronicle">Back to KhelChronicle</a></div>
+  }
+
   return (
     <div className="kc-root">
       {/* Breadcrumb */}
@@ -88,7 +108,10 @@ export function KhelChronicleCategoryPage({ categorySlug, onNavigate }: KhelChro
             <SiteIcon name="award" size={13} />
             <span>Research Discipline</span>
           </span>
-          <span className="kc-badge-open-access">Curated Scientific Discipline</span>
+          <span className="kc-badge-open-access">Preprints Archive</span>
+          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
+            Editorial review required
+          </span>
           <span className="kc-badge-open-access">Diamond Open Access (CC BY 4.0)</span>
         </div>
 
@@ -161,10 +184,14 @@ export function KhelChronicleCategoryPage({ categorySlug, onNavigate }: KhelChro
           </span>
         </div>
 
-        {papers.length === 0 ? (
+        {isLoading ? (
+          <div style={{ padding: '48px 24px', textAlign: 'center' }}><p>Checking approved public manuscripts…</p></div>
+        ) : !category ? (
+          <div style={{ padding: '48px 24px', textAlign: 'center' }}><h3>Research discipline not found</h3></div>
+        ) : papers.length === 0 ? (
           <div style={{ padding: '48px 24px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
             <SiteIcon name="search" size={32} style={{ color: '#94a3b8', marginBottom: '10px' }} />
-            <h3 style={{ margin: '0 0 6px', fontSize: '16px', color: '#0f172a' }}>No preprints in this discipline yet</h3>
+            <h3 style={{ margin: '0 0 6px', fontSize: '16px', color: '#0f172a' }}>No reviewed public manuscripts in this discipline yet</h3>
             <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: '#64748b' }}>Be the first sports scientist to deposit a manuscript in {category?.name}.</p>
             <a
               href="/khelchronicle/submit"

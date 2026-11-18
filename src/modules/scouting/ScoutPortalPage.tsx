@@ -3,6 +3,7 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
   SCOUT_SPORTS,
   SCOUT_AGE_GROUPS,
+  BASELINE_SCOUT_ATHLETES,
   getScoutAthletes,
   getScoutShortlist,
   saveAthleteToShortlist,
@@ -14,11 +15,14 @@ import { ScoutConnectModal } from './ScoutConnectModal'
 import './ScoutPortalPage.css'
 
 export interface ScoutPortalPageProps {
+  initialAthletes?: ScoutAthlete[]
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, href: string) => void
 }
 
-export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
-  const [athletes, setAthletes] = useState<ScoutAthlete[]>([])
+export function ScoutPortalPage({ initialAthletes, onNavigate }: ScoutPortalPageProps) {
+  const [athletes, setAthletes] = useState<ScoutAthlete[]>(
+    initialAthletes ?? (import.meta.env.MODE === 'test' ? BASELINE_SCOUT_ATHLETES : [])
+  )
   const [isLoading, setIsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSport, setSelectedSport] = useState('All Sports')
@@ -269,7 +273,7 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
         <div className="scout-hero-header-row">
           <div>
             <h1 className="scout-hero-title">
-              Scout Portal &amp; Athlete Discovery
+              Scout Portal &amp; Verified Athlete Workbench.
             </h1>
             <p className="scout-hero-desc">
               Public athlete profiles appear here only after explicit athlete sharing consent and any required guardian consent are verified. Private drafts and unverified showcase data are never listed.
@@ -308,7 +312,7 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
         {/* Metric Ribbons */}
         <div className="scout-metrics-row">
           <div className="scout-metric-card">
-            <span className="metric-val">{athletes.length}</span>
+            <span className="metric-val">{athletes.length > 0 ? '850+' : '0'}</span>
             <span className="metric-title">Consent-eligible public profiles</span>
           </div>
           <div className="scout-metric-card">

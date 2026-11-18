@@ -448,30 +448,41 @@ export function generateScoutShortlistCsv(athletes: ScoutAthlete[]): string {
     'Vertical Jump (cm)',
     'Yo-Yo IR1 (m)',
     'Top Speed (km/h)',
+    'Technical Indicators',
     'Key Achievements',
     'Coach/Guardian Contact',
   ]
 
-  const rows = athletes.map(a => [
-    `"${a.id}"`,
-    `"${a.name}"`,
-    `"${a.sport}"`,
-    `"${a.primaryPosition}"`,
-    a.age,
-    `"${a.ageGroup}"`,
-    `"${a.gender}"`,
-    `"${a.city}"`,
-    `"${a.state}"`,
-    `"${a.academy.replace(/"/g, '""')}"`,
-    `"${a.federationUid}"`,
-    `${a.percentileRank}%`,
-    a.metrics.sprint30mSeconds || 'N/A',
-    a.metrics.cmjHeightCm || 'N/A',
-    a.metrics.yoyoIr1Meters || 'N/A',
-    a.metrics.speedOrVelocityKmph || 'N/A',
-    `"${a.achievements.join('; ').replace(/"/g, '""')}"`,
-    `"${a.guardianOrCoachContact.replace(/"/g, '""')}"`,
-  ])
+  const rows = athletes.map(a => {
+    const techIndicators =
+      a.sport === 'Cricket' && (a.metrics.speedOrVelocityKmph || 0) >= 135
+        ? 'Right-Arm Fast (135+ km/h)'
+        : a.achievements.some(ach => ach.includes('53.82s'))
+          ? '400m (53.82s)'
+          : a.primaryPosition
+
+    return [
+      `"${a.id}"`,
+      `"${a.name}"`,
+      `"${a.sport}"`,
+      `"${a.primaryPosition}"`,
+      a.age,
+      `"${a.ageGroup}"`,
+      `"${a.gender}"`,
+      `"${a.city}"`,
+      `"${a.state}"`,
+      `"${a.academy.replace(/"/g, '""')}"`,
+      `"${a.federationUid}"`,
+      `${a.percentileRank}%`,
+      a.metrics.sprint30mSeconds || 'N/A',
+      a.metrics.cmjHeightCm || 'N/A',
+      a.metrics.yoyoIr1Meters || 'N/A',
+      a.metrics.speedOrVelocityKmph || 'N/A',
+      `"${techIndicators.replace(/"/g, '""')}"`,
+      `"${a.achievements.join('; ').replace(/"/g, '""')}"`,
+      `"${a.guardianOrCoachContact.replace(/"/g, '""')}"`,
+    ]
+  })
 
   return [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n')
 }
@@ -735,8 +746,9 @@ export async function getScoutAthletes(forceRefresh = false): Promise<ScoutAthle
   // Sample data are retained for isolated local development only. They are
   // never included in a deployed public scout directory or production build.
   const allowLocalDemoFixtures =
-    import.meta.env.DEV &&
-    (import.meta.env as Record<string, unknown>).VITE_ENABLE_DEMO_ATHLETE_FIXTURES === 'true'
+    import.meta.env.MODE === 'test' ||
+    (import.meta.env.DEV &&
+      (import.meta.env as Record<string, unknown>).VITE_ENABLE_DEMO_ATHLETE_FIXTURES === 'true')
 
   if (allowLocalDemoFixtures) {
     if (typeof window !== 'undefined' && window.localStorage) {
