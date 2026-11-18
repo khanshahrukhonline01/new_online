@@ -55,7 +55,7 @@ For a full historical record of all phases, fixes, database migrations, and repo
 5. Authorized live sports provider integrations.
 6. SEO, privacy, analytics, advertising, accessibility, and release checks.
 7. KhelChronicle Diamond Open Access research preprint repository and intake queue.
-8. 34-Sport comprehensive hub directory with Olympic pathways and SAI quotas.
+8. 35-Sport comprehensive hub directory with Olympic pathways and SAI quotas.
 9. Core database relational expansion (junction tables & stadium surfaces).
 10. Monetization, Indian Payment Gateways (UPI/Cards/NetBanking) & Host Hub.
 11. Performance optimizations, SWR caching, Interactive Sports Tools & Selection Calendar.

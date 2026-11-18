@@ -1,19 +1,19 @@
 # KhelGrid Sport Icon Assets & Pictograms
 
-This directory contains the complete visual asset collection for all **34 verified sports** on KhelGrid.
+This directory contains the complete visual asset collection for all **35 verified sports** on KhelGrid.
 
 ## Architecture & Storage Structure
 
 1. **Sprite Sheet (`sport-icons.svg`)**:
-   - A single, optimized SVG sprite containing `<symbol id="...">` elements for each of the 34 sports.
+   - A single, optimized SVG sprite containing `<symbol id="...">` elements for each of the 35 sports.
    - Referenced client-side by `<use href="/assets/sports/sport-icons.svg#<slug>" />` via the React component `src/shared/sports/sportIcons.tsx` (`<SportIcon name="..." />`).
    - Ensures ultra-low latency, zero layout shift, and instant rendering with no additional network waterfalls.
 
 2. **Standalone Sport SVGs (`<slug>.svg`)**:
-   - Dedicated standalone 64×64 SVG files for all 34 sports.
+   - Dedicated standalone 64×64 SVG files for all 35 sports.
    - Useful for external consumers, Open Graph preview metadata, native web manifests, and direct image references (`<img src="/assets/sports/<slug>.svg" />`).
 
-## Directory Manifest (All 34 Sports)
+## Directory Manifest (All 35 Sports)
 
 | # | Sport Name | SVG Slug | Standalone File | Sprite Symbol ID |
 |---|---|---|---|---|
@@ -36,21 +36,22 @@ This directory contains the complete visual asset collection for all **34 verifi
 | 17 | Judo | `judo` | `judo.svg` | `#judo` |
 | 18 | Kabaddi | `kabaddi` | `kabaddi.svg` | `#kabaddi` |
 | 19 | Karate | `karate` | `karate.svg` | `#karate` |
-| 20 | Martial Arts | `martial-arts` | `martial-arts.svg` | `#martial-arts` |
-| 21 | Pickleball | `pickleball` | `pickleball.svg` | `#pickleball` |
-| 22 | Rowing | `rowing` | `rowing.svg` | `#rowing` |
-| 23 | Rugby | `rugby` | `rugby.svg` | `#rugby` |
-| 24 | Shooting | `shooting` | `shooting.svg` | `#shooting` |
-| 25 | Skating | `skating` | `skating.svg` | `#skating` |
-| 26 | Squash | `squash` | `squash.svg` | `#squash` |
-| 27 | Swimming | `swimming` | `swimming.svg` | `#swimming` |
-| 28 | Table Tennis | `table-tennis` | `table-tennis.svg` | `#table-tennis` |
-| 29 | Taekwondo | `taekwondo` | `taekwondo.svg` | `#taekwondo` |
-| 30 | Tennis | `tennis` | `tennis.svg` | `#tennis` |
-| 31 | Volleyball | `volleyball` | `volleyball.svg` | `#volleyball` |
-| 32 | Weightlifting | `weightlifting` | `weightlifting.svg` | `#weightlifting` |
-| 33 | Wrestling | `wrestling` | `wrestling.svg` | `#wrestling` |
-| 34 | Yoga | `yoga` | `yoga.svg` | `#yoga` |
+| 20 | Lacrosse | `lacrosse` | `lacrosse.svg` | `#lacrosse` |
+| 21 | Martial Arts | `martial-arts` | `martial-arts.svg` | `#martial-arts` |
+| 22 | Pickleball | `pickleball` | `pickleball.svg` | `#pickleball` |
+| 23 | Rowing | `rowing` | `rowing.svg` | `#rowing` |
+| 24 | Rugby | `rugby` | `rugby.svg` | `#rugby` |
+| 25 | Shooting | `shooting` | `shooting.svg` | `#shooting` |
+| 26 | Skating | `skating` | `skating.svg` | `#skating` |
+| 27 | Squash | `squash` | `squash.svg` | `#squash` |
+| 28 | Swimming | `swimming` | `swimming.svg` | `#swimming` |
+| 29 | Table Tennis | `table-tennis` | `table-tennis.svg` | `#table-tennis` |
+| 30 | Taekwondo | `taekwondo` | `taekwondo.svg` | `#taekwondo` |
+| 31 | Tennis | `tennis` | `tennis.svg` | `#tennis` |
+| 32 | Volleyball | `volleyball` | `volleyball.svg` | `#volleyball` |
+| 33 | Weightlifting | `weightlifting` | `weightlifting.svg` | `#weightlifting` |
+| 34 | Wrestling | `wrestling` | `wrestling.svg` | `#wrestling` |
+| 35 | Yoga | `yoga` | `yoga.svg` | `#yoga` |
 
 ## Usage Guidelines
 

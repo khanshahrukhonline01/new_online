@@ -1642,6 +1642,41 @@ export const ALL_SPORTS_DATA: Record<string, SportDetailData> = {
       'Train high-intensity interval sprints (HIIT) replicating Rugby 7s breakdown intensity.',
     ],
   },
+  lacrosse: {
+    id: 'lacrosse',
+    slug: 'lacrosse',
+    name: 'Lacrosse',
+    hindiName: 'लैक्रोस',
+    tagline: 'A fast-paced stick-and-ball team sport with field, box and Sixes disciplines.',
+    category: 'Emerging Sport',
+    governingBody: {
+      name: 'World Lacrosse (international); Lacrosse Association of India (national)',
+      shortName: 'World Lacrosse / LAI',
+      headquarters: 'Colorado Springs, Colorado, USA (World Lacrosse)',
+      website: 'https://worldlacrosse.sport',
+    },
+    olympicStatus: 'Men’s and women’s Sixes lacrosse are included in the Los Angeles 2028 Olympic programme.',
+    popularTournaments: ['World Lacrosse Sixes Championships', 'Asia-Pacific Sixes Lacrosse Championships', 'The World Games'],
+    keyAgeCategories: ['Youth', 'Junior', 'Senior'],
+    selectionPathway: [
+      { stage: '1. Local clubs and state associations', description: 'Find an established local programme and ask the Lacrosse Association of India about current participation and state-association pathways.' },
+      { stage: '2. National competition and selection', description: 'Follow official Lacrosse Association of India announcements for national camps, team selection and competition eligibility.' },
+      { stage: '3. International Sixes pathway', description: 'World Lacrosse continental championships and the Sixes Championships form part of the published LA28 qualification pathway.' },
+    ],
+    skillsEvaluated: ['Stick handling and ball control', 'Passing and catching on the move', 'Shooting accuracy', 'Agility and change of direction', 'Defensive footwork and safe body positioning', 'Team communication and transition play'],
+    equipment: ['Lacrosse stick appropriate to the discipline and player', 'Lacrosse ball', 'Sport-specific protective equipment required by the applicable rules', 'Suitable athletic footwear'],
+    popularCenters: [],
+    notableIcons: [],
+    description: 'Lacrosse is a team sport played with a stick and ball. Its international disciplines include field, box and Sixes lacrosse. Sixes is a compact, fast-paced format selected for the men’s and women’s competitions at Los Angeles 2028. In India, the Lacrosse Association of India provides the national association route; check its current notices for participation and state-association information.',
+    saiQuotaBenefits: 'KhelGrid does not currently list a lacrosse-specific SAI sports-quota benefit. Check the latest official recruitment or admission notice before relying on any quota claim.',
+    trainingTips: [
+      'Build bilateral stick-handling skills and practise catching with both hands.',
+      'Develop passing accuracy while moving at different speeds.',
+      'Use progressive agility and acceleration drills with adequate recovery.',
+      'Learn safe defensive positioning and the current rules for your discipline.',
+    ],
+  },
+
 }
 
 export function getSportDataBySlug(slug: string): SportDetailData | undefined {

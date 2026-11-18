@@ -36,6 +36,7 @@ export const sportIconManifest = [
   { id: 'fencing', label: 'Fencing' },
   { id: 'equestrian', label: 'Equestrian' },
   { id: 'judo', label: 'Judo' },
+  { id: 'lacrosse', label: 'Lacrosse' },
 ] as const
 
 export type SportIconId = typeof sportIconManifest[number]['id']

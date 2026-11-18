@@ -32,6 +32,7 @@ const khelchronicleCategories = new Set([
   'sports-analytics',
   'sports-policy',
 ])
+  '/play/lacrosse-sixes': 'Lacrosse Sixes Arcade Game',
 const featurePages: Record<string, string> = {
   '/dashboard': 'My Dashboard', '/host': 'Host & Partner Dashboard', '/partner-dashboard': 'Host & Partner Dashboard', '/live': 'Live Scores', '/live-scores': 'Live Scores', '/play': 'Play · Find Games',
   '/coaches': 'Coaches Directory', '/events': 'Events & Tournaments',
