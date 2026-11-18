@@ -1,5 +1,4 @@
 import { SHOWCASE_ATHLETE_PROFILES } from '../../integrations/supabase/athlete-profile-client'
-import { formatTechnicalIndicators } from '../../shared/data/sportRolesData'
 
 export type ScoutAgeGroup = 'U-14' | 'U-16' | 'U-17' | 'U-19' | 'Senior'
 export type ScoutGender = 'Male' | 'Female'
@@ -37,20 +36,9 @@ export interface ScoutAthlete {
   guardianOrCoachContact: string
   username?: string
   videoClipsCount?: number
-  // Technical Scouting Indicators & Role Presets (Improvement 6)
-  technicalIndicators?: string
-  battingStyle?: string
-  bowlingStyle?: string
-  preferredFoot?: string
-  tacticalPosition?: string
-  athleticsEvent?: string
-  personalBest?: string
-  seasonBest?: string
-  playingStyle?: string
-  racketHand?: string
-  signatureMove?: string
 }
 
+/** Synthetic UI/test fixtures only; never treat these records as real or verified athletes. */
 export const BASELINE_SCOUT_ATHLETES: ScoutAthlete[] = [
   {
     id: 'scout-ath-01',
@@ -81,9 +69,6 @@ export const BASELINE_SCOUT_ATHLETES: ScoutAthlete[] = [
     heightCm: 188,
     weightKg: 76,
     dominantSide: 'Right Handed / Fast',
-    battingStyle: 'Right-Hand Bat (RHB)',
-    bowlingStyle: 'Right-Arm Fast (135+ km/h)',
-    technicalIndicators: 'Batting: Right-Hand Bat (RHB) · Bowling: Right-Arm Fast (135+ km/h)',
     scoutingSummary: 'Tall, high-arm action with natural seam presentation. Consistently clocks 134-138 km/h with late movement into right-handers. High stamina in multi-spell tests.',
     guardianOrCoachContact: 'Coach D.K. Tyagi (BCCI Level 2) · contact@bhamashahcricket.in',
   },
@@ -116,10 +101,6 @@ export const BASELINE_SCOUT_ATHLETES: ScoutAthlete[] = [
     heightCm: 172,
     weightKg: 58,
     dominantSide: 'Left Stride Lead',
-    athleticsEvent: '400m Sprint',
-    personalBest: '53.82s',
-    seasonBest: '54.10s',
-    technicalIndicators: 'Event: 400m Sprint · PB: 53.82s · SB: 54.10s',
     scoutingSummary: 'Outstanding stride frequency and lactate tolerance. Splits second 200m with remarkable endurance pacing. Top recommendation for national junior relay squad.',
     guardianOrCoachContact: 'Academy Director Office · ushaschool@kerala.org',
   },
@@ -152,9 +133,6 @@ export const BASELINE_SCOUT_ATHLETES: ScoutAthlete[] = [
     heightCm: 174,
     weightKg: 64,
     dominantSide: 'Both Feet (Preferred Right)',
-    preferredFoot: 'Both Feet (Ambidextrous)',
-    tacticalPosition: 'Box-to-Box Midfielder',
-    technicalIndicators: 'Foot: Both Feet (Ambidextrous) · Role: Box-to-Box Midfielder',
     scoutingSummary: 'Relentless work rate across 90 minutes. 86% pass completion under high press; exceptional spatial awareness and transitional ball recoveries.',
     guardianOrCoachContact: 'Head Coach Vanlalzuala · aizawlfcacademy@mfa.org',
   },
@@ -187,9 +165,6 @@ export const BASELINE_SCOUT_ATHLETES: ScoutAthlete[] = [
     heightCm: 168,
     weightKg: 55,
     dominantSide: 'Right Handed',
-    racketHand: 'Right-Handed',
-    playingStyle: 'Attacking Singles (Smash & Net Domination)',
-    technicalIndicators: 'Hand: Right-Handed · Style: Attacking Singles (Smash & Net Domination)',
     scoutingSummary: 'Explosive baseline-to-net recovery time (under 1.1s). Aggressive steep overhead smash combined with deceptive cross-court drop shots.',
     guardianOrCoachContact: 'Coach Nikhil Kanetkar (Olympian) · info@nkba.org',
   },
@@ -221,8 +196,6 @@ export const BASELINE_SCOUT_ATHLETES: ScoutAthlete[] = [
     heightCm: 183,
     weightKg: 82,
     dominantSide: 'Right Corner',
-    signatureMove: 'Ankle Hold (Kona Catch)',
-    technicalIndicators: 'Signature Move: Ankle Hold (Kona Catch)',
     scoutingSummary: 'Incredible grip strength and ankle-hold timing. Excellent communication anchoring the chain defense under pressure.',
     guardianOrCoachContact: 'Coach Harpreet Singh · contact@grewalsports.org',
   },
@@ -470,7 +443,6 @@ export function generateScoutShortlistCsv(athletes: ScoutAthlete[]): string {
     'State',
     'Academy',
     'Federation UID',
-    'Technical Indicators',
     'Percentile Rank',
     '30m Sprint (s)',
     'Vertical Jump (cm)',
@@ -492,7 +464,6 @@ export function generateScoutShortlistCsv(athletes: ScoutAthlete[]): string {
     `"${a.state}"`,
     `"${a.academy.replace(/"/g, '""')}"`,
     `"${a.federationUid}"`,
-    `"${(a.technicalIndicators || 'N/A').replace(/"/g, '""')}"`,
     `${a.percentileRank}%`,
     a.metrics.sprint30mSeconds || 'N/A',
     a.metrics.cmjHeightCm || 'N/A',
@@ -676,32 +647,6 @@ export function mapProfileToScoutAthlete(row: Record<string, unknown>): ScoutAth
   const rawClips = row.video_clips || row.videoClips
   const videoClipsCount = Array.isArray(rawClips) ? rawClips.length : 0
 
-  const battingStyle = (row.batting_style || row.battingStyle) as string | undefined
-  const bowlingStyle = (row.bowling_style || row.bowlingStyle) as string | undefined
-  const preferredFoot = (row.preferred_foot || row.preferredFoot) as string | undefined
-  const tacticalPosition = (row.tactical_position || row.tacticalPosition) as string | undefined
-  const athleticsEvent = (row.athletics_event || row.athleticsEvent) as string | undefined
-  const personalBest = (row.personal_best || row.personalBest) as string | undefined
-  const seasonBest = (row.season_best || row.seasonBest) as string | undefined
-  const playingStyle = (row.playing_style || row.playingStyle) as string | undefined
-  const racketHand = (row.racket_hand || row.racketHand) as string | undefined
-  const signatureMove = (row.signature_move || row.signatureMove) as string | undefined
-
-  const technicalIndicators = formatTechnicalIndicators({
-    sport,
-    battingStyle,
-    bowlingStyle,
-    preferredFoot,
-    tacticalPosition,
-    athleticsEvent,
-    personalBest,
-    seasonBest,
-    playingStyle,
-    racketHand,
-    signatureMove,
-    primaryFootOrHand: String(row.primary_foot_or_hand || row.primaryFootOrHand || ''),
-  })
-
   return {
     id: String(row.id || row.username || `scout-gen-${Date.now()}`),
     name: String(row.full_name || row.fullName || 'Grassroots Athlete'),
@@ -732,17 +677,6 @@ export function mapProfileToScoutAthlete(row: Record<string, unknown>): ScoutAth
         ? row.weightKg
         : 68,
     dominantSide: String(row.primary_foot_or_hand || row.primaryFootOrHand || 'Right-dominant'),
-    technicalIndicators: technicalIndicators && technicalIndicators !== '—' ? technicalIndicators : undefined,
-    battingStyle,
-    bowlingStyle,
-    preferredFoot,
-    tacticalPosition,
-    athleticsEvent,
-    personalBest,
-    seasonBest,
-    playingStyle,
-    racketHand,
-    signatureMove,
     scoutingSummary: String(
       row.summary ||
         `${position} with high potential and verified normative benchmark percentiles tracked via KhelGrid.`
@@ -762,13 +696,15 @@ export function clearScoutAthletesCache(): void {
 }
 
 export async function getScoutAthletes(forceRefresh = false): Promise<ScoutAthlete[]> {
-  if (!forceRefresh && scoutAthletesCache && scoutAthletesCache.length > 0) {
+  if (!forceRefresh && scoutAthletesCache !== null) {
     return scoutAthletesCache
   }
 
   const candidateList: ScoutAthlete[] = []
 
-  // 1. Fetch live published profiles from Supabase if configured
+  // Public athlete discovery is fail-closed until a consent-gated, sanitized
+  // directory endpoint is available. A direct table read or browser cache is
+  // not evidence of consent to be discoverable by scouts.
   if (supabaseUrl && anonKey) {
     try {
       const response = await fetch(
@@ -792,46 +728,48 @@ export async function getScoutAthletes(forceRefresh = false): Promise<ScoutAthle
         }
       }
     } catch {
-      // Network/offline fallback
+      // Keep the public directory empty when the protected source is unavailable.
     }
   }
 
-  // 2. Load locally cached published profiles from /sports-cv
-  if (typeof window !== 'undefined' && window.localStorage) {
-    try {
-      const rawLocal = window.localStorage.getItem(LOCAL_STORAGE_PROFILES_KEY)
-      if (rawLocal) {
-        const parsed = JSON.parse(rawLocal) as Record<string, unknown>
-        if (parsed && typeof parsed === 'object') {
-          for (const val of Object.values(parsed)) {
-            if (val && typeof val === 'object') {
-              candidateList.push(mapProfileToScoutAthlete(val as Record<string, unknown>))
+  // Sample data are retained for isolated local development only. They are
+  // never included in a deployed public scout directory or production build.
+  const allowLocalDemoFixtures =
+    import.meta.env.DEV &&
+    (import.meta.env as Record<string, unknown>).VITE_ENABLE_DEMO_ATHLETE_FIXTURES === 'true'
+
+  if (allowLocalDemoFixtures) {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const rawLocal = window.localStorage.getItem(LOCAL_STORAGE_PROFILES_KEY)
+        if (rawLocal) {
+          const parsed = JSON.parse(rawLocal) as Record<string, unknown>
+          if (parsed && typeof parsed === 'object') {
+            for (const val of Object.values(parsed)) {
+              if (val && typeof val === 'object') {
+                candidateList.push(mapProfileToScoutAthlete(val as Record<string, unknown>))
+              }
             }
           }
         }
+      } catch {
+        // Ignore local demo cache parsing errors.
       }
-    } catch {
-      // Storage parsing fallback
     }
+
+    for (const profile of Object.values(SHOWCASE_ATHLETE_PROFILES)) {
+      candidateList.push(mapProfileToScoutAthlete(profile as unknown as Record<string, unknown>))
+    }
+    candidateList.push(...BASELINE_SCOUT_ATHLETES)
   }
 
-  // 3. Include pre-seeded high-performance showcase profiles
-  for (const prof of Object.values(SHOWCASE_ATHLETE_PROFILES)) {
-    candidateList.push(mapProfileToScoutAthlete(prof as unknown as Record<string, unknown>))
-  }
-
-  // 4. Include baseline curated showcase athletes
-  candidateList.push(...BASELINE_SCOUT_ATHLETES)
-
-  // 5. Deduplicate by username/name/id (preserving newest / highest priority)
   const seenKeys = new Set<string>()
   const merged: ScoutAthlete[] = []
-
-  for (const ath of candidateList) {
-    const dedupeKey = (ath.username || ath.name).toLowerCase().trim()
+  for (const athlete of candidateList) {
+    const dedupeKey = (athlete.username || athlete.name).toLowerCase().trim()
     if (!seenKeys.has(dedupeKey)) {
       seenKeys.add(dedupeKey)
-      merged.push(ath)
+      merged.push(athlete)
     }
   }
 
