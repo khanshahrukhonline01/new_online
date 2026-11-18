@@ -21,6 +21,20 @@
   border-radius: 999px;
 }
 
+.breadcrumb-khel-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: monospace;
+}
+
 /* Two-column layout */
 .athlete-profile-layout {
   display: grid;
@@ -40,7 +54,150 @@
 .athlete-card-column {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+}
+
+.btn-export-dossier-pdf {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  padding: 11px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-export-dossier-pdf:hover {
+  background: #38bdf8;
+  color: #0b0f17;
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.3);
+}
+
+/* Coach Endorsement Banner */
+.coach-endorsed-banner {
+  background: linear-gradient(135deg, rgba(180, 83, 9, 0.15) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 14px;
+  padding: 16px;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.endorsed-badge-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fbbf24;
+}
+
+.endorsed-by {
+  margin: 0;
+  font-size: 13px;
+  color: #fef08a;
+}
+
+.endorsed-by strong {
+  color: #fff;
+}
+
+.endorsed-license {
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.endorsed-org {
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.endorsed-quote {
+  margin: 6px 0;
+  padding-left: 10px;
+  border-left: 2px solid #fbbf24;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #e2e8f0;
+  font-style: italic;
+}
+
+.endorsed-footer-strip {
+  margin-top: 4px;
+  font-size: 10px;
+  font-family: monospace;
+  color: #64748b;
+}
+
+/* Coach Endorsement Prompt Card */
+.coach-endorse-prompt-card {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px dashed rgba(251, 191, 36, 0.3);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.coach-endorse-prompt-card h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.coach-endorse-prompt-card p {
+  margin: 0 0 12px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+.btn-request-endorsement {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-request-endorsement:hover {
+  background: #fbbf24;
+  color: #0b0f17;
+}
+
+.bio-coach-endorsed-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  color: #fbbf24;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .scout-contact-card {

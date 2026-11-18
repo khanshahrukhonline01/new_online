@@ -5,7 +5,7 @@
   padding: 32px 0;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(var(--accent-rgb, 16, 185, 129), 0.02) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.02) 0%, transparent 100%);
   width: 100%;
 }
 
@@ -38,23 +38,23 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background-color: var(--accent, #10b981);
-  box-shadow: 0 0 0 0 rgba(var(--accent-rgb, 16, 185, 129), 0.7);
+  background-color: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
   animation: chroniclePulse 2s infinite;
 }
 
 @keyframes chroniclePulse {
   0% {
     transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(var(--accent-rgb, 16, 185, 129), 0.7);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
   }
   70% {
     transform: scale(1);
-    box-shadow: 0 0 0 6px rgba(var(--accent-rgb, 16, 185, 129), 0);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
   }
   100% {
     transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(var(--accent-rgb, 16, 185, 129), 0);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
   }
 }
 
@@ -63,9 +63,9 @@
   align-items: center;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(var(--accent-rgb, 16, 185, 129), 0.12);
-  color: var(--accent, #10b981);
-  border: 1px solid rgba(var(--accent-rgb, 16, 185, 129), 0.25);
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -111,13 +111,13 @@
 }
 
 .home-chronicle-bookmark-filter-btn:hover {
-  border-color: var(--accent, #10b981);
+  border-color: #10b981;
 }
 
 .home-chronicle-bookmark-filter-btn.active {
-  background: rgba(var(--accent-rgb, 16, 185, 129), 0.12);
-  border-color: var(--accent, #10b981);
-  color: var(--accent, #10b981);
+  background: rgba(16, 185, 129, 0.12);
+  border-color: #10b981;
+  color: #10b981;
 }
 
 .home-chronicle-view-all-pill {
@@ -241,7 +241,7 @@
 }
 
 .home-chronicle-card:hover {
-  border-color: rgba(var(--accent-rgb, 16, 185, 129), 0.4);
+  border-color: rgba(16, 185, 129, 0.4);
   box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.12);
   transform: translateY(-2px);
 }
@@ -311,14 +311,14 @@
 }
 
 .home-chronicle-bookmark-btn:hover {
-  color: var(--accent, #10b981);
-  border-color: var(--accent, #10b981);
+  color: #10b981;
+  border-color: #10b981;
 }
 
 .home-chronicle-bookmark-btn.is-bookmarked {
-  background: rgba(var(--accent-rgb, 16, 185, 129), 0.12);
-  border-color: var(--accent, #10b981);
-  color: var(--accent, #10b981);
+  background: rgba(16, 185, 129, 0.12);
+  border-color: #10b981;
+  color: #10b981;
 }
 
 .home-chronicle-card-title {
@@ -336,7 +336,7 @@
 }
 
 .home-chronicle-card-title-link:hover {
-  color: var(--accent, #10b981);
+  color: #10b981;
 }
 
 .home-chronicle-author-row {
@@ -379,9 +379,9 @@
 
 /* User Retention: Takeaway Box */
 .home-chronicle-takeaway-box {
-  background: rgba(var(--accent-rgb, 16, 185, 129), 0.05);
-  border: 1px solid rgba(var(--accent-rgb, 16, 185, 129), 0.2);
-  border-left: 3px solid var(--accent, #10b981);
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-left: 3px solid #10b981;
   border-radius: 8px;
   padding: 10px 12px;
   margin-bottom: 14px;
@@ -399,7 +399,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--accent, #10b981);
+  color: #10b981;
 }
 
 .home-chronicle-takeaway-badge {
@@ -488,10 +488,10 @@
 }
 
 .home-chronicle-abstract-part.highlight {
-  background: rgba(var(--accent-rgb, 16, 185, 129), 0.08);
+  background: rgba(16, 185, 129, 0.08);
   padding: 6px 8px;
   border-radius: 6px;
-  border-left: 2px solid var(--accent, #10b981);
+  border-left: 2px solid #10b981;
 }
 
 /* Bridge Row */
@@ -631,7 +631,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--accent, #10b981);
+  color: #10b981;
   margin-bottom: 6px;
 }
 
@@ -662,7 +662,7 @@
   gap: 6px;
   padding: 8px 16px;
   border-radius: 8px;
-  background: var(--accent, #10b981);
+  background: #10b981;
   color: #ffffff;
   font-size: 12px;
   font-weight: 700;
@@ -671,7 +671,7 @@
 }
 
 .home-chronicle-submit-btn:hover {
-  background: var(--accent, #059669);
+  background: #059669;
 }
 
 .home-chronicle-browse-all-btn {

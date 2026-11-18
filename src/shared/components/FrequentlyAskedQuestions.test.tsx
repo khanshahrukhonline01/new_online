@@ -122,4 +122,37 @@ describe('FrequentlyAskedQuestions component for SEO, Ranking & Thin-Content mit
       expect(html).toContain('What is the &quot;Start From Zero&quot; athletic roadmap for young athletes and parents?')
     }
   })
+
+  it('renders Khel ID & Sports CV FAQs on /sports-cv', () => {
+    const html = renderToStaticMarkup(<FrequentlyAskedQuestions activePath="/sports-cv" />)
+    expect(html).toContain('Khel ID &amp; Athlete Sports CV FAQ')
+    expect(html).toContain('"@type":"FAQPage"')
+    expect(html).toContain('What is Khel ID (खेल आईडी) and how do athletes create and download their digital sports ID card?')
+    expect(html).toContain('What is the KhelGrid Sports CV and how does it help athletes get scouted?')
+    expect(html).toContain('Official Sports Credential')
+  })
+
+  it('renders Academies & SAI Coaching FAQs on /academies and /train', () => {
+    const html = renderToStaticMarkup(<FrequentlyAskedQuestions activePath="/academies" />)
+    expect(html).toContain('Sports Academies &amp; SAI Coaching FAQ')
+    expect(html).toContain('"@type":"FAQPage"')
+    expect(html).toContain('How do I find Khelo India accredited sports academies and SAI NCOE training centers near me?')
+    expect(html).toContain('How can I compare fees, admission batches, and coach certifications across sports academies?')
+    expect(html).toContain('SAI NCOE &amp; Khelo India')
+  })
+
+  it('renders KhelChronicle Sports Science FAQs on /khelchronicle', () => {
+    const html = renderToStaticMarkup(<FrequentlyAskedQuestions activePath="/khelchronicle" />)
+    expect(html).toContain('KhelChronicle Sports Science FAQ')
+    expect(html).toContain('"@type":"FAQPage"')
+    expect(html).toContain('What sports science research, cricket biomechanics, and normative benchmarks does KhelChronicle publish?')
+    expect(html).toContain('How do coaches and PE teachers use KhelChronicle Yo-Yo test normative standards (KG-2026-002)?')
+    expect(html).toContain('Yo-Yo Norms KG-2026-002')
+  })
+
+  it('renders Box Cricket & Khel Turf questions on /venues', () => {
+    const html = renderToStaticMarkup(<FrequentlyAskedQuestions activePath="/venues" />)
+    expect(html).toContain('How do I find and book a khel turf or box cricket ground near me on KhelGrid?')
+    expect(html).toContain('Box Cricket &amp; Khel Turf')
+  })
 })

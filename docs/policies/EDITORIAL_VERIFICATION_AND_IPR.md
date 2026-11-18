@@ -14,6 +14,9 @@ Define review intervals by record type. Re-check deadlines and status as events 
 ## Copyright and reuse
 Link to original sources and summarize in original wording. Do not copy full articles, photographs, logos, videos, PDFs or database contents without permission or a valid licence/legal basis. Record licence/permission and attribution requirements for each asset. Public accessibility does not imply permission to republish.
 
+## Live sports data, factual commentary and nominative trademark fair use
+Real-time sports match results, scores, wickets, overs and factual match statistics are reported as factual current events under Section 52(1)(a)(iii) of the Indian Copyright Act, 1957. Tournament names (e.g., WPL, ICC Cricket World Cup, IPL), team marks and federation acronyms (BCCI, ICC, AIFF, SAI) are used strictly as nominative identifiers under Section 30 of the Trade Marks Act, 1999 to identify matches and events. KhelGrid is an independent platform and does not claim ownership of, sponsorship by, or official commercial affiliation with any professional league, board, or franchise unless explicitly documented under a written bilateral agreement. IPR notices and questions may be sent to `ipr@khelgrid.com`.
+
 ## Verification integrity
 Define evidence, reviewer role, timestamp, scope and expiry for each verification badge. Make clear what was checked and what was not. Provide a correction/appeal process. Paid placement or sponsorship must not be represented as independent verification.
 

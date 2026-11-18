@@ -17,7 +17,7 @@ export function usePreferences() {
 
   useEffect(() => {
     // Initial DOM synchronization
-    applyThemeToDOM(preferences.theme, preferences.accent)
+    applyThemeToDOM(preferences.theme)
     applyAccessibilityToDOM(preferences.reducedMotion)
 
     function handlePreferencesChange(event: Event) {
@@ -32,32 +32,19 @@ export function usePreferences() {
     function handleSystemThemeChange() {
       const current = getStoredPreferences()
       if (current.theme === 'system') {
-        applyThemeToDOM('system', current.accent)
-      }
-    }
-
-    function handleStorageChange(event: StorageEvent) {
-      if (event.key === null || event.key === 'khelgrid-user-preferences' || event.key === 'khelgrid-theme') {
-        const current = getStoredPreferences()
-        setPreferences(current)
-        applyThemeToDOM(current.theme, current.accent)
-        applyAccessibilityToDOM(current.reducedMotion)
+        applyThemeToDOM('system')
       }
     }
 
     window.addEventListener('khelgrid-preferences-change', handlePreferencesChange)
-    window.addEventListener('storage', handleStorageChange)
     const media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null
-    if (media?.addEventListener) media.addEventListener('change', handleSystemThemeChange)
-    else media?.addListener?.(handleSystemThemeChange)
+    media?.addEventListener?.('change', handleSystemThemeChange)
 
     return () => {
       window.removeEventListener('khelgrid-preferences-change', handlePreferencesChange)
-      window.removeEventListener('storage', handleStorageChange)
-      if (media?.removeEventListener) media.removeEventListener('change', handleSystemThemeChange)
-      else media?.removeListener?.(handleSystemThemeChange)
+      media?.removeEventListener?.('change', handleSystemThemeChange)
     }
-  }, [preferences.theme, preferences.accent, preferences.reducedMotion])
+  }, [preferences.theme, preferences.reducedMotion])
 
   const updatePreferences = useCallback((updates: Partial<UserPreferences>) => {
     const updated = savePreferences(updates)

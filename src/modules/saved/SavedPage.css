@@ -229,7 +229,7 @@
   gap: 6px;
   padding: 9px 16px;
   border-radius: 8px;
-  background: var(--accent, #10b981);
+  background: #10b981;
   color: #ffffff;
   border: none;
   font-size: 13px;
@@ -240,7 +240,7 @@
 }
 
 .saved-btn-export:hover {
-  background: var(--accent-strong, #059669);
+  background: #059669;
   transform: translateY(-1px);
 }
 
@@ -317,7 +317,7 @@
 }
 
 .saved-card.is-venue {
-  border-top: 3px solid var(--accent, #10b981);
+  border-top: 3px solid #10b981;
 }
 
 .saved-card.is-paper {

@@ -38,12 +38,15 @@ describe('Scout Portal Module', () => {
     expect(runner?.verifiedTier).toBe('Tier-1 Verified')
   })
 
-  it('generates valid RFC-4180 CSV scouting dossier with headers and athlete rows', () => {
+  it('generates valid RFC-4180 CSV scouting dossier with headers, athlete rows, and technical indicators', () => {
     const csv = generateScoutShortlistCsv(BASELINE_SCOUT_ATHLETES.slice(0, 3))
 
     expect(csv).toContain('Athlete ID,Name,Sport,Position/Role')
+    expect(csv).toContain('Technical Indicators')
     expect(csv).toContain('Aarav Choudhary')
+    expect(csv).toContain('Right-Arm Fast (135+ km/h)')
     expect(csv).toContain('Kavya R. Nair')
+    expect(csv).toContain('53.82s')
     expect(csv).toContain('Lalrempuia Fanai')
     expect(csv).toContain('30m Sprint (s)')
     expect(csv).toContain('Vertical Jump (cm)')

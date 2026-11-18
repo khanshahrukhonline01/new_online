@@ -184,3 +184,67 @@ export const TOP_CITY_SPORTS_COMPLEXES: CitySportsComplex[] = [
     ],
   },
 ]
+
+export const REGIONAL_CITY_SPORTS_COMPLEXES: CitySportsComplex[] = [
+  {
+    city: 'Kanpur',
+    state: 'Uttar Pradesh',
+    slug: 'kanpur',
+    href: '/city/kanpur',
+    complexes: [
+      'Green Park International Cricket Stadium',
+      'Palika Stadium & Sports Complex',
+      'Kanpur South Ground (Kidwai Nagar)',
+    ],
+  },
+  {
+    city: 'Varanasi',
+    state: 'Uttar Pradesh',
+    slug: 'varanasi',
+    href: '/city/varanasi',
+    complexes: [
+      'Dr. Sampurnanand Sports Stadium (Sigra)',
+      'Varanasi International Cricket Stadium',
+      'Banaras Hindu University (BHU) Sports Ground',
+    ],
+  },
+  {
+    city: 'Meerut',
+    state: 'Uttar Pradesh',
+    slug: 'meerut',
+    href: '/city/meerut',
+    complexes: [
+      'Kailash Prakash Sports Stadium',
+      'Victoria Park Cricket Ground',
+      'Bhangel Sports Complex',
+    ],
+  },
+  {
+    city: 'Jalandhar',
+    state: 'Punjab',
+    slug: 'jalandhar',
+    href: '/city/jalandhar',
+    complexes: [
+      'Burlton Park Sports Stadium',
+      'Surjit Hockey Stadium',
+      'Olympian Surjit Bhullar Arena',
+    ],
+  },
+  {
+    city: 'Indore',
+    state: 'Madhya Pradesh',
+    slug: 'indore',
+    href: '/city/indore',
+    complexes: [
+      'Holkar Cricket Stadium',
+      'Nehru Stadium',
+      'Abhay Prashal Indoor Stadium',
+    ],
+  },
+]
+
+export const ALL_ACTIVE_CITY_HUBS: CitySportsComplex[] = [
+  ...TOP_CITY_SPORTS_COMPLEXES,
+  ...REGIONAL_CITY_SPORTS_COMPLEXES,
+]
+

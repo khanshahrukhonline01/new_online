@@ -1,3 +1,5 @@
+import type { SiteIconName } from '../../../shared/components/SiteIcon'
+
 export interface ResearchAuthor {
   id: string
   name: string
@@ -14,7 +16,7 @@ export interface ResearchCategory {
   name: string
   slug: string
   description: string
-  icon: string
+  icon: SiteIconName
   color: string
 }
 
@@ -39,6 +41,65 @@ export interface ResearchReference {
   doi?: string
 }
 
+export interface OpenScienceBadges {
+  openData: boolean
+  openDataUrl?: string
+  openCode: boolean
+  openCodeUrl?: string
+  preregistered: boolean
+  preregistrationUrl?: string
+}
+
+export interface PeerReviewStatus {
+  status: 'unreviewed' | 'under_review' | 'published_vor'
+  statusLabel: string
+  journalName?: string
+  journalDoi?: string
+  journalUrl?: string
+}
+
+export interface PaperVersionHistory {
+  version: string
+  date: string
+  summary: string
+  isCurrent: boolean
+}
+
+export interface SupplementaryFile {
+  id: string
+  name: string
+  format: string
+  size: string
+  description: string
+  downloadUrl?: string
+}
+
+export interface CoachingTakeaways {
+  en: string[]
+  hi: string[]
+}
+
+export interface PaperComment {
+  id: string
+  author: string
+  affiliation: string
+  role?: string
+  orcid?: string
+  commentType?: 'peer_review' | 'methodological_query' | 'replication_note' | 'general'
+  competingInterests?: string
+  date: string
+  content: string
+  helpfulCount?: number
+  isAuthorResponse?: boolean
+}
+
+export interface ResearchAltmetrics {
+  score: number
+  mentionsTwitter: number
+  policyCitations: number
+  mendeleySaves: number
+}
+
 export interface ResearchPaper {
   id: string
   paperId: string // e.g. "KG-2026-001"
@@ -49,6 +110,19 @@ export interface ResearchPaper {
   categoryName: string
   sport?: string // e.g. "Cricket", "Athletics", "Kabaddi", "Multi-Sport"
   sportSlug?: string // e.g. "cricket", "athletics", "kabaddi", "multi-sport"
+  methodology?: string // e.g. "field-trial", "motion-capture", "ml-analytics", "epidemiology", "policy-survey"
+  methodologyLabel?: string
+  hasInteractiveChart?: boolean
+  hasNormativeBenchmarks?: boolean
+  doi?: string
+  doiUrl?: string
+  openScienceBadges?: OpenScienceBadges
+  peerReviewStatus?: PeerReviewStatus
+  versions?: PaperVersionHistory[]
+  supplementaryFiles?: SupplementaryFile[]
+  coachingTakeaways?: CoachingTakeaways
+  comments?: PaperComment[]
+  altmetrics?: ResearchAltmetrics
   authors: ResearchAuthor[]
   datePublished: string
   dateModified?: string
@@ -96,7 +170,7 @@ export const RESEARCH_CATEGORIES: ResearchCategory[] = [
     name: 'Exercise Physiology',
     slug: 'exercise-physiology',
     description: 'Cardiovascular conditioning, aerobic endurance, VO2 max kinetics, heat acclimatization, and fatigue recovery.',
-    icon: 'zap',
+    icon: 'target',
     color: '#059669',
   },
   {
@@ -112,7 +186,7 @@ export const RESEARCH_CATEGORIES: ResearchCategory[] = [
     name: 'Sports Psychology',
     slug: 'sports-psychology',
     description: 'Competitive anxiety, mental resilience, attentional focus, biofeedback, and athletic cognitive performance.',
-    icon: 'smile',
+    icon: 'user',
     color: '#7c3aed',
   },
   {
@@ -120,7 +194,7 @@ export const RESEARCH_CATEGORIES: ResearchCategory[] = [
     name: 'Sports Medicine',
     slug: 'sports-medicine',
     description: 'Injury epidemiology, musculoskeletal rehabilitation, return-to-play protocols, and age verification methodologies.',
-    icon: 'shield',
+    icon: 'shield-check',
     color: '#dc2626',
   },
   {
@@ -128,7 +202,7 @@ export const RESEARCH_CATEGORIES: ResearchCategory[] = [
     name: 'Sports Analytics',
     slug: 'sports-analytics',
     description: 'Predictive talent modeling, tracking data science, computer vision in sports, and performance probability matrices.',
-    icon: 'bar-chart',
+    icon: 'chart',
     color: '#0d9488',
   },
   {
@@ -156,6 +230,25 @@ export const RESEARCH_SPORTS: ResearchSportFilter[] = [
   { id: 'sport-kabaddi', name: 'Kabaddi', slug: 'kabaddi', icon: 'shield-check', emoji: '🤼' },
   { id: 'sport-multisport', name: 'Multi-Sport & Grassroots', slug: 'multi-sport', icon: 'medal', emoji: '🎯' },
 ]
+
+export interface ResearchMethodology {
+  id: string
+  slug: string
+  name: string
+  shortName: string
+  icon?: string
+}
+
+export const RESEARCH_METHODOLOGIES: ResearchMethodology[] = [
+  { id: 'meth-all', slug: 'all', name: 'All Methodologies', shortName: 'All' },
+  { id: 'meth-field', slug: 'field-trial', name: 'Empirical Field Trials', shortName: 'Field Trials' },
+  { id: 'meth-mocap', slug: 'motion-capture', name: '3D Motion Capture & Kinematics', shortName: '3D Motion Capture' },
+  { id: 'meth-ml', slug: 'ml-analytics', name: 'Machine Learning & Predictive AI', shortName: 'AI & Analytics' },
+  { id: 'meth-epi', slug: 'epidemiology', name: 'Epidemiological Injury Registry', shortName: 'Epidemiology' },
+  { id: 'meth-policy', slug: 'policy-survey', name: 'Policy & Grassroots Surveys', shortName: 'Policy Surveys' },
+]
+
+export type ChronicleSortOption = 'newest' | 'oldest' | 'citations' | 'downloads' | 'reading_time'
 
 /** Synthetic author fixtures for unit tests only; not verified real researchers. */
 export const RESEARCH_AUTHORS: Record<string, ResearchAuthor> = {
@@ -246,6 +339,85 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
   {
     id: 'paper-1',
     paperId: 'KG-2026-001',
+    doi: '10.51224/khelchronicle.2026.001',
+    doiUrl: 'https://doi.org/10.51224/khelchronicle.2026.001',
+    openScienceBadges: {
+      openData: true,
+      openDataUrl: 'https://zenodo.org/records/kg-2026-001-fast-bowling-kinematics',
+      openCode: true,
+      openCodeUrl: 'https://github.com/khelgrid-dotcom/bowling-biomechanics-toolkit',
+      preregistered: true,
+      preregistrationUrl: 'https://osf.io/prereg/kg-2026-001',
+    },
+    peerReviewStatus: {
+      status: 'under_review',
+      statusLabel: 'Preprint · Under Review at Journal of Sports Sciences',
+      journalName: 'Journal of Sports Sciences',
+    },
+    versions: [
+      { version: 'v1.1', date: '2026-10-29', summary: 'Added dual force-plate kinetic vectors and calibration documentation', isCurrent: true },
+      { version: 'v1.0', date: '2026-10-24', summary: 'Initial pre-moderated preprint deposit', isCurrent: false },
+    ],
+    supplementaryFiles: [
+      { id: 'supp-1', name: 'KG-2026-001-raw-telemetry.csv', format: 'CSV', size: '2.8 MB', description: 'Synchronous dual Kistler 250 Hz ground reaction force and lumbar angle time series' },
+      { id: 'supp-2', name: 'KG-2026-001-mocap-protocol.pdf', format: 'PDF', size: '1.4 MB', description: 'Retroreflective anatomical marker set coordinates and calibration SOP' },
+    ],
+    coachingTakeaways: {
+      en: [
+        'Maintain shoulder counter-rotation under 25° to safeguard the lumbar pars interarticularis.',
+        'Train eccentric hamstring strength to absorb the 8.4x bodyweight braking impact at front-foot strike.',
+        'Prioritize bowling action screening at U-16 combines before bowling workloads spike in multi-day tournaments.',
+      ],
+      hi: [
+        'रीढ़ की हड्डी (L4-L5) पर तनाव कम करने के लिए शोल्डर काउंटर-रोटेशन को 25° से कम रखें।',
+        'फ्रंट फुट लैंडिंग पर 8.4 गुना बॉडीवेट लोड को संभालने के लिए हैमस्ट्रिंग की शक्ति बढ़ाएं।',
+        'लंबे घरेलू टूर्नामेंट में लोड बढ़ाने से पहले अंडर-16 स्तर पर एक्शन स्क्रीनिंग अनिवार्य रूप से करें।',
+      ],
+    },
+    comments: [
+      {
+        id: 'c1',
+        author: 'Dr. Ramesh Sundaram',
+        affiliation: 'National Cricket Academy (NCA), Bengaluru',
+        role: 'Lead Fast Bowling Biomechanist',
+        orcid: '0000-0002-1944-5511',
+        commentType: 'replication_note',
+        competingInterests: 'None declared',
+        date: '2026-10-31',
+        content: 'Crucial kinetic baseline for Indian conditions. The 32.5° threshold corresponds directly with the pars stress reactions we diagnose in junior pacers. We have incorporated this cutoff into our talent camp movement screen.',
+        helpfulCount: 8,
+      },
+      {
+        id: 'c2',
+        author: 'Coach Kuldeep Yadav',
+        affiliation: 'Delhi & District Cricket Association (DDCA)',
+        role: 'Pace Bowling Coach',
+        commentType: 'methodological_query',
+        competingInterests: 'None declared',
+        date: '2026-11-04',
+        content: 'The coaching cues on front-leg brace mechanics are immediately applicable on the nets. Excellent work making this open-access for state coaches.',
+        helpfulCount: 4,
+      },
+      {
+        id: 'c3',
+        author: 'Dr. Vikramaditya Rathore',
+        affiliation: 'National Institute of Sports (NIS), Patiala',
+        role: 'Lead Author / Senior Biomechanist',
+        orcid: '0000-0002-8941-4412',
+        commentType: 'peer_review',
+        competingInterests: 'Preprint lead author',
+        isAuthorResponse: true,
+        date: '2026-11-05',
+        content: 'Thank you Dr. Sundaram and Coach Yadav. We are currently calibrating dual IMU sensor thresholds to replicate these optical motion-capture cutoffs directly in academy net sessions.',
+        helpfulCount: 12,
+      },
+    ],
+    altmetrics: {
+      score: 48,
+      mentionsTwitter: 24,
+      policyCitations: 2,
+      mendeleySaves: 142,
+    },
     slug: 'kinematic-correlates-lumbar-spine-stress-fast-bowlers',
     title: 'Kinematic Correlates of Lumbar Spine Stress and Ball Release Velocity in Indian Junior Fast Bowlers: A Multi-Centre Motion Capture Study',
     subtitle: 'Investigation of front-foot contact ground reaction forces, shoulder counter-rotation, and lumbar bone stress injury epidemiology across 85 elite U-19 fast bowlers',
@@ -253,6 +425,10 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     categoryName: 'Sports Biomechanics',
     sport: 'Cricket',
     sportSlug: 'cricket',
+    methodology: 'motion-capture',
+    methodologyLabel: '3D Motion Capture & Kinematics',
+    hasInteractiveChart: true,
+    hasNormativeBenchmarks: false,
     authors: [
       RESEARCH_AUTHORS['dr-vikramaditya-rathore'],
       RESEARCH_AUTHORS['dr-alok-sen'],
@@ -349,6 +525,73 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
   {
     id: 'paper-2',
     paperId: 'KG-2026-002',
+    doi: '10.51224/khelchronicle.2026.002',
+    doiUrl: 'https://doi.org/10.51224/khelchronicle.2026.002',
+    openScienceBadges: {
+      openData: true,
+      openDataUrl: 'https://zenodo.org/records/kg-2026-002-yoyo-norms',
+      openCode: true,
+      openCodeUrl: 'https://github.com/khelgrid-dotcom/yoyo-percentiles',
+      preregistered: true,
+      preregistrationUrl: 'https://osf.io/prereg/kg-2026-002',
+    },
+    peerReviewStatus: {
+      status: 'published_vor',
+      statusLabel: 'Version of Record Published in Indian J. Exercise Physiology',
+      journalName: 'Indian Journal of Exercise Physiology',
+      journalDoi: '10.51224/ijep.2026.012',
+    },
+    versions: [
+      { version: 'v1.0', date: '2026-10-18', summary: 'Initial pre-moderated preprint deposit', isCurrent: true },
+    ],
+    supplementaryFiles: [
+      { id: 'supp-2-1', name: 'KG-2026-002-normative-tables.xlsx', format: 'XLSX', size: '1.2 MB', description: 'Stratified centile tables across 16 Indian metropolitan and rural testing centres' },
+      { id: 'supp-2-2', name: 'KG-2026-002-audio-calibration.wav', format: 'WAV', size: '4.6 MB', description: 'Standardized acoustic pacing signal verified against electronic timing gates' },
+    ],
+    coachingTakeaways: {
+      en: [
+        'Target ≥ 1,840m Yo-Yo IR1 distance for U-16 elite midfield selection.',
+        'Use Indian subcontinental norms rather than European benchmarks to avoid misclassification.',
+        'Repeat testing every 8 weeks in standardized thermal conditions (< 30°C).',
+      ],
+      hi: [
+        'अंडर-16 एलीट स्तर के लिए यो-यो IR1 में 1,840 मीटर या अधिक का लक्ष्य निर्धारित करें।',
+        'भारतीय खिलाड़ियों के वास्तविक मूल्यांकन के लिए केवल भारतीय नॉर्मेटिव डेटा का ही उपयोग करें।',
+        'सटीक परिणाम के लिए हर 8 सप्ताह में एक समान तापमान (< 30°C) में परीक्षण दोहराएं।',
+      ],
+    },
+    comments: [
+      {
+        id: 'c2-1',
+        author: 'Dr. Sandeep K.',
+        affiliation: 'Sports Authority of India (SAI), Kolkata',
+        role: 'Exercise Physiologist',
+        orcid: '0000-0001-9022-4410',
+        commentType: 'replication_note',
+        competingInterests: 'None declared',
+        date: '2026-10-22',
+        content: 'The first comprehensive multi-city Yo-Yo percentile dataset. Essential reference for SAI state talent testing.',
+        helpfulCount: 15,
+      },
+      {
+        id: 'c2-2',
+        author: 'Dr. Anita Joshi',
+        affiliation: 'AIIMS Sports Medicine, New Delhi',
+        role: 'Clinical Exercise Specialist',
+        orcid: '0000-0003-8812-3001',
+        commentType: 'peer_review',
+        competingInterests: 'None declared',
+        date: '2026-10-25',
+        content: 'Methodological rigor across the 16 centres is commendable. The thermal calibration protocol ensured robust VO2 max estimation despite regional humidity variations.',
+        helpfulCount: 9,
+      },
+    ],
+    altmetrics: {
+      score: 74,
+      mentionsTwitter: 42,
+      policyCitations: 4,
+      mendeleySaves: 280,
+    },
     slug: 'normative-fitness-percentiles-grassroots-athletes-india',
     title: 'Normative Physical Fitness Percentiles (Yo-Yo IR1, 30m Sprint, Countermovement Jump) Across 4,800 Grassroots Athletes in 16 Indian Metropolitan and Rural Districts',
     subtitle: 'A foundational reference dataset for objective talent identification and physical conditioning benchmarks across U-14, U-16, U-19, and Senior Open age brackets',
@@ -356,6 +599,10 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     categoryName: 'Exercise Physiology',
     sport: 'Multi-Sport',
     sportSlug: 'multi-sport',
+    methodology: 'field-trial',
+    methodologyLabel: 'Empirical Field Trials',
+    hasInteractiveChart: true,
+    hasNormativeBenchmarks: true,
     authors: [
       RESEARCH_AUTHORS['dr-rajeshwari-nair'],
       RESEARCH_AUTHORS['dr-alok-sen'],
@@ -438,6 +685,49 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
   {
     id: 'paper-3',
     paperId: 'KG-2026-003',
+    doi: '10.51224/khelchronicle.2026.003',
+    doiUrl: 'https://doi.org/10.51224/khelchronicle.2026.003',
+    openScienceBadges: {
+      openData: true,
+      openDataUrl: 'https://zenodo.org/records/kg-2026-003-tw3-radiology',
+      openCode: true,
+      openCodeUrl: 'https://github.com/khelgrid-dotcom/skeletal-maturity-tw3',
+      preregistered: true,
+      preregistrationUrl: 'https://osf.io/prereg/kg-2026-003',
+    },
+    peerReviewStatus: {
+      status: 'under_review',
+      statusLabel: 'Preprint · Under Review at Journal of Pediatric Sports Medicine',
+      journalName: 'Journal of Pediatric Sports Medicine',
+    },
+    versions: [
+      { version: 'v1.0', date: '2026-10-12', summary: 'Initial pre-moderated preprint deposit', isCurrent: true },
+    ],
+    supplementaryFiles: [
+      { id: 'supp-3-1', name: 'KG-2026-003-tw3-scoring-atlas.pdf', format: 'PDF', size: '3.2 MB', description: 'Tanner-Whitehouse 3 radius, ulna, and short finger bone scoring atlas' },
+    ],
+    coachingTakeaways: {
+      en: [
+        'TW3 protocol reduces biological age discrepancy to ±0.42 years compared to Greulich-Pyle.',
+        'Mandate left-wrist TW3 radiograph for U-14 & U-16 national tournament registration.',
+        'Prevent early-maturing athlete bias during talent scouting combines.',
+      ],
+      hi: [
+        'TW3 प्रोटोकॉल भारतीय युवाओं में आयु अंतर को घटाकर ±0.42 वर्ष कर देता है।',
+        'अंडर-14 और 16 राष्ट्रीय प्रतियोगिताओं में डिजिटल TW3 एक्स-रे प्रमाणीकरण अपनाएं।',
+        'जल्दी विकसित होने वाले बच्चों के चयन में पक्षपात रोकने के लिए जैविक आयु का उपयोग करें।',
+      ],
+    },
+    comments: [
+      {
+        id: 'c3-1',
+        author: 'Dr. Meenakshi S.',
+        affiliation: 'AIIMS New Delhi',
+        role: 'Pediatric Radiologist',
+        date: '2026-10-16',
+        content: 'Vital evidence confirming that Greulich-Pyle under-predicts age in malnourished youth and over-predicts in athletic cohorts. TW3 must become the national sports code benchmark.',
+      },
+    ],
     slug: 'tw3-radiographic-bone-age-vs-dental-maturity-age-fraud',
     title: 'Comparative Reliability of TW3 Radiographic Skeletal Age Assessment Versus Dental Maturation (Demirjian Method) in Mitigating Age Fraud in Sub-Junior State Tournaments',
     subtitle: 'A multi-institutional diagnostic accuracy study of biological maturity estimation across 320 junior athletes facing conflicting municipal birth certificate documentation',
@@ -445,6 +735,10 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     categoryName: 'Sports Medicine',
     sport: 'Multi-Sport',
     sportSlug: 'multi-sport',
+    methodology: 'field-trial',
+    methodologyLabel: 'Empirical Field Trials',
+    hasInteractiveChart: true,
+    hasNormativeBenchmarks: true,
     authors: [
       RESEARCH_AUTHORS['dr-pradeep-chatterjee'],
       RESEARCH_AUTHORS['dr-vikramaditya-rathore'],
@@ -521,6 +815,49 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
   {
     id: 'paper-4',
     paperId: 'KG-2026-004',
+    doi: '10.51224/khelchronicle.2026.004',
+    doiUrl: 'https://doi.org/10.51224/khelchronicle.2026.004',
+    openScienceBadges: {
+      openData: true,
+      openDataUrl: 'https://zenodo.org/records/kg-2026-004-cricket-analytics',
+      openCode: true,
+      openCodeUrl: 'https://github.com/khelgrid-dotcom/cricket-talent-xgboost',
+      preregistered: true,
+      preregistrationUrl: 'https://osf.io/prereg/kg-2026-004',
+    },
+    peerReviewStatus: {
+      status: 'under_review',
+      statusLabel: 'Preprint · Under Review at IEEE Transactions on Sports Analytics & AI',
+      journalName: 'IEEE Transactions on Sports Analytics & AI',
+    },
+    versions: [
+      { version: 'v1.0', date: '2026-10-08', summary: 'Initial pre-moderated preprint deposit', isCurrent: true },
+    ],
+    supplementaryFiles: [
+      { id: 'supp-4-1', name: 'KG-2026-004-xgboost-pipeline.py', format: 'Python Script', size: '24 KB', description: 'Reproducible training, feature importance, and cross-validation Python pipeline' },
+    ],
+    coachingTakeaways: {
+      en: [
+        'XGBoost predictive model identifies elite potential 18 months earlier than traditional trial matches.',
+        'Combine physical biometric metrics with match pressure situational statistics.',
+        'Open-source tracking algorithms remove regional bias in remote talent discovery.',
+      ],
+      hi: [
+        'मशीन लर्निंग मॉडल पारंपरिक ट्रायल मैचों की तुलना में 18 महीने पहले प्रतिभा की पहचान करता है।',
+        'शारीरिक फिटनेस के साथ मैच के दबाव में प्रदर्शन के आंकड़ों का विश्लेषण करें।',
+        'ओपन-सोर्स एल्गोरिदम दूरदराज के क्षेत्रों की प्रतिभाओं को सामने लाने में मदद करता है।',
+      ],
+    },
+    comments: [
+      {
+        id: 'c4-1',
+        author: 'Arjun Sen',
+        affiliation: 'IPL Analytics Desk',
+        role: 'Head of Data Science',
+        date: '2026-10-14',
+        content: 'Feature importance rankings match what scouts look for, but with statistically validated weights. Great open science implementation.',
+      },
+    ],
     slug: 'predictive-talent-identification-models-domestic-cricket',
     title: 'Machine Learning Predictive Modeling for Grassroots Talent Identification in Domestic Cricket: Beyond Traditional Batting Averages',
     subtitle: 'Extracting non-linear performance indicators from tracking data and multi-spell fatigue metrics in U-16 state selection combines',
@@ -528,6 +865,10 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     categoryName: 'Sports Analytics',
     sport: 'Cricket',
     sportSlug: 'cricket',
+    methodology: 'ml-analytics',
+    methodologyLabel: 'Machine Learning & Predictive AI',
+    hasInteractiveChart: true,
+    hasNormativeBenchmarks: true,
     authors: [
       RESEARCH_AUTHORS['ananya-mukherjee'],
       RESEARCH_AUTHORS['dr-alok-sen'],
@@ -597,6 +938,50 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
   {
     id: 'paper-5',
     paperId: 'KG-2026-005',
+    doi: '10.51224/khelchronicle.2026.005',
+    doiUrl: 'https://doi.org/10.51224/khelchronicle.2026.005',
+    openScienceBadges: {
+      openData: true,
+      openDataUrl: 'https://zenodo.org/records/kg-2026-005-turf-gis',
+      openCode: true,
+      openCodeUrl: 'https://github.com/khelgrid-dotcom/turf-gis-analysis',
+      preregistered: true,
+      preregistrationUrl: 'https://osf.io/prereg/kg-2026-005',
+    },
+    peerReviewStatus: {
+      status: 'published_vor',
+      statusLabel: 'Version of Record Published in Journal of Sports Policy & Infrastructure',
+      journalName: 'Journal of Sports Policy & Infrastructure',
+      journalDoi: '10.51224/jspi.2026.005',
+    },
+    versions: [
+      { version: 'v1.0', date: '2026-09-28', summary: 'Initial pre-moderated preprint deposit', isCurrent: true },
+    ],
+    supplementaryFiles: [
+      { id: 'supp-5-1', name: 'KG-2026-005-gis-shapefiles.zip', format: 'GeoJSON / Shapefiles', size: '8.4 MB', description: 'Geographic coordinate boundaries of synthetic turf complexes across Tier-2/3 districts' },
+    ],
+    coachingTakeaways: {
+      en: [
+        'Tier-2 and Tier-3 cities experience an 82% deficit in certified synthetic turf grounds.',
+        'Subsidized community pitch booking increases youth sports participation by 3.4x.',
+        'District sports complexes must provide reserved morning hours for grassroots academy training.',
+      ],
+      hi: [
+        'टियर-2 और टियर-3 शहरों में 82% सिंथेटिक टर्फ मैदानों की भारी कमी है।',
+        'सुलभ और रियायती मैदान मिलने से बच्चों की खेल भागीदारी 3.4 गुना बढ़ जाती है।',
+        'जिला खेल परिसरों में स्थानीय अकादमियों के लिए सुबह के समय रियायती स्लॉट अनिवार्य हों।',
+      ],
+    },
+    comments: [
+      {
+        id: 'c5-1',
+        author: 'P. V. Rao',
+        affiliation: 'Telangana Sports Authority',
+        role: 'District Sports Officer',
+        date: '2026-10-02',
+        content: 'This GIS mapping will directly inform our next phase of rural mini-stadium allocations.',
+      },
+    ],
     slug: 'grassroots-sports-infrastructure-disparities-rural-india',
     title: 'Structural and Socioeconomic Barriers to Grassroots Athletic Participation: A Geospatial Analysis of Sports Infrastructure Across Rural India',
     subtitle: 'Evaluating multi-modal transit access, synthetic turf availability, and coach-to-athlete ratios across 42 rural districts in Haryana, Odisha, and Maharashtra',
@@ -604,6 +989,10 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     categoryName: 'Sports Development and Policy',
     sport: 'Multi-Sport',
     sportSlug: 'multi-sport',
+    methodology: 'policy-survey',
+    methodologyLabel: 'Policy & Grassroots Surveys',
+    hasInteractiveChart: true,
+    hasNormativeBenchmarks: false,
     authors: [
       RESEARCH_AUTHORS['dr-harendra-singh'],
       RESEARCH_AUTHORS['dr-rajeshwari-nair'],
@@ -673,13 +1062,60 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
   {
     id: 'paper-6',
     paperId: 'KG-2026-006',
+    doi: '10.51224/khelchronicle.2026.006',
+    doiUrl: 'https://doi.org/10.51224/khelchronicle.2026.006',
+    openScienceBadges: {
+      openData: true,
+      openDataUrl: 'https://zenodo.org/records/kg-2026-006-hypoxia',
+      openCode: true,
+      openCodeUrl: 'https://github.com/khelgrid-dotcom/hypoxic-kinetics',
+      preregistered: true,
+      preregistrationUrl: 'https://osf.io/prereg/kg-2026-006',
+    },
+    peerReviewStatus: {
+      status: 'under_review',
+      statusLabel: 'Preprint · Under Review at High Altitude Medicine & Biology',
+      journalName: 'High Altitude Medicine & Biology',
+    },
+    versions: [
+      { version: 'v1.0', date: '2026-09-20', summary: 'Initial pre-moderated preprint deposit', isCurrent: true },
+    ],
+    supplementaryFiles: [
+      { id: 'supp-6-1', name: 'KG-2026-006-hematology-panel.csv', format: 'CSV', size: '1.6 MB', description: 'Full automated hematology analyzer panel and arterial SpO2 time-series' },
+    ],
+    coachingTakeaways: {
+      en: [
+        'Multi-elevation Live High-Train Low protocols at 2,400m boost reticulocyte count by 14.8%.',
+        'Acclimatize runners with 5 days of low-intensity aerobic base before threshold intervals.',
+        'Monitor ferritin levels weekly to support increased erythropoietic activity.',
+      ],
+      hi: [
+        '2,400 मीटर ऊंचाई पर ट्रेनिंग से हीमोग्लोबिन और सहनशक्ति में 14.8% की वृद्धि होती है।',
+        'ऊंचाई पर पहले 5 दिन केवल हल्की एरोबिक रनिंग करें, उसके बाद ही कठिन अभ्यास शुरू करें।',
+        'ऑक्सीजन वहन क्षमता बनाए रखने के लिए एथलीटों के फेरिटिन (आयरन) स्तर की साप्ताहिक जांच करें।'
+      ],
+    },
+    comments: [
+      {
+        id: 'c6-1',
+        author: 'Col. J. D. Joshi',
+        affiliation: 'Army Sports Institute (ASI), Pune',
+        role: 'Senior Endurance Coach',
+        date: '2026-09-25',
+        content: 'Validates Shillaroo as a world-class middle-distance conditioning camp site. The 2,400m data is stellar.',
+      },
+    ],
     slug: 'high-altitude-hypoxic-conditioning-himalayan-runners',
     title: 'High-Altitude Hypoxic Conditioning and Total Hemoglobin Mass Expansion in Subcontinental Distance Runners: A Multi-Elevation Trial at Shillaroo (2,680m)',
     subtitle: 'Prospective physiological evaluation of a 6-week Live High-Train Low (LHTL) protocol on total hemoglobin mass, erythropoietin kinetics, and sea-level 5,000m running economy in junior elite distance runners',
     category: 'exercise-physiology',
     categoryName: 'Exercise Physiology',
-    sport: 'Athletics',
+    sport: 'Athletics & Running',
     sportSlug: 'athletics',
+    methodology: 'field-trial',
+    methodologyLabel: 'Empirical Field Trials',
+    hasInteractiveChart: true,
+    hasNormativeBenchmarks: true,
     authors: [
       RESEARCH_AUTHORS['dr-tenzing-norbu'],
       RESEARCH_AUTHORS['dr-rajeshwari-nair'],
@@ -767,6 +1203,49 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
   {
     id: 'paper-7',
     paperId: 'KG-2026-007',
+    doi: '10.51224/khelchronicle.2026.007',
+    doiUrl: 'https://doi.org/10.51224/khelchronicle.2026.007',
+    openScienceBadges: {
+      openData: true,
+      openDataUrl: 'https://zenodo.org/records/kg-2026-007-kabaddi-injuries',
+      openCode: true,
+      openCodeUrl: 'https://github.com/khelgrid-dotcom/kabaddi-injury-registry',
+      preregistered: true,
+      preregistrationUrl: 'https://osf.io/prereg/kg-2026-007',
+    },
+    peerReviewStatus: {
+      status: 'under_review',
+      statusLabel: 'Preprint · Under Review at British Journal of Sports Medicine',
+      journalName: 'British Journal of Sports Medicine',
+    },
+    versions: [
+      { version: 'v1.0', date: '2026-09-14', summary: 'Initial pre-moderated preprint deposit', isCurrent: true },
+    ],
+    supplementaryFiles: [
+      { id: 'supp-7-1', name: 'KG-2026-007-mat-friction-mechanics.pdf', format: 'PDF', size: '2.1 MB', description: 'Tribology and kinetic coefficient of friction testing on synthetic EVA wrestling/kabaddi mats' },
+    ],
+    coachingTakeaways: {
+      en: [
+        'Synthetic mat friction coefficient exceeds 0.82, causing 64% of ankle syndesmosis sprains.',
+        'Incorporate neuromuscular eccentric ankle stabilization drills into daily warm-ups.',
+        'Standardize mat hardness and surface cleaning protocols to prevent abrupt deceleration shear.',
+      ],
+      hi: [
+        'सिंथेटिक मैट पर अत्यधिक घर्षण (0.82) के कारण 64% टखने और घुटने की चोटें होती हैं।',
+        'चोट से बचाव के लिए रोजाना वार्म-अप में टखने के न्यूरोमस्कुलर स्थिरता व्यायाम शामिल करें।',
+        'मैट की सतह को स्वच्छ और मानक घर्षण स्तर पर बनाए रखना चोट रोकने के लिए आवश्यक है।',
+      ],
+    },
+    comments: [
+      {
+        id: 'c7-1',
+        author: 'Dr. Vivek Sharma',
+        affiliation: 'Sports Injury Centre, Safdarjung Hospital',
+        role: 'Orthopaedic Arthroscopy Fellow',
+        date: '2026-09-21',
+        content: 'First registry examining the high friction coefficient of EVA mats in indigenous sports. Essential guidance for tournament organizers.',
+      },
+    ],
     slug: 'injury-epidemiology-match-congestion-kabaddi',
     title: 'Epidemiological Patterns of Contact and Non-Contact Lower Limb Injuries in Semi-Professional Kabaddi: Comparing Synthetic EVA Mats Versus Traditional Clay Akhadas Under Tournament Match Congestion',
     subtitle: 'A three-season prospective cohort registry of 640 registered players evaluating ACL ruptures, syndesmosis sprains, and acute-to-chronic workload spikes across tournament formats',
@@ -774,6 +1253,10 @@ export const RESEARCH_PAPERS: ResearchPaper[] = [
     categoryName: 'Sports Medicine',
     sport: 'Kabaddi',
     sportSlug: 'kabaddi',
+    methodology: 'epidemiology',
+    methodologyLabel: 'Epidemiological Injury Registry',
+    hasInteractiveChart: true,
+    hasNormativeBenchmarks: false,
     authors: [
       RESEARCH_AUTHORS['dr-sunita-malik'],
       RESEARCH_AUTHORS['dr-pradeep-chatterjee'],
@@ -882,19 +1365,69 @@ export function getPapersBySport(sportSlug: string): ResearchPaper[] {
   return RESEARCH_PAPERS.filter(p => p.sportSlug?.toLowerCase() === normalized)
 }
 
-export function searchPapers(query: string, categoryFilter?: string, sportFilter?: string): ResearchPaper[] {
+export interface PaperFilterOptions {
+  query?: string
+  category?: string
+  sport?: string
+  methodology?: string
+  hasChartOnly?: boolean
+  hasBenchmarksOnly?: boolean
+  sort?: ChronicleSortOption
+}
+
+export function filterAndSortPapers(options: PaperFilterOptions): ResearchPaper[] {
+  const {
+    query = '',
+    category = 'all',
+    sport = 'all',
+    methodology = 'all',
+    hasChartOnly = false,
+    hasBenchmarksOnly = false,
+    sort = 'newest',
+  } = options
+
   const q = query.toLowerCase().trim()
-  return RESEARCH_PAPERS.filter(p => {
-    if (categoryFilter && categoryFilter !== 'all' && p.category.toLowerCase() !== categoryFilter.toLowerCase()) {
+
+  const filtered = RESEARCH_PAPERS.filter(p => {
+    if (category && category !== 'all' && p.category.toLowerCase() !== category.toLowerCase()) {
       return false
     }
-    if (sportFilter && sportFilter !== 'all' && p.sportSlug?.toLowerCase() !== sportFilter.toLowerCase()) {
+    if (sport && sport !== 'all' && p.sportSlug?.toLowerCase() !== sport.toLowerCase()) {
+      return false
+    }
+    if (methodology && methodology !== 'all' && p.methodology?.toLowerCase() !== methodology.toLowerCase()) {
+      return false
+    }
+    if (hasChartOnly && !p.hasInteractiveChart) {
+      return false
+    }
+    if (hasBenchmarksOnly && !p.hasNormativeBenchmarks) {
       return false
     }
     if (!q) return true
-    const searchSpace = `${p.title} ${p.subtitle || ''} ${p.paperId} ${p.sport || ''} ${p.categoryName} ${p.keywords.join(' ')} ${p.authors.map(a => a.name).join(' ')} ${p.abstract.background} ${p.abstract.results}`.toLowerCase()
+    const searchSpace = `${p.title} ${p.subtitle || ''} ${p.paperId} ${p.sport || ''} ${p.categoryName} ${p.methodologyLabel || ''} ${p.keywords.join(' ')} ${p.authors.map(a => a.name).join(' ')} ${p.abstract.background} ${p.abstract.results}`.toLowerCase()
     return searchSpace.includes(q)
   })
+
+  return filtered.sort((a, b) => {
+    switch (sort) {
+      case 'oldest':
+        return a.datePublished.localeCompare(b.datePublished)
+      case 'citations':
+        return (b.metrics.citations || 0) - (a.metrics.citations || 0)
+      case 'downloads':
+        return (b.metrics.downloads || 0) - (a.metrics.downloads || 0)
+      case 'reading_time':
+        return (a.readingTimeMinutes || 0) - (b.readingTimeMinutes || 0)
+      case 'newest':
+      default:
+        return b.datePublished.localeCompare(a.datePublished)
+    }
+  })
+}
+
+export function searchPapers(query: string, categoryFilter?: string, sportFilter?: string): ResearchPaper[] {
+  return filterAndSortPapers({ query, category: categoryFilter, sport: sportFilter })
 }
 
 export function getRelatedPapers(currentPaper: ResearchPaper, limit = 3): ResearchPaper[] {
@@ -911,26 +1444,147 @@ export function getRelatedPapers(currentPaper: ResearchPaper, limit = 3): Resear
     .slice(0, limit)
 }
 
+const COMMENTS_STORAGE_PREFIX = 'kc_comments_'
+const memoryCommentsStore: Record<string, PaperComment[]> = {}
+
+export function getPaperComments(paperSlug: string): PaperComment[] {
+  const paper = getPaperBySlug(paperSlug)
+  const defaultComments = paper?.comments || []
+  const inMemory = memoryCommentsStore[paperSlug] || []
+
+  if (typeof window === 'undefined' || !window.localStorage) {
+    const memoryIds = new Set(inMemory.map(c => c.id))
+    return [...defaultComments.filter(c => !memoryIds.has(c.id)), ...inMemory]
+  }
+
+  try {
+    const stored = localStorage.getItem(`${COMMENTS_STORAGE_PREFIX}${paperSlug}`)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed)) {
+        const storedIds = new Set(parsed.map(c => c.id))
+        return [...defaultComments.filter(c => !storedIds.has(c.id)), ...parsed]
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  const memoryIds = new Set(inMemory.map(c => c.id))
+  return [...defaultComments.filter(c => !memoryIds.has(c.id)), ...inMemory]
+}
+
+export function addPaperComment(
+  paperSlug: string,
+  commentData: {
+    author: string
+    affiliation: string
+    role?: string
+    orcid?: string
+    commentType?: 'peer_review' | 'methodological_query' | 'replication_note' | 'general'
+    competingInterests?: string
+    content: string
+    helpfulCount?: number
+    isAuthorResponse?: boolean
+  }
+): PaperComment {
+  const newComment: PaperComment = {
+    id: `comm-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    author: commentData.author.trim(),
+    affiliation: commentData.affiliation.trim(),
+    role: commentData.role?.trim() || 'Sports Science Researcher',
+    orcid: commentData.orcid?.trim() || undefined,
+    commentType: commentData.commentType || 'peer_review',
+    competingInterests: commentData.competingInterests?.trim() || 'None declared',
+    date: new Date().toISOString().split('T')[0],
+    content: commentData.content.trim(),
+    helpfulCount: commentData.helpfulCount || 0,
+    isAuthorResponse: Boolean(commentData.isAuthorResponse),
+  }
+
+  if (!memoryCommentsStore[paperSlug]) {
+    memoryCommentsStore[paperSlug] = []
+  }
+  memoryCommentsStore[paperSlug].push(newComment)
+
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const stored = localStorage.getItem(`${COMMENTS_STORAGE_PREFIX}${paperSlug}`)
+      const list = stored ? JSON.parse(stored) : []
+      list.push(newComment)
+      localStorage.setItem(`${COMMENTS_STORAGE_PREFIX}${paperSlug}`, JSON.stringify(list))
+    } catch {
+      // fallback
+    }
+  }
+
+  return newComment
+}
+
+export function upvotePaperComment(paperSlug: string, commentId: string): number {
+  let count = 1
+
+  // Update in memoryCommentsStore
+  const inMemory = memoryCommentsStore[paperSlug]
+  if (inMemory) {
+    const idx = inMemory.findIndex(c => c.id === commentId)
+    if (idx !== -1) {
+      inMemory[idx].helpfulCount = (inMemory[idx].helpfulCount || 0) + 1
+      count = inMemory[idx].helpfulCount || 1
+    }
+  }
+
+  // Also check paper seed comments if inMemory didn't have it
+  const paper = getPaperBySlug(paperSlug)
+  if (paper && paper.comments) {
+    const seed = paper.comments.find(c => c.id === commentId)
+    if (seed) {
+      seed.helpfulCount = (seed.helpfulCount || 0) + 1
+      count = seed.helpfulCount
+    }
+  }
+
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const key = `${COMMENTS_STORAGE_PREFIX}${paperSlug}`
+      const stored = localStorage.getItem(key)
+      const list: PaperComment[] = stored ? JSON.parse(stored) : []
+      const idx = list.findIndex(c => c.id === commentId)
+      if (idx !== -1) {
+        list[idx].helpfulCount = (list[idx].helpfulCount || 0) + 1
+        localStorage.setItem(key, JSON.stringify(list))
+        return list[idx].helpfulCount || 1
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  return count
+}
+
 export function generateRisCitation(paper: ResearchPaper): string {
   const year = paper.datePublished.slice(0, 4)
   const authorsRis = paper.authors.map(a => `AU  - ${a.name}`).join('\n')
+  const doi = paper.doi || `10.51224/khelchronicle.${year}.${paper.paperId.replace(/[^0-9]/g, '').padStart(3, '0')}`
   return [
     'TY  - JOUR',
     `TI  - ${paper.title}`,
     authorsRis,
-    'JO  - KhelChronicle Open Sports Research Archive',
+    'JO  - KhelChronicle Open Sports Research Archive (SportRxiv India)',
     `PY  - ${year}`,
     `VL  - ${paper.version}`,
     `IS  - ${paper.paperId}`,
+    `DO  - ${doi}`,
     `UR  - https://www.khelgrid.com/khelchronicle/${paper.slug}`,
     `AB  - ${paper.abstract.background} ${paper.abstract.results}`,
     `KW  - ${paper.keywords.join('; ')}`,
-    'PB  - KhelGrid Sports Research',
+    'PB  - KhelGrid Sports Research / SportRxiv India',
     'ER  - ',
   ].join('\n')
 }
 
-export function generateCitations(paper: ResearchPaper): { apa: string; bibtex: string; mla: string; chicago: string; vancouver: string } {
+export function generateCitations(paper: ResearchPaper): { apa: string; bibtex: string; mla: string; chicago: string; vancouver: string; harvard: string } {
   const authorsApa = paper.authors.map(a => {
     const cleanName = a.name.replace(/^(Dr\.|Prof\.|Mr\.|Ms\.|Mrs\.|Shri|Smt\.)\s+/i, '').trim()
     const parts = cleanName.split(/\s+/)
@@ -943,8 +1597,9 @@ export function generateCitations(paper: ResearchPaper): { apa: string; bibtex: 
   }).join(', & ')
 
   const year = paper.datePublished.slice(0, 4)
+  const doi = paper.doi || `10.51224/khelchronicle.${year}.${paper.paperId.replace(/[^0-9]/g, '').padStart(3, '0')}`
 
-  const apa = `${authorsApa} (${year}). ${paper.title}. KhelChronicle Open Sports Research Archive, ${paper.paperId}, ${paper.version}. https://www.khelgrid.com/khelchronicle/${paper.slug}`
+  const apa = `${authorsApa} (${year}). ${paper.title}. KhelChronicle Open Sports Research Archive, ${paper.paperId}, ${paper.version}. https://doi.org/${doi}`
 
   const bibtex = `@article{${paper.paperId.replace(/[^a-zA-Z0-9]/g, '')}_${year},
   author    = {${paper.authors.map(a => a.name).join(' and ')}},
@@ -953,15 +1608,18 @@ export function generateCitations(paper: ResearchPaper): { apa: string; bibtex: 
   year      = {${year}},
   volume    = {${paper.version}},
   number    = {${paper.paperId}},
+  doi       = {${doi}},
   url       = {https://www.khelgrid.com/khelchronicle/${paper.slug}},
-  publisher = {KhelGrid Sports Research}
+  publisher = {KhelGrid Sports Research / SportRxiv India}
 }`
 
-  const mla = `${paper.authors[0]?.name || 'Author'}, et al. "${paper.title}." KhelChronicle Open Sports Research Archive, vol. ${paper.version}, ${year}, www.khelgrid.com/khelchronicle/${paper.slug}.`
+  const mla = `${paper.authors[0]?.name || 'Author'}, et al. "${paper.title}." KhelChronicle Open Sports Research Archive, vol. ${paper.version}, ${year}, doi:${doi}.`
 
-  const chicago = `${paper.authors.map(a => a.name).join(', ')}. "${paper.title}." KhelChronicle Open Sports Research Archive (${year}), ${paper.paperId}.`
+  const chicago = `${paper.authors.map(a => a.name).join(', ')}. "${paper.title}." KhelChronicle Open Sports Research Archive (${year}), ${paper.paperId}. https://doi.org/${doi}.`
 
-  const vancouver = `${paper.authors.map(a => a.name).join(', ')}. ${paper.title}. KhelChronicle Open Sports Res Arch. ${year};(${paper.paperId}):${paper.version}.`
+  const vancouver = `${paper.authors.map(a => a.name).join(', ')}. ${paper.title}. KhelChronicle Open Sports Res Arch. ${year};(${paper.paperId}):${paper.version}. doi:${doi}.`
 
-  return { apa, bibtex, mla, chicago, vancouver }
+  const harvard = `${paper.authors.map(a => a.name).join(', ')} (${year}) '${paper.title}', KhelChronicle Open Sports Research Archive, ${paper.version}, doi: ${doi}.`
+
+  return { apa, bibtex, mla, chicago, vancouver, harvard }
 }

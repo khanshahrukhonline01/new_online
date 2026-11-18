@@ -5,10 +5,16 @@ import type { Opportunity, Sport, Venue } from '../../shared/domain'
 import { AsyncState } from '../../shared/components/AsyncState'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { TrialAlertActions } from '../opportunities/TrialAlertActions'
+import { updatePageSeoMetadata } from '../../shared/utils/seoAndShare'
 import './catalogue-detail.css'
 
 type Kind = 'sport' | 'opportunity' | 'venue'
 type RecordValue = Sport | Opportunity | Venue
+
+export function resolveCatalogueRecordBySlug<T extends { slug: string }>(records: readonly T[], slug: string): T | undefined {
+  return records.find(item => item.slug === slug) ??
+    records.find(item => item.slug.replace(/^t-/, '') === slug.replace(/^t-/, ''))
+}
 
 export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: string }) {
   const [result, setResult] = useState<CatalogueResult<RecordValue> | { status: 'loading'; data: [] }>({ status: 'loading', data: [] })
@@ -18,7 +24,81 @@ export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: 
     load.then(value => { if (active) setResult(value as CatalogueResult<RecordValue>) })
     return () => { active = false }
   }, [kind])
-  const record = result.status === 'ready' ? result.data.find(item => item.slug === slug) : undefined
+  const record = result.status === 'ready'
+    ? (kind === 'opportunity'
+        ? resolveCatalogueRecordBySlug(result.data, slug)
+        : result.data.find(item => item.slug === slug))
+    : undefined
+
+  useEffect(() => {
+    if (kind !== 'opportunity' || result.status !== 'ready') return
+
+    const opportunity = record as Opportunity | undefined
+    const canonicalSlug = opportunity?.slug ?? slug
+    const canonicalUrl = `https://khelgrid.com/trial/${encodeURIComponent(canonicalSlug)}`
+    const description = opportunity
+      ? [
+          opportunity.title,
+          opportunity.sport?.name,
+          opportunity.city,
+          opportunity.organizer_name,
+          opportunity.source_name ? `Source: ${opportunity.source_name}` : 'Confirm details with the organiser',
+        ].filter(Boolean).join(' · ').slice(0, 160)
+      : 'This sports trial or opportunity is not currently available in the published KhelGrid catalogue.'
+
+    const startDate = opportunity?.starts_at ? new Date(opportunity.starts_at) : null
+    const endDate = opportunity?.ends_at ? new Date(opportunity.ends_at) : null
+    const locationName = opportunity?.venue_name || opportunity?.city
+    const isSportingEvent = Boolean(
+      opportunity &&
+      opportunity.verification_status === 'verified' &&
+      ['trial', 'combine', 'camp'].includes(opportunity.opportunity_type) &&
+      startDate &&
+      !Number.isNaN(startDate.getTime()) &&
+      locationName,
+    )
+    const jsonLd = isSportingEvent && opportunity && startDate
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'SportsEvent',
+          name: opportunity.title,
+          startDate: startDate.toISOString(),
+          ...(endDate && !Number.isNaN(endDate.getTime()) ? { endDate: endDate.toISOString() } : {}),
+          url: canonicalUrl,
+          location: {
+            '@type': 'Place',
+            name: locationName,
+            ...(opportunity.city ? {
+              address: {
+                '@type': 'PostalAddress',
+                addressLocality: opportunity.city,
+                addressCountry: 'IN',
+              },
+            } : {}),
+          },
+          ...(opportunity.organizer_name ? {
+            organizer: { '@type': 'Organization', name: opportunity.organizer_name },
+          } : {}),
+          ...(typeof opportunity.registration_fee === 'number' && Number.isFinite(opportunity.registration_fee) ? {
+            offers: {
+              '@type': 'Offer',
+              price: String(opportunity.registration_fee),
+              priceCurrency: 'INR',
+              url: opportunity.source_url || canonicalUrl,
+            },
+          } : {}),
+        }
+      : undefined
+
+    return updatePageSeoMetadata({
+      title: opportunity ? `${opportunity.title} · Sports Trial | KhelGrid` : 'Trial not found · KhelGrid',
+      description,
+      canonicalUrl,
+      robots: opportunity?.verification_status === 'verified' ? undefined : 'noindex, follow',
+      ogType: 'website',
+      jsonLd,
+    })
+  }, [kind, record, result.status, slug])
   const back = kind === 'sport' ? '/sports' : kind === 'opportunity' ? '/opportunities' : '/venues'
   const heading = kind === 'sport' ? 'Sport details' : kind === 'opportunity' ? 'Opportunity details' : 'Venue details'
   return <section className="content-page catalogue-detail-page">
@@ -32,7 +112,7 @@ export default function CatalogueDetailPage({ kind, slug }: { kind: Kind; slug: 
   </section>
 }
 
-function OpportunityDetail({ item }: { item: Opportunity }) {
+export function OpportunityDetail({ item }: { item: Opportunity }) {
   const date = (value: string | null) => {
     if (!value) return 'Not provided'
     const parsed = new Date(value)

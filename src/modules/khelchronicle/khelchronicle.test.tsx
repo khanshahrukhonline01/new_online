@@ -10,12 +10,21 @@ import {
   generateCitations,
   generateRisCitation,
   searchPapers,
+  filterAndSortPapers,
   getPaperBySlug,
   getPapersBySport,
   getRelatedPapers,
   RESEARCH_SPORTS,
+  RESEARCH_METHODOLOGIES,
+  RESEARCH_PAPERS,
 } from './data/khelchronicleData'
+import {
+  getChroniclePaperComments,
+  addChroniclePaperComment,
+  voteChronicleCommentHelpful,
+} from '../../integrations/supabase/chronicle-client'
 import { AcademicDataChart } from './components/AcademicDataChart'
+import { NormativeBenchmarkCalculator } from './components/NormativeBenchmarkCalculator'
 
 describe('KhelChronicle Open Sports Research Repository', () => {
   it('renders an empty, truthful research archive without synthetic public manuscripts', () => {
@@ -198,7 +207,7 @@ describe('KhelChronicle Open Sports Research Repository', () => {
     expect(ris).toContain('ER  - ')
 
     // 2. Paper reader page contains print-only academic header & table-chart view switcher
-    const pageHtml = renderToStaticMarkup(<KhelChroniclePaperPage slug="KG-2026-001" />)
+    const pageHtml = renderToStaticMarkup(<KhelChroniclePaperPage slug="KG-2026-001" initialPaper={paper} />)
     expect(pageHtml).toContain('kc-print-only-header')
     expect(pageHtml).toContain('KHELCHRONICLE OPEN SPORTS RESEARCH ARCHIVE')
     expect(pageHtml).toContain('Preprint Accession:')
@@ -211,5 +220,350 @@ describe('KhelChronicle Open Sports Research Repository', () => {
     const related = getRelatedPapers(paper, 3)
     expect(related.length).toBeGreaterThanOrEqual(1)
     expect(related.every(r => r.paperId !== paper.paperId)).toBe(true)
+  })
+
+  it('filters and sorts research papers across study methodology, charts, benchmarks, and citations', () => {
+    // 1. Methodology catalogue
+    expect(RESEARCH_METHODOLOGIES.length).toBeGreaterThanOrEqual(5)
+
+    // 2. Filter by methodology
+    const fieldTrialPapers = filterAndSortPapers({ methodology: 'field-trial' })
+    expect(fieldTrialPapers.length).toBeGreaterThanOrEqual(2)
+    expect(fieldTrialPapers.some(p => p.paperId === 'KG-2026-002')).toBe(true)
+    expect(fieldTrialPapers.some(p => p.paperId === 'KG-2026-006')).toBe(true)
+
+    const epidemiologyPapers = filterAndSortPapers({ methodology: 'epidemiology' })
+    expect(epidemiologyPapers.length).toBe(1)
+    expect(epidemiologyPapers[0].paperId).toBe('KG-2026-007')
+
+    const mlPapers = filterAndSortPapers({ methodology: 'ml-analytics' })
+    expect(mlPapers.length).toBe(1)
+    expect(mlPapers[0].paperId).toBe('KG-2026-004')
+
+    // 3. Filter by interactive chart availability
+    const chartPapers = filterAndSortPapers({ hasChartOnly: true })
+    expect(chartPapers.length).toBeGreaterThanOrEqual(4)
+    expect(chartPapers.every(p => p.hasInteractiveChart)).toBe(true)
+
+    // 4. Filter by normative benchmarks
+    const benchmarkPapers = filterAndSortPapers({ hasBenchmarksOnly: true })
+    expect(benchmarkPapers.length).toBeGreaterThanOrEqual(3)
+    expect(benchmarkPapers.every(p => p.hasNormativeBenchmarks)).toBe(true)
+
+    // 5. Sort by citations (descending)
+    const sortedByCitations = filterAndSortPapers({ sort: 'citations' })
+    expect(sortedByCitations[0].metrics.citations).toBeGreaterThanOrEqual(sortedByCitations[1].metrics.citations)
+    expect(sortedByCitations[1].metrics.citations).toBeGreaterThanOrEqual(sortedByCitations[2].metrics.citations)
+
+    // 6. Sort by downloads (descending)
+    const sortedByDownloads = filterAndSortPapers({ sort: 'downloads' })
+    expect(sortedByDownloads[0].metrics.downloads).toBeGreaterThanOrEqual(sortedByDownloads[1].metrics.downloads)
+
+    // 7. Sort by shortest reading time (ascending)
+    const sortedByReadingTime = filterAndSortPapers({ sort: 'reading_time' })
+    expect(sortedByReadingTime[0].readingTimeMinutes).toBeLessThanOrEqual(sortedByReadingTime[sortedByReadingTime.length - 1].readingTimeMinutes)
+  })
+
+  it('renders methodology pills, empirical feature toggles, sort controls, and trending keywords on homepage', () => {
+    const homeHtml = renderToStaticMarkup(<KhelChronicleHome />)
+
+    // 1. Methodology filter bar
+    expect(homeHtml).toContain('Methodology:')
+    expect(homeHtml).toContain('Empirical Field Trials')
+    expect(homeHtml).toContain('3D Motion Capture &amp; Kinematics')
+    expect(homeHtml).toContain('Machine Learning &amp; Predictive AI')
+    expect(homeHtml).toContain('Epidemiological Injury Registry')
+    expect(homeHtml).toContain('Policy &amp; Grassroots Surveys')
+
+    // 2. Empirical feature toggles
+    expect(homeHtml).toContain('Interactive Charts')
+    expect(homeHtml).toContain('Normative Cutoffs')
+
+    // 3. Sort controls and toolbar
+    expect(homeHtml).toContain('Sort by:')
+    expect(homeHtml).toContain('Newest Published')
+    expect(homeHtml).toContain('Most Cited')
+    expect(homeHtml).toContain('Most Downloaded')
+    expect(homeHtml).toContain('Shortest Reading Time')
+
+    // 4. Trending research keywords cloud
+    expect(homeHtml).toContain('Trending Topics:')
+    expect(homeHtml).toContain('#YoYoIR1')
+    expect(homeHtml).toContain('#FastBowling')
+    expect(homeHtml).toContain('#HighAltitude')
+    expect(homeHtml).toContain('#KabaddiInjuries')
+  })
+
+  it('renders SportRxiv server navigation tabs and information panels (About, Moderation Policy, Author Guidelines, FAQ)', () => {
+    const homeHtml = renderToStaticMarkup(<KhelChronicleHome />)
+
+    // SportRxiv Server Navigation Tabs
+    expect(homeHtml).toContain('Preprints Archive')
+    expect(homeHtml).toContain('About KhelChronicle')
+    expect(homeHtml).toContain('Editorial &amp; Moderation Policy')
+    expect(homeHtml).toContain('Author Guidelines')
+    expect(homeHtml).toContain('Open Science Policies')
+    expect(homeHtml).toContain('FAQ')
+  })
+
+  it('renders Crossref persistent DOI, STORK open science badges, bilingual coach takeaways, and supplementary files on preprint page', () => {
+    const testPaper = getPaperBySlug('KG-2026-001')!
+    const paperHtml = renderToStaticMarkup(
+      <KhelChroniclePaperPage slug="kinematic-correlates-lumbar-spine-stress-fast-bowlers" initialPaper={testPaper} />
+    )
+
+    // Persistent DOI banner
+    expect(paperHtml).toContain('https://doi.org/10.51224/khelchronicle.2026.001')
+    expect(paperHtml).toContain('Copy DOI')
+    expect(paperHtml).toContain('Copy Link')
+
+    // STORK Open Science Badges
+    expect(paperHtml).toContain('Open Science Badges:')
+    expect(paperHtml).toContain('Open Data')
+    expect(paperHtml).toContain('Open Materials / Code')
+    expect(paperHtml).toContain('Preregistered Study')
+    expect(paperHtml).toContain('CC BY 4.0')
+
+    // Bilingual Grassroots Coaching Takeaways
+    expect(paperHtml).toContain('Grassroots Coaching Takeaways &amp; Field Implications')
+    expect(paperHtml).toContain('English')
+    expect(paperHtml).toContain('हिंदी (Hindi)')
+    expect(paperHtml).toContain('Maintain shoulder counter-rotation under 25°')
+
+    // Supplementary Datasets Table
+    expect(paperHtml).toContain('Supplementary Datasets &amp; Protocols')
+    expect(paperHtml).toContain('KG-2026-001-raw-telemetry.csv')
+    expect(paperHtml).toContain('KG-2026-001-mocap-protocol.pdf')
+    expect(paperHtml).toContain('Download')
+
+    // Community Discussion & Peer Reviews
+    expect(paperHtml).toContain('Community Discussion &amp; Peer Reviews')
+    expect(paperHtml).toContain('Dr. Ramesh Sundaram')
+    expect(paperHtml).toContain('Leave a Scientific Comment / Feedback')
+    expect(paperHtml).toContain('Post Peer Feedback')
+  })
+
+  it('supports expanded academic citations including DOI, Harvard, and SportRxiv attribution', () => {
+    const paper = getPaperBySlug('kinematic-correlates-lumbar-spine-stress-fast-bowlers')
+    expect(paper).toBeDefined()
+    if (!paper) return
+
+    const citations = generateCitations(paper)
+    expect(citations.apa).toContain('https://doi.org/10.51224/khelchronicle.2026.001')
+    expect(citations.bibtex).toContain('doi       = {10.51224/khelchronicle.2026.001}')
+    expect(citations.bibtex).toContain('publisher = {KhelGrid Sports Research / SportRxiv India}')
+    expect(citations.harvard).toContain('doi: 10.51224/khelchronicle.2026.001')
+
+    const ris = generateRisCitation(paper)
+    expect(ris).toContain('DO  - 10.51224/khelchronicle.2026.001')
+    expect(ris).toContain('JO  - KhelChronicle Open Sports Research Archive (SportRxiv India)')
+  })
+
+  it('renders Phase 1 Two-Column layout, Phase 5 Trust Ribbon, and Phase 2 Scholarly Action Cards on homepage', () => {
+    const html = renderToStaticMarkup(<KhelChronicleHome initialPapers={RESEARCH_PAPERS} />)
+
+    // Phase 5: Institutional Trust Ribbon & Live Stats
+    expect(html).toContain('kc-trust-ribbon')
+    expect(html).toContain('Preprints Indexed')
+    expect(html).toContain('Repository Views')
+    expect(html).toContain('Manuscript Downloads')
+    expect(html).toContain('Athletes Tested')
+    expect(html).toContain('100% Diamond Open Access')
+    expect(html).toContain('SAI NCOE')
+    expect(html).toContain('LNIPE Gwalior')
+    expect(html).toContain('AIIMS Sports Medicine')
+    expect(html).toContain('STORK Network')
+    expect(html).toContain('Crossref DOIs')
+
+    // Phase 1: Two-Column Layout and Left Sticky Filter Rail
+    expect(html).toContain('kc-two-col-layout')
+    expect(html).toContain('kc-filter-sidebar')
+    expect(html).toContain('kc-main-feed')
+    expect(html).toContain('Filter Repository')
+    expect(html).toContain('Study Methodology')
+    expect(html).toContain('Normative Calculator Tool')
+
+    // Phase 2: Scholarly Action Cards with 1-click Galley, Cite & DOI copy
+    expect(html).toContain('kc-card-doi-pill')
+    expect(html).toContain('doi:10.51224/khelchronicle.2026.001')
+    expect(html).toContain('Read Galley')
+    expect(html).toContain('Cite')
+    expect(html).toContain('kc-serif-title')
+  })
+
+  it('renders Phase 1 Two-Column Reading Layout on paper page with Sticky TOC rail and Print Field Cue Card', () => {
+    const testPaper = getPaperBySlug('KG-2026-001')!
+    const html = renderToStaticMarkup(
+      <KhelChroniclePaperPage slug="kinematic-correlates-lumbar-spine-stress-fast-bowlers" initialPaper={testPaper} />
+    )
+
+    // Two-column paper layout & Sticky TOC rail
+    expect(html).toContain('kc-paper-two-col-layout')
+    expect(html).toContain('kc-paper-article-col')
+    expect(html).toContain('kc-paper-toc-rail')
+    expect(html).toContain('On This Page')
+
+    // Table of contents jump links
+    expect(html).toContain('href="#abstract"')
+    expect(html).toContain('href="#takeaways"')
+    expect(html).toContain('href="#supplements"')
+    expect(html).toContain('href="#ethics"')
+    expect(html).toContain('href="#references"')
+    expect(html).toContain('href="#comments"')
+
+    // Sticky Action Box
+    expect(html).toContain('Read Manuscript Galley')
+    expect(html).toContain('Download PDF / Print')
+    expect(html).toContain('Cite This Preprint')
+
+    // Print Field Cue Card Button
+    expect(html).toContain('Print Field Cue Card')
+  })
+
+  it('renders Phase 3 NormativeBenchmarkCalculator with test selection, percentile gauges, and bilingual advice', () => {
+    const html = renderToStaticMarkup(<NormativeBenchmarkCalculator />)
+
+    // Header & Tool Information
+    expect(html).toContain('Indian Athlete Normative Benchmark Calculator')
+    expect(html).toContain('Interactive National Norms Tool')
+    expect(html).toContain('4,820 grassroots athletes')
+
+    // Form Controls
+    expect(html).toContain('benchmark-test-select')
+    expect(html).toContain('Yo-Yo Intermittent Recovery Level 1')
+    expect(html).toContain('30m Electronic Sprint')
+    expect(html).toContain('Countermovement Jump Height')
+
+    expect(html).toContain('benchmark-age-select')
+    expect(html).toContain('Under-14')
+    expect(html).toContain('Under-16')
+    expect(html).toContain('Under-19')
+    expect(html).toContain('Senior Open')
+
+    expect(html).toContain('benchmark-gender-select')
+    expect(html).toContain('Male Athletes')
+    expect(html).toContain('Female Athletes')
+
+    // Percentile Progress Gauge
+    expect(html).toContain('role="progressbar"')
+    expect(html).toContain('kc-calc-gauge-fill')
+
+    // Bilingual Coaching Advice
+    expect(html).toContain('Coaching Action (English):')
+    expect(html).toContain('कोच के लिए सुझाव (हिंदी):')
+  })
+
+  it('embeds NormativeBenchmarkCalculator directly in empirical benchmark paper KG-2026-002', () => {
+    const testPaper = getPaperBySlug('KG-2026-002')!
+    const html = renderToStaticMarkup(
+      <KhelChroniclePaperPage slug="normative-fitness-percentiles-grassroots-athletes-india" initialPaper={testPaper} />
+    )
+
+    // Must embed calculator under #calculator anchor
+    expect(html).toContain('id="calculator"')
+    expect(html).toContain('Indian Athlete Normative Benchmark Calculator')
+    expect(html).toContain('href="#calculator"')
+  })
+
+  it('renders international standard preprint features: Version of Record (VoR) banner, Revisions changelog, Altmetric score, and comment filter tabs', () => {
+    const testPaper = getPaperBySlug('KG-2026-002')!
+    const html = renderToStaticMarkup(
+      <KhelChroniclePaperPage slug="normative-fitness-percentiles-grassroots-athletes-india" initialPaper={testPaper} />
+    )
+
+    // Version of Record (VoR) Journal Publication Banner
+    expect(html).toContain('PEER-REVIEWED VERSION OF RECORD (VoR) PUBLISHED')
+    expect(html).toContain('Indian Journal of Exercise Physiology')
+    expect(html).toContain('10.51224/ijep.2026.012')
+
+    // Revision History Pill Trigger
+    expect(html).toContain('kc-version-history-btn')
+    expect(html).toContain('Revisions (')
+
+    // Altmetric Attention Score Card
+    expect(html).toContain('kc-altmetric-card')
+    expect(html).toContain('Attention Score')
+    expect(html).toContain('Global Scholarly Reach')
+    expect(html).toContain('Policy &amp; Guideline Citations')
+    expect(html).toContain('Mendeley / Zotero Saves')
+
+    // Peer Comment Type Filter Tabs
+    expect(html).toContain('All Comments (')
+    expect(html).toContain('🔬 Peer Reviews (')
+    expect(html).toContain('❓ Methodological Queries (')
+    expect(html).toContain('📋 Replication Notes (')
+    expect(html).toContain('💬 Academic Discussion (')
+
+    // Rich Peer Review Submission Form
+    expect(html).toContain('Leave a Scientific Comment / Feedback &amp; Peer Review')
+    expect(html).toContain('id="comment-author"')
+    expect(html).toContain('id="comment-affiliation"')
+    expect(html).toContain('id="comment-orcid"')
+    expect(html).toContain('id="comment-type-select"')
+    expect(html).toContain('id="comment-coi"')
+    expect(html).toContain('id="comment-content"')
+  })
+
+  it('fetches, adds, and upvotes database-backed peer comments via chronicle-client', async () => {
+    const testSlug = 'kinematic-correlates-lumbar-spine-stress-fast-bowlers'
+
+    // Fetch existing comments
+    const initialComments = await getChroniclePaperComments(testSlug)
+    expect(Array.isArray(initialComments)).toBe(true)
+    expect(initialComments.length).toBeGreaterThan(0)
+    expect(initialComments[0].author).toBeDefined()
+    expect(initialComments[0].affiliation).toBeDefined()
+
+    // Add a new peer review comment
+    const newComment = await addChroniclePaperComment(testSlug, {
+      author: 'Dr. Ramesh Sundaram',
+      affiliation: 'National Cricket Academy (NCA), Bengaluru',
+      role: 'Lead Fast Bowling Biomechanist',
+      orcid: '0000-0003-1234-5678',
+      commentType: 'peer_review',
+      competingInterests: 'Biomechanics advisor to BCCI pathways',
+      content: 'Independent high-speed kinematic video validation corroborates the 28-degree threshold within +/- 1.2 degrees.',
+    })
+
+    expect(newComment.id).toBeDefined()
+    expect(newComment.author).toBe('Dr. Ramesh Sundaram')
+    expect(newComment.affiliation).toBe('National Cricket Academy (NCA), Bengaluru')
+    expect(newComment.commentType).toBe('peer_review')
+    expect(newComment.orcid).toBe('0000-0003-1234-5678')
+    expect(newComment.competingInterests).toContain('BCCI pathways')
+    expect(newComment.helpfulCount).toBe(0)
+
+    // Upvote comment as helpful
+    const voteResult = await voteChronicleCommentHelpful(newComment.id, testSlug)
+    expect(voteResult.helpfulCount).toBe(1)
+
+    // Upvote again
+    const secondVote = await voteChronicleCommentHelpful(newComment.id, testSlug)
+    expect(secondVote.helpfulCount).toBe(2)
+
+    // Validation checks
+    await expect(
+      addChroniclePaperComment(testSlug, {
+        author: 'A',
+        affiliation: 'SAI',
+        content: 'Valid content exceeding minimum character threshold.',
+      })
+    ).rejects.toThrow('full name')
+
+    await expect(
+      addChroniclePaperComment(testSlug, {
+        author: 'Valid Name',
+        affiliation: 'S',
+        content: 'Valid content exceeding minimum character threshold.',
+      })
+    ).rejects.toThrow('university')
+
+    await expect(
+      addChroniclePaperComment(testSlug, {
+        author: 'Valid Name',
+        affiliation: 'Valid University',
+        content: 'Short',
+      })
+    ).rejects.toThrow('at least 10 characters')
   })
 })

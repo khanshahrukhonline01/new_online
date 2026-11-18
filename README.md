@@ -55,7 +55,7 @@ For a full historical record of all phases, fixes, database migrations, and repo
 5. Authorized live sports provider integrations.
 6. SEO, privacy, analytics, advertising, accessibility, and release checks.
 7. KhelChronicle Diamond Open Access research preprint repository and intake queue.
-8. 34-Sport comprehensive hub directory with Olympic pathways and SAI quotas.
+8. 35-Sport comprehensive hub directory with Olympic pathways and SAI quotas.
 9. Core database relational expansion (junction tables & stadium surfaces).
 10. Monetization, Indian Payment Gateways (UPI/Cards/NetBanking) & Host Hub.
 11. Performance optimizations, SWR caching, Interactive Sports Tools & Selection Calendar.
@@ -87,7 +87,7 @@ The carousel is a presentation-only feature and does not change catalogue, venue
 Implemented and verified production routes:
 - `/` — Homepage with isolated sports hero carousel, video drills, and curated sports books.
 - `/dashboard` — Dedicated Athlete & User Dashboard with real-time KPI ribbon, Player Card, confirmed match RSVPs, and saved trial deadlines.
-- `/sports` and `/sports/:slug` — Complete 34-sport Olympic/national discipline directory.
+- `/sports` and `/sports/:slug` — Complete 35-sport Olympic/national discipline directory.
 - `/opportunities` and `/opportunities/:slug` — Dynamic trial discovery with deadline alerts and Google Calendar / .ics sync.
 - `/venues` and `/venues/:slug` — Venue directory with 1-tap GPS "Near Me" radius filters, Haversine distance calculator, and interactive Leaflet map view.
 - `/academies` and `/academies/:slug` — Verified academy directory with SAI NCOE accreditation badges.

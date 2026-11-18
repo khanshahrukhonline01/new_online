@@ -36,6 +36,8 @@ export interface SportsMatch {
   source: string;
   sourceUrl?: string;
   completedAt?: string;
+  lastUpdated?: string;
+  playerOfTheMatch?: { name: string; role?: string; stats?: string };
   isPinned?: boolean;
 }
 

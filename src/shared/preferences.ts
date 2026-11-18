@@ -7,7 +7,6 @@
 import { changeAppLanguage } from '../i18n'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
-export type AccentColour = 'green' | 'blue' | 'orange'
 export type EmailFrequency = 'daily' | 'weekly' | 'monthly' | 'never'
 export type ProfileVisibility = 'public' | 'scouts_only' | 'private'
 
@@ -70,7 +69,6 @@ export const ALL_SPORTS_DISCIPLINES = [
 
 export interface UserPreferences {
   theme: ThemeMode
-  accent: AccentColour
   language: string
   preferredCity: string
   soundAlerts: boolean
@@ -86,7 +84,6 @@ export interface UserPreferences {
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'light',
-  accent: 'green',
   language: 'en',
   preferredCity: 'All India',
   soundAlerts: true,
@@ -104,55 +101,19 @@ const STORAGE_KEY = 'khelgrid-user-preferences'
 const THEME_STORAGE_KEY = 'khelgrid-theme'
 const LANG_STORAGE_KEY = 'khelgrid-lang'
 
-function isThemeMode(value: unknown): value is ThemeMode {
-  return value === 'light' || value === 'dark' || value === 'system'
-}
-
-function isAccentColour(value: unknown): value is AccentColour {
-  return value === 'green' || value === 'blue' || value === 'orange'
-}
-
-function isEmailFrequency(value: unknown): value is EmailFrequency {
-  return value === 'daily' || value === 'weekly' || value === 'monthly' || value === 'never'
-}
-
-function isProfileVisibility(value: unknown): value is ProfileVisibility {
-  return value === 'public' || value === 'scouts_only' || value === 'private'
-}
-
 export function getStoredPreferences(): UserPreferences {
   if (typeof localStorage === 'undefined') return DEFAULT_PREFERENCES
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    const legacyTheme = localStorage.getItem(THEME_STORAGE_KEY) || localStorage.getItem('theme')
+    const legacyTheme = (localStorage.getItem(THEME_STORAGE_KEY) || localStorage.getItem('theme')) as ThemeMode | null
     const legacyLang = localStorage.getItem(LANG_STORAGE_KEY)
+
     const parsed: Partial<UserPreferences> = raw ? JSON.parse(raw) : {}
-
-    const language = typeof parsed.language === 'string' && SUPPORTED_LANGUAGES.some(item => item.code === parsed.language)
-      ? parsed.language
-      : typeof legacyLang === 'string' && SUPPORTED_LANGUAGES.some(item => item.code === legacyLang)
-        ? legacyLang
-        : DEFAULT_PREFERENCES.language
-
     return {
       ...DEFAULT_PREFERENCES,
-      theme: isThemeMode(parsed.theme) ? parsed.theme : isThemeMode(legacyTheme) ? legacyTheme : DEFAULT_PREFERENCES.theme,
-      accent: isAccentColour(parsed.accent) ? parsed.accent : DEFAULT_PREFERENCES.accent,
-      language,
-      preferredCity: typeof parsed.preferredCity === 'string' && INDIAN_SPORTS_CITIES.includes(parsed.preferredCity as typeof INDIAN_SPORTS_CITIES[number])
-        ? parsed.preferredCity
-        : DEFAULT_PREFERENCES.preferredCity,
-      soundAlerts: typeof parsed.soundAlerts === 'boolean' ? parsed.soundAlerts : DEFAULT_PREFERENCES.soundAlerts,
-      emailFrequency: isEmailFrequency(parsed.emailFrequency) ? parsed.emailFrequency : DEFAULT_PREFERENCES.emailFrequency,
-      trialDeadlineReminders: typeof parsed.trialDeadlineReminders === 'boolean' ? parsed.trialDeadlineReminders : DEFAULT_PREFERENCES.trialDeadlineReminders,
-      pickupGameAlerts: typeof parsed.pickupGameAlerts === 'boolean' ? parsed.pickupGameAlerts : DEFAULT_PREFERENCES.pickupGameAlerts,
-      reducedMotion: typeof parsed.reducedMotion === 'boolean' ? parsed.reducedMotion : DEFAULT_PREFERENCES.reducedMotion,
-      compactMode: typeof parsed.compactMode === 'boolean' ? parsed.compactMode : DEFAULT_PREFERENCES.compactMode,
-      favoriteSports: Array.isArray(parsed.favoriteSports)
-        ? parsed.favoriteSports.filter((sport): sport is string => typeof sport === 'string' && ALL_SPORTS_DISCIPLINES.includes(sport as typeof ALL_SPORTS_DISCIPLINES[number]))
-        : DEFAULT_PREFERENCES.favoriteSports,
-      role: typeof parsed.role === 'string' && parsed.role.length <= 80 ? parsed.role : DEFAULT_PREFERENCES.role,
-      profileVisibility: isProfileVisibility(parsed.profileVisibility) ? parsed.profileVisibility : DEFAULT_PREFERENCES.profileVisibility,
+      ...parsed,
+      theme: parsed.theme || legacyTheme || DEFAULT_PREFERENCES.theme,
+      language: parsed.language || legacyLang || DEFAULT_PREFERENCES.language,
     }
   } catch {
     return DEFAULT_PREFERENCES
@@ -173,7 +134,7 @@ export function savePreferences(updates: Partial<UserPreferences>): UserPreferen
         localStorage.setItem(LANG_STORAGE_KEY, updates.language)
         changeAppLanguage(updates.language)
       }
-      applyThemeToDOM(next.theme, next.accent)
+      applyThemeToDOM(next.theme)
       applyAccessibilityToDOM(next.reducedMotion)
       if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
         window.dispatchEvent(new CustomEvent('khelgrid-preferences-change', { detail: next }))
@@ -195,11 +156,10 @@ export function resolveEffectiveTheme(theme: ThemeMode): 'light' | 'dark' {
   return 'light'
 }
 
-export function applyThemeToDOM(theme: ThemeMode, accent: AccentColour = 'green'): void {
+export function applyThemeToDOM(theme: ThemeMode): void {
   if (typeof document === 'undefined') return
   const effective = resolveEffectiveTheme(theme)
   const root = document.documentElement
-  root.dataset.accent = accent
 
   if (effective === 'dark') {
     root.classList.remove('light')

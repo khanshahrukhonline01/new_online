@@ -247,7 +247,8 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     }
   }
 
-  const processSelectedFile = (_file: File) => {
+  const processSelectedFile = (file: File) => {
+    void file
     setUploadedFile(null)
     setErrorMessage('Direct file upload is not available yet. Please provide a secure HTTPS link to the complete manuscript.')
   }
@@ -973,7 +974,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
 
                 {/* Drag and drop zone */}
                 <div className="kc-field-group">
-                  <label className="kc-field-label">Direct manuscript upload (not available yet)</label>
+                  <label className="kc-field-label">Preprint File Upload (PDF or DOCX, max 25MB)</label>
                   <div
                     className={`kc-dropzone ${isDragging ? 'is-dragover' : ''}`}
                     onDragOver={handleDragOver}
@@ -1011,9 +1012,8 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     ) : (
                       <>
                         <SiteIcon name="upload" size={32} className="kc-dropzone-icon" />
-                        <div className="kc-dropzone-title">Direct file upload is not enabled</div>
-                        <div className="kc-dropzone-subtitle">Please provide a secure HTTPS manuscript link in the field below.</div>
-                        
+                        <div className="kc-dropzone-title">Drag &amp; Drop Manuscript File Here</div>
+                        <div className="kc-dropzone-subtitle">or click to browse files · Direct file upload is not enabled</div>
                       </>
                     )}
                   </div>
@@ -1130,8 +1130,8 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       className="kc-checkbox-input"
                     />
                     <div>
-                      <strong>Manuscript licence declaration *</strong>: I confirm I have the rights to grant the selected
-                      Creative Commons licence and understand that it will apply to the public manuscript if approved.
+                      <strong>Diamond Open Access License *</strong>: I confirm I have the rights to grant the selected
+                      Creative Commons licence and understand that it will apply to the public manuscript if approved with zero embargo and zero author fees.
                     </div>
                   </label>
                 </div>

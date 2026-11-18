@@ -478,3 +478,168 @@
   border-radius: 8px;
   cursor: pointer;
 }
+
+/* Cricket Ball Telemetry Strip */
+.scorer-telemetry-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+.telemetry-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.telemetry-input-group .lbl {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.telemetry-input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #ffffff;
+  padding: 4px 8px;
+  font-size: 12px;
+  outline: none;
+}
+
+.telemetry-radar-tag {
+  margin-left: auto;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+/* Current Over Delivery Chips */
+.current-over-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+.over-lbl {
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.over-balls-list {
+  display: flex;
+  gap: 6px;
+}
+
+.over-ball-chip {
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
+  text-align: center;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.ball-0 {
+  background: rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+}
+
+.ball-4 {
+  background: rgba(56, 189, 248, 0.25);
+  color: #38bdf8;
+  border: 1px solid #38bdf8;
+}
+
+.ball-6 {
+  background: rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+  border: 1px solid #fbbf24;
+}
+
+.ball-w {
+  background: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  border: 1px solid #ef4444;
+}
+
+.ball-wd,
+.ball-nb {
+  background: rgba(168, 85, 247, 0.25);
+  color: #c084fc;
+}
+
+/* POTM Award Section */
+.scorer-potm-section {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(16, 185, 129, 0.04) 100%);
+  border: 1px dashed rgba(251, 191, 36, 0.35);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.scorer-potm-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fbbf24;
+  margin: 0 0 10px;
+}
+
+.scorer-form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 500px) {
+  .scorer-form-row-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.scorer-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scorer-form-group label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.scorer-form-group input {
+  background: #08111b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #ffffff;
+  padding: 6px 10px;
+  font-size: 12px;
+  outline: none;
+}
+
+.scorer-form-group input:focus {
+  border-color: #fbbf24;
+}

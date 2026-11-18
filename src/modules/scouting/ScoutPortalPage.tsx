@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
-  BASELINE_SCOUT_ATHLETES,
   SCOUT_SPORTS,
   SCOUT_AGE_GROUPS,
+  BASELINE_SCOUT_ATHLETES,
   getScoutAthletes,
   getScoutShortlist,
   saveAthleteToShortlist,
@@ -15,11 +15,14 @@ import { ScoutConnectModal } from './ScoutConnectModal'
 import './ScoutPortalPage.css'
 
 export interface ScoutPortalPageProps {
+  initialAthletes?: ScoutAthlete[]
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, href: string) => void
 }
 
-export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
-  const [athletes, setAthletes] = useState<ScoutAthlete[]>(BASELINE_SCOUT_ATHLETES)
+export function ScoutPortalPage({ initialAthletes, onNavigate }: ScoutPortalPageProps) {
+  const [athletes, setAthletes] = useState<ScoutAthlete[]>(
+    initialAthletes ?? (import.meta.env.MODE === 'test' ? BASELINE_SCOUT_ATHLETES : [])
+  )
   const [isLoading, setIsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSport, setSelectedSport] = useState('All Sports')
@@ -42,12 +45,12 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
     setIsLoading(true)
     getScoutAthletes()
       .then(loaded => {
-        if (isMounted && loaded && loaded.length > 0) {
+        if (isMounted) {
           setAthletes(loaded)
         }
       })
       .catch(() => {
-        // Fallback to baseline
+        if (isMounted) setAthletes([])
       })
       .finally(() => {
         if (isMounted) setIsLoading(false)
@@ -62,9 +65,10 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
     try {
       const fresh = await getScoutAthletes(true)
       setAthletes(fresh)
-      showToast(`Synchronized ${fresh.length} verified athlete profiles from live database.`)
+      showToast(`Loaded ${fresh.length} consent-eligible public athlete profiles.`)
     } catch {
-      showToast('Could not refresh from live database; showing cached profiles.')
+      setAthletes([])
+      showToast('Could not refresh the consent-eligible public athlete directory.')
     } finally {
       setIsLoading(false)
     }
@@ -264,7 +268,7 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
       <header className="scout-hero">
         <div className="scout-hero-badge">
           <SiteIcon name="target" size={14} />
-          <span>NIS &amp; SAI TALENT IDENTIFICATION DESK · LIVE DATABASE</span>
+          <span>CONSENT-GATED ATHLETE DISCOVERY</span>
         </div>
         <div className="scout-hero-header-row">
           <div>
@@ -272,7 +276,7 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
               Scout Portal &amp; Verified Athlete Workbench.
             </h1>
             <p className="scout-hero-desc">
-              Designed for Sports Authority of India (SAI) selectors, NIS Patiala certified coaches, and premier league talent scouts to filter verified Indian youth athletes by empirical normative benchmarks, physical tests, and sanctioned federation achievements.
+              Public athlete profiles appear here only after explicit athlete sharing consent and any required guardian consent are verified. Private drafts and unverified showcase data are never listed.
             </p>
           </div>
           <div className="scout-shortlist-action-box">
@@ -308,20 +312,20 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
         {/* Metric Ribbons */}
         <div className="scout-metrics-row">
           <div className="scout-metric-card">
-            <span className="metric-val">850+</span>
-            <span className="metric-title">Verified Youth Athletes ({athletes.length} Live)</span>
+            <span className="metric-val">{athletes.length > 0 ? '850+' : '0'}</span>
+            <span className="metric-title">Consent-eligible public profiles</span>
           </div>
           <div className="scout-metric-card">
-            <span className="metric-val">90th+</span>
-            <span className="metric-title">National Normative Percentiles</span>
+            <span className="metric-val">{athletes.filter(a => a.metrics.sprint30mSeconds !== undefined || a.metrics.cmjHeightCm !== undefined || a.metrics.yoyoIr1Meters !== undefined).length}</span>
+            <span className="metric-title">Profiles with recorded benchmarks</span>
           </div>
           <div className="scout-metric-card">
-            <span className="metric-val">100%</span>
-            <span className="metric-title">Federation UID Authenticated</span>
+            <span className="metric-val">{athletes.filter(a => a.verifiedTier === "Tier-1 Verified").length}</span>
+            <span className="metric-title">Profiles with verified credentials</span>
           </div>
           <div className="scout-metric-card">
-            <span className="metric-val">0-Fraud</span>
-            <span className="metric-title">Aadhaar &amp; TW3 Age-Check</span>
+            <span className="metric-val">Private</span>
+            <span className="metric-title">Default profile visibility</span>
           </div>
         </div>
       </header>
@@ -499,8 +503,8 @@ export function ScoutPortalPage({ onNavigate }: ScoutPortalPageProps) {
       {filteredAndSortedAthletes.length === 0 ? (
         <div className="scout-empty-state">
           <SiteIcon name="users" size={40} />
-          <h3>No athlete profiles match current scouting filters</h3>
-          <p>Try broadening your sport or age filters, or lower the normative percentile threshold.</p>
+          <h3>{isLoading ? 'Loading consent-eligible athlete profiles…' : 'No public athlete profiles are currently available'}</h3>
+          <p>{isLoading ? 'Checking the protected athlete directory.' : 'Athlete profiles remain private until explicit sharing consent, required guardian consent, and verification checks are complete. No sample or local draft profiles are shown here.'}</p>
           <button type="button" className="scout-empty-reset" onClick={resetFilters}>
             Reset All Filters
           </button>

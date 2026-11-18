@@ -52,6 +52,9 @@ export function KhelChronicleDispatchStrip({ onNavigate }: KhelChronicleDispatch
             <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
               Published
             </span>
+            <span className="kc-badge-open-access">
+              Open Access · CC BY 4.0
+            </span>
           </div>
 
           <h3 id="kc-dispatch-heading" className="kc-strip-title">

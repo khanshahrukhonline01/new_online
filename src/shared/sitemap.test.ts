@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   BASE_URL,
-  SITEMAP_LASTMOD,
   VERIFIED_SPORTS,
   buildSitemapEntries,
   generateSitemapXml,
@@ -23,11 +22,10 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     expect(home).toBeDefined()
     expect(home?.priority).toBe(1.0)
     expect(home?.changefreq).toBe('daily')
-    expect(home?.lastmod).toBe(SITEMAP_LASTMOD)
+    expect(home?.lastmod).toBeUndefined()
 
-    const search = entries.find(e => e.loc === `${BASE_URL}/search`)
-    expect(search).toBeDefined()
-    expect(search?.priority).toBe(0.9)
+    // Search is a user-driven utility route, not a stable crawl landing page.
+    expect(entries.some(e => e.loc === `${BASE_URL}/search`)).toBe(false)
 
     const play = entries.find(e => e.loc === `${BASE_URL}/play`)
     expect(play).toBeDefined()
@@ -37,18 +35,19 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     expect(opportunities).toBeDefined()
     expect(opportunities?.priority).toBe(0.9)
 
-    const trials = entries.find(e => e.loc === `${BASE_URL}/trials`)
-    expect(trials).toBeDefined()
-    expect(trials?.priority).toBe(0.9)
-
     const talentScanner = entries.find(e => e.loc === `${BASE_URL}/talent-scanner`)
     expect(talentScanner).toBeDefined()
     expect(talentScanner?.priority).toBe(0.85)
   })
 
-  it('indexes all 34 verified sports directories with weekly freshness', () => {
+  it('does not index the live match centre until provider permissions and current data are confirmed', () => {
+    const urls = buildSitemapEntries().map(entry => entry.loc)
+    expect(urls).not.toContain(`${BASE_URL}/live`)
+  })
+
+  it('indexes all 35 verified sports directories with weekly freshness', () => {
     const entries = buildSitemapEntries()
-    expect(VERIFIED_SPORTS).toHaveLength(34)
+    expect(VERIFIED_SPORTS).toHaveLength(35)
 
     for (const sport of VERIFIED_SPORTS) {
       const match = entries.find(e => e.loc === `${BASE_URL}/sports/${sport}`)
@@ -74,25 +73,26 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     }
   })
 
-  it('indexes curated academies and venues detail pages', () => {
-    const entries = buildSitemapEntries()
-
-    // Curated Academies
-    const bfcAcademy = entries.find(e => e.loc === `${BASE_URL}/academies/bengaluru-fc-academy`)
-    expect(bfcAcademy).toBeDefined()
-    expect(bfcAcademy?.priority).toBe(0.85)
-    expect(bfcAcademy?.changefreq).toBe('weekly')
-
-    const gopichand = entries.find(e => e.loc === `${BASE_URL}/academies/pullela-gopichand-badminton-academy`)
-    expect(gopichand).toBeDefined()
-
-    // Curated Venues
-    const kanteerava = entries.find(e => e.loc === `${BASE_URL}/venues/sree-kanteerava-stadium`)
-    expect(kanteerava).toBeDefined()
-    expect(kanteerava?.priority).toBe(0.85)
-    expect(kanteerava?.changefreq).toBe('weekly')
+  it('does not index curated academy or venue detail records without a published database snapshot', () => {
+    const urls = buildSitemapEntries().map(entry => entry.loc)
+    expect(urls).not.toContain(`${BASE_URL}/academies/bengaluru-fc-academy`)
+    expect(urls).not.toContain(`${BASE_URL}/academies/pullela-gopichand-badminton-academy`)
+    expect(urls).not.toContain(`${BASE_URL}/venues/sree-kanteerava-stadium`)
   })
 
+  it('includes trial detail URLs only from the published-and-verified snapshot', () => {
+    const entries = buildSitemapEntries({ opportunities: [{ slug: 'sample-verified-trial' }] })
+    const urls = entries.map(entry => entry.loc)
+    expect(urls).toContain(`${BASE_URL}/trial/sample-verified-trial`)
+    expect(urls).not.toContain(`${BASE_URL}/opportunities/sample-verified-trial`)
+    expect(urls).not.toContain(`${BASE_URL}/trials`)
+  })
+
+  it('does not add curated trial detail URLs without a database snapshot', () => {
+    const urls = buildSitemapEntries().map(entry => entry.loc)
+    expect(urls.some(url => url.includes('/trial/'))).toBe(false)
+    expect(urls.some(url => url.includes('/opportunities/') && url !== `${BASE_URL}/opportunities`)).toBe(false)
+  })
   it('indexes KhelChronicle repository, all 7 disciplines, preprints, and author profiles', () => {
     const entries = buildSitemapEntries()
 
@@ -101,9 +101,8 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
       priority: 0.95,
       changefreq: 'daily',
     })
-    expect(entries.find(e => e.loc === `${BASE_URL}/khelchronicle/submit`)).toMatchObject({
-      priority: 0.85,
-    })
+    // Submission is an intake workflow, not a public research record.
+    expect(entries.some(e => e.loc === `${BASE_URL}/khelchronicle/submit`)).toBe(false)
 
     // 2. 7 Academic Disciplines
     const disciplines = [
@@ -141,6 +140,12 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
     )
     expect(rathore).toBeDefined()
     expect(rathore?.priority).toBe(0.75)
+
+    // 5. Open Science & Research Ethics Policy
+    const openSciencePolicy = entries.find(e => e.loc === `${BASE_URL}/open-science-policy`)
+    expect(openSciencePolicy).toBeDefined()
+    expect(openSciencePolicy?.priority).toBe(0.6)
+    expect(openSciencePolicy?.changefreq).toBe('monthly')
   })
 
   it('contains expected metadata and date formatting on every entry', () => {
@@ -149,7 +154,7 @@ describe('Google XML Sitemap & Scholar Indexing Engine', () => {
 
     for (const entry of entries) {
       expect(entry.loc).toMatch(/^https:\/\/khelgrid\.com\//)
-      expect(entry.lastmod).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      if (entry.lastmod) expect(entry.lastmod).toMatch(/^\d{4}-\d{2}-\d{2}$/)
       expect(['daily', 'weekly', 'monthly', 'hourly']).toContain(entry.changefreq)
       expect(entry.priority).toBeGreaterThanOrEqual(0.5)
       expect(entry.priority).toBeLessThanOrEqual(1.0)

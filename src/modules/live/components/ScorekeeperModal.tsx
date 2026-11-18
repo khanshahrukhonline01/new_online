@@ -19,15 +19,22 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
   const [newSport, setNewSport] = useState<SportType>('Cricket');
   const [newTournament, setNewTournament] = useState('');
   const [newVenue, setNewVenue] = useState('');
-  const [newCity, setNewCity] = useState('Bengaluru');
+  const [newCity, setNewCity] = useState('');
   const [newTeamA, setNewTeamA] = useState('');
   const [newTeamB, setNewTeamB] = useState('');
-  const [newHostName, setNewHostName] = useState('Ground Scorer');
+  const [newHostName, setNewHostName] = useState('');
 
   // Active Scoring Input State
   const [customCommentary, setCustomCommentary] = useState('');
   const [footballScorer, setFootballScorer] = useState('');
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
+
+  // Ball Telemetry & Player of the Match State
+  const [potmName, setPotmName] = useState('');
+  const [potmStats, setPotmStats] = useState('');
+  const [recentBalls, setRecentBalls] = useState<string[]>(['0', '1', '4', 'W', '2', '6']);
+  const [strikerName, setStrikerName] = useState('Striker (Batting)');
+  const [bowlerName, setBowlerName] = useState('Opening Bowler');
 
   if (!isOpen) return null;
 
@@ -35,19 +42,19 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
 
   const handleCreateMatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTournament.trim() || !newTeamA.trim() || !newTeamB.trim()) {
-      setFeedbackNotice('Please provide tournament name and both team names.');
+    if (!newTournament.trim() || !newTeamA.trim() || !newTeamB.trim() || !newVenue.trim() || !newCity.trim() || !newHostName.trim()) {
+      setFeedbackNotice('Please provide the tournament, both teams, actual venue, city and scorer/host name.');
       return;
     }
 
     const created = await scorekeeperService.createNewMatch({
       sport: newSport,
       tournament: newTournament,
-      venue: newVenue || 'Local Turf Arena',
-      city: newCity || 'Bengaluru',
+      venue: newVenue.trim(),
+      city: newCity.trim(),
       teamAName: newTeamA,
       teamBName: newTeamB,
-      hostName: newHostName,
+      hostName: newHostName.trim(),
     });
 
     const updated = scorekeeperService.getCommunityMatches();
@@ -60,6 +67,8 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
 
   const handleCricketBall = async (runs: number, isWicket = false, isExtra = false, extraType?: 'wide' | 'no_ball') => {
     if (!currentMatch) return;
+    const ballLabel = isWicket ? 'W' : extraType === 'wide' ? 'WD' : extraType === 'no_ball' ? 'NB' : String(runs);
+    setRecentBalls(prev => [...prev.slice(-5), ballLabel]);
     const updated = await scorekeeperService.recordCricketBall(currentMatch.id, {
       runs,
       isWicket,
@@ -89,11 +98,31 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
 
   const handleFinishMatch = async () => {
     if (!currentMatch) return;
+    if (potmName.trim()) {
+      try {
+        const awards = JSON.parse(localStorage.getItem('khelgrid_potm_awards') || '[]');
+        awards.unshift({
+          id: `potm-${Date.now()}`,
+          playerName: potmName.trim(),
+          performance: potmStats.trim() || 'Match Winning Performance',
+          matchId: currentMatch.id,
+          tournament: currentMatch.tournament,
+          awardedAt: new Date().toISOString(),
+        });
+        localStorage.setItem('khelgrid_potm_awards', JSON.stringify(awards));
+      } catch {
+        // Ignore in private browsing
+      }
+    }
     const updated = await scorekeeperService.updateMatchStatus(currentMatch.id, 'FINISHED');
     if (updated) {
       setMatches(scorekeeperService.getCommunityMatches());
       onMatchUpdated(updated);
-      setFeedbackNotice('Match marked as FINISHED and archived to results.');
+      setFeedbackNotice(
+        potmName.trim()
+          ? `✓ Match finished! Digital POTM Badge awarded to ${potmName.trim()}.`
+          : 'Match marked as FINISHED and archived to results.'
+      );
     }
   };
 
@@ -134,13 +163,17 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
                 setSelectedMatchId(e.target.value);
                 setIsCreatingNew(false);
               }}
-              disabled={isCreatingNew}
+              disabled={isCreatingNew || matches.length === 0}
             >
-              {matches.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.tournament}: {m.teamA.name} ({m.teamA.score}) vs {m.teamB.name} ({m.teamB.score}) — {m.status}
-                </option>
-              ))}
+              {matches.length === 0 ? (
+                <option value="" disabled>No community matches yet — create one to start scoring</option>
+              ) : (
+                matches.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.tournament}: {m.teamA.name} ({m.teamA.score}) vs {m.teamB.name} ({m.teamB.score}) — {m.status}
+                  </option>
+                ))
+              )}
             </select>
             <button
               type="button"
@@ -211,6 +244,7 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
                   placeholder="e.g. FSV Arena Court 1"
                   value={newVenue}
                   onChange={(e) => setNewVenue(e.target.value)}
+                  required
                 />
               </div>
               <div className="form-group">
@@ -221,6 +255,7 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
                   placeholder="e.g. Bengaluru"
                   value={newCity}
                   onChange={(e) => setNewCity(e.target.value)}
+                  required
                 />
               </div>
               <div className="form-group">
@@ -231,6 +266,7 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
                   placeholder="e.g. Coach Ramesh"
                   value={newHostName}
                   onChange={(e) => setNewHostName(e.target.value)}
+                  required
                 />
               </div>
             </div>
@@ -266,6 +302,39 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
               {/* CRICKET CONTROLS */}
               {currentMatch.sport === 'Cricket' && (
                 <div className="scorer-action-section">
+                  <div className="scorer-telemetry-strip">
+                    <div className="telemetry-input-group">
+                      <span className="lbl">On Strike:</span>
+                      <input
+                        className="telemetry-input"
+                        value={strikerName}
+                        onChange={(e) => setStrikerName(e.target.value)}
+                        placeholder="Striker Name"
+                      />
+                    </div>
+                    <div className="telemetry-input-group">
+                      <span className="lbl">Bowler:</span>
+                      <input
+                        className="telemetry-input"
+                        value={bowlerName}
+                        onChange={(e) => setBowlerName(e.target.value)}
+                        placeholder="Bowler Name"
+                      />
+                    </div>
+                    <span className="telemetry-radar-tag">Radar ~132 km/h</span>
+                  </div>
+
+                  <div className="current-over-row">
+                    <span className="over-lbl">This Over:</span>
+                    <div className="over-balls-list">
+                      {recentBalls.map((b, idx) => (
+                        <span key={idx} className={`over-ball-chip ball-${b.toLowerCase()}`}>
+                          {b}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
                   <h4>Tap to Record Ball (Delivery):</h4>
                   <div className="scorer-keypad">
                     <button type="button" className="keypad-btn" onClick={() => handleCricketBall(0)}>
@@ -349,6 +418,35 @@ export function ScorekeeperModal({ isOpen, onClose, onMatchUpdated }: Scorekeepe
                       <span className="timeline-text">{ev.text}</span>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* PLAYER OF THE MATCH (POTM) AWARD INTAKE */}
+              <div className="scorer-potm-section">
+                <h4>
+                  <SiteIcon name="award" size={15} /> Award Player of the Match (POTM) Digital Badge:
+                </h4>
+                <div className="scorer-form-row-2">
+                  <div className="scorer-form-group">
+                    <label htmlFor="potm-name">Player Full Name</label>
+                    <input
+                      id="potm-name"
+                      type="text"
+                      placeholder="e.g. Rohit Verma"
+                      value={potmName}
+                      onChange={(e) => setPotmName(e.target.value)}
+                    />
+                  </div>
+                  <div className="scorer-form-group">
+                    <label htmlFor="potm-stats">Performance Summary</label>
+                    <input
+                      id="potm-stats"
+                      type="text"
+                      placeholder="e.g. 54* (28) & 3/18 (4.0)"
+                      value={potmStats}
+                      onChange={(e) => setPotmStats(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
 

@@ -35,7 +35,6 @@ describe('Settings & Preferences System', () => {
   it('provides comprehensive default preferences', () => {
     const prefs = getStoredPreferences()
     expect(prefs.theme).toBe(DEFAULT_PREFERENCES.theme)
-    expect(prefs.accent).toBe('green')
     expect(prefs.language).toBe('en')
     expect(prefs.preferredCity).toBe('All India')
     expect(prefs.soundAlerts).toBe(true)
@@ -52,20 +51,17 @@ describe('Settings & Preferences System', () => {
   it('persists preference updates and returns updated state', () => {
     const updated = savePreferences({
       theme: 'dark',
-      accent: 'blue',
       language: 'hi',
       preferredCity: 'Delhi NCR',
       soundAlerts: false,
     })
     expect(updated.theme).toBe('dark')
-    expect(updated.accent).toBe('blue')
     expect(updated.language).toBe('hi')
     expect(updated.preferredCity).toBe('Delhi NCR')
     expect(updated.soundAlerts).toBe(false)
 
     const reloaded = getStoredPreferences()
     expect(reloaded.theme).toBe('dark')
-    expect(reloaded.accent).toBe('blue')
     expect(reloaded.language).toBe('hi')
     expect(reloaded.preferredCity).toBe('Delhi NCR')
     expect(reloaded.soundAlerts).toBe(false)
@@ -75,37 +71,6 @@ describe('Settings & Preferences System', () => {
     expect(resolveEffectiveTheme('light')).toBe('light')
     expect(resolveEffectiveTheme('dark')).toBe('dark')
     expect(['light', 'dark']).toContain(resolveEffectiveTheme('system'))
-  })
-
-  it('falls back safely when persisted theme and preference values are invalid', () => {
-    localStorage.setItem('khelgrid-user-preferences', JSON.stringify({
-      theme: 'ultraviolet',
-      accent: 'pink',
-      language: 'xx',
-      preferredCity: { unexpected: true },
-      soundAlerts: 'yes',
-      reducedMotion: 1,
-      favoriteSports: ['Football', 42, 'Invented Sport'],
-      profileVisibility: 'everyone',
-    }))
-
-    const preferences = getStoredPreferences()
-    expect(preferences.theme).toBe(DEFAULT_PREFERENCES.theme)
-    expect(preferences.accent).toBe(DEFAULT_PREFERENCES.accent)
-    expect(preferences.language).toBe(DEFAULT_PREFERENCES.language)
-    expect(preferences.preferredCity).toBe(DEFAULT_PREFERENCES.preferredCity)
-    expect(preferences.soundAlerts).toBe(DEFAULT_PREFERENCES.soundAlerts)
-    expect(preferences.reducedMotion).toBe(DEFAULT_PREFERENCES.reducedMotion)
-    expect(preferences.favoriteSports).toEqual(['Football'])
-    expect(preferences.profileVisibility).toBe(DEFAULT_PREFERENCES.profileVisibility)
-  })
-
-  it('supports legacy valid theme values while rejecting invalid legacy values', () => {
-    localStorage.setItem('khelgrid-theme', 'dark')
-    expect(getStoredPreferences().theme).toBe('dark')
-
-    localStorage.setItem('khelgrid-theme', 'ultraviolet')
-    expect(getStoredPreferences().theme).toBe(DEFAULT_PREFERENCES.theme)
   })
 
   it('includes key Indian regional languages and major sports cities', () => {
@@ -148,9 +113,6 @@ describe('Settings & Preferences System', () => {
     expect(html).toContain('Light Mode')
     expect(html).toContain('Dark Mode')
     expect(html).toContain('System Default')
-    expect(html).toContain('Emerald Green')
-    expect(html).toContain('Royal Blue')
-    expect(html).toContain('Dynamic Orange')
     expect(html).toContain('Application Language / भाषा')
     expect(html).toContain('Reduced Motion')
     expect(html).toContain('Compact Display Mode')

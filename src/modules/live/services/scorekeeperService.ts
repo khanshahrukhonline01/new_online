@@ -14,75 +14,8 @@ function isConfigured(): boolean {
 
 const STORAGE_KEY_COMMUNITY_MATCHES = 'kg_community_live_matches_v1';
 
-export const INITIAL_SAMPLE_COMMUNITY_MATCHES: CommunityLiveMatch[] = [
-  {
-    id: 'comm-match-cricket-1',
-    isCommunityMatch: true,
-    sport: 'Cricket',
-    tournament: 'Bengaluru Premier Turf League 2026',
-    stage: 'Semi-Final 1 · 12 Overs',
-    status: 'LIVE',
-    city: 'Bengaluru',
-    venue: 'FSV Arena, Koramangala',
-    hostName: 'Coach Ramesh & FSV Ops',
-    hostPhone: '+91 98450 11920',
-    teamA: {
-      name: 'Indiranagar Knights',
-      code: 'INK',
-      score: '84/3',
-      flag: '🏏',
-    },
-    teamB: {
-      name: 'Koramangala Titans',
-      code: 'KMT',
-      score: 'Yet to bat',
-      flag: '🏏',
-    },
-    venueOrOvers: '9.4 Overs · Target: 110',
-    liveTime: 'Live Now',
-    highlight: '84/3 (9.4 Ov) · Aditya Verma 34*(18) at crease',
-    source: 'KhelGrid Live Community Scorer',
-    commentaryTimeline: [
-      { id: 'ev-4', time: '9.4 Ov', type: 'runs', text: 'SIX! Aditya lofts it straight over long-on for a monster 6!', runs: 6 },
-      { id: 'ev-3', time: '9.3 Ov', type: 'runs', text: '1 run, pushed into covers for a quick single.', runs: 1 },
-      { id: 'ev-2', time: '9.2 Ov', type: 'wicket', text: 'WICKET! Bowled him! Clean off-stump shattered.', isWicket: true },
-      { id: 'ev-1', time: '9.1 Ov', type: 'extra', text: 'Wide ball down the leg side + 1 run.', runs: 1 },
-    ],
-  },
-  {
-    id: 'comm-match-football-1',
-    isCommunityMatch: true,
-    sport: 'Football',
-    tournament: 'Bangalore 5v5 Turf Championship',
-    stage: 'Final Match',
-    status: 'LIVE',
-    city: 'Bengaluru',
-    venue: 'Dribble Football Arena',
-    hostName: 'Dribble Turf Coordinator',
-    hostPhone: '+91 99112 88221',
-    teamA: {
-      name: 'Whitefield Strikers',
-      code: 'WFS',
-      score: '2',
-      flag: '⚽',
-    },
-    teamB: {
-      name: 'HSR United',
-      code: 'HSR',
-      score: '1',
-      flag: '⚽',
-    },
-    venueOrOvers: '38\' 2nd Half',
-    liveTime: 'Live Now',
-    highlight: '2-1 · Farhan scores from counter attack in 36th min',
-    source: 'KhelGrid Live Community Scorer',
-    commentaryTimeline: [
-      { id: 'ev-f3', time: '36\'', type: 'goal', text: 'GOAL! Farhan strikes into the bottom-right corner!' },
-      { id: 'ev-f2', time: '29\'', type: 'card', text: 'Yellow Card for tackle outside the D-box.' },
-      { id: 'ev-f1', time: '14\'', type: 'goal', text: 'GOAL! HSR United equalize with a header from corner!' },
-    ],
-  },
-];
+// Public match feeds must never be populated with fabricated sample scores.
+export const INITIAL_SAMPLE_COMMUNITY_MATCHES: CommunityLiveMatch[] = [];
 
 export class ScorekeeperService {
   private static instance: ScorekeeperService;
@@ -99,16 +32,23 @@ export class ScorekeeperService {
       try {
         const stored = window.localStorage.getItem(STORAGE_KEY_COMMUNITY_MATCHES);
         if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
+          const parsed: unknown = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            const legacySampleIds = new Set(['comm-match-cricket-1', 'comm-match-football-1']);
+            const communityMatches = (parsed as CommunityLiveMatch[]).filter(
+              match => match && typeof match.id === 'string' && !legacySampleIds.has(match.id),
+            );
+            if (communityMatches.length !== parsed.length) {
+              window.localStorage.setItem(STORAGE_KEY_COMMUNITY_MATCHES, JSON.stringify(communityMatches));
+            }
+            return communityMatches;
           }
         }
       } catch {
         // fallback
       }
     }
-    return INITIAL_SAMPLE_COMMUNITY_MATCHES;
+    return [];
   }
 
   public async saveCommunityMatch(match: CommunityLiveMatch): Promise<CommunityLiveMatch> {

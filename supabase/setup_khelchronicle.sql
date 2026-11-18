@@ -82,4 +82,57 @@ values
   )
 on conflict (paper_id) do nothing;
 
+-- 5. Community Peer Reviews and Reader Scientific Comments Table
+create table if not exists public.chronicle_paper_comments (
+  id uuid primary key default gen_random_uuid(),
+  paper_slug text not null,
+  author text not null,
+  affiliation text not null,
+  role text not null default 'Sports Science Researcher',
+  orcid text,
+  comment_type text not null default 'peer_review' check (comment_type in ('peer_review', 'methodological_query', 'replication_note', 'general')),
+  competing_interests text default 'None declared',
+  content text not null,
+  helpful_count integer not null default 0,
+  is_author_response boolean not null default false,
+  status text not null default 'approved' check (status in ('pending', 'approved', 'hidden', 'flagged')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_chronicle_comments_paper_slug on public.chronicle_paper_comments (paper_slug, created_at desc);
+
+alter table public.chronicle_paper_comments enable row level security;
+
+drop policy if exists "chronicle_comments_public_read" on public.chronicle_paper_comments;
+create policy "chronicle_comments_public_read" on public.chronicle_paper_comments
+  for select to anon, authenticated using (status = 'approved');
+
+drop policy if exists "chronicle_comments_public_insert" on public.chronicle_paper_comments;
+create policy "chronicle_comments_public_insert" on public.chronicle_paper_comments
+  for insert to anon, authenticated with check (status = 'approved');
+
+grant select, insert on public.chronicle_paper_comments to anon, authenticated;
+
+-- 6. Stored Procedures: Helpful Vote and Metric Tracking
+create or replace function public.increment_chronicle_comment_helpful(p_comment_id uuid)
+returns integer
+language plpgsql
+security definer
+as $$
+declare
+  v_new_count integer;
+begin
+  update public.chronicle_paper_comments
+  set helpful_count = helpful_count + 1,
+      updated_at = now()
+  where id = p_comment_id
+  returning helpful_count into v_new_count;
+
+  return coalesce(v_new_count, 1);
+end;
+$$;
+
+grant execute on function public.increment_chronicle_comment_helpful(uuid) to anon, authenticated;
+
 commit;

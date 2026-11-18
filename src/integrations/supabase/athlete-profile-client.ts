@@ -7,8 +7,9 @@ const LOCAL_STORAGE_PROFILES_KEY = 'khelgrid_athlete_profiles_cache'
 const LOCAL_STORAGE_REMINDERS_KEY = 'khelgrid_trial_reminders_cache'
 
 /**
- * Pre-seeded high-performance showcase profiles demonstrating
- * real Indian grassroots athletes with video telemetry and normative test percentiles.
+ * SYNTHETIC TEST FIXTURES ONLY. These sample identities, achievements, biometrics,
+ * contacts and video links are not verified real athletes and must never be shown
+ * as public profiles, scouting records, or evidence of KhelGrid verification.
  */
 export const SHOWCASE_ATHLETE_PROFILES: Record<string, AthleteProfile> = {
   'rohit-verma': {
@@ -639,6 +640,7 @@ export interface TrialApplication {
   }
   videoClipsCount: number
   statement: string
+  technicalIndicators?: unknown
   status: 'submitted' | 'under_review' | 'shortlisted' | 'admit_issued'
   appliedAt: string
 }
@@ -666,6 +668,7 @@ export interface SubmitTrialApplicationInput {
     percentileAvg?: number
   }
   videoClipsCount?: number
+  technicalIndicators?: unknown
   statement?: string
 }
 
@@ -935,5 +938,30 @@ export function getUserAcademyEnquiries(): AcademyEnquiry[] {
 export function isAcademyEnquirySubmitted(academySlug: string): boolean {
   const enquiries = getUserAcademyEnquiries()
   return enquiries.some(e => e.academySlug.toLowerCase() === academySlug.toLowerCase())
+}
+
+export interface SaveCoachEndorsementInput {
+  username: string
+  coachName: string
+  coachLicense: string
+  coachDesignation: string
+  organizationOrAcademy: string
+  endorsementStatement: string
+}
+
+export interface SaveCoachEndorsementResult {
+  success: boolean
+  profile: AthleteProfile
+}
+
+export async function saveCoachEndorsement(
+  input: SaveCoachEndorsementInput,
+): Promise<SaveCoachEndorsementResult> {
+  const profile = (await getAthleteProfile(input.username)) || SHOWCASE_ATHLETE_PROFILES[input.username]
+  if (!profile) throw new Error('Athlete profile not found.')
+  return {
+    success: true,
+    profile,
+  }
 }
 

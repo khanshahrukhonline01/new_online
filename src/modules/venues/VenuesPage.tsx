@@ -192,9 +192,9 @@ export default function VenuesPage({ onNavigate }: VenuesPageProps = {}) {
 
   const quickFilters: QuickFilterPill[] = [
     { id: 'govt', label: 'Govt Complexes', icon: 'building', active: facility === 'true', onClick: () => setFacility(prev => prev === 'true' ? '' : 'true') },
+    { id: 'cricket', label: 'Cricket & Box Turfs', icon: 'sports', active: sport === 'Cricket', onClick: () => setSport(prev => prev === 'Cricket' ? '' : 'Cricket') },
+    { id: 'football', label: 'Football Turfs', icon: 'sports', active: sport === 'Football', onClick: () => setSport(prev => prev === 'Football' ? '' : 'Football') },
     { id: 'badminton', label: 'Badminton Courts', icon: 'sports', active: sport === 'Badminton', onClick: () => setSport(prev => prev === 'Badminton' ? '' : 'Badminton') },
-    { id: 'cricket', label: 'Cricket Turfs', icon: 'sports', active: sport === 'Cricket', onClick: () => setSport(prev => prev === 'Cricket' ? '' : 'Cricket') },
-    { id: 'football', label: 'Football Grounds', icon: 'sports', active: sport === 'Football', onClick: () => setSport(prev => prev === 'Football' ? '' : 'Football') },
     { id: 'swimming', label: 'Swimming Pools', icon: 'sports', active: sport === 'Swimming', onClick: () => setSport(prev => prev === 'Swimming' ? '' : 'Swimming') },
   ]
 
@@ -202,10 +202,10 @@ export default function VenuesPage({ onNavigate }: VenuesPageProps = {}) {
 
   return (
     <section className="content-page">
-      <p className="eyebrow">VENUE & TURF DIRECTORY</p>
-      <h1>Find a place to play.</h1>
+      <p className="eyebrow">KHEL TURF · VENUE &amp; TURF DIRECTORY (टर्फ बुकिंग)</p>
+      <h1>Book Sports Turfs &amp; Find a place to play.</h1>
       <p className="page-intro">
-        Discover sports grounds, courts, turfs and training facilities. Check each venue’s address, facilities and source details before visiting.
+        Discover verified box cricket turfs, football grounds, synthetic pitches, badminton courts, and sports training facilities near you. Check hourly pricing and amenities before visiting.
       </p>
 
       <DirectoryCallout

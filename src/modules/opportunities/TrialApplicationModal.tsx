@@ -7,6 +7,8 @@ import {
   submitTrialApplication,
   type TrialApplication,
 } from '../../integrations/supabase/athlete-profile-client'
+import { formatTechnicalIndicators } from '../../shared/data/sportRolesData'
+import { getSafeStorage } from '../../shared/utils/khelId'
 import './TrialApplicationModal.css'
 
 export interface TrialApplicationModalProps {
@@ -27,6 +29,7 @@ export function TrialApplicationModal({
   const [fullName, setFullName] = useState(authUser?.fullName || authUser?.name || '')
   const [phone, setPhone] = useState('')
   const [position, setPosition] = useState('')
+  const [technicalIndicators, setTechnicalIndicators] = useState<string>('')
   const [statement, setStatement] = useState(
     'Passionate athlete registered on KhelGrid applying with verified physical combine test benchmarks and game footage highlights.',
   )
@@ -45,6 +48,18 @@ export function TrialApplicationModal({
         if (p.playingPosition) setPosition(p.playingPosition)
       }
     })
+    try {
+      const draftRaw = getSafeStorage().getItem('khelgrid_cv_draft_v2')
+      if (draftRaw) {
+        const parsed = JSON.parse(draftRaw)
+        const formatted = formatTechnicalIndicators(parsed)
+        if (formatted) {
+          setTechnicalIndicators(formatted)
+        }
+      }
+    } catch {
+      // Ignore
+    }
     return () => {
       active = false
     }
@@ -80,6 +95,7 @@ export function TrialApplicationModal({
         athleteEmail: authUser?.email || undefined,
         ageCategory: opportunity.age_category || undefined,
         playingPosition: position || profile?.playingPosition || undefined,
+        technicalIndicators: technicalIndicators || undefined,
         summary: profile?.summary || undefined,
         fitnessBenchmarks: profile?.fitnessBenchmarks || undefined,
         videoClipsCount: profile?.videoClips?.length || 0,
@@ -213,6 +229,13 @@ export function TrialApplicationModal({
                       </a>{' '}
                       to boost selector ranking.
                     </span>
+                  </div>
+                )}
+
+                {technicalIndicators && (
+                  <div className="trial-app-tech-badge">
+                    <SiteIcon name="target" size={13} />
+                    <span>{technicalIndicators}</span>
                   </div>
                 )}
 

@@ -71,4 +71,38 @@ describe('CityDetailPage Dynamic City Sports Hub', () => {
     expect(html).toContain('Maharana Pratap Sports College')
     expect(html).toContain('+ List in Dehradun')
   })
+
+  it('renders Kanpur city sports hub with Green Park Stadium, regional zone badge, and BreadcrumbList schema', () => {
+    const html = renderToStaticMarkup(
+      <CityDetailPage citySlug="kanpur" onNavigate={vi.fn()} onOpenIntake={vi.fn()} />
+    )
+
+    expect(html).toContain('Kanpur Sports Hub.')
+    expect(html).toContain('Uttar Pradesh')
+    expect(html).toContain('SPORTS CITY HUB · NORTH ZONE')
+    expect(html).toContain('State &amp; Regional Hub')
+    expect(html).toContain('Green Park International Cricket Stadium')
+    expect(html).toContain('Palika Stadium &amp; Sports Complex')
+    expect(html).toContain('BreadcrumbList')
+    expect(html).toContain('https://khelgrid.com/cities/kanpur')
+    expect(html).toContain('+ List in Kanpur')
+
+    // Weather & Playing Conditions Live Strip
+    expect(html).toContain('Optimal Turf &amp; Pitch Moisture')
+    expect(html).toContain('Clear Skies in Kanpur')
+
+    // Category Navigation Filter Tabs
+    expect(html).toContain('Turfs &amp; Box Cricket')
+    expect(html).toContain('Top Academies &amp; Akhadas')
+    expect(html).toContain('Selection Trials')
+
+    // 1-Tap WhatsApp Trial Alerts Integration
+    expect(html).toContain('1-TAP WHATSAPP TRIAL ALERTS')
+    expect(html).toContain('Subscribe in 1 Tap')
+
+    // Tournament Bracket & Knockout Viewer Integration
+    expect(html).toContain('Kanpur District Junior Sports Championship 2026')
+    expect(html).toContain('Knockout Bracket Tree')
+    expect(html).toContain('Group Standings Table')
+  })
 })

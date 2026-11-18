@@ -1,12 +1,11 @@
 import { useState, useEffect, type MouseEvent } from 'react'
-import { getVenueBySlug, getVenues, getCommunityVenueBySlug, getReviews, computeReviewStats } from '../../integrations/supabase/public-client'
+import { getVenueBySlug, getVenues, getReviews, computeReviewStats } from '../../integrations/supabase/public-client'
 import type { Venue } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { ShareBar } from '../../shared/components/ShareBar'
 import { BookmarkButton } from '../../shared/components/BookmarkButton'
 import { createVenueSavedItem } from '../../shared/services/savedService'
 import { updatePageSeoMetadata } from '../../shared/utils/seoAndShare'
-import { getCuratedVenueBySlug, type CuratedVenue } from '../../shared/data/curatedEntitiesData'
 import ReportListingModal from '../../shared/components/ReportListingModal'
 import VerificationClaimModal from '../../shared/components/VerificationClaimModal'
 import { CommunityReviewsSection } from '../../shared/components/CommunityReviewsSection'
@@ -24,18 +23,17 @@ export interface VenueDetailPageProps {
 
 export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initialBookingOpen }: VenueDetailPageProps) {
   const isServer = typeof window === 'undefined'
-  const initialCurated = getCuratedVenueBySlug(slug) || getCommunityVenueBySlug(slug)
-  const [venue, setVenue] = useState<Venue | CuratedVenue | null>(initialCurated || null)
+  const [venue, setVenue] = useState<Venue | null>(null)
   const [related, setRelated] = useState<Venue[]>([])
-  const [loading, setLoading] = useState(!initialCurated && !isServer)
+  const [loading, setLoading] = useState(!isServer)
   const [openFaq, setOpenFaq] = useState<number | null>(0)
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false)
 
   // Turf / Court Slot Booking State
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(initialBookingOpen ?? false)
-  const [liveRating, setLiveRating] = useState<number>(() => initialCurated?.rating || 4.8)
-  const [liveReviewCount, setLiveReviewCount] = useState<number>(() => initialCurated?.review_count || 96)
+  const [liveRating, setLiveRating] = useState<number>(0)
+  const [liveReviewCount, setLiveReviewCount] = useState<number>(0)
   const [bookedSlots, setBookedSlots] = useState<string[]>([])
   const [selectedSport, setSelectedSport] = useState('')
   const [selectedDate, setSelectedDate] = useState('Today')
@@ -49,16 +47,10 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
 
   useEffect(() => {
     let active = true
-    if (!initialCurated) setLoading(true)
-
+    setLoading(true)
     getVenueBySlug(slug).then(found => {
       if (!active) return
-      if (found) {
-        setVenue(found)
-      } else {
-        const curated = getCuratedVenueBySlug(slug)
-        setVenue(curated || null)
-      }
+      setVenue(found ?? null)
       setLoading(false)
     })
 
@@ -72,7 +64,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
     return () => {
       active = false
     }
-  }, [slug, initialCurated])
+  }, [slug])
 
   // Dynamic Community Rating & Review Stats
   useEffect(() => {
@@ -83,11 +75,11 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
         if (active && res.data && res.data.length > 0) {
           const stats = computeReviewStats(res.data)
           if (stats.totalReviews > 0) {
-            const baselineR = initialCurated?.rating || 4.8
-            const baselineC = initialCurated?.review_count || 96
+            const baselineR = venue?.rating ?? 0
+            const baselineC = venue?.review_count ?? 0
             const communitySum = stats.averageRating * stats.totalReviews
-            const totalCount = baselineC + stats.totalReviews - Math.min(stats.totalReviews, 2)
-            const newAvg = Number(((baselineR * baselineC + communitySum) / (baselineC + stats.totalReviews)).toFixed(1))
+            const totalCount = baselineC + stats.totalReviews
+            const newAvg = baselineC > 0 ? Number(((baselineR * baselineC + communitySum) / totalCount).toFixed(1)) : stats.averageRating
             setLiveRating(newAvg)
             setLiveReviewCount(totalCount)
           }
@@ -107,7 +99,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
       active = false
       window.removeEventListener('khelgrid:review-added', onReviewAdded)
     }
-  }, [slug, initialCurated?.rating, initialCurated?.review_count])
+  }, [slug, venue?.rating, venue?.review_count])
 
   // Real-time booked slots tracking directly from PostgreSQL public.venue_bookings via zero-PII RPC
   useEffect(() => {
@@ -141,7 +133,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
     if (!venue) return
 
     const pageTitle = `${venue.name} — Sports Venue in ${venue.city} | KhelGrid`
-    const pageDesc = venue.description || `Play sports at ${venue.name} in ${venue.city}, India. Pitch surfaces, timings, floodlights, facilities, and booking enquiries on KhelGrid.`
+    const pageDesc = venue.description || `${venue.name} in ${venue.city}. Confirm access, facilities, opening hours and pricing directly with the venue.`
     const pageUrl = `https://khelgrid.com/venues/${venue.slug}`
 
     const jsonLd = {
@@ -154,11 +146,10 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
         '@type': 'PostalAddress',
         addressLocality: venue.city,
         addressCountry: 'IN',
-        streetAddress: venue.address || `${venue.name}, ${venue.city}`,
+        ...(venue.address ? { streetAddress: venue.address } : {}),
       },
-      telephone: (venue as CuratedVenue).phone || undefined,
-      openingHours: (venue as CuratedVenue).timings || 'Mo-Su 06:00-23:00',
-      priceRange: '₹₹',
+      ...(venue.phone ? { telephone: venue.phone } : {}),
+      ...(venue.timings ? { openingHours: venue.timings } : {}),
     }
 
     const cleanup = updatePageSeoMetadata({
@@ -174,7 +165,8 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
         'football turf booking',
         'KhelGrid sports venues',
       ],
-      jsonLd,
+      robots: venue.verification_status === 'verified' ? undefined : 'noindex, follow',
+      jsonLd: venue.verification_status === 'verified' ? jsonLd : undefined,
     })
 
     return cleanup
@@ -209,51 +201,24 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
     )
   }
 
-  const curated = venue as Partial<CuratedVenue>
-  const sportName = curated.sport || 'Multi-Sport'
-  const fullAddress = venue.address || `${venue.name}, ${venue.city}`
+  const sportName = venue.sport || venue.sports?.map(sport => sport.name).join(', ') || 'Sport not specified'
+  const fullAddress = venue.address || [venue.city, venue.state].filter(Boolean).join(', ')
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Hi, I found ${venue.name} on KhelGrid and would like to enquire about slot booking availability.`)}`
+  const whatsappUrl = venue.phone ? `https://wa.me/${venue.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi, I found ${venue.name} on KhelGrid and would like to enquire about availability.`)}` : undefined
 
-  const facilitiesList = curated.facilities || [
-    'Floodlights / High-Lux LED Lighting',
-    'Clean Drinking Water',
-    'Washrooms & Changing Rooms',
-    'Free Parking Space',
-    'Bibs & Sports Balls Provided',
-    'On-site First Aid Support',
-  ]
+  const facilitiesList = venue.facilities || []
 
-  const rulesList = curated.rules || [
-    'Appropriate athletic shoes required (no metal studs)',
-    'Teams must vacate playing ground promptly when booked slot expires',
-    'Follow sports facility safety and code of conduct rules',
-  ]
+  const rulesList = venue.rules || []
 
-  const timingsText = curated.timings || '6:00 AM – 11:00 PM (Open 7 Days)'
-  const surfaceText = curated.surface_type || 'Professional Playing Surface'
-  const courtText = curated.court_count || 'Standard Multi-Sport Playing Ground'
-  const pricingText = curated.pricing || 'Contact venue for current pricing'
+  const timingsText = venue.timings || 'Hours not provided'
+  const surfaceText = venue.surface_type || 'Surface not provided'
+  const courtText = venue.court_count || 'Court details not provided'
+  const pricingText = venue.pricing || 'Contact venue to confirm current pricing'
   const displaySlotFee = parseInrPrice(pricingText)
+  // Online booking/payment remains disabled until the booking release gate is approved.
+  const venueBookingEnabled = false
 
-  const faqs = curated.faqs || [
-    {
-      question: `How do I book a court or turf slot at ${venue.name}?`,
-      answer: `You can reach out directly via WhatsApp using the 'Enquire on WhatsApp' button or call the venue manager. For community play, you can also host an open pickup match directly through KhelGrid.`,
-    },
-    {
-      question: `What footwear is permitted on the playing surface?`,
-      answer: `Standard rubber stud turf shoes, running trainers, or non-marking court shoes are required. Hard metal cleats or formal shoes are strictly prohibited to preserve the playing surface.`,
-    },
-    {
-      question: `Are changing rooms and drinking water available?`,
-      answer: `Yes, clean restrooms, player changing facilities, and purified drinking water stations are available on-site for visiting athletes and teams.`,
-    },
-    {
-      question: `Can our team organize private corporate or tournament events here?`,
-      answer: `Yes, private tournament bookings and full-day facility allotments can be arranged by contacting the venue manager in advance.`,
-    },
-  ]
+  const faqs = venue.faqs || []
 
   return (
     <article className="content-page venue-detail-page">
@@ -278,7 +243,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
             <span className="venue-verified-badge is-govt">
               <SiteIcon name="shield-check" size={14} /> Government Sports Facility
             </span>
-          ) : (venue as Partial<Venue>).verification_status === 'verified' || getCuratedVenueBySlug(slug) ? (
+          ) : (venue as Partial<Venue>).verification_status === 'verified' ? (
             <span className="venue-verified-badge">
               <SiteIcon name="shield-check" size={14} /> KhelGrid Verified Venue
             </span>
@@ -287,7 +252,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
               <SiteIcon name="alert-triangle" size={14} /> Pending Verification
             </span>
           )}
-          <span className="venue-status-open">⚡ Active Sports Facility</span>
+          <span className="venue-status-open">Published Listing</span>
         </div>
 
         <h1 className="venue-title">{venue.name}</h1>
@@ -312,45 +277,41 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
         <div className="venue-actions-bar">
           <BookmarkButton item={createVenueSavedItem(venue)} variant="pill" showLabel={true} />
 
-          <button
-            type="button"
-            onClick={() => {
-              setIsBookingModalOpen(true)
-              setConfirmedBooking(null)
-              setBookingError('')
-            }}
-            className="venue-btn venue-btn-book"
-          >
-            <SiteIcon name="calendar-check" size={16} />
-            <span>Book Turf / Court Slot</span>
-          </button>
+          {venueBookingEnabled && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsBookingModalOpen(true)
+                setConfirmedBooking(null)
+                setBookingError('')
+              }}
+              className="venue-btn venue-btn-book"
+            >
+              <SiteIcon name="calendar-check" size={16} />
+              <span>Book Turf / Court Slot</span>
+            </button>
+          )}
 
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="venue-btn venue-btn-primary"
-          >
-            <SiteIcon name="message" size={16} />
-            <span>Enquire on WhatsApp</span>
-          </a>
+          {whatsappUrl && (
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-primary">
+              <SiteIcon name="message" size={16} />
+              <span>Contact Venue on WhatsApp</span>
+            </a>
+          )}
 
-          {curated.phone && (
-            <a href={`tel:${curated.phone.replace(/\s+/g, '')}`} className="venue-btn venue-btn-secondary">
+          {venue.phone && (
+            <a href={`tel:${venue.phone.replace(/\s+/g, '')}`} className="venue-btn venue-btn-secondary">
               <SiteIcon name="phone" size={16} />
               <span>Call Venue</span>
             </a>
           )}
 
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="venue-btn venue-btn-secondary"
-          >
-            <SiteIcon name="map-pin" size={16} />
-            <span>Get Directions</span>
-          </a>
+          {fullAddress && (
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-secondary">
+              <SiteIcon name="map-pin" size={16} />
+              <span>Get Directions</span>
+            </a>
+          )}
 
           {onOpenIntake && (
             <button
@@ -375,7 +336,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
       </header>
 
       {/* Anti-Scam Athlete & Parent Safety Advisory Banner */}
-      {!(venue.government_facility || (venue as Partial<Venue>).verification_status === 'verified' || getCuratedVenueBySlug(slug)) && (
+      {!(venue.government_facility || (venue as Partial<Venue>).verification_status === 'verified') && (
         <section className="entity-scam-advisory-banner" role="alert">
           <div className="scam-advisory-badge">
             <SiteIcon name="alert-triangle" size={24} />
@@ -417,7 +378,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
           <strong className="highlight-value">{courtText}</strong>
         </div>
         <div className="highlight-card">
-          <span className="highlight-label">Estimated Slot Rates</span>
+          <span className="highlight-label">Published Pricing</span>
           <strong className="highlight-value">{pricingText}</strong>
         </div>
         <div className="highlight-card">
@@ -433,17 +394,12 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
           <section className="venue-section">
             <h2>About {venue.name}</h2>
             <div className="venue-prose">
-              <p>{venue.description}</p>
-              <p>
-                {venue.name} is one of {venue.city}&apos;s premier destinations for sports enthusiasts, offering
-                professional-grade playing conditions for competitive games and casual training sessions alike.
-                The arena is maintained with clean surroundings, high-lux illumination, and dedicated sports staff.
-              </p>
+              {venue.description && <p>{venue.description}</p>}
             </div>
           </section>
 
-          {/* Facilities & Amenities */}
-          <section className="venue-section">
+          {/* Facilities & Amenities — show only source-provided details */}
+          {facilitiesList.length > 0 && <section className="venue-section">
             <h2>Amenities &amp; Features</h2>
             <div className="venue-facilities-grid">
               {facilitiesList.map((facility, index) => (
@@ -453,10 +409,10 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                 </div>
               ))}
             </div>
-          </section>
+          </section>}
 
           {/* Ground Guidelines & Rules */}
-          <section className="venue-section">
+          {rulesList.length > 0 && <section className="venue-section">
             <h2>Ground Rules &amp; Guidelines</h2>
             <ul className="venue-rules-list">
               {rulesList.map((rule, index) => (
@@ -466,7 +422,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                 </li>
               ))}
             </ul>
-          </section>
+          </section>}
 
           {/* Location & Directions Card */}
           <section className="venue-section">
@@ -479,20 +435,17 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                   <p>{fullAddress}</p>
                 </div>
               </div>
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="venue-btn venue-btn-primary location-directions-btn"
-              >
-                <SiteIcon name="map" size={16} />
-                <span>Open in Google Maps</span>
-              </a>
+              {fullAddress && (
+                <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-primary location-directions-btn">
+                  <SiteIcon name="map" size={16} />
+                  <span>Open in Google Maps</span>
+                </a>
+              )}
             </div>
           </section>
 
-          {/* FAQs Accordion */}
-          <section className="venue-section venue-faqs">
+          {/* FAQs Accordion — never invent questions or answers */}
+          {faqs.length > 0 && <section className="venue-section venue-faqs">
             <h2>Frequently Asked Questions</h2>
             <div className="faq-accordion-list">
               {faqs.map((faq, index) => {
@@ -517,7 +470,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                 )
               })}
             </div>
-          </section>
+          </section>}
 
           {/* Community Reviews, Ratings & Media Uploads */}
           <CommunityReviewsSection
@@ -533,30 +486,27 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
         {/* Sidebar / Quick Inquiry Box */}
         <aside className="venue-sidebar-column">
           <div className="venue-inquiry-box">
-            <h3>Book or Check Slots</h3>
+            <h3>Contact the Venue</h3>
             <p>
-              Connect directly with {venue.name} management to verify current court availability and hourly slot pricing.
+              Online booking and payment are not enabled here yet. Contact {venue.name} directly to confirm access, availability and current pricing.
             </p>
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="venue-btn venue-btn-whatsapp-block"
-            >
-              <SiteIcon name="message" size={18} />
-              <span>Enquire on WhatsApp</span>
-            </a>
+            {whatsappUrl && (
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-whatsapp-block">
+                <SiteIcon name="message" size={18} />
+                <span>Contact Venue on WhatsApp</span>
+              </a>
+            )}
 
-            {curated.phone && (
-              <a href={`tel:${curated.phone.replace(/\s+/g, '')}`} className="venue-btn venue-btn-call-block">
+            {venue.phone && (
+              <a href={`tel:${venue.phone.replace(/\s+/g, '')}`} className="venue-btn venue-btn-call-block">
                 <SiteIcon name="phone" size={17} />
-                <span>Call {curated.phone}</span>
+                <span>Call {venue.phone}</span>
               </a>
             )}
 
             <div className="venue-disclaimer-note">
               <SiteIcon name="shield-check" size={14} />
-              <span>Direct venue contact · KhelGrid verified arena · 0% commission fees.</span>
+              <span>Published, source-reviewed listing. Confirm booking terms, fees and availability directly with the venue.</span>
             </div>
 
             <button
@@ -610,7 +560,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
       />
 
       {/* Venue Court / Turf Slot Booking Modal */}
-      {isBookingModalOpen && (
+      {venueBookingEnabled && isBookingModalOpen && (
         <div className="venue-booking-overlay" onClick={() => setIsBookingModalOpen(false)}>
           <div
             className="venue-booking-modal"

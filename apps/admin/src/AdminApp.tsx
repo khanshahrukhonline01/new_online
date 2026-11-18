@@ -24,14 +24,6 @@ export function AdminApp() {
     <main className="khelgrid-admin-app" aria-label="KhelGrid private administration">
       <div className="admin-theme-controls" aria-label="Appearance preferences">
         <label>
-          Accent colour
-          <select value={preferences.accent} onChange={event => updatePreferences({ accent: event.target.value as 'green' | 'blue' | 'orange' })}>
-            <option value="green">Emerald Green</option>
-            <option value="blue">Royal Blue</option>
-            <option value="orange">Dynamic Orange</option>
-          </select>
-        </label>
-        <label>
           Appearance
           <select value={preferences.theme} onChange={event => updatePreferences({ theme: event.target.value as 'light' | 'dark' | 'system' })}>
             <option value="system">System default</option>

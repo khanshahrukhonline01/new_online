@@ -24,6 +24,23 @@ describe('PolicyPage', () => {
     expect(html).toContain('Workplace Policy')
     expect(html).toContain('href="/posh-policy"')
     expect(html).toContain('href="/privacy"')
+    expect(html).toContain('href="/open-science-policy"')
+    expect(html).toContain('Open Science Policy')
+  })
+
+  it('renders open science & research ethics policy with Diamond Open Access, ICMR ethics, and FAIR data', () => {
+    const html = renderToStaticMarkup(
+      <PolicyPage path="/open-science-policy" onNavigate={() => {}} />
+    )
+    expect(html).toContain('Open Science &amp; Research Ethics Policy')
+    expect(html).toContain('OPEN SCIENCE &amp; RESEARCH INTEGRITY')
+    expect(html).toContain('Diamond Open Access &amp; CC BY 4.0 Standard')
+    expect(html).toContain('Human Subject Ethics &amp; Informed Consent')
+    expect(html).toContain('FAIR Primary Data &amp; Code Sharing Mandate')
+    expect(html).toContain('Community Peer Review &amp; Scholarly Conduct Code')
+    expect(html).toContain('Version of Record (VoR) Linking')
+    expect(html).toContain('Machine-Readable Syndication &amp; PRISM Feeds')
+    expect(html).toContain('href="/open-science-policy"')
   })
 
   it('renders not found for unknown path', () => {

@@ -209,7 +209,7 @@ export default function Sidebar({ activePath, onNavigate, open, onClose, toggleR
     <div ref={drawerRef} id="mobile-sidebar-drawer" className={open ? 'mobile-drawer is-open' : 'mobile-drawer'} aria-hidden={!open} role="dialog" aria-modal={open ? 'true' : undefined} aria-label="Mobile navigation">
       <div className="mobile-drawer-header">
         <a href="/" className="mobile-drawer-brand" onClick={event => { onNavigate(event, '/'); onClose() }} aria-label="KhelGrid home">
-          <img src="/assets/kg-logo.webp" alt="" className="mobile-drawer-logo" width="26" height="26" />
+          <img src="/assets/kg-logo.webp" alt="KhelGrid Platform Logo" className="mobile-drawer-logo" width="26" height="26" loading="lazy" decoding="async" />
           <span className="mobile-drawer-brand-name">KHELGRID</span>
         </a>
         <div className="mobile-drawer-actions">

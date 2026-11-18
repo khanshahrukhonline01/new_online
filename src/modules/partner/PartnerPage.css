@@ -60,7 +60,7 @@
   gap: 7px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--accent-strong, #059669);
+  color: #059669;
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.25);
   padding: 4px 12px;
@@ -71,7 +71,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--accent, #10b981);
+  background: #10b981;
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
   animation: partnerPulse 1.8s infinite;
 }
@@ -338,7 +338,7 @@
 }
 
 .partner-track-card.tone-amber:hover { border-color: #f59e0b; }
-.partner-track-card.tone-emerald:hover { border-color: var(--accent, #10b981); }
+.partner-track-card.tone-emerald:hover { border-color: #10b981; }
 .partner-track-card.tone-purple:hover { border-color: #9333ea; }
 .partner-track-card.tone-blue:hover { border-color: #3b82f6; }
 
@@ -359,7 +359,7 @@
 }
 
 .partner-track-icon-wrap.tone-amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
-.partner-track-icon-wrap.tone-emerald { background: rgba(16, 185, 129, 0.12); color: var(--accent-strong, #059669); }
+.partner-track-icon-wrap.tone-emerald { background: rgba(16, 185, 129, 0.12); color: #059669; }
 .partner-track-icon-wrap.tone-purple { background: rgba(147, 51, 234, 0.12); color: #9333ea; }
 .partner-track-icon-wrap.tone-blue { background: rgba(59, 130, 246, 0.12); color: #2563eb; }
 
@@ -416,7 +416,7 @@
 }
 
 .partner-benefit-item .text-emerald {
-  color: var(--accent, #10b981);
+  color: #10b981;
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -492,7 +492,7 @@
   gap: 6px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--accent-strong, #059669);
+  color: #059669;
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.25);
   padding: 3px 10px;
@@ -611,7 +611,7 @@
   gap: 4px;
   font-size: 10.5px;
   font-weight: 700;
-  color: var(--accent-strong, #047857);
+  color: #047857;
   background: rgba(16, 185, 129, 0.12);
   padding: 2px 8px;
   border-radius: 999px;
@@ -632,7 +632,7 @@
 .partner-calc-metric-number {
   font-size: clamp(26px, 3.5vw, 36px);
   font-weight: 800;
-  color: var(--accent, #10b981);
+  color: #10b981;
   letter-spacing: -0.02em;
   line-height: 1.1;
 }

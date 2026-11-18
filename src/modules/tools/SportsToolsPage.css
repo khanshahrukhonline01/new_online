@@ -63,7 +63,7 @@ html.dark .tools-hero-section {
   padding: 4px 10px;
   border-radius: 9999px;
   background: rgba(16, 185, 129, 0.12);
-  color: var(--accent-strong, #059669);
+  color: #059669;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -137,7 +137,7 @@ html.dark .tools-kpi-card {
 .tools-kpi-number {
   font-size: 18px;
   font-weight: 800;
-  color: var(--accent-strong, #059669);
+  color: #059669;
   letter-spacing: -0.01em;
 }
 
@@ -226,15 +226,15 @@ html.dark .tools-tab-button:hover {
 }
 
 .tools-tab-button.is-active {
-  background: var(--accent-strong, #059669);
-  border-color: var(--accent-strong, #059669);
+  background: #059669;
+  border-color: #059669;
   color: #ffffff;
   box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
 }
 
 html.dark .tools-tab-button.is-active {
-  background: var(--accent, #10b981);
-  border-color: var(--accent, #10b981);
+  background: #10b981;
+  border-color: #10b981;
   color: #0f172a;
 }
 
@@ -273,7 +273,7 @@ html.dark .tools-search-input {
 }
 
 .tools-search-input:focus {
-  border-color: var(--accent-strong, #059669);
+  border-color: #059669;
   box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
 }
 
@@ -333,7 +333,7 @@ html.dark .tool-workbench-header {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--accent-strong, #059669);
+  color: #059669;
   background: rgba(5, 150, 105, 0.1);
   padding: 3px 8px;
   border-radius: 6px;
@@ -491,7 +491,7 @@ html.dark .tool-select-dropdown {
 .input-val-tag {
   font-size: 12px;
   font-weight: 700;
-  color: var(--accent-strong, #059669);
+  color: #059669;
 }
 
 html.dark .input-val-tag {
@@ -535,12 +535,12 @@ html.dark .tools-native-select {
 
 .tools-native-input:focus,
 .tools-native-select:focus {
-  border-color: var(--accent-strong, #059669);
+  border-color: #059669;
   box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
 }
 
 input[type="range"] {
-  accent-color: var(--accent-strong, #059669);
+  accent-color: #059669;
   width: 100%;
   cursor: pointer;
 }
@@ -629,7 +629,7 @@ input[type="range"] {
 }
 
 .meter-status-badge.optimal {
-  background: var(--accent, #10b981);
+  background: #10b981;
   color: #ffffff;
 }
 
@@ -707,7 +707,7 @@ html.dark .coach-advice-box {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--accent-strong, #059669);
+  color: #059669;
   font-size: 13px;
 }
 
@@ -764,12 +764,12 @@ html.dark .advice-text {
 }
 
 .tool-action-btn.primary {
-  background: var(--accent-strong, #059669);
+  background: #059669;
   color: #ffffff;
 }
 
 .tool-action-btn.primary:hover {
-  background: var(--accent-strong, #047857);
+  background: #047857;
 }
 
 .tool-action-btn.secondary {
@@ -837,7 +837,7 @@ html.dark .tools-status-table td {
 
 .status-pill.eligible {
   background: rgba(16, 185, 129, 0.15);
-  color: var(--accent-strong, #059669);
+  color: #059669;
 }
 
 html.dark .status-pill.eligible {
@@ -909,7 +909,7 @@ html.dark .macro-card {
 
 html.dark .whatsapp-preview-box {
   background: #064e3b;
-  border-color: var(--accent-strong, #059669);
+  border-color: #059669;
 }
 
 .preview-label {
@@ -976,7 +976,7 @@ html.dark .checklist-progress-header {
 .progress-value {
   font-size: 14px;
   font-weight: 800;
-  color: var(--accent-strong, #059669);
+  color: #059669;
 }
 
 html.dark .progress-value {
@@ -997,7 +997,7 @@ html.dark .progress-bar-track {
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent, #10b981) 0%, var(--accent-strong, #059669) 100%);
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
   border-radius: 9999px;
   transition: width 0.3s ease;
 }
@@ -1032,7 +1032,7 @@ html.dark .checklist-item-card {
 }
 
 .checklist-item-card:hover {
-  border-color: var(--accent-strong, #059669);
+  border-color: #059669;
 }
 
 .checklist-item-card.is-checked {
@@ -1081,8 +1081,8 @@ html.dark .custom-check-box {
 }
 
 .checklist-item-card.is-checked .custom-check-box {
-  background: var(--accent-strong, #059669);
-  border-color: var(--accent-strong, #059669);
+  background: #059669;
+  border-color: #059669;
 }
 
 .checklist-text {
@@ -1220,7 +1220,7 @@ html.dark .scheme-card {
   padding: 2px 8px;
   border-radius: 9999px;
   background: rgba(16, 185, 129, 0.12);
-  color: var(--accent-strong, #059669);
+  color: #059669;
 }
 
 .scheme-title {
@@ -1236,7 +1236,7 @@ html.dark .scheme-card {
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--accent-strong, #059669);
+  color: #059669;
 }
 
 html.dark .scheme-benefit {
@@ -1377,7 +1377,7 @@ html.dark .tool-grid-card:hover {
 }
 
 .tool-grid-card.is-active {
-  border-color: var(--accent-strong, #059669);
+  border-color: #059669;
   background: linear-gradient(180deg, rgba(16, 185, 129, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
   box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.3);
 }
@@ -1396,7 +1396,7 @@ html.dark .tool-grid-card.is-active {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--accent-strong, #059669);
+  color: #059669;
   letter-spacing: 0.05em;
 }
 
@@ -1490,7 +1490,7 @@ html.dark .tool-card-bottom {
 .tool-launch-link {
   font-size: 12.5px;
   font-weight: 700;
-  color: var(--accent-strong, #059669);
+  color: #059669;
 }
 
 html.dark .tool-launch-link {
@@ -1522,7 +1522,7 @@ html.dark .info-badge-row {
 }
 
 .info-icon {
-  color: var(--accent-strong, #059669);
+  color: #059669;
   flex-shrink: 0;
   margin-top: 2px;
 }

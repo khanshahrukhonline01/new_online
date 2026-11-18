@@ -1,6 +1,6 @@
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, useEffect, useMemo, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import type { AthleteProfile, VideoClip } from '../../shared/domain'
+import type { AthleteProfile, VideoClip, CvGenerationRecord } from '../../shared/domain'
 import {
   publishAthleteProfile,
   normalizeUsername,
@@ -14,11 +14,29 @@ import {
   type AuthUserProfile,
 } from '../../integrations/supabase/auth-client'
 import { PlayerCard } from '../athlete-profile/PlayerCard'
+import {
+  generateKhelId,
+  computeFitnessTier,
+  createFreshGenerationRecord,
+  getStoredGenerationRecord,
+  saveGenerationRecord,
+  getGenerationHistory,
+  clearGenerationRecords,
+  generateDossierReference,
+  formatIndianDateTime,
+  getSafeStorage,
+} from '../../shared/utils/khelId'
+import {
+  getSportRolePreset,
+  formatTechnicalIndicators,
+  POPULAR_SPORTS_LIST,
+} from '../../shared/data/sportRolesData'
+import { generateQrSvgString } from '../../shared/utils/qrCodeGenerator'
 import './sports-cv.css'
 
-type Achievement = { year: string; event: string; result: string }
+export type Achievement = { year: string; event: string; result: string }
 
-type Cv = {
+export type Cv = {
   username: string
   fullName: string
   sport: string
@@ -34,6 +52,22 @@ type Cv = {
   primaryFootOrHand: string
   heightCm: string
   weightKg: string
+  bloodGroup: string
+  schoolOrCollege: string
+  federationUid: string
+  guardianName: string
+  guardianRelation: string
+  guardianPhone: string
+  battingStyle?: string
+  bowlingStyle?: string
+  preferredFoot?: string
+  tacticalPosition?: string
+  athleticsEvent?: string
+  personalBest?: string
+  seasonBest?: string
+  playingStyle?: string
+  racketHand?: string
+  signatureMove?: string
   goals: string
   achievements: Achievement[]
   videoClips: VideoClip[]
@@ -42,8 +76,11 @@ type Cv = {
     sprint30mSeconds?: number
     cmjHeightCm?: number
     tier?: string
+    percentileAvg?: number
   }
 }
+
+const DRAFT_STORAGE_KEY = 'khelgrid_cv_draft_v2'
 
 const initialCv: Cv = {
   username: '',
@@ -61,6 +98,22 @@ const initialCv: Cv = {
   primaryFootOrHand: '',
   heightCm: '',
   weightKg: '',
+  bloodGroup: '',
+  schoolOrCollege: '',
+  federationUid: '',
+  guardianName: '',
+  guardianRelation: '',
+  guardianPhone: '',
+  battingStyle: '',
+  bowlingStyle: '',
+  preferredFoot: '',
+  tacticalPosition: '',
+  athleticsEvent: '',
+  personalBest: '',
+  seasonBest: '',
+  playingStyle: '',
+  racketHand: '',
+  signatureMove: '',
   goals: '',
   achievements: [{ year: '', event: '', result: '' }],
   videoClips: [],
@@ -71,12 +124,83 @@ export default function SportsCvWizard() {
   const [currentUser, setCurrentUser] = useState<AuthUserProfile | KhelGridUser | null>(
     () => getStoredAuthUser() || getStoredUser()
   )
-  const [cv, setCv] = useState<Cv>(initialCv)
+  const [cv, setCv] = useState<Cv>(() => {
+    try {
+      const raw = getSafeStorage().getItem(DRAFT_STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<Cv>
+        if (parsed.fullName || parsed.sport || parsed.phone) {
+          return {
+            ...initialCv,
+            ...parsed,
+            fitnessBenchmarks: parsed.fitnessBenchmarks || initialCv.fitnessBenchmarks,
+            achievements:
+              parsed.achievements && parsed.achievements.length > 0
+                ? parsed.achievements
+                : initialCv.achievements,
+            videoClips: parsed.videoClips || initialCv.videoClips,
+          }
+        }
+      }
+    } catch {
+      // Ignore corrupt local storage
+    }
+    return initialCv
+  })
+  const [draftRestored, setDraftRestored] = useState(false)
   const [savedForPrint, setSavedForPrint] = useState(false)
   const [publishedProfile, setPublishedProfile] = useState<AthleteProfile | null>(null)
   const [publishMessage, setPublishMessage] = useState<string | null>(null)
   const [isPublishing, setIsPublishing] = useState(false)
   const [hasExistingProfile, setHasExistingProfile] = useState(false)
+
+  // Dossier Generation Reference & Audit History
+  const [currentGenerationRecord, setCurrentGenerationRecord] = useState<CvGenerationRecord | null>(
+    () => getStoredGenerationRecord()
+  )
+  const [generationHistory, setGenerationHistory] = useState<CvGenerationRecord[]>(
+    () => getGenerationHistory()
+  )
+  const [showHistory, setShowHistory] = useState(false)
+
+  // Pillar 4: Local-First Draft Auto-Save & Recovery on Mount
+  useEffect(() => {
+    try {
+      const raw = getSafeStorage().getItem(DRAFT_STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<Cv>
+        if (parsed.fullName || parsed.sport || parsed.phone) {
+          setCv(prev => ({
+            ...prev,
+            ...parsed,
+            fitnessBenchmarks: parsed.fitnessBenchmarks || prev.fitnessBenchmarks,
+            achievements:
+              parsed.achievements && parsed.achievements.length > 0
+                ? parsed.achievements
+                : prev.achievements,
+            videoClips: parsed.videoClips || prev.videoClips,
+          }))
+          setDraftRestored(true)
+        }
+      }
+    } catch {
+      // Ignore corrupt local storage
+    }
+  }, [])
+
+  // Pillar 4: Debounced auto-save to localStorage on every input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        if (cv.fullName || cv.sport || cv.city || cv.phone) {
+          getSafeStorage().setItem(DRAFT_STORAGE_KEY, JSON.stringify(cv))
+        }
+      } catch {
+        // Ignore quota limits
+      }
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [cv])
 
   useEffect(() => {
     return onAuthChange(u => {
@@ -134,6 +258,22 @@ export default function SportsCvWizard() {
       primaryFootOrHand: publishedProfile.primaryFootOrHand || '',
       heightCm: publishedProfile.heightCm ? String(publishedProfile.heightCm) : '',
       weightKg: publishedProfile.weightKg ? String(publishedProfile.weightKg) : '',
+      bloodGroup: publishedProfile.bloodGroup || '',
+      schoolOrCollege: publishedProfile.schoolOrCollege || '',
+      federationUid: publishedProfile.federationUid || '',
+      guardianName: publishedProfile.guardianName || '',
+      guardianRelation: publishedProfile.guardianRelation || '',
+      guardianPhone: publishedProfile.guardianPhone || '',
+      battingStyle: publishedProfile.battingStyle || '',
+      bowlingStyle: publishedProfile.bowlingStyle || '',
+      preferredFoot: publishedProfile.preferredFoot || '',
+      tacticalPosition: publishedProfile.tacticalPosition || '',
+      athleticsEvent: publishedProfile.athleticsEvent || '',
+      personalBest: publishedProfile.personalBest || '',
+      seasonBest: publishedProfile.seasonBest || '',
+      playingStyle: publishedProfile.playingStyle || '',
+      racketHand: publishedProfile.racketHand || '',
+      signatureMove: publishedProfile.signatureMove || '',
       goals: publishedProfile.summary || '',
       achievements:
         publishedProfile.achievements && publishedProfile.achievements.length > 0
@@ -156,6 +296,27 @@ export default function SportsCvWizard() {
       ...current,
       achievements: current.achievements.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
     }))
+    setSavedForPrint(false)
+  }
+
+  // Interactive combine benchmark updates (Pillar 2)
+  const updateFitnessBenchmark = (field: 'yoyoIr1Meters' | 'sprint30mSeconds' | 'cmjHeightCm', rawVal: string) => {
+    const num = rawVal === '' ? undefined : Number(rawVal)
+    setCv(current => {
+      const nextBenchmarks = {
+        ...current.fitnessBenchmarks,
+        [field]: num,
+      }
+      const { tier, percentileAvg } = computeFitnessTier(nextBenchmarks)
+      return {
+        ...current,
+        fitnessBenchmarks: {
+          ...nextBenchmarks,
+          tier,
+          percentileAvg,
+        },
+      }
+    })
     setSavedForPrint(false)
   }
 
@@ -187,6 +348,150 @@ export default function SportsCvWizard() {
     }))
   }
 
+  // Active Khel ID & Public Profile URL
+  const activeHandle = normalizeUsername(cv.username || cv.fullName || 'athlete')
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://khelgrid.com'
+  const dossierPublicUrl = `${origin}/u/@${activeHandle}`
+  const activeKhelId = generateKhelId({ state: cv.state, username: activeHandle })
+
+  // Active Dossier Generation Record (fallback to dynamic preview if not yet explicitly generated)
+  const activeDossierRecord = useMemo<CvGenerationRecord>(() => {
+    if (currentGenerationRecord) {
+      return currentGenerationRecord
+    }
+    return {
+      referenceId: generateDossierReference({ seed: `${activeKhelId}-0` }),
+      revisionNumber: 1,
+      generatedAt: new Date().toISOString(),
+      formattedDateTime: formatIndianDateTime(),
+      season: `${new Date().getFullYear()}–${new Date().getFullYear() + 1}`,
+      khelId: activeKhelId,
+      athleteName: cv.fullName.trim() || 'Athlete',
+      sport: cv.sport.trim() || 'Sports Candidate',
+    }
+  }, [currentGenerationRecord, activeKhelId, cv.fullName, cv.sport])
+
+  const handleGenerateFreshDossier = () => {
+    const prevRevision = currentGenerationRecord?.revisionNumber || 0
+    const freshRecord = createFreshGenerationRecord({
+      athleteName: cv.fullName.trim() || 'Athlete Full Name',
+      khelId: activeKhelId,
+      sport: cv.sport.trim() || 'Sports Candidate',
+      previousRevision: prevRevision,
+    })
+    saveGenerationRecord(freshRecord)
+    setCurrentGenerationRecord(freshRecord)
+    setGenerationHistory(getGenerationHistory())
+    setPublishMessage(
+      `✓ Fresh Selection Dossier Generated! Reference ID: ${freshRecord.referenceId} (Revision ${freshRecord.revisionNumber}), Timestamped: ${freshRecord.formattedDateTime}`
+    )
+  }
+
+  const handleRestorePreviousRecord = (record: CvGenerationRecord) => {
+    saveGenerationRecord(record)
+    setCurrentGenerationRecord(record)
+    setPublishMessage(`Restored active dossier reference to #${record.referenceId} (${record.formattedDateTime}).`)
+  }
+
+  const [dossierCopied, setDossierCopied] = useState(false)
+
+  // Sport Role Preset & Technical Indicators (Improvement 4 & 6)
+  const sportPreset = useMemo(() => {
+    return getSportRolePreset(cv.sport || 'Cricket')
+  }, [cv.sport])
+
+  const technicalIndicatorsString = useMemo(() => {
+    return formatTechnicalIndicators({
+      sport: cv.sport,
+      battingStyle: cv.battingStyle,
+      bowlingStyle: cv.bowlingStyle,
+      preferredFoot: cv.preferredFoot,
+      tacticalPosition: cv.tacticalPosition,
+      athleticsEvent: cv.athleticsEvent,
+      personalBest: cv.personalBest,
+      seasonBest: cv.seasonBest,
+      playingStyle: cv.playingStyle,
+      racketHand: cv.racketHand,
+      signatureMove: cv.signatureMove,
+      primaryFootOrHand: cv.primaryFootOrHand,
+    })
+  }, [
+    cv.sport,
+    cv.battingStyle,
+    cv.bowlingStyle,
+    cv.preferredFoot,
+    cv.tacticalPosition,
+    cv.athleticsEvent,
+    cv.personalBest,
+    cv.seasonBest,
+    cv.playingStyle,
+    cv.racketHand,
+    cv.signatureMove,
+    cv.primaryFootOrHand,
+  ])
+
+  // WhatsApp share payload for the official selection trial dossier (Improvement 5)
+  const dossierShareText = useMemo(() => {
+    const athleteName = cv.fullName.trim() || 'Athlete'
+    const sportName = cv.sport.trim() || 'Sports'
+    const role = cv.playingPosition.trim() || 'Candidate'
+    const tech =
+      technicalIndicatorsString && technicalIndicatorsString !== '—'
+        ? `\n• Technical: ${technicalIndicatorsString}`
+        : ''
+    const tier = cv.fitnessBenchmarks.tier
+      ? `\n• Combine Readiness: ${cv.fitnessBenchmarks.tier} (${cv.fitnessBenchmarks.percentileAvg || 80}th Percentile)`
+      : ''
+
+    return (
+      `*KhelGrid Official Selection Trial Dossier*\n\n` +
+      `• *Athlete:* ${athleteName}\n` +
+      `• *Sport & Role:* ${sportName} — ${role}\n` +
+      `• *Digital Khel ID:* ${activeKhelId}\n` +
+      `• *Dossier Ref:* ${activeDossierRecord.referenceId} (Rev ${activeDossierRecord.revisionNumber})\n` +
+      `• *Generated On:* ${activeDossierRecord.formattedDateTime}\n` +
+      `• *Official Scrutiny:* SAI / State Directorate ${activeDossierRecord.season}` +
+      `${tech}${tier}\n\n` +
+      `*View Verified Dossier & Video Telemetry:*\n${dossierPublicUrl}`
+    )
+  }, [
+    cv.fullName,
+    cv.sport,
+    cv.playingPosition,
+    activeKhelId,
+    activeDossierRecord,
+    technicalIndicatorsString,
+    cv.fitnessBenchmarks,
+    dossierPublicUrl,
+  ])
+
+  const whatsappDossierUrl = `https://wa.me/?text=${encodeURIComponent(dossierShareText)}`
+
+  const handleCopyDossierSummary = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(dossierShareText)
+      setDossierCopied(true)
+      setTimeout(() => setDossierCopied(false), 2500)
+    }
+  }
+
+  const handleClearDraft = () => {
+    try {
+      getSafeStorage().removeItem(DRAFT_STORAGE_KEY)
+    } catch {
+      // Ignore
+    }
+    clearGenerationRecords()
+    setCv(initialCv)
+    setDraftRestored(false)
+    setSavedForPrint(false)
+    setPublishedProfile(null)
+    setCurrentGenerationRecord(null)
+    setGenerationHistory([])
+    setShowHistory(false)
+    setPublishMessage('Draft and dossier generation records cleared. Form reset to fresh state.')
+  }
+
   const handlePublish = async () => {
     if (!cv.fullName.trim()) {
       setPublishMessage('Please provide your athlete full name before publishing.')
@@ -203,6 +508,10 @@ export default function SportsCvWizard() {
     const res = await publishAthleteProfile({
       userId: currentUser?.id,
       username: handle,
+      khelId: activeKhelId,
+      dossierReference: activeDossierRecord.referenceId,
+      dossierGeneratedAt: activeDossierRecord.formattedDateTime,
+      dossierRevision: activeDossierRecord.revisionNumber,
       fullName: cv.fullName,
       sport: cv.sport,
       playingPosition: cv.playingPosition || 'Athlete',
@@ -217,6 +526,22 @@ export default function SportsCvWizard() {
       primaryFootOrHand: cv.primaryFootOrHand,
       heightCm: cv.heightCm ? Number(cv.heightCm) : undefined,
       weightKg: cv.weightKg ? Number(cv.weightKg) : undefined,
+      bloodGroup: cv.bloodGroup,
+      schoolOrCollege: cv.schoolOrCollege,
+      federationUid: cv.federationUid,
+      guardianName: cv.guardianName,
+      guardianRelation: cv.guardianRelation,
+      guardianPhone: cv.guardianPhone,
+      battingStyle: cv.battingStyle,
+      bowlingStyle: cv.bowlingStyle,
+      preferredFoot: cv.preferredFoot,
+      tacticalPosition: cv.tacticalPosition,
+      athleticsEvent: cv.athleticsEvent,
+      personalBest: cv.personalBest,
+      seasonBest: cv.seasonBest,
+      playingStyle: cv.playingStyle,
+      racketHand: cv.racketHand,
+      signatureMove: cv.signatureMove,
       summary: cv.goals,
       achievements: cv.achievements.filter(a => a.event.trim()),
       videoClips: cv.videoClips.filter(c => c.title.trim() && c.videoUrl.trim()),
@@ -227,6 +552,12 @@ export default function SportsCvWizard() {
     if (res.status === 'published') {
       setPublishedProfile(res.profile)
       setPublishMessage(`✓ Success! Official athlete profile published at ${res.publicUrl}`)
+      try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY)
+        setDraftRestored(false)
+      } catch {
+        // Ignore
+      }
     } else {
       setPublishMessage(res.message)
     }
@@ -234,18 +565,59 @@ export default function SportsCvWizard() {
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (!currentGenerationRecord) {
+      const initialRecord = createFreshGenerationRecord({
+        athleteName: cv.fullName.trim() || 'Athlete Full Name',
+        khelId: activeKhelId,
+        sport: cv.sport.trim() || 'Sports Candidate',
+        previousRevision: 0,
+      })
+      saveGenerationRecord(initialRecord)
+      setCurrentGenerationRecord(initialRecord)
+      setGenerationHistory(getGenerationHistory())
+    }
     setSavedForPrint(true)
-    window.setTimeout(() => window.print(), 50)
+    window.setTimeout(() => window.print(), 80)
   }
+
+  // High-contrast scannable QR Code for the official print dossier
+  const printQrSvg = useMemo(() => {
+    return generateQrSvgString(dossierPublicUrl, { size: 92, color: '#0B1C2D', bgColor: '#FFFFFF' })
+  }, [dossierPublicUrl])
+
+  // Calculated athlete age
+  const calculatedAge = useMemo(() => {
+    if (!cv.dateOfBirth) return ''
+    const birthYear = new Date(cv.dateOfBirth).getFullYear()
+    const currentYear = new Date().getFullYear()
+    const age = currentYear - birthYear
+    return age > 0 && age < 80 ? `${age} yrs` : ''
+  }, [cv.dateOfBirth])
 
   return (
     <section className="content-page sports-cv-page">
-      <p className="eyebrow">ATHLETE TOOLS · VERIFIED PROFILE &amp; PLAYER CARD</p>
-      <h1>Build your sports CV &amp; Player Card.</h1>
+      <p className="eyebrow">ATHLETE TOOLS · DIGITAL KHEL ID (खेल आईडी) &amp; SELECTION TRIAL DOSSIER</p>
+      <h1>Build your sports CV, digital Khel ID &amp; Player Card.</h1>
       <p className="page-intro">
-        Create an official athlete profile with technique video telemetry and scientific fitness benchmarks. Share your
-        custom FIFA-style Player Card with scouts, coaches, and on social media, or save it as a clean PDF.
+        Create your official athlete profile with standardized Digital Khel ID ({activeKhelId}), trial-ready federation registration,
+        video telemetry, and empirical fitness combine benchmarks. Share your custom FIFA-style Player Card with scouts, or export a
+        one-page SAI / State Directorate selection trial resume.
       </p>
+
+      {/* Pillar 4: Local-First Draft Restored Banner */}
+      {draftRestored && (
+        <div className="cv-draft-banner" role="status">
+          <div className="cv-draft-content">
+            <SiteIcon name="sparkles" size={18} />
+            <span>
+              <strong>Draft Restored:</strong> We automatically restored your uncommitted profile inputs from your previous session.
+            </span>
+          </div>
+          <button type="button" className="btn-clear-draft-pill" onClick={handleClearDraft} title="Discard saved draft">
+            Clear Draft
+          </button>
+        </div>
+      )}
 
       {/* Success banner if profile published */}
       {publishedProfile && (
@@ -255,7 +627,8 @@ export default function SportsCvWizard() {
             <div>
               <h3>Your Player Card &amp; Profile are Live!</h3>
               <p>
-                Public shareable URL: <strong>https://khelgrid.com/u/@{publishedProfile.username}</strong>
+                Official Khel ID: <strong>{publishedProfile.khelId || activeKhelId}</strong> · Public URL:{' '}
+                <strong>https://khelgrid.com/u/@{publishedProfile.username}</strong>
               </p>
             </div>
           </div>
@@ -281,15 +654,125 @@ export default function SportsCvWizard() {
       <div className="cv-privacy-note" role="note">
         <SiteIcon name="shield-check" size={18} />
         <span>
-          <strong>Scout-ready &amp; Privacy first.</strong> Do not enter government ID numbers, passwords, or private
-          medical records. Video links (YouTube, Google Drive, or Instagram Reels) can be set to Unlisted or Public.
+          <strong>Scout-ready &amp; Privacy first.</strong> Digital Khel ID replaces the need to share government ID numbers or private documents.
+          Enter federation UIDs (BCCI, AFI, BAI, SGFI, AIFF) to streamline eligibility checks at selection trials.
         </span>
       </div>
 
+      {/* Active Dossier Generation Reference & Audit Card for returning athletes */}
+      {currentGenerationRecord && (
+        <div className="active-dossier-reference-card" role="region" aria-label="Official Dossier Reference">
+          <div className="dossier-ref-header">
+            <div className="dossier-ref-title-group">
+              <span className="ref-badge-live">
+                <SiteIcon name="badge-check" size={16} /> OFFICIAL SELECTION DOSSIER REFERENCE
+              </span>
+              <h3 className="ref-main-code">{currentGenerationRecord.referenceId}</h3>
+            </div>
+            <div className="dossier-ref-quick-actions">
+              <button
+                type="button"
+                className="primary-link btn-generate-fresh"
+                onClick={handleGenerateFreshDossier}
+                title="Generate fresh revision with current date, time and new reference number"
+              >
+                <SiteIcon name="sparkles" size={16} /> Generate Fresh Dossier (New Ref &amp; Time)
+              </button>
+              <button
+                type="button"
+                className="secondary-link btn-history-toggle"
+                onClick={() => setShowHistory(prev => !prev)}
+                title="View past generated dossiers"
+              >
+                <SiteIcon name="clock" size={15} /> {showHistory ? 'Hide History' : `History (${generationHistory.length})`}
+              </button>
+            </div>
+          </div>
+
+          <div className="dossier-ref-meta-grid">
+            <div className="ref-meta-cell">
+              <span className="ref-cell-label">Generation Status</span>
+              <strong className="ref-cell-val">
+                {currentGenerationRecord.revisionNumber === 1
+                  ? 'Revision 1 (Initial Release)'
+                  : `Revision ${currentGenerationRecord.revisionNumber} (Fresh Release)`}
+              </strong>
+            </div>
+            <div className="ref-meta-cell">
+              <span className="ref-cell-label">Generated Timestamp (IST)</span>
+              <strong className="ref-cell-val">{currentGenerationRecord.formattedDateTime}</strong>
+            </div>
+            <div className="ref-meta-cell">
+              <span className="ref-cell-label">Trial Season</span>
+              <strong className="ref-cell-val">{currentGenerationRecord.season} National Trials</strong>
+            </div>
+            <div className="ref-meta-cell">
+              <span className="ref-cell-label">Registered Athlete</span>
+              <strong className="ref-cell-val">
+                {currentGenerationRecord.athleteName} ({currentGenerationRecord.sport})
+              </strong>
+            </div>
+          </div>
+
+          {showHistory && (
+            <div className="dossier-history-drawer">
+              <h4>Dossier Generation Audit Log</h4>
+              <p className="history-subtitle">
+                Every generation records an immutable reference with exact timestamp and revision number.
+              </p>
+              <div className="table-responsive">
+                <table className="dossier-history-table">
+                  <thead>
+                    <tr>
+                      <th>Revision</th>
+                      <th>Reference ID</th>
+                      <th>Generated Date &amp; Time (IST)</th>
+                      <th>Athlete &amp; Sport</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generationHistory.map(item => (
+                      <tr
+                        key={item.referenceId}
+                        className={item.referenceId === currentGenerationRecord.referenceId ? 'current-ref-row' : ''}
+                      >
+                        <td>
+                          <strong>{item.revisionNumber === 1 ? 'Rev 1 (Initial)' : `Rev ${item.revisionNumber}`}</strong>
+                          {item.referenceId === currentGenerationRecord.referenceId && (
+                            <span className="current-ref-tag">Active</span>
+                          )}
+                        </td>
+                        <td className="mono-ref">{item.referenceId}</td>
+                        <td>{item.formattedDateTime}</td>
+                        <td>
+                          {item.athleteName} · {item.sport}
+                        </td>
+                        <td>
+                          {item.referenceId !== currentGenerationRecord.referenceId && (
+                            <button
+                              type="button"
+                              className="btn-restore-ref"
+                              onClick={() => handleRestorePreviousRecord(item)}
+                            >
+                              Set as Active
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <form className="sports-cv-form" onSubmit={submit}>
-        {/* Section 1: Athlete Details */}
+        {/* Section 1: Athlete Details & Federation Registration */}
         <fieldset>
-          <legend>1. Athlete Details &amp; Custom Handle</legend>
+          <legend>1. Athlete Identity &amp; Federation Registration</legend>
           <div className="cv-field-grid">
             <label>
               Full name *
@@ -313,15 +796,65 @@ export default function SportsCvWizard() {
               />
             </label>
 
+            <div className="sport-input-wrap">
+              <label>
+                Primary Sport *
+                <input
+                  required
+                  maxLength={80}
+                  value={cv.sport}
+                  onChange={e => update('sport', e.target.value)}
+                  placeholder="e.g. Cricket, Football, Athletics, Badminton, Kabaddi, Lacrosse"
+                />
+              </label>
+              <div className="popular-sports-tray" aria-label="Quick Select Sport">
+                <span className="tray-label">Popular Presets:</span>
+                {POPULAR_SPORTS_LIST.map(sportName => (
+                  <button
+                    key={sportName}
+                    type="button"
+                    className={`sport-preset-pill ${cv.sport.toLowerCase().includes(sportName.toLowerCase()) ? 'is-selected' : ''}`}
+                    onClick={() => update('sport', sportName)}
+                  >
+                    {sportName}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <label>
-              Primary Sport *
+              Federation / Board UID (Optional)
               <input
-                required
                 maxLength={80}
-                value={cv.sport}
-                onChange={e => update('sport', e.target.value)}
-                placeholder="e.g. Cricket, Athletics, Badminton"
+                value={cv.federationUid}
+                onChange={e => update('federationUid', e.target.value)}
+                placeholder="e.g. BCCI-UID-4819 / AFI-2026-9021 / AIFF CRS"
               />
+            </label>
+
+            <label>
+              School / College / University
+              <input
+                maxLength={120}
+                value={cv.schoolOrCollege}
+                onChange={e => update('schoolOrCollege', e.target.value)}
+                placeholder="e.g. Delhi Public School R.K. Puram / Hindu College"
+              />
+            </label>
+
+            <label>
+              Blood Group
+              <select value={cv.bloodGroup} onChange={e => update('bloodGroup', e.target.value)}>
+                <option value="">Select Blood Group</option>
+                <option value="O+">O+ (Universal Donor)</option>
+                <option value="A+">A+</option>
+                <option value="B+">B+</option>
+                <option value="AB+">AB+</option>
+                <option value="O-">O-</option>
+                <option value="A-">A-</option>
+                <option value="B-">B-</option>
+                <option value="AB-">AB-</option>
+              </select>
             </label>
 
             <label>
@@ -332,7 +865,7 @@ export default function SportsCvWizard() {
                 value={cv.city}
                 onChange={e => update('city', e.target.value)}
                 autoComplete="address-level2"
-                placeholder="e.g. Delhi, Hyderabad, Rohtak"
+                placeholder="e.g. Delhi, Hyderabad, Rohtak, Kanpur"
               />
             </label>
 
@@ -342,7 +875,7 @@ export default function SportsCvWizard() {
                 maxLength={100}
                 value={cv.state}
                 onChange={e => update('state', e.target.value)}
-                placeholder="e.g. Haryana, Punjab, Maharashtra"
+                placeholder="e.g. Delhi, Haryana, Punjab, Maharashtra"
               />
             </label>
 
@@ -352,13 +885,14 @@ export default function SportsCvWizard() {
             </label>
 
             <label>
-              Email (for scout enquiries)
+              Athlete Email (for scout enquiries)
               <input
                 type="email"
                 maxLength={254}
                 value={cv.email}
                 onChange={e => update('email', e.target.value)}
                 autoComplete="email"
+                placeholder="athlete@khelgrid.com"
               />
             </label>
 
@@ -370,17 +904,253 @@ export default function SportsCvWizard() {
                 value={cv.phone}
                 onChange={e => update('phone', e.target.value)}
                 autoComplete="tel"
+                placeholder="+91 98765 43210"
               />
             </label>
           </div>
+
+          {/* Minor Athlete & Emergency Contact Subsection */}
+          <div className="cv-guardian-box">
+            <h4>Parent / Guardian Emergency Contact (Mandatory for Minors under 18)</h4>
+            <div className="cv-field-grid">
+              <label>
+                Parent / Guardian Name
+                <input
+                  maxLength={100}
+                  value={cv.guardianName}
+                  onChange={e => update('guardianName', e.target.value)}
+                  placeholder="e.g. Rajesh Verma"
+                />
+              </label>
+
+              <label>
+                Relationship
+                <select value={cv.guardianRelation} onChange={e => update('guardianRelation', e.target.value)}>
+                  <option value="">Select Relation</option>
+                  <option value="Father">Father</option>
+                  <option value="Mother">Mother</option>
+                  <option value="Legal Guardian">Legal Guardian</option>
+                  <option value="Coach / Mentor">Coach / Mentor</option>
+                </select>
+              </label>
+
+              <label>
+                Emergency Phone Number
+                <input
+                  type="tel"
+                  maxLength={30}
+                  value={cv.guardianPhone}
+                  onChange={e => update('guardianPhone', e.target.value)}
+                  placeholder="+91 98111 22334"
+                />
+              </label>
+            </div>
+          </div>
         </fieldset>
 
-        {/* Section 2: Sporting Background & Physical Metrics */}
+        {/* Section 2: Sporting Background & Biometrics */}
         <fieldset>
           <legend>2. Sporting Background &amp; Biometrics</legend>
+
+          {/* Dynamic Sport-Specific Roles & Tactical Attributes (Improvement 4) */}
+          {sportPreset && (
+            <div className="sport-specific-scouting-panel" aria-label={`${sportPreset.sport} Scouting Profile`}>
+              <div className="preset-panel-header">
+                <span className="preset-header-tag">SPORT-SPECIFIC SCOUTING PRESET: {sportPreset.sport.toUpperCase()}</span>
+                <span className="preset-header-hint">Tap a role preset below to autofill or customize your position</span>
+              </div>
+
+              {/* Position Quick-Pick Pills */}
+              <div className="preset-pills-row" aria-label="Suggested Positions">
+                {sportPreset.primaryPositions.map(pos => (
+                  <button
+                    key={pos}
+                    type="button"
+                    className={`preset-pill ${cv.playingPosition === pos ? 'is-active' : ''}`}
+                    onClick={() => update('playingPosition', pos)}
+                  >
+                    {pos}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sport-Specific Technical Fields Grid */}
+              <div className="preset-technical-grid">
+                {/* Cricket: Batting Style & Bowling Style */}
+                {sportPreset.technicalFields.battingStyles && (
+                  <label>
+                    Batting Style
+                    <select
+                      value={cv.battingStyle || ''}
+                      onChange={e => {
+                        const val = e.target.value
+                        update('battingStyle', val)
+                        if (val.includes('Left')) {
+                          update('primaryFootOrHand', 'Left-Hand Bat')
+                        } else if (val.includes('Right')) {
+                          update('primaryFootOrHand', 'Right-Hand Bat')
+                        }
+                      }}
+                    >
+                      <option value="">Select Batting Style</option>
+                      {sportPreset.technicalFields.battingStyles.map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {sportPreset.technicalFields.bowlingStyles && (
+                  <label>
+                    Bowling Style
+                    <select
+                      value={cv.bowlingStyle || ''}
+                      onChange={e => update('bowlingStyle', e.target.value)}
+                    >
+                      <option value="">Select Bowling Style</option>
+                      {sportPreset.technicalFields.bowlingStyles.map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {/* Football: Preferred Foot & Tactical Role */}
+                {sportPreset.technicalFields.preferredFeet && (
+                  <label>
+                    Preferred Foot
+                    <select
+                      value={cv.preferredFoot || ''}
+                      onChange={e => {
+                        const val = e.target.value
+                        update('preferredFoot', val)
+                        update('primaryFootOrHand', val)
+                      }}
+                    >
+                      <option value="">Select Preferred Foot</option>
+                      {sportPreset.technicalFields.preferredFeet.map(f => (
+                        <option key={f} value={f}>{f}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {sportPreset.technicalFields.tacticalPositions && (
+                  <label>
+                    Tactical Playing Role
+                    <select
+                      value={cv.tacticalPosition || ''}
+                      onChange={e => update('tacticalPosition', e.target.value)}
+                    >
+                      <option value="">Select Tactical Role</option>
+                      {sportPreset.technicalFields.tacticalPositions.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {/* Athletics: Primary Event, Personal Best (PB), Season Best (SB) */}
+                {sportPreset.technicalFields.athleticsEvents && (
+                  <>
+                    <label>
+                      Primary Track / Field Event
+                      <select
+                        value={cv.athleticsEvent || ''}
+                        onChange={e => {
+                          const val = e.target.value
+                          update('athleticsEvent', val)
+                          if (!cv.playingPosition || cv.playingPosition.includes('Sprint') || cv.playingPosition.includes('Specialist')) {
+                            update('playingPosition', `${val} Specialist`)
+                          }
+                        }}
+                      >
+                        <option value="">Select Official Event</option>
+                        {sportPreset.technicalFields.athleticsEvents.map(evt => (
+                          <option key={evt} value={evt}>{evt}</option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label>
+                      Official Personal Best (PB)
+                      <input
+                        maxLength={50}
+                        value={cv.personalBest || ''}
+                        onChange={e => update('personalBest', e.target.value)}
+                        placeholder="e.g. 10.42s / 84.50m / 2.15m"
+                      />
+                    </label>
+
+                    <label>
+                      Season Best (SB)
+                      <input
+                        maxLength={50}
+                        value={cv.seasonBest || ''}
+                        onChange={e => update('seasonBest', e.target.value)}
+                        placeholder="e.g. 10.51s / 82.30m"
+                      />
+                    </label>
+                  </>
+                )}
+
+                {/* Badminton & Tennis: Racket Hand & Playing Style */}
+                {sportPreset.technicalFields.racketHands && (
+                  <label>
+                    Racket Hand
+                    <select
+                      value={cv.racketHand || ''}
+                      onChange={e => {
+                        const val = e.target.value
+                        update('racketHand', val)
+                        update('primaryFootOrHand', val)
+                      }}
+                    >
+                      <option value="">Select Racket Hand</option>
+                      {sportPreset.technicalFields.racketHands.map(h => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {sportPreset.technicalFields.playingStyles && (
+                  <label>
+                    Playing Style &amp; Tactical Specialty
+                    <select
+                      value={cv.playingStyle || ''}
+                      onChange={e => update('playingStyle', e.target.value)}
+                    >
+                      <option value="">Select Playing Style</option>
+                      {sportPreset.technicalFields.playingStyles.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {/* Kabaddi: Signature Move */}
+                {sportPreset.technicalFields.signatureMoves && (
+                  <label>
+                    Signature Move / Scoring Weapon
+                    <select
+                      value={cv.signatureMove || ''}
+                      onChange={e => update('signatureMove', e.target.value)}
+                    >
+                      <option value="">Select Signature Move</option>
+                      {sportPreset.technicalFields.signatureMoves.map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="cv-field-grid">
             <label>
-              Playing Position / Event *
+              Playing Position / Primary Event *
               <input
                 required
                 maxLength={100}
@@ -406,7 +1176,7 @@ export default function SportsCvWizard() {
                 maxLength={120}
                 value={cv.coach}
                 onChange={e => update('coach', e.target.value)}
-                placeholder="e.g. Coach Tarak Sinha Academy"
+                placeholder="e.g. Coach Zaheer Farooq / NIS Senior Coach"
               />
             </label>
 
@@ -458,7 +1228,7 @@ export default function SportsCvWizard() {
           <label>
             Profile summary &amp; athletic ambition
             <textarea
-              rows={4}
+              rows={3}
               maxLength={1500}
               value={cv.goals}
               onChange={e => update('goals', e.target.value)}
@@ -467,10 +1237,74 @@ export default function SportsCvWizard() {
           </label>
         </fieldset>
 
-        {/* Section 3: Video Clips & Telemetry Attachments */}
+        {/* Section 3: Scientific Fitness Combine Benchmarks (Pillar 2) */}
+        <fieldset>
+          <legend>3. Physical Fitness &amp; Combine Benchmarks</legend>
+          <p className="cv-help">
+            SAI, BCCI, and national sports directorates evaluate candidates on these 3 standardized physical markers.
+            Enter your combine scores below to update your dynamic athletic rating (OVR).
+          </p>
+
+          <div className="cv-field-grid">
+            <label>
+              Yo-Yo IR1 Test Distance (meters)
+              <input
+                type="number"
+                min={400}
+                max={3000}
+                step={40}
+                value={cv.fitnessBenchmarks.yoyoIr1Meters || ''}
+                onChange={e => updateFitnessBenchmark('yoyoIr1Meters', e.target.value)}
+                placeholder="e.g. 1960 (Level 18.2)"
+              />
+              <span className="field-hint">Cricket / Football norm: 1600m - 2040m</span>
+            </label>
+
+            <label>
+              30m Sprint Acceleration (seconds)
+              <input
+                type="number"
+                min={3.2}
+                max={6.0}
+                step={0.01}
+                value={cv.fitnessBenchmarks.sprint30mSeconds || ''}
+                onChange={e => updateFitnessBenchmark('sprint30mSeconds', e.target.value)}
+                placeholder="e.g. 4.02"
+              />
+              <span className="field-hint">National pace &amp; winger benchmark: &lt; 4.10s</span>
+            </label>
+
+            <label>
+              Countermovement Jump — CMJ (cm)
+              <input
+                type="number"
+                min={20}
+                max={90}
+                value={cv.fitnessBenchmarks.cmjHeightCm || ''}
+                onChange={e => updateFitnessBenchmark('cmjHeightCm', e.target.value)}
+                placeholder="e.g. 54"
+              />
+              <span className="field-hint">Vertical jump explosion marker: 45cm - 65cm</span>
+            </label>
+          </div>
+
+          {/* Live Combine Indicator */}
+          <div className="cv-combine-indicator">
+            <div className="indicator-col">
+              <span className="indicator-title">Combine Readiness Tier:</span>
+              <strong className="indicator-tier">{cv.fitnessBenchmarks.tier || 'Grassroots Prospect'}</strong>
+            </div>
+            <div className="indicator-col">
+              <span className="indicator-title">National Percentile:</span>
+              <strong className="indicator-percentile">{cv.fitnessBenchmarks.percentileAvg || 80}th Percentile</strong>
+            </div>
+          </div>
+        </fieldset>
+
+        {/* Section 4: Video Clips & Telemetry Attachments */}
         <fieldset>
           <legend>
-            3. Video Clips &amp; Technique Telemetry{' '}
+            4. Video Clips &amp; Technique Telemetry{' '}
             <span className="legend-sub">({cv.videoClips.length}/4 Clips)</span>
           </legend>
           <p className="cv-help">
@@ -551,10 +1385,10 @@ export default function SportsCvWizard() {
           )}
         </fieldset>
 
-        {/* Section 4: Achievements */}
+        {/* Section 5: Achievements */}
         <fieldset>
-          <legend>4. Competition Achievements &amp; Medals</legend>
-          <p className="cv-help">List verified state, national, university, or district tournament results.</p>
+          <legend>5. Competition Achievements &amp; Medals</legend>
+          <p className="cv-help">List verified state, national, university, school, or district tournament results.</p>
           {cv.achievements.map((item, index) => (
             <div className="cv-achievement-row" key={index}>
               <label>
@@ -572,7 +1406,7 @@ export default function SportsCvWizard() {
                   maxLength={150}
                   value={item.event}
                   onChange={e => updateAchievement(index, 'event', e.target.value)}
-                  placeholder="Delhi State U-19 Inter-District"
+                  placeholder="Delhi State U-19 Inter-District Trophy"
                 />
               </label>
               <label>
@@ -627,21 +1461,36 @@ export default function SportsCvWizard() {
             {isPublishing ? 'Publishing Player Card…' : 'Publish & Get Shareable Player Card'}
           </button>
 
-          <button type="submit" className="secondary-link">
-            <SiteIcon name="download" size={17} /> Preview &amp; Save as PDF
+          <button
+            type="button"
+            className="secondary-link btn-generate-fresh"
+            onClick={handleGenerateFreshDossier}
+            title="Generate a fresh selection trial dossier reference with current timestamp"
+          >
+            <SiteIcon name="sparkles" size={16} /> Generate Fresh Dossier (New Ref &amp; Time)
           </button>
+
+          <button type="submit" className="secondary-link">
+            <SiteIcon name="download" size={17} /> Preview &amp; Print Selection Resume (PDF)
+          </button>
+
+          <a
+            href={whatsappDossierUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="secondary-link btn-whatsapp-dossier-action"
+            title="Directly send verified trial dossier to NIS coaches and selectors via WhatsApp"
+          >
+            <SiteIcon name="share" size={16} /> Share Dossier on WhatsApp
+          </a>
 
           <button
             type="button"
             className="secondary-link btn-clear-form"
-            onClick={() => {
-              setCv(initialCv)
-              setSavedForPrint(false)
-              setPublishedProfile(null)
-              setPublishMessage(null)
-            }}
+            onClick={handleClearDraft}
+            title="Reset form and remove local draft"
           >
-            Clear Form
+            Clear Form &amp; Draft
           </button>
         </div>
 
@@ -671,17 +1520,32 @@ export default function SportsCvWizard() {
         <PlayerCard
           profile={{
             id: 'preview-id',
-            username: normalizeUsername(cv.username || cv.fullName || 'athlete'),
+            username: activeHandle,
+            khelId: activeKhelId,
+            dossierReference: activeDossierRecord.referenceId,
+            dossierGeneratedAt: activeDossierRecord.formattedDateTime,
+            dossierRevision: activeDossierRecord.revisionNumber,
             fullName: cv.fullName.trim() || 'Rohit Verma',
             sport: cv.sport.trim() || 'Cricket',
             playingPosition: cv.playingPosition.trim() || 'Right-Arm Fast Bowler',
             city: cv.city.trim() || 'Delhi',
             state: cv.state.trim() || 'Delhi',
             teamOrAcademy: cv.teamOrAcademy.trim() || 'Sonnet Cricket Club',
+            battingStyle: cv.battingStyle,
+            bowlingStyle: cv.bowlingStyle,
+            preferredFoot: cv.preferredFoot,
+            tacticalPosition: cv.tacticalPosition,
+            athleticsEvent: cv.athleticsEvent,
+            personalBest: cv.personalBest,
+            seasonBest: cv.seasonBest,
+            playingStyle: cv.playingStyle,
+            racketHand: cv.racketHand,
+            signatureMove: cv.signatureMove,
+            primaryFootOrHand: cv.primaryFootOrHand,
             achievements: cv.achievements.filter(a => a.event.trim()),
             videoClips: cv.videoClips,
             fitnessBenchmarks: cv.fitnessBenchmarks,
-            verificationStatus: 'verified',
+            verificationStatus: 'community',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           }}
@@ -689,62 +1553,314 @@ export default function SportsCvWizard() {
         />
       </section>
 
-      {/* Print PDF Preview (for browser printing) */}
-      <section className="cv-print-preview" aria-label="Athlete CV print preview">
-        <p className="eyebrow">KHELGRID · OFFICIAL ATHLETE CV</p>
-        <h2>{cv.fullName.trim() || 'Your Name'}</h2>
-        <p className="cv-preview-sport">
-          {cv.sport.trim() || 'Sport'}
-          {cv.playingPosition ? ` · ${cv.playingPosition}` : ''}
-        </p>
-        <p>{[cv.city, cv.email, cv.phone].filter(Boolean).join(' · ') || 'Contact details'}</p>
-        {cv.dateOfBirth && <p>Date of birth: {cv.dateOfBirth}</p>}
+      {/* Dossier Quick Share & Export Action Toolbar (Improvement 5) */}
+      <div className="dossier-export-toolbar no-print" aria-label="Selection Trial Dossier Export Actions">
+        <div className="toolbar-info">
+          <span className="toolbar-badge">OFFICIAL TRIAL DOSSIER READY</span>
+          <span className="toolbar-sub">
+            Reference: <strong>{activeDossierRecord.referenceId}</strong> (Rev {activeDossierRecord.revisionNumber}) · {activeDossierRecord.formattedDateTime}
+          </span>
+        </div>
+        <div className="toolbar-actions">
+          <button
+            type="button"
+            className="dossier-action-btn btn-print-pdf"
+            onClick={() => {
+              setSavedForPrint(true)
+              window.setTimeout(() => window.print(), 80)
+            }}
+            title="Open print dialog to save 1-page selection resume (PDF)"
+          >
+            <SiteIcon name="download" size={15} /> Save / Print PDF (A4)
+          </button>
+          <a
+            href={whatsappDossierUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="dossier-action-btn btn-whatsapp-dossier"
+            title="Share verified selection trial dossier with NIS coaches and selectors via WhatsApp"
+          >
+            <SiteIcon name="share" size={15} /> Share on WhatsApp
+          </a>
+          <button
+            type="button"
+            className="dossier-action-btn btn-copy-dossier"
+            onClick={handleCopyDossierSummary}
+            title="Copy formatted dossier summary and verification link to clipboard"
+          >
+            <SiteIcon name="copy" size={15} /> {dossierCopied ? 'Copied to Clipboard!' : 'Copy Dossier Link'}
+          </button>
+        </div>
+      </div>
 
-        <h3>Sporting Background</h3>
-        <p>
-          {[
-            cv.teamOrAcademy && `Team / Academy: ${cv.teamOrAcademy}`,
-            cv.coach && `Coach: ${cv.coach}`,
-            cv.experience && `Experience: ${cv.experience}`,
-          ]
-            .filter(Boolean)
-            .join(' · ') || 'Your team, coach and experience will appear here.'}
-        </p>
+      {/* Pillar 3: Professional One-Page Selection Trial Resume (Print/PDF Layout) */}
+      <section className="cv-print-preview" aria-label="Athlete Selection Trial Dossier">
+        {/* Dossier Header */}
+        <div className="dossier-header-row">
+          <div className="dossier-athlete-info">
+            <p className="dossier-crest">KHELGRID · OFFICIAL SELECTION TRIAL DOSSIER</p>
+            <h2 className="dossier-athlete-name">{cv.fullName.trim() || 'ATHLETE FULL NAME'}</h2>
+            <p className="dossier-sport-title">
+              {cv.sport.trim() || 'SPORT'} · {cv.playingPosition || 'PLAYING POSITION / EVENT'}
+            </p>
+            <div className="dossier-khel-id-pill">
+              <span>DIGITAL KHEL ID:</span>
+              <strong>{activeKhelId}</strong>
+            </div>
+            <p className="dossier-contact-line">
+              {[cv.city, cv.state, cv.phone, cv.email].filter(Boolean).join(' · ') || 'Contact details'}
+            </p>
+          </div>
 
-        {cv.goals && (
-          <>
-            <h3>Profile Summary</h3>
-            <p className="cv-preview-long-text">{cv.goals}</p>
-          </>
-        )}
+          <div className="dossier-qr-col">
+            <div
+              className="dossier-qr-frame"
+              title="Scan with smartphone camera to view live telemetry and video attachments"
+              dangerouslySetInnerHTML={{ __html: printQrSvg }}
+            />
+            <span className="dossier-qr-label">Scan for Video Proof</span>
+            <small className="dossier-qr-link">khelgrid.com/u/@{activeHandle}</small>
+          </div>
+        </div>
 
+        {/* Official Reference & Timestamp Audit Strip */}
+        <div className="dossier-audit-strip">
+          <div className="audit-strip-col">
+            <span className="audit-label">DOSSIER REFERENCE:</span>
+            <strong className="audit-code">{activeDossierRecord.referenceId}</strong>
+            <span className="audit-rev">
+              ({activeDossierRecord.revisionNumber === 1 ? 'Original Issue' : `Revision ${activeDossierRecord.revisionNumber}`})
+            </span>
+          </div>
+          <div className="audit-strip-col">
+            <span className="audit-label">GENERATED ON:</span>
+            <strong className="audit-val">{activeDossierRecord.formattedDateTime}</strong>
+          </div>
+          <div className="audit-strip-col">
+            <span className="audit-label">OFFICIAL SCRUTINY:</span>
+            <strong className="audit-val">SAI / State Directorate {activeDossierRecord.season}</strong>
+          </div>
+        </div>
+
+        {/* Table 1: Physical & Biometric Profile */}
+        <div className="dossier-section-block">
+          <h3 className="dossier-section-heading">1. Physical &amp; Biometric Profile</h3>
+          <table className="dossier-data-table">
+            <thead>
+              <tr>
+                <th>Date of Birth</th>
+                <th>Age</th>
+                <th>Height</th>
+                <th>Weight</th>
+                <th>Blood Group</th>
+                <th>Dominant Side</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{cv.dateOfBirth || '—'}</td>
+                <td>{calculatedAge || '—'}</td>
+                <td>{cv.heightCm ? `${cv.heightCm} cm` : '—'}</td>
+                <td>{cv.weightKg ? `${cv.weightKg} kg` : '—'}</td>
+                <td>{cv.bloodGroup || '—'}</td>
+                <td>{cv.primaryFootOrHand || '—'}</td>
+              </tr>
+              {technicalIndicatorsString && technicalIndicatorsString !== '—' && (
+                <tr className="dossier-technical-row">
+                  <td colSpan={6}>
+                    <div className="dossier-tech-indicators-box">
+                      <span className="tech-badge-label">TECHNICAL SCOUTING INDICATORS:</span>
+                      <strong className="tech-badge-value">{technicalIndicatorsString}</strong>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Table 2: Affiliations & Federation Registrations */}
+        <div className="dossier-section-block">
+          <h3 className="dossier-section-heading">2. Affiliations &amp; Federation Credentials</h3>
+          <table className="dossier-data-table">
+            <tbody>
+              <tr>
+                <th>Federation / Board UID</th>
+                <td>{cv.federationUid || 'Pending State / District Verification'}</td>
+                <th>School / College / Institution</th>
+                <td>{cv.schoolOrCollege || 'Private Candidate'}</td>
+              </tr>
+              <tr>
+                <th>Current Club / Academy</th>
+                <td>{cv.teamOrAcademy || 'Grassroots Athlete'}</td>
+                <th>Primary Coach / Mentor</th>
+                <td>{cv.coach || 'Self-Coached'}</td>
+              </tr>
+              <tr>
+                <th>Years of Experience</th>
+                <td>{cv.experience || 'Grassroots'}</td>
+                <th>Emergency / Guardian Contact</th>
+                <td>
+                  {[cv.guardianName, cv.guardianRelation, cv.guardianPhone].filter(Boolean).join(' · ') || 'Self'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Table 3: Scientific Fitness Combine Benchmarks */}
+        <div className="dossier-section-block">
+          <h3 className="dossier-section-heading">3. Physical Fitness Combine Benchmarks (SAI Protocol)</h3>
+          <table className="dossier-data-table">
+            <thead>
+              <tr>
+                <th>Yo-Yo IR1 Endurance</th>
+                <th>30m Sprint Acceleration</th>
+                <th>Countermovement Jump (CMJ)</th>
+                <th>Combine Percentile</th>
+                <th>Candidate Readiness Tier</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{cv.fitnessBenchmarks.yoyoIr1Meters ? `${cv.fitnessBenchmarks.yoyoIr1Meters} m` : '—'}</td>
+                <td>{cv.fitnessBenchmarks.sprint30mSeconds ? `${cv.fitnessBenchmarks.sprint30mSeconds} s` : '—'}</td>
+                <td>{cv.fitnessBenchmarks.cmjHeightCm ? `${cv.fitnessBenchmarks.cmjHeightCm} cm` : '—'}</td>
+                <td><strong>{cv.fitnessBenchmarks.percentileAvg || 80}th Percentile</strong></td>
+                <td><strong className="tier-badge-text">{cv.fitnessBenchmarks.tier || 'Grassroots Candidate'}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Section 4: Verified Competitive Records & Medal Ledger */}
+        <div className="dossier-section-block">
+          <h3 className="dossier-section-heading">4. Competition Achievements &amp; Medal Ledger</h3>
+          {cv.achievements.some(a => a.event.trim()) ? (
+            <table className="dossier-data-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '80px' }}>Year</th>
+                  <th>Championship / Tournament</th>
+                  <th>Official Result / Medal / Distinction</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cv.achievements
+                  .filter(a => a.event.trim())
+                  .map((item, idx) => (
+                    <tr key={idx}>
+                      <td><strong>{item.year || '—'}</strong></td>
+                      <td>{item.event}</td>
+                      <td>{item.result || 'Participant'}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="dossier-empty-note">No tournament achievements listed. Add competitive history above.</p>
+          )}
+        </div>
+
+        {/* Section 5: Video Telemetry Proof */}
         {cv.videoClips.length > 0 && (
-          <>
-            <h3>Video Clips &amp; Telemetry</h3>
-            <ul>
-              {cv.videoClips.map((clip, i) => (
-                <li key={i}>
-                  <strong>{clip.title}</strong> ({clip.clipType}) — Link: {clip.videoUrl}
-                </li>
-              ))}
-            </ul>
-          </>
+          <div className="dossier-section-block">
+            <h3 className="dossier-section-heading">5. Technique Video Telemetry (QR Link Verifiable)</h3>
+            <table className="dossier-data-table">
+              <thead>
+                <tr>
+                  <th>Clip Drill</th>
+                  <th>Discipline / Category</th>
+                  <th>Recorded Telemetry Metric</th>
+                  <th>Digital Link</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cv.videoClips.map((clip, idx) => (
+                  <tr key={idx}>
+                    <td><strong>{clip.title}</strong></td>
+                    <td>{clip.clipType}</td>
+                    <td>{clip.telemetry?.[0]?.metricValue || 'Visual Evaluation'}</td>
+                    <td className="table-url-cell">{clip.videoUrl}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
-        <h3>Achievements</h3>
-        {cv.achievements.some(item => item.year || item.event || item.result) ? (
-          <ul>
-            {cv.achievements
-              .filter(item => item.year || item.event || item.result)
-              .map((item, i) => (
-                <li key={i}>{[item.year, item.event, item.result].filter(Boolean).join(' — ')}</li>
-              ))}
-          </ul>
-        ) : (
-          <p>Add achievements above to include them in the CV.</p>
-        )}
+        {/* Section 6: Statutory Selection Trial Endorsement Box */}
+        <div className="dossier-endorsement-container">
+          <div className="candidate-declaration-box">
+            <h4>Candidate Statutory Declaration</h4>
+            <p>
+              I hereby solemnly declare that all competitive records, federation registrations, biometrics, and telemetry
+              stated in this Sports CV are true, accurate, and verifiable against official tournament scorecards.
+            </p>
+            <div className="dossier-cert-reference-line">
+              <span>Dossier Ref: <strong>{activeDossierRecord.referenceId}</strong> (Rev {activeDossierRecord.revisionNumber})</span>
+              <span>Timestamp: <strong>{activeDossierRecord.formattedDateTime}</strong></span>
+            </div>
+            <div className="signature-line-row">
+              <div className="sig-block">
+                <span className="sig-line" />
+                <span className="sig-caption">Athlete / Guardian Signature</span>
+              </div>
+              <div className="sig-block">
+                <span className="sig-line" />
+                <span className="sig-caption">Date &amp; Trial Location</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="selector-endorsement-box">
+            <h4>Selection Trial Observer &amp; Scout Sign-Off</h4>
+            <div className="endorsement-fields-grid">
+              <div>
+                <span className="field-label">Chief Selector / Verifier:</span>
+                <span className="field-dotted-line" />
+              </div>
+              <div>
+                <span className="field-label">Designation / Federation:</span>
+                <span className="field-dotted-line" />
+              </div>
+              <div>
+                <span className="field-label">Combine Observation Remarks:</span>
+                <span className="field-dotted-line" />
+              </div>
+            </div>
+            <div className="stamp-signature-area">
+              <div className="official-stamp-box" title="SAI & Directorate Trial Scrutiny Seal">
+                <div className="stamp-seal-svg">
+                  <svg viewBox="0 0 100 100" width="76" height="76" className="official-trial-seal-svg" aria-label="Official Verification Seal">
+                    <circle cx="50" cy="50" r="46" fill="none" stroke="#087B45" strokeWidth="2.5" strokeDasharray="3 2" />
+                    <circle cx="50" cy="50" r="39" fill="none" stroke="#087B45" strokeWidth="1.2" />
+                    <text x="50" y="32" fontSize="6.5" fontWeight="900" fill="#087B45" textAnchor="middle" letterSpacing="0.8">
+                      ★ KHELGRID ★
+                    </text>
+                    <text x="50" y="48" fontSize="8" fontWeight="900" fill="#0B1C2D" textAnchor="middle" letterSpacing="0.5">
+                      SAI / FED
+                    </text>
+                    <text x="50" y="60" fontSize="7" fontWeight="bold" fill="#087B45" textAnchor="middle">
+                      SCRUTINY
+                    </text>
+                    <text x="50" y="71" fontSize="5.5" fontWeight="700" fill="#64748B" textAnchor="middle">
+                      {activeDossierRecord.season}
+                    </text>
+                  </svg>
+                </div>
+                <span className="stamp-seal-caption">OFFICIAL STAMP / SEAL</span>
+              </div>
+              <div className="selector-sig-box">
+                <span className="sig-line" />
+                <span className="sig-caption">Selector / Scrutinizer Signature</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <p className="cv-disclaimer">
-          Self-reported information. Verified on KhelGrid Athlete Network.
+          Digital Khel ID ({activeKhelId}) · Dossier Ref: {activeDossierRecord.referenceId} · Generated on {activeDossierRecord.formattedDateTime} via KhelGrid Athlete Network. Scan the QR code to verify video telemetry and certificate attachments.
         </p>
       </section>
     </section>

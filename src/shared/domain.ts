@@ -51,6 +51,7 @@ export interface Venue {
   pricing?: string | null
   facilities?: string[]
   rules?: string[]
+  faqs?: Array<{ question: string; answer: string }>
   rating?: number
   review_count?: number
   verification_status?: 'unverified' | 'pending_review' | 'verified' | 'rejected'
@@ -81,6 +82,8 @@ export interface Academy {
   age_groups?: string[]
   timings?: string | null
   fee_structure?: string | null
+  curriculum_highlights?: string[]
+  faqs?: Array<{ question: string; answer: string }>
   admission_open?: boolean
   rating?: number
   review_count?: number
@@ -264,6 +267,26 @@ export interface AthleteProfile {
   heightCm?: number
   weightKg?: number
   summary?: string
+  khelId?: string
+  federationUid?: string
+  schoolOrCollege?: string
+  bloodGroup?: string
+  guardianName?: string
+  guardianRelation?: string
+  guardianPhone?: string
+  dossierReference?: string
+  dossierGeneratedAt?: string
+  dossierRevision?: number
+  battingStyle?: string
+  bowlingStyle?: string
+  preferredFoot?: string
+  tacticalPosition?: string
+  athleticsEvent?: string
+  personalBest?: string
+  seasonBest?: string
+  playingStyle?: string
+  racketHand?: string
+  signatureMove?: string
   achievements: { year: string; event: string; result: string }[]
   videoClips: VideoClip[]
   fitnessBenchmarks?: {
@@ -274,6 +297,10 @@ export interface AthleteProfile {
     percentileAvg?: number
   }
   verificationStatus: 'community' | 'verified' | 'pro'
+  /** True only when a trusted server projection confirms moderator verification. */
+  verificationTrusted?: boolean
+  /** True only when a server-side consent gate authorizes public profile display. */
+  publicProfileEligible?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -288,5 +315,16 @@ export interface TrialReminder {
   venueName?: string | null
   notificationType: 'whatsapp' | 'google-calendar' | 'ical'
   createdAt: string
+}
+
+export interface CvGenerationRecord {
+  referenceId: string
+  revisionNumber: number
+  generatedAt: string
+  formattedDateTime: string
+  season: string
+  khelId: string
+  athleteName: string
+  sport: string
 }
 

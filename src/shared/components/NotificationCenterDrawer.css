@@ -75,7 +75,7 @@
   font-size: 0.6875rem;
   font-weight: 700;
   background: rgba(5, 150, 105, 0.12);
-  color: var(--color-primary, var(--accent-strong, #059669));
+  color: var(--color-primary, #059669);
   padding: 0.15rem 0.5rem;
   border-radius: 9999px;
   border: 1px solid rgba(5, 150, 105, 0.25);
@@ -116,7 +116,7 @@
 .notif-mark-read-btn {
   background: none;
   border: none;
-  color: var(--color-primary, var(--accent-strong, #059669));
+  color: var(--color-primary, #059669);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
@@ -167,8 +167,8 @@
 }
 
 .notif-tab.is-active {
-  background: var(--color-primary, var(--accent-strong, #059669));
-  border-color: var(--color-primary, var(--accent-strong, #059669));
+  background: var(--color-primary, #059669);
+  border-color: var(--color-primary, #059669);
   color: #ffffff;
 }
 
@@ -198,7 +198,7 @@
 }
 
 .notif-item.is-unread {
-  border-left: 3px solid var(--color-primary, var(--accent-strong, #059669));
+  border-left: 3px solid var(--color-primary, #059669);
   background: linear-gradient(90deg, rgba(5, 150, 105, 0.03) 0%, var(--color-surface, #ffffff) 100%);
 }
 
@@ -207,7 +207,7 @@
 }
 
 .notif-item:hover {
-  border-color: var(--color-primary, var(--accent-strong, #059669));
+  border-color: var(--color-primary, #059669);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.06);
 }
@@ -232,12 +232,12 @@
 
 .notif-item-icon-wrap.cat-trials {
   background: rgba(5, 150, 105, 0.12);
-  color: var(--accent-strong, #059669);
+  color: #059669;
 }
 
 .notif-item-icon-wrap.cat-turfs {
   background: rgba(16, 185, 129, 0.12);
-  color: var(--accent, #10b981);
+  color: #10b981;
 }
 
 .notif-item-icon-wrap.cat-matches {
@@ -275,7 +275,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--color-primary, var(--accent-strong, #059669));
+  background: var(--color-primary, #059669);
   flex-shrink: 0;
   margin-top: 4px;
 }
@@ -304,7 +304,7 @@
   align-items: center;
   gap: 0.25rem;
   font-weight: 600;
-  color: var(--color-primary, var(--accent-strong, #059669));
+  color: var(--color-primary, #059669);
 }
 
 .notif-item-dismiss {
@@ -403,7 +403,7 @@
 }
 
 .notif-footer-link:hover {
-  color: var(--color-primary, var(--accent-strong, #059669));
+  color: var(--color-primary, #059669);
   text-decoration: underline;
 }
 
@@ -490,8 +490,8 @@
   }
 
   .notif-tab.is-active {
-    background: var(--accent-strong, #059669);
-    border-color: var(--accent-strong, #059669);
+    background: #059669;
+    border-color: #059669;
     color: #ffffff;
   }
 

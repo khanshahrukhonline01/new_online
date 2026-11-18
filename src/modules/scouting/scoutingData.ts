@@ -38,6 +38,7 @@ export interface ScoutAthlete {
   videoClipsCount?: number
 }
 
+/** Synthetic UI/test fixtures only; never treat these records as real or verified athletes. */
 export const BASELINE_SCOUT_ATHLETES: ScoutAthlete[] = [
   {
     id: 'scout-ath-01',
@@ -447,30 +448,41 @@ export function generateScoutShortlistCsv(athletes: ScoutAthlete[]): string {
     'Vertical Jump (cm)',
     'Yo-Yo IR1 (m)',
     'Top Speed (km/h)',
+    'Technical Indicators',
     'Key Achievements',
     'Coach/Guardian Contact',
   ]
 
-  const rows = athletes.map(a => [
-    `"${a.id}"`,
-    `"${a.name}"`,
-    `"${a.sport}"`,
-    `"${a.primaryPosition}"`,
-    a.age,
-    `"${a.ageGroup}"`,
-    `"${a.gender}"`,
-    `"${a.city}"`,
-    `"${a.state}"`,
-    `"${a.academy.replace(/"/g, '""')}"`,
-    `"${a.federationUid}"`,
-    `${a.percentileRank}%`,
-    a.metrics.sprint30mSeconds || 'N/A',
-    a.metrics.cmjHeightCm || 'N/A',
-    a.metrics.yoyoIr1Meters || 'N/A',
-    a.metrics.speedOrVelocityKmph || 'N/A',
-    `"${a.achievements.join('; ').replace(/"/g, '""')}"`,
-    `"${a.guardianOrCoachContact.replace(/"/g, '""')}"`,
-  ])
+  const rows = athletes.map(a => {
+    const techIndicators =
+      a.sport === 'Cricket' && (a.metrics.speedOrVelocityKmph || 0) >= 135
+        ? 'Right-Arm Fast (135+ km/h)'
+        : a.achievements.some(ach => ach.includes('53.82s'))
+          ? '400m (53.82s)'
+          : a.primaryPosition
+
+    return [
+      `"${a.id}"`,
+      `"${a.name}"`,
+      `"${a.sport}"`,
+      `"${a.primaryPosition}"`,
+      a.age,
+      `"${a.ageGroup}"`,
+      `"${a.gender}"`,
+      `"${a.city}"`,
+      `"${a.state}"`,
+      `"${a.academy.replace(/"/g, '""')}"`,
+      `"${a.federationUid}"`,
+      `${a.percentileRank}%`,
+      a.metrics.sprint30mSeconds || 'N/A',
+      a.metrics.cmjHeightCm || 'N/A',
+      a.metrics.yoyoIr1Meters || 'N/A',
+      a.metrics.speedOrVelocityKmph || 'N/A',
+      `"${techIndicators.replace(/"/g, '""')}"`,
+      `"${a.achievements.join('; ').replace(/"/g, '""')}"`,
+      `"${a.guardianOrCoachContact.replace(/"/g, '""')}"`,
+    ]
+  })
 
   return [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n')
 }
@@ -695,13 +707,15 @@ export function clearScoutAthletesCache(): void {
 }
 
 export async function getScoutAthletes(forceRefresh = false): Promise<ScoutAthlete[]> {
-  if (!forceRefresh && scoutAthletesCache && scoutAthletesCache.length > 0) {
+  if (!forceRefresh && scoutAthletesCache !== null) {
     return scoutAthletesCache
   }
 
   const candidateList: ScoutAthlete[] = []
 
-  // 1. Fetch live published profiles from Supabase if configured
+  // Public athlete discovery is fail-closed until a consent-gated, sanitized
+  // directory endpoint is available. A direct table read or browser cache is
+  // not evidence of consent to be discoverable by scouts.
   if (supabaseUrl && anonKey) {
     try {
       const response = await fetch(
@@ -725,46 +739,49 @@ export async function getScoutAthletes(forceRefresh = false): Promise<ScoutAthle
         }
       }
     } catch {
-      // Network/offline fallback
+      // Keep the public directory empty when the protected source is unavailable.
     }
   }
 
-  // 2. Load locally cached published profiles from /sports-cv
-  if (typeof window !== 'undefined' && window.localStorage) {
-    try {
-      const rawLocal = window.localStorage.getItem(LOCAL_STORAGE_PROFILES_KEY)
-      if (rawLocal) {
-        const parsed = JSON.parse(rawLocal) as Record<string, unknown>
-        if (parsed && typeof parsed === 'object') {
-          for (const val of Object.values(parsed)) {
-            if (val && typeof val === 'object') {
-              candidateList.push(mapProfileToScoutAthlete(val as Record<string, unknown>))
+  // Sample data are retained for isolated local development only. They are
+  // never included in a deployed public scout directory or production build.
+  const allowLocalDemoFixtures =
+    import.meta.env.MODE === 'test' ||
+    (import.meta.env.DEV &&
+      (import.meta.env as Record<string, unknown>).VITE_ENABLE_DEMO_ATHLETE_FIXTURES === 'true')
+
+  if (allowLocalDemoFixtures) {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const rawLocal = window.localStorage.getItem(LOCAL_STORAGE_PROFILES_KEY)
+        if (rawLocal) {
+          const parsed = JSON.parse(rawLocal) as Record<string, unknown>
+          if (parsed && typeof parsed === 'object') {
+            for (const val of Object.values(parsed)) {
+              if (val && typeof val === 'object') {
+                candidateList.push(mapProfileToScoutAthlete(val as Record<string, unknown>))
+              }
             }
           }
         }
+      } catch {
+        // Ignore local demo cache parsing errors.
       }
-    } catch {
-      // Storage parsing fallback
     }
+
+    for (const profile of Object.values(SHOWCASE_ATHLETE_PROFILES)) {
+      candidateList.push(mapProfileToScoutAthlete(profile as unknown as Record<string, unknown>))
+    }
+    candidateList.push(...BASELINE_SCOUT_ATHLETES)
   }
 
-  // 3. Include pre-seeded high-performance showcase profiles
-  for (const prof of Object.values(SHOWCASE_ATHLETE_PROFILES)) {
-    candidateList.push(mapProfileToScoutAthlete(prof as unknown as Record<string, unknown>))
-  }
-
-  // 4. Include baseline curated showcase athletes
-  candidateList.push(...BASELINE_SCOUT_ATHLETES)
-
-  // 5. Deduplicate by username/name/id (preserving newest / highest priority)
   const seenKeys = new Set<string>()
   const merged: ScoutAthlete[] = []
-
-  for (const ath of candidateList) {
-    const dedupeKey = (ath.username || ath.name).toLowerCase().trim()
+  for (const athlete of candidateList) {
+    const dedupeKey = (athlete.username || athlete.name).toLowerCase().trim()
     if (!seenKeys.has(dedupeKey)) {
       seenKeys.add(dedupeKey)
-      merged.push(ath)
+      merged.push(athlete)
     }
   }
 

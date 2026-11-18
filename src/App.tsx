@@ -22,6 +22,7 @@ import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAn
 
 // Code-split route components via React.lazy()
 const HelpFeedbackPage = lazy(() => import('./modules/help/HelpFeedbackPage'))
+const LacrosseSixesPage = lazy(() => import('./modules/games/LacrosseSixesPage'))
 const PlayPage = lazy(() => import('./modules/play/PlayPage'))
 const SportsCvWizard = lazy(() => import('./modules/sports-cv/SportsCvWizard'))
 const OpportunitiesPage = lazy(() => import('./modules/opportunities/OpportunitiesPage'))
@@ -288,6 +289,7 @@ export default function App() {
       else if (match.canonicalPath === '/help-feedback') page = <HelpFeedbackPage />
       else if (match.canonicalPath === '/sports-cv') page = <SportsCvWizard />
       else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} onOpenAuth={tab => { setAuthModalTab(tab || 'signup'); setAuthModalOpen(true) }} />
+      else if (match.canonicalPath === '/play/lacrosse-sixes') page = <LacrosseSixesPage />
       else if (match.canonicalPath === '/play') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openListingSubmission('pickup_game')} />
       else if (match.canonicalPath === '/coaches') page = <CoachesPage onNavigate={navigate} onOpenCoachIntake={() => openListingSubmission('coach')} />
       else if (match.canonicalPath === '/events') page = <EventsPage onNavigate={navigate} />
@@ -329,7 +331,7 @@ export default function App() {
       else if (match.canonicalPath === '/saved') page = <SavedPage onNavigate={navigate} />
       else if (match.canonicalPath === '/for-you') page = <ForYouPage onNavigate={navigate} onOpenAuth={tab => { setAuthModalTab(tab || 'signup'); setAuthModalOpen(true) }} />
       else if (match.canonicalPath === '/partner' || match.canonicalPath === '/partners') page = <PartnerPage onNavigate={navigate} onOpenIntake={openListingSubmission} />
-      else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
+      else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy','/open-science-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
       break
     default:
@@ -340,7 +342,7 @@ export default function App() {
     <a className="skip-link" href="#main-content">Skip to content</a>
     <header className="site-header">
       <button ref={menuToggleRef} className="menu-toggle" type="button" aria-expanded={isMobile ? menuOpen : !sidebarCollapsed} aria-controls={isMobile ? 'mobile-sidebar-drawer' : 'app-sidebar'} onClick={toggleMainMenu} aria-label="Toggle main navigation"><SiteIcon name={isMobile && menuOpen ? 'close' : 'menu'} size={20} /></button>
-      <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /><span>KHELGRID</span></a>
+      <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="KhelGrid Platform Logo" width="34" height="34" fetchPriority="high" /><span>KHELGRID</span></a>
       <a
         href="/play"
         className={`header-play-pill ${path === '/play' ? 'is-active' : ''}`}
@@ -423,7 +425,7 @@ export default function App() {
           >
             <span className="header-user-avatar">
               {authUser.avatarUrl ? (
-                <img src={authUser.avatarUrl} alt="" />
+                <img src={authUser.avatarUrl} alt={authUser.fullName || 'User Avatar'} width="32" height="32" loading="lazy" decoding="async" />
               ) : (
                 authUser.fullName.charAt(0).toUpperCase()
               )}
@@ -580,7 +582,7 @@ export default function App() {
       <TopSportsComplexes onNavigate={navigate} />
       <div className="footer-main">
         <div className="footer-about">
-          <a className="footer-brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="footer-brand-logo" src="/assets/kg-logo.webp" alt="" aria-hidden="true" /></a>
+          <a className="footer-brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="footer-brand-logo" src="/assets/kg-logo.webp" alt="KhelGrid Platform Logo" width="118" height="38" loading="lazy" decoding="async" /></a>
           <p className="footer-tagline">India’s grid for sports trials, venues, coaching and athlete profiles.</p>
           <p className="footer-region">India · 50+ sports cities in the grid (16 metro hubs)</p>
           <a className="footer-pro-link" href="/pricing" onClick={event => navigate(event, '/pricing')}>★ Go Pro · ₹499/month</a>
@@ -698,6 +700,8 @@ export default function App() {
         <a href="/editorial-policy" onClick={event => navigate(event, '/editorial-policy')}>Editorial</a>
         <a href="/verification-policy" onClick={event => navigate(event, '/verification-policy')}>Verification</a>
         <a href="/correction-policy" onClick={event => navigate(event, '/correction-policy')}>Corrections</a>
+        <a href="/open-science-policy" onClick={event => navigate(event, '/open-science-policy')}>Open Science</a>
+        <a href="/khelchronicle" onClick={event => navigate(event, '/khelchronicle')}>KhelChronicle</a>
         <a href="https://www.khelgrid.com/sitemap.xml" target="_blank" rel="noopener noreferrer">Sitemap</a>
         <a
           href="#sports-pass"

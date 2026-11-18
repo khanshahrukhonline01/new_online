@@ -52,3 +52,8 @@
 ## Page-by-page implementation reference
 
 - [Full Page and Workflow Specification](FULL_PAGE_AND_WORKFLOW_SPECIFICATION.md) — current dedicated routes, registered feature-information routes, planned route families, expected behaviour, data/security requirements, release gates and prioritized implementation roadmap. Route existence is explicitly distinguished from a working or verified workflow.
+
+## KhelChronicle Open Sports Research Repository (SportRxiv India)
+- [KhelChronicle Open Science & Research Policy](khelchronicle/KHELCHRONICLE_OPEN_SCIENCE_POLICY.md) — comprehensive policy covering Diamond Open Access (CC BY 4.0), ICMR / Helsinki participant ethics, minor athlete consent, FAIR data/code transparency, COPE peer discourse conduct, Crossref DOIs, and retraction/withdrawal standards.
+- [KhelChronicle Author Submission Guidelines](khelchronicle/KHELCHRONICLE_AUTHOR_SUBMISSION_GUIDELINES.md) — complete manuscript formatting, structured abstract, supplementary dataset formats, Open Science Badges, and journal transition workflows.
+- [KhelChronicle Editorial Moderation & Peer Review SOP](khelchronicle/KHELCHRONICLE_MODERATION_AND_PEER_REVIEW_SOP.md) — standard operating procedure for two-tier pre-moderation screening, ethical clearance verification, author identification, and community peer review moderation.

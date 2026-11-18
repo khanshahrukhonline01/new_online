@@ -143,6 +143,33 @@
   letter-spacing: 0.04em;
 }
 
+.card-coach-endorsed-chip {
+  position: absolute;
+  top: -6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(180, 83, 9, 0.9);
+  color: #fef08a;
+  border: 1px solid #fbbf24;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  animation: pulseGold 2s infinite ease-in-out;
+}
+
+@keyframes pulseGold {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(251, 191, 36, 0.7);
+  }
+}
+
 /* Nameplate */
 .card-nameplate {
   text-align: center;
@@ -168,6 +195,23 @@
   font-size: 12px;
   font-weight: 600;
   color: #a7f36b;
+}
+
+.card-tech-role {
+  margin: 5px auto 2px;
+  display: inline-block;
+  background: rgba(229, 192, 123, 0.15);
+  border: 1px solid rgba(229, 192, 123, 0.45);
+  color: #f7d28b;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  max-width: 92%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.02em;
 }
 
 .card-club {
@@ -212,25 +256,105 @@
   letter-spacing: 0.05em;
 }
 
-/* Footer Branding */
-.card-footer-branding {
+/* Khel ID Badge */
+.card-khel-id-badge {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  background: rgba(13, 35, 56, 0.95);
+  border: 1px solid #e5c07b;
+  border-radius: 8px;
+  padding: 4px 10px;
+  margin: 10px auto 4px;
+  width: fit-content;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.khel-id-label {
+  font-size: 8px;
+  font-weight: 800;
+  color: #a7f36b;
+  letter-spacing: 0.1em;
+}
+
+.khel-id-code {
+  font-size: 12px;
+  font-weight: 900;
+  color: #e5c07b;
+  letter-spacing: 0.08em;
+  font-family: monospace, ui-monospace, sans-serif;
+}
+
+.card-dossier-ref-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 9px;
+  font-family: monospace, ui-monospace, sans-serif;
+  color: #94a3b8;
+  margin: 3px auto 8px;
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+/* Scannable QR Footer */
+.card-qr-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid rgba(229, 192, 123, 0.25);
+  position: relative;
+  z-index: 2;
+}
+
+.card-qr-box {
+  background: rgba(13, 35, 56, 0.95);
+  border: 1px solid #a7f36b;
+  border-radius: 8px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.card-qr-box svg {
+  display: block;
+  width: 58px;
+  height: 58px;
+}
+
+.card-scan-hint {
+  font-size: 8px;
+  color: #8fa5be;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Footer Branding */
+.card-footer-branding {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   font-size: 9px;
   font-weight: 800;
-  color: rgba(167, 243, 107, 0.75);
-  letter-spacing: 0.12em;
-  margin-top: auto;
+  color: rgba(167, 243, 107, 0.85);
+  letter-spacing: 0.08em;
   position: relative;
   z-index: 2;
 }
 
 .card-handle {
-  font-size: 10px;
+  font-size: 11px;
   color: #e5c07b;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* Sharing & Action Tray */
@@ -258,16 +382,28 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-.btn-download-card {
+.btn-download-png {
   background: #a7f36b;
   color: #030e18;
   border-color: #a7f36b;
 }
 
-.btn-download-card:hover {
+.btn-download-png:hover:not(:disabled) {
   background: #c3f798;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(167, 243, 107, 0.35);
+}
+
+.btn-download-svg {
+  background: #0d2338;
+  color: #a7f36b;
+  border-color: rgba(167, 243, 107, 0.4);
+}
+
+.btn-download-svg:hover {
+  background: #143554;
+  border-color: #a7f36b;
+  transform: translateY(-2px);
 }
 
 .btn-whatsapp-share {

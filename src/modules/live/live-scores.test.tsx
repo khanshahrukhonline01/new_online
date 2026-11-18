@@ -21,7 +21,8 @@ describe('LiveSportsEngine', () => {
     const result = await liveSportsEngine.getScores({ forceRefresh: true });
     expect(result).toBeDefined();
     expect(Array.isArray(result.matches)).toBe(true);
-    expect(result.sourceSummary).toContain('Display attribution compliant');
+    expect(result.sourceSummary).toContain('External ESPN scoreboard feed')
+    expect(result.sourceSummary).toContain('community entries are not independently verified');
     expect(result.lastUpdated).toBeDefined();
 
     for (const match of result.matches) {

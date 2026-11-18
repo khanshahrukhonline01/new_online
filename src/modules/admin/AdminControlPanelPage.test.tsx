@@ -22,4 +22,5 @@ describe('AdminControlPanelPage', () => {
     expect(html).not.toContain('Authorized accounts')
     expect(html).not.toContain('Evidence register')
   })
+
 })

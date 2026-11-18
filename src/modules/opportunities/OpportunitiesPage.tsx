@@ -17,6 +17,7 @@ import { BookmarkButton } from '../../shared/components/BookmarkButton'
 import { createOpportunitySavedItem } from '../../shared/services/savedService'
 import { TrialApplicationModal } from './TrialApplicationModal'
 import { getUserTrialApplications } from '../../integrations/supabase/athlete-profile-client'
+import { WhatsAppTrialAlertWidget } from './WhatsAppTrialAlertWidget'
 
 function formatDate(value: string | null) {
   if (!value) return 'Date not provided'
@@ -124,9 +125,16 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
           const before = toDate ? new Date(toDate + 'T23:59:59.999+05:30').getTime() : Number.POSITIVE_INFINITY
           return (
             (!q ||
-              [item.title, item.organizer_name, item.city, item.venue_name, item.opportunity_type, item.sport?.name].some(value =>
-                value?.toLocaleLowerCase().includes(q),
-              )) &&
+              [
+                item.title,
+                item.organizer_name,
+                item.city,
+                item.venue_name,
+                item.opportunity_type,
+                item.sport?.name,
+                item.eligibility_criteria,
+                item.gender,
+              ].some(value => value?.toLocaleLowerCase().includes(q))) &&
             (!city || (item.city ? (item.city.toLowerCase() === city.toLowerCase() || item.city.toLowerCase().includes(city.toLowerCase()) || city.toLowerCase().includes(item.city.toLowerCase())) : false)) &&
             (!sport || item.sport?.name?.toLowerCase() === sport.toLowerCase()) &&
             (!ageCategory || (
@@ -221,6 +229,13 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
         Published opportunities only. Check the source and organizer details before applying.
       </p>
 
+      {/* 1-Tap WhatsApp Trial Alerts Subscription Banner */}
+      <WhatsAppTrialAlertWidget
+        sport={sport || 'All Sports'}
+        city={city || undefined}
+        variant="banner"
+      />
+
       <DirectoryCallout
         variant="opportunity"
         tag="Free trial listing"
@@ -314,7 +329,15 @@ export default function OpportunitiesPage({ onNavigate, initialApplySlug }: Oppo
                           </div>
                           <BookmarkButton item={createOpportunitySavedItem(item)} />
                         </div>
-                        <h2>{item.title}</h2>
+                        <h2>
+                          <a
+                            href={`/opportunities/${item.slug}`}
+                            onClick={(e) => onNavigate?.(e, `/opportunities/${item.slug}`)}
+                            style={{ color: 'inherit', textDecoration: 'none' }}
+                          >
+                            {item.title}
+                          </a>
+                        </h2>
                         <p>
                           {[item.organizer_name, item.city, item.venue_name].filter(Boolean).join(' · ') ||
                             'Location or organizer not provided'}
