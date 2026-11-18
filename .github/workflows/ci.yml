@@ -3,7 +3,7 @@ on:
   push:
     branches: [main, development/admin-control-center, development/admin-app-separation]
   pull_request:
-    branches: [main, development/admin-control-center]
+    branches: [main, development/admin-control-center, development/admin-app-separation]
 permissions:
   contents: read
 jobs:
@@ -162,6 +162,15 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261113174449_phase_a_rls_initplan_optimization.sql
       - name: Verify Phase A security privilege boundaries
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-a-security-privilege-assertions.sql
+      - name: Verify athlete public access guard
+        if: hashFiles('.github/scripts/athlete-profile-public-access-guard-assertions.sql') != ''
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/athlete-profile-public-access-guard-assertions.sql
+      - name: Verify KhelChronicle seed publication gate
+        if: hashFiles('.github/scripts/khelchronicle-seed-publication-gate-assertions.sql') != ''
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/khelchronicle-seed-publication-gate-assertions.sql
+      - name: Verify KhelChronicle submission and editorial schema
+        if: hashFiles('.github/scripts/khelchronicle-submission-schema-assertions.sql') != ''
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/khelchronicle-submission-schema-assertions.sql
       - name: Validate SQL migration safety
         shell: bash
         run: |
