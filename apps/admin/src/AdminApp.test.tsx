@@ -1,27 +1,42 @@
 import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { AdminApp } from './AdminApp'
 
-vi.mock('../../../src/modules/admin/AdminControlPanelPage', () => ({
-  AdminControlPanelPage: () => <div>Admin listings workspace</div>,
-}))
-vi.mock('../../../src/modules/admin/AdminModerationPage', () => ({
-  AdminModerationPage: () => <div>Chronicle editorial workspace</div>,
-}))
-vi.mock('../../../src/shared/usePreferences', () => ({
-  usePreferences: () => ({
-    preferences: { accent: 'green', theme: 'system' },
-    updatePreferences: vi.fn(),
-  }),
-}))
-
-describe('separate KhelGrid admin application', () => {
-  it('exposes distinct listings and KhelChronicle administration areas', async () => {
+describe('AdminApp Root Shell & Dual Workspace Navigation', () => {
+  it('renders the executive admin topbar and command centre when configured for the approved development database', () => {
     vi.stubEnv('VITE_SUPABASE_URL', 'https://hznsbxvovjxvmnchzzqt.supabase.co')
-    const { AdminApp } = await import('./AdminApp')
-    const html = renderToStaticMarkup(<AdminApp />)
+    try {
+      const html = renderToStaticMarkup(<AdminApp />)
+      expect(html).toContain('khelgrid-admin-app')
+      expect(html).not.toContain('KhelGrid Admin is unavailable')
 
-    expect(html).toContain('Listings &amp; Verification')
-    expect(html).toContain('KhelChronicle Editorial')
-    expect(html).toContain('Admin listings workspace')
+      // Topbar brand and telemetry
+      expect(html).toContain('KhelGrid Admin Operations')
+      expect(html).toContain('admin.khelgrid.com')
+      expect(html).toContain('Dev Database (hznsbxvovjxvmnchzzqt)')
+
+      // Workspace navigation tabs
+      expect(html).toContain('Command Centre')
+      expect(html).toContain('Listing &amp; Chronicle Desk')
+
+      // Initial default workspace state
+      expect(html).toContain('Checking secure moderation access')
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('fails closed and blocks access if configured against an unauthorized or production database URL', () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://production-project-id.supabase.co')
+    try {
+      const html = renderToStaticMarkup(<AdminApp />)
+      expect(html).toContain('KhelGrid Admin is unavailable')
+      expect(html).toContain('This development admin application is not configured for its approved development database')
+      expect(html).toContain('Contact the platform owner. Do not attempt to bypass this restriction')
+      expect(html).not.toContain('Checking secure moderation access')
+      expect(html).not.toContain('Command Centre')
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 })

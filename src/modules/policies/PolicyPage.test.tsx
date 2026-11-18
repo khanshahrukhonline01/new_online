@@ -1,52 +1,38 @@
-import { describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { describe, expect, it } from 'vitest'
 import PolicyPage from './PolicyPage'
 
 describe('PolicyPage', () => {
-  it('renders workplace policy with ethics and safety sections', () => {
-    const html = renderToStaticMarkup(
-      <PolicyPage path="/workplace-policy" onNavigate={() => {}} />
-    )
-    expect(html).toContain('Workplace &amp; Professional Conduct Policy')
-    expect(html).toContain('WORKPLACE ETHICS &amp; SAFETY')
-    expect(html).toContain('Commitment to safety, equality and inclusion')
-    expect(html).toContain('Anti-harassment and respectful conduct')
-    expect(html).toContain('Fair practices with venue hosts and sports organizers')
-    expect(html).toContain('Confidential grievance redressal and whistleblower protection')
-    expect(html).toContain('workplace@khelgrid.com')
+  it('renders official privacy policy in effect with Google AdSense and DPDP Act disclosures', () => {
+    const html = renderToStaticMarkup(<PolicyPage path="/privacy" onNavigate={() => {}} />)
+
+    expect(html).toContain('Privacy Policy')
+    expect(html).toContain('Official Published Policy · In Effect')
+    expect(html).toContain('Digital Personal Data Protection Act, 2023')
+    expect(html).toContain('Cookies, Web Beacons &amp; Third-Party Advertising')
+    expect(html).toContain('Google')
+    expect(html).toContain('khelgrid@gmail.com')
+    expect(html).not.toContain('Owner and legal review required')
+    expect(html).not.toContain('This development copy is not a statement')
+    expect(html).not.toContain('This draft is dated')
   })
 
-  it('renders policy directory links including workplace-policy', () => {
-    const html = renderToStaticMarkup(
-      <PolicyPage path="/workplace-policy" onNavigate={() => {}} />
-    )
-    expect(html).toContain('href="/workplace-policy"')
-    expect(html).toContain('Workplace Policy')
-    expect(html).toContain('href="/posh-policy"')
-    expect(html).toContain('href="/privacy"')
-    expect(html).toContain('href="/open-science-policy"')
-    expect(html).toContain('Open Science Policy')
+  it('renders official terms of use in effect without placeholder or draft warnings', () => {
+    const html = renderToStaticMarkup(<PolicyPage path="/terms" onNavigate={() => {}} />)
+
+    expect(html).toContain('Terms of Use')
+    expect(html).toContain('Official Published Policy · In Effect')
+    expect(html).toContain('Permitted Use &amp; Community Conduct')
+    expect(html).toContain('khelgrid@gmail.com')
+    expect(html).not.toContain('Owner and legal review required')
   })
 
-  it('renders open science & research ethics policy with Diamond Open Access, ICMR ethics, and FAIR data', () => {
-    const html = renderToStaticMarkup(
-      <PolicyPage path="/open-science-policy" onNavigate={() => {}} />
-    )
-    expect(html).toContain('Open Science &amp; Research Ethics Policy')
-    expect(html).toContain('OPEN SCIENCE &amp; RESEARCH INTEGRITY')
-    expect(html).toContain('Diamond Open Access &amp; CC BY 4.0 Standard')
-    expect(html).toContain('Human Subject Ethics &amp; Informed Consent')
-    expect(html).toContain('FAIR Primary Data &amp; Code Sharing Mandate')
-    expect(html).toContain('Community Peer Review &amp; Scholarly Conduct Code')
-    expect(html).toContain('Version of Record (VoR) Linking')
-    expect(html).toContain('Machine-Readable Syndication &amp; PRISM Feeds')
-    expect(html).toContain('href="/open-science-policy"')
-  })
+  it('renders official cookie policy in effect', () => {
+    const html = renderToStaticMarkup(<PolicyPage path="/cookies" onNavigate={() => {}} />)
 
-  it('renders not found for unknown path', () => {
-    const html = renderToStaticMarkup(
-      <PolicyPage path="/unknown-policy" onNavigate={() => {}} />
-    )
-    expect(html).toContain('Policy not found')
+    expect(html).toContain('Cookie &amp; Device Storage Policy')
+    expect(html).toContain('Official Published Policy · In Effect')
+    expect(html).toContain('Managing and Opting Out of Cookies')
+    expect(html).not.toContain('Configuration audit required')
   })
 })

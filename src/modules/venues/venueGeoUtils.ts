@@ -235,3 +235,25 @@ export function getDirectionsUrl(lat: number, lng: number, venueName?: string): 
   const query = venueName ? encodeURIComponent(venueName) : `${lat},${lng}`
   return `https://www.google.com/maps/dir/?api=1&destination=${query}&destination_place_id=${lat},${lng}`
 }
+
+/**
+ * Builds a direct 1-tap WhatsApp inquiry URL for turf/court availability.
+ * Prefilled with venue name, city, requested sport, and formatted date.
+ */
+export function buildVenueWhatsAppInquiryUrl(
+  venue: { name: string; city?: string; sport?: string },
+  selectedSport?: string,
+): string {
+  const sportName =
+    selectedSport && selectedSport !== 'All Sports' && selectedSport !== ''
+      ? selectedSport
+      : venue.sport || 'turf / court'
+  const location = venue.city ? `${venue.name}, ${venue.city}` : venue.name
+  const todayStr = new Date().toLocaleDateString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  })
+  const message = `Hi, I found ${venue.name} on KhelGrid (${location}). I would like to check turf availability for ${sportName} on ${todayStr}. Please share available slots and pricing.`
+  return `https://wa.me/?text=${encodeURIComponent(message)}`
+}

@@ -121,6 +121,36 @@
     <priority>0.80</priority>
   </url>
   <url>
+    <loc>https://khelgrid.com/mobile-app</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/careers</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/referrals</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/submit-listing</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/submit-listing/email</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
     <loc>https://khelgrid.com/sports/archery</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -1189,6 +1219,12 @@
     <priority>0.60</priority>
   </url>
   <url>
+    <loc>https://khelgrid.com/contact</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.60</priority>
+  </url>
+  <url>
     <loc>https://khelgrid.com/privacy</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>monthly</changefreq>
@@ -1196,6 +1232,12 @@
   </url>
   <url>
     <loc>https://khelgrid.com/terms</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.60</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/cookies</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.60</priority>
@@ -1219,7 +1261,31 @@
     <priority>0.60</priority>
   </url>
   <url>
-    <loc>https://khelgrid.com/contact</loc>
+    <loc>https://khelgrid.com/verification-policy</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.60</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/correction-policy</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.60</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/posh-policy</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.60</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/workplace-policy</loc>
+    <lastmod>2026-10-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.60</priority>
+  </url>
+  <url>
+    <loc>https://khelgrid.com/cancellation-policy</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.60</priority>

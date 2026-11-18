@@ -41,5 +41,7 @@ describe('WhatsAppTrialAlertModal & Widget', () => {
     expect(html).toContain('Get Football Selection Trial Alerts for Kozhikode, Kerala')
     expect(html).toContain('48h and 12h registration deadline countdown reminders')
     expect(html).toContain('Subscribe in 1 Tap')
+    expect(html).toContain('Get WhatsApp Alerts for Football Trials in Kozhikode')
+    expect(html).toContain('https://wa.me/?text=')
   })
 })

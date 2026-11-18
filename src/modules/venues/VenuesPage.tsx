@@ -20,6 +20,7 @@ import {
   formatDistance,
   getVenueCoordinates,
   requestUserLocation,
+  buildVenueWhatsAppInquiryUrl,
   type RadiusKm,
   type UserLocation,
 } from './venueGeoUtils'
@@ -415,17 +416,30 @@ export default function VenuesPage({ onNavigate }: VenuesPageProps = {}) {
                               <SiteIcon name="external-link" size={14} /> Official source{venue.source_name ? ` · ${venue.source_name}` : ''}
                             </a>
                           )}
-                          <a
-                            className="card-action"
-                            href={`/venues/${encodeURIComponent(venue.slug)}`}
-                            onClick={event => {
-                              if (onNavigate) {
-                                onNavigate(event, `/venues/${encodeURIComponent(venue.slug)}`)
-                              }
-                            }}
-                          >
-                            View venue details
-                          </a>
+                          <div className="venue-card-actions">
+                            <a
+                              className="card-action"
+                              href={`/venues/${encodeURIComponent(venue.slug)}`}
+                              onClick={event => {
+                                if (onNavigate) {
+                                  onNavigate(event, `/venues/${encodeURIComponent(venue.slug)}`)
+                                }
+                              }}
+                            >
+                              View venue details
+                            </a>
+                            <a
+                              className="card-action venue-whatsapp-action"
+                              href={buildVenueWhatsAppInquiryUrl(venue, sport)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={`Check turf availability for ${venue.name} on WhatsApp`}
+                              aria-label={`Check turf availability for ${venue.name} on WhatsApp`}
+                            >
+                              <SiteIcon name="message-circle" size={14} />
+                              <span>Check Availability on WhatsApp</span>
+                            </a>
+                          </div>
                         </article>
                       ))}
                     </div>

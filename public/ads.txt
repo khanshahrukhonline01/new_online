@@ -1,0 +1,7 @@
+# KhelGrid Official ads.txt (Authorized Digital Sellers)
+# Specification: https://iabtechlab.com/ads-txt/
+#
+# When connecting Google AdSense, replace "pub-0000000000000000" with your actual Google AdSense Publisher ID
+# (Find your ID in Google AdSense Console > Account > Settings > Account information > Publisher ID).
+#
+google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0

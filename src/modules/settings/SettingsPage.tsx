@@ -15,6 +15,7 @@ import {
   SUPPORTED_LANGUAGES,
   playTestAlertChime,
   type ThemeMode,
+  type ColorTheme,
   type EmailFrequency,
   type ProfileVisibility,
 } from '../../shared/preferences'
@@ -117,6 +118,11 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
   function handleThemeChange(theme: ThemeMode) {
     updatePreferences({ theme })
     showToast(`Theme set to ${theme.charAt(0).toUpperCase() + theme.slice(1)} Mode`)
+  }
+
+  function handleColorThemeChange(colorTheme: ColorTheme) {
+    updatePreferences({ colorTheme })
+    showToast(`Color theme set to ${colorTheme.charAt(0).toUpperCase() + colorTheme.slice(1)}`)
   }
 
   function handleLanguageChange(code: string) {
@@ -288,6 +294,61 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                     <div className="theme-tile-label">
                       <SiteIcon name="monitor" size={16} />
                       <span>System Default</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Brand Color Theme Palette */}
+              <div className="settings-form-row">
+                <label className="settings-label">Brand Color Palette</label>
+                <p className="settings-hint">Select the active accent hue applied across buttons, badges, navigation highlights, and interactive elements.</p>
+                <div className="theme-options-grid">
+                  <button
+                    type="button"
+                    className={`theme-tile ${(preferences.colorTheme || 'green') === 'green' ? 'selected' : ''}`}
+                    onClick={() => handleColorThemeChange('green')}
+                    aria-label="Green Emerald Theme"
+                  >
+                    <div className="theme-preview-box" style={{ background: '#e8f7ef', border: '1px solid #a7f3d0' }}>
+                      <div className="preview-bar" style={{ background: '#07964f' }} />
+                      <div className="preview-card" style={{ background: '#ffffff', borderColor: '#07964f' }} />
+                    </div>
+                    <div className="theme-tile-label">
+                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#07964f' }} />
+                      <span>Green (Emerald)</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`theme-tile ${(preferences.colorTheme || 'green') === 'blue' ? 'selected' : ''}`}
+                    onClick={() => handleColorThemeChange('blue')}
+                    aria-label="Blue Sapphire Theme"
+                  >
+                    <div className="theme-preview-box" style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}>
+                      <div className="preview-bar" style={{ background: '#2563eb' }} />
+                      <div className="preview-card" style={{ background: '#ffffff', borderColor: '#2563eb' }} />
+                    </div>
+                    <div className="theme-tile-label">
+                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#2563eb' }} />
+                      <span>Blue (Sapphire)</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`theme-tile ${(preferences.colorTheme || 'green') === 'orange' ? 'selected' : ''}`}
+                    onClick={() => handleColorThemeChange('orange')}
+                    aria-label="Orange Saffron Theme"
+                  >
+                    <div className="theme-preview-box" style={{ background: '#fff7ed', border: '1px solid #fed7aa' }}>
+                      <div className="preview-bar" style={{ background: '#ea580c' }} />
+                      <div className="preview-card" style={{ background: '#ffffff', borderColor: '#ea580c' }} />
+                    </div>
+                    <div className="theme-tile-label">
+                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#ea580c' }} />
+                      <span>Orange (Saffron)</span>
                     </div>
                   </button>
                 </div>

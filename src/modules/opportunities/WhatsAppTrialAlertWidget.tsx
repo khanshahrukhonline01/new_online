@@ -19,6 +19,11 @@ export function WhatsAppTrialAlertWidget({
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const regionLabel = city ? `${city}, ${state}` : state
+  const sportLabel = sport && sport !== 'All Sports' ? sport : 'All'
+  const locationLabel = city ? `${city}, India` : 'India'
+  const directAlertActionLabel = `Get WhatsApp Alerts for ${sport && sport !== 'All Sports' ? `${sport} ` : ''}Trials${city ? ` in ${city}` : ''}`
+  const directWhatsAppMessage = `Hi KhelGrid, please send me instant WhatsApp alerts for ${sportLabel} selection trials in ${locationLabel}.`
+  const directWhatsAppUrl = `https://wa.me/?text=${encodeURIComponent(directWhatsAppMessage)}`
 
   return (
     <>
@@ -42,12 +47,24 @@ export function WhatsAppTrialAlertWidget({
         </div>
 
         <div className="widget-right">
-          <button
-            type="button"
-            className="btn-open-alert-modal"
-            onClick={() => setIsModalOpen(true)}
+          <a
+            href={directWhatsAppUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-open-alert-modal btn-direct-whatsapp-alert"
+            title={directAlertActionLabel}
+            aria-label={directAlertActionLabel}
           >
             <SiteIcon name="share" size={15} />
+            <span>{directAlertActionLabel}</span>
+          </a>
+          <button
+            type="button"
+            className="btn-open-alert-modal btn-alert-modal-trigger"
+            onClick={() => setIsModalOpen(true)}
+            title="Configure alert frequency & preferences"
+          >
+            <SiteIcon name="bell" size={14} />
             <span>Subscribe in 1 Tap</span>
           </button>
         </div>
