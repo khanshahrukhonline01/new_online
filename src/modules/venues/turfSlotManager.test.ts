@@ -1,0 +1,202 @@
+import { describe, expect, it, beforeEach } from 'vitest'
+import {
+  clearTurfSlotMemoryStore,
+  getTurfCourts,
+  getTurfSlots,
+  bookTurfSlot,
+  toggleSlotBlocked,
+  cancelTurfBooking,
+  getTurfBookings,
+  getTurfVenueSettings,
+  saveTurfVenueSettings,
+  generateWhatsAppTurfConfirmationUrl,
+  generateTurfUpiPayLink,
+  getTurfDayKpis,
+  HOURLY_TIME_SLOTS,
+} from './turfSlotManager'
+
+describe('turfSlotManager Unit Suite', () => {
+  beforeEach(() => {
+    clearTurfSlotMemoryStore()
+  })
+
+  it('retrieves default turf courts for sree-kanteerava-stadium', () => {
+    const courts = getTurfCourts('sree-kanteerava-stadium')
+    expect(courts.length).toBeGreaterThanOrEqual(3)
+    expect(courts[0].name).toContain('Pitch 1')
+    expect(courts[0].sport).toBe('Football')
+  })
+
+  it('generates 17 hourly slots for any given date and court', () => {
+    const courts = getTurfCourts('sree-kanteerava-stadium')
+    const slots = getTurfSlots('sree-kanteerava-stadium', '2026-11-20', courts[0].id)
+    expect(slots.length).toBe(HOURLY_TIME_SLOTS.length)
+    expect(slots[0].timeSlot).toBe('06:00 AM – 07:00 AM')
+    expect(slots[0].status).toBe('available')
+  })
+
+  it('books an available slot and creates verifiable booking record', () => {
+    const courts = getTurfCourts('sree-kanteerava-stadium')
+    const court = courts[0]
+
+    const result = bookTurfSlot({
+      venueSlug: 'sree-kanteerava-stadium',
+      venueName: 'Sree Kanteerava Stadium',
+      courtId: court.id,
+      courtName: court.name,
+      date: '2026-11-20',
+      timeSlot: '07:00 PM – 08:00 PM',
+      customerName: 'Rohit Sharma',
+      customerPhone: '9876543210',
+      sport: 'Football',
+      paymentMethod: 'upi_advance_paid',
+      hourlyPrice: 1500,
+      advanceDeposit: 300,
+      upiVpa: 'kanteerava@okaxis',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.booking).toBeDefined()
+    expect(result.booking?.bookingId).toMatch(/^TRF-/)
+    expect(result.booking?.customerName).toBe('Rohit Sharma')
+    expect(result.booking?.paidAmount).toBe(300)
+    expect(result.booking?.balanceAmount).toBe(1200)
+
+    const slots = getTurfSlots('sree-kanteerava-stadium', '2026-11-20', court.id)
+    const booked = slots.find(s => s.timeSlot === '07:00 PM – 08:00 PM')
+    expect(booked?.status).toBe('booked')
+    expect(booked?.customerName).toBe('Rohit Sharma')
+
+    const allBookings = getTurfBookings('sree-kanteerava-stadium')
+    expect(allBookings.length).toBe(1)
+    expect(allBookings[0].customerName).toBe('Rohit Sharma')
+
+    // Double-booking check
+    const duplicate = bookTurfSlot({
+      venueSlug: 'sree-kanteerava-stadium',
+      venueName: 'Sree Kanteerava Stadium',
+      courtId: court.id,
+      courtName: court.name,
+      date: '2026-11-20',
+      timeSlot: '07:00 PM – 08:00 PM',
+      customerName: 'Another Team',
+      customerPhone: '9123456780',
+      paymentMethod: 'pay_at_venue',
+    })
+    expect(duplicate.success).toBe(false)
+    expect(duplicate.error).toContain('already reserved')
+  })
+
+  it('toggles slot blocked state for maintenance', () => {
+    const courts = getTurfCourts('sree-kanteerava-stadium')
+    const court = courts[0]
+
+    const blocked = toggleSlotBlocked('sree-kanteerava-stadium', '2026-11-20', court.id, '11:00 AM – 12:00 PM', 'Turf Grooming')
+    expect(blocked.status).toBe('blocked')
+    expect(blocked.blockedReason).toBe('Turf Grooming')
+
+    const unblocked = toggleSlotBlocked('sree-kanteerava-stadium', '2026-11-20', court.id, '11:00 AM – 12:00 PM')
+    expect(unblocked.status).toBe('available')
+  })
+
+  it('cancels booking and frees up the slot', () => {
+    const courts = getTurfCourts('sree-kanteerava-stadium')
+    const court = courts[0]
+
+    bookTurfSlot({
+      venueSlug: 'sree-kanteerava-stadium',
+      venueName: 'Sree Kanteerava Stadium',
+      courtId: court.id,
+      courtName: court.name,
+      date: '2026-11-20',
+      timeSlot: '08:00 PM – 09:00 PM',
+      customerName: 'Vikram Verma',
+      customerPhone: '9845011111',
+      paymentMethod: 'pay_at_venue',
+    })
+
+    const cancelled = cancelTurfBooking('sree-kanteerava-stadium', '2026-11-20', court.id, '08:00 PM – 09:00 PM')
+    expect(cancelled).toBe(true)
+
+    const slots = getTurfSlots('sree-kanteerava-stadium', '2026-11-20', court.id)
+    const slot = slots.find(s => s.timeSlot === '08:00 PM – 09:00 PM')
+    expect(slot?.status).toBe('available')
+  })
+
+  it('generates WhatsApp turf booking voucher link and UPI deep-link', () => {
+    const booking = {
+      bookingId: 'TRF-20261120-TEST',
+      venueSlug: 'sree-kanteerava-stadium',
+      venueName: 'Sree Kanteerava Stadium',
+      courtId: 'c1',
+      courtName: 'Pitch 1 — FIFA AstroTurf',
+      sport: 'Football',
+      slotDate: '2026-11-20',
+      slotTime: '07:00 PM – 08:00 PM',
+      customerName: 'Sunil Chhetri',
+      customerPhone: '9876500000',
+      totalAmount: 1500,
+      paidAmount: 300,
+      balanceAmount: 1200,
+      paymentStatus: 'upi_advance_paid' as const,
+      bookedAt: new Date().toISOString(),
+      qrCodePayload: 'test',
+    }
+
+    const waUrl = generateWhatsAppTurfConfirmationUrl(booking)
+    expect(waUrl).toContain('https://wa.me/919876500000?text=')
+    expect(waUrl).toContain(encodeURIComponent('TRF-20261120-TEST'))
+    expect(waUrl).toContain(encodeURIComponent('₹1,500'))
+    expect(waUrl).toContain(encodeURIComponent('₹300'))
+
+    const upiLink = generateTurfUpiPayLink({
+      vpa: 'turf@okhdfcbank',
+      name: 'Kanteerava Turf',
+      amount: 300,
+      note: 'Advance Slot Deposit',
+    })
+    expect(upiLink).toContain('pa=turf%40okhdfcbank')
+  })
+
+  it('computes daily turf KPIs accurately', () => {
+    const courts = getTurfCourts('sree-kanteerava-stadium')
+    const court = courts[0]
+
+    bookTurfSlot({
+      venueSlug: 'sree-kanteerava-stadium',
+      venueName: 'Sree Kanteerava Stadium',
+      courtId: court.id,
+      courtName: court.name,
+      date: '2026-11-20',
+      timeSlot: '06:00 PM – 07:00 PM',
+      customerName: 'Player 1',
+      customerPhone: '9845011111',
+      paymentMethod: 'upi_advance_paid',
+      hourlyPrice: 1500,
+      advanceDeposit: 300,
+    })
+
+    const kpis = getTurfDayKpis('sree-kanteerava-stadium', '2026-11-20', court.id)
+    expect(kpis.totalSlots).toBe(17)
+    expect(kpis.bookedCount).toBe(1)
+    expect(kpis.availableCount).toBe(16)
+    expect(kpis.totalAdvanceRevenue).toBe(300)
+    expect(kpis.totalProjectedRevenue).toBe(1500)
+  })
+
+  it('persists and loads turf venue settings', () => {
+    saveTurfVenueSettings({
+      venueSlug: 'custom-turf-arena',
+      venueName: 'Custom Turf Arena',
+      managerName: 'Manager Deepak',
+      managerWhatsApp: '9876543210',
+      upiVpa: 'customturf@icici',
+      allowPayAtVenue: true,
+      autoWhatsAppConfirmEnabled: true,
+    })
+
+    const loaded = getTurfVenueSettings('custom-turf-arena')
+    expect(loaded.managerName).toBe('Manager Deepak')
+    expect(loaded.upiVpa).toBe('customturf@icici')
+  })
+})

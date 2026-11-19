@@ -20,9 +20,13 @@ import {
   generateWhatsAppParentContactUrl,
   generateWhatsAppFeeReminderUrl,
   generateUpiPayLink,
+  getRegisteredAcademies,
+  registerCustomAcademy,
+  hasCompletedOnboarding,
   type AcademyLead,
   type AcademyStudent,
   type AcademyTrialPass,
+  type RegisteredAcademy,
 } from './academySaaSClient'
 import './AcademyHubPage.css'
 
@@ -45,8 +49,12 @@ export default function AcademyHubPage({
     return 'bengaluru-fc-academy'
   })
 
+  // Registered academies list (curated + custom onboarded)
+  const registeredAcademies = getRegisteredAcademies()
+
   // Selected Academy details
-  const currentAcademy = CURATED_ACADEMIES.find(a => a.slug === selectedSlug) || {
+  const currentAcademy = registeredAcademies.find(a => a.slug === selectedSlug) ||
+    CURATED_ACADEMIES.find(a => a.slug === selectedSlug) || {
     id: 'custom-academy',
     slug: selectedSlug,
     name: 'National Sports Academy',
@@ -61,6 +69,33 @@ export default function AcademyHubPage({
   // Data Refresh State
   const [refreshKey, setRefreshKey] = useState(0)
   const triggerRefresh = () => setRefreshKey(k => k + 1)
+
+  // 3-Step Onboarding Modal State
+  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const q = new URLSearchParams(window.location.search).get('onboarding')
+      if (q === 'true') return true
+      return !hasCompletedOnboarding() && registeredAcademies.every(a => !a.isCustom)
+    }
+    return false
+  })
+  const [onboardingStep, setOnboardingStep] = useState<1 | 2 | 3 | 4>(1)
+  const [onboardAcademyName, setOnboardAcademyName] = useState('')
+  const [onboardSport, setOnboardSport] = useState('Cricket')
+  const [onboardCity, setOnboardCity] = useState('')
+  const [onboardDirectorName, setOnboardDirectorName] = useState('')
+  const [onboardDirectorWhatsApp, setOnboardDirectorWhatsApp] = useState('')
+  const [onboardUpiVpa, setOnboardUpiVpa] = useState('')
+  const [onboardBatchName, setOnboardBatchName] = useState('Morning Elite Coaching Camp')
+  const [onboardBatchDays, setOnboardBatchDays] = useState('Mon, Wed, Fri')
+  const [onboardBatchTimings, setOnboardBatchTimings] = useState('06:30 AM – 08:30 AM')
+  const [onboardBatchCapacity, setOnboardBatchCapacity] = useState(25)
+  const [onboardBatchFee, setOnboardBatchFee] = useState(2500)
+  const [onboardingError, setOnboardingError] = useState('')
+  const [newlyCreatedAcademy, setNewlyCreatedAcademy] = useState<RegisteredAcademy | null>(null)
+
+  // Student Fee Receipt Voucher View State
+  const [activeReceiptStudent, setActiveReceiptStudent] = useState<AcademyStudent | null>(null)
 
   // Derived Data
   const leads = getAcademyLeads(selectedSlug)
@@ -242,6 +277,79 @@ export default function AcademyHubPage({
     triggerRefresh()
   }
 
+  const handleOnboardingStep1Next = (e: FormEvent) => {
+    e.preventDefault()
+    if (onboardAcademyName.trim().length < 3) {
+      setOnboardingError('Please enter academy full name (at least 3 characters).')
+      return
+    }
+    if (onboardDirectorName.trim().length < 2) {
+      setOnboardingError('Please enter director or head coach name.')
+      return
+    }
+    if (onboardDirectorWhatsApp.replace(/\D/g, '').length < 10) {
+      setOnboardingError('Please enter a valid 10-digit WhatsApp number for parent routing.')
+      return
+    }
+    setOnboardingError('')
+    if (!onboardUpiVpa) {
+      const clean = onboardAcademyName.toLowerCase().replace(/[^a-z0-9]/g, '')
+      setOnboardUpiVpa(`${clean}@okaxis`)
+    }
+    setOnboardingStep(2)
+  }
+
+  const handleOnboardingStep2Next = (e: FormEvent) => {
+    e.preventDefault()
+    if (!onboardUpiVpa.trim() || !onboardUpiVpa.includes('@')) {
+      setOnboardingError('Please enter a valid UPI ID (VPA) with an @ symbol (e.g. academy@okaxis).')
+      return
+    }
+    setOnboardingError('')
+    setOnboardingStep(3)
+  }
+
+  const handleOnboardingStep3Finish = (e: FormEvent) => {
+    e.preventDefault()
+    if (onboardBatchName.trim().length < 3) {
+      setOnboardingError('Please enter training batch name (e.g. Under-14 Morning Squad).')
+      return
+    }
+
+    const cityParts = onboardCity.split(',')
+    const cleanCity = cityParts[0]?.trim() || 'India'
+    const cleanState = cityParts[1]?.trim() || 'India'
+
+    const newAcad = registerCustomAcademy({
+      name: onboardAcademyName.trim(),
+      sport: onboardSport,
+      city: cleanCity,
+      state: cleanState,
+      directorName: onboardDirectorName.trim(),
+      directorWhatsApp: onboardDirectorWhatsApp.replace(/\D/g, ''),
+      upiVpa: onboardUpiVpa.trim(),
+    })
+
+    saveAcademyBatch({
+      academySlug: newAcad.slug,
+      batchName: onboardBatchName.trim(),
+      sport: onboardSport,
+      days: onboardBatchDays,
+      timings: onboardBatchTimings,
+      coachName: onboardDirectorName.trim() || 'Head Coach',
+      ageGroup: 'U-14 (8–14 yrs)',
+      monthlyFee: Number(onboardBatchFee) || 2500,
+      maxCapacity: Number(onboardBatchCapacity) || 25,
+      isActive: true,
+    })
+
+    setNewlyCreatedAcademy(newAcad)
+    setSelectedSlug(newAcad.slug)
+    setOnboardingError('')
+    setOnboardingStep(4)
+    triggerRefresh()
+  }
+
   const handleSaveSettingsSubmit = (e: FormEvent) => {
     e.preventDefault()
     saveAcademySettings({
@@ -353,18 +461,33 @@ export default function AcademyHubPage({
 
         <div className="academy-hub-switcher">
           <label htmlFor="academy-hub-select">Switch Academy Management Workspace:</label>
-          <select
-            id="academy-hub-select"
-            className="academy-hub-select"
-            value={selectedSlug}
-            onChange={e => setSelectedSlug(e.target.value)}
-          >
-            {CURATED_ACADEMIES.map(a => (
-              <option key={a.slug} value={a.slug}>
-                {a.name} ({a.city})
-              </option>
-            ))}
-          </select>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <select
+              id="academy-hub-select"
+              className="academy-hub-select"
+              value={selectedSlug}
+              onChange={e => setSelectedSlug(e.target.value)}
+            >
+              {registeredAcademies.map(a => (
+                <option key={a.slug} value={a.slug}>
+                  {a.name} ({a.city} · {a.sport}) {a.isCustom ? '★ Your Academy' : ''}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="academy-hub-btn-outline"
+              onClick={() => {
+                setOnboardingStep(1)
+                setIsOnboardingModalOpen(true)
+                setOnboardingError('')
+              }}
+              style={{ padding: '8px 12px', fontSize: '13px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+            >
+              <SiteIcon name="sparkles" size={14} />
+              <span>+ Setup New Academy</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -775,6 +898,18 @@ export default function AcademyHubPage({
                             }}
                           >
                             <SiteIcon name="check" size={15} />
+                          </button>
+                        )}
+
+                        {student.feeStatus === 'paid' && (
+                          <button
+                            type="button"
+                            className="crm-action-btn"
+                            title="View / Share Digital Fee Receipt"
+                            aria-label={`View fee receipt for ${student.studentName}`}
+                            onClick={() => setActiveReceiptStudent(student)}
+                          >
+                            <SiteIcon name="download" size={15} />
                           </button>
                         )}
                       </div>
@@ -1432,6 +1567,384 @@ export default function AcademyHubPage({
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Fee Receipt Voucher */}
+      {activeReceiptStudent && (
+        <div className="academy-hub-modal-overlay" onClick={() => setActiveReceiptStudent(null)}>
+          <div className="academy-hub-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="academy-hub-modal-header">
+              <h3>Official Student Fee Receipt</h3>
+              <button
+                type="button"
+                className="academy-hub-modal-close"
+                onClick={() => setActiveReceiptStudent(null)}
+                aria-label="Close modal"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="receipt-voucher-card">
+              <div className="receipt-header">
+                <span className="receipt-ref-badge">PAID · 0% PLATFORM FEE</span>
+                <h4 style={{ margin: '0.4rem 0 0.2rem', color: '#065f46', fontSize: '1.1rem' }}>{currentAcademy.name}</h4>
+                <div style={{ fontSize: '0.82rem', color: '#64748b' }}>Receipt Ref: REC-{activeReceiptStudent.id.toUpperCase()}</div>
+              </div>
+
+              <div style={{ textAlign: 'left', background: '#f8fafc', padding: '0.85rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                <div><strong>Student Name:</strong> {activeReceiptStudent.studentName}</div>
+                <div><strong>Parent Name:</strong> {activeReceiptStudent.parentName} (+91 {activeReceiptStudent.parentPhone})</div>
+                <div><strong>Batch:</strong> {activeReceiptStudent.batchName} ({activeReceiptStudent.sport})</div>
+                <div><strong>Amount Paid:</strong> ₹{activeReceiptStudent.monthlyFee.toLocaleString('en-IN')}</div>
+                <div><strong>Payment Date:</strong> {activeReceiptStudent.lastPaymentDate || 'Today'}</div>
+                <div><strong>Next Fee Due Date:</strong> {activeReceiptStudent.nextDueDate}</div>
+              </div>
+
+              <div
+                style={{ display: 'inline-block', padding: '0.75rem', background: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '0.75rem' }}
+                dangerouslySetInnerHTML={{
+                  __html: generateQrSvgString(
+                    JSON.stringify({
+                      ref: `REC-${activeReceiptStudent.id}`,
+                      student: activeReceiptStudent.studentName,
+                      academy: currentAcademy.name,
+                      amount: activeReceiptStudent.monthlyFee,
+                      status: 'paid',
+                    }),
+                    { size: 140, color: '#047857' }
+                  ),
+                }}
+              />
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                <a
+                  href={`https://wa.me/${activeReceiptStudent.parentPhone.startsWith('91') ? activeReceiptStudent.parentPhone : `91${activeReceiptStudent.parentPhone}`}?text=${encodeURIComponent(
+                    `🧾 *Coaching Fee Receipt — ${currentAcademy.name}*\n\nDear ${activeReceiptStudent.parentName},\nFee receipt for *${activeReceiptStudent.studentName}* (${activeReceiptStudent.batchName}):\nAmount Paid: *₹${activeReceiptStudent.monthlyFee.toLocaleString('en-IN')}*\nNext Due Date: *${activeReceiptStudent.nextDueDate}*\n\nThank you!`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="academy-hub-primary-btn"
+                  style={{ flex: 1, textDecoration: 'none', justifyContent: 'center' }}
+                >
+                  <SiteIcon name="phone" size={15} />
+                  <span>Share on WhatsApp</span>
+                </a>
+                <button
+                  type="button"
+                  className="academy-hub-public-page-btn"
+                  onClick={() => window.print?.()}
+                >
+                  <SiteIcon name="download" size={15} />
+                  <span>Print</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: 3-Step Academy Director Onboarding Flow */}
+      {isOnboardingModalOpen && (
+        <div className="academy-hub-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="onboarding-wizard-title">
+          <div className="academy-hub-modal-content" style={{ maxWidth: '580px' }} onClick={e => e.stopPropagation()}>
+            <div className="academy-hub-modal-header">
+              <h3 id="onboarding-wizard-title">
+                {onboardingStep === 4 ? 'Academy Hub Ready!' : '⚡ Fast Academy Setup (3 Steps)'}
+              </h3>
+              <button
+                type="button"
+                className="academy-hub-modal-close"
+                onClick={() => setIsOnboardingModalOpen(false)}
+                aria-label="Close onboarding modal"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Visual Step Progress Bar */}
+            {onboardingStep < 4 && (
+              <div className="onboarding-steps-bar" aria-label="Setup steps">
+                <div className={`onboarding-step-pill ${onboardingStep === 1 ? 'active' : onboardingStep > 1 ? 'completed' : ''}`}>
+                  <span className="onboarding-step-num">1</span>
+                  <span>Academy Profile</span>
+                </div>
+                <div className={`onboarding-step-pill ${onboardingStep === 2 ? 'active' : onboardingStep > 2 ? 'completed' : ''}`}>
+                  <span className="onboarding-step-num">2</span>
+                  <span>UPI Settlement</span>
+                </div>
+                <div className={`onboarding-step-pill ${onboardingStep === 3 ? 'active' : ''}`}>
+                  <span className="onboarding-step-num">3</span>
+                  <span>First Batch</span>
+                </div>
+              </div>
+            )}
+
+            {onboardingError && (
+              <div style={{ padding: '0.6rem 0.85rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#b91c1c', fontSize: '0.85rem' }}>
+                {onboardingError}
+              </div>
+            )}
+
+            {/* STEP 1: Academy & Director Profile */}
+            {onboardingStep === 1 && (
+              <form onSubmit={handleOnboardingStep1Next} className="academy-hub-form">
+                <p style={{ color: '#64748b', fontSize: '0.88rem', margin: '0 0 0.5rem' }}>
+                  Register your sports academy on KhelGrid to manage parent enquiries, student batches, and fees with 100% free grassroots access.
+                </p>
+
+                <label>
+                  Academy Full Name *
+                  <input
+                    type="text"
+                    value={onboardAcademyName}
+                    onChange={e => setOnboardAcademyName(e.target.value)}
+                    placeholder="e.g. Shivaji Sports & Cricket Academy"
+                    required
+                  />
+                </label>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                  <label>
+                    Primary Sport *
+                    <select
+                      value={onboardSport}
+                      onChange={e => setOnboardSport(e.target.value)}
+                    >
+                      {['Cricket', 'Football', 'Badminton', 'Tennis', 'Swimming', 'Martial Arts', 'Basketball', 'Athletics', 'Multi-Sport'].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    City &amp; State *
+                    <input
+                      type="text"
+                      value={onboardCity}
+                      onChange={e => setOnboardCity(e.target.value)}
+                      placeholder="e.g. Pune, Maharashtra"
+                      required
+                    />
+                  </label>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                  <label>
+                    Director / Head Coach Name *
+                    <input
+                      type="text"
+                      value={onboardDirectorName}
+                      onChange={e => setOnboardDirectorName(e.target.value)}
+                      placeholder="e.g. Coach Anand Patil"
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Director WhatsApp Mobile *
+                    <input
+                      type="tel"
+                      value={onboardDirectorWhatsApp}
+                      onChange={e => setOnboardDirectorWhatsApp(e.target.value)}
+                      placeholder="10-digit mobile number"
+                      required
+                    />
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                  <button type="submit" className="academy-hub-primary-btn">
+                    Continue to Step 2: UPI Setup →
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* STEP 2: Instant UPI Settlement Setup */}
+            {onboardingStep === 2 && (
+              <form onSubmit={handleOnboardingStep2Next} className="academy-hub-form">
+                <p style={{ color: '#64748b', fontSize: '0.88rem', margin: '0 0 0.5rem' }}>
+                  Set your official UPI ID (VPA). Parents pay student fees directly into your academy&apos;s bank account with <strong>0% platform deduction</strong>.
+                </p>
+
+                <label>
+                  Academy / Director UPI ID (VPA) *
+                  <input
+                    type="text"
+                    value={onboardUpiVpa}
+                    onChange={e => setOnboardUpiVpa(e.target.value)}
+                    placeholder="e.g. shivajiacademy@okaxis or 9823012345@paytm"
+                    required
+                  />
+                  <small style={{ color: '#059669', fontSize: '0.78rem', marginTop: '0.2rem' }}>
+                    ✓ 100% direct bank settlement into your account.
+                  </small>
+                </label>
+
+                {/* Live Vector QR Code Preview */}
+                <div className="onboarding-qr-preview-box">
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#059669', marginBottom: '0.5rem' }}>
+                    Live Parent Payment QR Preview (GPay, PhonePe, Paytm)
+                  </div>
+                  <div
+                    style={{ display: 'inline-block', padding: '0.5rem', background: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                    dangerouslySetInnerHTML={{
+                      __html: generateQrSvgString(
+                        generateUpiPayLink({
+                          vpa: onboardUpiVpa || 'academy@upi',
+                          name: onboardAcademyName || 'Academy',
+                          amount: 2500,
+                          note: 'Coaching Fee',
+                        }),
+                        { size: 140, color: '#047857' }
+                      ),
+                    }}
+                  />
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.4rem' }}>
+                    Settle directly to: <strong>{onboardUpiVpa || 'your-vpa@bank'}</strong>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+                  <button
+                    type="button"
+                    className="academy-hub-btn-outline"
+                    onClick={() => setOnboardingStep(1)}
+                  >
+                    ← Back
+                  </button>
+                  <button type="submit" className="academy-hub-primary-btn">
+                    Continue to Step 3: First Batch →
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* STEP 3: Create First Training Batch */}
+            {onboardingStep === 3 && (
+              <form onSubmit={handleOnboardingStep3Finish} className="academy-hub-form">
+                <p style={{ color: '#64748b', fontSize: '0.88rem', margin: '0 0 0.5rem' }}>
+                  Publish your initial training batch. It will appear on your academy profile for prospective parents and students.
+                </p>
+
+                <label>
+                  Batch Name *
+                  <input
+                    type="text"
+                    value={onboardBatchName}
+                    onChange={e => setOnboardBatchName(e.target.value)}
+                    placeholder="e.g. Morning Junior Cricket Squad"
+                    required
+                  />
+                </label>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                  <label>
+                    Schedule Days *
+                    <input
+                      type="text"
+                      value={onboardBatchDays}
+                      onChange={e => setOnboardBatchDays(e.target.value)}
+                      placeholder="e.g. Mon, Wed, Fri"
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Timings *
+                    <input
+                      type="text"
+                      value={onboardBatchTimings}
+                      onChange={e => setOnboardBatchTimings(e.target.value)}
+                      placeholder="e.g. 06:30 AM – 08:30 AM"
+                      required
+                    />
+                  </label>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                  <label>
+                    Max Slot Capacity *
+                    <input
+                      type="number"
+                      min={5}
+                      max={100}
+                      value={onboardBatchCapacity}
+                      onChange={e => setOnboardBatchCapacity(Number(e.target.value))}
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Monthly Coaching Fee (₹) *
+                    <input
+                      type="number"
+                      min={0}
+                      step={100}
+                      value={onboardBatchFee}
+                      onChange={e => setOnboardBatchFee(Number(e.target.value))}
+                      required
+                    />
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+                  <button
+                    type="button"
+                    className="academy-hub-btn-outline"
+                    onClick={() => setOnboardingStep(2)}
+                  >
+                    ← Back
+                  </button>
+                  <button type="submit" className="academy-hub-primary-btn">
+                    Complete Setup &amp; Launch Academy Hub →
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* STEP 4: Celebratory Completion Screen */}
+            {onboardingStep === 4 && newlyCreatedAcademy && (
+              <div className="onboarding-celebration-card">
+                <div className="onboarding-celebration-icon">
+                  <SiteIcon name="award" size={32} />
+                </div>
+                <h3 style={{ margin: '0 0 0.5rem', color: '#065f46', fontSize: '1.4rem' }}>
+                  Congratulations, {newlyCreatedAcademy.name}!
+                </h3>
+                <p style={{ color: '#047857', fontSize: '0.95rem', margin: '0 0 1.25rem' }}>
+                  Your Academy Operations Hub is now active with 100% Free Grassroots Launch Access.
+                </p>
+
+                <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', textAlign: 'left', fontSize: '0.88rem', marginBottom: '1.25rem' }}>
+                  <div><strong>Official Sport:</strong> {newlyCreatedAcademy.sport}</div>
+                  <div><strong>Location:</strong> {newlyCreatedAcademy.city}</div>
+                  <div><strong>Head Coach:</strong> {newlyCreatedAcademy.directorName}</div>
+                  <div><strong>Direct UPI Settlement:</strong> {newlyCreatedAcademy.upiVpa} (0% platform cut)</div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="academy-hub-primary-btn"
+                    onClick={() => setIsOnboardingModalOpen(false)}
+                  >
+                    Open Academy Dashboard →
+                  </button>
+                  <a
+                    href={`/academies/${newlyCreatedAcademy.slug}`}
+                    className="academy-hub-public-page-btn"
+                    onClick={e => onNavigate?.(e, `/academies/${newlyCreatedAcademy.slug}`)}
+                  >
+                    <SiteIcon name="external-link" size={15} />
+                    <span>View Public Profile</span>
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

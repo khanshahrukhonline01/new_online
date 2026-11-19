@@ -49,6 +49,17 @@ export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps
           Open Free Academy Admissions Hub <SiteIcon name="arrow-up-right" size={16} />
         </a>
       </div>
+
+      <div className="host-dashboard-empty-state" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), transparent)' }}>
+        <SiteIcon name="calendar" size={34} />
+        <h2>Turf &amp; Facility Slot Booking Calendar</h2>
+        <p>
+          Operating a sports turf, court, or box cricket arena? Manage hourly slot inventory, lock maintenance hours, accept 0% commission UPI deposits, and dispatch instant WhatsApp booking vouchers to team captains.
+        </p>
+        <a className="host-action-btn primary" href="/turf-calendar" onClick={event => onNavigate?.(event, '/turf-calendar')}>
+          Open Turf Slot Calendar (Free) <SiteIcon name="arrow-up-right" size={16} />
+        </a>
+      </div>
     </section>
   )
 }

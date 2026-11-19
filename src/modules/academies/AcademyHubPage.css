@@ -599,3 +599,105 @@
   border: 1px solid #cbd5e1;
   font-size: 0.9rem;
 }
+
+/* Onboarding Wizard Styles */
+.onboarding-steps-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.onboarding-step-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #94a3b8;
+  padding: 0.3rem 0.6rem;
+  border-radius: 9999px;
+  background: #f1f5f9;
+}
+
+.onboarding-step-pill.active {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #10b981;
+}
+
+.onboarding-step-pill.completed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.onboarding-step-num {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  background: currentColor;
+  color: #ffffff;
+}
+
+.onboarding-step-pill.active .onboarding-step-num {
+  background: #047857;
+  color: #ffffff;
+}
+
+.onboarding-qr-preview-box {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  margin: 0.75rem 0;
+}
+
+.onboarding-celebration-card {
+  text-align: center;
+  padding: 1.5rem 1rem;
+}
+
+.onboarding-celebration-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #059669;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.receipt-voucher-card {
+  background: #ffffff;
+  border: 2px dashed #059669;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.receipt-header {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.receipt-ref-badge {
+  display: inline-block;
+  background: #ecfdf5;
+  color: #047857;
+  font-weight: 800;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  margin-bottom: 0.35rem;
+}

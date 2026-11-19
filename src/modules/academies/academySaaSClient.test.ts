@@ -15,6 +15,9 @@ import {
   generateWhatsAppLeadRoutingUrl,
   generateWhatsAppFeeReminderUrl,
   generateUpiPayLink,
+  getRegisteredAcademies,
+  registerCustomAcademy,
+  hasCompletedOnboarding,
 } from './academySaaSClient'
 
 describe('academySaaSClient Unit Suite', () => {
@@ -179,5 +182,28 @@ describe('academySaaSClient Unit Suite', () => {
     expect(summary.totalStudents).toBeGreaterThan(0)
     expect(summary.collectionRate).toBeGreaterThanOrEqual(0)
     expect(summary.collectionRate).toBeLessThanOrEqual(100)
+  })
+
+  it('registers custom academy and tracks onboarding state', () => {
+    const initial = getRegisteredAcademies()
+    expect(initial.length).toBeGreaterThanOrEqual(4)
+    expect(hasCompletedOnboarding()).toBe(false)
+
+    const registered = registerCustomAcademy({
+      name: 'Shivaji Cricket Academy',
+      sport: 'Cricket',
+      city: 'Pune',
+      state: 'Maharashtra',
+      directorName: 'Coach Anand Patil',
+      directorWhatsApp: '9823012345',
+      upiVpa: 'shivajiacademy@okaxis',
+    })
+
+    expect(registered.slug).toBe('shivaji-cricket-academy')
+    expect(registered.isCustom).toBe(true)
+    expect(hasCompletedOnboarding()).toBe(true)
+
+    const all = getRegisteredAcademies()
+    expect(all.some(a => a.slug === 'shivaji-cricket-academy')).toBe(true)
   })
 })

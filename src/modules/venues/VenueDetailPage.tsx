@@ -292,6 +292,16 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
             </button>
           )}
 
+          <a
+            href={`/turf-calendar?venue=${venue.slug}`}
+            onClick={e => onNavigate?.(e, `/turf-calendar?venue=${venue.slug}`)}
+            className="venue-btn venue-btn-secondary"
+            style={{ borderColor: '#10b981', color: '#059669', background: 'rgba(16, 185, 129, 0.05)' }}
+          >
+            <SiteIcon name="calendar" size={16} />
+            <span>Hourly Turf Grid &amp; UPI</span>
+          </a>
+
           {whatsappUrl && (
             <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-primary">
               <SiteIcon name="message" size={16} />

@@ -86,12 +86,74 @@ export interface AcademySettings {
   isProUnlocked: boolean
 }
 
+export interface RegisteredAcademy {
+  id: string
+  slug: string
+  name: string
+  city: string
+  state: string
+  sport: string
+  directorName?: string
+  directorWhatsApp?: string
+  upiVpa?: string
+  isCustom?: boolean
+}
+
+export const INITIAL_REGISTERED_ACADEMIES: RegisteredAcademy[] = [
+  {
+    id: 'bengaluru-fc-academy',
+    slug: 'bengaluru-fc-academy',
+    name: 'Bengaluru FC Residential Academy',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    sport: 'Football',
+    directorName: 'Director John K.',
+    directorWhatsApp: '9845012345',
+    upiVpa: 'bengalurufc@okhdfcbank',
+  },
+  {
+    id: 'pullela-gopichand-badminton-academy',
+    slug: 'pullela-gopichand-badminton-academy',
+    name: 'Pullela Gopichand Badminton Academy',
+    city: 'Hyderabad',
+    state: 'Telangana',
+    sport: 'Badminton',
+    directorName: 'Coach Pullela G.',
+    directorWhatsApp: '9849012345',
+    upiVpa: 'gopichandacademy@icici',
+  },
+  {
+    id: 'tata-football-academy',
+    slug: 'tata-football-academy',
+    name: 'Tata Football Academy',
+    city: 'Jamshedpur',
+    state: 'Jharkhand',
+    sport: 'Football',
+    directorName: 'Director Mukul C.',
+    directorWhatsApp: '9835012345',
+    upiVpa: 'tatafootball@sbi',
+  },
+  {
+    id: 'kanpur-cricket-association-academy',
+    slug: 'kanpur-cricket-association-academy',
+    name: 'Green Park Cricket Academy',
+    city: 'Kanpur',
+    state: 'Uttar Pradesh',
+    sport: 'Cricket',
+    directorName: 'Coach R. K. Singh',
+    directorWhatsApp: '9415012345',
+    upiVpa: 'greenparkcricket@paytm',
+  },
+]
+
 const STORAGE_KEYS = {
   LEADS: 'khelgrid_academy_saas_leads',
   BATCHES: 'khelgrid_academy_saas_batches',
   STUDENTS: 'khelgrid_academy_saas_students',
   PASSES: 'khelgrid_academy_saas_trial_passes',
   SETTINGS: 'khelgrid_academy_saas_settings',
+  REGISTERED_ACADEMIES: 'khelgrid_academy_saas_registered_academies',
+  ONBOARDING_COMPLETED: 'khelgrid_academy_saas_onboarding_completed',
 }
 
 // Default Seed Data for major curated academies
@@ -278,6 +340,8 @@ export function clearAcademySaaSMemoryStore(): void {
       window.localStorage.removeItem(STORAGE_KEYS.STUDENTS)
       window.localStorage.removeItem(STORAGE_KEYS.PASSES)
       window.localStorage.removeItem(STORAGE_KEYS.SETTINGS)
+      window.localStorage.removeItem(STORAGE_KEYS.REGISTERED_ACADEMIES)
+      window.localStorage.removeItem(STORAGE_KEYS.ONBOARDING_COMPLETED)
     } catch {
       // ignore
     }
@@ -593,4 +657,69 @@ export function getAcademySaaSSummary(academySlug: string) {
     collectionRate: totalStudents > 0 ? Math.round((paidStudents / totalStudents) * 100) : 100,
     trialPassesCount: passes.length,
   }
+}
+
+export function getRegisteredAcademies(): RegisteredAcademy[] {
+  return loadFromStorage<RegisteredAcademy[]>(STORAGE_KEYS.REGISTERED_ACADEMIES, INITIAL_REGISTERED_ACADEMIES)
+}
+
+export function registerCustomAcademy(params: {
+  name: string
+  sport: string
+  city: string
+  state?: string
+  directorName: string
+  directorWhatsApp: string
+  upiVpa: string
+}): RegisteredAcademy {
+  const existing = getRegisteredAcademies()
+  const baseSlug = params.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '') || `academy-${Date.now()}`
+
+  let slug = baseSlug
+  let counter = 1
+  while (existing.some(a => a.slug === slug)) {
+    slug = `${baseSlug}-${counter}`
+    counter++
+  }
+
+  const newAcademy: RegisteredAcademy = {
+    id: `custom-acad-${Date.now()}`,
+    slug,
+    name: params.name.trim(),
+    sport: params.sport.trim() || 'Multi-Sport',
+    city: params.city.trim() || 'India',
+    state: (params.state || '').trim() || 'India',
+    directorName: params.directorName.trim(),
+    directorWhatsApp: params.directorWhatsApp.replace(/\D/g, ''),
+    upiVpa: params.upiVpa.trim(),
+    isCustom: true,
+  }
+
+  const updated = [newAcademy, ...existing]
+  saveToStorage(STORAGE_KEYS.REGISTERED_ACADEMIES, updated)
+
+  // Seed default settings for this newly registered academy
+  saveAcademySettings({
+    academySlug: slug,
+    academyName: newAcademy.name,
+    directorName: newAcademy.directorName || '',
+    directorWhatsApp: newAcademy.directorWhatsApp || '',
+    upiVpa: newAcademy.upiVpa || '',
+    autoWhatsAppRoutingEnabled: true,
+    isProUnlocked: true,
+  })
+
+  markOnboardingCompleted()
+  return newAcademy
+}
+
+export function hasCompletedOnboarding(): boolean {
+  return loadFromStorage<boolean>(STORAGE_KEYS.ONBOARDING_COMPLETED, false)
+}
+
+export function markOnboardingCompleted(): void {
+  saveToStorage(STORAGE_KEYS.ONBOARDING_COMPLETED, true)
 }

@@ -43,6 +43,7 @@ const featurePages: Record<string, string> = {
   '/calendar': 'Sports Calendar', '/for-you': 'For You', '/trust': 'Trust Center',
   '/pricing': 'Pricing & Memberships', '/mobile-app': 'KhelGrid Mobile App', '/careers': 'Careers',
   '/academy-hub': 'Academy Admissions & Operations Hub', '/academies/manage': 'Academy Admissions & Operations Hub',
+  '/turf-calendar': 'Turf & Facility Slot Booking Calendar', '/venues/manage': 'Turf & Facility Slot Booking Calendar', '/turf': 'Turf & Facility Slot Booking Calendar',
   '/partners': 'Partner with KhelGrid', '/partner': 'Partner with KhelGrid', '/about': 'About KhelGrid', '/contact': 'Contact KhelGrid',
   '/privacy': 'Privacy Policy', '/terms': 'Terms of Use', '/cookies': 'Cookie Policy',
   '/ipr-policy': 'IPR & Copyright Policy', '/cancellation-policy': 'Cancellation Policy',
@@ -122,6 +123,9 @@ export function resolveRoute(pathname: string): RouteMatch {
   }
   if (path === '/academy-hub' || path === '/academies/manage') {
     return { name: 'feature', canonicalPath: '/academy-hub', slug: 'Academy Admissions & Operations Hub' }
+  }
+  if (path === '/turf-calendar' || path === '/venues/manage' || path === '/turf') {
+    return { name: 'feature', canonicalPath: '/turf-calendar', slug: 'Turf & Facility Slot Booking Calendar' }
   }
   if (path === '/academies' || path === '/academy' || path === '/train') return { name: 'academies-index', canonicalPath: '/academies', ...(path === '/academies' ? {} : { alias: path }) }
   if (path.startsWith('/academies/') || path.startsWith('/academy/')) {

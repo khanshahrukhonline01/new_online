@@ -169,5 +169,15 @@ describe('platform route coverage', () => {
       canonicalPath: '/u/:username',
       username: 'aarav-choudhary',
     })
+    expect(resolveRoute('/academy-hub')).toEqual({
+      name: 'feature',
+      canonicalPath: '/academy-hub',
+      slug: 'Academy Admissions & Operations Hub',
+    })
+    expect(resolveRoute('/turf-calendar')).toEqual({
+      name: 'feature',
+      canonicalPath: '/turf-calendar',
+      slug: 'Turf & Facility Slot Booking Calendar',
+    })
   })
 })

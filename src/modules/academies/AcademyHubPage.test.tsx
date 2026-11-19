@@ -45,4 +45,13 @@ describe('AcademyHubPage SaaS Workspace Suite', () => {
     expect(html).toContain('ENQ-FTB')
     expect(html).toContain('https://wa.me/919845012345?text=')
   })
+
+  it('renders academy switcher with registered academies and setup new academy trigger', () => {
+    const html = renderToStaticMarkup(<AcademyHubPage initialAcademySlug="bengaluru-fc-academy" />)
+
+    expect(html).toContain('Switch Academy Management Workspace:')
+    expect(html).toContain('+ Setup New Academy')
+    expect(html).toContain('Bengaluru FC Residential Academy')
+    expect(html).toContain('Pullela Gopichand Badminton Academy')
+  })
 })

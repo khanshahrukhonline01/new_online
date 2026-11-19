@@ -33,6 +33,7 @@ const SportsCvWizard = lazy(() => import('./modules/sports-cv/SportsCvWizard'))
 const OpportunitiesPage = lazy(() => import('./modules/opportunities/OpportunitiesPage'))
 const VenuesPage = lazy(() => import('./modules/venues/VenuesPage'))
 const VenueDetailPage = lazy(() => import('./modules/venues/VenueDetailPage'))
+const TurfSlotCalendarPage = lazy(() => import('./modules/venues/TurfSlotCalendarPage'))
 const AcademiesPage = lazy(() => import('./modules/academies/AcademiesPage'))
 const AcademyDetailPage = lazy(() => import('./modules/academies/AcademyDetailPage'))
 const AcademyHubPage = lazy(() => import('./modules/academies/AcademyHubPage'))
@@ -315,6 +316,7 @@ export default function App() {
       else if (match.canonicalPath === '/book') page = <VenuesPage onOpenIntake={() => openListingSubmission('venue')} onNavigate={navigate} />
       else if (match.canonicalPath === '/train') page = <AcademiesPage onOpenIntake={() => openListingSubmission('academy')} onNavigate={navigate} />
       else if (match.canonicalPath === '/academy-hub' || match.canonicalPath === '/academies/manage') page = <AcademyHubPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/turf-calendar' || match.canonicalPath === '/venues/manage' || match.canonicalPath === '/turf') page = <TurfSlotCalendarPage onNavigate={navigate} />
       else if (match.canonicalPath === '/notifications') page = (
         <section className="content-page">
           <p className="eyebrow">YOUR UPDATES &amp; ALERTS</p>
@@ -612,6 +614,7 @@ export default function App() {
           <h2>Play & train</h2>
           <a href="/play" onClick={event => navigate(event, '/play')}>Find a game</a>
           <a href="/venues" onClick={event => navigate(event, '/venues')}>Book venues</a>
+          <a href="/turf-calendar" onClick={event => navigate(event, '/turf-calendar')}>Turf Calendar <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
           <a href="/coaches" onClick={event => navigate(event, '/coaches')}>Coaches</a>
           <a href="/academies" onClick={event => navigate(event, '/academies')}>Academies</a>
           <a href="/academy-hub" onClick={event => navigate(event, '/academy-hub')}>Academy Hub <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
