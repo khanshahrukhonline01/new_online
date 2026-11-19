@@ -1,5 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { getPublishedListingUrl } from '../../shared/routing'
 import {
   submitListingIntake,
   getSubmissionTrackingStatus,
@@ -8,6 +9,8 @@ import {
   type SubmissionTrackingDetails,
 } from '../../integrations/supabase/public-client'
 import './ListingSubmissionPage.css'
+
+export { getPublishedListingUrl }
 
 const listingTypes: Array<{ id: ListingSubmissionInput['listing_type']; label: string }> = [
   { id: 'opportunity', label: 'Sports Trial / Selection Camp' },
@@ -21,6 +24,34 @@ const listingTypes: Array<{ id: ListingSubmissionInput['listing_type']; label: s
 
 export interface ListingSubmissionPageProps {
   defaultTab?: 'submit' | 'track' | 'email'
+  initialTrackedSubmission?: SubmissionTrackingDetails
+}
+
+export function buildListingWhatsAppShare(params: {
+  listingType: string
+  title: string
+  origin?: string
+}) {
+  const origin = params.origin || (typeof window !== 'undefined' && window.location.origin ? window.location.origin : 'https://khelgrid.com')
+  const path = getPublishedListingUrl(params.listingType, params.title)
+  const fullUrl = `${origin}${path}`
+
+  const categoryName = params.listingType === 'pickup_game'
+    ? 'game'
+    : params.listingType === 'venue'
+    ? 'venue'
+    : params.listingType === 'coach'
+    ? 'coach profile'
+    : params.listingType === 'academy'
+    ? 'academy'
+    : params.listingType === 'opportunity'
+    ? 'trials'
+    : 'sports listing'
+
+  const message = `Our ${categoryName} "${params.title}" is officially live on KhelGrid! Check it out: ${fullUrl}`
+  const shareUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+
+  return { path, fullUrl, message, shareUrl }
 }
 
 export function buildListingDirectEmail(params: {
@@ -66,8 +97,41 @@ export function buildListingDirectEmail(params: {
   return { subject, body, mailtoUrl }
 }
 
-export default function ListingSubmissionPage({ defaultTab = 'submit' }: ListingSubmissionPageProps) {
+// 5-Stage Stepper Class Helper
+export function getStepClass(step: string, currentStatus: string): string {
+  if (step === 'submitted') return 'completed'
+
+  if (step === 'editorial_review') {
+    if (currentStatus === 'rejected') return 'rejected'
+    if (currentStatus === 'changes_requested') return 'changes_requested'
+    if (currentStatus === 'pending_review') return 'active'
+    if (['under_review', 'resubmitted', 'approved', 'published'].includes(currentStatus)) return 'completed'
+    return ''
+  }
+
+  if (step === 'desk_verified') {
+    if (['approved', 'published'].includes(currentStatus)) return 'completed'
+    if (['under_review', 'resubmitted'].includes(currentStatus)) return 'active'
+    return ''
+  }
+
+  if (step === 'approved') {
+    if (['approved', 'published'].includes(currentStatus)) return 'completed'
+    return ''
+  }
+
+  if (step === 'live') {
+    if (currentStatus === 'published') return 'completed'
+    if (currentStatus === 'approved') return 'active'
+    return ''
+  }
+
+  return ''
+}
+
+export default function ListingSubmissionPage({ defaultTab = 'submit', initialTrackedSubmission }: ListingSubmissionPageProps) {
   const [activeTab, setActiveTab] = useState<'submit' | 'track' | 'email'>(() => {
+    if (initialTrackedSubmission) return 'track'
     if (typeof window === 'undefined') return defaultTab
     const mode = new URLSearchParams(window.location.search).get('mode')
     if (mode === 'email' || mode === 'mail' || mode === 'direct') return 'email'
@@ -120,10 +184,12 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
   } | null>(null)
 
   // Tracking State
-  const [trackRef, setTrackRef] = useState('')
+  const [trackRef, setTrackRef] = useState(initialTrackedSubmission?.reference_number || '')
   const [trackKey, setTrackKey] = useState('')
   const [trackingLoading, setTrackingLoading] = useState(false)
-  const [trackedSubmission, setTrackedSubmission] = useState<SubmissionTrackingDetails | null>(null)
+  const [trackedSubmission, setTrackedSubmission] = useState<SubmissionTrackingDetails | null>(
+    initialTrackedSubmission || null
+  )
   const [trackError, setTrackError] = useState('')
   const [trackNotice, setTrackNotice] = useState('')
 
@@ -311,25 +377,6 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
     } finally {
       setResubmitting(false)
     }
-  }
-
-  function getStepClass(step: string, currentStatus: string) {
-    if (step === 'submitted') return 'completed'
-    if (step === 'under_review') {
-      if (['under_review', 'changes_requested', 'resubmitted', 'approved', 'published'].includes(currentStatus)) return 'completed'
-      return ''
-    }
-    if (step === 'decision') {
-      if (currentStatus === 'rejected') return 'rejected'
-      if (currentStatus === 'changes_requested') return 'changes_requested'
-      if (['approved', 'published'].includes(currentStatus)) return 'completed'
-      return ''
-    }
-    if (step === 'published') {
-      if (currentStatus === 'published') return 'completed'
-      return ''
-    }
-    return ''
   }
 
   return (
@@ -771,25 +818,83 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
 
           {trackedSubmission && (
             <div>
-              {/* Stepper Timeline */}
-              <div className="listing-stepper">
+              {/* 5-Stage Visual Progress Bar */}
+              <div className="listing-stepper" aria-label="5-stage submission progress">
                 <div className={`listing-step ${getStepClass('submitted', trackedSubmission.status)}`}>
                   <div className="listing-step-circle">1</div>
                   <span className="listing-step-lbl">Submitted</span>
                 </div>
-                <div className={`listing-step ${getStepClass('under_review', trackedSubmission.status)}`}>
+                <div className="listing-stepper-connector" aria-hidden="true">&rarr;</div>
+                <div className={`listing-step ${getStepClass('editorial_review', trackedSubmission.status)}`}>
                   <div className="listing-step-circle">2</div>
-                  <span className="listing-step-lbl">In Review</span>
+                  <span className="listing-step-lbl">Editorial Review</span>
                 </div>
-                <div className={`listing-step ${getStepClass('decision', trackedSubmission.status)}`}>
+                <div className="listing-stepper-connector" aria-hidden="true">&rarr;</div>
+                <div className={`listing-step ${getStepClass('desk_verified', trackedSubmission.status)}`}>
                   <div className="listing-step-circle">3</div>
-                  <span className="listing-step-lbl">Decision</span>
+                  <span className="listing-step-lbl">Desk Verified</span>
                 </div>
-                <div className={`listing-step ${getStepClass('published', trackedSubmission.status)}`}>
+                <div className="listing-stepper-connector" aria-hidden="true">&rarr;</div>
+                <div className={`listing-step ${getStepClass('approved', trackedSubmission.status)}`}>
                   <div className="listing-step-circle">4</div>
-                  <span className="listing-step-lbl">Published</span>
+                  <span className="listing-step-lbl">Approved</span>
+                </div>
+                <div className="listing-stepper-connector" aria-hidden="true">&rarr;</div>
+                <div className={`listing-step ${getStepClass('live', trackedSubmission.status)}`}>
+                  <div className="listing-step-circle">5</div>
+                  <span className="listing-step-lbl">Live on KhelGrid</span>
                 </div>
               </div>
+
+              {/* Live Publication Celebratory Card with Direct Link & WhatsApp Share */}
+              {trackedSubmission.status === 'published' && (() => {
+                const shareData = buildListingWhatsAppShare({
+                  listingType: trackedSubmission.listing_type,
+                  title: trackedSubmission.title,
+                })
+                return (
+                  <div className="listing-live-celebration-card" data-testid="live-celebration-card">
+                    <div className="listing-live-celebration-header">
+                      <div className="listing-live-badge-icon" aria-hidden="true">
+                        <SiteIcon name="badge-check" size={32} />
+                      </div>
+                      <div className="listing-live-celebration-titles">
+                        <span className="listing-live-badge-pill">OFFICIALLY VERIFIED &amp; LIVE</span>
+                        <h3 className="listing-live-celebration-heading">Live on KhelGrid!</h3>
+                        <p className="listing-live-celebration-sub">
+                          Your sports listing has passed editorial review and desk verification. It is now published live on the KhelGrid public platform for sports enthusiasts across India.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="listing-live-celebration-actions">
+                      <a
+                        href={shareData.path}
+                        className="primary-link listing-live-view-btn"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <SiteIcon name="arrow-up-right" size={18} /> View Live Listing on KhelGrid
+                      </a>
+
+                      <a
+                        href={shareData.shareUrl}
+                        className="secondary-link listing-whatsapp-share-btn"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Share listing publication on WhatsApp"
+                      >
+                        <span className="listing-whatsapp-icon" aria-hidden="true">💬</span> Share on WhatsApp
+                      </a>
+                    </div>
+
+                    <div className="listing-live-url-display">
+                      <span className="listing-live-url-label">Direct Public Website Link:</span>
+                      <code className="listing-live-url-code">{shareData.fullUrl}</code>
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Status Message Banners */}
               {trackedSubmission.status === 'pending_review' && (
@@ -806,7 +911,7 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
                 <div className="listing-status-banner pending">
                   <SiteIcon name="search" size={20} />
                   <div>
-                    <strong>Under Active Review</strong>
+                    <strong>Under Active Review &amp; Desk Verification</strong>
                     <p style={{ margin: '0.25rem 0' }}>A KhelGrid moderator has begun reviewing this listing and checking source credentials.</p>
                   </div>
                 </div>
@@ -841,16 +946,6 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
                   <div>
                     <strong>Approved by Moderation Desk</strong>
                     <p style={{ margin: '0.25rem 0' }}>Your submission has been verified and approved. It is queued for live catalogue publication.</p>
-                  </div>
-                </div>
-              )}
-
-              {trackedSubmission.status === 'published' && (
-                <div className="listing-status-banner published">
-                  <SiteIcon name="check-circle" size={20} />
-                  <div>
-                    <strong>Published on KhelGrid!</strong>
-                    <p style={{ margin: '0.25rem 0' }}>This listing is now published and active in KhelGrid's public sports directory.</p>
                   </div>
                 </div>
               )}

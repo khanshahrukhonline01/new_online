@@ -190,9 +190,47 @@ export function resolveRoute(pathname: string): RouteMatch {
     }
   }
 
+  // Community pickup games, coaches and events detail/listing routing
+  if (path === '/pickup-games' || path.startsWith('/pickup-games/')) {
+    return { name: 'feature', canonicalPath: '/play', slug: 'Play · Find Games' }
+  }
+  if (path.startsWith('/coaches/')) {
+    return { name: 'feature', canonicalPath: '/coaches', slug: 'Coaches Directory' }
+  }
+  if (path.startsWith('/events/') || path.startsWith('/tournaments/')) {
+    return { name: 'feature', canonicalPath: '/events', slug: 'Events & Tournaments' }
+  }
+
   if (featurePages[path]) return { name: 'feature', canonicalPath: path, slug: featurePages[path] }
   return { name: 'not-found', canonicalPath: '/404' }
 }
 function decodeURIComponentSafe(value: string): string {
   try { return decodeURIComponent(value) } catch { return value }
 }
+
+export function getPublishedListingUrl(listingType: string, titleOrSlug: string): string {
+  const cleanSlug = (titleOrSlug || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'item'
+
+  switch (listingType) {
+    case 'venue':
+      return `/venues/${cleanSlug}`
+    case 'academy':
+      return `/academies/${cleanSlug}`
+    case 'opportunity':
+      return `/opportunities/${cleanSlug}`
+    case 'pickup_game':
+      return `/pickup-games/${cleanSlug}`
+    case 'coach':
+      return `/coaches/${cleanSlug}`
+    case 'event':
+      return `/events/${cleanSlug}`
+    default:
+      return `/venues/${cleanSlug}`
+  }
+}
+
