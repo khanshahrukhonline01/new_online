@@ -12,10 +12,12 @@ import {
   generateWhatsAppTurfConfirmationUrl,
   generateTurfUpiPayLink,
   getTurfDayKpis,
+  getTurfBookings,
   type TurfCourt,
   type TurfSlot,
   type TurfBookingRecord,
 } from './turfSlotManager'
+import { exportTurfBookingsToCsv, downloadBlobFile } from './turfExportUtils'
 import './TurfSlotCalendarPage.css'
 
 export interface TurfSlotCalendarPageProps {
@@ -184,6 +186,18 @@ export default function TurfSlotCalendarPage({
         </div>
 
         <div className="turf-header-actions">
+          <button
+            type="button"
+            className="turf-btn turf-btn-outline"
+            onClick={() => {
+              const bookings = getTurfBookings(selectedVenueSlug)
+              const csv = exportTurfBookingsToCsv(bookings, currentVenue.name)
+              downloadBlobFile(`${selectedVenueSlug}-turf-ledger.csv`, csv)
+            }}
+          >
+            <SiteIcon name="download" size={16} />
+            <span>Export Ledger (CSV)</span>
+          </button>
           <button
             type="button"
             className="turf-btn turf-btn-outline"

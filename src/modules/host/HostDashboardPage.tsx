@@ -1,5 +1,7 @@
 import type { MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { getRegisteredAcademies } from '../academies/academySaaSClient'
+import { DEFAULT_TURF_COURTS } from '../venues/turfSlotManager'
 import './HostDashboardPage.css'
 
 export interface HostDashboardPageProps {
@@ -8,6 +10,10 @@ export interface HostDashboardPageProps {
 }
 
 export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps) {
+  const registeredAcademies = getRegisteredAcademies()
+  const customAcademiesCount = registeredAcademies.filter(a => a.isCustom).length
+  const totalTurfCourts = DEFAULT_TURF_COURTS.length
+
   return (
     <section className="host-dashboard-root content-page">
       <header className="host-dashboard-header">
@@ -18,6 +24,25 @@ export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps
           We will not display sample listings, invented booking activity, balances or transaction history.
         </p>
       </header>
+
+      {/* Live Facility Operations Quick Bar */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', margin: '1.5rem 0' }}>
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
+          <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Active Sports Academies</div>
+          <strong style={{ fontSize: '1.5rem', color: '#059669' }}>{registeredAcademies.length}</strong>
+          <small style={{ display: 'block', color: '#64748b', fontSize: '0.78rem' }}>{customAcademiesCount} custom registered</small>
+        </div>
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
+          <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Managed Pitches &amp; Courts</div>
+          <strong style={{ fontSize: '1.5rem', color: '#2563eb' }}>{totalTurfCourts}</strong>
+          <small style={{ display: 'block', color: '#64748b', fontSize: '0.78rem' }}>Hourly slot tracking live</small>
+        </div>
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
+          <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Zero-Commission Payouts</div>
+          <strong style={{ fontSize: '1.5rem', color: '#0f172a' }}>0%</strong>
+          <small style={{ display: 'block', color: '#059669', fontSize: '0.78rem' }}>Direct UPI bank settlement</small>
+        </div>
+      </div>
 
       <div className="host-dashboard-empty-state">
         <SiteIcon name="shield-check" size={34} />

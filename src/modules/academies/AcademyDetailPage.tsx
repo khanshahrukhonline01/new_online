@@ -11,7 +11,8 @@ import VerificationClaimModal from '../../shared/components/VerificationClaimMod
 import { CommunityReviewsSection } from '../../shared/components/CommunityReviewsSection'
 import { AcademyEnquiryModal } from './AcademyEnquiryModal'
 import { isAcademyEnquirySubmitted } from '../../integrations/supabase/athlete-profile-client'
-import { getAcademyBatches } from './academySaaSClient'
+import { getAcademyBatches, createTrialPass, addAcademyLead, type AcademyBatch, type AcademyTrialPass } from './academySaaSClient'
+import { generateQrSvgString } from '../../shared/utils/qrCodeGenerator'
 import './AcademyDetailPage.css'
 
 export interface AcademyDetailPageProps {
@@ -33,6 +34,21 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
   const [isEnquired, setIsEnquired] = useState(() => isAcademyEnquirySubmitted(slug))
   const [liveRating, setLiveRating] = useState<number>(0)
   const [liveReviewCount, setLiveReviewCount] = useState<number>(0)
+
+  // Public Free Trial Booking Modal State
+  const [isTrialModalOpen, setIsTrialModalOpen] = useState(false)
+  const [trialBatch, setTrialBatch] = useState<AcademyBatch | null>(null)
+  const [trialParentName, setTrialParentName] = useState('')
+  const [trialParentPhone, setTrialParentPhone] = useState('')
+  const [trialStudentName, setTrialStudentName] = useState('')
+  const [trialStudentAge, setTrialStudentAge] = useState<number | string>(12)
+  const [trialDate, setTrialDate] = useState(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 2)
+    return d.toISOString().slice(0, 10)
+  })
+  const [trialError, setTrialError] = useState('')
+  const [createdTrialPass, setCreatedTrialPass] = useState<AcademyTrialPass | null>(null)
 
   useEffect(() => {
     const onEnquiryUpdated = () => {
@@ -99,6 +115,53 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
       window.removeEventListener('khelgrid:review-added', onReviewAdded)
     }
   }, [slug, academy?.rating, academy?.review_count])
+
+  function handleTrialBookingSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!academy) return
+    if (trialParentName.trim().length < 2) {
+      setTrialError('Please enter parent full name.')
+      return
+    }
+    if (trialParentPhone.replace(/\D/g, '').length < 10) {
+      setTrialError('Please enter a valid 10-digit WhatsApp number.')
+      return
+    }
+    if (trialStudentName.trim().length < 2) {
+      setTrialError('Please enter candidate athlete full name.')
+      return
+    }
+
+    const pass = createTrialPass({
+      academySlug: slug,
+      academyName: academy.name,
+      studentName: trialStudentName.trim(),
+      parentPhone: trialParentPhone.trim(),
+      sport: trialBatch?.sport || academy.sport || 'Sports',
+      trialDate,
+      reportingTime: trialBatch?.timings.split('–')[0]?.trim() || '07:00 AM',
+      venueAddress: academy.address || `${academy.name}, ${academy.city}`,
+      reportingInstructions: 'Report 15 minutes before batch time with sports shoes and hydration kit.',
+    })
+
+    addAcademyLead({
+      academySlug: slug,
+      parentName: trialParentName.trim(),
+      parentPhone: trialParentPhone.trim(),
+      studentName: trialStudentName.trim(),
+      studentAge: trialStudentAge,
+      sport: trialBatch?.sport || academy.sport || 'Sports',
+      batchType: 'free_trial',
+      batchName: trialBatch?.batchName || 'General Trial',
+      requestType: 'free_trial',
+      status: 'trial_scheduled',
+      notes: `Booked public free trial for ${trialDate}. Pass #${pass.passNumber}`,
+    })
+
+    setCreatedTrialPass(pass)
+    setTrialError('')
+    setIsEnquired(true)
+  }
 
   // SEO & Schema.org Structured Data
   useEffect(() => {
@@ -269,18 +332,22 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
             </button>
           )}
 
-          {contactUrl && (
-            <a href={contactUrl} target="_blank" rel="noopener noreferrer" className="academy-btn academy-btn-primary">
-              <SiteIcon name="external-link" size={16} />
-              <span>Contact Academy</span>
-            </a>
-          )}
-
-          {academy.phone && (
-            <a href={`tel:${academy.phone.replace(/\s+/g, '')}`} className="academy-btn academy-btn-secondary">
-              <SiteIcon name="phone" size={16} />
-              <span>Call Direct</span>
-            </a>
+          {isEnquired ? (
+            academy.phone && (
+              <a href={`tel:${academy.phone.replace(/\s+/g, '')}`} className="academy-btn academy-btn-secondary">
+                <SiteIcon name="phone" size={16} />
+                <span>Call Admissions Desk (Enquiry Active)</span>
+              </a>
+            )
+          ) : (
+            <div
+              className="academy-btn academy-btn-secondary"
+              style={{ opacity: 0.9, cursor: 'help' }}
+              title="KhelGrid platform protection: Send an enquiry or book a free trial to reveal direct desk line."
+            >
+              <SiteIcon name="lock" size={14} />
+              <span>Contact Protected · Enquire to Reveal</span>
+            </div>
           )}
 
           {mapsUrl && (
@@ -443,14 +510,29 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
                         <strong style={{ fontSize: '1.15rem', color: '#059669' }}>₹{b.monthlyFee.toLocaleString('en-IN')}</strong>
                         <small style={{ color: '#64748b' }}> / month</small>
                       </div>
-                      <button
-                        type="button"
-                        className="academy-btn academy-btn-primary"
-                        style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem' }}
-                        onClick={() => setIsEnrolModalOpen(true)}
-                      >
-                        Enquire for Batch
-                      </button>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          type="button"
+                          className="academy-btn academy-btn-primary"
+                          style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem' }}
+                          onClick={() => {
+                            setTrialBatch(b)
+                            setIsTrialModalOpen(true)
+                            setCreatedTrialPass(null)
+                            setTrialError('')
+                          }}
+                        >
+                          Book Free Trial
+                        </button>
+                        <button
+                          type="button"
+                          className="academy-btn academy-btn-secondary"
+                          style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem' }}
+                          onClick={() => setIsEnrolModalOpen(true)}
+                        >
+                          Enquire
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -641,6 +723,179 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
           onSuccess={() => setIsEnquired(true)}
           onNavigate={onNavigate}
         />
+      )}
+
+      {/* Free Trial Booking & Instant Digital Pass Modal */}
+      {isTrialModalOpen && (
+        <div className="academy-enquiry-overlay" role="dialog" aria-modal="true" aria-labelledby="trial-modal-title">
+          <div className="academy-enquiry-modal" style={{ maxWidth: '520px' }}>
+            <div className="academy-enquiry-header">
+              <div>
+                <span className="enquiry-badge">🟢 100% Free Trial Session</span>
+                <h3 id="trial-modal-title" style={{ margin: '0.25rem 0 0' }}>
+                  Book Trial Session — {trialBatch?.batchName || academy.name}
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setIsTrialModalOpen(false)}
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+
+            {createdTrialPass ? (
+              <div style={{ padding: '1.25rem 1rem', textAlign: 'center' }}>
+                <div style={{ background: '#ecfdf5', padding: '0.85rem', borderRadius: '10px', color: '#065f46', fontWeight: 800, fontSize: '1rem', marginBottom: '1rem' }}>
+                  ✓ Trial Entry Pass Confirmed: #{createdTrialPass.passNumber}
+                </div>
+
+                <div style={{ textAlign: 'left', background: '#f8fafc', padding: '1rem', borderRadius: '10px', fontSize: '0.88rem', marginBottom: '1rem' }}>
+                  <div><strong>Athlete:</strong> {createdTrialPass.studentName}</div>
+                  <div><strong>Academy:</strong> {createdTrialPass.academyName}</div>
+                  <div><strong>Sport / Batch:</strong> {createdTrialPass.sport} · {trialBatch?.batchName || 'Trial Batch'}</div>
+                  <div><strong>Date &amp; Time:</strong> {createdTrialPass.trialDate} at {createdTrialPass.reportingTime}</div>
+                  <div><strong>Venue Ground:</strong> {createdTrialPass.venueAddress}</div>
+                </div>
+
+                <div
+                  style={{ display: 'inline-block', padding: '0.75rem', background: '#ffffff', borderRadius: '10px', border: '1px solid #cbd5e1', marginBottom: '1rem' }}
+                  dangerouslySetInnerHTML={{
+                    __html: generateQrSvgString(createdTrialPass.qrCodePayload, { size: 160, color: '#059669' }),
+                  }}
+                />
+                <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '1.25rem' }}>
+                  Present this QR pass at the academy gate reception for coach verification.
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                  <a
+                    href={`https://wa.me/${trialParentPhone.startsWith('91') ? trialParentPhone : `91${trialParentPhone}`}?text=${encodeURIComponent(
+                      `🎟️ *Official Trial Entry Pass — ${academy.name}*\n\nCandidate: *${createdTrialPass.studentName}*\nPass No: *#${createdTrialPass.passNumber}*\nDate: *${createdTrialPass.trialDate}* (${createdTrialPass.reportingTime})\nVenue: *${createdTrialPass.venueAddress}*\n\nYour spot has been reserved via KhelGrid!`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="academy-btn academy-btn-primary"
+                    style={{ flex: 1, textDecoration: 'none', justifyContent: 'center' }}
+                  >
+                    <SiteIcon name="phone" size={15} />
+                    <span>Send Pass to WhatsApp</span>
+                  </a>
+                  <button
+                    type="button"
+                    className="academy-btn academy-btn-secondary"
+                    onClick={() => setIsTrialModalOpen(false)}
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleTrialBookingSubmit} style={{ padding: '1.25rem 1rem' }}>
+                {trialError && (
+                  <div style={{ padding: '0.6rem 0.85rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#b91c1c', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                    {trialError}
+                  </div>
+                )}
+
+                <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                  <div><strong>Academy:</strong> {academy.name} ({academy.city})</div>
+                  <div><strong>Batch:</strong> {trialBatch?.batchName || 'General Coaching Squad'}</div>
+                  <div><strong>Timings:</strong> {trialBatch?.timings || 'Morning 07:00 AM'}</div>
+                </div>
+
+                <div style={{ marginBottom: '0.85rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.3rem' }}>
+                    Candidate Athlete Name *
+                  </label>
+                  <input
+                    type="text"
+                    className="enquiry-input"
+                    value={trialStudentName}
+                    onChange={e => setTrialStudentName(e.target.value)}
+                    placeholder="e.g. Kabir Gupta"
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginBottom: '0.85rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.3rem' }}>
+                      Athlete Age *
+                    </label>
+                    <input
+                      type="number"
+                      min={4}
+                      max={35}
+                      className="enquiry-input"
+                      value={trialStudentAge}
+                      onChange={e => setTrialStudentAge(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.3rem' }}>
+                      Preferred Trial Date *
+                    </label>
+                    <input
+                      type="date"
+                      className="enquiry-input"
+                      value={trialDate}
+                      onChange={e => setTrialDate(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.3rem' }}>
+                      Parent / Guardian Name *
+                    </label>
+                    <input
+                      type="text"
+                      className="enquiry-input"
+                      value={trialParentName}
+                      onChange={e => setTrialParentName(e.target.value)}
+                      placeholder="e.g. Anita Gupta"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.3rem' }}>
+                      Parent WhatsApp Mobile *
+                    </label>
+                    <input
+                      type="tel"
+                      className="enquiry-input"
+                      value={trialParentPhone}
+                      onChange={e => setTrialParentPhone(e.target.value)}
+                      placeholder="10-digit mobile number"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    className="academy-btn academy-btn-secondary"
+                    onClick={() => setIsTrialModalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="academy-btn academy-btn-primary">
+                    Generate Digital Trial Pass →
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
       )}
     </article>
   )

@@ -11,6 +11,7 @@ import VerificationClaimModal from '../../shared/components/VerificationClaimMod
 import { CommunityReviewsSection } from '../../shared/components/CommunityReviewsSection'
 import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
 import { parseInrPrice, recordVenueSlotBooking, getBookedVenueSlots, fetchBookedVenueSlots } from '../../shared/payments/paymentService'
+import { getTurfCourts, getTurfSlots } from './turfSlotManager'
 import type { PaymentItem, VenueBookingResult } from '../../shared/payments/paymentTypes'
 import './VenueDetailPage.css'
 
@@ -44,6 +45,10 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
   const [checkoutItem, setCheckoutItem] = useState<PaymentItem | null>(null)
   const [confirmedBooking, setConfirmedBooking] = useState<VenueBookingResult | null>(null)
   const [slotConflictError, setSlotConflictError] = useState<string | null>(null)
+  const venueCourts = getTurfCourts(slug)
+  const [activeCourtTab, setActiveCourtTab] = useState<string>(venueCourts[0]?.id || '')
+  const activeVenueCourt = venueCourts.find(c => c.id === activeCourtTab) || venueCourts[0]
+  const liveTurfSlots = getTurfSlots(slug, selectedDate, activeVenueCourt?.id || '')
 
   useEffect(() => {
     let active = true
@@ -302,18 +307,30 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
             <span>Hourly Turf Grid &amp; UPI</span>
           </a>
 
-          {whatsappUrl && (
-            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-primary">
-              <SiteIcon name="message" size={16} />
-              <span>Contact Venue on WhatsApp</span>
-            </a>
-          )}
-
-          {venue.phone && (
-            <a href={`tel:${venue.phone.replace(/\s+/g, '')}`} className="venue-btn venue-btn-secondary">
-              <SiteIcon name="phone" size={16} />
-              <span>Call Venue</span>
-            </a>
+          {confirmedBooking ? (
+            <>
+              {venue.phone && (
+                <a href={`tel:${venue.phone.replace(/\s+/g, '')}`} className="venue-btn venue-btn-secondary">
+                  <SiteIcon name="phone" size={16} />
+                  <span>Call Venue Desk (Verified Booking)</span>
+                </a>
+              )}
+              {whatsappUrl && (
+                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-primary">
+                  <SiteIcon name="message" size={16} />
+                  <span>Contact Venue on WhatsApp</span>
+                </a>
+              )}
+            </>
+          ) : (
+            <div
+              className="venue-btn venue-btn-secondary"
+              style={{ opacity: 0.9, cursor: 'help' }}
+              title="KhelGrid platform protection: Book slot on KhelGrid to reveal direct manager line & gate instructions."
+            >
+              <SiteIcon name="lock" size={14} />
+              <span>Contact Protected · Reserve to Reveal</span>
+            </div>
           )}
 
           {fullAddress && (
@@ -433,6 +450,92 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
               ))}
             </ul>
           </section>}
+
+          {/* Live Hourly Court Availability & Instant Booking Grid */}
+          <section className="venue-section" aria-labelledby="live-slots-heading">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div>
+                <h2 id="live-slots-heading" style={{ margin: 0 }}>📅 Live Hourly Court Availability &amp; Instant Booking</h2>
+                <p style={{ margin: '0.25rem 0 0', color: '#64748b', fontSize: '0.88rem' }}>
+                  Verified real-time slots. Guaranteed reservation with 0% platform fee direct UPI settlement.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {['Today', 'Tomorrow', 'Day After'].map(d => (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`venue-slot-chip ${selectedDate === d ? 'selected' : ''}`}
+                    onClick={() => setSelectedDate(d)}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Pitch / Court tabs if venue has multiple courts */}
+            {venueCourts.length > 1 && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem', overflowX: 'auto', paddingBottom: '4px' }}>
+                {venueCourts.map(c => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`venue-slot-chip ${(activeCourtTab || venueCourts[0].id) === c.id ? 'selected' : ''}`}
+                    onClick={() => setActiveCourtTab(c.id)}
+                  >
+                    {c.name} ({c.sport})
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
+              {liveTurfSlots.slice(0, 10).map(slot => {
+                const isBooked = slot.status === 'booked' || bookedSlots.includes(slot.timeSlot)
+                const isBlocked = slot.status === 'blocked'
+                return (
+                  <div
+                    key={slot.id}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: isBooked ? '1px solid #cbd5e1' : isBlocked ? '1px dashed #94a3b8' : '1px solid #10b981',
+                      background: isBooked ? '#f1f5f9' : isBlocked ? '#f8fafc' : '#f0fdf4',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '6px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>{slot.timeSlot}</span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: isBooked ? '#64748b' : isBlocked ? '#94a3b8' : '#059669', textTransform: 'uppercase' }}>
+                        {isBooked ? 'Reserved' : isBlocked ? 'Maintenance' : 'Open'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>₹{slot.hourlyPrice}/hr</span>
+                      {!isBooked && !isBlocked && (
+                        <button
+                          type="button"
+                          className="venue-btn venue-btn-book"
+                          style={{ padding: '4px 10px', fontSize: '0.78rem', minHeight: 'unset' }}
+                          onClick={() => {
+                            setSelectedSlot(slot.timeSlot)
+                            setSelectedSport(activeVenueCourt?.sport || sportName)
+                            setIsBookingModalOpen(true)
+                          }}
+                        >
+                          Reserve
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
 
           {/* Location & Directions Card */}
           <section className="venue-section">

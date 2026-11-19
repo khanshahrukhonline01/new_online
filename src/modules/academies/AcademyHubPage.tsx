@@ -24,10 +24,12 @@ import {
   registerCustomAcademy,
   hasCompletedOnboarding,
   type AcademyLead,
+  type AcademyBatch,
   type AcademyStudent,
   type AcademyTrialPass,
   type RegisteredAcademy,
 } from './academySaaSClient'
+import { exportStudentsToCsv, downloadBlobFile } from './academyExportUtils'
 import './AcademyHubPage.css'
 
 export interface AcademyHubPageProps {
@@ -96,6 +98,9 @@ export default function AcademyHubPage({
 
   // Student Fee Receipt Voucher View State
   const [activeReceiptStudent, setActiveReceiptStudent] = useState<AcademyStudent | null>(null)
+
+  // Coach Attendance Sheet Modal State
+  const [activeAttendanceBatch, setActiveAttendanceBatch] = useState<AcademyBatch | null>(null)
 
   // Derived Data
   const leads = getAcademyLeads(selectedSlug)
@@ -786,16 +791,27 @@ export default function AcademyHubPage({
                     <div className="academy-batch-capacity">
                       {batch.enrolledCount} / {batch.maxCapacity} slots filled
                     </div>
-                    <button
-                      type="button"
-                      style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.78rem', cursor: 'pointer', marginTop: '0.25rem' }}
-                      onClick={() => {
-                        deleteAcademyBatch(batch.id)
-                        triggerRefresh()
-                      }}
-                    >
-                      Delete Batch
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '0.5rem' }}>
+                      <button
+                        type="button"
+                        className="academy-hub-btn-outline"
+                        style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
+                        onClick={() => setActiveAttendanceBatch(batch)}
+                      >
+                        <SiteIcon name="calendar-check" size={12} />
+                        <span>Attendance Sheet</span>
+                      </button>
+                      <button
+                        type="button"
+                        style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.78rem', cursor: 'pointer' }}
+                        onClick={() => {
+                          deleteAcademyBatch(batch.id)
+                          triggerRefresh()
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -817,13 +833,26 @@ export default function AcademyHubPage({
               </p>
             </div>
 
-            <button
-              type="button"
-              className="academy-hub-primary-btn"
-              onClick={() => setIsAddStudentModalOpen(true)}
-            >
-              <SiteIcon name="plus" size={16} /> Enroll New Student
-            </button>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="academy-hub-btn-outline"
+                style={{ padding: '0.5rem 0.85rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                onClick={() => {
+                  const csv = exportStudentsToCsv(students, currentAcademy.name)
+                  downloadBlobFile(`${currentAcademy.slug}-student-roster.csv`, csv)
+                }}
+              >
+                <SiteIcon name="download" size={15} /> Export CSV Roster
+              </button>
+              <button
+                type="button"
+                className="academy-hub-primary-btn"
+                onClick={() => setIsAddStudentModalOpen(true)}
+              >
+                <SiteIcon name="plus" size={16} /> Enroll New Student
+              </button>
+            </div>
           </div>
 
           <div className="academy-hub-table-wrapper">
@@ -1945,6 +1974,96 @@ export default function AcademyHubPage({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Coach Roll Call & Attendance Sheet */}
+      {activeAttendanceBatch && (
+        <div className="academy-hub-modal-overlay" onClick={() => setActiveAttendanceBatch(null)}>
+          <div className="academy-hub-modal-content" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+            <div className="academy-hub-modal-header">
+              <div>
+                <span className="enquiry-badge">📋 Official Coach Attendance Roster</span>
+                <h3 style={{ margin: '0.25rem 0 0' }}>{activeAttendanceBatch.batchName}</h3>
+              </div>
+              <button
+                type="button"
+                className="academy-hub-modal-close"
+                onClick={() => setActiveAttendanceBatch(null)}
+                aria-label="Close modal"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem' }}>
+              <div><strong>Academy:</strong> {currentAcademy.name}</div>
+              <div><strong>Head Coach:</strong> {activeAttendanceBatch.coachName} · <strong>Sport:</strong> {activeAttendanceBatch.sport}</div>
+              <div><strong>Batch Schedule:</strong> {activeAttendanceBatch.days} ({activeAttendanceBatch.timings})</div>
+              <div><strong>Enrolled Trainees:</strong> {students.filter(s => s.batchId === activeAttendanceBatch.id || s.batchName === activeAttendanceBatch.batchName).length} active students</div>
+            </div>
+
+            <div className="academy-hub-table-wrapper" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+              <table className="academy-hub-table" style={{ fontSize: '0.82rem' }}>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Trainee Name</th>
+                    <th>Fee Status</th>
+                    <th>M</th>
+                    <th>T</th>
+                    <th>W</th>
+                    <th>T</th>
+                    <th>F</th>
+                    <th>S</th>
+                    <th>S</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students
+                    .filter(s => s.batchId === activeAttendanceBatch.id || s.batchName === activeAttendanceBatch.batchName)
+                    .map((s, idx) => (
+                      <tr key={s.id}>
+                        <td>{idx + 1}</td>
+                        <td>
+                          <strong>{s.studentName}</strong>
+                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>+91 {s.parentPhone}</div>
+                        </td>
+                        <td>
+                          <span className={`fee-status-pill ${s.feeStatus}`}>
+                            {s.feeStatus.toUpperCase()}
+                          </span>
+                        </td>
+                        <td><input type="checkbox" /></td>
+                        <td><input type="checkbox" /></td>
+                        <td><input type="checkbox" /></td>
+                        <td><input type="checkbox" /></td>
+                        <td><input type="checkbox" /></td>
+                        <td><input type="checkbox" /></td>
+                        <td><input type="checkbox" /></td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+              <button
+                type="button"
+                className="academy-hub-btn-outline"
+                onClick={() => window.print?.()}
+              >
+                <SiteIcon name="download" size={15} /> Print Roster
+              </button>
+              <button
+                type="button"
+                className="academy-hub-primary-btn"
+                onClick={() => setActiveAttendanceBatch(null)}
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
