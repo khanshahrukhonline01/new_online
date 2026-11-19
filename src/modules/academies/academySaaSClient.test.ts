@@ -11,6 +11,8 @@ import {
   recordStudentPayment,
   createTrialPass,
   getAcademyTrialPasses,
+  lookupTrialPass,
+  admitTrialPass,
   getAcademySaaSSummary,
   generateWhatsAppLeadRoutingUrl,
   generateWhatsAppFeeReminderUrl,
@@ -121,6 +123,19 @@ describe('academySaaSClient Unit Suite', () => {
     const allPasses = getAcademyTrialPasses('test-academy')
     expect(allPasses.length).toBe(1)
     expect(allPasses[0].studentName).toBe('Vihaan Verma')
+
+    const lookedUp = lookupTrialPass(pass.passNumber)
+    expect(lookedUp).not.toBeNull()
+    expect(lookedUp?.studentName).toBe('Vihaan Verma')
+
+    const admission = admitTrialPass(pass.passNumber, 'Coach Rajesh')
+    expect(admission.success).toBe(true)
+    expect(admission.pass?.status).toBe('used')
+    expect(admission.pass?.checkedInBy).toBe('Coach Rajesh')
+
+    const doubleAdmit = admitTrialPass(pass.passNumber, 'Coach Rajesh')
+    expect(doubleAdmit.success).toBe(false)
+    expect(doubleAdmit.message).toContain('already admitted')
   })
 
   it('generates WhatsApp lead routing URL with prefilled message', () => {

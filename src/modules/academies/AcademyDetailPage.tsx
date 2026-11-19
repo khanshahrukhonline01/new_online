@@ -770,7 +770,16 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
                   Present this QR pass at the academy gate reception for coach verification.
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <a
+                    href="/my-passes"
+                    onClick={e => onNavigate?.(e, '/my-passes')}
+                    className="academy-btn"
+                    style={{ flex: 1, minWidth: '140px', background: '#2563eb', color: '#ffffff', textDecoration: 'none', justifyContent: 'center' }}
+                  >
+                    <SiteIcon name="shield-check" size={15} />
+                    <span>View in My Passes</span>
+                  </a>
                   <a
                     href={`https://wa.me/${trialParentPhone.startsWith('91') ? trialParentPhone : `91${trialParentPhone}`}?text=${encodeURIComponent(
                       `🎟️ *Official Trial Entry Pass — ${academy.name}*\n\nCandidate: *${createdTrialPass.studentName}*\nPass No: *#${createdTrialPass.passNumber}*\nDate: *${createdTrialPass.trialDate}* (${createdTrialPass.reportingTime})\nVenue: *${createdTrialPass.venueAddress}*\n\nYour spot has been reserved via KhelGrid!`
@@ -778,7 +787,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="academy-btn academy-btn-primary"
-                    style={{ flex: 1, textDecoration: 'none', justifyContent: 'center' }}
+                    style={{ flex: 1, minWidth: '140px', textDecoration: 'none', justifyContent: 'center' }}
                   >
                     <SiteIcon name="phone" size={15} />
                     <span>Send Pass to WhatsApp</span>

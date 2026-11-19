@@ -305,6 +305,14 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
             >
               <SiteIcon name="file-text" size={14} /> Edit Sports CV
             </a>
+            <a
+              href="/my-passes"
+              onClick={e => handleLink(e, '/my-passes')}
+              className="user-dash-btn secondary"
+              style={{ background: '#ecfdf5', color: '#065f46', borderColor: '#a7f3d0' }}
+            >
+              <SiteIcon name="shield-check" size={14} /> My Passes &amp; Vouchers
+            </a>
             {(authUser.role === 'host' || authUser.role === 'admin') && (
               <a
                 href="/host"

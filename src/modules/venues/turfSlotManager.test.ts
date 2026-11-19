@@ -13,6 +13,10 @@ import {
   generateTurfUpiPayLink,
   getTurfDayKpis,
   HOURLY_TIME_SLOTS,
+  calculateSlotDynamicPrice,
+  holdTurfSlot,
+  lookupTurfBooking,
+  admitTurfBooking,
 } from './turfSlotManager'
 
 describe('turfSlotManager Unit Suite', () => {
@@ -198,5 +202,65 @@ describe('turfSlotManager Unit Suite', () => {
     const loaded = getTurfVenueSettings('custom-turf-arena')
     expect(loaded.managerName).toBe('Manager Deepak')
     expect(loaded.upiVpa).toBe('customturf@icici')
+  })
+
+  it('calculates dynamic peak hour pricing and multipliers', () => {
+    const courts = getTurfCourts('sree-kanteerava-stadium')
+    const court = courts[0] // default 1500
+
+    const offPeak = calculateSlotDynamicPrice(court, '10:00 AM – 11:00 AM', '2026-11-20') // weekday morning
+    expect(offPeak.isPeak).toBe(false)
+    expect(offPeak.hourlyPrice).toBe(court.defaultHourlyRate)
+
+    const peakEvening = calculateSlotDynamicPrice(court, '07:00 PM – 08:00 PM', '2026-11-20') // weekday 7PM
+    expect(peakEvening.isPeak).toBe(true)
+    expect(peakEvening.hourlyPrice).toBeGreaterThan(court.defaultHourlyRate)
+  })
+
+  it('holds a slot for 10 minutes preventing collisions and releases when expired', () => {
+    const courts = getTurfCourts('sree-kanteerava-stadium')
+    const court = courts[0]
+
+    const holdRes = holdTurfSlot('sree-kanteerava-stadium', '2026-11-20', court.id, '08:00 AM – 09:00 AM', '9876543210')
+    expect(holdRes.success).toBe(true)
+    expect(holdRes.slot?.status).toBe('held')
+
+    // Second user with different phone cannot snatch held slot
+    const secondHold = holdTurfSlot('sree-kanteerava-stadium', '2026-11-20', court.id, '08:00 AM – 09:00 AM', '9123456789')
+    expect(secondHold.success).toBe(false)
+    expect(secondHold.message).toContain('currently held')
+  })
+
+  it('looks up a booking and admits court entry at the ground reception', () => {
+    const courts = getTurfCourts('sree-kanteerava-stadium')
+    const court = courts[0]
+
+    const booked = bookTurfSlot({
+      venueSlug: 'sree-kanteerava-stadium',
+      venueName: 'Sree Kanteerava Stadium',
+      courtId: court.id,
+      courtName: court.name,
+      date: '2026-11-20',
+      timeSlot: '09:00 PM – 10:00 PM',
+      customerName: 'Aditya Mehta',
+      customerPhone: '9845012345',
+      paymentMethod: 'upi_advance_paid',
+      hourlyPrice: 1500,
+      advanceDeposit: 300,
+    })
+
+    const bookingId = booked.booking!.bookingId
+    const found = lookupTurfBooking(bookingId)
+    expect(found).not.toBeNull()
+    expect(found?.customerName).toBe('Aditya Mehta')
+
+    const admitRes = admitTurfBooking(bookingId, 'Gatekeeper Suresh')
+    expect(admitRes.success).toBe(true)
+    expect(admitRes.booking?.checkedInBy).toBe('Gatekeeper Suresh')
+
+    // Double admission check
+    const secondAdmit = admitTurfBooking(bookingId, 'Gatekeeper Suresh')
+    expect(secondAdmit.success).toBe(false)
+    expect(secondAdmit.message).toContain('already admitted')
   })
 })

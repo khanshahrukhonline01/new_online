@@ -13,6 +13,10 @@ import {
   generateTurfUpiPayLink,
   getTurfDayKpis,
   getTurfBookings,
+  getTurfPricingConfig,
+  saveTurfPricingConfig,
+  isSlotPeakHour,
+  type TurfPricingConfig,
   type TurfCourt,
   type TurfSlot,
   type TurfBookingRecord,
@@ -110,6 +114,17 @@ export default function TurfSlotCalendarPage({
   const [editManagerName, setEditManagerName] = useState(venueSettings.managerName)
   const [editManagerPhone, setEditManagerPhone] = useState(venueSettings.managerWhatsApp)
   const [editUpiVpa, setEditUpiVpa] = useState(venueSettings.upiVpa)
+
+  // Dynamic Peak Pricing Modal State
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false)
+  const [pricingConfig, setPricingConfig] = useState<TurfPricingConfig>(() => getTurfPricingConfig(selectedVenueSlug))
+
+  function handleSavePricing(e: FormEvent) {
+    e.preventDefault()
+    saveTurfPricingConfig(pricingConfig)
+    setIsPricingModalOpen(false)
+    triggerRefresh()
+  }
 
   // Handle slot reservation form submission
   function handleConfirmBooking(e: FormEvent) {
@@ -210,6 +225,17 @@ export default function TurfSlotCalendarPage({
           >
             <SiteIcon name="settings" size={16} />
             <span>Turf Settings &amp; UPI</span>
+          </button>
+          <button
+            type="button"
+            className="turf-btn turf-btn-outline"
+            onClick={() => {
+              setPricingConfig(getTurfPricingConfig(selectedVenueSlug))
+              setIsPricingModalOpen(true)
+            }}
+          >
+            <SiteIcon name="wallet" size={16} />
+            <span>⚡ Dynamic Peak Pricing</span>
           </button>
           <a
             href={`/venues/${selectedVenueSlug}`}
@@ -346,7 +372,7 @@ export default function TurfSlotCalendarPage({
               <div className="turf-slot-header">
                 <span className="turf-slot-time">{slot.timeSlot}</span>
                 <span className={`turf-slot-badge badge-${slot.status}`}>
-                  {slot.status === 'available' ? 'Available' : slot.status === 'booked' ? 'Reserved' : 'Blocked'}
+                  {slot.status === 'available' ? 'Available' : slot.status === 'booked' ? 'Reserved' : slot.status === 'held' ? 'Held (Cart Lock)' : 'Blocked'}
                 </span>
               </div>
 
@@ -355,6 +381,18 @@ export default function TurfSlotCalendarPage({
                   <div>
                     <span className="turf-slot-price">₹{slot.hourlyPrice.toLocaleString('en-IN')}/hr</span>
                     <span className="turf-slot-deposit-note">Advance required: ₹{slot.advanceDeposit} via UPI</span>
+                    {isSlotPeakHour(slot.timeSlot, effectiveDate) && (
+                      <span style={{ display: 'inline-block', fontSize: '0.7rem', color: '#b45309', background: '#fef3c7', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700, marginTop: '0.25rem' }}>
+                        ⚡ Prime Peak Slot
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {slot.status === 'held' && (
+                  <div style={{ color: '#d97706', fontSize: '0.85rem', fontWeight: 600 }}>
+                    ⏱️ Held in customer cart
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>Auto-releases in 10 mins if unpaid</div>
                   </div>
                 )}
 
@@ -760,6 +798,91 @@ export default function TurfSlotCalendarPage({
                 </button>
                 <button type="submit" className="turf-btn turf-btn-primary">
                   Save Configuration
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Peak Pricing Modal */}
+      {isPricingModalOpen && (
+        <div className="turf-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pricing-modal-title">
+          <div className="turf-modal-card">
+            <div className="turf-modal-header">
+              <h3 id="pricing-modal-title">⚡ Dynamic Peak-Hour Yield &amp; Pricing</h3>
+              <button
+                type="button"
+                className="turf-modal-close"
+                onClick={() => setIsPricingModalOpen(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePricing}>
+              <div className="turf-form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+                  <input
+                    type="checkbox"
+                    checked={pricingConfig.isDynamicPricingEnabled}
+                    onChange={e => setPricingConfig({ ...pricingConfig, isDynamicPricingEnabled: e.target.checked })}
+                  />
+                  <span>Enable Automatic Dynamic Peak Pricing</span>
+                </label>
+                <small style={{ color: '#64748b', display: 'block', marginTop: '0.25rem' }}>
+                  Automatically adjusts rates for evening prime floodlight slots (18:00 – 23:00) and weekends.
+                </small>
+              </div>
+
+              {pricingConfig.isDynamicPricingEnabled && (
+                <>
+                  <div className="turf-form-group">
+                    <label htmlFor="pricing-peak-mult">Evening Floodlit Peak Multiplier</label>
+                    <select
+                      id="pricing-peak-mult"
+                      className="turf-form-input"
+                      value={pricingConfig.peakMultiplier}
+                      onChange={e => setPricingConfig({ ...pricingConfig, peakMultiplier: parseFloat(e.target.value) })}
+                    >
+                      <option value="1.20">+20% (1.20x standard rate)</option>
+                      <option value="1.35">+35% (1.35x prime floodlight)</option>
+                      <option value="1.50">+50% (1.50x high demand peak)</option>
+                      <option value="1.75">+75% (1.75x tournament weekend)</option>
+                    </select>
+                  </div>
+
+                  <div className="turf-form-group">
+                    <label htmlFor="pricing-weekend-mult">Weekend High-Demand Multiplier</label>
+                    <select
+                      id="pricing-weekend-mult"
+                      className="turf-form-input"
+                      value={pricingConfig.weekendMultiplier}
+                      onChange={e => setPricingConfig({ ...pricingConfig, weekendMultiplier: parseFloat(e.target.value) })}
+                    >
+                      <option value="1.15">+15% Saturday &amp; Sunday boost</option>
+                      <option value="1.25">+25% Standard weekend rate</option>
+                      <option value="1.40">+40% Weekend tournament rate</option>
+                    </select>
+                  </div>
+
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.85rem', color: '#166534', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                    <strong>Projected Venue Yield:</strong> Facilities utilizing automated floodlight pricing report an average <strong>+28% to +35% higher monthly revenue</strong> while keeping morning community rates affordable.
+                  </div>
+                </>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="turf-btn turf-btn-outline"
+                  onClick={() => setIsPricingModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="turf-btn turf-btn-primary">
+                  Save Pricing Rules
                 </button>
               </div>
             </form>

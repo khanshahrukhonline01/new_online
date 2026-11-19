@@ -16,7 +16,7 @@ export interface TurfCourt {
   advanceDepositRate: number // in INR
 }
 
-export type TurfSlotStatus = 'available' | 'booked' | 'blocked'
+export type TurfSlotStatus = 'available' | 'booked' | 'blocked' | 'held'
 
 export interface TurfSlot {
   id: string
@@ -34,6 +34,9 @@ export interface TurfSlot {
   paymentStatus?: 'upi_advance_paid' | 'pay_at_venue' | 'fully_paid'
   bookedAt?: string
   blockedReason?: string
+  holdExpiresAt?: string
+  heldByPhone?: string
+  isPeakHour?: boolean
 }
 
 export interface TurfBookingRecord {
@@ -54,6 +57,17 @@ export interface TurfBookingRecord {
   upiVpa?: string
   bookedAt: string
   qrCodePayload: string
+  checkedInAt?: string
+  checkedInBy?: string
+}
+
+export interface TurfPricingConfig {
+  venueSlug: string
+  isDynamicPricingEnabled: boolean
+  peakStartHour: number // 18 (6:00 PM)
+  peakEndHour: number // 23 (11:00 PM)
+  peakMultiplier: number // 1.35
+  weekendMultiplier: number // 1.25
 }
 
 export interface TurfVenueSettings {
@@ -149,6 +163,7 @@ const STORAGE_KEYS = {
   BOOKINGS: 'khelgrid_turf_bookings_store',
   COURTS: 'khelgrid_turf_courts_store',
   SETTINGS: 'khelgrid_turf_settings_store',
+  PRICING: 'khelgrid_turf_pricing_store',
 }
 
 const memoryStore = new Map<string, string>()
@@ -161,6 +176,7 @@ export function clearTurfSlotMemoryStore(): void {
       window.localStorage.removeItem(STORAGE_KEYS.BOOKINGS)
       window.localStorage.removeItem(STORAGE_KEYS.COURTS)
       window.localStorage.removeItem(STORAGE_KEYS.SETTINGS)
+      window.localStorage.removeItem(STORAGE_KEYS.PRICING)
     } catch {
       // ignore
     }
@@ -457,6 +473,221 @@ export function saveTurfVenueSettings(settings: TurfVenueSettings): void {
   const allSettings = loadFromStorage<Record<string, TurfVenueSettings>>(STORAGE_KEYS.SETTINGS, {})
   allSettings[settings.venueSlug] = settings
   saveToStorage(STORAGE_KEYS.SETTINGS, allSettings)
+}
+
+// ---------------------------------------------------------------------------
+// Dynamic Peak Pricing & Slot Yield Engine
+// ---------------------------------------------------------------------------
+
+export function getTurfPricingConfig(venueSlug: string): TurfPricingConfig {
+  const allConfigs = loadFromStorage<Record<string, TurfPricingConfig>>(STORAGE_KEYS.PRICING, {})
+  if (allConfigs[venueSlug]) return allConfigs[venueSlug]
+  return {
+    venueSlug,
+    isDynamicPricingEnabled: true,
+    peakStartHour: 18, // 06:00 PM
+    peakEndHour: 23, // 11:00 PM
+    peakMultiplier: 1.35,
+    weekendMultiplier: 1.25,
+  }
+}
+
+export function saveTurfPricingConfig(config: TurfPricingConfig): void {
+  const allConfigs = loadFromStorage<Record<string, TurfPricingConfig>>(STORAGE_KEYS.PRICING, {})
+  allConfigs[config.venueSlug] = config
+  saveToStorage(STORAGE_KEYS.PRICING, allConfigs)
+}
+
+export function isSlotPeakHour(timeSlot: string, dateStr?: string): boolean {
+  const match = timeSlot.match(/^(\d{1,2}):\d{2}\s*(AM|PM)/i)
+  if (!match) return false
+  let hour = parseInt(match[1], 10)
+  const ampm = match[2].toUpperCase()
+  if (ampm === 'PM' && hour !== 12) hour += 12
+  if (ampm === 'AM' && hour === 12) hour = 0
+
+  const isEvening = hour >= 18 && hour < 23
+  if (dateStr) {
+    const d = new Date(dateStr)
+    const day = d.getDay()
+    const isWeekend = day === 0 || day === 6
+    if (isWeekend) return true
+  }
+  return isEvening
+}
+
+export function calculateSlotDynamicPrice(
+  court: TurfCourt,
+  timeSlot: string,
+  dateStr?: string,
+  customConfig?: TurfPricingConfig
+): { hourlyPrice: number; advanceDeposit: number; isPeak: boolean; peakLabel: string } {
+  const config = customConfig || getTurfPricingConfig(court.venueSlug)
+  if (!config.isDynamicPricingEnabled) {
+    return {
+      hourlyPrice: court.defaultHourlyRate,
+      advanceDeposit: court.advanceDepositRate,
+      isPeak: false,
+      peakLabel: 'Standard Rate',
+    }
+  }
+
+  const isPeak = isSlotPeakHour(timeSlot, dateStr)
+  if (!isPeak) {
+    return {
+      hourlyPrice: court.defaultHourlyRate,
+      advanceDeposit: court.advanceDepositRate,
+      isPeak: false,
+      peakLabel: 'Off-Peak Rate',
+    }
+  }
+
+  const mult = config.peakMultiplier || 1.35
+  const roundedPrice = Math.round((court.defaultHourlyRate * mult) / 50) * 50
+  const roundedDeposit = Math.round((court.advanceDepositRate * mult) / 50) * 50
+
+  return {
+    hourlyPrice: roundedPrice,
+    advanceDeposit: roundedDeposit,
+    isPeak: true,
+    peakLabel: '⚡ Prime Floodlit Peak',
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 10-Minute Cart Slot Hold Engine (Anti-Collision Lock)
+// ---------------------------------------------------------------------------
+
+export function holdTurfSlot(
+  venueSlug: string,
+  date: string,
+  courtId: string,
+  timeSlot: string,
+  customerPhone: string
+): { success: boolean; slot?: TurfSlot; message?: string } {
+  const resolvedDate = normalizeDate(date)
+  const slotId = `${venueSlug}_${courtId}_${resolvedDate}_${timeSlot}`
+  const storedSlots = loadFromStorage<TurfSlot[]>(STORAGE_KEYS.SLOTS, [])
+  const existing = storedSlots.find(s => s.id === slotId)
+
+  if (existing?.status === 'booked') {
+    return { success: false, message: 'This court slot is already booked.' }
+  }
+  if (existing?.status === 'blocked') {
+    return { success: false, message: 'This slot is reserved for maintenance.' }
+  }
+
+  if (existing?.status === 'held' && existing.holdExpiresAt) {
+    const isStillHeld = new Date(existing.holdExpiresAt).getTime() > Date.now()
+    if (isStillHeld && existing.heldByPhone !== customerPhone) {
+      return { success: false, message: 'This slot is currently held by another user in payment checkout.' }
+    }
+  }
+
+  const courts = getTurfCourts(venueSlug)
+  const court = courts.find(c => c.id === courtId) || courts[0]
+  const pricing = calculateSlotDynamicPrice(court, timeSlot, resolvedDate)
+
+  const holdExpiry = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+  const heldSlot: TurfSlot = {
+    id: slotId,
+    venueSlug,
+    courtId,
+    date: resolvedDate,
+    timeSlot,
+    status: 'held',
+    hourlyPrice: pricing.hourlyPrice,
+    advanceDeposit: pricing.advanceDeposit,
+    holdExpiresAt: holdExpiry,
+    heldByPhone: customerPhone,
+    isPeakHour: pricing.isPeak,
+  }
+
+  const updatedSlots = [...storedSlots.filter(s => s.id !== slotId), heldSlot]
+  saveToStorage(STORAGE_KEYS.SLOTS, updatedSlots)
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('khelgrid:venue-booked', { detail: heldSlot }))
+  }
+
+  return { success: true, slot: heldSlot }
+}
+
+export function releaseExpiredHolds(venueSlug: string, date: string): TurfSlot[] {
+  const resolvedDate = normalizeDate(date)
+  const storedSlots = loadFromStorage<TurfSlot[]>(STORAGE_KEYS.SLOTS, [])
+  const now = Date.now()
+  let hasChanges = false
+
+  const updatedSlots = storedSlots.map(s => {
+    if (s.venueSlug === venueSlug && s.date === resolvedDate && s.status === 'held' && s.holdExpiresAt) {
+      if (new Date(s.holdExpiresAt).getTime() <= now) {
+        hasChanges = true
+        return {
+          ...s,
+          status: 'available' as TurfSlotStatus,
+          holdExpiresAt: undefined,
+          heldByPhone: undefined,
+        }
+      }
+    }
+    return s
+  })
+
+  if (hasChanges) {
+    saveToStorage(STORAGE_KEYS.SLOTS, updatedSlots)
+  }
+  return updatedSlots.filter(s => s.venueSlug === venueSlug && s.date === resolvedDate)
+}
+
+// ---------------------------------------------------------------------------
+// Universal Turf Bookings & On-Ground Check-In Desk
+// ---------------------------------------------------------------------------
+
+export function getAllTurfBookings(): TurfBookingRecord[] {
+  return loadFromStorage<TurfBookingRecord[]>(STORAGE_KEYS.BOOKINGS, [])
+}
+
+export function lookupTurfBooking(bookingId: string): TurfBookingRecord | null {
+  const clean = bookingId.trim().toUpperCase()
+  const all = getAllTurfBookings()
+  return all.find(b => b.bookingId.toUpperCase() === clean) || null
+}
+
+export function admitTurfBooking(
+  bookingId: string,
+  gatekeeperName: string = 'Turf Ground Reception'
+): { success: boolean; message: string; booking?: TurfBookingRecord } {
+  const clean = bookingId.trim().toUpperCase()
+  const all = getAllTurfBookings()
+  const existing = all.find(b => b.bookingId.toUpperCase() === clean)
+
+  if (!existing) {
+    return { success: false, message: 'Turf booking voucher not found' }
+  }
+
+  if (existing.checkedInAt) {
+    return {
+      success: false,
+      message: `Turf court was already admitted at ${new Date(existing.checkedInAt).toLocaleTimeString()}${existing.checkedInBy ? ` by ${existing.checkedInBy}` : ''}.`,
+      booking: existing,
+    }
+  }
+
+  const updated: TurfBookingRecord = {
+    ...existing,
+    checkedInAt: new Date().toISOString(),
+    checkedInBy: gatekeeperName,
+  }
+
+  const updatedList = all.map(b => (b.bookingId === existing.bookingId ? updated : b))
+  saveToStorage(STORAGE_KEYS.BOOKINGS, updatedList)
+
+  return {
+    success: true,
+    message: `Court access confirmed for ${existing.customerName} on ${existing.courtName}!`,
+    booking: updated,
+  }
 }
 
 export function generateWhatsAppTurfConfirmationUrl(booking: TurfBookingRecord, managerPhone?: string): string {

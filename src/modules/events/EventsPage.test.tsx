@@ -75,6 +75,7 @@ describe('Events & State Tournaments Module', () => {
     expect(markup).toContain(event.title)
     expect(markup).toContain('Athlete Full Name')
     expect(markup).toContain('WhatsApp Contact Phone')
+    expect(markup).toContain('Squad / Team Roster Entry')
     expect(markup).toContain('DPDP Act 2023 &amp; POCSO Safe Sports')
   })
 })

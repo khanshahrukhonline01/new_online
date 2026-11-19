@@ -179,5 +179,25 @@ describe('platform route coverage', () => {
       canonicalPath: '/turf-calendar',
       slug: 'Turf & Facility Slot Booking Calendar',
     })
+    expect(resolveRoute('/verify-pass')).toEqual({
+      name: 'feature',
+      canonicalPath: '/verify-pass',
+      slug: 'Gate Pass & Check-In Desk',
+    })
+    expect(resolveRoute('/gate-checkin')).toEqual({
+      name: 'feature',
+      canonicalPath: '/gate-checkin',
+      slug: 'Gate Pass & Check-In Desk',
+    })
+    expect(resolveRoute('/my-passes')).toEqual({
+      name: 'feature',
+      canonicalPath: '/my-passes',
+      slug: 'My Passes & Booking Vault',
+    })
+    expect(resolveRoute('/passes')).toEqual({
+      name: 'feature',
+      canonicalPath: '/passes',
+      slug: 'My Passes & Booking Vault',
+    })
   })
 })

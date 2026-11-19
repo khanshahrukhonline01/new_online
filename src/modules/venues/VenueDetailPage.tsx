@@ -11,7 +11,7 @@ import VerificationClaimModal from '../../shared/components/VerificationClaimMod
 import { CommunityReviewsSection } from '../../shared/components/CommunityReviewsSection'
 import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
 import { parseInrPrice, recordVenueSlotBooking, getBookedVenueSlots, fetchBookedVenueSlots } from '../../shared/payments/paymentService'
-import { getTurfCourts, getTurfSlots } from './turfSlotManager'
+import { getTurfCourts, getTurfSlots, isSlotPeakHour } from './turfSlotManager'
 import type { PaymentItem, VenueBookingResult } from '../../shared/payments/paymentTypes'
 import './VenueDetailPage.css'
 
@@ -510,9 +510,16 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1e293b' }}>{slot.timeSlot}</span>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: isBooked ? '#64748b' : isBlocked ? '#94a3b8' : '#059669', textTransform: 'uppercase' }}>
-                        {isBooked ? 'Reserved' : isBlocked ? 'Maintenance' : 'Open'}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {isSlotPeakHour(slot.timeSlot, selectedDate) && !isBooked && !isBlocked && (
+                          <span style={{ fontSize: '0.65rem', background: '#fef3c7', color: '#b45309', padding: '1px 4px', borderRadius: '4px', fontWeight: 700 }}>
+                            ⚡ Peak
+                          </span>
+                        )}
+                        <span style={{ fontSize: '0.7rem', fontWeight: 800, color: isBooked ? '#64748b' : isBlocked ? '#94a3b8' : '#059669', textTransform: 'uppercase' }}>
+                          {isBooked ? 'Reserved' : isBlocked ? 'Maintenance' : 'Open'}
+                        </span>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
                       <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>₹{slot.hourlyPrice}/hr</span>
@@ -738,11 +745,20 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
+                  <a
+                    href="/my-passes"
+                    onClick={e => onNavigate?.(e, '/my-passes')}
+                    className="venue-btn venue-btn-book"
+                    style={{ flex: 1, minWidth: '140px', justifyContent: 'center', background: '#2563eb' }}
+                  >
+                    <SiteIcon name="shield-check" size={15} />
+                    <span>View in My Passes</span>
+                  </a>
                   <button
                     type="button"
                     className="kg-btn-cancel"
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, minWidth: '130px' }}
                     onClick={() => window.print?.()}
                   >
                     <SiteIcon name="download" size={15} />
@@ -751,7 +767,7 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                   <button
                     type="button"
                     className="venue-btn venue-btn-book"
-                    style={{ flex: 1, justifyContent: 'center' }}
+                    style={{ flex: 'none', padding: '0 16px' }}
                     onClick={() => setIsBookingModalOpen(false)}
                   >
                     Done

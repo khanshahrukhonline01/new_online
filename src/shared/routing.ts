@@ -44,6 +44,8 @@ const featurePages: Record<string, string> = {
   '/pricing': 'Pricing & Memberships', '/mobile-app': 'KhelGrid Mobile App', '/careers': 'Careers',
   '/academy-hub': 'Academy Admissions & Operations Hub', '/academies/manage': 'Academy Admissions & Operations Hub',
   '/turf-calendar': 'Turf & Facility Slot Booking Calendar', '/venues/manage': 'Turf & Facility Slot Booking Calendar', '/turf': 'Turf & Facility Slot Booking Calendar',
+  '/verify-pass': 'Gate Pass & Check-In Desk', '/gate-checkin': 'Gate Pass & Check-In Desk',
+  '/my-passes': 'My Passes & Booking Vault', '/passes': 'My Passes & Booking Vault',
   '/partners': 'Partner with KhelGrid', '/partner': 'Partner with KhelGrid', '/about': 'About KhelGrid', '/contact': 'Contact KhelGrid',
   '/privacy': 'Privacy Policy', '/terms': 'Terms of Use', '/cookies': 'Cookie Policy',
   '/ipr-policy': 'IPR & Copyright Policy', '/cancellation-policy': 'Cancellation Policy',

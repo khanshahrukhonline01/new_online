@@ -73,6 +73,8 @@ export interface AcademyTrialPass {
   qrCodePayload: string
   status: 'valid' | 'used' | 'cancelled'
   issuedAt: string
+  checkedInAt?: string
+  checkedInBy?: string
 }
 
 export interface AcademySettings {
@@ -492,6 +494,70 @@ export function recordStudentPayment(studentId: string, amount?: number, method:
   const updatedAll = allStudents.map(s => (s.id === studentId ? updatedStudent : s))
   saveToStorage(STORAGE_KEYS.STUDENTS, updatedAll)
   return updatedStudent
+}
+
+export function getAllAcademyTrialPasses(): AcademyTrialPass[] {
+  return loadFromStorage<AcademyTrialPass[]>(STORAGE_KEYS.PASSES, [])
+}
+
+export function lookupTrialPass(passNumber: string): AcademyTrialPass | null {
+  const clean = passNumber.trim().toUpperCase()
+  const all = getAllAcademyTrialPasses()
+  return all.find(p => p.passNumber.toUpperCase() === clean || p.id.toUpperCase() === clean) || null
+}
+
+export function admitTrialPass(
+  passNumber: string,
+  gatekeeperName: string = 'Ground Gatekeeper'
+): { success: boolean; message: string; pass?: AcademyTrialPass } {
+  const clean = passNumber.trim().toUpperCase()
+  const all = getAllAcademyTrialPasses()
+  const existing = all.find(p => p.passNumber.toUpperCase() === clean || p.id.toUpperCase() === clean)
+
+  if (!existing) {
+    return { success: false, message: 'Selection trial pass not found' }
+  }
+
+  if (existing.status === 'used') {
+    return {
+      success: false,
+      message: `Pass was already admitted at ${existing.checkedInAt ? new Date(existing.checkedInAt).toLocaleTimeString() : 'the ground'}${existing.checkedInBy ? ` by ${existing.checkedInBy}` : ''}.`,
+      pass: existing,
+    }
+  }
+
+  if (existing.status === 'cancelled') {
+    return { success: false, message: 'This selection pass has been cancelled by the academy.', pass: existing }
+  }
+
+  const updated: AcademyTrialPass = {
+    ...existing,
+    status: 'used',
+    checkedInAt: new Date().toISOString(),
+    checkedInBy: gatekeeperName,
+  }
+
+  const updatedList = all.map(p => (p.id === existing.id ? updated : p))
+  saveToStorage(STORAGE_KEYS.PASSES, updatedList)
+
+  // Sync to Academy CRM lead if matching
+  try {
+    const leads = getAcademyLeads(existing.academySlug)
+    const matchingLead = leads.find(
+      l => l.studentName.toLowerCase() === existing.studentName.toLowerCase() || l.parentPhone === existing.parentPhone
+    )
+    if (matchingLead) {
+      updateLeadStatus(matchingLead.id, 'enrolled')
+    }
+  } catch {
+    // ignore
+  }
+
+  return {
+    success: true,
+    message: `Athlete ${existing.studentName} successfully admitted for ${existing.sport} trial at ${existing.academyName}!`,
+    pass: updated,
+  }
 }
 
 export function getAcademyTrialPasses(academySlug: string): AcademyTrialPass[] {

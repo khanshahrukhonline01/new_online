@@ -68,6 +68,8 @@ const CoachesPage = lazy(() => import('./modules/coaches/CoachesPage'))
 const EventsPage = lazy(() => import('./modules/events/EventsPage'))
 const ScoutPortalPage = lazy(() => import('./modules/scouting/ScoutPortalPage'))
 const AthleteVerificationPage = lazy(() => import('./modules/verification/AthleteVerificationPage'))
+const GateCheckInPage = lazy(() => import('./modules/verification/GateCheckInPage').then(m => ({ default: m.GateCheckInPage })))
+const MyPassesVaultPage = lazy(() => import('./modules/passes/MyPassesVaultPage').then(m => ({ default: m.MyPassesVaultPage })))
 
 // Code-split heavyweight modal dialogs
 const NotificationCenterDrawer = lazy(() => import('./shared/components/NotificationCenterDrawer'))
@@ -317,6 +319,8 @@ export default function App() {
       else if (match.canonicalPath === '/train') page = <AcademiesPage onOpenIntake={() => openListingSubmission('academy')} onNavigate={navigate} />
       else if (match.canonicalPath === '/academy-hub' || match.canonicalPath === '/academies/manage') page = <AcademyHubPage onNavigate={navigate} />
       else if (match.canonicalPath === '/turf-calendar' || match.canonicalPath === '/venues/manage' || match.canonicalPath === '/turf') page = <TurfSlotCalendarPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/verify-pass' || match.canonicalPath === '/gate-checkin') page = <GateCheckInPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/my-passes' || match.canonicalPath === '/passes') page = <MyPassesVaultPage onNavigate={navigate} />
       else if (match.canonicalPath === '/notifications') page = (
         <section className="content-page">
           <p className="eyebrow">YOUR UPDATES &amp; ALERTS</p>
