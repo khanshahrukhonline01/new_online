@@ -262,6 +262,22 @@ export function AdminControlPanelPage() {
       ))
       setSelected({ ...item, version: publicationDetails.version })
       setVerificationStates(prev => ({ ...prev, [item.id]: publicationDetails.verification_status }))
+      const defaultEvidenceType =
+        item.listing_type === 'coach' ? 'coach_qualification' :
+        item.listing_type === 'venue' ? 'venue_address' :
+        item.listing_type === 'academy' ? 'academy_identity' :
+        item.listing_type === 'event' ? 'event_details' :
+        item.listing_type === 'pickup_game' ? 'venue_address' :
+        'official_source'
+      setEvidenceType(defaultEvidenceType)
+      if (item.source_url) {
+        const clean = item.source_url.trim()
+        setEvidenceUrl(clean.startsWith('http://') ? clean.replace(/^http:\/\//i, 'https://') : clean.startsWith('https://') ? clean : `https://${clean}`)
+        setEvidenceDescription(`Official source provided by submitter for ${item.title}`)
+      } else {
+        setEvidenceUrl('')
+        setEvidenceDescription('')
+      }
     } catch (cause) {
       setEvidence([])
       setStructured({})
@@ -368,7 +384,13 @@ export function AdminControlPanelPage() {
     if (!selected) return
     setBusy(true); setError(''); setNotice('')
     try {
-      await addListingEvidence({ submissionId: selected.id, evidenceType, evidenceUrl, description: evidenceDescription })
+      const rawUrl = evidenceUrl.trim()
+      const cleanUrl = rawUrl.startsWith('http://')
+        ? rawUrl.replace(/^http:\/\//i, 'https://')
+        : rawUrl.startsWith('https://')
+          ? rawUrl
+          : `https://${rawUrl}`
+      await addListingEvidence({ submissionId: selected.id, evidenceType, evidenceUrl: cleanUrl, description: evidenceDescription })
       setEvidence(await getListingEvidence(selected.id))
       setSelected(prev => prev ? { ...prev, version: prev.version + 1 } : prev)
       setVerificationStates(prev => ({ ...prev, [selected.id]: 'unverified' }))
@@ -789,7 +811,32 @@ export function AdminControlPanelPage() {
             <div id="evidence" className="admin-control-card">
               <p className="eyebrow">WORKFLOW / 02</p><h3>Evidence register</h3>
               <p>Evidence URLs and reviewer notes are private. A verified decision requires supporting evidence and no pending or contradictory evidence.</p>
+
+              <div style={{ margin: '0.5rem 0 1rem 0', padding: '0.75rem', background: 'rgba(15, 23, 42, 0.55)', border: '1px solid rgba(148, 163, 184, 0.25)', borderRadius: '6px', fontSize: '0.82rem' }}>
+                <strong style={{ display: 'block', color: '#38bdf8', marginBottom: '0.3rem' }}>How to make the correct moderation decision:</strong>
+                <ul style={{ margin: '0 0 0 1.25rem', padding: 0, lineHeight: '1.45', color: '#cbd5e1' }}>
+                  <li><strong>Authentic listing with official source:</strong> Enter the official HTTPS URL confirming credentials or address, click <em>Add evidence</em>, review outcome as <em>Supports claim</em>, and click <em>Mark evidence verified</em> below.</li>
+                  <li><strong>Test, spam, or unverifiable listing:</strong> If no official proof exists or this is a test entry, the correct decision is to <strong>REJECT</strong>: under Workflow 01 click <em>Reject listing</em>, and click <em>Reject verification</em> below. Unverified records remain safely excluded from the public website.</li>
+                </ul>
+              </div>
+
               {['pending_review', 'under_review', 'approved', 'unpublished'].includes(selected.status) ? <form onSubmit={handleAddEvidence} className="admin-control-form">
+                {selected.source_url && (
+                  <div style={{ marginBottom: '0.75rem', fontSize: '0.82rem' }}>
+                    <span style={{ color: '#94a3b8' }}>Submitted URL: </span>
+                    <a href={selected.source_url} target="_blank" rel="noreferrer" style={{ color: '#38bdf8' }}>{selected.source_url} ↗</a>
+                    <button
+                      type="button"
+                      style={{ marginLeft: '0.5rem', padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.4)', borderRadius: '4px', color: '#7dd3fc', cursor: 'pointer' }}
+                      onClick={() => {
+                        const clean = selected.source_url?.trim() || ''
+                        setEvidenceUrl(clean.startsWith('http://') ? clean.replace(/^http:\/\//i, 'https://') : clean.startsWith('https://') ? clean : `https://${clean}`)
+                      }}
+                    >
+                      Use as evidence URL
+                    </button>
+                  </div>
+                )}
                 <label>Evidence type<select value={evidenceType} onChange={e => setEvidenceType(e.target.value)}>{evidenceTypes.map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
                 <label>HTTPS evidence URL<input type="url" value={evidenceUrl} onChange={e => setEvidenceUrl(e.target.value)} placeholder="https://official-source.gov.in/…" required /></label>
                 <label>What does this evidence establish?<textarea value={evidenceDescription} onChange={e => setEvidenceDescription(e.target.value)} minLength={10} maxLength={2000} required /></label>
