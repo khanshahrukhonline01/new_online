@@ -3918,3 +3918,212 @@ export async function getListingPublicationDetails(submissionId: string): Promis
   }
 }
 
+export interface GlobalModeratorActivityItem {
+  id: string
+  submission_id: string
+  reference_number: string
+  listing_title: string
+  listing_type: string
+  city: string | null
+  action: string
+  actor_id: string | null
+  from_status: string | null
+  to_status: string | null
+  notes: string | null
+  metadata?: Record<string, unknown>
+  created_at: string
+}
+
+export interface OperationsKpiSummary {
+  totalPublished: number
+  totalSubmissions: number
+  pendingCount: number
+  underReviewCount: number
+  changesRequestedCount: number
+  approvedCount: number
+  publishedCount: number
+  rejectedCount: number
+  unpublishedCount: number
+  sportsBreakdown: Record<string, number>
+  categoryBreakdown: Record<string, number>
+  cityBreakdown: Record<string, number>
+}
+
+export async function getOperationsKpiSummary(): Promise<OperationsKpiSummary> {
+  const queue = await getAdminModerationQueue({ limit: 200 })
+  const submissions = queue.pendingSubmissions || []
+
+  const sportsMap: Record<string, number> = {
+    Cricket: 0,
+    Football: 0,
+    Badminton: 0,
+    Turf: 0,
+    Basketball: 0,
+    Athletics: 0,
+    Tennis: 0,
+    Swimming: 0,
+    Other: 0,
+  }
+
+  const categoryMap: Record<string, number> = {
+    pickup_game: 0,
+    venue: 0,
+    opportunity: 0,
+    coach: 0,
+    academy: 0,
+    event: 0,
+    sport: 0,
+  }
+
+  const cityMap: Record<string, number> = {}
+
+  for (const sub of submissions) {
+    const cat = sub.listing_type || 'other'
+    categoryMap[cat] = (categoryMap[cat] || 0) + 1
+
+    const city = (sub.city && sub.city.trim().toLowerCase() !== 'india' ? sub.city.trim() : 'Delhi')
+    cityMap[city] = (cityMap[city] || 0) + 1
+
+    const text = `${sub.title} ${sub.details || ''}`.toLowerCase()
+    if (text.includes('cricket')) sportsMap.Cricket++
+    else if (text.includes('football') || text.includes('soccer')) sportsMap.Football++
+    else if (text.includes('badminton')) sportsMap.Badminton++
+    else if (text.includes('turf') || text.includes('ground') || text.includes('arena')) sportsMap.Turf++
+    else if (text.includes('basketball')) sportsMap.Basketball++
+    else if (text.includes('athletics') || text.includes('running') || text.includes('marathon')) sportsMap.Athletics++
+    else if (text.includes('tennis') || text.includes('pickleball')) sportsMap.Tennis++
+    else if (text.includes('swimming') || text.includes('pool')) sportsMap.Swimming++
+    else sportsMap.Other++
+  }
+
+  const totalPub =
+    (queue.stats.publishedCount ?? 0) +
+    (queue.stats.totalVenues ?? 0) +
+    (queue.stats.totalAcademies ?? 0) +
+    (queue.stats.totalCoaches ?? 0) +
+    (queue.stats.totalEvents ?? 0)
+
+  return {
+    totalPublished: Math.max(totalPub, queue.stats.publishedCount ?? 0),
+    totalSubmissions: queue.totalCount ?? submissions.length,
+    pendingCount: queue.stats.pendingSubmissionsCount ?? 0,
+    underReviewCount: queue.stats.underReviewCount ?? 0,
+    changesRequestedCount: queue.stats.changesRequestedCount ?? 0,
+    approvedCount: queue.stats.approvedCount ?? 0,
+    publishedCount: queue.stats.publishedCount ?? 0,
+    rejectedCount: queue.stats.rejectedCount ?? 0,
+    unpublishedCount: queue.stats.unpublishedCount ?? 0,
+    sportsBreakdown: sportsMap,
+    categoryBreakdown: categoryMap,
+    cityBreakdown: cityMap,
+  }
+}
+
+export async function getRecentModerationActivity(limit = 40): Promise<GlobalModeratorActivityItem[]> {
+  const queue = await getAdminModerationQueue({ limit: 50, sortBy: 'updated_at', sortDir: 'desc' })
+  const submissions = queue.pendingSubmissions || []
+
+  const activityList: GlobalModeratorActivityItem[] = []
+
+  const topSlice = submissions.slice(0, 20)
+  const auditResults = await Promise.allSettled(
+    topSlice.map(sub => getListingSubmissionAuditTrail(sub.id))
+  )
+
+  auditResults.forEach((res, idx) => {
+    const sub = topSlice[idx]
+    if (res.status === 'fulfilled' && Array.isArray(res.value) && res.value.length > 0) {
+      for (const audit of res.value) {
+        activityList.push({
+          id: audit.id,
+          submission_id: sub.id,
+          reference_number: sub.reference_number,
+          listing_title: sub.title,
+          listing_type: sub.listing_type,
+          city: sub.city,
+          action: audit.action,
+          actor_id: audit.actor_id,
+          from_status: audit.from_status,
+          to_status: audit.to_status,
+          notes: audit.notes,
+          metadata: audit.metadata,
+          created_at: audit.created_at,
+        })
+      }
+    } else {
+      if (sub.published_at) {
+        activityList.push({
+          id: `pub-${sub.id}`,
+          submission_id: sub.id,
+          reference_number: sub.reference_number,
+          listing_title: sub.title,
+          listing_type: sub.listing_type,
+          city: sub.city,
+          action: 'published',
+          actor_id: null,
+          from_status: 'approved',
+          to_status: 'published',
+          notes: 'Listing published to live public catalogue.',
+          created_at: sub.published_at,
+        })
+      }
+      activityList.push({
+        id: `created-${sub.id}`,
+        submission_id: sub.id,
+        reference_number: sub.reference_number,
+        listing_title: sub.title,
+        listing_type: sub.listing_type,
+        city: sub.city,
+        action: sub.status === 'pending_review' ? 'submitted' : sub.status,
+        actor_id: null,
+        from_status: null,
+        to_status: sub.status,
+        notes: 'Listing submitted for community review.',
+        created_at: sub.created_at,
+      })
+    }
+  })
+
+  activityList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  return activityList.slice(0, limit)
+}
+
+export async function bulkApproveListingSubmissions(
+  ids: string[],
+  notes?: string
+): Promise<{ succeeded: string[]; failed: Array<{ id: string; error: string }> }> {
+  const succeeded: string[] = []
+  const failed: Array<{ id: string; error: string }> = []
+
+  for (const id of ids) {
+    try {
+      await approveListingSubmission(id, notes || 'Bulk approved via Operations Dashboard')
+      succeeded.push(id)
+    } catch (err) {
+      failed.push({ id, error: err instanceof Error ? err.message : 'Approval failed' })
+    }
+  }
+  return { succeeded, failed }
+}
+
+export async function bulkTagListingSubmissions(
+  items: Array<{ id: string; currentStructured?: Record<string, unknown> }>,
+  tags: { sport?: string; city?: string }
+): Promise<{ succeeded: string[]; failed: Array<{ id: string; error: string }> }> {
+  const succeeded: string[] = []
+  const failed: Array<{ id: string; error: string }> = []
+
+  for (const item of items) {
+    try {
+      const merged = { ...(item.currentStructured || {}) }
+      if (tags.sport?.trim()) merged.sport = tags.sport.trim()
+      if (tags.city?.trim()) merged.city = tags.city.trim()
+      await saveListingPublicationDetails(item.id, merged)
+      succeeded.push(item.id)
+    } catch (err) {
+      failed.push({ id: item.id, error: err instanceof Error ? err.message : 'Tagging failed' })
+    }
+  }
+  return { succeeded, failed }
+}
+

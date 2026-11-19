@@ -146,6 +146,7 @@ export function AdminModerationPage({
   const [actionNotes, setActionNotes] = useState('')
   const [targetSlug, setTargetSlug] = useState('')
   const [publishStructured, setPublishStructured] = useState<Record<string, string>>({})
+  const [selectedSubIds, setSelectedSubIds] = useState<Set<string>>(new Set())
 
   const preparePublishDialog = async (item: ModeratorQueueItem) => {
     setSelectedItem(item)
@@ -899,6 +900,42 @@ export function AdminModerationPage({
             </div>
           </div>
 
+          {/* Bulk Selection Bar */}
+          <div style={{ margin: '0.75rem 0 1rem', padding: '0.6rem 1rem', background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', fontWeight: 650, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={selectedSubIds.size === paginatedItems.length && paginatedItems.length > 0}
+                onChange={() => {
+                  if (selectedSubIds.size === paginatedItems.length) setSelectedSubIds(new Set())
+                  else setSelectedSubIds(new Set(paginatedItems.map(p => p.id)))
+                }}
+              />
+              Select Page ({paginatedItems.length})
+            </label>
+
+            {selectedSubIds.size > 0 && (
+              <span style={{ fontSize: '0.82rem', color: '#0284c7', fontWeight: 700 }}>
+                {selectedSubIds.size} selected
+              </span>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="admin-btn admin-btn-secondary"
+                disabled={selectedSubIds.size === 0}
+                style={{ fontSize: '0.78rem', padding: '0.3rem 0.6rem' }}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('khelgrid-admin-switch-workspace', { detail: { workspace: 'analytics' } }))
+                }}
+              >
+                <SiteIcon name="chart" size={13} />
+                Open Operations &amp; Bulk Actions ({selectedSubIds.size}) →
+              </button>
+            </div>
+          </div>
+
           {/* Submissions List */}
           {paginatedItems.length === 0 ? (
             <div className="state-panel">
@@ -909,7 +946,21 @@ export function AdminModerationPage({
               {paginatedItems.map(sub => (
                 <article key={sub.id} className="admin-mod-card">
                   <div className="admin-mod-card-top">
-                    <div className="admin-mod-card-title-group">
+                    <div className="admin-mod-card-title-group" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedSubIds.has(sub.id)}
+                        onChange={() => {
+                          setSelectedSubIds(prev => {
+                            const next = new Set(prev)
+                            if (next.has(sub.id)) next.delete(sub.id)
+                            else next.add(sub.id)
+                            return next
+                          })
+                        }}
+                        style={{ width: 16, height: 16, cursor: 'pointer' }}
+                        aria-label={`Select ${sub.title}`}
+                      />
                       <span className="admin-ref-code">{sub.reference_number}</span>
                       <span className={`admin-type-pill ${sub.listing_type}`}>{sub.listing_type}</span>
                       <h3 className="admin-item-title">{sub.title}</h3>

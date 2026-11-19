@@ -18,6 +18,7 @@ describe('AdminApp Root Shell & Dual Workspace Navigation', () => {
       // Workspace navigation tabs
       expect(html).toContain('Command Centre')
       expect(html).toContain('Listing &amp; Chronicle Desk')
+      expect(html).toContain('Operations &amp; KPI Analytics')
 
       // Initial default workspace state
       expect(html).toContain('Checking secure moderation access')

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AdminControlPanelPage } from '../../../src/modules/admin/AdminControlPanelPage'
 import { AdminModerationPage } from '../../../src/modules/admin/AdminModerationPage'
+import { AdminAnalyticsDashboard } from '../../../src/modules/admin/AdminAnalyticsDashboard'
 import { SiteIcon } from '../../../src/shared/components/SiteIcon'
 import { usePreferences } from '../../../src/shared/usePreferences'
 
@@ -14,7 +15,7 @@ export function AdminApp() {
     .replace(/^["']|["']$/g, '')
     .replace(/\/$/, '')
 
-  const [activeWorkspace, setActiveWorkspace] = useState<'command' | 'moderation_desk'>('command')
+  const [activeWorkspace, setActiveWorkspace] = useState<'command' | 'moderation_desk' | 'analytics'>('command')
 
   useEffect(() => {
     document.title = 'KhelGrid Admin Operations · admin.khelgrid.com'
@@ -22,7 +23,7 @@ export function AdminApp() {
 
   useEffect(() => {
     const handleSwitchWorkspace = (e: Event) => {
-      const detail = (e as CustomEvent<{ workspace?: 'command' | 'moderation_desk' }>).detail
+      const detail = (e as CustomEvent<{ workspace?: 'command' | 'moderation_desk' | 'analytics' }>).detail
       if (detail?.workspace) {
         setActiveWorkspace(detail.workspace)
       }
@@ -74,6 +75,14 @@ export function AdminApp() {
             <SiteIcon name="check-circle" size={15} />
             <span>Listing &amp; Chronicle Desk</span>
           </button>
+          <button
+            type="button"
+            className={`admin-shell-tab-btn ${activeWorkspace === 'analytics' ? 'is-active' : ''}`}
+            onClick={() => setActiveWorkspace('analytics')}
+          >
+            <SiteIcon name="chart" size={15} />
+            <span>Operations &amp; KPI Analytics</span>
+          </button>
         </nav>
 
         <div className="admin-shell-meta">
@@ -110,8 +119,10 @@ export function AdminApp() {
       <div className="admin-shell-content">
         {activeWorkspace === 'command' ? (
           <AdminControlPanelPage />
-        ) : (
+        ) : activeWorkspace === 'moderation_desk' ? (
           <AdminModerationPage />
+        ) : (
+          <AdminAnalyticsDashboard />
         )}
       </div>
     </main>
