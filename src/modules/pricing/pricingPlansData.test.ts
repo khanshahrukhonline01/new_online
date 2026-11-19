@@ -17,6 +17,11 @@ describe('membership pricing catalogue consistency', () => {
     }
     const plans = [...ATHLETE_PLANS, ...ACADEMY_PLANS, ...VENUE_PLANS, ...ORGANIZER_BOOST_PLANS]
     for (const plan of plans) {
+      if (plan.isFree) {
+        expect(plan.monthlyPrice, plan.id + ' monthly free').toBe(0)
+        expect(plan.annualPrice, plan.id + ' annual free').toBe(0)
+        continue
+      }
       const canonical = expected[plan.id]
       if (!canonical) continue
       expect(plan.monthlyPrice, plan.id + ' monthly').toBe(canonical.monthly)

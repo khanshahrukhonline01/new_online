@@ -8,6 +8,7 @@ import {
   submitAcademyEnquiry,
   type AcademyEnquiry,
 } from '../../integrations/supabase/athlete-profile-client'
+import { addAcademyLead, getAcademySettings } from './academySaaSClient'
 import type { AthleteProfile } from '../../shared/domain'
 import './AcademyEnquiryModal.css'
 
@@ -95,6 +96,25 @@ export function AcademyEnquiryModal({
       })
 
       setConfirmedEnquiry(res.enquiry)
+      // Mirror to Academy SaaS CRM inbox
+      try {
+        addAcademyLead({
+          academySlug: academy.slug,
+          parentName: fullName.trim(),
+          parentPhone: phone.trim(),
+          parentEmail: email.trim() || undefined,
+          studentName: fullName.trim(),
+          studentAge: ageCategory,
+          sport: sportName,
+          batchType,
+          batchName: res.enquiry.batchLabel,
+          requestType,
+          status: 'new',
+          notes: statement,
+        })
+      } catch {
+        // ignore CRM sync error
+      }
       if (onSuccess) onSuccess(res.enquiry)
     } catch {
       setErrorMsg('Failed to submit admission enquiry. Please verify your connection.')
@@ -186,6 +206,37 @@ export function AcademyEnquiryModal({
                 The academy coaching director will contact you via WhatsApp or phone call within 24 hours to schedule
                 your on-ground batch induction. Please bring appropriate sporting kit and valid age proof.
               </p>
+
+              {(() => {
+                const settings = getAcademySettings(academy.slug, academy.name)
+                const phone = settings.directorWhatsApp.replace(/\D/g, '')
+                const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(
+                  `Hi, I just submitted an admission enquiry on KhelGrid for ${confirmedEnquiry.athleteName} for ${confirmedEnquiry.sport} (${confirmedEnquiry.batchLabel}). Enquiry Ref: ${confirmedEnquiry.enquiryToken}.`
+                )}`
+                return (
+                  <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                    <a
+                      href={waUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="enquiry-btn"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        background: '#25d366',
+                        color: '#ffffff',
+                        textDecoration: 'none',
+                        fontWeight: 700,
+                        padding: '0.75rem 1.25rem',
+                        borderRadius: '8px',
+                      }}
+                    >
+                      <span aria-hidden="true">💬</span> Connect with Academy Director on WhatsApp
+                    </a>
+                  </div>
+                )
+              })()}
             </div>
 
             <div className="academy-enquiry-footer" style={{ borderTop: 'none', paddingTop: 0 }}>

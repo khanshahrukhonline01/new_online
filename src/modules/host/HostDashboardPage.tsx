@@ -38,6 +38,17 @@ export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps
           Venue, coach and sports-trial submissions do not require a paid listing plan. Academy operations memberships, venue bookings and provider services are separate from evidence verification.
         </p>
       </div>
+
+      <div className="host-dashboard-empty-state" style={{ borderColor: 'rgba(16, 185, 129, 0.4)', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.05), transparent)' }}>
+        <SiteIcon name="shield-check" size={34} />
+        <h2>Academy Admissions &amp; Batch Management SaaS</h2>
+        <p>
+          Managing a sports academy? Track inbound parent leads, publish morning &amp; evening batch schedules, issue verifiable trial entry passes, and automate monthly student fee collection via UPI — <strong>100% free during grassroots launch</strong> (₹3,499/mo value unlocked).
+        </p>
+        <a className="host-action-btn primary" href="/academy-hub" onClick={event => onNavigate?.(event, '/academy-hub')}>
+          Open Free Academy Admissions Hub <SiteIcon name="arrow-up-right" size={16} />
+        </a>
+      </div>
     </section>
   )
 }

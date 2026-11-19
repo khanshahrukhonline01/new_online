@@ -35,6 +35,7 @@ const VenuesPage = lazy(() => import('./modules/venues/VenuesPage'))
 const VenueDetailPage = lazy(() => import('./modules/venues/VenueDetailPage'))
 const AcademiesPage = lazy(() => import('./modules/academies/AcademiesPage'))
 const AcademyDetailPage = lazy(() => import('./modules/academies/AcademyDetailPage'))
+const AcademyHubPage = lazy(() => import('./modules/academies/AcademyHubPage'))
 const SportsPage = lazy(() => import('./modules/sports/SportsPage'))
 const SportDetailPage = lazy(() => import('./modules/sports/SportDetailPage'))
 const SearchPage = lazy(() => import('./modules/search/SearchPage'))
@@ -313,6 +314,7 @@ export default function App() {
       else if (match.canonicalPath === '/referrals') page = <ReferralsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/book') page = <VenuesPage onOpenIntake={() => openListingSubmission('venue')} onNavigate={navigate} />
       else if (match.canonicalPath === '/train') page = <AcademiesPage onOpenIntake={() => openListingSubmission('academy')} onNavigate={navigate} />
+      else if (match.canonicalPath === '/academy-hub' || match.canonicalPath === '/academies/manage') page = <AcademyHubPage onNavigate={navigate} />
       else if (match.canonicalPath === '/notifications') page = (
         <section className="content-page">
           <p className="eyebrow">YOUR UPDATES &amp; ALERTS</p>
@@ -612,6 +614,7 @@ export default function App() {
           <a href="/venues" onClick={event => navigate(event, '/venues')}>Book venues</a>
           <a href="/coaches" onClick={event => navigate(event, '/coaches')}>Coaches</a>
           <a href="/academies" onClick={event => navigate(event, '/academies')}>Academies</a>
+          <a href="/academy-hub" onClick={event => navigate(event, '/academy-hub')}>Academy Hub <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
           <span className="footer-coming-soon">Sports CV Wizard <small>Coming soon</small></span>
         </nav>
         <nav className="footer-column" aria-label="Learn and discover">

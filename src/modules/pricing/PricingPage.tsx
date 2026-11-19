@@ -69,8 +69,18 @@ export default function PricingPage({ onNavigate, initialSegment = 'athlete' }: 
   function handleOpenCheckout(plan: PricingPlan) {
     if (plan.isFree) {
       // Free plan navigation
-      if (typeof window !== 'undefined') {
-        window.location.href = plan.audience === 'venue' ? '/submit-listing?type=venue' : plan.audience === 'organizer' ? '/submit-listing?type=opportunity' : '/opportunities'
+      const target = plan.audience === 'academy'
+        ? '/academy-hub'
+        : plan.audience === 'venue'
+        ? '/submit-listing?type=venue'
+        : plan.audience === 'organizer'
+        ? '/submit-listing?type=opportunity'
+        : '/opportunities'
+
+      if (onNavigate) {
+        onNavigate({ preventDefault: () => {} } as unknown as MouseEvent<HTMLAnchorElement>, target)
+      } else if (typeof window !== 'undefined') {
+        window.location.href = target
       }
       return
     }

@@ -1,0 +1,596 @@
+/**
+ * KhelGrid Academy Admissions & Batch Management SaaS Client
+ * Provides complete B2B operations tools for sports academies across India:
+ * - Inbound parent enquiry CRM & 1-click WhatsApp lead routing
+ * - Multi-sport batch scheduling & coach allocations
+ * - Student roster & automated UPI fee collection with WhatsApp reminders
+ * - Selection trial digital pass generator with verifiable QR codes
+ * 
+ * Free during the Grassroots Launch Phase.
+ */
+
+export interface AcademyLead {
+  id: string
+  academySlug: string
+  enquiryToken: string
+  parentName: string
+  parentPhone: string
+  parentEmail?: string
+  studentName: string
+  studentAge: number | string
+  sport: string
+  batchType: string
+  batchName?: string
+  requestType: 'free_trial' | 'regular_admission' | 'scholarship_assessment'
+  status: 'new' | 'contacted' | 'trial_scheduled' | 'enrolled' | 'archived'
+  notes?: string
+  submittedAt: string
+}
+
+export interface AcademyBatch {
+  id: string
+  academySlug: string
+  batchName: string
+  sport: string
+  days: string // e.g. "Mon, Wed, Fri" or "Sat, Sun"
+  timings: string // e.g. "06:00 AM – 08:00 AM"
+  coachName: string
+  ageGroup: string // e.g. "U-14 (8–14 yrs)"
+  monthlyFee: number // in ₹
+  maxCapacity: number
+  enrolledCount: number
+  isActive: boolean
+}
+
+export interface AcademyStudent {
+  id: string
+  academySlug: string
+  studentName: string
+  parentName: string
+  parentPhone: string
+  batchId: string
+  batchName: string
+  sport: string
+  monthlyFee: number
+  feeStatus: 'paid' | 'due_soon' | 'overdue'
+  nextDueDate: string
+  lastPaymentDate?: string
+  upiVpa?: string
+}
+
+export interface AcademyTrialPass {
+  id: string
+  passNumber: string
+  academySlug: string
+  academyName: string
+  studentName: string
+  parentPhone: string
+  sport: string
+  trialDate: string
+  reportingTime: string
+  venueAddress: string
+  reportingInstructions: string
+  qrCodePayload: string
+  status: 'valid' | 'used' | 'cancelled'
+  issuedAt: string
+}
+
+export interface AcademySettings {
+  academySlug: string
+  academyName: string
+  directorName: string
+  directorWhatsApp: string
+  directorEmail?: string
+  upiVpa: string // e.g. "bengalurufc@okhdfcbank"
+  autoWhatsAppRoutingEnabled: boolean
+  isProUnlocked: boolean
+}
+
+const STORAGE_KEYS = {
+  LEADS: 'khelgrid_academy_saas_leads',
+  BATCHES: 'khelgrid_academy_saas_batches',
+  STUDENTS: 'khelgrid_academy_saas_students',
+  PASSES: 'khelgrid_academy_saas_trial_passes',
+  SETTINGS: 'khelgrid_academy_saas_settings',
+}
+
+// Default Seed Data for major curated academies
+const DEFAULT_BATCHES: AcademyBatch[] = [
+  {
+    id: 'batch-bfc-1',
+    academySlug: 'bengaluru-fc-academy',
+    batchName: 'Morning Elite U-14 Youth Squad',
+    sport: 'Football',
+    days: 'Tue, Thu, Sat',
+    timings: '06:00 AM – 08:00 AM',
+    coachName: 'Coach Suresh M. (AFC A-License)',
+    ageGroup: 'U-14 (10–14 yrs)',
+    monthlyFee: 2500,
+    maxCapacity: 25,
+    enrolledCount: 22,
+    isActive: true,
+  },
+  {
+    id: 'batch-bfc-2',
+    academySlug: 'bengaluru-fc-academy',
+    batchName: 'Weekend Grassroots Foundation',
+    sport: 'Football',
+    days: 'Sat, Sun',
+    timings: '04:00 PM – 06:00 PM',
+    coachName: 'Coach Anand Rao (AIFF D-License)',
+    ageGroup: 'Grassroots (6–10 yrs)',
+    monthlyFee: 1800,
+    maxCapacity: 30,
+    enrolledCount: 24,
+    isActive: true,
+  },
+  {
+    id: 'batch-gopichand-1',
+    academySlug: 'pullela-gopichand-badminton-academy',
+    batchName: 'Junior National Development Batch',
+    sport: 'Badminton',
+    days: 'Mon to Fri',
+    timings: '06:30 AM – 08:30 AM',
+    coachName: 'Coach P. Gopichand & Staff',
+    ageGroup: 'Junior (11–17 yrs)',
+    monthlyFee: 3500,
+    maxCapacity: 20,
+    enrolledCount: 19,
+    isActive: true,
+  },
+  {
+    id: 'batch-tfa-1',
+    academySlug: 'tata-football-academy',
+    batchName: 'All-India Cadet Combine Batch',
+    sport: 'Football',
+    days: 'Mon to Sat',
+    timings: '06:00 AM – 08:30 AM',
+    coachName: 'Coach Noel Wilson (Ex-International)',
+    ageGroup: 'U-17 (14–17 yrs)',
+    monthlyFee: 3000,
+    maxCapacity: 28,
+    enrolledCount: 26,
+    isActive: true,
+  },
+  {
+    id: 'batch-kca-1',
+    academySlug: 'kanpur-cricket-association-academy',
+    batchName: 'Turf Wicket Advanced Batting & Fast Bowling',
+    sport: 'Cricket',
+    days: 'Tue, Wed, Fri, Sun',
+    timings: '03:30 PM – 06:30 PM',
+    coachName: 'Coach Rakesh Shukla (BCCI Level 2)',
+    ageGroup: 'U-19 (14–19 yrs)',
+    monthlyFee: 2200,
+    maxCapacity: 30,
+    enrolledCount: 27,
+    isActive: true,
+  },
+]
+
+const DEFAULT_LEADS: AcademyLead[] = [
+  {
+    id: 'lead-1',
+    academySlug: 'bengaluru-fc-academy',
+    enquiryToken: 'ENQ-FTB-92A1',
+    parentName: 'Ramesh Sundaram',
+    parentPhone: '9845012345',
+    parentEmail: 'ramesh.s@example.com',
+    studentName: 'Aarav Sundaram',
+    studentAge: 12,
+    sport: 'Football',
+    batchType: 'morning_grassroots',
+    batchName: 'Morning Elite U-14 Youth Squad',
+    requestType: 'free_trial',
+    status: 'new',
+    notes: 'Playing as midfielder in school team, interested in trial evaluation for U-14 squad.',
+    submittedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+  },
+  {
+    id: 'lead-2',
+    academySlug: 'bengaluru-fc-academy',
+    enquiryToken: 'ENQ-FTB-81C4',
+    parentName: 'Priya Narayanan',
+    parentPhone: '9880098765',
+    parentEmail: 'priya.n@example.com',
+    studentName: 'Rohan Narayanan',
+    studentAge: 9,
+    sport: 'Football',
+    batchType: 'weekend',
+    batchName: 'Weekend Grassroots Foundation',
+    requestType: 'regular_admission',
+    status: 'contacted',
+    notes: 'Looking for weekend batch slots, parent requested timing details on WhatsApp.',
+    submittedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+  },
+  {
+    id: 'lead-3',
+    academySlug: 'pullela-gopichand-badminton-academy',
+    enquiryToken: 'ENQ-BDM-44F2',
+    parentName: 'Sunita Reddy',
+    parentPhone: '9440123456',
+    studentName: 'Ananya Reddy',
+    studentAge: 13,
+    sport: 'Badminton',
+    batchType: 'weekday',
+    batchName: 'Junior National Development Batch',
+    requestType: 'scholarship_assessment',
+    status: 'trial_scheduled',
+    notes: 'District U-13 semi-finalist. Scheduled trial pass issued for Saturday.',
+    submittedAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+  },
+]
+
+const DEFAULT_STUDENTS: AcademyStudent[] = [
+  {
+    id: 'std-1',
+    academySlug: 'bengaluru-fc-academy',
+    studentName: 'Aarav Sundaram',
+    parentName: 'Ramesh Sundaram',
+    parentPhone: '9845012345',
+    batchId: 'batch-bfc-1',
+    batchName: 'Morning Elite U-14 Youth Squad',
+    sport: 'Football',
+    monthlyFee: 2500,
+    feeStatus: 'paid',
+    nextDueDate: '2026-12-05',
+    lastPaymentDate: '2026-11-05',
+  },
+  {
+    id: 'std-2',
+    academySlug: 'bengaluru-fc-academy',
+    studentName: 'Karan Sharma',
+    parentName: 'Vikas Sharma',
+    parentPhone: '9845112233',
+    batchId: 'batch-bfc-1',
+    batchName: 'Morning Elite U-14 Youth Squad',
+    sport: 'Football',
+    monthlyFee: 2500,
+    feeStatus: 'due_soon',
+    nextDueDate: '2026-11-25',
+    lastPaymentDate: '2026-10-25',
+  },
+  {
+    id: 'std-3',
+    academySlug: 'bengaluru-fc-academy',
+    studentName: 'Dhruv Nair',
+    parentName: 'Mahesh Nair',
+    parentPhone: '9845998877',
+    batchId: 'batch-bfc-2',
+    batchName: 'Weekend Grassroots Foundation',
+    sport: 'Football',
+    monthlyFee: 1800,
+    feeStatus: 'overdue',
+    nextDueDate: '2026-11-10',
+    lastPaymentDate: '2026-10-10',
+  },
+]
+
+// Safe In-Memory & LocalStorage Persistence
+const memoryStore = new Map<string, string>()
+
+export function clearAcademySaaSMemoryStore(): void {
+  memoryStore.clear()
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      window.localStorage.removeItem(STORAGE_KEYS.LEADS)
+      window.localStorage.removeItem(STORAGE_KEYS.BATCHES)
+      window.localStorage.removeItem(STORAGE_KEYS.STUDENTS)
+      window.localStorage.removeItem(STORAGE_KEYS.PASSES)
+      window.localStorage.removeItem(STORAGE_KEYS.SETTINGS)
+    } catch {
+      // ignore
+    }
+  }
+}
+
+function loadFromStorage<T>(key: string, fallback: T): T {
+  let raw: string | null = null
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      raw = window.localStorage.getItem(key)
+    } catch {
+      raw = null
+    }
+  }
+  if (!raw && memoryStore.has(key)) {
+    raw = memoryStore.get(key) || null
+  }
+  if (!raw) return fallback
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    return fallback
+  }
+}
+
+function saveToStorage<T>(key: string, data: T): void {
+  const serialized = JSON.stringify(data)
+  memoryStore.set(key, serialized)
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      window.localStorage.setItem(key, serialized)
+    } catch {
+      // ignore quota errors
+    }
+  }
+}
+
+// Public API Methods
+
+export function getAcademyLeads(academySlug: string): AcademyLead[] {
+  const allLeads = loadFromStorage<AcademyLead[]>(STORAGE_KEYS.LEADS, DEFAULT_LEADS)
+  return allLeads.filter(l => l.academySlug === academySlug)
+}
+
+export function updateLeadStatus(leadId: string, status: AcademyLead['status'], note?: string): AcademyLead[] {
+  const allLeads = loadFromStorage<AcademyLead[]>(STORAGE_KEYS.LEADS, DEFAULT_LEADS)
+  const updated = allLeads.map(l => {
+    if (l.id === leadId) {
+      return {
+        ...l,
+        status,
+        notes: note ? `${l.notes ? l.notes + '\n' : ''}[${new Date().toLocaleDateString('en-IN')}] ${note}` : l.notes,
+      }
+    }
+    return l
+  })
+  saveToStorage(STORAGE_KEYS.LEADS, updated)
+  return updated
+}
+
+export function addAcademyLead(lead: Omit<AcademyLead, 'id' | 'enquiryToken' | 'submittedAt'>): AcademyLead {
+  const allLeads = loadFromStorage<AcademyLead[]>(STORAGE_KEYS.LEADS, DEFAULT_LEADS)
+  const token = `ENQ-${lead.sport.slice(0, 3).toUpperCase()}-${Date.now().toString(36).slice(-4).toUpperCase()}`
+  const newLead: AcademyLead = {
+    ...lead,
+    id: `lead-${Date.now()}`,
+    enquiryToken: token,
+    submittedAt: new Date().toISOString(),
+  }
+  const updated = [newLead, ...allLeads]
+  saveToStorage(STORAGE_KEYS.LEADS, updated)
+  return newLead
+}
+
+export function getAcademyBatches(academySlug: string): AcademyBatch[] {
+  const allBatches = loadFromStorage<AcademyBatch[]>(STORAGE_KEYS.BATCHES, DEFAULT_BATCHES)
+  return allBatches.filter(b => b.academySlug === academySlug && b.isActive)
+}
+
+export function getAllBatches(academySlug: string): AcademyBatch[] {
+  const allBatches = loadFromStorage<AcademyBatch[]>(STORAGE_KEYS.BATCHES, DEFAULT_BATCHES)
+  return allBatches.filter(b => b.academySlug === academySlug)
+}
+
+export function saveAcademyBatch(batch: Omit<AcademyBatch, 'id' | 'enrolledCount'> & { id?: string }): AcademyBatch {
+  const allBatches = loadFromStorage<AcademyBatch[]>(STORAGE_KEYS.BATCHES, DEFAULT_BATCHES)
+  if (batch.id) {
+    const updated = allBatches.map(b => (b.id === batch.id ? { ...b, ...batch } : b))
+    saveToStorage(STORAGE_KEYS.BATCHES, updated)
+    return updated.find(b => b.id === batch.id)!
+  }
+  const newBatch: AcademyBatch = {
+    ...batch,
+    id: `batch-${Date.now()}`,
+    enrolledCount: 0,
+  }
+  const updated = [newBatch, ...allBatches]
+  saveToStorage(STORAGE_KEYS.BATCHES, updated)
+  return newBatch
+}
+
+export function deleteAcademyBatch(batchId: string): void {
+  const allBatches = loadFromStorage<AcademyBatch[]>(STORAGE_KEYS.BATCHES, DEFAULT_BATCHES)
+  const updated = allBatches.filter(b => b.id !== batchId)
+  saveToStorage(STORAGE_KEYS.BATCHES, updated)
+}
+
+export function getAcademyStudents(academySlug: string): AcademyStudent[] {
+  const allStudents = loadFromStorage<AcademyStudent[]>(STORAGE_KEYS.STUDENTS, DEFAULT_STUDENTS)
+  return allStudents.filter(s => s.academySlug === academySlug)
+}
+
+export function saveAcademyStudent(student: Omit<AcademyStudent, 'id'> & { id?: string }): AcademyStudent {
+  const allStudents = loadFromStorage<AcademyStudent[]>(STORAGE_KEYS.STUDENTS, DEFAULT_STUDENTS)
+  if (student.id) {
+    const updated = allStudents.map(s => (s.id === student.id ? { ...s, ...student } : s))
+    saveToStorage(STORAGE_KEYS.STUDENTS, updated)
+    return updated.find(s => s.id === student.id)!
+  }
+  const newStudent: AcademyStudent = {
+    ...student,
+    id: `std-${Date.now()}`,
+  }
+  const updated = [newStudent, ...allStudents]
+  saveToStorage(STORAGE_KEYS.STUDENTS, updated)
+  return newStudent
+}
+
+export function recordStudentPayment(studentId: string, amount?: number, method: 'upi' | 'cash' = 'upi'): AcademyStudent | null {
+  const allStudents = loadFromStorage<AcademyStudent[]>(STORAGE_KEYS.STUDENTS, DEFAULT_STUDENTS)
+  const student = allStudents.find(s => s.id === studentId)
+  if (!student) return null
+
+  // Calculate next month's due date
+  const now = new Date()
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate())
+  const nextDueDate = nextMonth.toISOString().slice(0, 10)
+
+  const updatedStudent: AcademyStudent = {
+    ...student,
+    monthlyFee: typeof amount === 'number' && amount > 0 ? amount : student.monthlyFee,
+    feeStatus: 'paid',
+    lastPaymentDate: `${now.toISOString().slice(0, 10)} (${method.toUpperCase()})`,
+    nextDueDate,
+  }
+
+  const updatedAll = allStudents.map(s => (s.id === studentId ? updatedStudent : s))
+  saveToStorage(STORAGE_KEYS.STUDENTS, updatedAll)
+  return updatedStudent
+}
+
+export function getAcademyTrialPasses(academySlug: string): AcademyTrialPass[] {
+  const allPasses = loadFromStorage<AcademyTrialPass[]>(STORAGE_KEYS.PASSES, [])
+  return allPasses.filter(p => p.academySlug === academySlug)
+}
+
+export function createTrialPass(input: {
+  academySlug: string
+  academyName: string
+  studentName: string
+  parentPhone: string
+  sport: string
+  trialDate: string
+  reportingTime: string
+  venueAddress: string
+  reportingInstructions?: string
+}): AcademyTrialPass {
+  const allPasses = loadFromStorage<AcademyTrialPass[]>(STORAGE_KEYS.PASSES, [])
+  const passNumber = `PASS-${input.sport.slice(0, 3).toUpperCase()}-${Date.now().toString(36).slice(-5).toUpperCase()}`
+  const qrCodePayload = `https://khelgrid.com/verify-pass?id=${passNumber}&sport=${encodeURIComponent(input.sport)}`
+
+  const newPass: AcademyTrialPass = {
+    id: `pass-${Date.now()}`,
+    passNumber,
+    academySlug: input.academySlug,
+    academyName: input.academyName,
+    studentName: input.studentName,
+    parentPhone: input.parentPhone,
+    sport: input.sport,
+    trialDate: input.trialDate,
+    reportingTime: input.reportingTime,
+    venueAddress: input.venueAddress,
+    reportingInstructions: input.reportingInstructions || 'Please arrive 15 minutes before reporting time with appropriate sporting kit and valid age proof.',
+    qrCodePayload,
+    status: 'valid',
+    issuedAt: new Date().toISOString(),
+  }
+
+  const updated = [newPass, ...allPasses]
+  saveToStorage(STORAGE_KEYS.PASSES, updated)
+  return newPass
+}
+
+export function getAcademySettings(academySlug: string, defaultName = 'Sports Academy'): AcademySettings {
+  const allSettings = loadFromStorage<Record<string, AcademySettings>>(STORAGE_KEYS.SETTINGS, {})
+  if (allSettings[academySlug]) {
+    return allSettings[academySlug]
+  }
+  return {
+    academySlug,
+    academyName: defaultName,
+    directorName: 'Academy Coaching Director',
+    directorWhatsApp: '9845012345',
+    directorEmail: 'admissions@khelgrid.com',
+    upiVpa: 'academy@upi',
+    autoWhatsAppRoutingEnabled: true,
+    isProUnlocked: true, // Free during Grassroots Launch Phase
+  }
+}
+
+export function saveAcademySettings(settings: AcademySettings): void {
+  const allSettings = loadFromStorage<Record<string, AcademySettings>>(STORAGE_KEYS.SETTINGS, {})
+  allSettings[settings.academySlug] = settings
+  saveToStorage(STORAGE_KEYS.SETTINGS, allSettings)
+}
+
+// WhatsApp Routing & Deep-Link Generators
+
+export function generateWhatsAppLeadRoutingUrl(lead: AcademyLead, directorWhatsApp: string): string {
+  const cleanPhone = directorWhatsApp.replace(/\D/g, '')
+  const fullPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`
+  const message = [
+    `*KhelGrid Academy Lead Alert* 🏆`,
+    ``,
+    `Candidate: *${lead.studentName}* (Age: ${lead.studentAge})`,
+    `Parent: ${lead.parentName} (${lead.parentPhone})`,
+    `Sport: ${lead.sport}`,
+    `Batch: ${lead.batchName || lead.batchType}`,
+    `Request Type: ${lead.requestType === 'free_trial' ? 'Free Trial' : lead.requestType === 'scholarship_assessment' ? 'Scholarship' : 'Regular Admission'}`,
+    `Token: ${lead.enquiryToken}`,
+    ``,
+    `Notes: "${lead.notes || 'Interested in batch admission'}"`,
+    ``,
+    `_Sent via KhelGrid Academy Admissions Desk_`,
+  ].join('\n')
+
+  return `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`
+}
+
+export function generateWhatsAppParentContactUrl(lead: AcademyLead, academyName: string): string {
+  const cleanPhone = lead.parentPhone.replace(/\D/g, '')
+  const fullPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`
+  const message = [
+    `Dear ${lead.parentName},`,
+    ``,
+    `Greetings from *${academyName}*!`,
+    ``,
+    `We received your admission enquiry on KhelGrid for *${lead.studentName}* (${lead.sport}).`,
+    `We would love to invite you for an on-ground session/trial.`,
+    ``,
+    `Enquiry Ref: *${lead.enquiryToken}*`,
+    `Please let us know your preferred date and time this week.`,
+    ``,
+    `Warm regards,`,
+    `Admissions Team · ${academyName}`,
+  ].join('\n')
+
+  return `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`
+}
+
+export function generateWhatsAppFeeReminderUrl(student: AcademyStudent, academyName: string, upiVpa?: string): string {
+  const cleanPhone = student.parentPhone.replace(/\D/g, '')
+  const fullPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`
+  const upiLink = upiVpa
+    ? `upi://pay?pa=${encodeURIComponent(upiVpa)}&pn=${encodeURIComponent(academyName)}&am=${student.monthlyFee}&cu=INR&tn=${encodeURIComponent(`Coaching Fee - ${student.studentName}`)}`
+    : ''
+
+  const message = [
+    `Dear ${student.parentName},`,
+    ``,
+    `This is a gentle reminder from *${academyName}* that the monthly coaching fee for *${student.studentName}* (${student.batchName}) is due:`,
+    ``,
+    `Amount: *₹${student.monthlyFee.toLocaleString('en-IN')}*`,
+    `Due Date: *${student.nextDueDate}*`,
+    upiVpa ? `UPI ID: *${upiVpa}*` : '',
+    upiLink ? `Direct UPI Pay: ${upiLink}` : '',
+    ``,
+    `You can pay directly via any UPI app (GPay, PhonePe, Paytm). Kindly share the transaction screenshot once completed.`,
+    ``,
+    `Thank you,`,
+    `Administration · ${academyName}`,
+  ].filter(Boolean).join('\n')
+
+  return `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`
+}
+
+export function generateUpiPayLink(params: { vpa: string; name: string; amount: number; note: string }): string {
+  const { vpa, name, amount, note } = params
+  return `upi://pay?pa=${encodeURIComponent(vpa)}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`
+}
+
+export function getAcademySaaSSummary(academySlug: string) {
+  const leads = getAcademyLeads(academySlug)
+  const batches = getAcademyBatches(academySlug)
+  const students = getAcademyStudents(academySlug)
+  const passes = getAcademyTrialPasses(academySlug)
+
+  const newLeadsCount = leads.filter(l => l.status === 'new').length
+  const totalStudents = students.length
+  const paidStudents = students.filter(s => s.feeStatus === 'paid').length
+  const totalRevenue = students.reduce((acc, s) => acc + (s.feeStatus === 'paid' ? s.monthlyFee : 0), 0)
+  const pendingRevenue = students.reduce((acc, s) => acc + (s.feeStatus !== 'paid' ? s.monthlyFee : 0), 0)
+
+  return {
+    totalLeads: leads.length,
+    newLeadsCount,
+    totalBatches: batches.length,
+    totalStudents,
+    paidStudents,
+    totalRevenue,
+    pendingRevenue,
+    collectionRate: totalStudents > 0 ? Math.round((paidStudents / totalStudents) * 100) : 100,
+    trialPassesCount: passes.length,
+  }
+}

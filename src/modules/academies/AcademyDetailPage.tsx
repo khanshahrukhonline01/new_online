@@ -11,6 +11,7 @@ import VerificationClaimModal from '../../shared/components/VerificationClaimMod
 import { CommunityReviewsSection } from '../../shared/components/CommunityReviewsSection'
 import { AcademyEnquiryModal } from './AcademyEnquiryModal'
 import { isAcademyEnquirySubmitted } from '../../integrations/supabase/athlete-profile-client'
+import { getAcademyBatches } from './academySaaSClient'
 import './AcademyDetailPage.css'
 
 export interface AcademyDetailPageProps {
@@ -187,6 +188,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
   const feeText = academy.fee_structure || 'Contact academy to confirm current fees'
 
   const faqs = academy.faqs || []
+  const publishedBatches = getAcademyBatches(academy.slug)
 
   return (
     <article className="content-page academy-detail-page">
@@ -299,6 +301,16 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
               <span>Official Website</span>
             </a>
           )}
+
+          <a
+            href={`/academy-hub?academy=${academy.slug}`}
+            onClick={event => onNavigate?.(event, `/academy-hub?academy=${academy.slug}`)}
+            className="academy-btn academy-btn-secondary"
+            title="Open Academy Admissions & Batch Management SaaS Hub"
+          >
+            <SiteIcon name="award" size={16} />
+            <span>Admissions Hub (Free)</span>
+          </a>
         </div>
 
         {/* Social Share Bar */}
@@ -386,6 +398,63 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
                   </li>
                 ))}
               </ul>
+            </section>
+          )}
+
+          {/* Published Coaching Batches & Schedules */}
+          {publishedBatches.length > 0 && (
+            <section className="academy-section" data-testid="published-batches-section">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <h3 style={{ margin: 0 }}>Official Training Batches &amp; Timings</h3>
+                <span style={{ fontSize: '0.8rem', background: '#ecfdf5', color: '#047857', padding: '0.2rem 0.55rem', borderRadius: '6px', fontWeight: 700 }}>
+                  🟢 Admissions Open
+                </span>
+              </div>
+              <p style={{ color: '#64748b', fontSize: '0.88rem', margin: '0 0 1rem' }}>
+                Verified coaching batches and training schedules managed directly by the academy coaching staff.
+              </p>
+              <div className="academy-batches-grid">
+                {publishedBatches.map(b => (
+                  <div className="academy-batch-card" key={b.id} style={{ border: '1px solid #bbf7d0', background: '#fcfdfc' }}>
+                    <div className="academy-batch-header">
+                      <h4 className="academy-batch-title" style={{ fontSize: '1.05rem' }}>{b.batchName}</h4>
+                      <span className="academy-batch-sport-pill">{b.sport}</span>
+                    </div>
+                    <div className="academy-batch-meta-list" style={{ fontSize: '0.85rem' }}>
+                      <div className="academy-batch-meta-item">
+                        <SiteIcon name="calendar" size={14} />
+                        <span><strong>Days:</strong> {b.days}</span>
+                      </div>
+                      <div className="academy-batch-meta-item">
+                        <SiteIcon name="calendar-check" size={14} />
+                        <span><strong>Timings:</strong> {b.timings}</span>
+                      </div>
+                      <div className="academy-batch-meta-item">
+                        <SiteIcon name="award" size={14} />
+                        <span><strong>Coach:</strong> {b.coachName}</span>
+                      </div>
+                      <div className="academy-batch-meta-item">
+                        <SiteIcon name="user" size={14} />
+                        <span><strong>Age Group:</strong> {b.ageGroup}</span>
+                      </div>
+                    </div>
+                    <div className="academy-batch-footer">
+                      <div>
+                        <strong style={{ fontSize: '1.15rem', color: '#059669' }}>₹{b.monthlyFee.toLocaleString('en-IN')}</strong>
+                        <small style={{ color: '#64748b' }}> / month</small>
+                      </div>
+                      <button
+                        type="button"
+                        className="academy-btn academy-btn-primary"
+                        style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem' }}
+                        onClick={() => setIsEnrolModalOpen(true)}
+                      >
+                        Enquire for Batch
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </section>
           )}
 
