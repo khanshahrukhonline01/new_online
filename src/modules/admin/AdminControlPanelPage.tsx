@@ -821,22 +821,33 @@ export function AdminControlPanelPage() {
               </div>
 
               {['pending_review', 'under_review', 'approved', 'unpublished'].includes(selected.status) ? <form onSubmit={handleAddEvidence} className="admin-control-form">
-                {selected.source_url && (
-                  <div style={{ marginBottom: '0.75rem', fontSize: '0.82rem' }}>
-                    <span style={{ color: '#94a3b8' }}>Submitted URL: </span>
-                    <a href={selected.source_url} target="_blank" rel="noreferrer" style={{ color: '#38bdf8' }}>{selected.source_url} ↗</a>
+                <div style={{ marginBottom: '0.75rem', fontSize: '0.82rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ color: '#94a3b8' }}>Quick Evidence Source:</span>
+                  {selected.source_url && (
                     <button
                       type="button"
-                      style={{ marginLeft: '0.5rem', padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.4)', borderRadius: '4px', color: '#7dd3fc', cursor: 'pointer' }}
+                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.4)', borderRadius: '4px', color: '#7dd3fc', cursor: 'pointer' }}
                       onClick={() => {
                         const clean = selected.source_url?.trim() || ''
                         setEvidenceUrl(clean.startsWith('http://') ? clean.replace(/^http:\/\//i, 'https://') : clean.startsWith('https://') ? clean : `https://${clean}`)
                       }}
                     >
-                      Use as evidence URL
+                      Use Submitter Source URL
                     </button>
-                  </div>
-                )}
+                  )}
+                  <button
+                    type="button"
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: 'rgba(34, 197, 94, 0.15)', border: '1px solid rgba(34, 197, 94, 0.4)', borderRadius: '4px', color: '#86efac', cursor: 'pointer' }}
+                    onClick={() => {
+                      setEvidenceUrl(`https://khelgrid.com/verify/${encodeURIComponent(selected.reference_number)}`)
+                      if (!evidenceDescription) {
+                        setEvidenceDescription(`Community verification by KhelGrid moderation desk for ${selected.title}`)
+                      }
+                    }}
+                  >
+                    Auto-Fill Desk Verification URL ({selected.reference_number})
+                  </button>
+                </div>
                 <label>Evidence type<select value={evidenceType} onChange={e => setEvidenceType(e.target.value)}>{evidenceTypes.map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
                 <label>HTTPS evidence URL<input type="url" value={evidenceUrl} onChange={e => setEvidenceUrl(e.target.value)} placeholder="https://official-source.gov.in/…" required /></label>
                 <label>What does this evidence establish?<textarea value={evidenceDescription} onChange={e => setEvidenceDescription(e.target.value)} minLength={10} maxLength={2000} required /></label>

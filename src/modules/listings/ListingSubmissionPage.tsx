@@ -91,6 +91,15 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
+  // Category-specific helper fields ensuring complete submission data
+  const [helperSport, setHelperSport] = useState('')
+  const [helperVenue, setHelperVenue] = useState('')
+  const [helperHost, setHelperHost] = useState('')
+  const [helperSchedule, setHelperSchedule] = useState('')
+  const [helperAddress, setHelperAddress] = useState('')
+  const [helperQualifications, setHelperQualifications] = useState('')
+  const [helperOrganizer, setHelperOrganizer] = useState('')
+
   // Direct Email Concierge Desk State
   const [emailKind, setEmailKind] = useState<ListingSubmissionInput['listing_type']>(kind)
   const [emailTitle, setEmailTitle] = useState('')
@@ -195,12 +204,38 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
 
     setSubmitting(true)
     try {
+      const extraParts: string[] = []
+      if (kind === 'pickup_game') {
+        if (helperSport.trim()) extraParts.push(`Sport: ${helperSport.trim()}`)
+        if (helperVenue.trim()) extraParts.push(`Venue: ${helperVenue.trim()}`)
+        if (helperHost.trim()) extraParts.push(`Host: ${helperHost.trim()}`)
+        if (helperSchedule.trim()) extraParts.push(`Schedule: ${helperSchedule.trim()}`)
+      } else if (kind === 'venue') {
+        if (helperAddress.trim()) extraParts.push(`Address: ${helperAddress.trim()}`)
+        if (helperSport.trim()) extraParts.push(`Sports: ${helperSport.trim()}`)
+      } else if (kind === 'coach') {
+        if (helperQualifications.trim()) extraParts.push(`Qualifications: ${helperQualifications.trim()}`)
+        if (helperSport.trim()) extraParts.push(`Sport: ${helperSport.trim()}`)
+      } else if (kind === 'opportunity') {
+        if (helperOrganizer.trim()) extraParts.push(`Organizer: ${helperOrganizer.trim()}`)
+        if (helperVenue.trim()) extraParts.push(`Venue: ${helperVenue.trim()}`)
+        if (helperSchedule.trim()) extraParts.push(`Trial Date: ${helperSchedule.trim()}`)
+      } else if (kind === 'event') {
+        if (helperOrganizer.trim()) extraParts.push(`Organizer: ${helperOrganizer.trim()}`)
+        if (helperVenue.trim()) extraParts.push(`Venue: ${helperVenue.trim()}`)
+        if (helperSchedule.trim()) extraParts.push(`Event Date: ${helperSchedule.trim()}`)
+      }
+      if (details.trim()) {
+        extraParts.push(details.trim())
+      }
+      const combinedDetails = extraParts.join('\n')
+
       const result = await submitListingIntake({
         listing_type: kind,
         title: title.trim(),
         city: city.trim(),
         source_url: normalizedSource,
-        details: details.trim(),
+        details: combinedDetails,
         submitter_email: submitterEmail.trim() || undefined,
       })
 
@@ -227,6 +262,13 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
         setSourceUrl('')
         setDetails('')
         setSubmitterEmail('')
+        setHelperSport('')
+        setHelperVenue('')
+        setHelperHost('')
+        setHelperSchedule('')
+        setHelperAddress('')
+        setHelperQualifications('')
+        setHelperOrganizer('')
       } else if (result.status === 'unconfigured') {
         setSubmitError('Database submissions are not configured on this deployment. No listing was submitted.')
       } else {
@@ -440,6 +482,142 @@ export default function ListingSubmissionPage({ defaultTab = 'submit' }: Listing
                     placeholder="https://..."
                   />
                 </label>
+              </div>
+
+              {/* Dynamic Category Helper Fields */}
+              <div className="cv-field-grid cv-category-helper-grid" style={{ marginTop: '0.75rem', marginBottom: '0.75rem' }}>
+                {kind === 'pickup_game' && (
+                  <>
+                    <label>
+                      Sport
+                      <input
+                        value={helperSport}
+                        onChange={e => setHelperSport(e.target.value)}
+                        placeholder="e.g. Football, Cricket, Badminton"
+                      />
+                    </label>
+                    <label>
+                      Ground / Venue Name
+                      <input
+                        value={helperVenue}
+                        onChange={e => setHelperVenue(e.target.value)}
+                        placeholder="e.g. Shivaji Park Ground"
+                      />
+                    </label>
+                    <label>
+                      Host / Organizer Name
+                      <input
+                        value={helperHost}
+                        onChange={e => setHelperHost(e.target.value)}
+                        placeholder="e.g. Community Coordinator"
+                      />
+                    </label>
+                    <label>
+                      Game Schedule / Timings
+                      <input
+                        value={helperSchedule}
+                        onChange={e => setHelperSchedule(e.target.value)}
+                        placeholder="e.g. Saturday 5:00 PM"
+                      />
+                    </label>
+                  </>
+                )}
+                {kind === 'venue' && (
+                  <>
+                    <label>
+                      Street / Locality Address
+                      <input
+                        value={helperAddress}
+                        onChange={e => setHelperAddress(e.target.value)}
+                        placeholder="e.g. Sector 12 Sports Complex Road"
+                      />
+                    </label>
+                    <label>
+                      Sports Available
+                      <input
+                        value={helperSport}
+                        onChange={e => setHelperSport(e.target.value)}
+                        placeholder="e.g. Badminton, Turf Cricket, Tennis"
+                      />
+                    </label>
+                  </>
+                )}
+                {kind === 'coach' && (
+                  <>
+                    <label>
+                      Qualifications / Certifications
+                      <input
+                        value={helperQualifications}
+                        onChange={e => setHelperQualifications(e.target.value)}
+                        placeholder="e.g. NIS Certified, AFC C-License, State Medallist"
+                      />
+                    </label>
+                    <label>
+                      Primary Coaching Sport
+                      <input
+                        value={helperSport}
+                        onChange={e => setHelperSport(e.target.value)}
+                        placeholder="e.g. Badminton, Athletics, Swimming"
+                      />
+                    </label>
+                  </>
+                )}
+                {kind === 'opportunity' && (
+                  <>
+                    <label>
+                      Organizing Club / Academy / Entity
+                      <input
+                        value={helperOrganizer}
+                        onChange={e => setHelperOrganizer(e.target.value)}
+                        placeholder="e.g. Mohun Bagan Academy, Delhi State FA"
+                      />
+                    </label>
+                    <label>
+                      Trial Venue / Ground
+                      <input
+                        value={helperVenue}
+                        onChange={e => setHelperVenue(e.target.value)}
+                        placeholder="e.g. Salt Lake Stadium Practice Ground"
+                      />
+                    </label>
+                    <label>
+                      Trial Date &amp; Eligibility
+                      <input
+                        value={helperSchedule}
+                        onChange={e => setHelperSchedule(e.target.value)}
+                        placeholder="e.g. 25 Nov 2026, U-17 Boys Born After 2009"
+                      />
+                    </label>
+                  </>
+                )}
+                {kind === 'event' && (
+                  <>
+                    <label>
+                      Event Organizer
+                      <input
+                        value={helperOrganizer}
+                        onChange={e => setHelperOrganizer(e.target.value)}
+                        placeholder="e.g. State Badminton Association"
+                      />
+                    </label>
+                    <label>
+                      Venue / Arena
+                      <input
+                        value={helperVenue}
+                        onChange={e => setHelperVenue(e.target.value)}
+                        placeholder="e.g. Indira Gandhi Indoor Stadium"
+                      />
+                    </label>
+                    <label>
+                      Event Dates
+                      <input
+                        value={helperSchedule}
+                        onChange={e => setHelperSchedule(e.target.value)}
+                        placeholder="e.g. 10 Dec - 15 Dec 2026"
+                      />
+                    </label>
+                  </>
+                )}
               </div>
 
               <label>

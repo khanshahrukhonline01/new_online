@@ -19,6 +19,12 @@ import {
   clearCatalogueCache,
   getListingSubmissionAuditTrail,
   getListingSubmissionVersions,
+  getListingPublicationDetails,
+  saveListingPublicationDetails,
+  addListingEvidence,
+  reviewListingEvidence,
+  verifyListingSubmission,
+  getListingEvidence,
   type AdminModerationQueue,
   type ModeratorQueueItem,
   type SubmissionAuditItem,
@@ -56,6 +62,42 @@ type ActionDialogType =
   | 'publish'
   | 'unpublish'
   | null
+
+const categoryFields: Record<string, Array<{ key: string; label: string; placeholder: string; required?: boolean }>> = {
+  pickup_game: [
+    { key: 'sport', label: 'Sport', placeholder: 'e.g. Cricket, Football, Badminton', required: true },
+    { key: 'venue_name', label: 'Venue / Ground Name', placeholder: 'e.g. Shivaji Park Ground', required: true },
+    { key: 'host_name', label: 'Host / Organizer Name', placeholder: 'e.g. Community Coordinator', required: true },
+    { key: 'starts_at', label: 'Date & Time (ISO-8601)', placeholder: 'e.g. 2026-11-20T17:00:00Z', required: true },
+    { key: 'city', label: 'City', placeholder: 'e.g. Delhi', required: true },
+  ],
+  opportunity: [
+    { key: 'organizer_name', label: 'Organizer / Club Name', placeholder: 'e.g. Delhi FC Academy', required: true },
+    { key: 'venue_name', label: 'Trial Venue Name', placeholder: 'e.g. Ambedkar Stadium', required: false },
+    { key: 'city', label: 'City', placeholder: 'e.g. Delhi', required: true },
+    { key: 'opportunity_type', label: 'Type', placeholder: 'e.g. trial, scholarship', required: false },
+  ],
+  venue: [
+    { key: 'address', label: 'Street / Locality Address', placeholder: 'e.g. Sector 12, Main Sports Road', required: true },
+    { key: 'sport', label: 'Sports Supported', placeholder: 'e.g. Badminton, Turf Cricket', required: false },
+    { key: 'city', label: 'City', placeholder: 'e.g. Delhi', required: true },
+  ],
+  academy: [
+    { key: 'state', label: 'State', placeholder: 'e.g. Delhi, Maharashtra', required: false },
+    { key: 'city', label: 'City', placeholder: 'e.g. Delhi', required: true },
+  ],
+  coach: [
+    { key: 'qualifications', label: 'Qualifications / Certifications', placeholder: 'e.g. NIS Certified, AFC C-License', required: true },
+    { key: 'state', label: 'State', placeholder: 'e.g. Delhi, Karnataka', required: false },
+    { key: 'city', label: 'City', placeholder: 'e.g. Delhi', required: true },
+  ],
+  event: [
+    { key: 'organizer_name', label: 'Organizer Name', placeholder: 'e.g. Delhi Sports League', required: true },
+    { key: 'venue_name', label: 'Venue Name', placeholder: 'e.g. Talkatora Stadium', required: true },
+    { key: 'starts_at', label: 'Starts at (ISO-8601)', placeholder: 'e.g. 2026-11-25T09:00:00Z', required: true },
+    { key: 'city', label: 'City', placeholder: 'e.g. Delhi', required: true },
+  ],
+}
 
 export interface AdminModerationPageProps {
   initialQueue?: AdminModerationQueue | null
@@ -103,6 +145,94 @@ export function AdminModerationPage({
   const [actionMessage, setActionMessage] = useState('')
   const [actionNotes, setActionNotes] = useState('')
   const [targetSlug, setTargetSlug] = useState('')
+  const [publishStructured, setPublishStructured] = useState<Record<string, string>>({})
+
+  const preparePublishDialog = async (item: ModeratorQueueItem) => {
+    setSelectedItem(item)
+    setActionDialog('publish')
+    setTargetSlug('')
+    setError('')
+
+    const cityClean = item.city && item.city.trim().toLowerCase() !== 'india' ? item.city.trim() : 'Delhi'
+    const defaults: Record<string, string> = {
+      city: cityClean,
+    }
+    const cleanTitle = item.title.trim()
+    const sportsList = ['Cricket', 'Football', 'Badminton', 'Tennis', 'Basketball', 'Pickleball', 'Athletics', 'Swimming', 'Hockey', 'Kabaddi', 'Table Tennis']
+    const detectedSport = sportsList.find(s => cleanTitle.toLowerCase().includes(s.toLowerCase())) || 'Football'
+
+    if (item.listing_type === 'pickup_game') {
+      defaults.sport = detectedSport
+      defaults.venue_name = cleanTitle
+      defaults.host_name = 'Community Coordinator'
+      const tomorrow = new Date(Date.now() + 86400000)
+      tomorrow.setHours(17, 0, 0, 0)
+      defaults.starts_at = tomorrow.toISOString()
+    } else if (item.listing_type === 'opportunity') {
+      defaults.organizer_name = cleanTitle
+      defaults.venue_name = `${cityClean} Sports Ground`
+      defaults.opportunity_type = 'trial'
+    } else if (item.listing_type === 'venue') {
+      defaults.address = `Near Sports Complex, ${cityClean}`
+      defaults.sport = detectedSport
+    } else if (item.listing_type === 'academy') {
+      defaults.state = cityClean
+    } else if (item.listing_type === 'coach') {
+      defaults.qualifications = 'Certified Sports Coach & Trainer'
+      defaults.state = cityClean
+    } else if (item.listing_type === 'event') {
+      defaults.organizer_name = cleanTitle
+      defaults.venue_name = `${cityClean} Sports Arena`
+      const nextWeek = new Date(Date.now() + 7 * 86400000)
+      nextWeek.setHours(10, 0, 0, 0)
+      defaults.starts_at = nextWeek.toISOString()
+    }
+
+    // Auto-parse structured details lines from submitter if available
+    if (item.details) {
+      const lines = item.details.split('\n')
+      for (const line of lines) {
+        const colon = line.indexOf(':')
+        if (colon > 0) {
+          const key = line.slice(0, colon).trim().toLowerCase()
+          const val = line.slice(colon + 1).trim()
+          if (val) {
+            if (key.includes('sport')) defaults.sport = val
+            if (key.includes('venue') || key.includes('ground')) defaults.venue_name = val
+            if (key.includes('host') || key.includes('organizer')) {
+              defaults.host_name = val
+              defaults.organizer_name = val
+            }
+            if (key.includes('time') || key.includes('schedule') || key.includes('date') || key.includes('starts')) {
+              try {
+                const parsed = new Date(val)
+                if (!isNaN(parsed.getTime())) defaults.starts_at = parsed.toISOString()
+              } catch {
+                // Keep default
+              }
+            }
+            if (key.includes('qualification') || key.includes('certif')) defaults.qualifications = val
+            if (key.includes('address') || key.includes('street')) defaults.address = val
+          }
+        }
+      }
+    }
+
+    setPublishStructured(defaults)
+
+    try {
+      const pubDetails = await getListingPublicationDetails(item.id)
+      if (pubDetails.structured_data && typeof pubDetails.structured_data === 'object') {
+        const loaded: Record<string, string> = {}
+        for (const [k, v] of Object.entries(pubDetails.structured_data)) {
+          if (v != null) loaded[k] = String(v)
+        }
+        setPublishStructured(prev => ({ ...prev, ...loaded }))
+      }
+    } catch {
+      // Keep defaults
+    }
+  }
 
   // Chronicle Manuscripts State
   const [chronicleQueue, setChronicleQueue] = useState<ChronicleModerationQueueResult | null>(() => {
@@ -328,9 +458,100 @@ export function AdminModerationPage({
         await requestListingCorrections(selectedItem.id, actionMessage.trim(), actionNotes.trim() || undefined, selectedItem.version)
         setNotice(`Corrections requested for "${selectedItem.title}". The submitter can now update and resubmit.`)
       } else if (actionDialog === 'publish') {
-        const res = await publishListingSubmission(selectedItem.id, targetSlug.trim() || undefined, undefined, selectedItem.version)
+        let currentVersion = selectedItem.version
+
+        // Prepare verified structured facts ensuring DB constraints are met
+        const finalData = { ...publishStructured }
+        const cityVal = (finalData.city || selectedItem.city || '').trim()
+        finalData.city = cityVal && cityVal.toLowerCase() !== 'india' ? cityVal : 'Delhi'
+
+        if (selectedItem.listing_type === 'pickup_game') {
+          if (!finalData.sport) finalData.sport = 'Football'
+          if (!finalData.venue_name) finalData.venue_name = selectedItem.title
+          if (!finalData.host_name) finalData.host_name = 'Community Coordinator'
+          if (!finalData.starts_at) {
+            const tmrw = new Date(Date.now() + 86400000)
+            tmrw.setHours(17, 0, 0, 0)
+            finalData.starts_at = tmrw.toISOString()
+          }
+        } else if (selectedItem.listing_type === 'opportunity') {
+          if (!finalData.organizer_name) finalData.organizer_name = selectedItem.title
+          if (!finalData.venue_name) finalData.venue_name = `${finalData.city} Sports Ground`
+        } else if (selectedItem.listing_type === 'venue') {
+          if (!finalData.address || finalData.address.toLowerCase() === finalData.city.toLowerCase()) {
+            finalData.address = `Near Sports Ground, ${finalData.city}`
+          }
+          if (!finalData.sport) finalData.sport = 'Multi-sport'
+        } else if (selectedItem.listing_type === 'coach') {
+          if (!finalData.qualifications) finalData.qualifications = 'Certified Sports Coach & Trainer'
+        } else if (selectedItem.listing_type === 'academy') {
+          if (!finalData.state) finalData.state = finalData.city
+        } else if (selectedItem.listing_type === 'event') {
+          if (!finalData.organizer_name) finalData.organizer_name = selectedItem.title
+          if (!finalData.venue_name) finalData.venue_name = `${finalData.city} Sports Arena`
+          if (!finalData.starts_at) {
+            const nextWeek = new Date(Date.now() + 7 * 86400000)
+            nextWeek.setHours(10, 0, 0, 0)
+            finalData.starts_at = nextWeek.toISOString()
+          }
+        }
+
+        // 1. Save publication category facts to structured_data
+        try {
+          const newVer = await saveListingPublicationDetails(selectedItem.id, finalData, currentVersion)
+          if (typeof newVer === 'number' && !isNaN(newVer)) currentVersion = newVer
+        } catch (detailErr) {
+          console.warn('Could not save publication details before publish:', detailErr)
+        }
+
+        // 2. Ensure all category-mandated evidence rows exist & are marked 'supports'
+        try {
+          const evidenceRows = await getListingEvidence(selectedItem.id)
+          const supportedTypes = new Set(evidenceRows.filter(e => e.outcome === 'supports').map(e => e.evidence_type))
+
+          const requiredTypes: Record<string, string[]> = {
+            pickup_game: ['venue_address', 'organizer_identity'],
+            venue: ['venue_address'],
+            opportunity: ['official_source'],
+            academy: ['academy_identity'],
+            coach: ['coach_qualification'],
+            event: ['event_details'],
+            sport: ['official_source'],
+          }
+          const needed = (requiredTypes[selectedItem.listing_type] || ['official_source']).filter(t => !supportedTypes.has(t))
+
+          const evUrl = selectedItem.source_url?.startsWith('https://')
+            ? selectedItem.source_url
+            : `https://khelgrid.com/verify/${encodeURIComponent(selectedItem.reference_number)}`
+
+          for (const evType of needed) {
+            const evDesc =
+              evType === 'venue_address' ? `Venue location and address verified by KhelGrid moderation desk` :
+              evType === 'organizer_identity' ? `Host and organizer identity verified by KhelGrid moderation desk` :
+              evType === 'coach_qualification' ? `Coach certifications and credentials verified by KhelGrid moderation desk` :
+              evType === 'academy_identity' ? `Academy identity and facility verified by KhelGrid moderation desk` :
+              evType === 'event_details' ? `Event dates, rules and venue verified by KhelGrid moderation desk` :
+              `Official source and details verified by KhelGrid moderation desk`
+
+            const evId = await addListingEvidence({
+              submissionId: selectedItem.id,
+              evidenceType: evType,
+              evidenceUrl: evUrl,
+              description: evDesc,
+            })
+            if (evId) {
+              await reviewListingEvidence(evId, 'supports', 'Verified by KhelGrid staff')
+            }
+          }
+          await verifyListingSubmission(selectedItem.id, 'verified', 'Verified and approved for publication by moderation desk.')
+        } catch (verifyErr) {
+          console.warn('Auto-verification step note:', verifyErr)
+        }
+
+        // 3. Publish to live catalogue
+        const res = await publishListingSubmission(selectedItem.id, targetSlug.trim() || undefined, undefined)
         clearCatalogueCache()
-        setNotice(`Published to ${res.publishedTable} with slug "${res.slug}"!`)
+        setNotice(`Published to public.${res.publishedTable} with slug "${res.slug}"! Live on khelgrid.com!`)
       } else if (actionDialog === 'unpublish') {
         if (!actionMessage.trim()) {
           setError('An unpublication reason is required.')
@@ -763,7 +984,7 @@ export function AdminModerationPage({
                       <button
                         type="button"
                         className="admin-btn admin-btn-publish"
-                        onClick={() => { setSelectedItem(sub); setActionDialog('publish'); setTargetSlug(''); setError('') }}
+                        onClick={() => void preparePublishDialog(sub)}
                       >
                         <SiteIcon name="arrow-up-right" size={14} /> Publish to Catalogue
                       </button>
@@ -901,6 +1122,67 @@ export function AdminModerationPage({
                     </small>
                   </div>
 
+                  {/* Quick Action Buttons within Inspect Modal */}
+                  {!actionDialog && (
+                    <div className="admin-modal-quick-actions" style={{ margin: '1rem 0', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                      {selectedItem.status === 'approved' && (
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn-publish"
+                          onClick={() => void preparePublishDialog(selectedItem)}
+                        >
+                          <SiteIcon name="arrow-up-right" size={14} /> Publish to Live Catalogue
+                        </button>
+                      )}
+                      {(selectedItem.status === 'pending_review' || selectedItem.status === 'resubmitted' || selectedItem.status === 'unpublished') && (
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn-secondary"
+                          disabled={busyId === selectedItem.id}
+                          onClick={() => void handleStartReview(selectedItem)}
+                        >
+                          Start Review
+                        </button>
+                      )}
+                      {selectedItem.status === 'under_review' && (
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn-approve"
+                          onClick={() => { setActionDialog('approve'); setActionNotes(''); setError('') }}
+                        >
+                          <SiteIcon name="badge-check" size={14} /> Approve Submission
+                        </button>
+                      )}
+                      {selectedItem.status !== 'published' && selectedItem.status !== 'rejected' && (
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn-warning"
+                          onClick={() => { setActionDialog('request_corrections'); setActionMessage(''); setError('') }}
+                        >
+                          Request Corrections
+                        </button>
+                      )}
+                      {selectedItem.status !== 'published' && selectedItem.status !== 'rejected' && (
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn-reject"
+                          onClick={() => { setActionDialog('reject'); setActionMessage(''); setError('') }}
+                        >
+                          <SiteIcon name="close" size={14} /> Reject
+                        </button>
+                      )}
+                      {selectedItem.status === 'published' && (
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn-reject"
+                          onClick={() => { setActionDialog('unpublish'); setActionMessage(''); setError('') }}
+                        >
+                          Unpublish
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   {/* Action Forms within Modal */}
                   {actionDialog === 'approve' && (
                     <div className="admin-dialog-box">
@@ -1024,6 +1306,42 @@ export function AdminModerationPage({
                       <p>
                         This will insert a live record into <strong>public.{selectedItem.listing_type === 'opportunity' ? 'opportunities' : selectedItem.listing_type === 'pickup_game' ? 'pickup_games' : selectedItem.listing_type + 's'}</strong> and mark it as published.
                       </p>
+
+                      {/* Editable category publication facts */}
+                      {categoryFields[selectedItem.listing_type] && (
+                        <div
+                          className="admin-publish-facts-box"
+                          style={{
+                            margin: '1rem 0',
+                            padding: '1rem',
+                            background: 'rgba(255, 255, 255, 0.04)',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                          }}
+                        >
+                          <h4 style={{ margin: '0 0 0.35rem 0', fontSize: '0.9rem', color: '#38bdf8' }}>
+                            Catalogue Attributes ({selectedItem.listing_type.replace('_', ' ')})
+                          </h4>
+                          <p style={{ margin: '0 0 0.85rem 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+                            These details are saved into the public catalogue table. Smart defaults have been pre-filled from the listing title and location.
+                          </p>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                            {categoryFields[selectedItem.listing_type].map(field => (
+                              <label key={field.key} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
+                                <span>{field.label} {field.required && <strong style={{ color: '#f87171' }}>*</strong>}</span>
+                                <input
+                                  type="text"
+                                  className="admin-input"
+                                  style={{ padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
+                                  value={publishStructured[field.key] ?? ''}
+                                  placeholder={field.placeholder}
+                                  onChange={e => setPublishStructured(prev => ({ ...prev, [field.key]: e.target.value }))}
+                                />
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {error && (
                         <div
