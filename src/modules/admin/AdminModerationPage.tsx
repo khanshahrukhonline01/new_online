@@ -16,6 +16,7 @@ import {
   requestListingCorrections,
   publishListingSubmission,
   unpublishListingSubmission,
+  clearCatalogueCache,
   getListingSubmissionAuditTrail,
   getListingSubmissionVersions,
   type AdminModerationQueue,
@@ -328,6 +329,7 @@ export function AdminModerationPage({
         setNotice(`Corrections requested for "${selectedItem.title}". The submitter can now update and resubmit.`)
       } else if (actionDialog === 'publish') {
         const res = await publishListingSubmission(selectedItem.id, targetSlug.trim() || undefined, undefined, selectedItem.version)
+        clearCatalogueCache()
         setNotice(`Published to ${res.publishedTable} with slug "${res.slug}"!`)
       } else if (actionDialog === 'unpublish') {
         if (!actionMessage.trim()) {
@@ -336,6 +338,7 @@ export function AdminModerationPage({
           return
         }
         await unpublishListingSubmission(selectedItem.id, actionMessage.trim(), actionNotes.trim() || undefined, selectedItem.version)
+        clearCatalogueCache()
         setNotice(`Listing "${selectedItem.title}" unpublished. It is no longer visible in public catalogue queries.`)
       }
       setActionDialog(null)
@@ -750,7 +753,7 @@ export function AdminModerationPage({
                       <button
                         type="button"
                         className="admin-btn admin-btn-approve"
-                        onClick={() => { setSelectedItem(sub); setActionDialog('approve'); setActionNotes('') }}
+                        onClick={() => { setSelectedItem(sub); setActionDialog('approve'); setActionNotes(''); setError('') }}
                       >
                         <SiteIcon name="badge-check" size={14} /> Approve
                       </button>
@@ -760,7 +763,7 @@ export function AdminModerationPage({
                       <button
                         type="button"
                         className="admin-btn admin-btn-publish"
-                        onClick={() => { setSelectedItem(sub); setActionDialog('publish'); setTargetSlug('') }}
+                        onClick={() => { setSelectedItem(sub); setActionDialog('publish'); setTargetSlug(''); setError('') }}
                       >
                         <SiteIcon name="arrow-up-right" size={14} /> Publish to Catalogue
                       </button>
@@ -770,7 +773,7 @@ export function AdminModerationPage({
                       <button
                         type="button"
                         className="admin-btn admin-btn-warning"
-                        onClick={() => { setSelectedItem(sub); setActionDialog('request_corrections'); setActionMessage('') }}
+                        onClick={() => { setSelectedItem(sub); setActionDialog('request_corrections'); setActionMessage(''); setError('') }}
                       >
                         Request Corrections
                       </button>
@@ -780,7 +783,7 @@ export function AdminModerationPage({
                       <button
                         type="button"
                         className="admin-btn admin-btn-reject"
-                        onClick={() => { setSelectedItem(sub); setActionDialog('reject'); setActionMessage('') }}
+                        onClick={() => { setSelectedItem(sub); setActionDialog('reject'); setActionMessage(''); setError('') }}
                       >
                         <SiteIcon name="close" size={14} /> Reject
                       </button>
@@ -790,7 +793,7 @@ export function AdminModerationPage({
                       <button
                         type="button"
                         className="admin-btn admin-btn-reject"
-                        onClick={() => { setSelectedItem(sub); setActionDialog('unpublish'); setActionMessage('') }}
+                        onClick={() => { setSelectedItem(sub); setActionDialog('unpublish'); setActionMessage(''); setError('') }}
                       >
                         Unpublish
                       </button>
@@ -1021,6 +1024,46 @@ export function AdminModerationPage({
                       <p>
                         This will insert a live record into <strong>public.{selectedItem.listing_type === 'opportunity' ? 'opportunities' : selectedItem.listing_type === 'pickup_game' ? 'pickup_games' : selectedItem.listing_type + 's'}</strong> and mark it as published.
                       </p>
+
+                      {error && (
+                        <div
+                          className="admin-dialog-error"
+                          role="alert"
+                          style={{
+                            margin: '0.85rem 0',
+                            padding: '0.85rem',
+                            background: 'rgba(239, 68, 68, 0.12)',
+                            border: '1px solid rgba(239, 68, 68, 0.45)',
+                            borderRadius: '8px',
+                            color: '#fca5a5',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                            <SiteIcon name="alert-triangle" size={16} />
+                            <strong style={{ fontSize: '0.9rem' }}>Publication Blocked by Quality Gate</strong>
+                          </div>
+                          <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', lineHeight: '1.4' }}>{error}</p>
+                          <div style={{ marginTop: '0.65rem', paddingTop: '0.65rem', borderTop: '1px solid rgba(239, 68, 68, 0.25)' }}>
+                            <p style={{ fontSize: '0.82rem', color: '#cbd5e1', margin: '0 0 0.5rem 0', lineHeight: '1.4' }}>
+                              Under KhelGrid Phase 3.1 policy, approved submissions must be <strong>Evidence-Verified</strong> and have complete catalogue attributes (Sport, Venue, Host, Schedule/Address) before PostgreSQL allows live catalogue publication.
+                            </p>
+                            <button
+                              type="button"
+                              className="admin-btn admin-btn-secondary"
+                              style={{ width: '100%', justifyContent: 'center', fontSize: '0.82rem', background: 'rgba(255, 255, 255, 0.08)' }}
+                              onClick={() => {
+                                setSelectedItem(null)
+                                setActionDialog(null)
+                                setError('')
+                                window.dispatchEvent(new CustomEvent('khelgrid-admin-switch-workspace', { detail: { workspace: 'command' } }))
+                              }}
+                            >
+                              Switch to Command Centre to verify evidence &amp; set publication facts →
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       <label>
                         Custom URL slug (optional, auto-generated if left blank):
                         <input
@@ -1042,7 +1085,7 @@ export function AdminModerationPage({
                         <button
                           type="button"
                           className="admin-btn admin-btn-secondary"
-                          onClick={() => setActionDialog(null)}
+                          onClick={() => { setActionDialog(null); setError('') }}
                         >
                           Cancel
                         </button>
@@ -1610,6 +1653,28 @@ export function AdminModerationPage({
                     <div className="admin-dialog-box">
                       <h3>Publish to KhelChronicle Live Archive</h3>
                       <p>This will assign an official paper ID and make the preprint accessible to coaches and researchers.</p>
+
+                      {error && (
+                        <div
+                          className="admin-dialog-error"
+                          role="alert"
+                          style={{
+                            margin: '0.85rem 0',
+                            padding: '0.85rem',
+                            background: 'rgba(239, 68, 68, 0.12)',
+                            border: '1px solid rgba(239, 68, 68, 0.45)',
+                            borderRadius: '8px',
+                            color: '#fca5a5',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
+                            <SiteIcon name="alert-triangle" size={16} />
+                            <strong style={{ fontSize: '0.9rem' }}>Publication Blocked</strong>
+                          </div>
+                          <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', lineHeight: '1.4' }}>{error}</p>
+                        </div>
+                      )}
+
                       <label>
                         Target Paper ID (optional, default auto-assigned):
                         <input

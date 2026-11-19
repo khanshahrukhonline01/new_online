@@ -20,6 +20,17 @@ export function AdminApp() {
     document.title = 'KhelGrid Admin Operations · admin.khelgrid.com'
   }, [])
 
+  useEffect(() => {
+    const handleSwitchWorkspace = (e: Event) => {
+      const detail = (e as CustomEvent<{ workspace?: 'command' | 'moderation_desk' }>).detail
+      if (detail?.workspace) {
+        setActiveWorkspace(detail.workspace)
+      }
+    }
+    window.addEventListener('khelgrid-admin-switch-workspace', handleSwitchWorkspace)
+    return () => window.removeEventListener('khelgrid-admin-switch-workspace', handleSwitchWorkspace)
+  }, [])
+
   const isApproved =
     Boolean(configuredUrl) &&
     (configuredUrl === DEVELOPMENT_SUPABASE_URL || configuredUrl.includes('hznsbxvovjxvmnchzzqt'))
