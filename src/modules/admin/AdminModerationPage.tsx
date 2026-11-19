@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { signInWithEmail, signOut } from '../../integrations/supabase/auth-client'
+import {
+  signInWithEmail,
+  signOut,
+  sendPasswordReset,
+  updatePassword,
+  parseAuthUrlCallback,
+  clearAuthUrlHash,
+} from '../../integrations/supabase/auth-client'
 import {
   getAdminModerationQueue,
   startListingReview,
@@ -73,6 +80,9 @@ export function AdminModerationPage({
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [signingIn, setSigningIn] = useState(false)
+  const [authMode, setAuthMode] = useState<'login' | 'forgot_password' | 'set_new_password'>('login')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   // Listing Filters & Search
   const [activeTab, setActiveTab] = useState<TabFilter>('pending_review')
@@ -168,6 +178,65 @@ export function AdminModerationPage({
     if (initialChronicleQueue !== undefined) return
     void loadChronicleQueue()
   }, [initialChronicleQueue, loadChronicleQueue])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const callbackInfo = parseAuthUrlCallback()
+    if (callbackInfo.type === 'recovery') {
+      setAuthMode('set_new_password')
+      setNotice('Please set a new secure password for your moderator account.')
+      clearAuthUrlHash()
+    }
+  }, [])
+
+  const handleRequestPasswordReset = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setSigningIn(true)
+    setError('')
+    setNotice('')
+    try {
+      const redirectUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}${window.location.pathname}`
+        : undefined
+      const res = await sendPasswordReset(email, redirectUrl)
+      if (!res.success) {
+        setError(res.message || 'Could not send reset email.')
+      } else {
+        setNotice(res.message || 'Password reset instructions have been sent. Please check your inbox.')
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not request password reset.')
+    } finally {
+      setSigningIn(false)
+    }
+  }
+
+  const handleSaveNewPassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters long.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+    setSigningIn(true)
+    setError('')
+    setNotice('')
+    try {
+      const res = await updatePassword(newPassword)
+      if (!res.success) throw new Error(res.message || 'Could not update password.')
+      setNotice('Your password has been changed successfully. You may now sign in.')
+      setNewPassword('')
+      setConfirmPassword('')
+      setAuthMode('login')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not update password.')
+    } finally {
+      setSigningIn(false)
+    }
+  }
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -1670,6 +1739,93 @@ export function AdminModerationPage({
       )}
     </>
   ) : (
+      authMode === 'forgot_password' ? (
+        <form className="admin-restricted-box" onSubmit={handleRequestPasswordReset}>
+          <SiteIcon name="shield-check" size={36} />
+          <h2>Reset Moderator Password</h2>
+          <p>
+            Enter your authorized moderator email address. We will send a secure password reset link directly to your inbox.
+          </p>
+          <label style={{ display: 'block', textAlign: 'left', marginBottom: '1.25rem' }}>
+            Moderator Email
+            <input
+              type="email"
+              autoComplete="username"
+              required
+              className="admin-search-input"
+              value={email}
+              onChange={event => setEmail(event.target.value)}
+              placeholder="moderator@khelgrid.com"
+            />
+          </label>
+          <button type="submit" className="admin-btn admin-btn-approve" style={{ width: '100%', justifyContent: 'center' }} disabled={signingIn}>
+            {signingIn ? 'Sending link…' : 'Send password reset link'}
+          </button>
+          <div style={{ marginTop: '0.85rem', textAlign: 'center' }}>
+            <button
+              type="button"
+              className="admin-text-link"
+              onClick={() => {
+                setAuthMode('login')
+                setError('')
+                setNotice('')
+              }}
+            >
+              ← Back to moderator sign-in
+            </button>
+          </div>
+        </form>
+      ) : authMode === 'set_new_password' ? (
+        <form className="admin-restricted-box" onSubmit={handleSaveNewPassword}>
+          <SiteIcon name="shield-check" size={36} />
+          <h2>Set New Moderator Password</h2>
+          <p>
+            Create a secure new password for your moderator account (minimum 6 characters).
+          </p>
+          <label style={{ display: 'block', textAlign: 'left', marginBottom: '0.75rem' }}>
+            New Password
+            <input
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={6}
+              className="admin-search-input"
+              value={newPassword}
+              onChange={event => setNewPassword(event.target.value)}
+              placeholder="At least 6 characters"
+            />
+          </label>
+          <label style={{ display: 'block', textAlign: 'left', marginBottom: '1.25rem' }}>
+            Confirm New Password
+            <input
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={6}
+              className="admin-search-input"
+              value={confirmPassword}
+              onChange={event => setConfirmPassword(event.target.value)}
+              placeholder="Re-type new password"
+            />
+          </label>
+          <button type="submit" className="admin-btn admin-btn-approve" style={{ width: '100%', justifyContent: 'center' }} disabled={signingIn}>
+            {signingIn ? 'Saving…' : 'Save new password'}
+          </button>
+          <div style={{ marginTop: '0.85rem', textAlign: 'center' }}>
+            <button
+              type="button"
+              className="admin-text-link"
+              onClick={() => {
+                setAuthMode('login')
+                setError('')
+                setNotice('')
+              }}
+            >
+              ← Back to moderator sign-in
+            </button>
+          </div>
+        </form>
+      ) : (
         <form className="admin-restricted-box" onSubmit={handleSignIn}>
           <SiteIcon name="shield-check" size={36} />
           <h2>Moderator Sign-In</h2>
@@ -1701,7 +1857,21 @@ export function AdminModerationPage({
           <button type="submit" className="admin-btn admin-btn-approve" style={{ width: '100%', justifyContent: 'center' }} disabled={signingIn}>
             {signingIn ? 'Verifying access…' : 'Sign in to Moderation Desk'}
           </button>
+          <div style={{ marginTop: '0.85rem', textAlign: 'center' }}>
+            <button
+              type="button"
+              className="admin-text-link"
+              onClick={() => {
+                setAuthMode('forgot_password')
+                setError('')
+                setNotice('')
+              }}
+            >
+              Forgot password? Reset via email →
+            </button>
+          </div>
         </form>
+      )
       )}
     </section>
   )

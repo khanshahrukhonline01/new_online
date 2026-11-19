@@ -92,6 +92,7 @@ export function AdminControlPanelPage() {
   const [targetRole, setTargetRole] = useState<'moderator' | 'super_admin'>('moderator')
   const [targetActive, setTargetActive] = useState(true)
   const [accessNotes, setAccessNotes] = useState('')
+  const [moderatorResetEmail, setModeratorResetEmail] = useState('')
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -158,7 +159,17 @@ export function AdminControlPanelPage() {
     if (callbackInfo.type === 'recovery') {
       setAuthMode('set_new_password')
       setNotice('Please set a new secure password for your moderator account.')
+    } else if (window.location.hash.includes('reset-password') || window.location.search.includes('reset-password')) {
+      setAuthMode('forgot_password')
     }
+
+    const handleOpenForgotPassword = () => {
+      setAuthMode('forgot_password')
+      setError('')
+      setNotice('')
+    }
+    window.addEventListener('khelgrid-admin-open-forgot-password', handleOpenForgotPassword)
+    return () => window.removeEventListener('khelgrid-admin-open-forgot-password', handleOpenForgotPassword)
   }, [])
   useEffect(() => {
     const client = getSupabaseClient()
@@ -486,6 +497,29 @@ export function AdminControlPanelPage() {
     } finally { setBusy(false) }
   }
 
+  const handleAdminSendModeratorReset = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const redirectUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}${window.location.pathname}`
+        : undefined
+      const res = await sendPasswordReset(moderatorResetEmail, redirectUrl)
+      if (!res.success) {
+        setError(res.message || 'Could not send reset email.')
+      } else {
+        setNotice(`Password reset instructions sent to ${moderatorResetEmail}.`)
+        setModeratorResetEmail('')
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not request password reset for moderator.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (loading) return <section className="content-page admin-control"><p>Checking secure moderation access…</p></section>
 
   if (authMode === 'set_new_password') return (
@@ -800,6 +834,12 @@ export function AdminControlPanelPage() {
             </form>
             <h4>Authorized accounts</h4>
             {accounts.map(account => <p key={account.user_id}><code>{account.user_id}</code> · {account.role} · {account.is_active ? 'Active' : 'Inactive'}</p>)}
+            <h4>Send password reset email to moderator</h4>
+            <p>Send an official password recovery link to any registered moderator email address.</p>
+            <form onSubmit={handleAdminSendModeratorReset} className="admin-control-form">
+              <label>Moderator email<input type="email" value={moderatorResetEmail} onChange={e => setModeratorResetEmail(e.target.value)} placeholder="moderator@khelgrid.com" required /></label>
+              <button disabled={busy}>{busy ? 'Sending…' : 'Send password reset link'}</button>
+            </form>
             <div id="access-audit"><h4>Moderator access history</h4>
             {accessAudits.length === 0 ? <p>No access changes recorded yet.</p> : accessAudits.map(audit => <p key={audit.id}>
               {audit.action} · <code>{audit.target_user_id}</code> · {audit.old_role || 'none'} → {audit.new_role} · {new Date(audit.created_at).toLocaleString('en-IN')}

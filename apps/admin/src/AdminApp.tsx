@@ -66,6 +66,18 @@ export function AdminApp() {
         </nav>
 
         <div className="admin-shell-meta">
+          <button
+            type="button"
+            className="admin-shell-reset-pw-btn"
+            title="Reset moderator password"
+            onClick={() => {
+              setActiveWorkspace('command')
+              window.dispatchEvent(new CustomEvent('khelgrid-admin-open-forgot-password'))
+            }}
+          >
+            <SiteIcon name="lock" size={13} />
+            <span>Reset Password</span>
+          </button>
           <div className="admin-theme-inline" aria-label="Appearance preferences">
             <label>
               Theme
