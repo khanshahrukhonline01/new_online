@@ -192,6 +192,7 @@ const STORAGE_KEYS = {
   COURTS: 'khelgrid_turf_courts_store',
   SETTINGS: 'khelgrid_turf_settings_store',
   PRICING: 'khelgrid_turf_pricing_store',
+  SUBSCRIPTIONS: 'khelgrid_turf_subscriptions_store',
 }
 
 const memoryStore = new Map<string, string>()
@@ -205,6 +206,7 @@ export function clearTurfSlotMemoryStore(): void {
       window.localStorage.removeItem(STORAGE_KEYS.COURTS)
       window.localStorage.removeItem(STORAGE_KEYS.SETTINGS)
       window.localStorage.removeItem(STORAGE_KEYS.PRICING)
+      window.localStorage.removeItem(STORAGE_KEYS.SUBSCRIPTIONS)
     } catch {
       // ignore
     }
@@ -904,3 +906,146 @@ export function getTurfDayKpis(venueSlug: string, date: string, courtId: string)
     totalProjectedRevenue,
   }
 }
+
+// ---------------------------------------------------------------------------
+// 5. Express Walk-In & Recurring Slot Subscriptions
+// ---------------------------------------------------------------------------
+
+export interface RecurringSlotSubscription {
+  subscriptionId: string
+  venueSlug: string
+  courtId: string
+  courtName: string
+  dayOfWeek: number // 0 = Sun, 1 = Mon ... 6 = Sat
+  timeSlot: string
+  startDate: string
+  endDate: string
+  weeksCount: number
+  customerName: string
+  customerPhone: string
+  totalFee: number
+  advanceDepositPaid: number
+  balanceDue: number
+  status: 'active' | 'completed' | 'cancelled'
+  createdAt: string
+}
+
+export function createQuickWalkInBooking(params: {
+  venueSlug: string
+  courtId: string
+  date: string
+  timeSlot: string
+  customerName: string
+  customerPhone: string
+  totalAmount: number
+  paidAmount: number
+  paymentStatus: 'upi_advance_paid' | 'pay_at_venue' | 'fully_paid'
+  notes?: string
+}): { success: boolean; booking?: TurfBookingRecord; whatsappPassUrl?: string; message: string } {
+  try {
+    const courts = getTurfCourts(params.venueSlug)
+    const court = courts.find(c => c.id === params.courtId) || courts[0]
+
+    const res = bookTurfSlot({
+      venueSlug: params.venueSlug,
+      venueName: court?.venueSlug || params.venueSlug,
+      courtId: params.courtId,
+      courtName: court?.name || 'Main Court',
+      date: params.date,
+      timeSlot: params.timeSlot,
+      customerName: params.customerName,
+      customerPhone: params.customerPhone,
+      hourlyPrice: params.totalAmount,
+      advanceDeposit: params.paidAmount,
+      paymentMethod: params.paymentStatus,
+    })
+
+    if (!res.success || !res.booking) {
+      return {
+        success: false,
+        message: res.error || 'This slot is already reserved or locked by another booking.',
+      }
+    }
+
+    const whatsappPassUrl = generateWhatsAppTurfConfirmationUrl(res.booking)
+    return {
+      success: true,
+      booking: res.booking,
+      whatsappPassUrl,
+      message: `Quick walk-in booking confirmed for ${params.customerName}! Ref: #${res.booking.bookingId}`,
+    }
+  } catch (err) {
+    return {
+      success: false,
+      message: `Error recording walk-in: ${err instanceof Error ? err.message : 'Unknown error'}`,
+    }
+  }
+}
+
+export function createRecurringSubscription(params: {
+  venueSlug: string
+  courtId: string
+  courtName: string
+  dayOfWeek: number
+  timeSlot: string
+  startDate: string
+  weeksCount: number
+  customerName: string
+  customerPhone: string
+  weeklyRate: number
+  advanceDepositPaid: number
+}): { success: boolean; subscription?: RecurringSlotSubscription; message: string } {
+  const totalFee = params.weeklyRate * params.weeksCount
+  const balanceDue = Math.max(0, totalFee - params.advanceDepositPaid)
+  const subscriptionId = `SUB-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`
+
+  // Calculate end date (startDate + weeksCount * 7 days)
+  const start = new Date(params.startDate)
+  const end = new Date(start.getTime() + (params.weeksCount * 7 - 1) * 24 * 60 * 60 * 1000)
+  const endDate = end.toISOString().slice(0, 10)
+
+  const newSub: RecurringSlotSubscription = {
+    subscriptionId,
+    venueSlug: params.venueSlug,
+    courtId: params.courtId,
+    courtName: params.courtName,
+    dayOfWeek: params.dayOfWeek,
+    timeSlot: params.timeSlot,
+    startDate: params.startDate,
+    endDate,
+    weeksCount: params.weeksCount,
+    customerName: params.customerName,
+    customerPhone: params.customerPhone,
+    totalFee,
+    advanceDepositPaid: params.advanceDepositPaid,
+    balanceDue,
+    status: 'active',
+    createdAt: new Date().toISOString(),
+  }
+
+  const allSubs = loadFromStorage<RecurringSlotSubscription[]>(STORAGE_KEYS.SUBSCRIPTIONS, [])
+  saveToStorage(STORAGE_KEYS.SUBSCRIPTIONS, [newSub, ...allSubs])
+
+  return {
+    success: true,
+    subscription: newSub,
+    message: `Recurring subscription active for ${params.customerName}! Reserved ${params.weeksCount} weeks on ${params.timeSlot}.`,
+  }
+}
+
+export function getRecurringSubscriptions(venueSlug?: string): RecurringSlotSubscription[] {
+  const all = loadFromStorage<RecurringSlotSubscription[]>(STORAGE_KEYS.SUBSCRIPTIONS, [])
+  if (venueSlug) return all.filter(s => s.venueSlug === venueSlug)
+  return all
+}
+
+export function cancelRecurringSubscription(subscriptionId: string): boolean {
+  const all = loadFromStorage<RecurringSlotSubscription[]>(STORAGE_KEYS.SUBSCRIPTIONS, [])
+  const sub = all.find(s => s.subscriptionId === subscriptionId)
+  if (!sub) return false
+
+  sub.status = 'cancelled'
+  saveToStorage(STORAGE_KEYS.SUBSCRIPTIONS, all)
+  return true
+}
+

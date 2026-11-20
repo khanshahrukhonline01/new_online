@@ -44,6 +44,7 @@ const featurePages: Record<string, string> = {
   '/pricing': 'Pricing & Memberships', '/mobile-app': 'KhelGrid Mobile App', '/careers': 'Careers',
   '/academy-hub': 'Academy Admissions & Operations Hub', '/academies/manage': 'Academy Admissions & Operations Hub',
   '/partner-signup': 'Partner Onboarding Wizard', '/academy/signup': 'Academy Admissions & Operations Hub',
+  '/parent-portal': 'Parent & Athlete Passbook', '/parent': 'Parent & Athlete Passbook', '/passbook': 'Parent & Athlete Passbook',
   '/tournament-ops': 'Tournament Operations Suite', '/tournaments/manage': 'Tournament Operations Suite', '/tournament-management': 'Tournament Operations Suite',
   '/turf-calendar': 'Turf & Facility Slot Booking Calendar', '/venues/manage': 'Turf & Facility Slot Booking Calendar', '/turf': 'Turf & Facility Slot Booking Calendar',
   '/verify-pass': 'Gate Pass & Check-In Desk', '/gate-checkin': 'Gate Pass & Check-In Desk',
@@ -139,6 +140,9 @@ export function resolveRoute(pathname: string): RouteMatch {
   }
   if (path === '/tournament-ops' || path === '/tournaments/manage' || path === '/tournament-management') {
     return { name: 'feature', canonicalPath: '/tournament-ops', slug: 'Tournament Operations Suite' }
+  }
+  if (path === '/parent-portal' || path === '/parent' || path === '/passbook') {
+    return { name: 'feature', canonicalPath: '/parent-portal', slug: 'Parent & Athlete Passbook' }
   }
   if (path === '/academies' || path === '/academy' || path === '/train') return { name: 'academies-index', canonicalPath: '/academies', ...(path === '/academies' ? {} : { alias: path }) }
   if (path.startsWith('/academies/') || path.startsWith('/academy/')) {

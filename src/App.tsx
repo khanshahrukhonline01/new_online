@@ -64,6 +64,7 @@ const SportsToolsPage = lazy(() => import('./modules/tools/SportsToolsPage'))
 const PricingPage = lazy(() => import('./modules/pricing/PricingPage'))
 const PartnerPage = lazy(() => import('./modules/partner/PartnerPage'))
 const PartnerOnboardingPage = lazy(() => import('./modules/partner/PartnerOnboardingPage'))
+const ParentPortalPage = lazy(() => import('./modules/parent/ParentPortalPage'))
 const SavedPage = lazy(() => import('./modules/saved/SavedPage'))
 const CoachesPage = lazy(() => import('./modules/coaches/CoachesPage'))
 const CoachDashboardPage = lazy(() => import('./modules/coaches/CoachDashboardPage'))
@@ -338,6 +339,7 @@ export default function App() {
       else if (match.canonicalPath === '/coach-dashboard' || match.canonicalPath === '/coach/hub' || match.canonicalPath === '/coach/manage') page = <CoachDashboardPage onNavigate={navigate} />
       else if (match.canonicalPath === '/turf-calendar' || match.canonicalPath === '/venues/manage' || match.canonicalPath === '/turf') page = <TurfSlotCalendarPage onNavigate={navigate} />
       else if (match.canonicalPath === '/tournament-ops' || match.canonicalPath === '/tournaments/manage' || match.canonicalPath === '/tournament-management') page = <TournamentOpsPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/parent-portal' || match.canonicalPath === '/parent' || match.canonicalPath === '/passbook') page = <ParentPortalPage onNavigate={navigate} />
       else if (match.canonicalPath === '/verify-pass' || match.canonicalPath === '/gate-checkin') page = <GateCheckInPage onNavigate={navigate} />
       else if (match.canonicalPath === '/my-passes' || match.canonicalPath === '/passes') page = <MyPassesVaultPage onNavigate={navigate} />
       else if (match.canonicalPath === '/notifications') page = (

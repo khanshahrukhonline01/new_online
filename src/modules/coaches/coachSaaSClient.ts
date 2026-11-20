@@ -889,3 +889,23 @@ export function generateWhatsAppEndorsementUrl(endorsement: CoachEndorsementReco
 
   return `https://wa.me/?text=${encodeURIComponent(message)}`
 }
+
+export function getAthleteVerifiedCombines(traineeNameOrId: string): TraineeCombineBenchmark[] {
+  const all = loadFromStorage<TraineeCombineBenchmark[]>(STORAGE_COACH_KEYS.COMBINES, DEFAULT_COMBINES)
+  const query = traineeNameOrId.trim().toLowerCase()
+  return all.filter(c => 
+    c.traineeId.toLowerCase() === query || 
+    c.traineeName.toLowerCase() === query ||
+    c.traineeName.toLowerCase().includes(query)
+  )
+}
+
+export function getAthleteVerifiedEndorsements(traineeNameOrId: string): CoachEndorsementRecord[] {
+  const all = loadFromStorage<CoachEndorsementRecord[]>(STORAGE_COACH_KEYS.ENDORSEMENTS, DEFAULT_ENDORSEMENTS)
+  const query = traineeNameOrId.trim().toLowerCase()
+  return all.filter(e => 
+    e.traineeId.toLowerCase() === query || 
+    e.traineeName.toLowerCase() === query ||
+    e.traineeName.toLowerCase().includes(query)
+  )
+}

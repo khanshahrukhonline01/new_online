@@ -31,6 +31,13 @@ import {
   type RegisteredCoach,
 } from './coachSaaSClient'
 import {
+  getKheloIndiaAssessments,
+  saveKheloIndiaAssessment,
+  evaluateJuniorSeniorBattery,
+  evaluateSubJuniorBattery,
+  generateWhatsAppKheloIndiaUrl,
+} from './kheloIndiaBattery'
+import {
   parseCoachTraineeCsvRows,
   getSampleCoachTraineeCsv,
   getDailyAttendance,
@@ -70,7 +77,7 @@ export default function CoachDashboardPage({
   const currentCoach: RegisteredCoach = getCurrentCoach(selectedSlug)
 
   const [activeTab, setActiveTab] = useState<
-    'trainees' | 'inquiries' | 'batches' | 'attendance' | 'earnings' | 'credentials' | 'combines' | 'plans' | 'endorsements'
+    'trainees' | 'inquiries' | 'batches' | 'attendance' | 'earnings' | 'credentials' | 'combines' | 'plans' | 'endorsements' | 'khelo_india'
   >('trainees')
 
   // Data
@@ -81,6 +88,68 @@ export default function CoachDashboardPage({
   const combines = getTraineeCombines(selectedSlug)
   const trainingPlans = getCoachTrainingPlans(selectedSlug)
   const endorsements = getCoachEndorsements(selectedSlug)
+  const kheloIndiaReports = getKheloIndiaAssessments(selectedSlug)
+
+  // Khelo India Modal State
+  const [isKheloIndiaModalOpen, setIsKheloIndiaModalOpen] = useState(false)
+  const [kiAthleteName, setKiAthleteName] = useState('')
+  const [kiAge, setKiAge] = useState(14)
+  const [kiGender, setKiGender] = useState<'male' | 'female'>('male')
+  const [kiHeightCm, setKiHeightCm] = useState(165)
+  const [kiWeightKg, setKiWeightKg] = useState(54)
+  const [ki50mDash, setKi50mDash] = useState(7.4)
+  const [ki600mRun, setKi600mRun] = useState(135)
+  const [kiSitReach, setKiSitReach] = useState(24)
+  const [kiCurlUps, setKiCurlUps] = useState(22)
+  const [kiPushUps, setKiPushUps] = useState(20)
+  const [kiFlamingoFalls, setKiFlamingoFalls] = useState(2)
+  const [kiPlateTapping, setKiPlateTapping] = useState(12.5)
+  const [kiMsg, setKiMsg] = useState('')
+
+  function handleSaveKheloIndia(e: FormEvent) {
+    e.preventDefault()
+    if (!kiAthleteName.trim()) {
+      setKiMsg('Please enter athlete name.')
+      return
+    }
+
+    let reportData: ReturnType<typeof evaluateJuniorSeniorBattery> | ReturnType<typeof evaluateSubJuniorBattery>
+    if (kiAge <= 8) {
+      reportData = evaluateSubJuniorBattery({
+        heightCm: Number(kiHeightCm),
+        weightKg: Number(kiWeightKg),
+        flamingoFallsCount: Number(kiFlamingoFalls),
+        plateTappingSeconds: Number(kiPlateTapping),
+      }, kiAthleteName.trim())
+    } else {
+      reportData = evaluateJuniorSeniorBattery({
+        heightCm: Number(kiHeightCm),
+        weightKg: Number(kiWeightKg),
+        gender: kiGender,
+        dash50mSeconds: Number(ki50mDash),
+        run600mSeconds: Number(ki600mRun),
+        sitAndReachCm: Number(kiSitReach),
+        partialCurlUpsReps: Number(kiCurlUps),
+        pushUpsReps: Number(kiPushUps),
+      }, kiAthleteName.trim(), Number(kiAge))
+    }
+
+    const saved = saveKheloIndiaAssessment({
+      ...reportData,
+      coachSlug: selectedSlug,
+      coachName: currentCoach.name,
+      athleteId: `ath-${Date.now().toString().slice(-4)}`,
+      testDate: new Date().toISOString().slice(0, 10),
+    })
+
+    setKiMsg(`Assessment saved! Official SAI Report Code: ${saved.saiReportCode}`)
+    triggerRefresh()
+    setTimeout(() => {
+      setIsKheloIndiaModalOpen(false)
+      setKiAthleteName('')
+      setKiMsg('')
+    }, 1500)
+  }
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
@@ -722,6 +791,17 @@ export default function CoachDashboardPage({
         >
           <SiteIcon name="shield-check" size={15} />
           <span>Verified Endorsements ({endorsements.length})</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'khelo_india'}
+          className={`coach-tab-btn ${activeTab === 'khelo_india' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('khelo_india')}
+        >
+          <SiteIcon name="trophy" size={15} />
+          <span>🇮🇳 Khelo India &amp; SAI Battery ({kheloIndiaReports.length})</span>
         </button>
       </div>
 
@@ -1722,6 +1802,278 @@ export default function CoachDashboardPage({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 10: KHELO INDIA & SAI OFFICIAL FITNESS BATTERY */}
+      {activeTab === 'khelo_india' && (
+        <div className="coach-card-panel">
+          <div className="coach-table-toolbar">
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>
+                🇮🇳 Khelo India &amp; SAI National Fitness Assessment Battery
+              </h3>
+              <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>
+                Standardized testing protocols calibrated to Sports Authority of India (SAI) national talent scout percentiles.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="coach-primary-action-btn"
+              onClick={() => {
+                setKiMsg('')
+                setIsKheloIndiaModalOpen(true)
+              }}
+            >
+              <SiteIcon name="plus" size={16} />
+              <span>Conduct SAI Assessment</span>
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', margin: '1rem 0 1.5rem' }}>
+            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Total Athletes Tested</span>
+              <strong style={{ display: 'block', fontSize: '1.6rem', color: '#0f172a', marginTop: '4px' }}>{kheloIndiaReports.length}</strong>
+              <small style={{ color: '#059669' }}>SAI Standardized Roster</small>
+            </div>
+            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>SAI Talent Targets</span>
+              <strong style={{ display: 'block', fontSize: '1.6rem', color: '#16a34a', marginTop: '4px' }}>
+                {kheloIndiaReports.filter(r => r.isSaiTalentTarget).length}
+              </strong>
+              <small style={{ color: '#15803d' }}>Recommended for State Trials</small>
+            </div>
+            <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Grade A+ Cohort</span>
+              <strong style={{ display: 'block', fontSize: '1.6rem', color: '#d97706', marginTop: '4px' }}>
+                {kheloIndiaReports.filter(r => r.overallGrade === 'A+').length}
+              </strong>
+              <small style={{ color: '#b45309' }}>Top 5% National Tier</small>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {kheloIndiaReports.map(rep => {
+              const waUrl = generateWhatsAppKheloIndiaUrl(rep)
+              return (
+                <div key={rep.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{rep.athleteName}</strong>
+                        <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700 }}>
+                          Grade {rep.overallGrade} ({rep.averageStars} ★)
+                        </span>
+                        {rep.isSaiTalentTarget && (
+                          <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700 }}>
+                            🎯 SAI Talent Target
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '0.82rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                        Age {rep.age} · {rep.gender.toUpperCase()} · Tested on {rep.testDate} · Ref: <code>{rep.saiReportCode}</code>
+                      </span>
+                    </div>
+                    <a
+                      href={waUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="coach-action-btn whatsapp"
+                      style={{ padding: '8px 12px', fontSize: '12.5px' }}
+                    >
+                      <SiteIcon name="share" size={14} />
+                      <span>WhatsApp SAI Card</span>
+                    </a>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px' }}>
+                    {rep.testScores.map((score, sIdx) => (
+                      <div key={sIdx} style={{ fontSize: '0.82rem' }}>
+                        <span style={{ color: '#64748b', display: 'block' }}>{score.testName}</span>
+                        <strong style={{ color: '#0f172a', fontSize: '0.95rem' }}>{score.metricValue}</strong>
+                        <div style={{ color: '#d97706', fontSize: '0.8rem' }}>{'★'.repeat(score.stars)} ({score.band})</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CONDUCT KHELO INDIA & SAI FITNESS TEST */}
+      {isKheloIndiaModalOpen && (
+        <div className="coach-modal-backdrop" onClick={() => setIsKheloIndiaModalOpen(false)}>
+          <div className="coach-modal-card" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+            <div className="coach-modal-header">
+              <h3>Conduct Official SAI / Khelo India Fitness Test</h3>
+              <button
+                type="button"
+                className="coach-modal-close-btn"
+                onClick={() => setIsKheloIndiaModalOpen(false)}
+              >
+                <SiteIcon name="close" size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveKheloIndia} className="coach-modal-form">
+              {kiMsg && (
+                <div style={{ padding: '0.75rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', color: '#166534', fontSize: '0.88rem', marginBottom: '1rem' }}>
+                  {kiMsg}
+                </div>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="coach-modal-field">
+                  <label htmlFor="ki-name">Athlete Name</label>
+                  <input
+                    id="ki-name"
+                    type="text"
+                    value={kiAthleteName}
+                    onChange={e => setKiAthleteName(e.target.value)}
+                    placeholder="e.g. Tanmay Saxena"
+                    required
+                  />
+                </div>
+                <div className="coach-modal-field">
+                  <label htmlFor="ki-age">Age (Years)</label>
+                  <input
+                    id="ki-age"
+                    type="number"
+                    min="5"
+                    max="22"
+                    value={kiAge}
+                    onChange={e => setKiAge(parseInt(e.target.value))}
+                    required
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                <div className="coach-modal-field">
+                  <label htmlFor="ki-gender">Gender</label>
+                  <select
+                    id="ki-gender"
+                    value={kiGender}
+                    onChange={e => setKiGender(e.target.value as 'male' | 'female')}
+                  >
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+                <div className="coach-modal-field">
+                  <label htmlFor="ki-height">Height (cm)</label>
+                  <input
+                    id="ki-height"
+                    type="number"
+                    value={kiHeightCm}
+                    onChange={e => setKiHeightCm(parseFloat(e.target.value))}
+                    required
+                  />
+                </div>
+                <div className="coach-modal-field">
+                  <label htmlFor="ki-weight">Weight (kg)</label>
+                  <input
+                    id="ki-weight"
+                    type="number"
+                    value={kiWeightKg}
+                    onChange={e => setKiWeightKg(parseFloat(e.target.value))}
+                    required
+                  />
+                </div>
+              </div>
+
+              {kiAge <= 8 ? (
+                <div style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '1rem' }}>
+                  <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', color: '#0f172a' }}>Sub-Junior Tests (Ages 5–8)</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div className="coach-modal-field">
+                      <label htmlFor="ki-flamingo">Flamingo Balance (Falls / 60s)</label>
+                      <input
+                        id="ki-flamingo"
+                        type="number"
+                        value={kiFlamingoFalls}
+                        onChange={e => setKiFlamingoFalls(parseInt(e.target.value))}
+                      />
+                    </div>
+                    <div className="coach-modal-field">
+                      <label htmlFor="ki-tapping">Plate Tapping (Seconds / 25 taps)</label>
+                      <input
+                        id="ki-tapping"
+                        type="number"
+                        step="0.1"
+                        value={kiPlateTapping}
+                        onChange={e => setKiPlateTapping(parseFloat(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '1rem' }}>
+                  <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', color: '#0f172a' }}>Junior &amp; Senior SAI National Battery (Ages 9–18+)</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div className="coach-modal-field">
+                      <label htmlFor="ki-dash">50m Dash (Seconds)</label>
+                      <input
+                        id="ki-dash"
+                        type="number"
+                        step="0.01"
+                        value={ki50mDash}
+                        onChange={e => setKi50mDash(parseFloat(e.target.value))}
+                      />
+                    </div>
+                    <div className="coach-modal-field">
+                      <label htmlFor="ki-run">600m Run (Seconds)</label>
+                      <input
+                        id="ki-run"
+                        type="number"
+                        value={ki600mRun}
+                        onChange={e => setKi600mRun(parseInt(e.target.value))}
+                      />
+                    </div>
+                    <div className="coach-modal-field">
+                      <label htmlFor="ki-reach">Sit &amp; Reach (cm)</label>
+                      <input
+                        id="ki-reach"
+                        type="number"
+                        value={kiSitReach}
+                        onChange={e => setKiSitReach(parseFloat(e.target.value))}
+                      />
+                    </div>
+                    <div className="coach-modal-field">
+                      <label htmlFor="ki-curls">Partial Curl-Ups (Reps / 30s)</label>
+                      <input
+                        id="ki-curls"
+                        type="number"
+                        value={kiCurlUps}
+                        onChange={e => setKiCurlUps(parseInt(e.target.value))}
+                      />
+                    </div>
+                    <div className="coach-modal-field">
+                      <label htmlFor="ki-push">Push-Ups (Reps)</label>
+                      <input
+                        id="ki-push"
+                        type="number"
+                        value={kiPushUps}
+                        onChange={e => setKiPushUps(parseInt(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="coach-modal-actions" style={{ marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="coach-secondary-action-btn"
+                  onClick={() => setIsKheloIndiaModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="coach-primary-action-btn">
+                  Evaluate &amp; Save SAI Report Card
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

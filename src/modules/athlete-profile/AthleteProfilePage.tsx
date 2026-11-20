@@ -1,6 +1,7 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import type { AthleteProfile } from '../../shared/domain'
 import { getAthleteProfile } from '../../integrations/supabase/athlete-profile-client'
+import { getAthleteVerifiedCombines, getAthleteVerifiedEndorsements } from '../coaches/coachSaaSClient'
 import { PlayerCard } from './PlayerCard'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { SportIcon } from '../../shared/sports/sportIcons'
@@ -65,6 +66,8 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
   const clips = profile.videoClips || []
   const achievements = profile.achievements || []
   const fitness = profile.fitnessBenchmarks
+  const verifiedCombines = getAthleteVerifiedCombines(profile.username || profile.fullName)
+  const verifiedEndorsements = getAthleteVerifiedEndorsements(profile.username || profile.fullName)
 
   return (
     <section className="content-page athlete-profile-page">
@@ -250,6 +253,87 @@ export default function AthleteProfilePage({ username, onNavigate }: AthleteProf
                     <span className="f-sub">Lower-body power output</span>
                   </div>
                 )}
+              </div>
+            </section>
+          )}
+
+          {/* Section 2B: Official Coach-Certified KhelChronicle Combine Scores */}
+          {verifiedCombines.length > 0 && (
+            <section className="profile-section-panel coach-combines-panel">
+              <div className="section-header">
+                <h2>
+                  <SiteIcon name="shield-check" size={20} /> Coach-Certified Combine Battery
+                </h2>
+                <span className="tier-badge gold">{verifiedCombines[0].tier}</span>
+              </div>
+              <p className="section-intro">
+                Official physical combine test supervised and digitally stamped by licensed academy coach. Certified on {verifiedCombines[0].testDate}.
+              </p>
+              <div className="fitness-metrics-grid">
+                {verifiedCombines[0].sprint30mSeconds && (
+                  <div className="fitness-metric-card certified">
+                    <span className="f-title">30m Acceleration Sprint</span>
+                    <strong className="f-score">{verifiedCombines[0].sprint30mSeconds}s</strong>
+                    <span className="f-sub">Explosive first-step speed</span>
+                  </div>
+                )}
+                {verifiedCombines[0].verticalJumpCm && (
+                  <div className="fitness-metric-card certified">
+                    <span className="f-title">Vertical Jump</span>
+                    <strong className="f-score">{verifiedCombines[0].verticalJumpCm} cm</strong>
+                    <span className="f-sub">Lower-body power output</span>
+                  </div>
+                )}
+                {verifiedCombines[0].yoYoBeepLevel && (
+                  <div className="fitness-metric-card certified">
+                    <span className="f-title">Yo-Yo Endurance Test</span>
+                    <strong className="f-score">{verifiedCombines[0].yoYoBeepLevel}</strong>
+                    <span className="f-sub">Aerobic recovery under fatigue</span>
+                  </div>
+                )}
+                {verifiedCombines[0].proAgilitySeconds && (
+                  <div className="fitness-metric-card certified">
+                    <span className="f-title">5-10-5 Pro Agility</span>
+                    <strong className="f-score">{verifiedCombines[0].proAgilitySeconds}s</strong>
+                    <span className="f-sub">Lateral change-of-direction</span>
+                  </div>
+                )}
+              </div>
+              <div className="combine-percentile-banner">
+                <span>National Peer Percentile: <strong>{verifiedCombines[0].compositePercentile}th Percentile</strong></span>
+                <span className="combine-cert-stamp">Verified by Coach ID: {verifiedCombines[0].coachSlug}</span>
+              </div>
+            </section>
+          )}
+
+          {/* Section 2C: Verified Coach & Selector Endorsements */}
+          {verifiedEndorsements.length > 0 && (
+            <section className="profile-section-panel coach-endorsements-panel">
+              <div className="section-header">
+                <h2>
+                  <SiteIcon name="badge-check" size={20} /> Verified Coach Endorsements
+                </h2>
+                <span className="section-badge">{verifiedEndorsements.length} Verified</span>
+              </div>
+              <div className="verified-endorsements-list">
+                {verifiedEndorsements.map(end => (
+                  <article key={end.id} className="endorsement-quote-card">
+                    <div className="endorsement-quote-header">
+                      <div className="coach-endorse-meta">
+                        <strong>{end.coachName}</strong>
+                        <span className="coach-endorse-cert">{end.coachCertification} · {end.sport}</span>
+                      </div>
+                      <span className="endorse-badge-tag">🎖️ {end.badgeTitle}</span>
+                    </div>
+                    <blockquote className="endorsement-quote-text">
+                      "{end.endorsementText}"
+                    </blockquote>
+                    <div className="endorsement-quote-footer">
+                      <span className="endorse-hash">Verification Stamp: <code>{end.verificationHash}</code></span>
+                      <span className="endorse-date">{end.awardedDate}</span>
+                    </div>
+                  </article>
+                ))}
               </div>
             </section>
           )}

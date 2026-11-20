@@ -40,6 +40,16 @@ import {
   type AcademyStaffMember,
   type AcademyFeeTransaction,
 } from './academySaaSClient'
+import {
+  getAvailableTournaments,
+  registerAcademySquad,
+} from '../events/tournamentOpsEngine'
+import {
+  getAcademyKitDistributions,
+  getAcademyEquipment,
+  getAcademyStaffSafeguarding,
+  getAcademySafetyIncidents,
+} from './academyInventoryService'
 import { exportStudentsToCsv, downloadBlobFile } from './academyExportUtils'
 import {
   parseStudentCsvRows,
@@ -113,7 +123,56 @@ export default function AcademyHubPage({
   const ledgerSummary = getAcademyLedgerSummary(selectedSlug)
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'leads' | 'batches' | 'fees' | 'ledger' | 'attendance' | 'staff' | 'trial_passes' | 'settings'>('leads')
+  const [activeTab, setActiveTab] = useState<'leads' | 'batches' | 'fees' | 'ledger' | 'attendance' | 'staff' | 'trial_passes' | 'kits' | 'safeguarding' | 'settings'>('leads')
+
+  // Inventory & Safeguarding Data
+  const kits = getAcademyKitDistributions(selectedSlug)
+  const equipment = getAcademyEquipment(selectedSlug)
+  const safeguardingStaff = getAcademyStaffSafeguarding(selectedSlug)
+  const safetyIncidents = getAcademySafetyIncidents(selectedSlug)
+  const availableTournaments = getAvailableTournaments()
+
+  // Tournament Squad Registration Modal State
+  const [isTournamentSquadModalOpen, setIsTournamentSquadModalOpen] = useState(false)
+  const [activeTournamentBatch, setActiveTournamentBatch] = useState<AcademyBatch | null>(null)
+  const [targetTournamentId, setTargetTournamentId] = useState(() => availableTournaments[0]?.id || '')
+  const [squadTeamName, setSquadTeamName] = useState('')
+  const [tournamentRegMsg, setTournamentRegMsg] = useState('')
+
+  function handleRegisterSquad(e: FormEvent) {
+    e.preventDefault()
+    if (!activeTournamentBatch) return
+
+    const batchStudents = students.filter(s => s.batchId === activeTournamentBatch.id)
+    const roster = batchStudents.length > 0 ? batchStudents.map(s => ({
+      id: s.id,
+      name: s.studentName,
+      age: 15,
+      dob: '2011-04-12',
+      isPassportVerified: true,
+    })) : [
+      { id: 'p-1', name: 'Aarav Sharma', age: 15, dob: '2011-05-10', isPassportVerified: true },
+      { id: 'p-2', name: 'Vihaan Verma', age: 15, dob: '2011-08-20', isPassportVerified: true },
+    ]
+
+    const res = registerAcademySquad({
+      tournamentId: targetTournamentId,
+      academyId: selectedSlug,
+      academyName: currentAcademy.name,
+      teamName: squadTeamName.trim() || `${currentAcademy.name} ${activeTournamentBatch.batchName}`,
+      division: activeTournamentBatch.ageGroup || 'U-16',
+      contactPhone: settings.directorWhatsApp || '+919876543210',
+      players: roster,
+    })
+
+    setTournamentRegMsg(res.message)
+    triggerRefresh()
+    setTimeout(() => {
+      setIsTournamentSquadModalOpen(false)
+      setSquadTeamName('')
+      setTournamentRegMsg('')
+    }, 2000)
+  }
 
   // Staff Modal State
   const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false)
@@ -888,6 +947,22 @@ export default function AcademyHubPage({
 
         <button
           type="button"
+          className={`academy-hub-tab-btn ${activeTab === 'kits' ? 'active' : ''}`}
+          onClick={() => setActiveTab('kits')}
+        >
+          <SiteIcon name="award" size={18} /> Kit &amp; Gear Locker ({kits.length})
+        </button>
+
+        <button
+          type="button"
+          className={`academy-hub-tab-btn ${activeTab === 'safeguarding' ? 'active' : ''}`}
+          onClick={() => setActiveTab('safeguarding')}
+        >
+          <SiteIcon name="shield-check" size={18} /> POCSO &amp; Safeguarding ({safeguardingStaff.length})
+        </button>
+
+        <button
+          type="button"
           className={`academy-hub-tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
           onClick={() => setActiveTab('settings')}
         >
@@ -1120,6 +1195,21 @@ export default function AcademyHubPage({
                       >
                         <SiteIcon name="alert-triangle" size={12} />
                         <span>Session Notice</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="academy-hub-btn-outline"
+                        style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#1d4ed8', borderColor: '#bfdbfe', background: '#eff6ff' }}
+                        onClick={() => {
+                          setActiveTournamentBatch(batch)
+                          setSquadTeamName(`${currentAcademy.name} ${batch.batchName}`)
+                          setTournamentRegMsg('')
+                          setIsTournamentSquadModalOpen(true)
+                        }}
+                        title="Register batch squad directly into an active tournament on Tournament Ops"
+                      >
+                        <SiteIcon name="trophy" size={12} />
+                        <span>Enter Tournament</span>
                       </button>
                       <button
                         type="button"
@@ -1964,6 +2054,188 @@ export default function AcademyHubPage({
             </button>
           </form>
         </section>
+      )}
+
+      {/* TAB 6: Kit & Gear Locker */}
+      {activeTab === 'kits' && (
+        <section aria-labelledby="kits-section-heading">
+          <div className="academy-hub-section-header">
+            <div>
+              <h2 id="kits-section-heading" className="academy-hub-section-title">
+                Academy Kit Locker &amp; Equipment Inventory
+              </h2>
+              <p style={{ color: '#64748b', margin: '0.25rem 0 0', fontSize: '0.9rem' }}>
+                Track student jersey sizes, assigned squad numbers, and training gear checkout logs.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+            <div className="academy-hub-card-panel" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem' }}>
+              <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', color: '#0f172a' }}>Student Match Kits &amp; Squad Numbers</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {kits.map(k => (
+                  <div key={k.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem' }}>
+                    <div>
+                      <strong>#{k.squadNumber} {k.studentName}</strong> ({k.batchName})
+                      <div style={{ color: '#64748b', fontSize: '0.78rem' }}>
+                        Jersey Size: <strong>{k.jerseySize}</strong> · Shorts: {k.hasShorts ? 'Yes' : 'No'} · Socks: {k.hasSocks ? 'Yes' : 'No'}
+                      </div>
+                    </div>
+                    <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold', background: k.status === 'DELIVERED' ? '#dcfce7' : '#fef3c7', color: k.status === 'DELIVERED' ? '#166534' : '#b45309' }}>
+                      {k.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="academy-hub-card-panel" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem' }}>
+              <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', color: '#0f172a' }}>Training Equipment &amp; Gear Checkout</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {equipment.map(e => (
+                  <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem' }}>
+                    <div>
+                      <strong>{e.name}</strong>
+                      <div style={{ color: '#64748b', fontSize: '0.78rem' }}>
+                        Category: {e.category} · Condition: {e.condition} · Checked out: {e.checkedOutQuantity} units to {e.lastCheckedOutBy || 'None'}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <strong style={{ color: '#0f172a', fontSize: '0.95rem' }}>{e.availableQuantity} / {e.totalQuantity}</strong>
+                      <small style={{ display: 'block', color: '#64748b', fontSize: '0.75rem' }}>in locker</small>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* TAB 7: POCSO & Staff Safeguarding */}
+      {activeTab === 'safeguarding' && (
+        <section aria-labelledby="safeguarding-section-heading">
+          <div className="academy-hub-section-header">
+            <div>
+              <h2 id="safeguarding-section-heading" className="academy-hub-section-title">
+                POCSO Child Protection &amp; Medical Safeguarding Register
+              </h2>
+              <p style={{ color: '#64748b', margin: '0.25rem 0 0', fontSize: '0.9rem' }}>
+                Staff police background verification, first aid certification, and student ground injury logs.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+            <div className="academy-hub-card-panel" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem' }}>
+              <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', color: '#0f172a' }}>Staff Background Check &amp; POCSO Compliance</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {safeguardingStaff.map(s => (
+                  <div key={s.id} style={{ padding: '0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <strong>{s.staffName}</strong> ({s.role})
+                      <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold', background: s.policeVerificationStatus === 'VERIFIED' ? '#dcfce7' : '#fef3c7', color: s.policeVerificationStatus === 'VERIFIED' ? '#166534' : '#b45309' }}>
+                        {s.policeVerificationStatus}
+                      </span>
+                    </div>
+                    <div style={{ color: '#64748b', fontSize: '0.78rem' }}>
+                      Police Ref: <code>{s.policeVerificationRef || 'Pending'}</code> · Verified: {s.verificationDate || 'In Progress'}
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '6px', fontSize: '0.78rem' }}>
+                      <span style={{ color: s.pocsoTrainingCompleted ? '#16a34a' : '#dc2626' }}>
+                        {s.pocsoTrainingCompleted ? '✅ POCSO Certified' : '❌ POCSO Pending'}
+                      </span>
+                      <span style={{ color: s.firstAidCertified ? '#16a34a' : '#dc2626' }}>
+                        {s.firstAidCertified ? '✅ First Aid Certified' : '❌ First Aid Pending'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="academy-hub-card-panel" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem' }}>
+              <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', color: '#0f172a' }}>Ground Medical &amp; Incident Logbook</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {safetyIncidents.map(inc => (
+                  <div key={inc.id} style={{ padding: '0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <strong>{inc.studentName}</strong> ({inc.incidentDate})
+                      <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold', background: inc.rtpClearance === 'CLEARED' ? '#dcfce7' : '#fee2e2', color: inc.rtpClearance === 'CLEARED' ? '#166534' : '#991b1b' }}>
+                        RTP: {inc.rtpClearance}
+                      </span>
+                    </div>
+                    <p style={{ margin: '4px 0', color: '#334155', fontSize: '0.82rem' }}>{inc.description}</p>
+                    <div style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                      First Aid: {inc.firstAidAdministered} · Parent Notified: {inc.parentNotifiedAt || 'Yes'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* MODAL: Tournament Squad Registration */}
+      {isTournamentSquadModalOpen && activeTournamentBatch && (
+        <div className="academy-hub-modal-overlay" onClick={() => setIsTournamentSquadModalOpen(false)}>
+          <div className="academy-hub-modal-content" style={{ maxWidth: '580px' }} onClick={e => e.stopPropagation()}>
+            <div className="academy-hub-modal-header">
+              <h3>Enter Squad into Tournament</h3>
+              <button
+                type="button"
+                className="academy-hub-modal-close"
+                onClick={() => setIsTournamentSquadModalOpen(false)}
+                aria-label="Close modal"
+              >
+                &times;
+              </button>
+            </div>
+            <form onSubmit={handleRegisterSquad} className="academy-hub-form">
+              {tournamentRegMsg && (
+                <div style={{ padding: '0.75rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', color: '#166534', fontSize: '0.88rem', marginBottom: '1rem' }}>
+                  {tournamentRegMsg}
+                </div>
+              )}
+              <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                Selected Batch: <strong>{activeTournamentBatch.batchName}</strong> ({activeTournamentBatch.sport}) · Division: <strong>{activeTournamentBatch.ageGroup}</strong>
+              </div>
+              <label>
+                Select Open Tournament
+                <select
+                  value={targetTournamentId}
+                  onChange={e => setTargetTournamentId(e.target.value)}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                >
+                  {availableTournaments.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.title} ({t.city} · {t.division} · Entry Fee: ₹{t.entryFee})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Registered Squad / Team Name
+                <input
+                  type="text"
+                  value={squadTeamName}
+                  onChange={e => setSquadTeamName(e.target.value)}
+                  placeholder={`e.g. ${currentAcademy.name} ${activeTournamentBatch.batchName}`}
+                />
+              </label>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                <button type="button" className="academy-hub-btn-outline" onClick={() => setIsTournamentSquadModalOpen(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="academy-hub-primary-btn">
+                  Submit Squad to Tournament Ops
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* MODAL: Add Walk-In Lead */}

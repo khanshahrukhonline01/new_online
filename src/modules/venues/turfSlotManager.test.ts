@@ -17,6 +17,10 @@ import {
   holdTurfSlot,
   lookupTurfBooking,
   admitTurfBooking,
+  createQuickWalkInBooking,
+  createRecurringSubscription,
+  getRecurringSubscriptions,
+  cancelRecurringSubscription,
 } from './turfSlotManager'
 
 describe('turfSlotManager Unit Suite', () => {
@@ -345,5 +349,59 @@ describe('turfSlotManager Unit Suite', () => {
     expect(eveningFloodlit.breakdown?.baseRate).toBe(court.defaultHourlyRate)
     expect(eveningFloodlit.breakdown?.floodlightSurcharge).toBeGreaterThan(0)
     expect(eveningFloodlit.breakdown?.total).toBe(eveningFloodlit.hourlyPrice)
+  })
+
+  it('records quick walk-in phone bookings with instant WhatsApp confirmation passes', () => {
+    const courts = getTurfCourts('sree-kanteerava-stadium')
+    const court = courts[0]
+
+    const walkIn = createQuickWalkInBooking({
+      venueSlug: 'sree-kanteerava-stadium',
+      courtId: court.id,
+      date: '2026-11-25',
+      timeSlot: '07:00 AM – 08:00 AM',
+      customerName: 'Kunal Kapoor (Walk-In)',
+      customerPhone: '9876500000',
+      totalAmount: 1200,
+      paidAmount: 1200,
+      paymentStatus: 'fully_paid',
+    })
+
+    expect(walkIn.success).toBe(true)
+    expect(walkIn.booking).toBeDefined()
+    expect(walkIn.whatsappPassUrl).toContain('wa.me')
+    expect(walkIn.whatsappPassUrl).toContain(encodeURIComponent('Kunal Kapoor (Walk-In)'))
+  })
+
+  it('manages recurring slot subscriptions across multiple weeks with cancellation support', () => {
+    const courts = getTurfCourts('sree-kanteerava-stadium')
+    const court = courts[0]
+
+    const sub = createRecurringSubscription({
+      venueSlug: 'sree-kanteerava-stadium',
+      courtId: court.id,
+      courtName: court.name,
+      dayOfWeek: 0, // Sunday
+      timeSlot: '06:00 AM – 08:00 AM',
+      startDate: '2026-12-01',
+      weeksCount: 8,
+      customerName: 'Bengaluru Weekend FC',
+      customerPhone: '9845099999',
+      weeklyRate: 2000,
+      advanceDepositPaid: 5000,
+    })
+
+    expect(sub.success).toBe(true)
+    expect(sub.subscription?.subscriptionId).toBeDefined()
+    expect(sub.subscription?.totalFee).toBe(16000)
+    expect(sub.subscription?.balanceDue).toBe(11000)
+
+    const list = getRecurringSubscriptions('sree-kanteerava-stadium')
+    expect(list.some(s => s.customerName === 'Bengaluru Weekend FC')).toBe(true)
+
+    const cancelled = cancelRecurringSubscription(sub.subscription!.subscriptionId)
+    expect(cancelled).toBe(true)
+    const afterCancel = getRecurringSubscriptions('sree-kanteerava-stadium').find(s => s.subscriptionId === sub.subscription!.subscriptionId)
+    expect(afterCancel?.status).toBe('cancelled')
   })
 })

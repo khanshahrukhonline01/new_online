@@ -222,5 +222,20 @@ describe('platform route coverage', () => {
       canonicalPath: '/passes',
       slug: 'My Passes & Booking Vault',
     })
+    expect(resolveRoute('/parent-portal')).toEqual({
+      name: 'feature',
+      canonicalPath: '/parent-portal',
+      slug: 'Parent & Athlete Passbook',
+    })
+    expect(resolveRoute('/parent')).toEqual({
+      name: 'feature',
+      canonicalPath: '/parent-portal',
+      slug: 'Parent & Athlete Passbook',
+    })
+    expect(resolveRoute('/passbook')).toEqual({
+      name: 'feature',
+      canonicalPath: '/parent-portal',
+      slug: 'Parent & Athlete Passbook',
+    })
   })
 })

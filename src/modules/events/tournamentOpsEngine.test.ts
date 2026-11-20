@@ -10,6 +10,9 @@ import {
   issueTournamentCertificate,
   generateWhatsAppCertificateUrl,
   SAMPLE_SQUAD_ROSTER,
+  getAvailableTournaments,
+  registerAcademySquad,
+  bookVenueSlotForTournamentMatch,
 } from './tournamentOpsEngine'
 
 describe('tournamentOpsEngine Unit Suite', () => {
@@ -132,5 +135,46 @@ describe('tournamentOpsEngine Unit Suite', () => {
     expect(waUrl).toContain('https://wa.me/?text=')
     expect(waUrl).toContain('Aarav%20Choudhary')
     expect(waUrl).toContain('Champion%20Winner')
+  })
+
+  it('provides available tournaments and registers academy squads with age checks', () => {
+    const tournaments = getAvailableTournaments()
+    expect(tournaments.length).toBeGreaterThanOrEqual(4)
+    const delhiTour = tournaments.find(t => t.id === 'tour-delhi-grassroots-u14')!
+
+    const cleanSquad = [
+      { id: 'p1', name: 'Kabir Verma', age: 13, dob: '2013-05-10', isPassportVerified: true },
+      { id: 'p2', name: 'Manav Sharma', age: 14, dob: '2012-08-14', isPassportVerified: true },
+    ]
+
+    const regResult = registerAcademySquad({
+      tournamentId: delhiTour.id,
+      academyId: 'delhi-fa',
+      academyName: 'Delhi Football Academy',
+      teamName: 'Delhi FA Juniors U-14',
+      division: 'U-14',
+      contactPhone: '+919876543210',
+      players: cleanSquad,
+    })
+
+    expect(regResult.success).toBe(true)
+    expect(regResult.squad.status).toBe('APPROVED')
+    expect(regResult.message).toContain('successfully registered')
+  })
+
+  it('cross-SaaS books venue turf court slot for scheduled tournament match', () => {
+    const res = bookVenueSlotForTournamentMatch({
+      matchId: 'match-qf-1',
+      tournamentId: 'tour-national-u16-2026',
+      tournamentTitle: 'All-India National Youth Championship 2026',
+      venueSlug: 'sree-kanteerava-stadium',
+      courtId: 'court-kan-1',
+      date: '2026-11-26',
+      timeSlot: '04:00 PM – 05:00 PM',
+      matchTitle: 'Quarter Final 1',
+    })
+
+    expect(res.success).toBe(true)
+    expect(res.bookingRef).toMatch(/^TRF-/)
   })
 })

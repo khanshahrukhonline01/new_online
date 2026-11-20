@@ -10,6 +10,8 @@
  * Free during Grassroots Launch Phase.
  */
 
+import { bookTurfSlot, getTurfCourts } from '../venues/turfSlotManager'
+
 export type TournamentBracketFormat = 'single_elimination' | 'double_elimination' | 'round_robin_knockout'
 
 export interface TournamentBracketNode {
@@ -99,6 +101,8 @@ const STORAGE_KEYS = {
   BRACKETS: 'khelgrid_tournament_brackets_store',
   SCORER: 'khelgrid_tournament_scorer_store',
   CERTIFICATES: 'khelgrid_tournament_certificates_store',
+  TOURNAMENTS: 'khelgrid_tournament_meta_store',
+  REGISTERED_SQUADS: 'khelgrid_tournament_registered_squads_store',
 }
 
 const memoryStore = new Map<string, unknown>()
@@ -110,6 +114,8 @@ export function clearTournamentOpsMemoryStore(): void {
       window.localStorage.removeItem(STORAGE_KEYS.BRACKETS)
       window.localStorage.removeItem(STORAGE_KEYS.SCORER)
       window.localStorage.removeItem(STORAGE_KEYS.CERTIFICATES)
+      window.localStorage.removeItem(STORAGE_KEYS.TOURNAMENTS)
+      window.localStorage.removeItem(STORAGE_KEYS.REGISTERED_SQUADS)
     } catch {
       // ignore
     }
@@ -540,4 +546,244 @@ export function generateWhatsAppCertificateUrl(cert: TournamentCertificate): str
   ].join('\n')
 
   return `https://wa.me/?text=${encodeURIComponent(message)}`
+}
+
+// ---------------------------------------------------------------------------
+// 5. Cross-SaaS Ecosystem Interoperability (Tournament <-> Academy <-> Venue)
+// ---------------------------------------------------------------------------
+
+export interface TournamentMetadata {
+  id: string
+  title: string
+  sport: string
+  city: string
+  state?: string
+  division: string // e.g. 'U-14' | 'U-16' | 'U-18' | 'Open'
+  maxAllowedAge: number
+  venueSlug?: string
+  venueName?: string
+  startDate: string
+  endDate: string
+  status: 'registration_open' | 'bracket_active' | 'completed'
+  entryFee: number
+  maxTeams: number
+  registeredTeamsCount: number
+}
+
+export interface RegisteredAcademySquad {
+  id: string
+  tournamentId: string
+  tournamentTitle: string
+  academyId: string
+  academyName: string
+  teamName: string
+  division: string
+  contactPhone: string
+  submittedAt: string
+  status: 'APPROVED' | 'PENDING_AUDIT' | 'REJECTED'
+  players: SquadVerificationPlayer[]
+  verification: SquadVerificationResult
+}
+
+export const DEFAULT_TOURNAMENTS: TournamentMetadata[] = [
+  {
+    id: 'tour-national-u16-2026',
+    title: 'All-India National Youth Championship 2026',
+    sport: 'Football',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    division: 'U-16',
+    maxAllowedAge: 16,
+    venueSlug: 'bengaluru-football-turf',
+    venueName: 'Bengaluru Football Turf Arena',
+    startDate: '2026-11-20',
+    endDate: '2026-11-24',
+    status: 'bracket_active',
+    entryFee: 3000,
+    maxTeams: 8,
+    registeredTeamsCount: 8,
+  },
+  {
+    id: 'tour-delhi-grassroots-u14',
+    title: 'Delhi State Junior Grassroots Cup 2026',
+    sport: 'Football',
+    city: 'Delhi',
+    state: 'Delhi NCR',
+    division: 'U-14',
+    maxAllowedAge: 14,
+    venueSlug: 'delhi-sports-hub',
+    venueName: 'Siri Fort Sports Complex',
+    startDate: '2026-12-05',
+    endDate: '2026-12-08',
+    status: 'registration_open',
+    entryFee: 2500,
+    maxTeams: 16,
+    registeredTeamsCount: 9,
+  },
+  {
+    id: 'tour-mumbai-shuttle-u17',
+    title: 'Mumbai All-Stars Badminton Trophy 2026',
+    sport: 'Badminton',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    division: 'U-17',
+    maxAllowedAge: 17,
+    venueSlug: 'mumbai-badminton-hub',
+    venueName: 'Bandra Badminton Academy Courts',
+    startDate: '2026-12-12',
+    endDate: '2026-12-14',
+    status: 'registration_open',
+    entryFee: 1500,
+    maxTeams: 16,
+    registeredTeamsCount: 12,
+  },
+  {
+    id: 'tour-bengaluru-colts-cricket',
+    title: 'Bengaluru Colts Super Sixes Cricket Cup',
+    sport: 'Cricket',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    division: 'U-15',
+    maxAllowedAge: 15,
+    venueSlug: 'bengaluru-football-turf',
+    venueName: 'Koramangala Cricket Arena',
+    startDate: '2026-12-18',
+    endDate: '2026-12-21',
+    status: 'registration_open',
+    entryFee: 4000,
+    maxTeams: 12,
+    registeredTeamsCount: 6,
+  },
+]
+
+export function getAvailableTournaments(): TournamentMetadata[] {
+  return loadFromStorage<TournamentMetadata[]>(STORAGE_KEYS.TOURNAMENTS, DEFAULT_TOURNAMENTS)
+}
+
+export function getRegisteredSquads(tournamentId?: string): RegisteredAcademySquad[] {
+  const all = loadFromStorage<RegisteredAcademySquad[]>(STORAGE_KEYS.REGISTERED_SQUADS, [])
+  if (tournamentId) return all.filter(s => s.tournamentId === tournamentId)
+  return all
+}
+
+export function registerAcademySquad(params: {
+  tournamentId: string
+  academyId: string
+  academyName: string
+  teamName: string
+  division: string
+  contactPhone: string
+  players: SquadVerificationPlayer[]
+}): { success: boolean; message: string; squad: RegisteredAcademySquad } {
+  const tournaments = getAvailableTournaments()
+  const tour = tournaments.find(t => t.id === params.tournamentId)
+  const maxAge = tour ? tour.maxAllowedAge : 16
+  const tournamentTitle = tour ? tour.title : 'Official Tournament'
+
+  // Run anti-age-fraud verification
+  const verification = verifySquadAgeEligibility(params.teamName, params.players, maxAge)
+
+  const status: RegisteredAcademySquad['status'] =
+    verification.fraudRiskScore === 'FRAUD_DETECTED'
+      ? 'REJECTED'
+      : verification.fraudRiskScore === 'SUSPECT'
+      ? 'PENDING_AUDIT'
+      : 'APPROVED'
+
+  const squad: RegisteredAcademySquad = {
+    id: `sq-reg-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    tournamentId: params.tournamentId,
+    tournamentTitle,
+    academyId: params.academyId,
+    academyName: params.academyName,
+    teamName: params.teamName,
+    division: params.division,
+    contactPhone: params.contactPhone,
+    submittedAt: new Date().toISOString(),
+    status,
+    players: params.players,
+    verification,
+  }
+
+  const all = loadFromStorage<RegisteredAcademySquad[]>(STORAGE_KEYS.REGISTERED_SQUADS, [])
+  saveToStorage(STORAGE_KEYS.REGISTERED_SQUADS, [squad, ...all])
+
+  // Increment tournament registeredTeamsCount
+  if (tour && status === 'APPROVED') {
+    tour.registeredTeamsCount++
+    saveToStorage(STORAGE_KEYS.TOURNAMENTS, tournaments)
+  }
+
+  const message =
+    status === 'REJECTED'
+      ? `Registration rejected: ${verification.flaggedCount} player(s) flagged for age-fraud exceeding division cutoff.`
+      : status === 'PENDING_AUDIT'
+      ? `Squad submitted with warning: 1 player flagged for review. Status is pending referee audit.`
+      : `Squad successfully registered and verified for ${tournamentTitle}!`
+
+  return {
+    success: status !== 'REJECTED',
+    message,
+    squad,
+  }
+}
+
+export function bookVenueSlotForTournamentMatch(params: {
+  matchId: string
+  tournamentId: string
+  tournamentTitle: string
+  venueSlug: string
+  courtId: string
+  date: string
+  timeSlot: string
+  matchTitle: string
+}): { success: boolean; bookingRef: string; message: string } {
+  try {
+    const courts = getTurfCourts(params.venueSlug)
+    const court = courts.find(c => c.id === params.courtId) || courts[0]
+
+    const res = bookTurfSlot({
+      venueSlug: params.venueSlug,
+      venueName: params.tournamentTitle,
+      courtId: params.courtId,
+      courtName: court?.name || 'Main Pitch',
+      date: params.date,
+      timeSlot: params.timeSlot,
+      customerName: `Tournament Ops: ${params.tournamentTitle}`,
+      customerPhone: '+919876543210',
+      hourlyPrice: 1800,
+      advanceDeposit: 1800,
+      paymentMethod: 'fully_paid',
+    })
+
+    if (!res.success || !res.booking) {
+      return {
+        success: false,
+        bookingRef: '',
+        message: res.error || 'Court slot is already booked or unavailable on that date/time.',
+      }
+    }
+
+    const bookingRecord = res.booking
+
+    // Update match node in bracket store if it exists
+    const allMatches = loadFromStorage<TournamentBracketNode[]>(STORAGE_KEYS.BRACKETS, DEFAULT_BRACKET_MATCHES)
+    const matchIdx = allMatches.findIndex(m => m.id === params.matchId)
+    if (matchIdx >= 0) {
+      allMatches[matchIdx].pitchOrCourt = `Court ${params.courtId} (${bookingRecord.bookingId})`
+      saveToStorage(STORAGE_KEYS.BRACKETS, allMatches)
+    }
+
+    return {
+      success: true,
+      bookingRef: bookingRecord.bookingId,
+      message: `Turf court slot successfully reserved for match! Reference: ${bookingRecord.bookingId}`,
+    }
+  } catch (err) {
+    return {
+      success: false,
+      bookingRef: '',
+      message: `Could not reserve turf court: ${err instanceof Error ? err.message : 'Unknown error'}`,
+    }
+  }
 }

@@ -16,6 +16,9 @@ import {
   getTurfPricingConfig,
   saveTurfPricingConfig,
   isSlotPeakHour,
+  createQuickWalkInBooking,
+  createRecurringSubscription,
+  getRecurringSubscriptions,
   type TurfPricingConfig,
   type TurfCourt,
   type TurfSlot,
@@ -118,6 +121,91 @@ export default function TurfSlotCalendarPage({
   // Dynamic Peak Pricing Modal State
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false)
   const [pricingConfig, setPricingConfig] = useState<TurfPricingConfig>(() => getTurfPricingConfig(selectedVenueSlug))
+
+  // Quick Phone / Walk-In Modal State
+  const [isQuickWalkInModalOpen, setIsQuickWalkInModalOpen] = useState(false)
+  const [walkInName, setWalkInName] = useState('')
+  const [walkInPhone, setWalkInPhone] = useState('')
+  const [walkInCourtId, setWalkInCourtId] = useState(selectedCourtId)
+  const [walkInDate, setWalkInDate] = useState(selectedDate)
+  const [walkInTimeSlot, setWalkInTimeSlot] = useState('07:00 PM – 08:00 PM')
+  const [walkInPaymentStatus, setWalkInPaymentStatus] = useState<'upi_advance_paid' | 'pay_at_venue' | 'fully_paid'>('fully_paid')
+  const [walkInMsg, setWalkInMsg] = useState('')
+
+  // Recurring Subscriptions Modal State
+  const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false)
+  const [recCustomerName, setRecCustomerName] = useState('')
+  const [recCustomerPhone, setRecCustomerPhone] = useState('')
+  const [recDayOfWeek, setRecDayOfWeek] = useState(0) // Sunday
+  const [recTimeSlot, setRecTimeSlot] = useState('06:00 AM – 08:00 AM')
+  const [recWeeksCount, setRecWeeksCount] = useState(8)
+  const [recWeeklyRate, setRecWeeklyRate] = useState(2000)
+  const [recDeposit, setRecDeposit] = useState(4000)
+  const [recMsg, setRecMsg] = useState('')
+
+  function handleQuickWalkIn(e: FormEvent) {
+    e.preventDefault()
+    if (!walkInName.trim() || !walkInPhone.trim()) {
+      setWalkInMsg('Please enter customer name and phone.')
+      return
+    }
+    const res = createQuickWalkInBooking({
+      venueSlug: selectedVenueSlug,
+      courtId: walkInCourtId,
+      date: walkInDate,
+      timeSlot: walkInTimeSlot,
+      customerName: walkInName.trim(),
+      customerPhone: walkInPhone.trim(),
+      totalAmount: 1500,
+      paidAmount: 1500,
+      paymentStatus: walkInPaymentStatus,
+    })
+    if (res.success) {
+      setWalkInMsg(res.message)
+      triggerRefresh()
+      setTimeout(() => {
+        setIsQuickWalkInModalOpen(false)
+        setWalkInName('')
+        setWalkInPhone('')
+        setWalkInMsg('')
+      }, 1500)
+    } else {
+      setWalkInMsg(res.message)
+    }
+  }
+
+  function handleCreateSubscription(e: FormEvent) {
+    e.preventDefault()
+    if (!recCustomerName.trim() || !recCustomerPhone.trim()) {
+      setRecMsg('Please enter customer/club name and phone.')
+      return
+    }
+    const court = courts.find(c => c.id === walkInCourtId) || courts[0]
+    const res = createRecurringSubscription({
+      venueSlug: selectedVenueSlug,
+      courtId: court?.id || 'court-1',
+      courtName: court?.name || 'Pitch 1',
+      dayOfWeek: Number(recDayOfWeek),
+      timeSlot: recTimeSlot,
+      startDate: selectedDate,
+      weeksCount: Number(recWeeksCount),
+      customerName: recCustomerName.trim(),
+      customerPhone: recCustomerPhone.trim(),
+      weeklyRate: Number(recWeeklyRate),
+      advanceDepositPaid: Number(recDeposit),
+    })
+    if (res.success) {
+      setRecMsg(res.message)
+      triggerRefresh()
+      setTimeout(() => {
+        setRecCustomerName('')
+        setRecCustomerPhone('')
+        setRecMsg('')
+      }, 1500)
+    } else {
+      setRecMsg(res.message)
+    }
+  }
 
   function handleSavePricing(e: FormEvent) {
     e.preventDefault()
@@ -225,6 +313,30 @@ export default function TurfSlotCalendarPage({
           >
             <SiteIcon name="settings" size={16} />
             <span>Turf Settings &amp; UPI</span>
+          </button>
+          <button
+            type="button"
+            className="turf-btn turf-btn-outline"
+            onClick={() => {
+              setWalkInCourtId(selectedCourtId)
+              setWalkInDate(selectedDate)
+              setWalkInMsg('')
+              setIsQuickWalkInModalOpen(true)
+            }}
+          >
+            <SiteIcon name="phone" size={16} />
+            <span>⚡ Quick Phone Walk-In</span>
+          </button>
+          <button
+            type="button"
+            className="turf-btn turf-btn-outline"
+            onClick={() => {
+              setRecMsg('')
+              setIsRecurringModalOpen(true)
+            }}
+          >
+            <SiteIcon name="calendar" size={16} />
+            <span>📅 Subscriptions &amp; Leagues</span>
           </button>
           <button
             type="button"
@@ -886,6 +998,228 @@ export default function TurfSlotCalendarPage({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Phone / Walk-in Booking Modal */}
+      {isQuickWalkInModalOpen && (
+        <div className="turf-modal-overlay" onClick={() => setIsQuickWalkInModalOpen(false)}>
+          <div className="turf-modal" onClick={e => e.stopPropagation()}>
+            <div className="turf-modal-header">
+              <h2>⚡ 5-Second Phone / Walk-In Reservation</h2>
+              <button type="button" className="turf-modal-close" onClick={() => setIsQuickWalkInModalOpen(false)}>×</button>
+            </div>
+            <form onSubmit={handleQuickWalkIn} className="turf-modal-body">
+              {walkInMsg && (
+                <div style={{ padding: '0.75rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', color: '#166534', fontSize: '0.88rem', marginBottom: '1rem' }}>
+                  {walkInMsg}
+                </div>
+              )}
+              <div className="turf-form-group">
+                <label htmlFor="walkin-name">Customer / Captain Name</label>
+                <input
+                  id="walkin-name"
+                  type="text"
+                  className="turf-form-input"
+                  placeholder="e.g. Sameer Khan"
+                  value={walkInName}
+                  onChange={e => setWalkInName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="turf-form-group">
+                <label htmlFor="walkin-phone">Mobile Phone (for instant WhatsApp pass)</label>
+                <input
+                  id="walkin-phone"
+                  type="tel"
+                  className="turf-form-input"
+                  placeholder="e.g. 9876543210"
+                  value={walkInPhone}
+                  onChange={e => setWalkInPhone(e.target.value)}
+                  required
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="turf-form-group">
+                  <label htmlFor="walkin-court">Court</label>
+                  <select
+                    id="walkin-court"
+                    className="turf-form-input"
+                    value={walkInCourtId}
+                    onChange={e => setWalkInCourtId(e.target.value)}
+                  >
+                    {courts.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="turf-form-group">
+                  <label htmlFor="walkin-slot">Time Slot</label>
+                  <input
+                    id="walkin-slot"
+                    type="text"
+                    className="turf-form-input"
+                    value={walkInTimeSlot}
+                    onChange={e => setWalkInTimeSlot(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="turf-form-group">
+                <label htmlFor="walkin-pay-status">Payment Status</label>
+                <select
+                  id="walkin-pay-status"
+                  className="turf-form-input"
+                  value={walkInPaymentStatus}
+                  onChange={e => setWalkInPaymentStatus(e.target.value as any)}
+                >
+                  <option value="fully_paid">Fully Paid (Cash / UPI at Counter)</option>
+                  <option value="upi_advance_paid">Advance Deposit Paid</option>
+                  <option value="pay_at_venue">Pay Post-Match (Trusted regular)</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                <button type="button" className="turf-btn turf-btn-outline" onClick={() => setIsQuickWalkInModalOpen(false)}>Cancel</button>
+                <button type="submit" className="turf-btn turf-btn-primary">Confirm &amp; Generate WhatsApp Pass</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Recurring Subscriptions & Corporate Leagues Modal */}
+      {isRecurringModalOpen && (
+        <div className="turf-modal-overlay" onClick={() => setIsRecurringModalOpen(false)}>
+          <div className="turf-modal" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+            <div className="turf-modal-header">
+              <h2>📅 Recurring Slot Subscriptions &amp; Weekend Leagues</h2>
+              <button type="button" className="turf-modal-close" onClick={() => setIsRecurringModalOpen(false)}>×</button>
+            </div>
+            <div className="turf-modal-body">
+              {recMsg && (
+                <div style={{ padding: '0.75rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', color: '#166534', fontSize: '0.88rem', marginBottom: '1rem' }}>
+                  {recMsg}
+                </div>
+              )}
+              <form onSubmit={handleCreateSubscription} style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #e2e8f0' }}>
+                <h3 style={{ fontSize: '1rem', margin: '0 0 0.75rem', color: '#0f172a' }}>Add New Weekly Recurring Reservation</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div className="turf-form-group">
+                    <label htmlFor="rec-name">Team / Corporate Name</label>
+                    <input
+                      id="rec-name"
+                      type="text"
+                      className="turf-form-input"
+                      placeholder="e.g. Infosys Weekend Club"
+                      value={recCustomerName}
+                      onChange={e => setRecCustomerName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="turf-form-group">
+                    <label htmlFor="rec-phone">Captain Mobile</label>
+                    <input
+                      id="rec-phone"
+                      type="tel"
+                      className="turf-form-input"
+                      placeholder="e.g. 9845012345"
+                      value={recCustomerPhone}
+                      onChange={e => setRecCustomerPhone(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                  <div className="turf-form-group">
+                    <label htmlFor="rec-day">Day of Week</label>
+                    <select
+                      id="rec-day"
+                      className="turf-form-input"
+                      value={recDayOfWeek}
+                      onChange={e => setRecDayOfWeek(parseInt(e.target.value))}
+                    >
+                      <option value="0">Sunday</option>
+                      <option value="1">Monday</option>
+                      <option value="2">Tuesday</option>
+                      <option value="3">Wednesday</option>
+                      <option value="4">Thursday</option>
+                      <option value="5">Friday</option>
+                      <option value="6">Saturday</option>
+                    </select>
+                  </div>
+                  <div className="turf-form-group">
+                    <label htmlFor="rec-slot">Slot Time</label>
+                    <input
+                      id="rec-slot"
+                      type="text"
+                      className="turf-form-input"
+                      value={recTimeSlot}
+                      onChange={e => setRecTimeSlot(e.target.value)}
+                    />
+                  </div>
+                  <div className="turf-form-group">
+                    <label htmlFor="rec-weeks">Duration (Weeks)</label>
+                    <input
+                      id="rec-weeks"
+                      type="number"
+                      min="2"
+                      max="52"
+                      className="turf-form-input"
+                      value={recWeeksCount}
+                      onChange={e => setRecWeeksCount(parseInt(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div className="turf-form-group">
+                    <label htmlFor="rec-rate">Weekly Rate (INR)</label>
+                    <input
+                      id="rec-rate"
+                      type="number"
+                      className="turf-form-input"
+                      value={recWeeklyRate}
+                      onChange={e => setRecWeeklyRate(parseInt(e.target.value))}
+                    />
+                  </div>
+                  <div className="turf-form-group">
+                    <label htmlFor="rec-deposit">Advance Deposit Paid</label>
+                    <input
+                      id="rec-deposit"
+                      type="number"
+                      className="turf-form-input"
+                      value={recDeposit}
+                      onChange={e => setRecDeposit(parseInt(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                  <button type="submit" className="turf-btn turf-btn-primary">Create Recurring Subscription</button>
+                </div>
+              </form>
+
+              <div>
+                <h3 style={{ fontSize: '1rem', margin: '0 0 0.75rem', color: '#0f172a' }}>Active Subscriptions</h3>
+                {getRecurringSubscriptions(selectedVenueSlug).length === 0 ? (
+                  <p style={{ color: '#64748b', fontSize: '0.88rem' }}>No active recurring subscriptions for this venue.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {getRecurringSubscriptions(selectedVenueSlug).map(sub => (
+                      <div key={sub.subscriptionId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem' }}>
+                        <div>
+                          <strong>{sub.customerName}</strong> ({sub.customerPhone}) · {sub.timeSlot}
+                          <div style={{ color: '#64748b', fontSize: '0.78rem' }}>
+                            {sub.weeksCount} weeks ({sub.startDate} to {sub.endDate}) · Total: ₹{sub.totalFee} · Balance: ₹{sub.balanceDue}
+                          </div>
+                        </div>
+                        <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold', background: sub.status === 'active' ? '#dcfce7' : '#f1f5f9', color: sub.status === 'active' ? '#166534' : '#64748b' }}>
+                          {sub.status.toUpperCase()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
