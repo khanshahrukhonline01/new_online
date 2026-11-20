@@ -70,9 +70,14 @@ export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps
         <p>
           Managing a sports academy? Track inbound parent leads, publish morning &amp; evening batch schedules, issue verifiable trial entry passes, and automate monthly student fee collection via UPI — <strong>100% free during grassroots launch</strong> (₹3,499/mo value unlocked).
         </p>
-        <a className="host-action-btn primary" href="/academy-hub" onClick={event => onNavigate?.(event, '/academy-hub')}>
-          Open Free Academy Admissions Hub <SiteIcon name="arrow-up-right" size={16} />
-        </a>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '1rem' }}>
+          <a className="host-action-btn primary" href="/partner-signup" onClick={event => onNavigate?.(event, '/partner-signup')}>
+            Setup Academy (2-Min Wizard) <SiteIcon name="sparkles" size={16} />
+          </a>
+          <a className="host-action-btn secondary" href="/academy-hub" onClick={event => onNavigate?.(event, '/academy-hub')}>
+            Open Free Academy Admissions Hub <SiteIcon name="arrow-up-right" size={16} />
+          </a>
+        </div>
       </div>
 
       <div className="host-dashboard-empty-state" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), transparent)' }}>

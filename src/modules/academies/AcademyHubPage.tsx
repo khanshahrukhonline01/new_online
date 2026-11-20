@@ -75,6 +75,7 @@ export default function AcademyHubPage({
   // 3-Step Onboarding Modal State
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(() => {
     if (typeof window !== 'undefined') {
+      if (window.location.pathname === '/partner-signup' || window.location.pathname === '/academy/signup') return true
       const q = new URLSearchParams(window.location.search).get('onboarding')
       if (q === 'true') return true
       return !hasCompletedOnboarding() && registeredAcademies.every(a => !a.isCustom)

@@ -701,3 +701,138 @@
   border-radius: 9999px;
   margin-bottom: 0.35rem;
 }
+
+/* ==========================================================================
+   admincn (shadcn/ui style) Modern B2B SaaS Enhancements
+   ========================================================================== */
+
+.academy-hub-kpi-card {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.academy-hub-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  border-color: #cbd5e1;
+}
+
+:root[data-theme='dark'] .academy-hub-kpi-card,
+html.dark .academy-hub-kpi-card {
+  background: #111a28;
+  border-color: #1e293b;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme='dark'] .academy-hub-kpi-card:hover,
+html.dark .academy-hub-kpi-card:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 10px 24px -5px rgba(0, 0, 0, 0.6);
+}
+
+/* Stepper shadcn Enhancements */
+.onboarding-steps-bar {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+}
+
+:root[data-theme='dark'] .onboarding-steps-bar,
+html.dark .onboarding-steps-bar {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+.onboarding-step-pill.active {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+/* CRM & Leads Table shadcn Polish */
+.academy-hub-table-wrapper {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+:root[data-theme='dark'] .academy-hub-table-wrapper,
+html.dark .academy-hub-table-wrapper {
+  background: #111a28;
+  border-color: #1e293b;
+}
+
+.academy-hub-table th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+:root[data-theme='dark'] .academy-hub-table th,
+html.dark .academy-hub-table th {
+  background: #0f172a;
+  color: #94a3b8;
+  border-bottom-color: #1e293b;
+}
+
+.academy-hub-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+:root[data-theme='dark'] .academy-hub-table td,
+html.dark .academy-hub-table td {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.academy-hub-table tr:hover td {
+  background: #f8fafc;
+}
+
+:root[data-theme='dark'] .academy-hub-table tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Cosmic Neon Theme Overrides (ngx-admin style) */
+html.cosmic .academy-hub-kpi-card,
+html[data-admin-theme="cosmic"] .academy-hub-kpi-card {
+  background: #1b1b38;
+  border-color: rgba(115, 92, 255, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+html.cosmic .academy-hub-kpi-card:hover,
+html[data-admin-theme="cosmic"] .academy-hub-kpi-card:hover {
+  border-color: rgba(115, 92, 255, 0.6);
+  box-shadow: 0 8px 24px rgba(115, 92, 255, 0.2);
+}
+
+html.cosmic .academy-hub-table-wrapper,
+html[data-admin-theme="cosmic"] .academy-hub-table-wrapper {
+  background: #1b1b38;
+  border-color: rgba(115, 92, 255, 0.25);
+}
+
+html.cosmic .academy-hub-table th,
+html[data-admin-theme="cosmic"] .academy-hub-table th {
+  background: #16162e;
+  color: #a5b4fc;
+  border-bottom-color: rgba(115, 92, 255, 0.25);
+}
+
+html.cosmic .onboarding-steps-bar,
+html[data-admin-theme="cosmic"] .onboarding-steps-bar {
+  background: #16162e;
+  border-color: rgba(115, 92, 255, 0.25);
+}
+
