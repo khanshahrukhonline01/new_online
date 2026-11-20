@@ -70,6 +70,10 @@ export function AdminHeader({
           <SiteIcon name="menu" size={18} />
         </button>
 
+        <span className="admin-topbar-brand-title" title="KhelGrid Admin Operations">
+          KhelGrid Admin Operations
+        </span>
+
         {/* Command Palette Trigger */}
         <button
           type="button"

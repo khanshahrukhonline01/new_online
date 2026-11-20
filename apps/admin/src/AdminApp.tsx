@@ -11,8 +11,6 @@ import { AdminGroundOversightView } from './components/AdminGroundOversightView'
 import {
   getAdminModerationQueue,
   clearCatalogueCache,
-  type OperationsKpiSummary,
-  getOperationsKpiSummary,
 } from '../../../src/modules/admin/../../integrations/supabase/public-client'
 import { getChronicleModerationQueue } from '../../../src/modules/admin/../../integrations/supabase/chronicle-client'
 import './admin-app.css'
@@ -32,7 +30,6 @@ export function AdminApp() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [pendingListingsCount, setPendingListingsCount] = useState(0)
   const [pendingManuscriptsCount, setPendingManuscriptsCount] = useState(0)
-  const [kpiSummary, setKpiSummary] = useState<OperationsKpiSummary | null>(null)
   const [toastNotification, setToastNotification] = useState<string | null>(null)
   const [dbLatencyMs, setDbLatencyMs] = useState(24)
 
@@ -87,10 +84,9 @@ export function AdminApp() {
   const loadCounts = useCallback(async () => {
     const start = Date.now()
     try {
-      const [queueRes, chronicleRes, kpiRes] = await Promise.all([
+      const [queueRes, chronicleRes] = await Promise.all([
         getAdminModerationQueue({ limit: 50 }).catch(() => null),
         getChronicleModerationQueue().catch(() => null),
-        getOperationsKpiSummary().catch(() => null),
       ])
       setDbLatencyMs(Math.max(12, Math.min(80, Date.now() - start)))
       if (queueRes?.pendingSubmissions) {
@@ -98,9 +94,6 @@ export function AdminApp() {
       }
       if (chronicleRes?.submissions) {
         setPendingManuscriptsCount(chronicleRes.submissions.length)
-      }
-      if (kpiRes) {
-        setKpiSummary(kpiRes)
       }
     } catch {
       // ignore
@@ -257,99 +250,6 @@ export function AdminApp() {
 
   return (
     <main className="khelgrid-admin-app admin-lte-layout" aria-label="KhelGrid private administration">
-      {/* Compatibility Topbar (guarantees tests pass 100% while offering AdminLTE + ngx-admin topbar) */}
-      <header className="admin-shell-topbar">
-        <div className="admin-shell-brand">
-          <span className="admin-shell-badge-mark">KG</span>
-          <div>
-            <span className="admin-shell-title">KhelGrid Admin Operations</span>
-            <span className="admin-shell-sub">admin.khelgrid.com</span>
-          </div>
-        </div>
-
-        <nav className="admin-shell-nav" aria-label="Admin views">
-          <button
-            type="button"
-            className={`admin-shell-tab-btn ${activeWorkspace === 'command' ? 'is-active' : ''}`}
-            onClick={() => setActiveWorkspace('command')}
-          >
-            <SiteIcon name="activity" size={15} />
-            <span>Command Centre</span>
-          </button>
-          <button
-            type="button"
-            className={`admin-shell-tab-btn ${activeWorkspace === 'moderation_desk' || activeWorkspace === 'chronicle_desk' ? 'is-active' : ''}`}
-            onClick={() => setActiveWorkspace('moderation_desk')}
-          >
-            <SiteIcon name="check-circle" size={15} />
-            <span>Listing &amp; Chronicle Desk</span>
-            {pendingListingsCount > 0 && <span className="admin-tab-count-badge">{pendingListingsCount}</span>}
-          </button>
-          <button
-            type="button"
-            className={`admin-shell-tab-btn ${activeWorkspace === 'analytics' ? 'is-active' : ''}`}
-            onClick={() => setActiveWorkspace('analytics')}
-          >
-            <SiteIcon name="chart" size={15} />
-            <span>Operations &amp; KPI Analytics</span>
-          </button>
-          <button
-            type="button"
-            className={`admin-shell-tab-btn ${activeWorkspace === 'gate_desk' || activeWorkspace === 'turf_oversight' || activeWorkspace === 'academy_oversight' ? 'is-active' : ''}`}
-            onClick={() => setActiveWorkspace('gate_desk')}
-          >
-            <SiteIcon name="shield-check" size={15} />
-            <span>Ground &amp; SaaS Desks</span>
-          </button>
-        </nav>
-
-        <div className="admin-shell-meta">
-          <button
-            type="button"
-            className="admin-shell-command-palette-btn"
-            onClick={() => setIsCommandPaletteOpen(true)}
-            title="Open Command Palette (Ctrl+K)"
-          >
-            <SiteIcon name="search" size={13} />
-            <span>Commands</span>
-            <kbd>Ctrl+K</kbd>
-          </button>
-
-          <button
-            type="button"
-            className="admin-shell-reset-pw-btn"
-            title="Reset moderator password"
-            onClick={() => {
-              setActiveWorkspace('command')
-              window.dispatchEvent(new CustomEvent('khelgrid-admin-open-forgot-password'))
-            }}
-          >
-            <SiteIcon name="lock" size={13} />
-            <span>Reset Password</span>
-          </button>
-
-          <div className="admin-theme-inline" aria-label="Appearance preferences">
-            <label>
-              Theme
-              <select
-                value={adminTheme}
-                onChange={event => handleThemeChange(event.target.value as AdminThemeMode)}
-              >
-                <option value="system">System default</option>
-                <option value="light">Corporate Light</option>
-                <option value="dark">Dark Slate</option>
-                <option value="cosmic">Cosmic Neon</option>
-              </select>
-            </label>
-          </div>
-
-          <span className="admin-shell-db-indicator">
-            <span className="admin-shell-status-dot" />
-            <span>Dev Database (hznsbxvovjxvmnchzzqt)</span>
-          </span>
-        </div>
-      </header>
-
       {/* AdminLTE Master Two-Column Layout */}
       <div className="admin-lte-main-wrapper">
         {/* Collapsible AdminLTE & ngx-admin Sidebar */}
@@ -365,7 +265,7 @@ export function AdminApp() {
 
         {/* Content Area */}
         <div className="admin-lte-content-canvas">
-          {/* Secondary Sub-Header Bar */}
+          {/* Master AdminLTE & ngx-admin Header Bar */}
           <AdminHeader
             onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
@@ -388,28 +288,6 @@ export function AdminApp() {
               <SiteIcon name="check-circle" size={16} />
               <span>{toastNotification}</span>
             </div>
-          )}
-
-          {/* KPI Header Bar in Command / Analytics views */}
-          {kpiSummary && activeWorkspace === 'command' && (
-            <section className="admin-kpi-quick-strip" aria-label="Live Operations Summary">
-              <div className="admin-kpi-pill">
-                <span className="label">Total Ingestion</span>
-                <strong>{kpiSummary.totalSubmissions}</strong>
-              </div>
-              <div className="admin-kpi-pill warning">
-                <span className="label">Needs Verification</span>
-                <strong>{kpiSummary.pendingCount}</strong>
-              </div>
-              <div className="admin-kpi-pill success">
-                <span className="label">Live Catalogue</span>
-                <strong>{kpiSummary.publishedCount}</strong>
-              </div>
-              <div className="admin-kpi-pill purple">
-                <span className="label">Chronicle Preprints</span>
-                <strong>{pendingManuscriptsCount}</strong>
-              </div>
-            </section>
           )}
 
           {/* Main Active Workspace View */}

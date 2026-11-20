@@ -1787,8 +1787,116 @@ html[data-admin-theme="cosmic"] .admin-ground-tab-btn.is-active {
   color: #00d68f;
 }
 
+/* ==========================================================================
+   Cohesive Sub-Desk Harmonization (Zero Duplication & Enterprise Polish)
+   ========================================================================== */
+
+.admin-topbar-brand-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  padding-right: 0.75rem;
+  border-right: 1px solid #e2e8f0;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+
+:root[data-theme='dark'] .admin-topbar-brand-title,
+html.dark .admin-topbar-brand-title {
+  color: #f8fafc;
+  border-right-color: #1e293b;
+}
+
+html.cosmic .admin-topbar-brand-title,
+html[data-admin-theme="cosmic"] .admin-topbar-brand-title {
+  color: #ffffff;
+  border-right-color: rgba(115, 92, 255, 0.25);
+}
+
+/* 1. Hide duplicate top header inside AdminControlPanelPage when rendered inside AdminLTE */
+.admin-lte-content-canvas .admin-control-header {
+  display: none !important;
+}
+
+/* 2. Harmonize AdminControlPanelPage wrapper & inner sidebar into sleek top tabs */
+.admin-lte-content-canvas .admin-control {
+  max-width: 100% !important;
+  padding: 1.25rem 1.5rem 3rem !important;
+  background: transparent !important;
+}
+
+.admin-lte-content-canvas .admin-control-shell {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1.25rem !important;
+}
+
+.admin-lte-content-canvas .admin-control-sidebar {
+  position: static !important;
+  min-height: auto !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  padding: 0.5rem 0.75rem !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  gap: 0.5rem !important;
+}
+
+:root[data-theme='dark'] .admin-lte-content-canvas .admin-control-sidebar,
+html.dark .admin-lte-content-canvas .admin-control-sidebar {
+  background: #111a28 !important;
+  border-color: #1e293b !important;
+}
+
+html.cosmic .admin-lte-content-canvas .admin-control-sidebar,
+html[data-admin-theme="cosmic"] .admin-lte-content-canvas .admin-control-sidebar {
+  background: #1b1b38 !important;
+  border-color: rgba(115, 92, 255, 0.25) !important;
+}
+
+.admin-lte-content-canvas .admin-control-sidebar .admin-control-nav-label {
+  display: none !important;
+}
+
+.admin-lte-content-canvas .admin-control-sidebar-foot {
+  display: none !important;
+}
+
+.admin-lte-content-canvas .admin-control-sidebar > a {
+  padding: 0.45rem 0.85rem !important;
+  border-radius: 7px !important;
+  font-size: 0.82rem !important;
+  font-weight: 650 !important;
+  color: #64748b !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease !important;
+}
+
+.admin-lte-content-canvas .admin-control-sidebar > a:hover,
+.admin-lte-content-canvas .admin-control-sidebar > a.active {
+  background: #10b981 !important;
+  color: #042f2e !important;
+}
+
+/* 3. Hide redundant sign out buttons & duplicate role badges in AdminModerationPage */
+.admin-lte-content-canvas .admin-header .admin-mod-card-actions {
+  display: none !important;
+}
+
+.admin-lte-content-canvas .admin-page-root {
+  max-width: 100% !important;
+  padding: 1.25rem 1.5rem 3rem !important;
+}
+
 /* Responsive collapse on smaller displays */
 @media (max-width: 900px) {
+  .admin-topbar-brand-title {
+    display: none;
+  }
   .admin-lte-sidebar {
     position: absolute;
     top: 0;

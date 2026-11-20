@@ -48,7 +48,7 @@ export function AdminSidebar({
     { id: 'command', label: 'Command Centre', section: 'CORE WORKSPACES', icon: 'activity', badge: 'RBAC', badgeVariant: 'primary' },
     {
       id: 'moderation_desk',
-      label: 'Listing & Evidence Desk',
+      label: 'Listing & Chronicle Desk',
       section: 'CORE WORKSPACES',
       icon: 'check-circle',
       badge: pendingSubmissionsCount > 0 ? `${pendingSubmissionsCount} Pending` : 'Clear',
@@ -95,8 +95,8 @@ export function AdminSidebar({
       <div className="admin-sidebar-brand">
         <span className="admin-sidebar-logo-badge" title="KhelGrid Operations">KG</span>
         <div className="admin-sidebar-brand-text">
-          <span className="admin-sidebar-app-name">KhelGrid Admin</span>
-          <span className="admin-sidebar-sub-name">Enterprise Operations</span>
+          <span className="admin-sidebar-app-name">KhelGrid Admin Operations</span>
+          <span className="admin-sidebar-sub-name">admin.khelgrid.com</span>
         </div>
         <button
           type="button"
