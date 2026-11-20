@@ -3,6 +3,9 @@ import {
   clearGateAdmissionLog,
   verifyPassToken,
   admitPassToken,
+  admitPassOffline,
+  syncOfflineGateLogs,
+  getOfflineAuditStats,
   getGateAdmissionLogs,
 } from './passVerifierService'
 import { clearAcademySaaSMemoryStore, createTrialPass } from '../academies/academySaaSClient'
@@ -165,5 +168,27 @@ describe('Universal Pass Verifier Service Suite', () => {
 
   it('returns null for nonexistent tokens', () => {
     expect(verifyPassToken('FAKE-TOKEN-9999')).toBeNull()
+  })
+
+  it('handles offline gate admissions, indexed local logging and cloud synchronization', () => {
+    // 1. Admit pass in offline mode
+    const offlineRes = admitPassOffline('PASS-CRI-DEMO', 'Gate Officer Rakesh')
+    expect(offlineRes.success).toBe(true)
+    expect(offlineRes.isOffline).toBe(true)
+    expect(offlineRes.message).toContain('Offline Mode')
+
+    // 2. Check offline stats
+    const statsBefore = getOfflineAuditStats()
+    expect(statsBefore.totalAdmissions).toBe(1)
+    expect(statsBefore.offlineCount).toBe(1)
+    expect(statsBefore.pendingSyncCount).toBe(1)
+
+    // 3. Sync offline gate logs with cloud
+    const syncRes = syncOfflineGateLogs()
+    expect(syncRes.syncedCount).toBe(1)
+    expect(syncRes.message).toContain('synchronized')
+
+    const statsAfter = getOfflineAuditStats()
+    expect(statsAfter.pendingSyncCount).toBe(0)
   })
 })

@@ -19,6 +19,15 @@ import {
   generateWhatsAppParentReplyUrl,
   generateWhatsAppTraineeFeeReminderUrl,
   generateUpiPayLink,
+  getTraineeCombines,
+  saveTraineeCombine,
+  calculateCombinePercentile,
+  getCoachTrainingPlans,
+  saveCoachTrainingPlan,
+  generateWhatsAppTrainingPlanUrl,
+  getCoachEndorsements,
+  awardCoachEndorsement,
+  generateWhatsAppEndorsementUrl,
   type RegisteredCoach,
 } from './coachSaaSClient'
 import {
@@ -60,13 +69,18 @@ export default function CoachDashboardPage({
   const registeredCoaches = getRegisteredCoaches()
   const currentCoach: RegisteredCoach = getCurrentCoach(selectedSlug)
 
-  const [activeTab, setActiveTab] = useState<'trainees' | 'inquiries' | 'batches' | 'attendance' | 'earnings' | 'credentials'>('trainees')
+  const [activeTab, setActiveTab] = useState<
+    'trainees' | 'inquiries' | 'batches' | 'attendance' | 'earnings' | 'credentials' | 'combines' | 'plans' | 'endorsements'
+  >('trainees')
 
   // Data
   const trainees = getCoachTrainees(selectedSlug)
   const batches = getCoachBatches(selectedSlug)
   const inquiries = getCoachInquiries(selectedSlug)
   const summary = getCoachSaaSSummary(selectedSlug)
+  const combines = getTraineeCombines(selectedSlug)
+  const trainingPlans = getCoachTrainingPlans(selectedSlug)
+  const endorsements = getCoachEndorsements(selectedSlug)
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
@@ -78,6 +92,9 @@ export default function CoachDashboardPage({
   const [isRegisterCoachModalOpen, setIsRegisterCoachModalOpen] = useState(false)
   const [isImportCsvModalOpen, setIsImportCsvModalOpen] = useState(false)
   const [activeReceipt, setActiveReceipt] = useState<DigitalFeeReceipt | null>(null)
+  const [isAddCombineModalOpen, setIsAddCombineModalOpen] = useState(false)
+  const [isAddPlanModalOpen, setIsAddPlanModalOpen] = useState(false)
+  const [isAwardEndorsementModalOpen, setIsAwardEndorsementModalOpen] = useState(false)
 
   // CSV Import State
   const [importCsvText, setImportCsvText] = useState('')
@@ -133,6 +150,42 @@ export default function CoachDashboardPage({
   const [onboardCert, setOnboardCert] = useState('SAI / NIS Patiala Diploma')
   const [onboardFee, setOnboardFee] = useState(3500)
   const [onboardUpi, setOnboardUpi] = useState('')
+
+  // Combine Modal Form State
+  const [combineTraineeId, setCombineTraineeId] = useState('')
+  const [combineTraineeName, setCombineTraineeName] = useState('')
+  const [combineAgeGroup, setCombineAgeGroup] = useState('U-15')
+  const [combineSprint30m, setCombineSprint30m] = useState<number | undefined>(4.28)
+  const [combineVerticalJump, setCombineVerticalJump] = useState<number | undefined>(48)
+  const [combineYoYoLevel, setCombineYoYoLevel] = useState<number | undefined>(16.2)
+  const [combineProAgility, setCombineProAgility] = useState<number | undefined>(4.75)
+
+  // Training Plan Modal Form State
+  const [planBatchId, setPlanBatchId] = useState(batches[0]?.id || '')
+  const [planWeekTitle, setPlanWeekTitle] = useState('Week 4: Precision Fast Bowling & Seam Control')
+  const [planFocusArea, setPlanFocusArea] = useState('Wrist position, upright seam, Yorker execution at death overs')
+  const [planDrill1Day, setPlanDrill1Day] = useState('Mon')
+  const [planDrill1Title, setPlanDrill1Title] = useState('Static Wrist Snaps & 4-Stump Spot Bowling')
+  const [planDrill1Min, setPlanDrill1Min] = useState(45)
+  const [planDrill1Notes, setPlanDrill1Notes] = useState('3 sets of 18 deliveries onto a good-length chalk zone.')
+  const [planDrill2Day, setPlanDrill2Day] = useState('Wed')
+  const [planDrill2Title, setPlanDrill2Title] = useState('Run-up Rhythm & Crease Deceleration Checks')
+  const [planDrill2Min, setPlanDrill2Min] = useState(40)
+  const [planDrill2Notes, setPlanDrill2Notes] = useState('High-speed camera video recording of front-foot landing.')
+  const [planDrill3Day, setPlanDrill3Day] = useState('Fri')
+  const [planDrill3Title, setPlanDrill3Title] = useState('Match Simulation: 2 Death Overs Target Practice')
+  const [planDrill3Min, setPlanDrill3Min] = useState(60)
+  const [planDrill3Notes, setPlanDrill3Notes] = useState('Cones at blockhole and wide yorker line with fielders.')
+  const [planHomework, setPlanHomework] = useState('100 tennis ball wall-rebounds catching with soft hands + 30 core planks.')
+
+  // Endorsement Modal Form State
+  const [endorsementTraineeName, setEndorsementTraineeName] = useState(trainees[0]?.traineeName || 'Arjun Mehra')
+  const [endorsementSport, setEndorsementSport] = useState(currentCoach.sport || 'Cricket')
+  const [endorsementBadge, setEndorsementBadge] = useState('Fast-Bowling Elite Prodigy')
+  const [endorsementPassportId, setEndorsementPassportId] = useState('IN-ATH-2026-DEL-089')
+  const [endorsementStatement, setEndorsementStatement] = useState(
+    'Demonstrated extraordinary rotational velocity, clean gather, and rapid seam release. Highly disciplined athlete primed for state U-16 trials.'
+  )
 
   // UPI QR String
   const upiQrPayload = currentCoach.upiVpa
@@ -253,6 +306,79 @@ export default function CoachDashboardPage({
 
     setSelectedSlug(newCoach.slug)
     setIsRegisterCoachModalOpen(false)
+    triggerRefresh()
+  }
+
+  const handleSaveCombineSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    const targetTrainee = trainees.find(t => t.id === combineTraineeId)
+    const name = targetTrainee ? targetTrainee.traineeName : (combineTraineeName.trim() || 'Athlete')
+    const { percentile, tier } = calculateCombinePercentile({
+      ageGroup: combineAgeGroup,
+      sprint30m: combineSprint30m,
+      verticalJump: combineVerticalJump,
+      yoYoLevel: combineYoYoLevel,
+      proAgility: combineProAgility,
+    })
+
+    saveTraineeCombine({
+      coachSlug: selectedSlug,
+      traineeId: combineTraineeId || `tr-${Date.now()}`,
+      traineeName: name,
+      ageGroup: combineAgeGroup,
+      testDate: new Date().toISOString().slice(0, 10),
+      sprint30mSeconds: combineSprint30m,
+      verticalJumpCm: combineVerticalJump,
+      yoYoBeepLevel: combineYoYoLevel ? String(combineYoYoLevel) : undefined,
+      proAgilitySeconds: combineProAgility,
+      compositePercentile: percentile,
+      tier,
+      notes: `Standard combine test for ${combineAgeGroup} category.`,
+    })
+
+    setIsAddCombineModalOpen(false)
+    triggerRefresh()
+  }
+
+  const handleSavePlanSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    const targetBatch = batches.find(b => b.id === planBatchId) || batches[0]
+    const drills = [
+      { day: planDrill1Day, title: planDrill1Title, durationMinutes: planDrill1Min, instructions: planDrill1Notes },
+      { day: planDrill2Day, title: planDrill2Title, durationMinutes: planDrill2Min, instructions: planDrill2Notes },
+      { day: planDrill3Day, title: planDrill3Title, durationMinutes: planDrill3Min, instructions: planDrill3Notes },
+    ]
+
+    saveCoachTrainingPlan({
+      coachSlug: selectedSlug,
+      batchId: targetBatch?.id || 'batch-all',
+      batchName: targetBatch?.batchName || 'Elite Coaching Batch',
+      weekTitle: planWeekTitle,
+      focusArea: planFocusArea,
+      drills,
+      homeworkChallenge: planHomework,
+    })
+
+    setIsAddPlanModalOpen(false)
+    triggerRefresh()
+  }
+
+  const handleAwardEndorsementSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    if (!endorsementTraineeName.trim() || !endorsementStatement.trim()) return
+
+    awardCoachEndorsement({
+      coachSlug: selectedSlug,
+      coachName: currentCoach.name,
+      coachCertification: currentCoach.certification,
+      traineeName: endorsementTraineeName.trim(),
+      traineeId: endorsementPassportId.trim() || 'IN-ATH-2026-PENDING',
+      sport: endorsementSport,
+      badgeTitle: endorsementBadge,
+      endorsementText: endorsementStatement.trim(),
+    })
+
+    setIsAwardEndorsementModalOpen(false)
     triggerRefresh()
   }
 
@@ -563,6 +689,39 @@ export default function CoachDashboardPage({
         >
           <SiteIcon name="award" size={15} />
           <span>Credentials &amp; Evidence</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'combines'}
+          className={`coach-tab-btn ${activeTab === 'combines' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('combines')}
+        >
+          <SiteIcon name="award" size={15} />
+          <span>Combines &amp; Benchmarks ({combines.length})</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'plans'}
+          className={`coach-tab-btn ${activeTab === 'plans' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('plans')}
+        >
+          <SiteIcon name="calendar" size={15} />
+          <span>Weekly Drills &amp; Homework ({trainingPlans.length})</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'endorsements'}
+          className={`coach-tab-btn ${activeTab === 'endorsements' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('endorsements')}
+        >
+          <SiteIcon name="shield-check" size={15} />
+          <span>Verified Endorsements ({endorsements.length})</span>
         </button>
       </div>
 
@@ -1303,6 +1462,270 @@ export default function CoachDashboardPage({
         </div>
       )}
 
+      {/* TAB 7: COMBINES & BENCHMARKS (KhelChronicle Standards) */}
+      {activeTab === 'combines' && (
+        <div className="coach-card-panel">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div>
+              <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem' }}>Trainee Combine Benchmarks &amp; Norms</h3>
+              <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>
+                Standardized physiological battery benchmarked against the peer-reviewed KhelChronicle Normative Standards (KG-2026-002).
+              </p>
+            </div>
+            <button
+              type="button"
+              className="coach-primary-btn"
+              onClick={() => setIsAddCombineModalOpen(true)}
+            >
+              <SiteIcon name="award" size={15} />
+              <span>Log Combine Test</span>
+            </button>
+          </div>
+
+          <div className="coach-verification-status-banner verified" style={{ marginBottom: '1.25rem' }}>
+            <div className="coach-verification-status-text">
+              <SiteIcon name="shield-check" size={20} className="status-banner-icon verified" />
+              <div>
+                <strong style={{ color: '#065f46' }}>Peer-Reviewed Indian Normative Percentiles (KG-2026-002)</strong>
+                <p style={{ color: '#047857', margin: 0, fontSize: '0.84rem' }}>
+                  Combines test 30m sprint velocity, lower-body explosive power (vertical jump), aerobic recovery (Yo-Yo IR1), and pro agility (5-10-5 shuttle) calibrated for grassroots Indian age divisions (U-12 to Senior).
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="coach-combine-grid">
+            {combines.map(comb => {
+              const shareMsg = `🏆 *KhelGrid Athlete Combine Card*\n*Athlete:* ${comb.traineeName} (${comb.ageGroup})\n*Sport:* ${currentCoach.sport || 'Cricket'}\n*Percentile:* ${comb.compositePercentile}th Percentile (${comb.tier})\n• 30m Sprint: ${comb.sprint30mSeconds ? `${comb.sprint30mSeconds}s` : 'N/A'}\n• Vertical Jump: ${comb.verticalJumpCm ? `${comb.verticalJumpCm}cm` : 'N/A'}\n• Yo-Yo IR1: Level ${comb.yoYoBeepLevel || 'N/A'}\n• 5-10-5 Agility: ${comb.proAgilitySeconds ? `${comb.proAgilitySeconds}s` : 'N/A'}\n— Tested by Coach ${currentCoach.name}`
+              const shareUrl = `https://wa.me/?text=${encodeURIComponent(shareMsg)}`
+
+              const tierClass =
+                comb.tier.includes('Elite')
+                  ? 'elite'
+                  : comb.tier.includes('Advanced')
+                  ? 'advanced'
+                  : comb.tier.includes('Competitive')
+                  ? 'competitive'
+                  : 'developing'
+
+              return (
+                <div key={comb.id} className="coach-combine-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h4 style={{ margin: '0 0 2px', fontSize: '1.05rem', color: '#0f172a' }}>{comb.traineeName}</h4>
+                      <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                        {currentCoach.sport || 'Cricket'} · {comb.ageGroup} · Tested {comb.testDate}
+                      </span>
+                    </div>
+                    <span className={`combine-tier-pill ${tierClass}`}>{comb.tier}</span>
+                  </div>
+
+                  <div className="coach-combine-metrics">
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>30m SPRINT</span>
+                      <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>
+                        {comb.sprint30mSeconds ? `${comb.sprint30mSeconds}s` : '—'}
+                      </strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>VERTICAL JUMP</span>
+                      <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>
+                        {comb.verticalJumpCm ? `${comb.verticalJumpCm} cm` : '—'}
+                      </strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>YO-YO LEVEL</span>
+                      <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>
+                        {comb.yoYoBeepLevel ? `Level ${comb.yoYoBeepLevel}` : '—'}
+                      </strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>PRO AGILITY (5-10-5)</span>
+                      <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>
+                        {comb.proAgilitySeconds ? `${comb.proAgilitySeconds}s` : '—'}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Overall Score</span>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669' }}>
+                        {comb.compositePercentile}th %ile
+                      </div>
+                    </div>
+                    <a
+                      href={shareUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="coach-action-btn whatsapp"
+                      style={{ padding: '6px 10px', fontSize: '12px' }}
+                      title="Share combine card on WhatsApp"
+                    >
+                      <SiteIcon name="share" size={13} />
+                      <span>Share Card</span>
+                    </a>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 8: WEEKLY DRILLS & CURRICULUM */}
+      {activeTab === 'plans' && (
+        <div className="coach-card-panel">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div>
+              <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem' }}>Weekly Drills, Curriculum &amp; Homework</h3>
+              <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>
+                Structure weekly training targets, tactical drills, and home practice challenges for each batch.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="coach-primary-btn"
+              onClick={() => setIsAddPlanModalOpen(true)}
+            >
+              <SiteIcon name="calendar" size={15} />
+              <span>Create Training Plan</span>
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {trainingPlans.map(plan => (
+              <div key={plan.id} className="coach-plan-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <span className="coach-batch-sport-tag">{currentCoach.sport || 'Sports'}</span>
+                    <h4 style={{ margin: '6px 0 2px', fontSize: '1.1rem', color: '#0f172a' }}>{plan.weekTitle}</h4>
+                    <span style={{ fontSize: '0.84rem', color: '#059669', fontWeight: 600 }}>Batch: {plan.batchName}</span>
+                  </div>
+                  <a
+                    href={generateWhatsAppTrainingPlanUrl(plan, currentCoach.name)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="coach-action-btn whatsapp"
+                    style={{ padding: '8px 12px', fontSize: '12.5px' }}
+                    title="Broadcast weekly drills to trainees on WhatsApp"
+                  >
+                    <SiteIcon name="share" size={14} />
+                    <span>Broadcast on WhatsApp</span>
+                  </a>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px', borderLeft: '4px solid #059669', fontSize: '0.85rem' }}>
+                  <strong>Key Tactical Focus:</strong> {plan.focusArea}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {plan.drills.map((drill, idx) => (
+                    <div key={idx} className="plan-drill-row">
+                      <span className="plan-drill-day">{drill.day}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <strong style={{ color: '#0f172a' }}>{drill.title}</strong>
+                          <span style={{ fontSize: '0.78rem', color: '#64748b' }}>{drill.durationMinutes} mins</span>
+                        </div>
+                        <p style={{ margin: '2px 0 0', color: '#475569', fontSize: '0.82rem' }}>
+                          {drill.instructions}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ background: '#ecfdf5', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px dashed #6ee7b7', fontSize: '0.84rem' }}>
+                  <strong style={{ color: '#065f46' }}>🏠 Home Practice Challenge:</strong>
+                  <p style={{ margin: '4px 0 0', color: '#047857' }}>{plan.homeworkChallenge}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 9: VERIFIED ENDORSEMENTS */}
+      {activeTab === 'endorsements' && (
+        <div className="coach-card-panel">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div>
+              <h3 style={{ margin: '0 0 4px', fontSize: '1.1rem' }}>Official Coach Endorsements &amp; Talent Scouting CV</h3>
+              <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem' }}>
+                Endorse elite trainees with tamper-proof cryptographic badges permanently stamped on their National Sports CV.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="coach-primary-btn"
+              onClick={() => setIsAwardEndorsementModalOpen(true)}
+            >
+              <SiteIcon name="shield-check" size={15} />
+              <span>Award Official Endorsement</span>
+            </button>
+          </div>
+
+          <div className="coach-verification-status-banner verified" style={{ marginBottom: '1.25rem' }}>
+            <div className="coach-verification-status-text">
+              <SiteIcon name="award" size={20} className="status-banner-icon verified" />
+              <div>
+                <strong style={{ color: '#065f46' }}>Tamper-Proof Scouting Validation</strong>
+                <p style={{ color: '#047857', margin: 0, fontSize: '0.84rem' }}>
+                  Each endorsement issued by a verified NIS Patiala / SAI coach carries a unique cryptographic verification hash (KG-CERT-...). Scouts, selectors, and state federations can verify authenticity instantly on KhelGrid.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {endorsements.map(end => (
+              <div key={end.id} className="coach-endorsement-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <h4 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a' }}>{end.traineeName}</h4>
+                      <span className="endorsement-hash-badge">{end.verificationHash}</span>
+                    </div>
+                    <span style={{ fontSize: '0.82rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                      Passport: {end.traineeId} · Sport: {end.sport} · Awarded {end.awardedDate}
+                    </span>
+                  </div>
+                  <a
+                    href={generateWhatsAppEndorsementUrl(end)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="coach-action-btn whatsapp"
+                    style={{ padding: '8px 12px', fontSize: '12.5px' }}
+                    title="Send official verified certificate on WhatsApp"
+                  >
+                    <SiteIcon name="share" size={14} />
+                    <span>Share Certificate</span>
+                  </a>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '8px', borderLeft: '4px solid #10b981' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '1.1rem' }}>🎖️</span>
+                    <strong style={{ color: '#0f172a', fontSize: '0.95rem' }}>{end.badgeTitle}</strong>
+                  </div>
+                  <p style={{ margin: 0, color: '#334155', fontStyle: 'italic', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                    &quot;{end.endorsementText}&quot;
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: '#64748b' }}>
+                  <span>
+                    Endorsed by: <strong style={{ color: '#065f46' }}>{end.coachName}</strong> ({end.coachCertification})
+                  </span>
+                  <span style={{ color: '#059669', fontWeight: 600 }}>🛡️ KhelGrid Verified Coach</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* MODAL: ADD TRAINEE */}
       {isAddTraineeModalOpen && (
         <div className="coach-modal-backdrop" onClick={() => setIsAddTraineeModalOpen(false)}>
@@ -1835,6 +2258,349 @@ export default function CoachDashboardPage({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: LOG COMBINE TEST */}
+      {isAddCombineModalOpen && (
+        <div className="coach-modal-backdrop" onClick={() => setIsAddCombineModalOpen(false)}>
+          <div className="coach-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="coach-modal-header">
+              <h3>Log Trainee Combine Test (KG-2026-002)</h3>
+              <button
+                type="button"
+                className="coach-modal-close-btn"
+                onClick={() => setIsAddCombineModalOpen(false)}
+              >
+                <SiteIcon name="close" size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveCombineSubmit} className="coach-modal-form">
+              <div className="coach-modal-row">
+                <div className="coach-modal-field">
+                  <label>Select Trainee</label>
+                  <select
+                    value={combineTraineeId}
+                    onChange={e => {
+                      setCombineTraineeId(e.target.value)
+                      const tr = trainees.find(t => t.id === e.target.value)
+                      if (tr) setCombineTraineeName(tr.traineeName)
+                    }}
+                  >
+                    <option value="">-- Choose or type name below --</option>
+                    {trainees.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.traineeName} ({t.batchName})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="coach-modal-field">
+                  <label>Or Trainee Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Arjun Mehra"
+                    value={combineTraineeName}
+                    onChange={e => setCombineTraineeName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="coach-modal-row">
+                <div className="coach-modal-field">
+                  <label>Age Group Division</label>
+                  <select value={combineAgeGroup} onChange={e => setCombineAgeGroup(e.target.value)}>
+                    <option value="U-12">U-12 Sub-Junior</option>
+                    <option value="U-14">U-14 Junior</option>
+                    <option value="U-15">U-15 Cadet</option>
+                    <option value="U-17">U-17 Youth</option>
+                    <option value="U-19">U-19 Junior Elite</option>
+                    <option value="Senior">Senior (19+ yrs)</option>
+                  </select>
+                </div>
+                <div className="coach-modal-field">
+                  <label>30m Sprint (seconds)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g. 4.25"
+                    value={combineSprint30m ?? ''}
+                    onChange={e => setCombineSprint30m(parseFloat(e.target.value) || undefined)}
+                  />
+                </div>
+              </div>
+
+              <div className="coach-modal-row">
+                <div className="coach-modal-field">
+                  <label>Vertical Jump (cm)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    placeholder="e.g. 48.0"
+                    value={combineVerticalJump ?? ''}
+                    onChange={e => setCombineVerticalJump(parseFloat(e.target.value) || undefined)}
+                  />
+                </div>
+                <div className="coach-modal-field">
+                  <label>Yo-Yo IR1 (Shuttle Level)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="e.g. 16.2"
+                    value={combineYoYoLevel ?? ''}
+                    onChange={e => setCombineYoYoLevel(parseFloat(e.target.value) || undefined)}
+                  />
+                </div>
+              </div>
+
+              <div className="coach-modal-field">
+                <label>Pro Agility 5-10-5 Shuttle (seconds)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 4.75"
+                  value={combineProAgility ?? ''}
+                  onChange={e => setCombineProAgility(parseFloat(e.target.value) || undefined)}
+                />
+              </div>
+
+              {/* Real-time Percentile Calculation Preview */}
+              {(() => {
+                const preview = calculateCombinePercentile({
+                  ageGroup: combineAgeGroup,
+                  sprint30m: combineSprint30m,
+                  verticalJump: combineVerticalJump,
+                  yoYoLevel: combineYoYoLevel,
+                  proAgility: combineProAgility,
+                })
+                return (
+                  <div style={{ background: '#ecfdf5', padding: '10px 14px', borderRadius: '8px', border: '1px solid #6ee7b7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <strong style={{ color: '#065f46', fontSize: '0.85rem' }}>Calculated Talent Norm:</strong>
+                      <div style={{ color: '#047857', fontSize: '0.8rem' }}>Tier: <strong>{preview.tier}</strong></div>
+                    </div>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#059669' }}>
+                      {preview.percentile}th %ile
+                    </span>
+                  </div>
+                )
+              })()}
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '1rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="coach-hub-btn-outline"
+                  onClick={() => setIsAddCombineModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="coach-primary-btn">
+                  Save Combine Test
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CREATE TRAINING PLAN */}
+      {isAddPlanModalOpen && (
+        <div className="coach-modal-backdrop" onClick={() => setIsAddPlanModalOpen(false)}>
+          <div className="coach-modal-card" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+            <div className="coach-modal-header">
+              <h3>Create Weekly Training Plan</h3>
+              <button
+                type="button"
+                className="coach-modal-close-btn"
+                onClick={() => setIsAddPlanModalOpen(false)}
+              >
+                <SiteIcon name="close" size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleSavePlanSubmit} className="coach-modal-form">
+              <div className="coach-modal-row">
+                <div className="coach-modal-field">
+                  <label>Assign to Batch</label>
+                  <select value={planBatchId} onChange={e => setPlanBatchId(e.target.value)}>
+                    {batches.map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.batchName} ({b.days})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="coach-modal-field">
+                  <label>Week Curriculum Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={planWeekTitle}
+                    onChange={e => setPlanWeekTitle(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="coach-modal-field">
+                <label>Key Tactical / Technical Focus</label>
+                <input
+                  type="text"
+                  required
+                  value={planFocusArea}
+                  onChange={e => setPlanFocusArea(e.target.value)}
+                />
+              </div>
+
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
+                <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>Day-by-Day Drills:</strong>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr 80px', gap: '8px', marginTop: '6px' }}>
+                  <input value={planDrill1Day} onChange={e => setPlanDrill1Day(e.target.value)} placeholder="Day" />
+                  <input value={planDrill1Title} onChange={e => setPlanDrill1Title(e.target.value)} placeholder="Drill title" />
+                  <input type="number" value={planDrill1Min} onChange={e => setPlanDrill1Min(parseInt(e.target.value) || 30)} placeholder="Min" />
+                </div>
+                <input
+                  style={{ marginTop: '4px', fontSize: '0.82rem' }}
+                  value={planDrill1Notes}
+                  onChange={e => setPlanDrill1Notes(e.target.value)}
+                  placeholder="Instructions / coaching cues"
+                />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr 80px', gap: '8px', marginTop: '8px' }}>
+                  <input value={planDrill2Day} onChange={e => setPlanDrill2Day(e.target.value)} placeholder="Day" />
+                  <input value={planDrill2Title} onChange={e => setPlanDrill2Title(e.target.value)} placeholder="Drill title" />
+                  <input type="number" value={planDrill2Min} onChange={e => setPlanDrill2Min(parseInt(e.target.value) || 30)} placeholder="Min" />
+                </div>
+                <input
+                  style={{ marginTop: '4px', fontSize: '0.82rem' }}
+                  value={planDrill2Notes}
+                  onChange={e => setPlanDrill2Notes(e.target.value)}
+                  placeholder="Instructions / coaching cues"
+                />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr 80px', gap: '8px', marginTop: '8px' }}>
+                  <input value={planDrill3Day} onChange={e => setPlanDrill3Day(e.target.value)} placeholder="Day" />
+                  <input value={planDrill3Title} onChange={e => setPlanDrill3Title(e.target.value)} placeholder="Drill title" />
+                  <input type="number" value={planDrill3Min} onChange={e => setPlanDrill3Min(parseInt(e.target.value) || 30)} placeholder="Min" />
+                </div>
+                <input
+                  style={{ marginTop: '4px', fontSize: '0.82rem' }}
+                  value={planDrill3Notes}
+                  onChange={e => setPlanDrill3Notes(e.target.value)}
+                  placeholder="Instructions / coaching cues"
+                />
+              </div>
+
+              <div className="coach-modal-field" style={{ marginTop: '0.75rem' }}>
+                <label>Home Practice Challenge</label>
+                <textarea
+                  rows={2}
+                  value={planHomework}
+                  onChange={e => setPlanHomework(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '1rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="coach-hub-btn-outline"
+                  onClick={() => setIsAddPlanModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="coach-primary-btn">
+                  Publish Training Plan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: AWARD OFFICIAL ENDORSEMENT */}
+      {isAwardEndorsementModalOpen && (
+        <div className="coach-modal-backdrop" onClick={() => setIsAwardEndorsementModalOpen(false)}>
+          <div className="coach-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="coach-modal-header">
+              <h3>Award Official Trainee Endorsement</h3>
+              <button
+                type="button"
+                className="coach-modal-close-btn"
+                onClick={() => setIsAwardEndorsementModalOpen(false)}
+              >
+                <SiteIcon name="close" size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleAwardEndorsementSubmit} className="coach-modal-form">
+              <div className="coach-modal-row">
+                <div className="coach-modal-field">
+                  <label>Athlete Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={endorsementTraineeName}
+                    onChange={e => setEndorsementTraineeName(e.target.value)}
+                  />
+                </div>
+                <div className="coach-modal-field">
+                  <label>Athlete Passport ID</label>
+                  <input
+                    type="text"
+                    required
+                    value={endorsementPassportId}
+                    onChange={e => setEndorsementPassportId(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="coach-modal-row">
+                <div className="coach-modal-field">
+                  <label>Sport</label>
+                  <input
+                    type="text"
+                    required
+                    value={endorsementSport}
+                    onChange={e => setEndorsementSport(e.target.value)}
+                  />
+                </div>
+                <div className="coach-modal-field">
+                  <label>Official Badge Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={endorsementBadge}
+                    onChange={e => setEndorsementBadge(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="coach-modal-field">
+                <label>Official Endorsement Statement</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={endorsementStatement}
+                  onChange={e => setEndorsementStatement(e.target.value)}
+                />
+              </div>
+
+              <div style={{ background: '#ecfdf5', padding: '10px 12px', borderRadius: '8px', border: '1px solid #6ee7b7', fontSize: '0.8rem', color: '#065f46' }}>
+                🛡️ This endorsement generates a tamper-proof cryptographic verification hash stamped directly by <strong>{currentCoach.name}</strong> ({currentCoach.certification}) on the athlete's National Sports CV.
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '1rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="coach-hub-btn-outline"
+                  onClick={() => setIsAwardEndorsementModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="coach-primary-btn">
+                  Issue Verified Endorsement
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

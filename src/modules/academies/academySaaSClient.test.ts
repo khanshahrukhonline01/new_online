@@ -22,6 +22,13 @@ import {
   confirmAndVerifyAcademy,
   revokeAcademyVerification,
   hasCompletedOnboarding,
+  getAcademyStaff,
+  saveAcademyStaffMember,
+  deleteAcademyStaffMember,
+  getAcademyFeeTransactions,
+  recordFeeTransaction,
+  settleCashInHand,
+  getAcademyLedgerSummary,
 } from './academySaaSClient'
 
 describe('academySaaSClient Unit Suite', () => {
@@ -233,5 +240,76 @@ describe('academySaaSClient Unit Suite', () => {
     expect(revokeAcademyVerification('shivaji-cricket-academy')).toBe(true)
     const revokedAcad = getRegisteredAcademies().find(a => a.slug === 'shivaji-cricket-academy')
     expect(revokedAcad?.verificationStatus).toBe('pending_review')
+  })
+
+  it('manages academy staff members with roles and assignments', () => {
+    const staff = getAcademyStaff('bengaluru-fc-academy')
+    expect(staff.length).toBeGreaterThanOrEqual(4)
+    expect(staff.some(s => s.role === 'head_coach')).toBe(true)
+    expect(staff.some(s => s.role === 'accountant')).toBe(true)
+
+    const newStaff = saveAcademyStaffMember({
+      academySlug: 'test-academy',
+      name: 'Coach Vikram Rathore',
+      role: 'head_coach',
+      phone: '9812345678',
+      email: 'vikram@example.com',
+      qualification: 'BCCI Level 3',
+      assignedBatches: ['batch-1'],
+      status: 'active',
+      joinedDate: '2026-01-15',
+    })
+
+    expect(newStaff.id).toBeDefined()
+    expect(newStaff.name).toBe('Coach Vikram Rathore')
+
+    const testStaff = getAcademyStaff('test-academy')
+    expect(testStaff.length).toBe(1)
+    expect(testStaff[0].role).toBe('head_coach')
+
+    deleteAcademyStaffMember(newStaff.id)
+    expect(getAcademyStaff('test-academy').length).toBe(0)
+  })
+
+  it('records cash & UPI fee transactions and computes financial ledger summary', () => {
+    const initialTx = getAcademyFeeTransactions('bengaluru-fc-academy')
+    expect(initialTx.length).toBeGreaterThanOrEqual(2)
+
+    const summary = getAcademyLedgerSummary('bengaluru-fc-academy')
+    expect(summary.totalExpectedMonthly).toBeGreaterThan(0)
+    expect(summary.totalCollected).toBeGreaterThanOrEqual(5000)
+    expect(summary.cashCollected).toBeGreaterThan(0)
+    expect(summary.upiCollected).toBeGreaterThan(0)
+    expect(summary.collectionRate).toBeGreaterThan(0)
+
+    const newTx = recordFeeTransaction({
+      academySlug: 'bengaluru-fc-academy',
+      studentId: 'std-3',
+      studentName: 'Dhruv Nair',
+      parentName: 'Mahesh Nair',
+      parentPhone: '9845998877',
+      batchId: 'batch-bfc-2',
+      batchName: 'Weekend Grassroots Foundation',
+      amount: 1800,
+      paymentMode: 'cash',
+      collectedByStaffName: 'Coach Anand Rao',
+      collectedDate: '2026-11-21',
+      billingMonth: 'November 2026',
+      status: 'cash_in_hand',
+    })
+
+    expect(newTx.receiptNumber).toMatch(/^KGR-2026-\d{5}$/)
+    expect(newTx.status).toBe('cash_in_hand')
+
+    // Verify cash in hand increases
+    const updatedSummary = getAcademyLedgerSummary('bengaluru-fc-academy')
+    expect(updatedSummary.cashInHand).toBeGreaterThanOrEqual(1800)
+
+    // Settle cash in hand
+    settleCashInHand(newTx.id)
+    const afterSettleSummary = getAcademyLedgerSummary('bengaluru-fc-academy')
+    const settledTx = getAcademyFeeTransactions('bengaluru-fc-academy').find(t => t.id === newTx.id)
+    expect(settledTx?.status).toBe('settled')
+    expect(afterSettleSummary.cashInHand).toBeLessThan(updatedSummary.cashInHand)
   })
 })

@@ -102,6 +102,49 @@ export interface RegisteredAcademy {
   verificationStatus?: 'unverified' | 'pending_review' | 'verified' | 'rejected'
 }
 
+export interface AcademyStaffMember {
+  id: string
+  academySlug: string
+  name: string
+  role: 'director' | 'head_coach' | 'assistant_coach' | 'ground_staff' | 'accountant'
+  phone: string
+  email?: string
+  qualification?: string
+  assignedBatches?: string[]
+  status: 'active' | 'on_leave'
+  joinedDate: string
+}
+
+export interface AcademyFeeTransaction {
+  id: string
+  academySlug: string
+  studentId: string
+  studentName: string
+  parentName: string
+  parentPhone: string
+  batchId: string
+  batchName: string
+  amount: number
+  paymentMode: 'cash' | 'direct_upi' | 'bank_transfer' | 'cheque'
+  collectedByStaffName: string
+  collectedDate: string
+  billingMonth: string
+  receiptNumber: string
+  status: 'settled' | 'cash_in_hand'
+  notes?: string
+}
+
+export interface AcademyLedgerSummary {
+  totalExpectedMonthly: number
+  totalCollected: number
+  cashCollected: number
+  upiCollected: number
+  pendingDues: number
+  overdueCount: number
+  cashInHand: number
+  collectionRate: number
+}
+
 export const INITIAL_REGISTERED_ACADEMIES: RegisteredAcademy[] = [
   {
     id: 'bengaluru-fc-academy',
@@ -161,6 +204,8 @@ const STORAGE_KEYS = {
   SETTINGS: 'khelgrid_academy_saas_settings',
   REGISTERED_ACADEMIES: 'khelgrid_academy_saas_registered_academies',
   ONBOARDING_COMPLETED: 'khelgrid_academy_saas_onboarding_completed',
+  STAFF: 'khelgrid_academy_saas_staff',
+  TRANSACTIONS: 'khelgrid_academy_saas_transactions',
 }
 
 // Default Seed Data for major curated academies
@@ -335,6 +380,91 @@ const DEFAULT_STUDENTS: AcademyStudent[] = [
   },
 ]
 
+const DEFAULT_STAFF: AcademyStaffMember[] = [
+  {
+    id: 'staff-bfc-1',
+    academySlug: 'bengaluru-fc-academy',
+    name: 'Coach Suresh M.',
+    role: 'head_coach',
+    phone: '9845011223',
+    email: 'suresh.m@bengalurufc.in',
+    qualification: 'AFC A-License (AIFF)',
+    assignedBatches: ['batch-bfc-1'],
+    status: 'active',
+    joinedDate: '2023-06-15',
+  },
+  {
+    id: 'staff-bfc-2',
+    academySlug: 'bengaluru-fc-academy',
+    name: 'Coach Anand Rao',
+    role: 'assistant_coach',
+    phone: '9845022334',
+    qualification: 'AIFF D-License',
+    assignedBatches: ['batch-bfc-2'],
+    status: 'active',
+    joinedDate: '2024-01-10',
+  },
+  {
+    id: 'staff-bfc-3',
+    academySlug: 'bengaluru-fc-academy',
+    name: 'Ramesh Iyer',
+    role: 'accountant',
+    phone: '9845033445',
+    email: 'accounts@bengalurufc.in',
+    status: 'active',
+    joinedDate: '2022-08-01',
+  },
+  {
+    id: 'staff-bfc-4',
+    academySlug: 'bengaluru-fc-academy',
+    name: 'Director John K.',
+    role: 'director',
+    phone: '9845012345',
+    email: 'director@bengalurufc.in',
+    status: 'active',
+    joinedDate: '2021-03-01',
+  },
+]
+
+const DEFAULT_TRANSACTIONS: AcademyFeeTransaction[] = [
+  {
+    id: 'tx-1',
+    academySlug: 'bengaluru-fc-academy',
+    studentId: 'std-1',
+    studentName: 'Aarav Sundaram',
+    parentName: 'Ramesh Sundaram',
+    parentPhone: '9845012345',
+    batchId: 'batch-bfc-1',
+    batchName: 'Morning Elite U-14 Youth Squad',
+    amount: 2500,
+    paymentMode: 'direct_upi',
+    collectedByStaffName: 'Director John K.',
+    collectedDate: '2026-11-05',
+    billingMonth: 'November 2026',
+    receiptNumber: 'KGR-2026-88120',
+    status: 'settled',
+    notes: 'Paid via direct UPI (GPay)',
+  },
+  {
+    id: 'tx-2',
+    academySlug: 'bengaluru-fc-academy',
+    studentId: 'std-2',
+    studentName: 'Karan Sharma',
+    parentName: 'Vikas Sharma',
+    parentPhone: '9845112233',
+    batchId: 'batch-bfc-1',
+    batchName: 'Morning Elite U-14 Youth Squad',
+    amount: 2500,
+    paymentMode: 'cash',
+    collectedByStaffName: 'Coach Suresh M.',
+    collectedDate: '2026-11-08',
+    billingMonth: 'November 2026',
+    receiptNumber: 'KGR-2026-88121',
+    status: 'cash_in_hand',
+    notes: 'Cash received on ground by coach, pending bank deposit',
+  },
+]
+
 // Safe In-Memory & LocalStorage Persistence
 const memoryStore = new Map<string, string>()
 
@@ -349,6 +479,8 @@ export function clearAcademySaaSMemoryStore(): void {
       window.localStorage.removeItem(STORAGE_KEYS.SETTINGS)
       window.localStorage.removeItem(STORAGE_KEYS.REGISTERED_ACADEMIES)
       window.localStorage.removeItem(STORAGE_KEYS.ONBOARDING_COMPLETED)
+      window.localStorage.removeItem(STORAGE_KEYS.STAFF)
+      window.localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS)
     } catch {
       // ignore
     }
@@ -832,4 +964,88 @@ export function hasCompletedOnboarding(): boolean {
 
 export function markOnboardingCompleted(): void {
   saveToStorage(STORAGE_KEYS.ONBOARDING_COMPLETED, true)
+}
+
+// -------------------------------------------------------------
+// Academy Staff & Multi-Coach Operations
+// -------------------------------------------------------------
+
+export function getAcademyStaff(academySlug: string): AcademyStaffMember[] {
+  const allStaff = loadFromStorage<AcademyStaffMember[]>(STORAGE_KEYS.STAFF, DEFAULT_STAFF)
+  return allStaff.filter(s => s.academySlug === academySlug)
+}
+
+export function saveAcademyStaffMember(member: Omit<AcademyStaffMember, 'id'> & { id?: string }): AcademyStaffMember {
+  const allStaff = loadFromStorage<AcademyStaffMember[]>(STORAGE_KEYS.STAFF, DEFAULT_STAFF)
+  if (member.id) {
+    const updated = allStaff.map(s => (s.id === member.id ? { ...s, ...member } : s))
+    saveToStorage(STORAGE_KEYS.STAFF, updated)
+    return updated.find(s => s.id === member.id)!
+  }
+  const newStaff: AcademyStaffMember = {
+    ...member,
+    id: `staff-${Date.now()}`,
+  }
+  const updated = [newStaff, ...allStaff]
+  saveToStorage(STORAGE_KEYS.STAFF, updated)
+  return newStaff
+}
+
+export function deleteAcademyStaffMember(memberId: string): void {
+  const allStaff = loadFromStorage<AcademyStaffMember[]>(STORAGE_KEYS.STAFF, DEFAULT_STAFF)
+  const updated = allStaff.filter(s => s.id !== memberId)
+  saveToStorage(STORAGE_KEYS.STAFF, updated)
+}
+
+// -------------------------------------------------------------
+// Academy Cash & UPI Financial Ledger
+// -------------------------------------------------------------
+
+export function getAcademyFeeTransactions(academySlug: string): AcademyFeeTransaction[] {
+  const allTx = loadFromStorage<AcademyFeeTransaction[]>(STORAGE_KEYS.TRANSACTIONS, DEFAULT_TRANSACTIONS)
+  return allTx.filter(t => t.academySlug === academySlug)
+}
+
+export function recordFeeTransaction(tx: Omit<AcademyFeeTransaction, 'id' | 'receiptNumber'>): AcademyFeeTransaction {
+  const allTx = loadFromStorage<AcademyFeeTransaction[]>(STORAGE_KEYS.TRANSACTIONS, DEFAULT_TRANSACTIONS)
+  const receiptNumber = `KGR-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`
+  const newTx: AcademyFeeTransaction = {
+    ...tx,
+    id: `tx-${Date.now()}`,
+    receiptNumber,
+  }
+  const updated = [newTx, ...allTx]
+  saveToStorage(STORAGE_KEYS.TRANSACTIONS, updated)
+  return newTx
+}
+
+export function settleCashInHand(transactionId: string): void {
+  const allTx = loadFromStorage<AcademyFeeTransaction[]>(STORAGE_KEYS.TRANSACTIONS, DEFAULT_TRANSACTIONS)
+  const updated = allTx.map(t => (t.id === transactionId ? { ...t, status: 'settled' as const } : t))
+  saveToStorage(STORAGE_KEYS.TRANSACTIONS, updated)
+}
+
+export function getAcademyLedgerSummary(academySlug: string): AcademyLedgerSummary {
+  const students = getAcademyStudents(academySlug)
+  const transactions = getAcademyFeeTransactions(academySlug)
+
+  const totalExpectedMonthly = students.reduce((sum, s) => sum + s.monthlyFee, 0)
+  const totalCollected = transactions.reduce((sum, t) => sum + t.amount, 0)
+  const cashCollected = transactions.filter(t => t.paymentMode === 'cash').reduce((sum, t) => sum + t.amount, 0)
+  const upiCollected = transactions.filter(t => t.paymentMode === 'direct_upi').reduce((sum, t) => sum + t.amount, 0)
+  const pendingDues = Math.max(0, totalExpectedMonthly - totalCollected)
+  const overdueCount = students.filter(s => s.feeStatus === 'overdue').length
+  const cashInHand = transactions.filter(t => t.paymentMode === 'cash' && t.status === 'cash_in_hand').reduce((sum, t) => sum + t.amount, 0)
+  const collectionRate = totalExpectedMonthly > 0 ? Math.round((totalCollected / totalExpectedMonthly) * 100) : 100
+
+  return {
+    totalExpectedMonthly,
+    totalCollected,
+    cashCollected,
+    upiCollected,
+    pendingDues,
+    overdueCount,
+    cashInHand,
+    collectionRate,
+  }
 }

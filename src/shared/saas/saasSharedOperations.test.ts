@@ -11,6 +11,9 @@ import {
   generateDigitalFeeReceipt,
   generateWhatsAppReceiptMessageUrl,
   generateWhatsAppShareProfileUrl,
+  generateWhatsAppBatchBroadcastUrl,
+  generateWhatsAppPaymentReminderUrl,
+  generateWhatsAppProgressReportUrl,
 } from './saasSharedOperations'
 
 describe('KhelGrid Shared SaaS Operations Service', () => {
@@ -165,6 +168,72 @@ describe('KhelGrid Shared SaaS Operations Service', () => {
       expect(shareUrl).toContain('https://wa.me/?text=')
       expect(shareUrl).toContain(encodeURIComponent('COACH ZAHEER FAROOQ'))
       expect(shareUrl).toContain(encodeURIComponent('https://khelgrid.com/coaches/zaheer-farooq-coach'))
+    })
+  })
+
+  describe('Emergency Weather & Session Cancellation Broadcast', () => {
+    it('generates well-formatted WhatsApp weather cancellation notice', () => {
+      const broadcastUrl = generateWhatsAppBatchBroadcastUrl({
+        entityName: 'Bengaluru FC Residential Academy',
+        batchName: 'Morning Elite U-14 Youth Squad',
+        reason: 'rain_weather',
+        date: '2026-11-21',
+        rescheduledTime: 'Tomorrow Sunday 07:00 AM',
+      })
+
+      expect(broadcastUrl).toContain('https://wa.me/?text=')
+      expect(broadcastUrl).toContain(encodeURIComponent('IMPORTANT NOTICE: SESSION UPDATE'))
+      expect(broadcastUrl).toContain(encodeURIComponent('Heavy rainfall and pitch waterlogging'))
+      expect(broadcastUrl).toContain(encodeURIComponent('Tomorrow Sunday 07:00 AM'))
+    })
+  })
+
+  describe('Overdue Fee Reminder via WhatsApp', () => {
+    it('generates polite fee reminder with direct UPI VPA', () => {
+      const reminderUrl = generateWhatsAppPaymentReminderUrl({
+        studentName: 'Aarav Sundaram',
+        parentName: 'Ramesh Sundaram',
+        parentPhone: '9845012345',
+        academyName: 'Bengaluru FC Academy',
+        batchName: 'Morning Elite Squad',
+        monthlyFee: 2500,
+        dueDate: '2026-11-25',
+        upiVpa: 'bengalurufc@okhdfcbank',
+      })
+
+      expect(reminderUrl).toContain('https://wa.me/919845012345')
+      expect(reminderUrl).toContain(encodeURIComponent('Aarav Sundaram'))
+      expect(reminderUrl).toContain(encodeURIComponent('₹2,500'))
+      expect(reminderUrl).toContain(encodeURIComponent('bengalurufc@okhdfcbank'))
+    })
+  })
+
+  describe('Quarterly Student Progress Report', () => {
+    it('generates comprehensive athlete evaluation summary for parent WhatsApp', () => {
+      const reportUrl = generateWhatsAppProgressReportUrl({
+        reportId: 'rep-1',
+        studentId: 'std-1',
+        studentName: 'Aarav Sundaram',
+        parentName: 'Ramesh Sundaram',
+        parentPhone: '9845012345',
+        batchName: 'Morning Elite Squad',
+        academyName: 'Bengaluru FC Academy',
+        sport: 'Football',
+        term: 'Q1 2026',
+        attendanceRate: 94,
+        technicalGrade: 'A+',
+        tacticalGrade: 'A',
+        physicalFitnessGrade: 'A',
+        disciplineGrade: 'A+',
+        coachRemarks: 'Excellent ball control and vision. Ready for state zonal selection trials.',
+        evaluatedByCoachName: 'Coach Suresh M.',
+        evaluatedDate: '2026-11-21',
+      })
+
+      expect(reportUrl).toContain('https://wa.me/919845012345')
+      expect(reportUrl).toContain(encodeURIComponent('QUARTERLY ATHLETE EVALUATION REPORT'))
+      expect(reportUrl).toContain(encodeURIComponent('Attendance Consistency:* 94%'))
+      expect(reportUrl).toContain(encodeURIComponent('Ready for state zonal selection trials'))
     })
   })
 })

@@ -187,6 +187,16 @@ describe('platform route coverage', () => {
       canonicalPath: '/academy-hub',
       slug: 'Academy Admissions & Operations Hub',
     })
+    expect(resolveRoute('/partner-signup')).toEqual({
+      name: 'feature',
+      canonicalPath: '/partner-signup',
+      slug: 'Partner Onboarding Wizard',
+    })
+    expect(resolveRoute('/tournament-ops')).toEqual({
+      name: 'feature',
+      canonicalPath: '/tournament-ops',
+      slug: 'Tournament Operations Suite',
+    })
     expect(resolveRoute('/turf-calendar')).toEqual({
       name: 'feature',
       canonicalPath: '/turf-calendar',

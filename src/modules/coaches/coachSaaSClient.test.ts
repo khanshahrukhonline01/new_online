@@ -19,6 +19,15 @@ import {
   generateWhatsAppParentReplyUrl,
   generateWhatsAppTraineeFeeReminderUrl,
   generateUpiPayLink,
+  calculateCombinePercentile,
+  getTraineeCombines,
+  saveTraineeCombine,
+  getCoachTrainingPlans,
+  saveCoachTrainingPlan,
+  getCoachEndorsements,
+  awardCoachEndorsement,
+  generateWhatsAppTrainingPlanUrl,
+  generateWhatsAppEndorsementUrl,
 } from './coachSaaSClient'
 
 describe('coachSaaSClient Unit Suite', () => {
@@ -164,5 +173,83 @@ describe('coachSaaSClient Unit Suite', () => {
       note: 'Cricket Coaching Fee',
     })
     expect(upiLink).toContain('upi://pay?pa=coach%40upi')
+  })
+
+  it('calculates physical combine benchmarks and assigns national percentiles', () => {
+    const elite = calculateCombinePercentile({
+      ageGroup: 'U-16',
+      sprint30m: 4.10,
+      verticalJump: 52,
+      yoYoLevel: 17.5,
+    })
+    expect(elite.percentile).toBeGreaterThanOrEqual(90)
+    expect(elite.tier).toBe('Elite (Top 5%)')
+
+    const developing = calculateCombinePercentile({
+      ageGroup: 'U-16',
+      sprint30m: 4.90,
+      verticalJump: 32,
+    })
+    expect(developing.percentile).toBeLessThan(70)
+    expect(developing.tier).toBe('Developing')
+  })
+
+  it('manages trainee combine benchmarks, training plans, and coach endorsements', () => {
+    const combines = getTraineeCombines('zaheer-farooq-coach')
+    expect(combines.length).toBeGreaterThanOrEqual(2)
+    expect(combines[0].traineeName).toBe('Arjun Mehra')
+
+    const savedComb = saveTraineeCombine({
+      coachSlug: 'zaheer-farooq-coach',
+      traineeId: 'tr-03',
+      traineeName: 'Samir Khan',
+      testDate: '2026-11-21',
+      ageGroup: 'U-14',
+      sprint30mSeconds: 4.25,
+      verticalJumpCm: 48,
+      compositePercentile: 88,
+      tier: 'Advanced (Top 15%)',
+    })
+    expect(savedComb.id).toBeDefined()
+    expect(getTraineeCombines('zaheer-farooq-coach').some(c => c.id === savedComb.id)).toBe(true)
+
+    // Training Plans
+    const plans = getCoachTrainingPlans('zaheer-farooq-coach')
+    expect(plans.length).toBeGreaterThanOrEqual(1)
+    const newPlan = saveCoachTrainingPlan({
+      coachSlug: 'zaheer-farooq-coach',
+      batchId: 'cbatch-zf-2',
+      batchName: 'Evening Grassroots All-Rounders',
+      weekTitle: 'Week 5: Power Hitting Drills',
+      focusArea: 'Bat speed & weight transfer',
+      drills: [{ day: 'Tue', title: 'Heavy Bat Swings', durationMinutes: 30, instructions: '5 sets of 20 swings' }],
+      homeworkChallenge: '50 shadow swings in front of mirror',
+    })
+    expect(newPlan.id).toBeDefined()
+    expect(getCoachTrainingPlans('zaheer-farooq-coach').some(p => p.id === newPlan.id)).toBe(true)
+
+    const waPlan = generateWhatsAppTrainingPlanUrl(newPlan, 'Coach Zaheer')
+    expect(waPlan).toContain('https://wa.me/?text=')
+    expect(waPlan).toContain(encodeURIComponent('WEEKLY TRAINING DRILLS & FOCUS'))
+
+    // Endorsements
+    const endorsements = getCoachEndorsements('zaheer-farooq-coach')
+    expect(endorsements.length).toBeGreaterThanOrEqual(1)
+    const newEnd = awardCoachEndorsement({
+      coachSlug: 'zaheer-farooq-coach',
+      coachName: 'Coach Zaheer Farooq',
+      coachCertification: 'BCCI Level 2',
+      traineeName: 'Samir Khan',
+      traineeId: 'tr-03',
+      badgeTitle: 'Verified Wicketkeeper Batsman',
+      sport: 'Cricket',
+      endorsementText: 'Remarkable glovework and reflex agility up to the stumps.',
+    })
+    expect(newEnd.verificationHash).toMatch(/^KG-CERT-ZAH-\d{5}$/)
+    expect(getCoachEndorsements('zaheer-farooq-coach').some(e => e.id === newEnd.id)).toBe(true)
+
+    const waEnd = generateWhatsAppEndorsementUrl(newEnd)
+    expect(waEnd).toContain('https://wa.me/?text=')
+    expect(waEnd).toContain(encodeURIComponent('OFFICIAL COACH VERIFIED ENDORSEMENT'))
   })
 })

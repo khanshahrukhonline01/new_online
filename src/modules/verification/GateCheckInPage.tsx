@@ -4,6 +4,9 @@ import { generateQrSvgString } from '../../shared/utils/qrCodeGenerator'
 import {
   verifyPassToken,
   admitPassToken,
+  admitPassOffline,
+  syncOfflineGateLogs,
+  getOfflineAuditStats,
   getGateAdmissionLogs,
   type UnifiedPassResult,
   type GateAdmissionLogItem,
@@ -34,6 +37,9 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [recentLogs, setRecentLogs] = useState<GateAdmissionLogItem[]>(() => getGateAdmissionLogs())
   const [isCameraActive, setIsCameraActive] = useState(false)
+  const [isOfflineMode, setIsOfflineMode] = useState(false)
+
+  const auditStats = getOfflineAuditStats()
 
   // Sync token from URL changes if needed
   useEffect(() => {
@@ -70,7 +76,8 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
 
   const handleAdmit = () => {
     if (!activePass) return
-    const res = admitPassToken(activePass.token, admittingOfficer.trim() || 'Ground Reception')
+    const officer = admittingOfficer.trim() || 'Ground Reception'
+    const res = isOfflineMode ? admitPassOffline(activePass.token, officer) : admitPassToken(activePass.token, officer)
     if (res.success && res.pass) {
       setActivePass(res.pass)
       setRecentLogs(getGateAdmissionLogs())
@@ -78,6 +85,12 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
     } else {
       setToastMessage({ text: res.message, type: 'error' })
     }
+  }
+
+  const handleSyncOffline = () => {
+    const syncRes = syncOfflineGateLogs()
+    setRecentLogs(getGateAdmissionLogs())
+    setToastMessage({ text: syncRes.message, type: 'success' })
   }
 
   return (
@@ -334,8 +347,41 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
 
         {/* Gate Admission Audit Log */}
         <aside className="gate-audit-card">
-          <h2 className="gate-audit-title">Today&apos;s Gate Admission Log</h2>
-          <p className="gate-audit-sub">Chronological audit trail of ground admissions for this facility session.</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px', marginBottom: '0.5rem' }}>
+            <div>
+              <h2 className="gate-audit-title" style={{ margin: 0 }}>Today&apos;s Gate Admission Log</h2>
+              <p className="gate-audit-sub">Chronological audit trail of ground admissions for this facility session.</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '0.78rem', color: isOfflineMode ? '#d97706' : '#64748b', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={isOfflineMode}
+                  onChange={e => setIsOfflineMode(e.target.checked)}
+                />
+                <span>Offline Mode</span>
+              </label>
+              {auditStats.pendingSyncCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSyncOffline}
+                  style={{
+                    fontSize: '0.75rem',
+                    background: '#ecfdf5',
+                    color: '#047857',
+                    border: '1px solid #6ee7b7',
+                    borderRadius: '6px',
+                    padding: '2px 8px',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                  }}
+                  title="Upload offline gate admissions to cloud"
+                >
+                  Sync ({auditStats.pendingSyncCount})
+                </button>
+              )}
+            </div>
+          </div>
 
           <div className="gate-audit-list">
             {recentLogs.length > 0 ? (
@@ -347,7 +393,14 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
                   <div className="gate-log-content">
                     <div className="gate-log-top">
                       <span className="gate-log-name">{log.holderName}</span>
-                      <span className="gate-log-time">{new Date(log.admittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {log.isOfflineRecord && (
+                          <span style={{ fontSize: '0.68rem', background: '#fef3c7', color: '#92400e', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                            Offline Cached
+                          </span>
+                        )}
+                        <span className="gate-log-time">{new Date(log.admittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
                     </div>
                     <div className="gate-log-facility">{log.sport} · {log.facility}</div>
                     <div className="gate-log-official">Admitted by {log.admittedBy}</div>

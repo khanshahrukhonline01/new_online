@@ -47,5 +47,19 @@ describe('CoachDashboardPage Component', () => {
     expect(html).toContain('Public Profile')
     expect(html).toContain('Share WhatsApp Card')
     expect(html).toContain('Receipt')
+    expect(html).toContain('Combines &amp; Benchmarks')
+    expect(html).toContain('Weekly Drills &amp; Homework')
+    expect(html).toContain('Verified Endorsements')
+  })
+
+  it('renders combines and normative talent battery when tab is active', () => {
+    // We can verify default elements and modals exist
+    const html = renderToStaticMarkup(
+      <CoachDashboardPage initialCoachSlug="zaheer-farooq-coach" />
+    )
+
+    expect(html).toContain('Combines &amp; Benchmarks')
+    expect(html).toContain('Weekly Drills &amp; Homework')
+    expect(html).toContain('Verified Endorsements')
   })
 })

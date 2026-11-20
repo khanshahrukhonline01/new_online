@@ -25,11 +25,20 @@ import {
   confirmAndVerifyAcademy,
   revokeAcademyVerification,
   hasCompletedOnboarding,
+  getAcademyStaff,
+  saveAcademyStaffMember,
+  deleteAcademyStaffMember,
+  getAcademyFeeTransactions,
+  recordFeeTransaction,
+  settleCashInHand,
+  getAcademyLedgerSummary,
   type AcademyLead,
   type AcademyBatch,
   type AcademyStudent,
   type AcademyTrialPass,
   type RegisteredAcademy,
+  type AcademyStaffMember,
+  type AcademyFeeTransaction,
 } from './academySaaSClient'
 import { exportStudentsToCsv, downloadBlobFile } from './academyExportUtils'
 import {
@@ -39,8 +48,12 @@ import {
   saveDailyAttendance,
   generateWhatsAppAttendanceAlertUrl,
   generateWhatsAppShareProfileUrl,
+  generateWhatsAppBatchBroadcastUrl,
+  generateWhatsAppPaymentReminderUrl,
+  generateWhatsAppProgressReportUrl,
   type DailyAttendanceRecord,
   type ParsedStudentImportRow,
+  type StudentProgressReport,
 } from '../../shared/saas/saasSharedOperations'
 import './AcademyHubPage.css'
 
@@ -95,9 +108,45 @@ export default function AcademyHubPage({
   const passes = getAcademyTrialPasses(selectedSlug)
   const settings = getAcademySettings(selectedSlug, currentAcademy.name)
   const summary = getAcademySaaSSummary(selectedSlug)
+  const staff = getAcademyStaff(selectedSlug)
+  const feeTransactions = getAcademyFeeTransactions(selectedSlug)
+  const ledgerSummary = getAcademyLedgerSummary(selectedSlug)
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'leads' | 'batches' | 'fees' | 'attendance' | 'trial_passes' | 'settings'>('leads')
+  const [activeTab, setActiveTab] = useState<'leads' | 'batches' | 'fees' | 'ledger' | 'attendance' | 'staff' | 'trial_passes' | 'settings'>('leads')
+
+  // Staff Modal State
+  const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false)
+  const [staffName, setStaffName] = useState('')
+  const [staffRole, setStaffRole] = useState<AcademyStaffMember['role']>('head_coach')
+  const [staffPhone, setStaffPhone] = useState('')
+  const [staffEmail, setStaffEmail] = useState('')
+  const [staffQual, setStaffQual] = useState('')
+  const [staffBatch, setStaffBatch] = useState('')
+
+  // Record Offline Fee Modal State
+  const [isRecordPaymentModalOpen, setIsRecordPaymentModalOpen] = useState(false)
+  const [payStudentId, setPayStudentId] = useState(() => students[0]?.id || '')
+  const [payAmount, setPayAmount] = useState(() => students[0]?.monthlyFee || 2500)
+  const [payMode, setPayMode] = useState<AcademyFeeTransaction['paymentMode']>('cash')
+  const [payStaffName, setPayStaffName] = useState('Coach Suresh M.')
+  const [payNotes, setPayNotes] = useState('Cash received pitch-side')
+
+  // Emergency Weather Broadcast Modal State
+  const [activeBroadcastBatch, setActiveBroadcastBatch] = useState<AcademyBatch | null>(null)
+  const [broadcastReason, setBroadcastReason] = useState<'rain_weather' | 'ground_maintenance' | 'heat_pollution' | 'holiday' | 'coach_emergency' | 'custom'>('rain_weather')
+  const [broadcastCustomReason, setBroadcastCustomReason] = useState('')
+  const [broadcastRescheduledTime, setBroadcastRescheduledTime] = useState('Tomorrow 07:00 AM')
+
+  // Student Quarterly Progress Report Modal State
+  const [activeEvaluationStudent, setActiveEvaluationStudent] = useState<AcademyStudent | null>(null)
+  const [evalTerm, setEvalTerm] = useState('Term 1 (Jan–Mar 2026)')
+  const [evalTechGrade, setEvalTechGrade] = useState<'A+' | 'A' | 'B+' | 'B' | 'C'>('A+')
+  const [evalTactGrade, setEvalTactGrade] = useState<'A+' | 'A' | 'B+' | 'B' | 'C'>('A')
+  const [evalFitGrade, setEvalFitGrade] = useState<'A+' | 'A' | 'B+' | 'B' | 'C'>('A')
+  const [evalDiscGrade, setEvalDiscGrade] = useState<'A+' | 'A' | 'B+' | 'B' | 'C'>('A+')
+  const [evalRemarks, setEvalRemarks] = useState('Demonstrating exceptional pitch vision and leadership. Ready for zonal trial matches.')
+  const [evalCoachName, setEvalCoachName] = useState('Coach Suresh M. (AFC A-License)')
 
   // CSV Import State
   const [isImportCsvModalOpen, setIsImportCsvModalOpen] = useState(false)
@@ -806,10 +855,27 @@ export default function AcademyHubPage({
 
         <button
           type="button"
+          className={`academy-hub-tab-btn ${activeTab === 'ledger' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ledger')}
+        >
+          <SiteIcon name="wallet" size={18} /> Cash &amp; UPI Ledger
+          {ledgerSummary.cashInHand > 0 && <span className="academy-hub-tab-badge" style={{ background: '#f59e0b' }}>₹{ledgerSummary.cashInHand}</span>}
+        </button>
+
+        <button
+          type="button"
           className={`academy-hub-tab-btn ${activeTab === 'attendance' ? 'active' : ''}`}
           onClick={() => setActiveTab('attendance')}
         >
           <SiteIcon name="check-circle" size={18} /> Daily Attendance
+        </button>
+
+        <button
+          type="button"
+          className={`academy-hub-tab-btn ${activeTab === 'staff' ? 'active' : ''}`}
+          onClick={() => setActiveTab('staff')}
+        >
+          <SiteIcon name="users" size={18} /> Staff &amp; Coaches ({staff.length})
         </button>
 
         <button
@@ -1047,6 +1113,16 @@ export default function AcademyHubPage({
                       </button>
                       <button
                         type="button"
+                        className="academy-hub-btn-outline"
+                        style={{ padding: '4px 8px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#b45309', borderColor: '#fde68a', background: '#fffbeb' }}
+                        onClick={() => setActiveBroadcastBatch(batch)}
+                        title="Broadcast weather, rainout, or emergency cancellation notice to parents via WhatsApp"
+                      >
+                        <SiteIcon name="alert-triangle" size={12} />
+                        <span>Session Notice</span>
+                      </button>
+                      <button
+                        type="button"
                         style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.78rem', cursor: 'pointer' }}
                         onClick={() => {
                           deleteAcademyBatch(batch.id)
@@ -1152,11 +1228,20 @@ export default function AcademyHubPage({
                     <td>
                       <div style={{ display: 'flex', gap: '0.4rem' }}>
                         <a
-                          href={generateWhatsAppFeeReminderUrl(student, currentAcademy.name, settings.upiVpa)}
+                          href={student.feeStatus === 'overdue' ? generateWhatsAppPaymentReminderUrl({
+                            studentName: student.studentName,
+                            parentName: student.parentName,
+                            parentPhone: student.parentPhone,
+                            academyName: currentAcademy.name,
+                            batchName: student.batchName,
+                            monthlyFee: student.monthlyFee,
+                            dueDate: student.nextDueDate,
+                            upiVpa: settings.upiVpa,
+                          }) : generateWhatsAppFeeReminderUrl(student, currentAcademy.name, settings.upiVpa)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="crm-action-btn whatsapp"
-                          title="Send WhatsApp Fee Reminder"
+                          title={student.feeStatus === 'overdue' ? 'Send WhatsApp Overdue Fee Reminder' : 'Send WhatsApp Fee Reminder'}
                           aria-label={`Send WhatsApp fee reminder to ${student.parentName}`}
                         >
                           <span aria-hidden="true">💬</span>
@@ -1198,10 +1283,179 @@ export default function AcademyHubPage({
                             <SiteIcon name="download" size={15} />
                           </button>
                         )}
+
+                        <button
+                          type="button"
+                          className="crm-action-btn"
+                          title="Generate Quarterly Progress Report Card"
+                          aria-label={`Progress report for ${student.studentName}`}
+                          onClick={() => setActiveEvaluationStudent(student)}
+                        >
+                          <SiteIcon name="file-text" size={15} />
+                        </button>
                       </div>
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* TAB 3: Cash & UPI Financial Ledger */}
+      {activeTab === 'ledger' && (
+        <section aria-labelledby="ledger-section-heading">
+          <div className="academy-hub-section-header">
+            <div>
+              <h2 id="ledger-section-heading" className="academy-hub-section-title">
+                Cash &amp; Direct UPI Financial Ledger
+              </h2>
+              <p style={{ color: '#64748b', margin: '0.25rem 0 0', fontSize: '0.9rem' }}>
+                Complete audit trail of monthly tuition fees collected across UPI, on-ground cash, and bank transfers with 0% platform deductions.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="academy-hub-primary-btn"
+              onClick={() => setIsRecordPaymentModalOpen(true)}
+            >
+              <SiteIcon name="plus" size={16} /> Record Offline Fee Payment
+            </button>
+          </div>
+
+          <div className="academy-ledger-grid">
+            <div className="academy-ledger-card">
+              <span className="academy-ledger-label">Total Monthly Expected</span>
+              <span className="academy-ledger-value">₹{ledgerSummary.totalExpectedMonthly.toLocaleString('en-IN')}</span>
+              <small style={{ color: '#64748b' }}>Active enrolled trainees</small>
+            </div>
+
+            <div className="academy-ledger-card">
+              <span className="academy-ledger-label">Total Collected This Month</span>
+              <span className="academy-ledger-value" style={{ color: '#059669' }}>₹{ledgerSummary.totalCollected.toLocaleString('en-IN')}</span>
+              <small style={{ color: '#059669', fontWeight: 650 }}>{ledgerSummary.collectionRate}% collected rate</small>
+            </div>
+
+            <div className="academy-ledger-card">
+              <span className="academy-ledger-label">Direct UPI Collections</span>
+              <span className="academy-ledger-value">₹{ledgerSummary.upiCollected.toLocaleString('en-IN')}</span>
+              <small style={{ color: '#64748b' }}>0% middleman fees</small>
+            </div>
+
+            <div className={`academy-ledger-card ${ledgerSummary.cashInHand > 0 ? 'cash-alert' : ''}`}>
+              <span className="academy-ledger-label">Cash-in-Hand Held by Coaches</span>
+              <span className="academy-ledger-value">₹{ledgerSummary.cashInHand.toLocaleString('en-IN')}</span>
+              <small style={{ color: ledgerSummary.cashInHand > 0 ? '#b45309' : '#64748b' }}>
+                {ledgerSummary.cashInHand > 0 ? '⚠️ Awaiting deposit into bank' : 'All cash reconciled'}
+              </small>
+            </div>
+
+            <div className="academy-ledger-card">
+              <span className="academy-ledger-label">Pending / Overdue Balance</span>
+              <span className="academy-ledger-value" style={{ color: ledgerSummary.pendingDues > 0 ? '#dc2626' : '#64748b' }}>
+                ₹{ledgerSummary.pendingDues.toLocaleString('en-IN')}
+              </span>
+              <small style={{ color: '#dc2626' }}>{ledgerSummary.overdueCount} students overdue</small>
+            </div>
+          </div>
+
+          <div className="academy-hub-table-wrapper">
+            <table className="academy-hub-table">
+              <thead>
+                <tr>
+                  <th>Receipt / Date</th>
+                  <th>Student &amp; Parent</th>
+                  <th>Batch</th>
+                  <th>Amount</th>
+                  <th>Payment Mode</th>
+                  <th>Received By</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {feeTransactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                      No fee transactions recorded yet for this billing cycle.
+                    </td>
+                  </tr>
+                ) : (
+                  feeTransactions.map(tx => (
+                    <tr key={tx.id}>
+                      <td>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.82rem' }}>{tx.receiptNumber}</span>
+                        <div style={{ fontSize: '0.78rem', color: '#64748b' }}>{tx.collectedDate}</div>
+                      </td>
+                      <td>
+                        <strong>{tx.studentName}</strong>
+                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{tx.parentName} ({tx.parentPhone})</div>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 600 }}>{tx.batchName}</span>
+                        <div style={{ fontSize: '0.78rem', color: '#64748b' }}>{tx.billingMonth}</div>
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 800, color: '#047857' }}>₹{tx.amount.toLocaleString('en-IN')}</span>
+                      </td>
+                      <td>
+                        <span style={{ textTransform: 'uppercase', fontSize: '0.78rem', fontWeight: 700 }}>
+                          {tx.paymentMode === 'direct_upi' ? '⚡ Direct UPI' : tx.paymentMode === 'cash' ? '💵 Cash' : tx.paymentMode}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: '0.85rem' }}>{tx.collectedByStaffName}</td>
+                      <td>
+                        <span className={`ledger-status-pill ${tx.status}`}>
+                          {tx.status === 'settled' ? '✅ Settled to Bank' : '⚠️ Cash-in-Hand'}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          {tx.status === 'cash_in_hand' && (
+                            <button
+                              type="button"
+                              className="academy-hub-btn-outline"
+                              style={{ padding: '3px 8px', fontSize: '0.75rem', cursor: 'pointer' }}
+                              onClick={() => {
+                                settleCashInHand(tx.id)
+                                triggerRefresh()
+                              }}
+                              title="Confirm cash deposit to academy bank account"
+                            >
+                              Settle to Bank
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="crm-action-btn"
+                            title="View Official Receipt"
+                            onClick={() => {
+                              const std = students.find(s => s.id === tx.studentId) || {
+                                id: tx.studentId,
+                                academySlug: tx.academySlug,
+                                studentName: tx.studentName,
+                                parentName: tx.parentName,
+                                parentPhone: tx.parentPhone,
+                                batchId: tx.batchId,
+                                batchName: tx.batchName,
+                                sport: 'Sports',
+                                monthlyFee: tx.amount,
+                                feeStatus: 'paid' as const,
+                                nextDueDate: '2026-12-05',
+                                lastPaymentDate: tx.collectedDate,
+                              }
+                              setActiveReceiptStudent(std)
+                            }}
+                          >
+                            <SiteIcon name="download" size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -1412,6 +1666,72 @@ export default function AcademyHubPage({
                 })()}
               </tbody>
             </table>
+          </div>
+        </section>
+      )}
+
+      {/* TAB: Staff & Certified Coaches Delegation */}
+      {activeTab === 'staff' && (
+        <section aria-labelledby="staff-section-heading">
+          <div className="academy-hub-section-header">
+            <div>
+              <h2 id="staff-section-heading" className="academy-hub-section-title">
+                Coaching Staff &amp; Operational Roles
+              </h2>
+              <p style={{ color: '#64748b', margin: '0.25rem 0 0', fontSize: '0.9rem' }}>
+                Manage head coaches, assistant trainers, accountants, and ground staff with role-based dashboard permissions.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="academy-hub-primary-btn"
+              onClick={() => setIsAddStaffModalOpen(true)}
+            >
+              <SiteIcon name="plus" size={16} /> Add Staff Member
+            </button>
+          </div>
+
+          <div className="academy-staff-grid">
+            {staff.map(member => (
+              <div className="academy-staff-card" key={member.id}>
+                <div className="academy-staff-header">
+                  <div>
+                    <h3 className="academy-staff-name">{member.name}</h3>
+                    {member.qualification && (
+                      <span style={{ fontSize: '0.78rem', color: '#047857', fontWeight: 650 }}>
+                        {member.qualification}
+                      </span>
+                    )}
+                  </div>
+                  <span className={`staff-role-badge ${member.role}`}>
+                    {member.role.replace('_', ' ')}
+                  </span>
+                </div>
+
+                <div className="academy-staff-details">
+                  <div><SiteIcon name="phone" size={14} /> +91 {member.phone}</div>
+                  {member.email && <div><SiteIcon name="mail" size={14} /> {member.email}</div>}
+                  <div style={{ marginTop: '0.25rem' }}>
+                    <strong>Assigned Batches:</strong> {member.assignedBatches?.length ? member.assignedBatches.map(bId => batches.find(b => b.id === bId)?.batchName || bId).join(', ') : 'All Batches'}
+                  </div>
+                </div>
+
+                <div className="academy-staff-footer">
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Joined: {member.joinedDate}</span>
+                  <button
+                    type="button"
+                    style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer' }}
+                    onClick={() => {
+                      deleteAcademyStaffMember(member.id)
+                      triggerRefresh()
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       )}
@@ -2785,6 +3105,500 @@ export default function AcademyHubPage({
                 Done
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Emergency Weather & Session Cancellation Notice */}
+      {activeBroadcastBatch && (
+        <div className="academy-hub-modal-overlay" onClick={() => setActiveBroadcastBatch(null)}>
+          <div className="academy-hub-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="academy-hub-modal-header">
+              <h3>Broadcast Session Alert</h3>
+              <button
+                type="button"
+                className="academy-hub-modal-close"
+                onClick={() => setActiveBroadcastBatch(null)}
+                aria-label="Close modal"
+              >
+                &times;
+              </button>
+            </div>
+
+            <p style={{ margin: '0 0 1rem', color: '#64748b', fontSize: '0.88rem' }}>
+              Broadcast session cancellation or reschedule notices directly to parents in <strong>{activeBroadcastBatch.batchName}</strong> via WhatsApp.
+            </p>
+
+            <form
+              onSubmit={e => {
+                e.preventDefault()
+                const url = generateWhatsAppBatchBroadcastUrl({
+                  entityName: currentAcademy.name,
+                  batchName: activeBroadcastBatch.batchName,
+                  reason: broadcastReason,
+                  customReason: broadcastCustomReason,
+                  date: new Date().toLocaleDateString('en-IN'),
+                  rescheduledTime: broadcastRescheduledTime,
+                })
+                window.open(url, '_blank', 'noopener,noreferrer')
+                setActiveBroadcastBatch(null)
+              }}
+              className="academy-hub-form"
+            >
+              <label>
+                Cancellation / Alert Reason *
+                <select
+                  value={broadcastReason}
+                  onChange={e => setBroadcastReason(e.target.value as any)}
+                >
+                  <option value="rain_weather">🌧️ Heavy Rain / Pitch Waterlogging</option>
+                  <option value="ground_maintenance">🚜 Scheduled Turf Maintenance &amp; Relaying</option>
+                  <option value="heat_pollution">☀️ Severe Weather / Heat Index Advisory</option>
+                  <option value="holiday">🎉 Public Sports Holiday / Festive Break</option>
+                  <option value="coach_emergency">👨‍🏫 Coach Emergency Leave / Workshop</option>
+                  <option value="custom">✍️ Custom Announcement</option>
+                </select>
+              </label>
+
+              {broadcastReason === 'custom' && (
+                <label>
+                  Custom Reason Text *
+                  <input
+                    type="text"
+                    value={broadcastCustomReason}
+                    onChange={e => setBroadcastCustomReason(e.target.value)}
+                    placeholder="e.g. Floodlight power outage"
+                    required
+                  />
+                </label>
+              )}
+
+              <label>
+                Rescheduled Session Timing (Optional)
+                <input
+                  type="text"
+                  value={broadcastRescheduledTime}
+                  onChange={e => setBroadcastRescheduledTime(e.target.value)}
+                  placeholder="e.g. Tomorrow Sunday 07:00 AM"
+                />
+              </label>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                <button type="submit" className="academy-hub-primary-btn" style={{ flex: 1 }}>
+                  <span>📢 Launch WhatsApp Broadcast</span>
+                </button>
+                <button
+                  type="button"
+                  className="academy-hub-public-page-btn"
+                  onClick={() => setActiveBroadcastBatch(null)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Quarterly Athlete Evaluation Report Card */}
+      {activeEvaluationStudent && (
+        <div className="academy-hub-modal-overlay" onClick={() => setActiveEvaluationStudent(null)}>
+          <div className="academy-hub-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="academy-hub-modal-header">
+              <h3>Quarterly Athlete Evaluation Card</h3>
+              <button
+                type="button"
+                className="academy-hub-modal-close"
+                onClick={() => setActiveEvaluationStudent(null)}
+                aria-label="Close modal"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0', margin: '0.5rem 0 1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong>{activeEvaluationStudent.studentName}</strong>
+                <span style={{ fontSize: '0.8rem', color: '#047857', fontWeight: 700 }}>94% Attendance Record</span>
+              </div>
+              <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                {activeEvaluationStudent.batchName} ({activeEvaluationStudent.sport}) · Parent: {activeEvaluationStudent.parentName}
+              </div>
+            </div>
+
+            <form
+              onSubmit={e => {
+                e.preventDefault()
+                const report: StudentProgressReport = {
+                  reportId: `REP-${activeEvaluationStudent.id}-${Date.now()}`,
+                  studentId: activeEvaluationStudent.id,
+                  studentName: activeEvaluationStudent.studentName,
+                  parentName: activeEvaluationStudent.parentName,
+                  parentPhone: activeEvaluationStudent.parentPhone,
+                  batchName: activeEvaluationStudent.batchName,
+                  academyName: currentAcademy.name,
+                  sport: activeEvaluationStudent.sport,
+                  term: evalTerm,
+                  attendanceRate: 94,
+                  technicalGrade: evalTechGrade,
+                  tacticalGrade: evalTactGrade,
+                  physicalFitnessGrade: evalFitGrade,
+                  disciplineGrade: evalDiscGrade,
+                  coachRemarks: evalRemarks,
+                  evaluatedByCoachName: evalCoachName,
+                  evaluatedDate: new Date().toLocaleDateString('en-IN'),
+                }
+                const url = generateWhatsAppProgressReportUrl(report)
+                window.open(url, '_blank', 'noopener,noreferrer')
+                setActiveEvaluationStudent(null)
+              }}
+              className="academy-hub-form"
+            >
+              <label>
+                Evaluation Period / Term *
+                <input
+                  type="text"
+                  value={evalTerm}
+                  onChange={e => setEvalTerm(e.target.value)}
+                  placeholder="e.g. Term 1 (Jan–Mar 2026)"
+                  required
+                />
+              </label>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <label>
+                  Technical Skill
+                  <select value={evalTechGrade} onChange={e => setEvalTechGrade(e.target.value as any)}>
+                    <option value="A+">Grade A+ (Elite)</option>
+                    <option value="A">Grade A (Advanced)</option>
+                    <option value="B+">Grade B+ (Proficient)</option>
+                    <option value="B">Grade B (Developing)</option>
+                    <option value="C">Grade C (Foundational)</option>
+                  </select>
+                </label>
+
+                <label>
+                  Tactical Awareness
+                  <select value={evalTactGrade} onChange={e => setEvalTactGrade(e.target.value as any)}>
+                    <option value="A+">Grade A+ (Elite Vision)</option>
+                    <option value="A">Grade A (Sharp)</option>
+                    <option value="B+">Grade B+ (Good)</option>
+                    <option value="B">Grade B (Developing)</option>
+                    <option value="C">Grade C (Basic)</option>
+                  </select>
+                </label>
+
+                <label>
+                  Physical Conditioning
+                  <select value={evalFitGrade} onChange={e => setEvalFitGrade(e.target.value as any)}>
+                    <option value="A+">Grade A+ (Match Fit)</option>
+                    <option value="A">Grade A (High Stamina)</option>
+                    <option value="B+">Grade B+ (Good)</option>
+                    <option value="B">Grade B (Average)</option>
+                    <option value="C">Grade C (Needs Conditioning)</option>
+                  </select>
+                </label>
+
+                <label>
+                  Discipline &amp; Punctuality
+                  <select value={evalDiscGrade} onChange={e => setEvalDiscGrade(e.target.value as any)}>
+                    <option value="A+">Grade A+ (Exemplary)</option>
+                    <option value="A">Grade A (Consistent)</option>
+                    <option value="B+">Grade B+ (Good)</option>
+                    <option value="B">Grade B (Occasional Leave)</option>
+                    <option value="C">Grade C (Irregular)</option>
+                  </select>
+                </label>
+              </div>
+
+              <label>
+                Coach Remarks &amp; Milestones *
+                <textarea
+                  rows={2}
+                  value={evalRemarks}
+                  onChange={e => setEvalRemarks(e.target.value)}
+                  placeholder="Coach observations, strengths and next development goals..."
+                  required
+                />
+              </label>
+
+              <label>
+                Evaluating Coach *
+                <input
+                  type="text"
+                  value={evalCoachName}
+                  onChange={e => setEvalCoachName(e.target.value)}
+                  placeholder="e.g. Coach Suresh M. (AFC A-License)"
+                  required
+                />
+              </label>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                <button type="submit" className="academy-hub-primary-btn" style={{ flex: 1 }}>
+                  <span>Send Report via WhatsApp</span>
+                </button>
+                <button
+                  type="button"
+                  className="academy-hub-public-page-btn"
+                  onClick={() => setActiveEvaluationStudent(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Add Staff Member */}
+      {isAddStaffModalOpen && (
+        <div className="academy-hub-modal-overlay" onClick={() => setIsAddStaffModalOpen(false)}>
+          <div className="academy-hub-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="academy-hub-modal-header">
+              <h3>Add Academy Staff Member</h3>
+              <button
+                type="button"
+                className="academy-hub-modal-close"
+                onClick={() => setIsAddStaffModalOpen(false)}
+                aria-label="Close modal"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form
+              onSubmit={e => {
+                e.preventDefault()
+                saveAcademyStaffMember({
+                  academySlug: selectedSlug,
+                  name: staffName,
+                  role: staffRole,
+                  phone: staffPhone,
+                  email: staffEmail || undefined,
+                  qualification: staffQual || undefined,
+                  assignedBatches: staffBatch ? [staffBatch] : undefined,
+                  status: 'active',
+                  joinedDate: new Date().toISOString().slice(0, 10),
+                })
+                setIsAddStaffModalOpen(false)
+                setStaffName('')
+                setStaffPhone('')
+                setStaffEmail('')
+                setStaffQual('')
+                triggerRefresh()
+              }}
+              className="academy-hub-form"
+            >
+              <label>
+                Staff Full Name *
+                <input
+                  type="text"
+                  value={staffName}
+                  onChange={e => setStaffName(e.target.value)}
+                  placeholder="e.g. Coach Vikram Rathore"
+                  required
+                />
+              </label>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <label>
+                  Operational Role *
+                  <select
+                    value={staffRole}
+                    onChange={e => setStaffRole(e.target.value as any)}
+                  >
+                    <option value="head_coach">Head Coach</option>
+                    <option value="assistant_coach">Assistant Coach</option>
+                    <option value="accountant">Accountant / Front Desk</option>
+                    <option value="ground_staff">Ground Staff</option>
+                    <option value="director">Director / Admin</option>
+                  </select>
+                </label>
+
+                <label>
+                  WhatsApp Phone *
+                  <input
+                    type="tel"
+                    value={staffPhone}
+                    onChange={e => setStaffPhone(e.target.value)}
+                    placeholder="e.g. 9812345678"
+                    required
+                  />
+                </label>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <label>
+                  Email Address
+                  <input
+                    type="email"
+                    value={staffEmail}
+                    onChange={e => setStaffEmail(e.target.value)}
+                    placeholder="e.g. coach@academy.com"
+                  />
+                </label>
+
+                <label>
+                  Sports Qualification
+                  <input
+                    type="text"
+                    value={staffQual}
+                    onChange={e => setStaffQual(e.target.value)}
+                    placeholder="e.g. NIS Patiala / AFC B"
+                  />
+                </label>
+              </div>
+
+              <label>
+                Assigned Primary Batch
+                <select value={staffBatch} onChange={e => setStaffBatch(e.target.value)}>
+                  <option value="">All Batches</option>
+                  {batches.map(b => (
+                    <option key={b.id} value={b.id}>{b.batchName}</option>
+                  ))}
+                </select>
+              </label>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                <button type="submit" className="academy-hub-primary-btn" style={{ flex: 1 }}>
+                  Save Staff Member
+                </button>
+                <button
+                  type="button"
+                  className="academy-hub-public-page-btn"
+                  onClick={() => setIsAddStaffModalOpen(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Record Offline Fee Payment */}
+      {isRecordPaymentModalOpen && (
+        <div className="academy-hub-modal-overlay" onClick={() => setIsRecordPaymentModalOpen(false)}>
+          <div className="academy-hub-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="academy-hub-modal-header">
+              <h3>Record Offline Fee Payment</h3>
+              <button
+                type="button"
+                className="academy-hub-modal-close"
+                onClick={() => setIsRecordPaymentModalOpen(false)}
+                aria-label="Close modal"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form
+              onSubmit={e => {
+                e.preventDefault()
+                const std = students.find(s => s.id === payStudentId) || students[0]
+                if (!std) return
+                recordFeeTransaction({
+                  academySlug: selectedSlug,
+                  studentId: std.id,
+                  studentName: std.studentName,
+                  parentName: std.parentName,
+                  parentPhone: std.parentPhone,
+                  batchId: std.batchId,
+                  batchName: std.batchName,
+                  amount: payAmount,
+                  paymentMode: payMode,
+                  collectedByStaffName: payStaffName,
+                  collectedDate: new Date().toISOString().slice(0, 10),
+                  billingMonth: new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
+                  status: payMode === 'cash' ? 'cash_in_hand' : 'settled',
+                  notes: payNotes,
+                })
+                recordStudentPayment(std.id, payAmount, payMode === 'cash' ? 'cash' : 'upi')
+                setIsRecordPaymentModalOpen(false)
+                triggerRefresh()
+              }}
+              className="academy-hub-form"
+            >
+              <label>
+                Select Student *
+                <select
+                  value={payStudentId}
+                  onChange={e => {
+                    const sId = e.target.value
+                    setPayStudentId(sId)
+                    const std = students.find(s => s.id === sId)
+                    if (std) setPayAmount(std.monthlyFee)
+                  }}
+                  required
+                >
+                  {students.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.studentName} — {s.batchName} (₹{s.monthlyFee})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <label>
+                  Amount Received (₹) *
+                  <input
+                    type="number"
+                    value={payAmount}
+                    onChange={e => setPayAmount(Number(e.target.value))}
+                    required
+                  />
+                </label>
+
+                <label>
+                  Payment Mode *
+                  <select
+                    value={payMode}
+                    onChange={e => setPayMode(e.target.value as any)}
+                  >
+                    <option value="cash">💵 On-Ground Cash</option>
+                    <option value="direct_upi">⚡ Direct UPI QR</option>
+                    <option value="bank_transfer">🏦 Direct Bank NEFT/IMPS</option>
+                    <option value="cheque">📝 Cheque</option>
+                  </select>
+                </label>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <label>
+                  Received By Staff Member *
+                  <input
+                    type="text"
+                    value={payStaffName}
+                    onChange={e => setPayStaffName(e.target.value)}
+                    required
+                  />
+                </label>
+
+                <label>
+                  Notes / Reference
+                  <input
+                    type="text"
+                    value={payNotes}
+                    onChange={e => setPayNotes(e.target.value)}
+                    placeholder="e.g. Cash received on ground"
+                  />
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                <button type="submit" className="academy-hub-primary-btn" style={{ flex: 1 }}>
+                  Confirm &amp; Issue Receipt
+                </button>
+                <button
+                  type="button"
+                  className="academy-hub-public-page-btn"
+                  onClick={() => setIsRecordPaymentModalOpen(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

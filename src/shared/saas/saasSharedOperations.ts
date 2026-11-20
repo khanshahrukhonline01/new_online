@@ -390,3 +390,129 @@ export function generateWhatsAppShareProfileUrl(opts: {
 
   return `https://wa.me/?text=${encodeURIComponent(message)}`
 }
+
+// -------------------------------------------------------------
+// 5. Emergency Weather & Session Cancellation Broadcast
+// -------------------------------------------------------------
+
+export function generateWhatsAppBatchBroadcastUrl(opts: {
+  entityName: string
+  batchName: string
+  reason: 'rain_weather' | 'ground_maintenance' | 'heat_pollution' | 'holiday' | 'coach_emergency' | 'custom'
+  customReason?: string
+  date: string
+  rescheduledTime?: string
+}): string {
+  const reasonMap: Record<string, string> = {
+    rain_weather: 'Heavy rainfall and pitch waterlogging',
+    ground_maintenance: 'Scheduled turf maintenance and ground relaying',
+    heat_pollution: 'Advisory for extreme weather / heat index',
+    holiday: 'Public sports holiday / festive break',
+    coach_emergency: 'Coach emergency leave / technical workshop',
+    custom: opts.customReason || 'Unforeseen grounds maintenance',
+  }
+  const reasonText = reasonMap[opts.reason] || opts.customReason || 'Unforeseen circumstances'
+  const rescheduleNote = opts.rescheduledTime
+    ? `\n*Rescheduled Session:* ${opts.rescheduledTime}`
+    : `\n*Next Session:* As per regular batch timetable.`
+
+  const message = [
+    `⚠️ *IMPORTANT NOTICE: SESSION UPDATE*`,
+    `*Academy:* ${opts.entityName}`,
+    `*Batch:* ${opts.batchName}`,
+    `*Date:* ${opts.date}`,
+    `--------------------------------`,
+    `Please note that today's training session has been *CALLED OFF* due to:`,
+    `👉 *${reasonText}*.`,
+    `${rescheduleNote}`,
+    `--------------------------------`,
+    `Student safety and optimal ground conditions remain our highest priority.`,
+    `— Management Desk via KhelGrid Infrastructure`,
+  ].join('\n')
+
+  return `https://wa.me/?text=${encodeURIComponent(message)}`
+}
+
+// -------------------------------------------------------------
+// 6. Overdue Fee Reminder via WhatsApp
+// -------------------------------------------------------------
+
+export function generateWhatsAppPaymentReminderUrl(opts: {
+  studentName: string
+  parentName: string
+  parentPhone: string
+  academyName: string
+  batchName: string
+  monthlyFee: number
+  dueDate: string
+  upiVpa?: string
+}): string {
+  const cleanPhone = opts.parentPhone.replace(/\D/g, '')
+  const phone = cleanPhone.startsWith('91') && cleanPhone.length > 10 ? cleanPhone : `91${cleanPhone.slice(-10)}`
+
+  const message = [
+    `Namaste ${opts.parentName} ji! 🙏`,
+    `*Academy Fee Notice:* ${opts.academyName}`,
+    `--------------------------------`,
+    `This is a gentle reminder regarding the training fee for *${opts.studentName}* (*${opts.batchName}*).`,
+    `*Amount Due:* ₹${opts.monthlyFee.toLocaleString('en-IN')}`,
+    `*Due Date:* ${opts.dueDate}`,
+    opts.upiVpa ? `*Direct UPI VPA:* \`${opts.upiVpa}\` (0% Commission)` : '',
+    `--------------------------------`,
+    `Please complete the payment directly to the academy account at your earliest convenience to maintain uninterrupted ground sessions.`,
+    `An official digital receipt will be dispatched immediately upon settlement.`,
+    `— KhelGrid Student Admissions Desk`,
+  ].filter(Boolean).join('\n')
+
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+}
+
+// -------------------------------------------------------------
+// 7. Student Evaluation & Progress Report Generator
+// -------------------------------------------------------------
+
+export interface StudentProgressReport {
+  reportId: string
+  studentId: string
+  studentName: string
+  parentName: string
+  parentPhone: string
+  batchName: string
+  academyName: string
+  sport: string
+  term: string
+  attendanceRate: number
+  technicalGrade: 'A+' | 'A' | 'B+' | 'B' | 'C'
+  tacticalGrade: 'A+' | 'A' | 'B+' | 'B' | 'C'
+  physicalFitnessGrade: 'A+' | 'A' | 'B+' | 'B' | 'C'
+  disciplineGrade: 'A+' | 'A' | 'B+' | 'B' | 'C'
+  coachRemarks: string
+  evaluatedByCoachName: string
+  evaluatedDate: string
+}
+
+export function generateWhatsAppProgressReportUrl(report: StudentProgressReport): string {
+  const cleanPhone = report.parentPhone.replace(/\D/g, '')
+  const phone = cleanPhone.startsWith('91') && cleanPhone.length > 10 ? cleanPhone : `91${cleanPhone.slice(-10)}`
+
+  const message = [
+    `📊 *QUARTERLY ATHLETE EVALUATION REPORT*`,
+    `*Academy:* ${report.academyName}`,
+    `*Student:* ${report.studentName}`,
+    `*Batch & Sport:* ${report.batchName} (${report.sport})`,
+    `*Period:* ${report.term}`,
+    `--------------------------------`,
+    `🎯 *Attendance Consistency:* ${report.attendanceRate}%`,
+    `⚽ *Technical Skill:* Grade ${report.technicalGrade}`,
+    `🧠 *Tactical Awareness:* Grade ${report.tacticalGrade}`,
+    `⚡ *Physical Conditioning:* Grade ${report.physicalFitnessGrade}`,
+    `🤝 *Discipline & Work Ethic:* Grade ${report.disciplineGrade}`,
+    `--------------------------------`,
+    `*Coach Remarks:*`,
+    `"${report.coachRemarks}"`,
+    `— Evaluated by: *${report.evaluatedByCoachName}* on ${report.evaluatedDate}`,
+    `🛡️ Official Athlete Record on KhelGrid National Infrastructure`,
+  ].join('\n')
+
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+}

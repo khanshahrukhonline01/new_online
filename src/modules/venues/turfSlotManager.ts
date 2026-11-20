@@ -14,6 +14,8 @@ export interface TurfCourt {
   hasFloodlights: boolean
   defaultHourlyRate: number // in INR
   advanceDepositRate: number // in INR
+  parentCourtId?: string // If this is a sub-pitch (e.g. 7v7 half field inside 11v11)
+  childCourtIds?: string[] // If this is a full pitch partitioned into sub-courts
 }
 
 export type TurfSlotStatus = 'available' | 'booked' | 'blocked' | 'held'
@@ -68,6 +70,7 @@ export interface TurfPricingConfig {
   peakEndHour: number // 23 (11:00 PM)
   peakMultiplier: number // 1.35
   weekendMultiplier: number // 1.25
+  floodlightSurchargeHourly?: number // e.g. 250 INR/hr
 }
 
 export interface TurfVenueSettings {
@@ -104,13 +107,38 @@ export const DEFAULT_TURF_COURTS: TurfCourt[] = [
   {
     id: 'court-kan-1',
     venueSlug: 'sree-kanteerava-stadium',
-    name: 'Pitch 1 — FIFA AstroTurf 7v7',
+    name: 'Pitch 1 — FIFA AstroTurf 7v7 (Full Ground)',
     sport: 'Football',
     surface: 'AstroTurf (FIFA 2-Star)',
     isIndoor: false,
     hasFloodlights: true,
     defaultHourlyRate: 1500,
     advanceDepositRate: 300,
+    childCourtIds: ['court-kan-1a', 'court-kan-1b'],
+  },
+  {
+    id: 'court-kan-1a',
+    venueSlug: 'sree-kanteerava-stadium',
+    name: 'Pitch 1A — Sub-Field 5v5 (North Box)',
+    sport: 'Football',
+    surface: 'AstroTurf (FIFA 2-Star)',
+    isIndoor: false,
+    hasFloodlights: true,
+    defaultHourlyRate: 850,
+    advanceDepositRate: 200,
+    parentCourtId: 'court-kan-1',
+  },
+  {
+    id: 'court-kan-1b',
+    venueSlug: 'sree-kanteerava-stadium',
+    name: 'Pitch 1B — Sub-Field 5v5 (South Box)',
+    sport: 'Football',
+    surface: 'AstroTurf (FIFA 2-Star)',
+    isIndoor: false,
+    hasFloodlights: true,
+    defaultHourlyRate: 850,
+    advanceDepositRate: 200,
+    parentCourtId: 'court-kan-1',
   },
   {
     id: 'court-kan-2',
@@ -271,6 +299,51 @@ export function getTurfSlots(venueSlug: string, date: string, courtId: string): 
   return HOURLY_TIME_SLOTS.map(timeSlot => {
     const slotId = `${venueSlug}_${targetCourt.id}_${resolvedDate}_${timeSlot}`
     const existing = storedSlots.find(s => s.id === slotId)
+    if (existing && (existing.status === 'booked' || existing.status === 'blocked')) {
+      return existing
+    }
+
+    // Partitioning Concurrency Check 1: Parent court reservation
+    if (targetCourt.parentCourtId) {
+      const parentSlotId = `${venueSlug}_${targetCourt.parentCourtId}_${resolvedDate}_${timeSlot}`
+      const parentSlot = storedSlots.find(s => s.id === parentSlotId)
+      if (parentSlot && parentSlot.status === 'booked') {
+        return {
+          id: slotId,
+          venueSlug,
+          courtId: targetCourt.id,
+          date: resolvedDate,
+          timeSlot,
+          status: 'blocked',
+          blockedReason: `Unavailable: Full pitch is booked (${parentSlot.customerName || 'Reserved'})`,
+          hourlyPrice: targetCourt.defaultHourlyRate,
+          advanceDeposit: targetCourt.advanceDepositRate,
+        }
+      }
+    }
+
+    // Partitioning Concurrency Check 2: Child sub-court reservation
+    if (targetCourt.childCourtIds && targetCourt.childCourtIds.length > 0) {
+      for (const childId of targetCourt.childCourtIds) {
+        const childSlotId = `${venueSlug}_${childId}_${resolvedDate}_${timeSlot}`
+        const childSlot = storedSlots.find(s => s.id === childSlotId)
+        if (childSlot && childSlot.status === 'booked') {
+          const childCourt = courts.find(c => c.id === childId)
+          return {
+            id: slotId,
+            venueSlug,
+            courtId: targetCourt.id,
+            date: resolvedDate,
+            timeSlot,
+            status: 'blocked',
+            blockedReason: `Unavailable: Sub-pitch (${childCourt?.name || childId}) is booked`,
+            hourlyPrice: targetCourt.defaultHourlyRate,
+            advanceDeposit: targetCourt.advanceDepositRate,
+          }
+        }
+      }
+    }
+
     if (existing) return existing
 
     return {
@@ -312,6 +385,27 @@ export function bookTurfSlot(params: {
 
   const courts = getTurfCourts(params.venueSlug)
   const court = courts.find(c => c.id === params.courtId) || courts[0]
+
+  // Partitioning Concurrency Check: If this court has a parent, check if parent is booked or held
+  if (court.parentCourtId) {
+    const parentSlotId = `${params.venueSlug}_${court.parentCourtId}_${resolvedDate}_${params.timeSlot}`
+    const parentSlot = storedSlots.find(s => s.id === parentSlotId)
+    if (parentSlot && (parentSlot.status === 'booked' || parentSlot.status === 'held')) {
+      return { success: false, error: 'Cannot book: The full main pitch is already reserved for this time slot.' }
+    }
+  }
+
+  // Partitioning Concurrency Check: If this court is a parent court, check if any child sub-court is booked or held
+  if (court.childCourtIds && court.childCourtIds.length > 0) {
+    for (const childId of court.childCourtIds) {
+      const childSlotId = `${params.venueSlug}_${childId}_${resolvedDate}_${params.timeSlot}`
+      const childSlot = storedSlots.find(s => s.id === childSlotId)
+      if (childSlot && (childSlot.status === 'booked' || childSlot.status === 'held')) {
+        const childCourt = courts.find(c => c.id === childId)
+        return { success: false, error: `Cannot book: Sub-court (${childCourt?.name || childId}) is already reserved for this time slot.` }
+      }
+    }
+  }
   const totalAmount = params.hourlyPrice ?? court.defaultHourlyRate
   const deposit = params.advanceDeposit ?? court.advanceDepositRate
   const paidAmount = params.paymentMethod === 'fully_paid' ? totalAmount : params.paymentMethod === 'upi_advance_paid' ? deposit : 0
@@ -489,6 +583,7 @@ export function getTurfPricingConfig(venueSlug: string): TurfPricingConfig {
     peakEndHour: 23, // 11:00 PM
     peakMultiplier: 1.35,
     weekendMultiplier: 1.25,
+    floodlightSurchargeHourly: 200,
   }
 }
 
@@ -521,36 +616,76 @@ export function calculateSlotDynamicPrice(
   timeSlot: string,
   dateStr?: string,
   customConfig?: TurfPricingConfig
-): { hourlyPrice: number; advanceDeposit: number; isPeak: boolean; peakLabel: string } {
+): {
+  hourlyPrice: number
+  advanceDeposit: number
+  isPeak: boolean
+  peakLabel: string
+  breakdown?: {
+    baseRate: number
+    peakSurcharge: number
+    floodlightSurcharge: number
+    total: number
+  }
+} {
   const config = customConfig || getTurfPricingConfig(court.venueSlug)
+  const baseRate = court.defaultHourlyRate
+
   if (!config.isDynamicPricingEnabled) {
     return {
-      hourlyPrice: court.defaultHourlyRate,
+      hourlyPrice: baseRate,
       advanceDeposit: court.advanceDepositRate,
       isPeak: false,
       peakLabel: 'Standard Rate',
+      breakdown: { baseRate, peakSurcharge: 0, floodlightSurcharge: 0, total: baseRate },
     }
   }
 
   const isPeak = isSlotPeakHour(timeSlot, dateStr)
   if (!isPeak) {
     return {
-      hourlyPrice: court.defaultHourlyRate,
+      hourlyPrice: baseRate,
       advanceDeposit: court.advanceDepositRate,
       isPeak: false,
       peakLabel: 'Off-Peak Rate',
+      breakdown: { baseRate, peakSurcharge: 0, floodlightSurcharge: 0, total: baseRate },
     }
   }
 
   const mult = config.peakMultiplier || 1.35
-  const roundedPrice = Math.round((court.defaultHourlyRate * mult) / 50) * 50
-  const roundedDeposit = Math.round((court.advanceDepositRate * mult) / 50) * 50
+  const roundedPrice = Math.round((baseRate * mult) / 50) * 50
+  const peakSurcharge = roundedPrice - baseRate
+
+  let floodlightSurcharge = 0
+  const match = timeSlot.match(/^(\d{1,2}):\d{2}\s*(AM|PM)/i)
+  if (match) {
+    let hour = parseInt(match[1], 10)
+    const ampm = match[2].toUpperCase()
+    if (ampm === 'PM' && hour !== 12) hour += 12
+    if (ampm === 'AM' && hour === 12) hour = 0
+    if (hour >= 18 && court.hasFloodlights && config.floodlightSurchargeHourly) {
+      floodlightSurcharge = config.floodlightSurchargeHourly
+    }
+  }
+
+  const finalPrice = roundedPrice + floodlightSurcharge
+  const roundedDeposit = Math.round((finalPrice * 0.25) / 50) * 50
+
+  const peakLabel = floodlightSurcharge > 0
+    ? '⚡ Prime Floodlit Peak'
+    : '⚡ Peak Hour Rate'
 
   return {
-    hourlyPrice: roundedPrice,
-    advanceDeposit: roundedDeposit,
+    hourlyPrice: finalPrice,
+    advanceDeposit: Math.max(court.advanceDepositRate, roundedDeposit),
     isPeak: true,
-    peakLabel: '⚡ Prime Floodlit Peak',
+    peakLabel,
+    breakdown: {
+      baseRate,
+      peakSurcharge,
+      floodlightSurcharge,
+      total: finalPrice,
+    },
   }
 }
 
@@ -586,6 +721,27 @@ export function holdTurfSlot(
 
   const courts = getTurfCourts(venueSlug)
   const court = courts.find(c => c.id === courtId) || courts[0]
+
+  // Partitioning Concurrency Check: If court has parent
+  if (court.parentCourtId) {
+    const parentSlotId = `${venueSlug}_${court.parentCourtId}_${resolvedDate}_${timeSlot}`
+    const parentSlot = storedSlots.find(s => s.id === parentSlotId)
+    if (parentSlot && (parentSlot.status === 'booked' || parentSlot.status === 'held')) {
+      return { success: false, message: 'Cannot hold: The full main pitch is already reserved for this time slot.' }
+    }
+  }
+
+  // Partitioning Concurrency Check: If court has children
+  if (court.childCourtIds && court.childCourtIds.length > 0) {
+    for (const childId of court.childCourtIds) {
+      const childSlotId = `${venueSlug}_${childId}_${resolvedDate}_${timeSlot}`
+      const childSlot = storedSlots.find(s => s.id === childSlotId)
+      if (childSlot && (childSlot.status === 'booked' || childSlot.status === 'held')) {
+        const childCourt = courts.find(c => c.id === childId)
+        return { success: false, message: `Cannot hold: Sub-court (${childCourt?.name || childId}) is already reserved for this time slot.` }
+      }
+    }
+  }
   const pricing = calculateSlotDynamicPrice(court, timeSlot, resolvedDate)
 
   const holdExpiry = new Date(Date.now() + 10 * 60 * 1000).toISOString()

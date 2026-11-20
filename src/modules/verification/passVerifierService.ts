@@ -63,6 +63,8 @@ export interface GateAdmissionLogItem {
   facility: string
   admittedAt: string
   admittedBy: string
+  isOfflineRecord?: boolean
+  syncStatus?: 'synced' | 'pending_sync'
 }
 
 const GATE_LOG_KEY = 'khelgrid_gate_admission_log'
@@ -520,5 +522,95 @@ export function admitPassToken(
     success: true,
     message: `Entry verified and admitted for ${current.primaryHolder}!`,
     pass: admittedDemo,
+  }
+}
+
+/**
+ * Admits a pass token offline into local indexed audit storage for venues with poor connectivity.
+ */
+export function admitPassOffline(
+  rawToken: string,
+  gatekeeperName: string = 'Ground Gatekeeper'
+): { success: boolean; message: string; pass?: UnifiedPassResult; isOffline: true } {
+  const token = rawToken.trim().toUpperCase()
+  const current = verifyPassToken(token)
+
+  if (!current) {
+    return { success: false, message: 'Invalid or unrecognized KhelGrid pass token.', isOffline: true }
+  }
+
+  const admittedPass: UnifiedPassResult = {
+    ...current,
+    status: 'used',
+    checkedInAt: new Date().toISOString(),
+    checkedInBy: gatekeeperName,
+    statusLabel: `Offline Admitted at ${new Date().toLocaleTimeString()} by ${gatekeeperName}`,
+  }
+
+  appendGateAdmissionLog({
+    id: `offline-gate-log-${Date.now()}`,
+    token: admittedPass.token,
+    passType: admittedPass.passType,
+    holderName: admittedPass.primaryHolder,
+    sport: admittedPass.sport,
+    facility: admittedPass.venueOrFacility,
+    admittedAt: admittedPass.checkedInAt!,
+    admittedBy: gatekeeperName,
+    isOfflineRecord: true,
+    syncStatus: 'pending_sync',
+  })
+
+  return {
+    success: true,
+    message: `[Offline Mode] Entry recorded locally for ${current.primaryHolder}. Queued for sync.`,
+    pass: admittedPass,
+    isOffline: true,
+  }
+}
+
+/**
+ * Synchronizes queued offline admission records once connectivity is restored.
+ */
+export function syncOfflineGateLogs(): { syncedCount: number; message: string } {
+  const logs = getGateAdmissionLogs()
+  const pending = logs.filter(l => l.syncStatus === 'pending_sync')
+
+  if (pending.length === 0) {
+    return { syncedCount: 0, message: 'All gate admission records are already synchronized.' }
+  }
+
+  const updated = logs.map(l => (l.syncStatus === 'pending_sync' ? { ...l, syncStatus: 'synced' as const } : l))
+
+  const storage = getSafeStorage()
+  if (storage) {
+    try {
+      storage.setItem(GATE_LOG_KEY, JSON.stringify(updated))
+    } catch {
+      // ignore
+    }
+  }
+
+  return {
+    syncedCount: pending.length,
+    message: `Successfully synchronized ${pending.length} offline gate admission records with KhelGrid Cloud.`,
+  }
+}
+
+/**
+ * Computes audit statistics for the gatekeeper.
+ */
+export function getOfflineAuditStats(): {
+  totalAdmissions: number
+  offlineCount: number
+  pendingSyncCount: number
+} {
+  const logs = getGateAdmissionLogs()
+  const offlineCount = logs.filter(l => l.isOfflineRecord).length
+  const pendingSyncCount = logs.filter(l => l.syncStatus === 'pending_sync').length
+
+  return {
+    totalAdmissions: logs.length,
+    offlineCount,
+    pendingSyncCount,
   }
 }

@@ -76,11 +76,61 @@ export interface RegisteredCoach {
   verificationStatus?: 'unverified' | 'pending_review' | 'verified' | 'rejected'
 }
 
+export interface TraineeCombineBenchmark {
+  id: string
+  coachSlug: string
+  traineeId: string
+  traineeName: string
+  testDate: string
+  ageGroup: string
+  sprint30mSeconds?: number
+  verticalJumpCm?: number
+  yoYoBeepLevel?: string
+  proAgilitySeconds?: number
+  compositePercentile: number
+  tier: 'Elite (Top 5%)' | 'Advanced (Top 15%)' | 'Competitive' | 'Developing'
+  notes?: string
+}
+
+export interface CoachTrainingPlan {
+  id: string
+  coachSlug: string
+  batchId: string
+  batchName: string
+  weekTitle: string
+  focusArea: string
+  drills: {
+    day: string
+    title: string
+    durationMinutes: number
+    instructions: string
+  }[]
+  homeworkChallenge: string
+  createdAt: string
+}
+
+export interface CoachEndorsementRecord {
+  id: string
+  coachSlug: string
+  coachName: string
+  coachCertification: string
+  traineeName: string
+  traineeId: string
+  badgeTitle: string
+  sport: string
+  endorsementText: string
+  awardedDate: string
+  verificationHash: string
+}
+
 export const STORAGE_COACH_KEYS = {
   COACHES: 'khelgrid_coach_saas_registered_coaches',
   TRAINEES: 'khelgrid_coach_saas_trainees',
   BATCHES: 'khelgrid_coach_saas_batches',
   INQUIRIES: 'khelgrid_coach_saas_inquiries',
+  COMBINES: 'khelgrid_coach_saas_combines',
+  TRAINING_PLANS: 'khelgrid_coach_saas_training_plans',
+  ENDORSEMENTS: 'khelgrid_coach_saas_endorsements',
 }
 
 export const INITIAL_REGISTERED_COACHES: RegisteredCoach[] = [
@@ -261,6 +311,73 @@ export const DEFAULT_COACH_INQUIRIES: CoachInquiry[] = [
   },
 ]
 
+export const DEFAULT_COMBINES: TraineeCombineBenchmark[] = [
+  {
+    id: 'comb-1',
+    coachSlug: 'zaheer-farooq-coach',
+    traineeId: 'tr-01',
+    traineeName: 'Arjun Mehra',
+    testDate: '2026-11-15',
+    ageGroup: 'U-15',
+    sprint30mSeconds: 4.12,
+    verticalJumpCm: 52,
+    yoYoBeepLevel: '17.4',
+    proAgilitySeconds: 4.58,
+    compositePercentile: 94,
+    tier: 'Elite (Top 5%)',
+    notes: 'Exceptional acceleration in first 10 meters. Ready for fast-bowler zonal trials.',
+  },
+  {
+    id: 'comb-2',
+    coachSlug: 'zaheer-farooq-coach',
+    traineeId: 'tr-02',
+    traineeName: 'Rohan Deshmukh',
+    testDate: '2026-11-12',
+    ageGroup: 'U-14',
+    sprint30mSeconds: 4.38,
+    verticalJumpCm: 44,
+    yoYoBeepLevel: '16.1',
+    proAgilitySeconds: 4.82,
+    compositePercentile: 82,
+    tier: 'Advanced (Top 15%)',
+    notes: 'Solid endurance base. Working on plyometric power generation.',
+  },
+]
+
+export const DEFAULT_TRAINING_PLANS: CoachTrainingPlan[] = [
+  {
+    id: 'plan-1',
+    coachSlug: 'zaheer-farooq-coach',
+    batchId: 'cbatch-zf-1',
+    batchName: 'Morning Elite Fast Bowlers Camp',
+    weekTitle: 'Week 4: Biomechanical Seam Position & Target Bowling',
+    focusArea: 'Wrist snapping at delivery stride and front-arm pull down',
+    drills: [
+      { day: 'Mon', title: 'Target Cone Bowling (Good Length Corridor)', durationMinutes: 45, instructions: '6 sets of 6 balls targeting 4x2 ft target zone at 120+ km/h' },
+      { day: 'Wed', title: '4-Pace Run-up Deceleration & Follow-through', durationMinutes: 40, instructions: 'Biomechanics check on non-bowling arm stabilization' },
+      { day: 'Fri', title: 'Match Simulation: Death Overs Yorkers & Slower Balls', durationMinutes: 50, instructions: 'Field placements set; defensive yorkers under pressure' },
+    ],
+    homeworkChallenge: 'Daily 50 wall seam snaps + 3 sets of 15 resistance band rotator cuff pulls.',
+    createdAt: '2026-11-17T06:00:00Z',
+  },
+]
+
+export const DEFAULT_ENDORSEMENTS: CoachEndorsementRecord[] = [
+  {
+    id: 'end-1',
+    coachSlug: 'zaheer-farooq-coach',
+    coachName: 'Coach Zaheer Farooq',
+    coachCertification: 'BCCI Level 2 · NIS Patiala Senior Diploma',
+    traineeName: 'Arjun Mehra',
+    traineeId: 'tr-01',
+    badgeTitle: 'Verified Express Pace Bowler (125+ km/h)',
+    sport: 'Cricket',
+    endorsementText: 'Disciplined work ethic with natural upright seam release and repeatable gather. Highly recommended for district & state age-group selection.',
+    awardedDate: '2026-11-18',
+    verificationHash: 'KG-CERT-ZF-89214',
+  },
+]
+
 // Memory fallback store
 let memoryCoachStore: Record<string, unknown> = {}
 
@@ -272,6 +389,9 @@ export function clearCoachSaaSMemoryStore(): void {
       window.localStorage.removeItem(STORAGE_COACH_KEYS.TRAINEES)
       window.localStorage.removeItem(STORAGE_COACH_KEYS.BATCHES)
       window.localStorage.removeItem(STORAGE_COACH_KEYS.INQUIRIES)
+      window.localStorage.removeItem(STORAGE_COACH_KEYS.COMBINES)
+      window.localStorage.removeItem(STORAGE_COACH_KEYS.TRAINING_PLANS)
+      window.localStorage.removeItem(STORAGE_COACH_KEYS.ENDORSEMENTS)
     } catch {
       // ignore
     }
@@ -604,4 +724,168 @@ export function generateWhatsAppTraineeFeeReminderUrl(trainee: CoachTrainee, coa
 export function generateUpiPayLink(params: { vpa: string; name: string; amount: number; note: string }): string {
   const { vpa, name, amount, note } = params
   return `upi://pay?pa=${encodeURIComponent(vpa)}&pn=${encodeURIComponent(name)}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`
+}
+
+// -------------------------------------------------------------
+// Combine Performance Benchmarks (KhelChronicle Normative Standards)
+// -------------------------------------------------------------
+
+export function calculateCombinePercentile(opts: {
+  ageGroup: string
+  sprint30m?: number
+  verticalJump?: number
+  yoYoLevel?: number
+  proAgility?: number
+}): { percentile: number; tier: 'Elite (Top 5%)' | 'Advanced (Top 15%)' | 'Competitive' | 'Developing' } {
+  let scoreSum = 0
+  let count = 0
+
+  if (opts.sprint30m && opts.sprint30m > 0) {
+    count++
+    // Sprint: Lower is better. 4.10s = 98%, 4.30s = 85%, 4.50s = 70%, 4.80s = 45%
+    if (opts.sprint30m <= 4.15) scoreSum += 95
+    else if (opts.sprint30m <= 4.35) scoreSum += 85
+    else if (opts.sprint30m <= 4.60) scoreSum += 70
+    else scoreSum += 50
+  }
+
+  if (opts.verticalJump && opts.verticalJump > 0) {
+    count++
+    // Vertical Jump: Higher is better. 52cm = 95%, 45cm = 85%, 38cm = 65%
+    if (opts.verticalJump >= 50) scoreSum += 95
+    else if (opts.verticalJump >= 44) scoreSum += 85
+    else if (opts.verticalJump >= 38) scoreSum += 70
+    else scoreSum += 50
+  }
+
+  if (opts.yoYoLevel && opts.yoYoLevel > 0) {
+    count++
+    if (opts.yoYoLevel >= 17.0) scoreSum += 96
+    else if (opts.yoYoLevel >= 15.5) scoreSum += 84
+    else if (opts.yoYoLevel >= 14.0) scoreSum += 70
+    else scoreSum += 50
+  }
+
+  if (opts.proAgility && opts.proAgility > 0) {
+    count++
+    if (opts.proAgility <= 4.60) scoreSum += 95
+    else if (opts.proAgility <= 4.85) scoreSum += 84
+    else scoreSum += 65
+  }
+
+  const percentile = count > 0 ? Math.round(scoreSum / count) : 75
+  let tier: 'Elite (Top 5%)' | 'Advanced (Top 15%)' | 'Competitive' | 'Developing' = 'Developing'
+  if (percentile >= 90) tier = 'Elite (Top 5%)'
+  else if (percentile >= 80) tier = 'Advanced (Top 15%)'
+  else if (percentile >= 65) tier = 'Competitive'
+
+  return { percentile, tier }
+}
+
+export function getTraineeCombines(coachSlug: string): TraineeCombineBenchmark[] {
+  const all = loadFromStorage<TraineeCombineBenchmark[]>(STORAGE_COACH_KEYS.COMBINES, DEFAULT_COMBINES)
+  return all.filter(c => c.coachSlug === coachSlug)
+}
+
+export function saveTraineeCombine(combine: Omit<TraineeCombineBenchmark, 'id'> & { id?: string }): TraineeCombineBenchmark {
+  const all = loadFromStorage<TraineeCombineBenchmark[]>(STORAGE_COACH_KEYS.COMBINES, DEFAULT_COMBINES)
+  if (combine.id) {
+    const updated = all.map(c => (c.id === combine.id ? { ...c, ...combine } : c))
+    saveToStorage(STORAGE_COACH_KEYS.COMBINES, updated)
+    return updated.find(c => c.id === combine.id)!
+  }
+  const newComb: TraineeCombineBenchmark = {
+    ...combine,
+    id: `comb-${Date.now()}`,
+  }
+  const updated = [newComb, ...all]
+  saveToStorage(STORAGE_COACH_KEYS.COMBINES, updated)
+  return newComb
+}
+
+// -------------------------------------------------------------
+// Training Drill & Curriculum Planner
+// -------------------------------------------------------------
+
+export function getCoachTrainingPlans(coachSlug: string): CoachTrainingPlan[] {
+  const all = loadFromStorage<CoachTrainingPlan[]>(STORAGE_COACH_KEYS.TRAINING_PLANS, DEFAULT_TRAINING_PLANS)
+  return all.filter(p => p.coachSlug === coachSlug)
+}
+
+export function saveCoachTrainingPlan(plan: Omit<CoachTrainingPlan, 'id' | 'createdAt'> & { id?: string }): CoachTrainingPlan {
+  const all = loadFromStorage<CoachTrainingPlan[]>(STORAGE_COACH_KEYS.TRAINING_PLANS, DEFAULT_TRAINING_PLANS)
+  if (plan.id) {
+    const updated = all.map(p => (p.id === plan.id ? { ...p, ...plan } : p))
+    saveToStorage(STORAGE_COACH_KEYS.TRAINING_PLANS, updated)
+    return updated.find(p => p.id === plan.id)!
+  }
+  const newPlan: CoachTrainingPlan = {
+    ...plan,
+    id: `plan-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+  }
+  const updated = [newPlan, ...all]
+  saveToStorage(STORAGE_COACH_KEYS.TRAINING_PLANS, updated)
+  return newPlan
+}
+
+export function generateWhatsAppTrainingPlanUrl(plan: CoachTrainingPlan, coachName: string): string {
+  const drillsList = plan.drills.map(d => `• *${d.day}:* ${d.title} (${d.durationMinutes} min)\n  _${d.instructions}_`).join('\n\n')
+
+  const message = [
+    `📋 *WEEKLY TRAINING DRILLS & FOCUS*`,
+    `*Coach:* ${coachName}`,
+    `*Batch:* ${plan.batchName}`,
+    `*Curriculum:* ${plan.weekTitle}`,
+    `*Key Focus:* ${plan.focusArea}`,
+    `--------------------------------`,
+    drillsList,
+    `--------------------------------`,
+    `🏠 *Home Practice Challenge:*`,
+    `${plan.homeworkChallenge}`,
+    `— KhelGrid Coach Operations`,
+  ].join('\n')
+
+  return `https://wa.me/?text=${encodeURIComponent(message)}`
+}
+
+// -------------------------------------------------------------
+// Official Coach Endorsements
+// -------------------------------------------------------------
+
+export function getCoachEndorsements(coachSlug: string): CoachEndorsementRecord[] {
+  const all = loadFromStorage<CoachEndorsementRecord[]>(STORAGE_COACH_KEYS.ENDORSEMENTS, DEFAULT_ENDORSEMENTS)
+  return all.filter(e => e.coachSlug === coachSlug)
+}
+
+export function awardCoachEndorsement(endorsement: Omit<CoachEndorsementRecord, 'id' | 'verificationHash' | 'awardedDate'>): CoachEndorsementRecord {
+  const all = loadFromStorage<CoachEndorsementRecord[]>(STORAGE_COACH_KEYS.ENDORSEMENTS, DEFAULT_ENDORSEMENTS)
+  const verificationHash = `KG-CERT-${endorsement.coachSlug.slice(0, 3).toUpperCase()}-${Math.floor(10000 + Math.random() * 90000)}`
+  const newEnd: CoachEndorsementRecord = {
+    ...endorsement,
+    id: `end-${Date.now()}`,
+    verificationHash,
+    awardedDate: new Date().toISOString().slice(0, 10),
+  }
+  const updated = [newEnd, ...all]
+  saveToStorage(STORAGE_COACH_KEYS.ENDORSEMENTS, updated)
+  return newEnd
+}
+
+export function generateWhatsAppEndorsementUrl(endorsement: CoachEndorsementRecord): string {
+  const message = [
+    `🛡️ *OFFICIAL COACH VERIFIED ENDORSEMENT*`,
+    `*Athlete:* ${endorsement.traineeName}`,
+    `*Sport:* ${endorsement.sport}`,
+    `*Badge Awarded:* 🎖️ ${endorsement.badgeTitle}`,
+    `*Endorsing Coach:* ${endorsement.coachName} (${endorsement.coachCertification})`,
+    `*Verification Stamp:* \`${endorsement.verificationHash}\``,
+    `--------------------------------`,
+    `"${endorsement.endorsementText}"`,
+    `--------------------------------`,
+    `Permanently attached to official KhelGrid National Sports CV.`,
+    `— Verified by KhelGrid National Scouting Network`,
+  ].join('\n')
+
+  return `https://wa.me/?text=${encodeURIComponent(message)}`
 }

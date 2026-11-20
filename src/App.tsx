@@ -63,10 +63,12 @@ const SportsCalendarPage = lazy(() => import('./modules/calendar/SportsCalendarP
 const SportsToolsPage = lazy(() => import('./modules/tools/SportsToolsPage'))
 const PricingPage = lazy(() => import('./modules/pricing/PricingPage'))
 const PartnerPage = lazy(() => import('./modules/partner/PartnerPage'))
+const PartnerOnboardingPage = lazy(() => import('./modules/partner/PartnerOnboardingPage'))
 const SavedPage = lazy(() => import('./modules/saved/SavedPage'))
 const CoachesPage = lazy(() => import('./modules/coaches/CoachesPage'))
 const CoachDashboardPage = lazy(() => import('./modules/coaches/CoachDashboardPage'))
 const EventsPage = lazy(() => import('./modules/events/EventsPage'))
+const TournamentOpsPage = lazy(() => import('./modules/events/TournamentOpsPage'))
 const ScoutPortalPage = lazy(() => import('./modules/scouting/ScoutPortalPage'))
 const AthleteVerificationPage = lazy(() => import('./modules/verification/AthleteVerificationPage'))
 const GateCheckInPage = lazy(() => import('./modules/verification/GateCheckInPage').then(m => ({ default: m.GateCheckInPage })))
@@ -331,9 +333,11 @@ export default function App() {
       else if (match.canonicalPath === '/referrals') page = <ReferralsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/book') page = <VenuesPage onOpenIntake={() => openListingSubmission('venue')} onNavigate={navigate} />
       else if (match.canonicalPath === '/train') page = <AcademiesPage onOpenIntake={() => openListingSubmission('academy')} onNavigate={navigate} />
+      else if (match.canonicalPath === '/partner-signup' || match.canonicalPath === '/partner/signup' || match.canonicalPath === '/partner/login') page = <PartnerOnboardingPage onNavigate={navigate} />
       else if (match.canonicalPath === '/academy-hub' || match.canonicalPath === '/academies/manage') page = <AcademyHubPage onNavigate={navigate} />
       else if (match.canonicalPath === '/coach-dashboard' || match.canonicalPath === '/coach/hub' || match.canonicalPath === '/coach/manage') page = <CoachDashboardPage onNavigate={navigate} />
       else if (match.canonicalPath === '/turf-calendar' || match.canonicalPath === '/venues/manage' || match.canonicalPath === '/turf') page = <TurfSlotCalendarPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/tournament-ops' || match.canonicalPath === '/tournaments/manage' || match.canonicalPath === '/tournament-management') page = <TournamentOpsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/verify-pass' || match.canonicalPath === '/gate-checkin') page = <GateCheckInPage onNavigate={navigate} />
       else if (match.canonicalPath === '/my-passes' || match.canonicalPath === '/passes') page = <MyPassesVaultPage onNavigate={navigate} />
       else if (match.canonicalPath === '/notifications') page = (

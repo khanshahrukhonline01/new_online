@@ -263,4 +263,87 @@ describe('turfSlotManager Unit Suite', () => {
     expect(secondAdmit.success).toBe(false)
     expect(secondAdmit.message).toContain('already admitted')
   })
+
+  it('enforces hierarchical multi-court partitioning and prevents double booking of parent/child slots', () => {
+    // 1. Booking Full Pitch 1 blocks Sub-pitch 1A and 1B
+    const fullPitchBooking = bookTurfSlot({
+      venueSlug: 'sree-kanteerava-stadium',
+      venueName: 'Sree Kanteerava Stadium',
+      courtId: 'court-kan-1',
+      courtName: 'Full Pitch 1',
+      date: '2026-11-21',
+      timeSlot: '08:00 PM – 09:00 PM',
+      customerName: 'Bengaluru FC U-18',
+      customerPhone: '9988776655',
+      paymentMethod: 'fully_paid',
+    })
+    expect(fullPitchBooking.success).toBe(true)
+
+    // Sub-pitch 1A slot query shows blocked due to full pitch booking
+    const subSlots = getTurfSlots('sree-kanteerava-stadium', '2026-11-21', 'court-kan-1a')
+    const subBlockedSlot = subSlots.find(s => s.timeSlot === '08:00 PM – 09:00 PM')
+    expect(subBlockedSlot?.status).toBe('blocked')
+    expect(subBlockedSlot?.blockedReason).toContain('Full pitch is booked')
+
+    // Attempting to book sub-pitch 1A during same slot fails
+    const subPitchBooking = bookTurfSlot({
+      venueSlug: 'sree-kanteerava-stadium',
+      venueName: 'Sree Kanteerava Stadium',
+      courtId: 'court-kan-1a',
+      courtName: 'Pitch 1A',
+      date: '2026-11-21',
+      timeSlot: '08:00 PM – 09:00 PM',
+      customerName: 'Grassroots 5v5 Team',
+      customerPhone: '9123456789',
+      paymentMethod: 'pay_at_venue',
+    })
+    expect(subPitchBooking.success).toBe(false)
+    expect(subPitchBooking.error).toContain('full main pitch is already reserved')
+
+    // 2. Booking a sub-pitch on another hour blocks the full pitch
+    const subPitch2 = bookTurfSlot({
+      venueSlug: 'sree-kanteerava-stadium',
+      venueName: 'Sree Kanteerava Stadium',
+      courtId: 'court-kan-1a',
+      courtName: 'Pitch 1A',
+      date: '2026-11-21',
+      timeSlot: '06:00 PM – 07:00 PM',
+      customerName: 'Local Academy',
+      customerPhone: '9876543211',
+      paymentMethod: 'upi_advance_paid',
+    })
+    expect(subPitch2.success).toBe(true)
+
+    const fullSlots = getTurfSlots('sree-kanteerava-stadium', '2026-11-21', 'court-kan-1')
+    const fullBlocked = fullSlots.find(s => s.timeSlot === '06:00 PM – 07:00 PM')
+    expect(fullBlocked?.status).toBe('blocked')
+    expect(fullBlocked?.blockedReason).toContain('Sub-pitch')
+
+    // Attempting to book full pitch fails
+    const fullPitchConflict = bookTurfSlot({
+      venueSlug: 'sree-kanteerava-stadium',
+      venueName: 'Sree Kanteerava Stadium',
+      courtId: 'court-kan-1',
+      courtName: 'Full Pitch 1',
+      date: '2026-11-21',
+      timeSlot: '06:00 PM – 07:00 PM',
+      customerName: 'Corporate League',
+      customerPhone: '9888777666',
+      paymentMethod: 'fully_paid',
+    })
+    expect(fullPitchConflict.success).toBe(false)
+    expect(fullPitchConflict.error).toContain('Sub-court')
+  })
+
+  it('calculates floodlight surcharge and itemized pricing breakdown', () => {
+    const courts = getTurfCourts('sree-kanteerava-stadium')
+    const court = courts[0] // Full pitch with floodlights
+
+    const eveningFloodlit = calculateSlotDynamicPrice(court, '07:00 PM – 08:00 PM', '2026-11-21')
+    expect(eveningFloodlit.isPeak).toBe(true)
+    expect(eveningFloodlit.breakdown).toBeDefined()
+    expect(eveningFloodlit.breakdown?.baseRate).toBe(court.defaultHourlyRate)
+    expect(eveningFloodlit.breakdown?.floodlightSurcharge).toBeGreaterThan(0)
+    expect(eveningFloodlit.breakdown?.total).toBe(eveningFloodlit.hourlyPrice)
+  })
 })

@@ -101,6 +101,17 @@ export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps
           Open Gate Check-In Desk <SiteIcon name="arrow-up-right" size={16} />
         </a>
       </div>
+
+      <div className="host-dashboard-empty-state" style={{ borderColor: 'rgba(147, 51, 234, 0.4)', background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.05), transparent)' }}>
+        <SiteIcon name="sparkles" size={34} />
+        <h2>Tournament &amp; Sports Organisation Suite</h2>
+        <p>
+          Organizing a cup, league, or school tournament? Generate automated knockout brackets, run anti-age-fraud squad verification, manage pitch-side live scoring connected to the `/live` feed, and issue tamper-proof digital certificates.
+        </p>
+        <a className="host-action-btn primary" href="/tournament-ops" onClick={event => onNavigate?.(event, '/tournament-ops')}>
+          Open Tournament Operations Suite <SiteIcon name="arrow-up-right" size={16} />
+        </a>
+      </div>
     </section>
   )
 }

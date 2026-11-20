@@ -20,5 +20,6 @@ describe('HostDashboardPage', () => {
     expect(html).toContain('Submit a listing for review')
     expect(html).toContain('href="/submit-listing"')
     expect(html).toContain('A submission is not published or verified')
+    expect(html).toContain('Tournament &amp; Sports Organisation Suite')
   })
 })

@@ -43,7 +43,8 @@ const featurePages: Record<string, string> = {
   '/calendar': 'Sports Calendar', '/for-you': 'For You', '/trust': 'Trust Center',
   '/pricing': 'Pricing & Memberships', '/mobile-app': 'KhelGrid Mobile App', '/careers': 'Careers',
   '/academy-hub': 'Academy Admissions & Operations Hub', '/academies/manage': 'Academy Admissions & Operations Hub',
-  '/partner-signup': 'Academy Admissions & Operations Hub', '/academy/signup': 'Academy Admissions & Operations Hub',
+  '/partner-signup': 'Partner Onboarding Wizard', '/academy/signup': 'Academy Admissions & Operations Hub',
+  '/tournament-ops': 'Tournament Operations Suite', '/tournaments/manage': 'Tournament Operations Suite', '/tournament-management': 'Tournament Operations Suite',
   '/turf-calendar': 'Turf & Facility Slot Booking Calendar', '/venues/manage': 'Turf & Facility Slot Booking Calendar', '/turf': 'Turf & Facility Slot Booking Calendar',
   '/verify-pass': 'Gate Pass & Check-In Desk', '/gate-checkin': 'Gate Pass & Check-In Desk',
   '/my-passes': 'My Passes & Booking Vault', '/passes': 'My Passes & Booking Vault',
@@ -124,14 +125,20 @@ export function resolveRoute(pathname: string): RouteMatch {
       }
     }
   }
-  if (path === '/academy-hub' || path === '/academies/manage' || path === '/partner-signup' || path === '/academy/signup') {
+  if (path === '/academy-hub' || path === '/academies/manage' || path === '/academy/signup') {
     return { name: 'feature', canonicalPath: '/academy-hub', slug: 'Academy Admissions & Operations Hub' }
+  }
+  if (path === '/partner-signup' || path === '/partner/signup' || path === '/partner/login') {
+    return { name: 'feature', canonicalPath: '/partner-signup', slug: 'Partner Onboarding Wizard' }
   }
   if (path === '/coach-dashboard' || path === '/coach/hub' || path === '/coach/manage') {
     return { name: 'feature', canonicalPath: '/coach-dashboard', slug: 'Coach Operations Hub' }
   }
   if (path === '/turf-calendar' || path === '/venues/manage' || path === '/turf') {
     return { name: 'feature', canonicalPath: '/turf-calendar', slug: 'Turf & Facility Slot Booking Calendar' }
+  }
+  if (path === '/tournament-ops' || path === '/tournaments/manage' || path === '/tournament-management') {
+    return { name: 'feature', canonicalPath: '/tournament-ops', slug: 'Tournament Operations Suite' }
   }
   if (path === '/academies' || path === '/academy' || path === '/train') return { name: 'academies-index', canonicalPath: '/academies', ...(path === '/academies' ? {} : { alias: path }) }
   if (path.startsWith('/academies/') || path.startsWith('/academy/')) {

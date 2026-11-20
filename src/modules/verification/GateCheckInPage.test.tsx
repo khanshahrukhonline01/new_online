@@ -31,5 +31,7 @@ describe('GateCheckInPage UI Suite', () => {
     expect(html).toContain('Karnataka Institute of Cricket (KIOC)')
     expect(html).toContain('Dhruv Jaiswal (Age: 15)')
     expect(html).toContain('Admit Candidate / Check In')
+    expect(html).toContain('Offline Mode')
+    expect(html).toContain('Today&#x27;s Gate Admission Log')
   })
 })
