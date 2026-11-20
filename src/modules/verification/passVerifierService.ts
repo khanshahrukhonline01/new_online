@@ -26,6 +26,7 @@ import {
   lookupVerificationStatus,
   type VerificationRecord,
 } from './verificationData'
+import { getUserVenueBookings } from '../../shared/payments/paymentService'
 
 export type PassType = 'academy_trial' | 'turf_booking' | 'tournament_team' | 'athlete_verification'
 
@@ -67,11 +68,26 @@ export interface GateAdmissionLogItem {
 const GATE_LOG_KEY = 'khelgrid_gate_admission_log'
 const gateLogMemoryStore: GateAdmissionLogItem[] = []
 
+function getSafeStorage(): Storage | null {
+  try {
+    if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
+      return globalThis.localStorage
+    }
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage
+    }
+  } catch {
+    // ignore
+  }
+  return null
+}
+
 export function clearGateAdmissionLog(): void {
   gateLogMemoryStore.length = 0
-  if (typeof window !== 'undefined' && window.localStorage) {
+  const storage = getSafeStorage()
+  if (storage) {
     try {
-      window.localStorage.removeItem(GATE_LOG_KEY)
+      storage.removeItem(GATE_LOG_KEY)
     } catch {
       // ignore
     }
@@ -80,9 +96,10 @@ export function clearGateAdmissionLog(): void {
 
 export function getGateAdmissionLogs(): GateAdmissionLogItem[] {
   let raw: string | null = null
-  if (typeof window !== 'undefined' && window.localStorage) {
+  const storage = getSafeStorage()
+  if (storage) {
     try {
-      raw = window.localStorage.getItem(GATE_LOG_KEY)
+      raw = storage.getItem(GATE_LOG_KEY)
     } catch {
       raw = null
     }
@@ -97,11 +114,12 @@ export function getGateAdmissionLogs(): GateAdmissionLogItem[] {
 
 function appendGateAdmissionLog(item: GateAdmissionLogItem): void {
   gateLogMemoryStore.unshift(item)
-  if (typeof window !== 'undefined' && window.localStorage) {
+  const storage = getSafeStorage()
+  if (storage) {
     try {
       const existing = getGateAdmissionLogs()
       const updated = [item, ...existing.filter(i => i.id !== item.id)].slice(0, 50)
-      window.localStorage.setItem(GATE_LOG_KEY, JSON.stringify(updated))
+      storage.setItem(GATE_LOG_KEY, JSON.stringify(updated))
     } catch {
       // ignore
     }
@@ -263,6 +281,42 @@ export function verifyPassToken(rawToken: string): UnifiedPassResult | null {
     }
   }
 
+  // 3b. Check User Venue Booking Record (#KG-VENUE-XXXX or voucherToken)
+  const userVenueBookings = getUserVenueBookings()
+  const matchedVenueBooking = userVenueBookings.find(
+    b => (b.bookingRef && b.bookingRef.toUpperCase() === token) ||
+         (b.voucherToken && b.voucherToken.toUpperCase() === token)
+  )
+  if (matchedVenueBooking) {
+    const isAdmitted = Boolean((matchedVenueBooking as unknown as { checkedInAt?: string }).checkedInAt)
+    return {
+      token: matchedVenueBooking.bookingRef || matchedVenueBooking.voucherToken || token,
+      passType: 'turf_booking',
+      typeLabel: 'Turf Court Booking Voucher',
+      status: isAdmitted ? 'used' : 'valid',
+      statusLabel: isAdmitted
+        ? `Admitted at ${new Date((matchedVenueBooking as unknown as { checkedInAt: string }).checkedInAt).toLocaleTimeString()}`
+        : 'Confirmed Reservation · Ready for Play',
+      title: `${matchedVenueBooking.venueName || 'Sports Venue'} · Court ${matchedVenueBooking.courtNumber || 1}`,
+      subtitle: matchedVenueBooking.venueName || 'KhelGrid Partner Venue',
+      primaryHolder: matchedVenueBooking.customerName || 'Verified Player',
+      contactMasked: 'Masked · Verified Player',
+      sport: matchedVenueBooking.sport || 'Sports Turf',
+      venueOrFacility: `${matchedVenueBooking.venueName || 'Sports Venue'} · Court ${matchedVenueBooking.courtNumber || 1}`,
+      dateTimeSummary: `${matchedVenueBooking.slotDate || 'Upcoming'} · ${matchedVenueBooking.slotTime || 'Slot'}`,
+      reportingInstructions: `Show this voucher at turf reception. Balance paid: ₹${matchedVenueBooking.paidAmount || 0}.`,
+      checkedInAt: (matchedVenueBooking as unknown as { checkedInAt?: string }).checkedInAt,
+      checkedInBy: (matchedVenueBooking as unknown as { checkedInBy?: string }).checkedInBy,
+      qrCodePayload: `https://khelgrid.com/verify-pass?id=${matchedVenueBooking.bookingRef || token}`,
+      metadata: {
+        totalAmount: matchedVenueBooking.totalAmount,
+        paidAmount: matchedVenueBooking.paidAmount,
+        paymentStatus: matchedVenueBooking.paymentStatus,
+        bookingRef: matchedVenueBooking.bookingRef,
+      },
+    }
+  }
+
   // 4. Check Tournament Match & Team Pass (#KG-TOUR-XXXX)
   const tourPass = lookupTournamentPass(token)
   if (tourPass) {
@@ -370,19 +424,59 @@ export function admitPassToken(
 
   if (current.passType === 'turf_booking') {
     const res = admitTurfBooking(token, gatekeeperName)
-    if (!res.success) return { success: false, message: res.message, pass: current }
-    const updated = verifyPassToken(token)!
-    appendGateAdmissionLog({
-      id: `gate-log-${Date.now()}`,
-      token: updated.token,
-      passType: updated.passType,
-      holderName: updated.primaryHolder,
-      sport: updated.sport,
-      facility: updated.venueOrFacility,
-      admittedAt: updated.checkedInAt || new Date().toISOString(),
-      admittedBy: gatekeeperName,
-    })
-    return { success: true, message: res.message, pass: updated }
+    if (res.success) {
+      const updated = verifyPassToken(token)!
+      appendGateAdmissionLog({
+        id: `gate-log-${Date.now()}`,
+        token: updated.token,
+        passType: updated.passType,
+        holderName: updated.primaryHolder,
+        sport: updated.sport,
+        facility: updated.venueOrFacility,
+        admittedAt: updated.checkedInAt || new Date().toISOString(),
+        admittedBy: gatekeeperName,
+      })
+      return { success: true, message: res.message, pass: updated }
+    }
+
+    // Fallback: check and admit in khelgrid_venue_bookings
+    const venueStorage = getSafeStorage()
+    if (venueStorage) {
+      try {
+        const raw = venueStorage.getItem('khelgrid_venue_bookings')
+        if (raw) {
+          const existing = JSON.parse(raw) as Array<Record<string, unknown>>
+          const idx = existing.findIndex(
+            b => (b.bookingRef as string)?.toUpperCase() === token || (b.voucherToken as string)?.toUpperCase() === token
+          )
+          if (idx !== -1) {
+            existing[idx].checkedInAt = new Date().toISOString()
+            existing[idx].checkedInBy = gatekeeperName
+            venueStorage.setItem('khelgrid_venue_bookings', JSON.stringify(existing))
+            const updated = verifyPassToken(token)!
+            appendGateAdmissionLog({
+              id: `gate-log-${Date.now()}`,
+              token: updated.token,
+              passType: updated.passType,
+              holderName: updated.primaryHolder,
+              sport: updated.sport,
+              facility: updated.venueOrFacility,
+              admittedAt: updated.checkedInAt || new Date().toISOString(),
+              admittedBy: gatekeeperName,
+            })
+            return {
+              success: true,
+              message: `Booking voucher #${token} verified and admitted at gate.`,
+              pass: updated,
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    return { success: false, message: res.message, pass: current }
   }
 
   if (current.passType === 'tournament_team') {

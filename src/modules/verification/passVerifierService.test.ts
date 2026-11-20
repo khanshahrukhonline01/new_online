@@ -9,6 +9,18 @@ import { clearAcademySaaSMemoryStore, createTrialPass } from '../academies/acade
 import { clearTurfSlotMemoryStore, bookTurfSlot } from '../venues/turfSlotManager'
 import { clearTournamentRegistrationsMemoryStore } from '../events/tournamentRegistrationManager'
 
+const memoryStore: Record<string, string> = {}
+if (typeof globalThis.localStorage === 'undefined') {
+  globalThis.localStorage = {
+    getItem: (k: string) => memoryStore[k] || null,
+    setItem: (k: string, v: string) => { memoryStore[k] = v },
+    removeItem: (k: string) => { delete memoryStore[k] },
+    clear: () => { Object.keys(memoryStore).forEach(k => delete memoryStore[k]) },
+    length: 0,
+    key: () => null,
+  }
+}
+
 describe('Universal Pass Verifier Service Suite', () => {
   beforeEach(() => {
     clearGateAdmissionLog()
@@ -114,6 +126,41 @@ describe('Universal Pass Verifier Service Suite', () => {
     expect(athleteVerif?.passType).toBe('athlete_verification')
     expect(athleteVerif?.primaryHolder).toBe('Rohan Sharma')
     expect(athleteVerif?.status).toBe('valid')
+  })
+
+  it('verifies and admits a venue booking from storage fallback', () => {
+    const mockRef = 'KG-VENUE-TEST-9988'
+    localStorage.setItem(
+      'khelgrid_venue_bookings',
+      JSON.stringify([
+        {
+          bookingRef: mockRef,
+          voucherToken: 'VOUCHER-TOKEN-77',
+          venueName: 'DDA Siri Fort Complex',
+          courtNumber: 2,
+          customerName: 'Aditya Sen',
+          sport: 'Tennis',
+          slotDate: '2026-11-25',
+          slotTime: '07:00 AM – 08:00 AM',
+          paidAmount: 500,
+          totalAmount: 500,
+          paymentStatus: 'paid',
+          status: 'confirmed',
+        },
+      ])
+    )
+
+    const verified = verifyPassToken(mockRef)
+    expect(verified).not.toBeNull()
+    expect(verified?.primaryHolder).toBe('Aditya Sen')
+    expect(verified?.venueOrFacility).toContain('DDA Siri Fort Complex')
+    expect(verified?.status).toBe('valid')
+
+    const admit = admitPassToken(mockRef, 'Siri Fort Gate Desk')
+    expect(admit.success).toBe(true)
+    expect(admit.pass?.status).toBe('used')
+
+    localStorage.removeItem('khelgrid_venue_bookings')
   })
 
   it('returns null for nonexistent tokens', () => {

@@ -11,7 +11,7 @@ import VerificationClaimModal from '../../shared/components/VerificationClaimMod
 import { CommunityReviewsSection } from '../../shared/components/CommunityReviewsSection'
 import { PaymentCheckoutModal } from '../../shared/payments/PaymentCheckoutModal'
 import { parseInrPrice, recordVenueSlotBooking, getBookedVenueSlots, fetchBookedVenueSlots } from '../../shared/payments/paymentService'
-import { getTurfCourts, getTurfSlots, isSlotPeakHour } from './turfSlotManager'
+import { getTurfCourts, getTurfSlots, isSlotPeakHour, bookTurfSlot, holdTurfSlot } from './turfSlotManager'
 import type { PaymentItem, VenueBookingResult } from '../../shared/payments/paymentTypes'
 import './VenueDetailPage.css'
 
@@ -607,21 +607,41 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
         <aside className="venue-sidebar-column">
           <div className="venue-inquiry-box">
             <h3>Contact the Venue</h3>
-            <p>
-              Online booking and payment are not enabled here yet. Contact {venue.name} directly to confirm access, availability and current pricing.
-            </p>
-            {whatsappUrl && (
-              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-whatsapp-block">
-                <SiteIcon name="message" size={18} />
-                <span>Contact Venue on WhatsApp</span>
-              </a>
-            )}
-
-            {venue.phone && (
-              <a href={`tel:${venue.phone.replace(/\s+/g, '')}`} className="venue-btn venue-btn-call-block">
-                <SiteIcon name="phone" size={17} />
-                <span>Call {venue.phone}</span>
-              </a>
+            {confirmedBooking ? (
+              <>
+                <p style={{ color: '#059669', fontWeight: 600, fontSize: '13px' }}>
+                  ✓ Reservation Confirmed: Direct reception contact unlocked for {venue.name}.
+                </p>
+                {whatsappUrl && (
+                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="venue-btn venue-btn-whatsapp-block">
+                    <SiteIcon name="message" size={18} />
+                    <span>Contact Venue Desk on WhatsApp</span>
+                  </a>
+                )}
+                {venue.phone && (
+                  <a href={`tel:${venue.phone.replace(/\s+/g, '')}`} className="venue-btn venue-btn-call-block">
+                    <SiteIcon name="phone" size={17} />
+                    <span>Call Venue Reception ({venue.phone})</span>
+                  </a>
+                )}
+              </>
+            ) : (
+              <div className="venue-contact-shield-card" style={{ padding: '14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', margin: '12px 0', textAlign: 'center' }}>
+                <SiteIcon name="shield-check" size={20} style={{ color: '#059669', marginBottom: '6px' }} />
+                <h4 style={{ margin: '0 0 4px', fontSize: '13px', color: '#1e293b' }}>Direct Contact Protected</h4>
+                <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+                  To prevent unauthorized off-platform bookings and guarantee your slot with 0% commission UPI advance protection, book your slot above to reveal the verified reception hotline.
+                </p>
+                <button
+                  type="button"
+                  className="venue-btn venue-btn-book"
+                  style={{ width: '100%', marginTop: '10px', fontSize: '13px', padding: '8px 12px' }}
+                  onClick={() => setIsBookingModalOpen(true)}
+                >
+                  <SiteIcon name="calendar-check" size={14} />
+                  <span>Reserve Slot to Unlock Direct Contact</span>
+                </button>
+              </div>
             )}
 
             <div className="venue-disclaimer-note">
@@ -793,6 +813,8 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
                   }
                   const courtNumber = 1
                   const depositAmount = Math.min(300, slotFee)
+                  // Hold slot for 10 minutes in turf inventory
+                  holdTurfSlot(venue.slug, selectedDate, activeVenueCourt?.id || 'court-1', selectedSlot, bookingPhone)
                   setCheckoutItem({
                     id: venue.id,
                     type: 'venue_booking',
@@ -979,9 +1001,28 @@ export default function VenueDetailPage({ slug, onNavigate, onOpenIntake, initia
               setBookedSlots(fresh)
             } else if (res.status === 'unconfirmed' || res.status === 'error') {
               setSlotConflictError(res.errorMessage || res.message || 'Booking could not be confirmed with the reservation server. The slot is not reserved. Please retry.')
-            } else if (res.status === 'confirmed' || (res.status === 'success' && res.serverConfirmed)) {
-              setConfirmedBooking(res)
             } else {
+              // Successfully confirmed on KhelGrid — record into Turf Slot Inventory
+              const paymentMethod = paymentResult.status === 'pay_at_venue'
+                ? 'pay_at_venue'
+                : (paymentResult.amount >= slotFee ? 'fully_paid' : 'upi_advance_paid')
+
+              bookTurfSlot({
+                venueSlug: venue.slug,
+                venueName: venue.name,
+                courtId: activeVenueCourt?.id || 'court-1',
+                courtName: activeVenueCourt?.name || 'Court 1',
+                date: selectedDate,
+                timeSlot: selectedSlot,
+                customerName: bookingName,
+                customerPhone: bookingPhone,
+                sport: selectedSport || sportName,
+                paymentMethod,
+                hourlyPrice: slotFee,
+                advanceDeposit: paymentResult.amount,
+                upiVpa: paymentResult.receiptRef ? `upi:${paymentResult.receiptRef}` : undefined,
+              })
+
               setConfirmedBooking(res)
             }
           }}

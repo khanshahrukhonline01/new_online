@@ -30,6 +30,7 @@ export const navigationModules: NavigationModule[] = [
     items: [
       { id: 'home', label: 'Home', href: '/', icon: 'home', module: 'your-space', available: true },
       { id: 'dashboard', label: 'My Dashboard', href: '/dashboard', icon: 'chart', module: 'your-space', available: true },
+      { id: 'my-passes', label: 'My Passes & Vouchers', href: '/my-passes', icon: 'badge-check', module: 'your-space', available: true },
       { id: 'saved', label: 'Saved Items', href: '/saved', icon: 'bookmark', module: 'your-space', available: true },
     ],
   },
@@ -52,8 +53,11 @@ export const navigationModules: NavigationModule[] = [
     items: [
       { id: 'find-games', label: 'Play · Find games', href: '/play', icon: 'sports', module: 'play-train', available: true },
       { id: 'lacrosse-sixes', label: 'Lacrosse Sixes Game', href: '/play/lacrosse-sixes', icon: 'trophy', module: 'play-train', available: true },
+      { id: 'turf-calendar', label: 'Turf Hourly Slots', href: '/turf-calendar', icon: 'calendar-check', module: 'play-train', available: true },
+      { id: 'gate-checkin', label: 'Gate Check-In Desk', href: '/gate-checkin', icon: 'shield-check', module: 'play-train', available: true },
       { id: 'coaches', label: 'Coaches Directory', href: '/coaches', icon: 'users', module: 'play-train', available: true },
       { id: 'academies', label: 'Sports Academies', href: '/academies', icon: 'building', module: 'play-train', available: true },
+      { id: 'academy-hub', label: 'Academy SaaS Hub', href: '/academy-hub', icon: 'building', module: 'play-train', available: true },
       { id: 'events', label: 'Events & Tournaments', href: '/events', icon: 'calendar', module: 'play-train', available: true },
       { id: 'calendar', label: 'Sports Calendar', href: '/calendar', icon: 'calendar-check', module: 'play-train', available: true },
       { id: 'live-scores', label: 'Live Scores', href: '/live', icon: 'activity', module: 'play-train', available: true },
@@ -102,7 +106,7 @@ export const navigationModules: NavigationModule[] = [
 export const primaryNavigation = navigationModules.flatMap(section => section.items)
 
 /** Header actions are maintained separately from feature navigation. */
-export const headerNavigation = navigationModules.find(section => section.id === 'your-space')?.items ?? []
+export const headerNavigation = (navigationModules.find(section => section.id === 'your-space')?.items ?? []).filter(item => ['/', '/dashboard', '/saved'].includes(item.href))
 
 export function getNavigationHref(item: NavigationItem): string {
   return item.href

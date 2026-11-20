@@ -740,14 +740,24 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
           <div className="user-dash-card" style={{ marginBottom: '24px' }}>
             <div className="user-dash-card-header">
               <h2><SiteIcon name="venues" size={18} /> My Turf &amp; Court Bookings ({venueBookings.length})</h2>
-              <a
-                href="/venues"
-                onClick={e => handleLink(e, '/venues')}
-                className="user-dash-btn secondary"
-                style={{ fontSize: '0.82rem', padding: '6px 12px' }}
-              >
-                + Book Another Turf
-              </a>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <a
+                  href="/my-passes"
+                  onClick={e => handleLink(e, '/my-passes')}
+                  className="user-dash-btn secondary"
+                  style={{ fontSize: '0.82rem', padding: '6px 12px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)' }}
+                >
+                  <SiteIcon name="badge-check" size={14} /> My Digital Passes
+                </a>
+                <a
+                  href="/venues"
+                  onClick={e => handleLink(e, '/venues')}
+                  className="user-dash-btn secondary"
+                  style={{ fontSize: '0.82rem', padding: '6px 12px' }}
+                >
+                  + Book Another Turf
+                </a>
+              </div>
             </div>
 
             {venueBookings.length > 0 ? (
@@ -777,6 +787,15 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
                       </div>
                     </div>
                     <div className="user-booking-actions">
+                      <a
+                        href="/my-passes"
+                        onClick={e => handleLink(e, '/my-passes')}
+                        className="user-dash-btn primary"
+                        style={{ fontSize: '12px', padding: '6px 10px', textDecoration: 'none', background: '#059669', borderColor: '#059669', color: '#ffffff' }}
+                      >
+                        <SiteIcon name="shield-check" size={13} />
+                        <span>Pass / QR</span>
+                      </a>
                       <a
                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.venueName + (b.city ? ' ' + b.city : ''))}`}
                         target="_blank"

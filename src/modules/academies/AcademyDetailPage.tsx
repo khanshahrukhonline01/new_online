@@ -647,18 +647,41 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
               </button>
             )}
 
-            {contactUrl && (
-              <a href={contactUrl} target="_blank" rel="noopener noreferrer" className="academy-btn academy-btn-whatsapp-block">
-                <SiteIcon name="external-link" size={18} />
-                <span>Contact Academy</span>
-              </a>
-            )}
-
-            {academy.phone && (
-              <a href={`tel:${academy.phone.replace(/\s+/g, '')}`} className="academy-btn academy-btn-call-block">
-                <SiteIcon name="phone" size={17} />
-                <span>Call {academy.phone}</span>
-              </a>
+            {isEnquired ? (
+              <>
+                <p style={{ color: '#059669', fontWeight: 600, fontSize: '13px' }}>
+                  ✓ Enquiry Active: Direct admissions desk contact unlocked for {academy.name}.
+                </p>
+                {contactUrl && (
+                  <a href={contactUrl} target="_blank" rel="noopener noreferrer" className="academy-btn academy-btn-whatsapp-block">
+                    <SiteIcon name="external-link" size={18} />
+                    <span>Contact Academy Desk</span>
+                  </a>
+                )}
+                {academy.phone && (
+                  <a href={`tel:${academy.phone.replace(/\s+/g, '')}`} className="academy-btn academy-btn-call-block">
+                    <SiteIcon name="phone" size={17} />
+                    <span>Call Admissions Desk ({academy.phone})</span>
+                  </a>
+                )}
+              </>
+            ) : (
+              <div className="academy-contact-shield-card" style={{ padding: '14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', margin: '12px 0', textAlign: 'center' }}>
+                <SiteIcon name="shield-check" size={20} style={{ color: '#059669', marginBottom: '6px' }} />
+                <h4 style={{ margin: '0 0 4px', fontSize: '13px', color: '#1e293b' }}>Direct Contact Protected</h4>
+                <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+                  To guarantee your child's priority admission queue and trial pass, submit an enquiry or free trial request to unlock the verified admissions desk hotline.
+                </p>
+                <button
+                  type="button"
+                  className="academy-btn academy-btn-enrol-block"
+                  style={{ width: '100%', marginTop: '10px', fontSize: '13px', padding: '8px 12px' }}
+                  onClick={() => setIsEnrolModalOpen(true)}
+                >
+                  <SiteIcon name="award" size={14} />
+                  <span>Send Enquiry to Reveal Contact</span>
+                </button>
+              </div>
             )}
 
             <div className="academy-disclaimer-note">

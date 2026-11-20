@@ -85,6 +85,17 @@ export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps
           Open Turf Slot Calendar (Free) <SiteIcon name="arrow-up-right" size={16} />
         </a>
       </div>
+
+      <div className="host-dashboard-empty-state" style={{ borderColor: 'rgba(245, 158, 11, 0.4)', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.05), transparent)' }}>
+        <SiteIcon name="shield-check" size={34} />
+        <h2>Universal Gate Check-In &amp; Pass Verifier Desk</h2>
+        <p>
+          On-ground verification desk for facility operators and gate marshals. Instantly scan QR codes or verify trial passes (#PASS-XXXX), turf court booking vouchers (#TRF-XXXX), tournament squads (#KG-TOUR-XXXX), and federation credentials (#KG-VERIF-XXXX) to prevent unauthorized entry.
+        </p>
+        <a className="host-action-btn primary" href="/gate-checkin" onClick={event => onNavigate?.(event, '/gate-checkin')}>
+          Open Gate Check-In Desk <SiteIcon name="arrow-up-right" size={16} />
+        </a>
+      </div>
     </section>
   )
 }

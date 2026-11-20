@@ -964,13 +964,23 @@ export default function AcademyHubPage({
               </p>
             </div>
 
-            <button
-              type="button"
-              className="academy-hub-primary-btn"
-              onClick={() => setIsTrialPassModalOpen(true)}
-            >
-              <SiteIcon name="plus" size={16} /> Issue Trial Entry Pass
-            </button>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <a
+                href="/gate-checkin"
+                onClick={e => onNavigate?.(e, '/gate-checkin')}
+                className="academy-hub-btn-outline"
+                style={{ padding: '0.5rem 0.85rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <SiteIcon name="shield-check" size={16} /> Open Gate Check-In Desk
+              </a>
+              <button
+                type="button"
+                className="academy-hub-primary-btn"
+                onClick={() => setIsTrialPassModalOpen(true)}
+              >
+                <SiteIcon name="plus" size={16} /> Issue Trial Entry Pass
+              </button>
+            </div>
           </div>
 
           {activeTrialPassView && (
@@ -984,6 +994,12 @@ export default function AcademyHubPage({
                   <span style={{ color: '#64748b', fontSize: '0.85rem' }}>
                     Trial Assessment Pass for {activeTrialPassView.sport}
                   </span>
+                  {(activeTrialPassView.status === 'used' || activeTrialPassView.checkedInAt) && (
+                    <div style={{ marginTop: '0.4rem', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 8px', background: '#dcfce7', color: '#166534', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
+                      <SiteIcon name="badge-check" size={14} />
+                      <span>Admitted on Ground {activeTrialPassView.checkedInAt ? `at ${new Date(activeTrialPassView.checkedInAt).toLocaleTimeString()}` : ''} {activeTrialPassView.checkedInBy ? `by ${activeTrialPassView.checkedInBy}` : ''}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="trial-pass-token">{activeTrialPassView.passNumber}</div>
               </div>
@@ -1073,7 +1089,17 @@ export default function AcademyHubPage({
                       <td><strong>{p.studentName}</strong></td>
                       <td>{p.parentPhone}</td>
                       <td>{p.trialDate} ({p.reportingTime})</td>
-                      <td><span className="lead-status-pill enrolled">Valid</span></td>
+                      <td>
+                        {p.status === 'used' || p.checkedInAt ? (
+                          <span className="lead-status-pill enrolled" style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}>
+                            ✓ Admitted
+                          </span>
+                        ) : p.status === 'cancelled' ? (
+                          <span className="lead-status-pill lost">Cancelled</span>
+                        ) : (
+                          <span className="lead-status-pill enrolled">Valid</span>
+                        )}
+                      </td>
                       <td>
                         <button
                           type="button"

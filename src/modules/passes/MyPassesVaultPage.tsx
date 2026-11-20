@@ -4,6 +4,7 @@ import { generateQrSvgString } from '../../shared/utils/qrCodeGenerator'
 import { getAllAcademyTrialPasses, type AcademyTrialPass } from '../academies/academySaaSClient'
 import { getAllTurfBookings, type TurfBookingRecord } from '../venues/turfSlotManager'
 import { getTournamentRegistrations, type TournamentTeamRegistration } from '../events/tournamentRegistrationManager'
+import { getUserVenueBookings } from '../../shared/payments/paymentService'
 import './MyPassesVaultPage.css'
 
 export interface MyPassesVaultPageProps {
@@ -40,6 +41,7 @@ export function MyPassesVaultPage({ onNavigate }: MyPassesVaultPageProps) {
   const rawTrialPasses = useMemo(() => getAllAcademyTrialPasses(), [])
   const rawTurfBookings = useMemo(() => getAllTurfBookings(), [])
   const rawTournaments = useMemo(() => getTournamentRegistrations(), [])
+  const rawVenueBookings = useMemo(() => getUserVenueBookings(), [])
 
   // Map into unified vault items
   const allVaultItems: UnifiedVaultItem[] = useMemo(() => {
@@ -91,6 +93,32 @@ export function MyPassesVaultPage({ onNavigate }: MyPassesVaultPageProps) {
       })
     })
 
+    // 2b. Venue Slot Bookings
+    rawVenueBookings.forEach(vb => {
+      const token = vb.bookingRef || vb.voucherToken
+      if (!token || list.some(i => i.token.toUpperCase() === token.toUpperCase())) return
+      const isCheckedIn = Boolean((vb as unknown as { checkedInAt?: string }).checkedInAt)
+      list.push({
+        id: token,
+        token: token,
+        category: 'turf',
+        categoryLabel: 'Turf Court Voucher',
+        title: `${vb.venueName || 'Sports Venue'} · Court ${vb.courtNumber || 1}`,
+        subtitle: vb.venueName || 'KhelGrid Partner Venue',
+        holder: vb.customerName || 'Verified Player',
+        contactPhone: 'Masked',
+        sport: vb.sport || 'Sports Turf',
+        date: vb.slotDate || 'Confirmed Date',
+        time: vb.slotTime || 'Confirmed Slot',
+        venue: `${vb.venueName || 'Sports Venue'}${vb.city ? `, ${vb.city}` : ''}`,
+        status: isCheckedIn ? 'used' : 'valid',
+        statusLabel: isCheckedIn ? 'Admitted at Pitch' : 'Confirmed Booking',
+        qrPayload: `https://khelgrid.com/verify-pass?id=${token}`,
+        instructions: `Advance paid: ₹${vb.paidAmount || 0}. Show voucher at reception.`,
+        checkedInAt: (vb as unknown as { checkedInAt?: string }).checkedInAt,
+      })
+    })
+
     // 3. Tournament Registrations
     rawTournaments.forEach((t: TournamentTeamRegistration) => {
       list.push({
@@ -137,7 +165,7 @@ export function MyPassesVaultPage({ onNavigate }: MyPassesVaultPageProps) {
     }
 
     return list
-  }, [rawTrialPasses, rawTurfBookings, rawTournaments])
+  }, [rawTrialPasses, rawTurfBookings, rawTournaments, rawVenueBookings])
 
   // Filter items
   const filteredItems = useMemo(() => {
