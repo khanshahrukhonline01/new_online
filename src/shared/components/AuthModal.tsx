@@ -60,6 +60,22 @@ const DEMO_ACCOUNTS: Array<{
     icon: 'user-round',
   },
   {
+    label: 'Shivaji Cricket Academy (Director)',
+    role: 'academy',
+    email: 'director.shivaji@khelgrid.com',
+    name: 'Coach Anand Patil',
+    city: 'Pune',
+    icon: 'building',
+  },
+  {
+    label: 'Sunita Sharma (Parent)',
+    role: 'parent',
+    email: 'sunita.parent@khelgrid.com',
+    name: 'Sunita Sharma',
+    city: 'Delhi NCR',
+    icon: 'users',
+  },
+  {
     label: 'FSV Arena (Turf Host)',
     role: 'host',
     email: 'host.fsv@khelgrid.com',
@@ -92,6 +108,7 @@ export default function AuthModal({
   initialEmail,
   onClose,
   onSuccess,
+  onNavigate,
 }: AuthModalProps) {
   const [tab, setTab] = useState<AuthModalTab>(initialTab)
 
@@ -158,7 +175,14 @@ export default function AuthModal({
       if (res.success && res.user) {
         setSuccessMsg(`Welcome back, ${res.user.fullName}!`)
         onSuccess?.(res.user)
-        setTimeout(() => onClose(), 600)
+        setTimeout(() => {
+          onClose()
+          if (res.user?.role === 'academy') {
+            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/academy-hub')
+          } else if (res.user?.role === 'host' || res.user?.role === 'venue_owner') {
+            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/host')
+          }
+        }, 600)
       } else if (res.requiresEmailVerification) {
         setEmailVerificationPending(true)
         setSuccessMsg(`Magic login link sent to ${email}. Check your inbox.`)
@@ -203,12 +227,13 @@ export default function AuthModal({
     setSubmitting(true)
 
     try {
+      const derivedName = fullName.trim() || email.split('@')[0] || 'KhelGrid Athlete'
       const res = await signUpWithEmail({
         email,
         password,
-        fullName,
+        fullName: derivedName,
         role,
-        city,
+        city: city || 'Delhi NCR',
         phone,
       })
       if (res.success) {
@@ -218,7 +243,16 @@ export default function AuthModal({
         } else if (res.user) {
           setSuccessMsg(`Account created! Welcome, ${res.user.fullName}.`)
           onSuccess?.(res.user)
-          setTimeout(() => onClose(), 700)
+          setTimeout(() => {
+            onClose()
+            if (role === 'academy') {
+              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/academy-hub')
+            } else if (role === 'host' || role === 'venue_owner') {
+              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/host')
+            } else if (role === 'athlete' || role === 'parent') {
+              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/dashboard')
+            }
+          }, 600)
         }
       } else {
         setErrorMsg(res.message || 'Registration could not be completed.')
@@ -322,7 +356,14 @@ export default function AuthModal({
       if (res.success && res.user) {
         setSuccessMsg(`Signed in as demo ${demo.role}: ${res.user.fullName}`)
         onSuccess?.(res.user)
-        setTimeout(() => onClose(), 600)
+        setTimeout(() => {
+          onClose()
+          if (demo.role === 'academy') {
+            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/academy-hub')
+          } else if (demo.role === 'host') {
+            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/host')
+          }
+        }, 600)
       } else {
         // Fallback sign up demo user
         const signRes = await signUpWithEmail({
@@ -334,7 +375,14 @@ export default function AuthModal({
         if (signRes.success && signRes.user) {
           setSuccessMsg(`Demo profile activated: ${signRes.user.fullName}`)
           onSuccess?.(signRes.user)
-          setTimeout(() => onClose(), 600)
+          setTimeout(() => {
+            onClose()
+            if (demo.role === 'academy') {
+              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/academy-hub')
+            } else if (demo.role === 'host') {
+              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/host')
+            }
+          }, 600)
         }
       }
     } finally {
@@ -600,6 +648,30 @@ export default function AuthModal({
 
                 <button
                   type="button"
+                  className={`kg-role-card ${role === 'parent' ? 'is-selected' : ''}`}
+                  onClick={() => setRole('parent')}
+                >
+                  <SiteIcon name="users" size={16} />
+                  <div className="kg-role-info">
+                    <strong>Parent / Guardian</strong>
+                    <span>Find sports academies &amp; trials for your child</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`kg-role-card ${role === 'academy' ? 'is-selected' : ''}`}
+                  onClick={() => setRole('academy')}
+                >
+                  <SiteIcon name="building" size={16} />
+                  <div className="kg-role-info">
+                    <strong>Academy Director</strong>
+                    <span>Manage admissions, batches &amp; student passes</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
                   className={`kg-role-card ${role === 'host' ? 'is-selected' : ''}`}
                   onClick={() => setRole('host')}
                 >
@@ -728,6 +800,25 @@ export default function AuthModal({
             <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
               {submitting ? 'Creating Account…' : 'Create KhelGrid Account'}
             </button>
+
+            {/* Direct Partner Onboarding Callout */}
+            <div className="kg-auth-partner-callout">
+              <div className="kg-auth-partner-callout-title">
+                <SiteIcon name="sparkles" size={14} />
+                <span>Operating a Sports Academy or Turf?</span>
+              </div>
+              <p>Launch your Admissions CRM &amp; Turf Slot Manager in under 30 seconds.</p>
+              <a
+                href="/partner-signup"
+                className="kg-auth-partner-btn"
+                onClick={e => {
+                  onClose()
+                  onNavigate?.(e, '/partner-signup')
+                }}
+              >
+                ⚡ 30-Second Express Partner Onboarding →
+              </a>
+            </div>
 
             <p className="kg-auth-terms-note">
               By registering, you agree to KhelGrid’s <a href="/terms">Terms of Use</a>,{' '}

@@ -644,7 +644,34 @@ html.dark .foundation-v1 .site-header .header-play-pill.is-active {
   font-size: 11px;
   font-weight: 650;
   white-space: nowrap;
-}.foundation-v1 .site-header .header-login-link span{ display: flex; flex-direction: column; gap: 1px; }.foundation-v1 .site-header .header-login-link small{ color: #8994a3; font-size: 9px; font-weight: 500; }.foundation-v1 .site-header .header-login-link:hover{ background: #f5f7fa; }.foundation-v1 .site-header .header-go-pro{
+}.foundation-v1 .site-header .header-login-link span{ display: flex; flex-direction: column; gap: 1px; }.foundation-v1 .site-header .header-login-link small{ color: #8994a3; font-size: 9px; font-weight: 500; }.foundation-v1 .site-header .header-login-link:hover{ background: #f5f7fa; }.foundation-v1 .site-header .header-partner-link {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  border-radius: 999px;
+  color: #047857;
+  background: rgba(16, 185, 129, 0.08);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.foundation-v1 .site-header .header-partner-link:hover {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+@media (max-width: 1080px) {
+  .foundation-v1 .site-header .header-partner-link span { display: none; }
+  .foundation-v1 .site-header .header-partner-link { width: 36px; height: 36px; padding: 0; }
+}
+.foundation-v1 .site-header .header-go-pro{
   display: inline-flex;
   flex: 0 0 auto;
   min-height: 36px;

@@ -83,6 +83,7 @@ export default function AcademyHubPage({
     return false
   })
   const [onboardingStep, setOnboardingStep] = useState<1 | 2 | 3 | 4>(1)
+  const [onboardingMode, setOnboardingMode] = useState<'express' | 'detailed'>('express')
   const [onboardAcademyName, setOnboardAcademyName] = useState('')
   const [onboardSport, setOnboardSport] = useState('Cricket')
   const [onboardCity, setOnboardCity] = useState('')
@@ -280,6 +281,56 @@ export default function AcademyHubPage({
     setActiveTrialPassView(pass)
     setPassStudentName('')
     setPassParentPhone('')
+    triggerRefresh()
+  }
+
+  const handleExpressOnboardingSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    if (onboardAcademyName.trim().length < 3) {
+      setOnboardingError('Please enter academy full name (at least 3 characters).')
+      return
+    }
+    const cleanPhone = onboardDirectorWhatsApp.replace(/\D/g, '')
+    if (cleanPhone.length < 10) {
+      setOnboardingError('Please enter a valid 10-digit WhatsApp number for parent lead routing.')
+      return
+    }
+
+    const cityParts = (onboardCity.trim() || 'Delhi NCR, India').split(',')
+    const cleanCity = cityParts[0]?.trim() || 'Delhi NCR'
+    const cleanState = cityParts[1]?.trim() || 'India'
+    const director = onboardDirectorName.trim() || `Coach ${onboardAcademyName.trim().split(' ')[0] || 'Director'}`
+    const cleanSlugBase = onboardAcademyName.toLowerCase().replace(/[^a-z0-9]/g, '')
+    const upi = onboardUpiVpa.trim() || `${cleanSlugBase || 'academy'}@okaxis`
+    const batchName = onboardBatchName.trim() || 'Foundation Coaching Squad'
+
+    const newAcad = registerCustomAcademy({
+      name: onboardAcademyName.trim(),
+      sport: onboardSport,
+      city: cleanCity,
+      state: cleanState,
+      directorName: director,
+      directorWhatsApp: cleanPhone,
+      upiVpa: upi,
+    })
+
+    saveAcademyBatch({
+      academySlug: newAcad.slug,
+      batchName,
+      sport: onboardSport,
+      days: onboardBatchDays || 'Mon, Wed, Fri',
+      timings: onboardBatchTimings || '06:30 AM – 08:30 AM',
+      coachName: director,
+      ageGroup: 'U-14 (8–14 yrs)',
+      monthlyFee: Number(onboardBatchFee) || 2500,
+      maxCapacity: Number(onboardBatchCapacity) || 25,
+      isActive: true,
+    })
+
+    setNewlyCreatedAcademy(newAcad)
+    setSelectedSlug(newAcad.slug)
+    setOnboardingError('')
+    setOnboardingStep(4)
     triggerRefresh()
   }
 
@@ -1708,7 +1759,11 @@ export default function AcademyHubPage({
           <div className="academy-hub-modal-content" style={{ maxWidth: '580px' }} onClick={e => e.stopPropagation()}>
             <div className="academy-hub-modal-header">
               <h3 id="onboarding-wizard-title">
-                {onboardingStep === 4 ? 'Academy Hub Ready!' : '⚡ Fast Academy Setup (3 Steps)'}
+                {onboardingStep === 4
+                  ? 'Academy Hub Ready!'
+                  : onboardingMode === 'express'
+                    ? '⚡ 30-Second Express Academy Launch'
+                    : '⚡ Custom Academy Setup (3 Steps)'}
               </h3>
               <button
                 type="button"
@@ -1720,8 +1775,28 @@ export default function AcademyHubPage({
               </button>
             </div>
 
-            {/* Visual Step Progress Bar */}
+            {/* Mode Switcher: Express 30s vs Detailed 3-Step */}
             {onboardingStep < 4 && (
+              <div className="onboarding-mode-switch" role="tablist">
+                <button
+                  type="button"
+                  className={`onboarding-mode-btn ${onboardingMode === 'express' ? 'active' : ''}`}
+                  onClick={() => setOnboardingMode('express')}
+                >
+                  ⚡ Express Launch (30 Seconds)
+                </button>
+                <button
+                  type="button"
+                  className={`onboarding-mode-btn ${onboardingMode === 'detailed' ? 'active' : ''}`}
+                  onClick={() => setOnboardingMode('detailed')}
+                >
+                  🛠️ Detailed 3-Step Setup
+                </button>
+              </div>
+            )}
+
+            {/* Visual Step Progress Bar (Detailed Mode Only) */}
+            {onboardingStep < 4 && onboardingMode === 'detailed' && (
               <div className="onboarding-steps-bar" aria-label="Setup steps">
                 <div className={`onboarding-step-pill ${onboardingStep === 1 ? 'active' : onboardingStep > 1 ? 'completed' : ''}`}>
                   <span className="onboarding-step-num">1</span>
@@ -1744,8 +1819,94 @@ export default function AcademyHubPage({
               </div>
             )}
 
-            {/* STEP 1: Academy & Director Profile */}
-            {onboardingStep === 1 && (
+            {/* EXPRESS 30-SECOND ONBOARDING FORM */}
+            {onboardingStep < 4 && onboardingMode === 'express' && (
+              <form onSubmit={handleExpressOnboardingSubmit} className="academy-hub-form">
+                <p style={{ color: '#64748b', fontSize: '0.88rem', margin: '0 0 0.5rem' }}>
+                  Register your sports academy in under 30 seconds. We automatically configure a starter squad batch and direct WhatsApp routing for parent trial inquiries.
+                </p>
+
+                <label>
+                  Academy Full Name *
+                  <input
+                    type="text"
+                    value={onboardAcademyName}
+                    onChange={e => setOnboardAcademyName(e.target.value)}
+                    placeholder="e.g. Shivaji Sports &amp; Cricket Academy"
+                    required
+                  />
+                </label>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                  <label>
+                    Primary Sport *
+                    <select
+                      value={onboardSport}
+                      onChange={e => setOnboardSport(e.target.value)}
+                    >
+                      {['Cricket', 'Football', 'Badminton', 'Tennis', 'Swimming', 'Martial Arts', 'Basketball', 'Athletics', 'Multi-Sport'].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    Director / Coach WhatsApp *
+                    <input
+                      type="tel"
+                      value={onboardDirectorWhatsApp}
+                      onChange={e => setOnboardDirectorWhatsApp(e.target.value)}
+                      placeholder="10-digit mobile number"
+                      required
+                    />
+                  </label>
+                </div>
+
+                <label>
+                  Academy City &amp; State *
+                  <div className="onboarding-city-chips" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', margin: '0.35rem 0' }}>
+                    {['Delhi NCR', 'Mumbai', 'Bengaluru', 'Pune', 'Hyderabad', 'Jaipur', 'Chandigarh'].map(c => (
+                      <button
+                        key={c}
+                        type="button"
+                        className={`onboarding-city-chip ${onboardCity.startsWith(c) ? 'active' : ''}`}
+                        onClick={() => setOnboardCity(c)}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    value={onboardCity}
+                    onChange={e => setOnboardCity(e.target.value)}
+                    placeholder="or type custom city, e.g. Pune, Maharashtra"
+                  />
+                </label>
+
+                <div style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.8rem', color: '#475569' }}>
+                  ✓ <strong>Starter Batch Included:</strong> Foundation Training Squad will be published automatically.<br />
+                  ✓ <strong>0% Platform Commission:</strong> Direct UPI bank settlement. You can customize slot timings anytime in Hub settings.
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+                  <button
+                    type="button"
+                    className="academy-hub-btn-outline"
+                    onClick={() => setOnboardingMode('detailed')}
+                    style={{ fontSize: '0.82rem' }}
+                  >
+                    Custom Batches &amp; UPI →
+                  </button>
+                  <button type="submit" className="academy-hub-primary-btn">
+                    ⚡ Instant Register &amp; Launch Hub (30s) →
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* STEP 1: Academy & Director Profile (Detailed Mode) */}
+            {onboardingStep === 1 && onboardingMode === 'detailed' && (
               <form onSubmit={handleOnboardingStep1Next} className="academy-hub-form">
                 <p style={{ color: '#64748b', fontSize: '0.88rem', margin: '0 0 0.5rem' }}>
                   Register your sports academy on KhelGrid to manage parent enquiries, student batches, and fees with 100% free grassroots access.
@@ -1811,7 +1972,14 @@ export default function AcademyHubPage({
                   </label>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+                  <button
+                    type="button"
+                    className="academy-hub-btn-outline"
+                    onClick={() => setOnboardingMode('express')}
+                  >
+                    ← Express 30s Setup
+                  </button>
                   <button type="submit" className="academy-hub-primary-btn">
                     Continue to Step 2: UPI Setup →
                   </button>
@@ -1820,7 +1988,7 @@ export default function AcademyHubPage({
             )}
 
             {/* STEP 2: Instant UPI Settlement Setup */}
-            {onboardingStep === 2 && (
+            {onboardingStep === 2 && onboardingMode === 'detailed' && (
               <form onSubmit={handleOnboardingStep2Next} className="academy-hub-form">
                 <p style={{ color: '#64748b', fontSize: '0.88rem', margin: '0 0 0.5rem' }}>
                   Set your official UPI ID (VPA). Parents pay student fees directly into your academy&apos;s bank account with <strong>0% platform deduction</strong>.
@@ -1880,7 +2048,7 @@ export default function AcademyHubPage({
             )}
 
             {/* STEP 3: Create First Training Batch */}
-            {onboardingStep === 3 && (
+            {onboardingStep === 3 && onboardingMode === 'detailed' && (
               <form onSubmit={handleOnboardingStep3Finish} className="academy-hub-form">
                 <p style={{ color: '#64748b', fontSize: '0.88rem', margin: '0 0 0.5rem' }}>
                   Publish your initial training batch. It will appear on your academy profile for prospective parents and students.

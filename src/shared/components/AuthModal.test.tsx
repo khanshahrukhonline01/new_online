@@ -40,6 +40,8 @@ describe('AuthModal Component', () => {
     // Fast demo accounts
     expect(html).toContain('TEST / DEMO ACCOUNTS')
     expect(html).toContain('Rohit Verma (Athlete)')
+    expect(html).toContain('Shivaji Cricket Academy (Director)')
+    expect(html).toContain('Sunita Sharma (Parent)')
     expect(html).toContain('FSV Arena (Turf Host)')
     expect(html).toContain('Zaheer Farooq (Coach)')
     expect(html).toContain('KhelGrid Admin')
@@ -55,6 +57,8 @@ describe('AuthModal Component', () => {
 
     // Roles
     expect(html).toContain('Athlete / Player')
+    expect(html).toContain('Parent / Guardian')
+    expect(html).toContain('Academy Director')
     expect(html).toContain('Turf &amp; Venue Host')
     expect(html).toContain('Certified Coach')
     expect(html).toContain('Talent Scout')
@@ -66,6 +70,7 @@ describe('AuthModal Component', () => {
     expect(html).toContain('Home City')
     expect(html).toContain('Mobile / WhatsApp (Optional)')
     expect(html).toContain('Create KhelGrid Account')
+    expect(html).toContain('30-Second Express Partner Onboarding')
     expect(html).toContain('DPDP Act standards')
   })
 

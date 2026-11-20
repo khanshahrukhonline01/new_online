@@ -212,9 +212,12 @@ export default function App() {
     }
   }
 
-  function navigate(event: MouseEvent<HTMLAnchorElement>, target: string) {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
-    event.preventDefault()
+  function navigate(event?: MouseEvent<HTMLAnchorElement>, target?: string) {
+    if (!target) return
+    if (event) {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || (typeof event.button === 'number' && event.button !== 0)) return
+      event.preventDefault()
+    }
     if (typeof window !== 'undefined') {
       if (target !== path) window.history.pushState({}, '', target)
       window.scrollTo({ top: 0, behavior: 'auto' })
@@ -570,6 +573,15 @@ export default function App() {
         </button>
       )}
       <a
+        className="header-partner-link"
+        href="/partner-signup"
+        onClick={event => navigate(event, '/partner-signup')}
+        title="Partner with KhelGrid: Academy Admissions Hub & Turf Slot Management (Free Grassroots Access)"
+      >
+        <SiteIcon name="building" size={15} />
+        <span>Partner Signup</span>
+      </a>
+      <a
         className="header-go-pro"
         href="/pricing"
         onClick={event => {
@@ -646,6 +658,7 @@ export default function App() {
         </nav>
         <nav className="footer-column" aria-label="About and support">
           <h2>Grow with KhelGrid</h2>
+          <a href="/partner-signup" onClick={event => navigate(event, '/partner-signup')} style={{ color: '#059669', fontWeight: 700 }}>⚡ Fast Partner Setup (30s)</a>
           <a href="/partner" onClick={event => navigate(event, '/partner')}><strong>Partner with KhelGrid</strong></a>
           <a href="/submit-listing?type=venue" onClick={e => { e.preventDefault(); openListingSubmission('venue') }}>List your venue</a>
           <a href="/submit-listing?type=opportunity" onClick={e => { e.preventDefault(); openListingSubmission('opportunity') }}>Submit a trial</a>
@@ -810,6 +823,14 @@ export default function App() {
           onSuccess={user => {
             setAuthUser(user)
             setAuthModalError(undefined)
+            // Intelligent 3-Tier Redirection based on registered user role
+            if (user.role === 'academy') {
+              navigate(undefined, '/academy-hub')
+            } else if (user.role === 'host' || user.role === 'venue_owner') {
+              navigate(undefined, '/host')
+            } else if (user.role === 'athlete' || user.role === 'parent') {
+              navigate(undefined, '/dashboard')
+            }
           }}
           onNavigate={navigate}
         />
