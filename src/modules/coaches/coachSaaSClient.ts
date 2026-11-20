@@ -406,6 +406,39 @@ export function updateCoachInquiryStatus(inquiryId: string, status: CoachInquiry
   saveToStorage(STORAGE_COACH_KEYS.INQUIRIES, updated)
 }
 
+export function addCoachInquiry(inquiry: {
+  coachSlug: string
+  athleteName: string
+  parentName?: string
+  phone: string
+  sport: string
+  ageCategory?: string
+  skillLevel?: string
+  preferredBatch?: string
+  objective?: string
+  referenceId?: string
+}): CoachInquiry {
+  const allInquiries = loadFromStorage<CoachInquiry[]>(STORAGE_COACH_KEYS.INQUIRIES, DEFAULT_COACH_INQUIRIES)
+  const newRecord: CoachInquiry = {
+    id: `inq-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    coachSlug: inquiry.coachSlug,
+    athleteName: inquiry.athleteName,
+    parentName: inquiry.parentName || 'Parent',
+    phone: inquiry.phone,
+    sport: inquiry.sport,
+    ageCategory: inquiry.ageCategory || 'U-14',
+    skillLevel: inquiry.skillLevel || 'Intermediate',
+    preferredBatch: inquiry.preferredBatch || 'Regular Clinic',
+    objective: inquiry.objective || 'Skill Assessment',
+    status: 'new',
+    referenceId: inquiry.referenceId || `INQ-${Date.now().toString(36).toUpperCase()}`,
+    submittedAt: new Date().toISOString(),
+  }
+  const updated = [newRecord, ...allInquiries]
+  saveToStorage(STORAGE_COACH_KEYS.INQUIRIES, updated)
+  return newRecord
+}
+
 export function getCoachSaaSSummary(coachSlug: string) {
   const trainees = getCoachTrainees(coachSlug)
   const batches = getCoachBatches(coachSlug)

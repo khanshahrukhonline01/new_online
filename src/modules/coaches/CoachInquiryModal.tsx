@@ -5,6 +5,7 @@ import {
   type CoachInquiryData,
 } from './coachesData'
 import { submitCoachInquiry } from '../../integrations/supabase/public-client'
+import { addCoachInquiry } from './coachSaaSClient'
 
 export interface CoachInquiryModalProps {
   coach: VerifiedCoach | null
@@ -99,6 +100,20 @@ export function CoachInquiryModal({ coach, isOpen, onClose }: CoachInquiryModalP
         submittedAt: res.submittedAt,
         referenceId: res.inquiryToken || res.referenceId,
       }
+
+      // Sync into Coach Operations SaaS Hub in real-time
+      addCoachInquiry({
+        coachSlug: coach.id,
+        athleteName: athleteName.trim(),
+        parentName: parentName.trim() || undefined,
+        phone: cleanPhone,
+        sport: coach.sport || 'Sports',
+        ageCategory,
+        skillLevel,
+        preferredBatch,
+        objective,
+        referenceId: record.referenceId,
+      })
 
       setConfirmedInquiry(record)
     } catch {

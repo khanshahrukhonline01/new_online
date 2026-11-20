@@ -34,13 +34,18 @@ describe('CoachDashboardPage Component', () => {
     expect(html).toContain('Trainee Roster')
     expect(html).toContain('Inbound Inquiries')
     expect(html).toContain('Batches &amp; Timings')
+    expect(html).toContain('Daily Attendance')
     expect(html).toContain('Total Earnings &amp; UPI QR')
     expect(html).toContain('Credentials &amp; Evidence')
 
-    // Table elements
+    // Table elements and new feature controls
     expect(html).toContain('Arjun Mehra')
     expect(html).toContain('Rohan Deshmukh')
     expect(html).toContain('Morning Elite Fast Bowlers Camp')
     expect(html).toContain('Add Trainee')
+    expect(html).toContain('Import CSV')
+    expect(html).toContain('Public Profile')
+    expect(html).toContain('Share WhatsApp Card')
+    expect(html).toContain('Receipt')
   })
 })

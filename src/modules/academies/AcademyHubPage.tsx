@@ -32,6 +32,16 @@ import {
   type RegisteredAcademy,
 } from './academySaaSClient'
 import { exportStudentsToCsv, downloadBlobFile } from './academyExportUtils'
+import {
+  parseStudentCsvRows,
+  getSampleStudentCsv,
+  getDailyAttendance,
+  saveDailyAttendance,
+  generateWhatsAppAttendanceAlertUrl,
+  generateWhatsAppShareProfileUrl,
+  type DailyAttendanceRecord,
+  type ParsedStudentImportRow,
+} from '../../shared/saas/saasSharedOperations'
 import './AcademyHubPage.css'
 
 export interface AcademyHubPageProps {
@@ -78,8 +88,45 @@ export default function AcademyHubPage({
     isCustom: true,
   })
 
+  // Derived Data
+  const leads = getAcademyLeads(selectedSlug)
+  const batches = getAcademyBatches(selectedSlug)
+  const students = getAcademyStudents(selectedSlug)
+  const passes = getAcademyTrialPasses(selectedSlug)
+  const settings = getAcademySettings(selectedSlug, currentAcademy.name)
+  const summary = getAcademySaaSSummary(selectedSlug)
+
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'leads' | 'batches' | 'fees' | 'trial_passes' | 'settings'>('leads')
+  const [activeTab, setActiveTab] = useState<'leads' | 'batches' | 'fees' | 'attendance' | 'trial_passes' | 'settings'>('leads')
+
+  // CSV Import State
+  const [isImportCsvModalOpen, setIsImportCsvModalOpen] = useState(false)
+  const [importCsvText, setImportCsvText] = useState('')
+  const [importCsvErrors, setImportCsvErrors] = useState<string[]>([])
+  const [importPreviewRows, setImportPreviewRows] = useState<ParsedStudentImportRow[]>([])
+
+  // Attendance State
+  const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [attendanceBatchId, setAttendanceBatchId] = useState(() => batches[0]?.id || '')
+  const [attendanceStatuses, setAttendanceStatuses] = useState<Record<string, 'present' | 'absent' | 'excused'>>(() => {
+    const existing = getDailyAttendance(selectedSlug, batches[0]?.id || '', new Date().toISOString().slice(0, 10))
+    const map: Record<string, 'present' | 'absent' | 'excused'> = {}
+    existing?.attendees.forEach(a => {
+      map[a.studentId] = a.status
+    })
+    return map
+  })
+  const [attendanceSavedNotice, setAttendanceSavedNotice] = useState(false)
+
+  // Share Profile Card Link
+  const shareWhatsAppCardUrl = generateWhatsAppShareProfileUrl({
+    entityType: 'academy',
+    entityName: currentAcademy.name,
+    slug: currentAcademy.slug,
+    sport: currentAcademy.sport || 'Sports',
+    city: currentAcademy.city,
+    isVerified: currentAcademy.verificationStatus === 'verified',
+  })
 
   // Data Refresh State
   const [refreshKey, setRefreshKey] = useState(0)
@@ -116,14 +163,6 @@ export default function AcademyHubPage({
 
   // Coach Attendance Sheet Modal State
   const [activeAttendanceBatch, setActiveAttendanceBatch] = useState<AcademyBatch | null>(null)
-
-  // Derived Data
-  const leads = getAcademyLeads(selectedSlug)
-  const batches = getAcademyBatches(selectedSlug)
-  const students = getAcademyStudents(selectedSlug)
-  const passes = getAcademyTrialPasses(selectedSlug)
-  const settings = getAcademySettings(selectedSlug, currentAcademy.name)
-  const summary = getAcademySaaSSummary(selectedSlug)
 
   // Filter State
   const [leadStatusFilter, setLeadStatusFilter] = useState<string>('all')
@@ -272,6 +311,48 @@ export default function AcademyHubPage({
     setStudentNameInput('')
     setStudentParentNameInput('')
     setStudentParentPhoneInput('')
+    triggerRefresh()
+  }
+
+  const handleStudentCsvInputChange = (text: string) => {
+    setImportCsvText(text)
+    if (!text.trim()) {
+      setImportCsvErrors([])
+      setImportPreviewRows([])
+      return
+    }
+    const { valid, errors } = parseStudentCsvRows(text)
+    setImportPreviewRows(valid)
+    setImportCsvErrors(errors)
+  }
+
+  const handleConfirmStudentImportCsv = () => {
+    if (importPreviewRows.length === 0) return
+    const now = new Date()
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 5)
+    const defaultBatch = batches[0]
+
+    importPreviewRows.forEach(row => {
+      const targetBatch = batches.find(b => b.batchName.toLowerCase() === (row.batchName || '').toLowerCase()) || defaultBatch
+      saveAcademyStudent({
+        academySlug: selectedSlug,
+        studentName: row.studentName,
+        parentName: row.parentName,
+        parentPhone: row.parentPhone,
+        batchId: targetBatch?.id || 'batch-default',
+        batchName: targetBatch?.batchName || 'General Squad',
+        sport: row.sport || targetBatch?.sport || currentAcademy.sport || 'Sports',
+        monthlyFee: row.monthlyFee || targetBatch?.monthlyFee || 2500,
+        feeStatus: 'paid',
+        lastPaymentDate: now.toISOString().slice(0, 10),
+        nextDueDate: nextMonth.toISOString().slice(0, 10),
+      })
+    })
+
+    setIsImportCsvModalOpen(false)
+    setImportCsvText('')
+    setImportPreviewRows([])
+    setImportCsvErrors([])
     triggerRefresh()
   }
 
@@ -570,6 +651,27 @@ export default function AcademyHubPage({
               <SiteIcon name="sparkles" size={14} />
               <span>+ Setup New Academy</span>
             </button>
+            <a
+              href={shareWhatsAppCardUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="academy-hub-btn-outline"
+              style={{
+                padding: '8px 12px',
+                fontSize: '13px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                textDecoration: 'none',
+                color: '#047857',
+                borderColor: '#10b981',
+                cursor: 'pointer',
+              }}
+              title="Broadcast your academy profile and trial admissions on WhatsApp"
+            >
+              <SiteIcon name="share" size={14} />
+              <span>Share WhatsApp Card</span>
+            </a>
           </div>
         </div>
       </div>
@@ -637,7 +739,7 @@ export default function AcademyHubPage({
           </div>
           <div className="academy-hub-kpi-value">{summary.totalLeads}</div>
           <p className="academy-hub-kpi-sub success">
-            {summary.newLeadsCount} new parent enquiries awaiting contact
+            <span className="coach-trend-pill positive">+{summary.newLeadsCount} this week</span> {summary.newLeadsCount} new parent enquiries awaiting contact
           </p>
         </div>
 
@@ -648,7 +750,7 @@ export default function AcademyHubPage({
           </div>
           <div className="academy-hub-kpi-value">{summary.totalStudents}</div>
           <p className="academy-hub-kpi-sub">
-            Across {summary.totalBatches} active coaching batches
+            <span className="coach-trend-pill positive">+12.4% MoM</span> Across {summary.totalBatches} active coaching batches
           </p>
         </div>
 
@@ -659,7 +761,7 @@ export default function AcademyHubPage({
           </div>
           <div className="academy-hub-kpi-value">₹{summary.totalRevenue.toLocaleString('en-IN')}</div>
           <p className="academy-hub-kpi-sub success">
-            {summary.collectionRate}% collected · ₹{summary.pendingRevenue.toLocaleString('en-IN')} pending
+            <span className="coach-trend-pill positive">{summary.collectionRate}% collected</span> {summary.collectionRate}% collected · ₹{summary.pendingRevenue.toLocaleString('en-IN')} pending
           </p>
         </div>
 
@@ -669,7 +771,9 @@ export default function AcademyHubPage({
             <SiteIcon name="check-circle" size={18} />
           </div>
           <div className="academy-hub-kpi-value">{summary.trialPassesCount}</div>
-          <p className="academy-hub-kpi-sub">Digital passes with verifiable QR</p>
+          <p className="academy-hub-kpi-sub">
+            <span className="coach-trend-pill neutral">Active Gate Passes</span> Digital passes with verifiable QR
+          </p>
         </div>
       </div>
 
@@ -698,6 +802,14 @@ export default function AcademyHubPage({
           onClick={() => setActiveTab('fees')}
         >
           <SiteIcon name="award" size={18} /> Student Fees &amp; UPI
+        </button>
+
+        <button
+          type="button"
+          className={`academy-hub-tab-btn ${activeTab === 'attendance' ? 'active' : ''}`}
+          onClick={() => setActiveTab('attendance')}
+        >
+          <SiteIcon name="check-circle" size={18} /> Daily Attendance
         </button>
 
         <button
@@ -971,6 +1083,19 @@ export default function AcademyHubPage({
                 className="academy-hub-btn-outline"
                 style={{ padding: '0.5rem 0.85rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
                 onClick={() => {
+                  setImportCsvText('')
+                  setImportCsvErrors([])
+                  setImportPreviewRows([])
+                  setIsImportCsvModalOpen(true)
+                }}
+              >
+                <SiteIcon name="upload" size={15} /> Import CSV
+              </button>
+              <button
+                type="button"
+                className="academy-hub-btn-outline"
+                style={{ padding: '0.5rem 0.85rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                onClick={() => {
                   const csv = exportStudentsToCsv(students, currentAcademy.name)
                   downloadBlobFile(`${currentAcademy.slug}-student-roster.csv`, csv)
                 }}
@@ -1077,6 +1202,214 @@ export default function AcademyHubPage({
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* TAB: Daily Attendance & WhatsApp Parent Roll Call */}
+      {activeTab === 'attendance' && (
+        <section aria-labelledby="attendance-section-heading">
+          <div className="academy-hub-section-header">
+            <div>
+              <h2 id="attendance-section-heading" className="academy-hub-section-title">
+                Daily Student Attendance &amp; WhatsApp Roll Call
+              </h2>
+              <p style={{ color: '#64748b', margin: '0.25rem 0 0', fontSize: '0.9rem' }}>
+                Mark on-ground attendance for morning &amp; evening squads with 1-click WhatsApp arrival notifications to parents.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <select
+                className="coach-filter-select"
+                value={attendanceBatchId}
+                onChange={e => {
+                  const bId = e.target.value
+                  setAttendanceBatchId(bId)
+                  const existing = getDailyAttendance(selectedSlug, bId, attendanceDate)
+                  const map: Record<string, 'present' | 'absent' | 'excused'> = {}
+                  existing?.attendees.forEach(a => {
+                    map[a.studentId] = a.status
+                  })
+                  setAttendanceStatuses(map)
+                }}
+              >
+                {batches.map(b => (
+                  <option key={b.id} value={b.id}>
+                    {b.batchName} ({b.timings})
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="date"
+                value={attendanceDate}
+                onChange={e => {
+                  const d = e.target.value
+                  setAttendanceDate(d)
+                  const existing = getDailyAttendance(selectedSlug, attendanceBatchId, d)
+                  const map: Record<string, 'present' | 'absent' | 'excused'> = {}
+                  existing?.attendees.forEach(a => {
+                    map[a.studentId] = a.status
+                  })
+                  setAttendanceStatuses(map)
+                }}
+                className="coach-search-input"
+                style={{ width: 'auto' }}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            {(() => {
+              const batchStudents = students.filter(s => s.batchId === attendanceBatchId || batches.length === 1)
+              const total = batchStudents.length
+              const presentCount = batchStudents.filter(s => attendanceStatuses[s.id] === 'present').length
+              const absentCount = batchStudents.filter(s => attendanceStatuses[s.id] === 'absent').length
+              const rate = total > 0 ? Math.round((presentCount / total) * 100) : 0
+
+              return (
+                <>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <span className="coach-att-chip">Total Squad: {total}</span>
+                    <span className="coach-att-chip present">Present: {presentCount} ({rate}%)</span>
+                    <span className="coach-att-chip absent">Absent: {absentCount}</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="academy-hub-primary-btn"
+                    onClick={() => {
+                      const batch = batches.find(b => b.id === attendanceBatchId) || batches[0]
+                      const record: DailyAttendanceRecord = {
+                        id: `att-${Date.now()}`,
+                        entityType: 'academy',
+                        entitySlug: selectedSlug,
+                        batchId: attendanceBatchId,
+                        batchName: batch?.batchName || 'Coaching Squad',
+                        date: attendanceDate,
+                        markedAt: new Date().toISOString(),
+                        attendees: batchStudents.map(s => ({
+                          studentId: s.id,
+                          studentName: s.studentName,
+                          parentPhone: s.parentPhone,
+                          status: attendanceStatuses[s.id] || 'present',
+                          checkInTime: batch?.timings.split('–')[0]?.trim() || '06:00 AM',
+                        })),
+                      }
+                      saveDailyAttendance(record)
+                      setAttendanceSavedNotice(true)
+                      setTimeout(() => setAttendanceSavedNotice(false), 3000)
+                    }}
+                  >
+                    <SiteIcon name="check" size={15} />
+                    <span>{attendanceSavedNotice ? '✓ Attendance Saved' : 'Save Attendance Roll Call'}</span>
+                  </button>
+                </>
+              )
+            })()}
+          </div>
+
+          <div className="academy-hub-table-wrapper">
+            <table className="academy-hub-table">
+              <thead>
+                <tr>
+                  <th>Student Name</th>
+                  <th>Parent Contact</th>
+                  <th>Status (1-Tap Mark)</th>
+                  <th>WhatsApp Parent Notice</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const batchStudents = students.filter(s => s.batchId === attendanceBatchId || batches.length === 1)
+                  const currentBatch = batches.find(b => b.id === attendanceBatchId) || batches[0]
+
+                  if (batchStudents.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                          No students enrolled in this batch yet.
+                        </td>
+                      </tr>
+                    )
+                  }
+
+                  return batchStudents.map(s => {
+                    const status = attendanceStatuses[s.id] || 'present'
+                    const waAlertUrl = generateWhatsAppAttendanceAlertUrl({
+                      studentName: s.studentName,
+                      parentPhone: s.parentPhone,
+                      status,
+                      batchName: currentBatch?.batchName || 'Academy Squad',
+                      entityName: currentAcademy.name,
+                      date: attendanceDate,
+                      checkInTime: currentBatch?.timings.split('–')[0]?.trim() || '06:00 AM',
+                    })
+
+                    return (
+                      <tr key={s.id}>
+                        <td>
+                          <strong>{s.studentName}</strong>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>{s.batchName}</div>
+                        </td>
+                        <td>
+                          <span>{s.parentName}</span>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>+91 {s.parentPhone}</div>
+                        </td>
+                        <td>
+                          <div className="coach-att-pills">
+                            <button
+                              type="button"
+                              className={`coach-att-btn ${status === 'present' ? 'active present' : ''}`}
+                              onClick={() => setAttendanceStatuses(prev => ({ ...prev, [s.id]: 'present' }))}
+                            >
+                              Present
+                            </button>
+                            <button
+                              type="button"
+                              className={`coach-att-btn ${status === 'absent' ? 'active absent' : ''}`}
+                              onClick={() => setAttendanceStatuses(prev => ({ ...prev, [s.id]: 'absent' }))}
+                            >
+                              Absent
+                            </button>
+                            <button
+                              type="button"
+                              className={`coach-att-btn ${status === 'excused' ? 'active excused' : ''}`}
+                              onClick={() => setAttendanceStatuses(prev => ({ ...prev, [s.id]: 'excused' }))}
+                            >
+                              Excused
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          <a
+                            href={waAlertUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`crm-action-btn ${status === 'present' ? 'whatsapp' : ''}`}
+                            style={{
+                              padding: '6px 10px',
+                              borderRadius: '6px',
+                              textDecoration: 'none',
+                              fontSize: '12px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              color: status === 'absent' ? '#dc2626' : undefined,
+                            }}
+                            title={`Send ${status} WhatsApp notice to ${s.parentName}`}
+                          >
+                            <SiteIcon name="phone" size={13} />
+                            <span>Notify Parent ({status})</span>
+                          </a>
+                        </td>
+                      </tr>
+                    )
+                  })
+                })()}
               </tbody>
             </table>
           </div>
@@ -1826,6 +2159,119 @@ export default function AcademyHubPage({
                 >
                   <SiteIcon name="download" size={15} />
                   <span>Print</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: BULK IMPORT STUDENTS FROM CSV / EXCEL */}
+      {isImportCsvModalOpen && (
+        <div className="academy-hub-modal-overlay" onClick={() => setIsImportCsvModalOpen(false)}>
+          <div className="academy-hub-modal-content" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+            <div className="academy-hub-modal-header">
+              <h3>Bulk Import Students from CSV / Excel</h3>
+              <button
+                type="button"
+                className="academy-hub-modal-close"
+                onClick={() => setIsImportCsvModalOpen(false)}
+                aria-label="Close modal"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ padding: '0.5rem 0' }}>
+              <div className="coach-csv-template-box">
+                <div>
+                  <strong style={{ fontSize: '13px' }}>Need the format template?</strong>
+                  <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>
+                    Columns: Student Name, Parent Name, Parent WhatsApp, Batch Name, Monthly Fee, Sport
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="academy-hub-btn-outline"
+                  onClick={() => {
+                    const sample = getSampleStudentCsv()
+                    handleStudentCsvInputChange(sample)
+                  }}
+                  style={{ fontSize: '12px', padding: '6px 10px', whiteSpace: 'nowrap' }}
+                >
+                  Load Sample Data
+                </button>
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  Paste CSV / Spreadsheet Data
+                </label>
+                <textarea
+                  className="coach-csv-textarea"
+                  placeholder="Paste rows copied from Excel or CSV here..."
+                  value={importCsvText}
+                  onChange={e => handleStudentCsvInputChange(e.target.value)}
+                />
+              </div>
+
+              {importCsvErrors.length > 0 && (
+                <div style={{ marginTop: '8px', padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px', color: '#dc2626', fontSize: '12px' }}>
+                  <strong>Validation Notices:</strong>
+                  <ul style={{ margin: '4px 0 0', paddingLeft: '20px' }}>
+                    {importCsvErrors.slice(0, 3).map((err, idx) => (
+                      <li key={idx}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {importPreviewRows.length > 0 && (
+                <div style={{ marginTop: '12px' }}>
+                  <strong style={{ fontSize: '12.5px', color: '#059669' }}>
+                    ✓ {importPreviewRows.length} Students Ready to Import
+                  </strong>
+                  <div style={{ maxHeight: '160px', overflowY: 'auto', marginTop: '6px' }}>
+                    <table className="coach-csv-preview-table">
+                      <thead>
+                        <tr>
+                          <th>Student</th>
+                          <th>Parent Contact</th>
+                          <th>Batch</th>
+                          <th>Monthly Fee</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importPreviewRows.map((r, i) => (
+                          <tr key={i}>
+                            <td>{r.studentName}</td>
+                            <td>{r.parentName} (+91 {r.parentPhone})</td>
+                            <td>{r.batchName || batches[0]?.batchName}</td>
+                            <td>₹{r.monthlyFee}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '1.25rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="academy-hub-btn-outline"
+                  onClick={() => setIsImportCsvModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="academy-hub-primary-btn"
+                  disabled={importPreviewRows.length === 0}
+                  onClick={handleConfirmStudentImportCsv}
+                  style={{ opacity: importPreviewRows.length === 0 ? 0.5 : 1 }}
+                >
+                  Import {importPreviewRows.length} Students Now
                 </button>
               </div>
             </div>

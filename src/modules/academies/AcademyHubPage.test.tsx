@@ -27,12 +27,13 @@ describe('AcademyHubPage SaaS Workspace Suite', () => {
     expect(html).toContain('new parent enquiries awaiting contact')
   })
 
-  it('renders all 5 operational workspaces in navigation tabs', () => {
+  it('renders all operational workspaces in navigation tabs including daily attendance', () => {
     const html = renderToStaticMarkup(<AcademyHubPage initialAcademySlug="bengaluru-fc-academy" />)
 
     expect(html).toContain('Admissions CRM &amp; Leads')
     expect(html).toContain('Batch Schedules')
     expect(html).toContain('Student Fees &amp; UPI')
+    expect(html).toContain('Daily Attendance')
     expect(html).toContain('Trial Passes')
     expect(html).toContain('WhatsApp &amp; UPI Setup')
   })
@@ -51,6 +52,7 @@ describe('AcademyHubPage SaaS Workspace Suite', () => {
 
     expect(html).toContain('Switch Academy Management Workspace:')
     expect(html).toContain('+ Setup New Academy')
+    expect(html).toContain('Share WhatsApp Card')
     expect(html).toContain('Bengaluru FC Residential Academy')
     expect(html).toContain('Pullela Gopichand Badminton Academy')
   })

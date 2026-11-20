@@ -897,3 +897,197 @@
   border-color: #334155;
   color: #f1f5f9;
 }
+
+/* Attendance Roll Call & WhatsApp Alert Styles */
+.coach-att-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.coach-att-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.coach-att-stats {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.coach-att-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--surface-muted, #f8fafc);
+  border: 1px solid var(--line, #e2e8f0);
+}
+
+.coach-att-chip.present {
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.coach-att-chip.absent {
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.coach-att-pills {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--surface-muted, #f1f5f9);
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.coach-att-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.15s ease;
+}
+
+.coach-att-btn.active.present {
+  background: #059669;
+  color: #ffffff;
+}
+
+.coach-att-btn.active.absent {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.coach-att-btn.active.excused {
+  background: #d97706;
+  color: #ffffff;
+}
+
+/* Digital Fee Receipt Modal */
+.coach-receipt-card {
+  background: var(--surface, #ffffff);
+  border-radius: 12px;
+  max-width: 520px;
+  width: 95%;
+  border: 1px solid var(--line, #e2e8f0);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.coach-receipt-header {
+  background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
+  color: #ffffff;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.coach-receipt-body {
+  padding: 1.5rem;
+}
+
+.coach-receipt-stamp {
+  display: inline-block;
+  padding: 4px 12px;
+  border: 2px dashed #059669;
+  color: #059669;
+  font-weight: 800;
+  font-size: 12px;
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+  transform: rotate(-3deg);
+  margin-top: 8px;
+}
+
+.coach-receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 13px;
+}
+
+.coach-receipt-table td {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line, #f1f5f9);
+}
+
+.coach-receipt-table td:first-child {
+  color: #64748b;
+}
+
+.coach-receipt-table td:last-child {
+  font-weight: 700;
+  text-align: right;
+  color: var(--text, #0f172a);
+}
+
+.coach-action-btn.receipt {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0284c7;
+  border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
+.coach-action-btn.receipt:hover {
+  background: rgba(14, 165, 233, 0.2);
+}
+
+/* CSV Import Styles */
+.coach-csv-template-box {
+  background: var(--surface-muted, #f8fafc);
+  border: 1px dashed var(--line, #cbd5e1);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.coach-csv-textarea {
+  width: 100%;
+  min-height: 120px;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line, #cbd5e1);
+  background: var(--surface, #ffffff);
+  color: var(--text, #0f172a);
+  resize: vertical;
+}
+
+.coach-csv-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  margin-top: 8px;
+}
+
+.coach-csv-preview-table th,
+.coach-csv-preview-table td {
+  padding: 6px 8px;
+  border: 1px solid var(--line, #e2e8f0);
+}
+
+.coach-csv-preview-table th {
+  background: var(--surface-muted, #f1f5f9);
+}

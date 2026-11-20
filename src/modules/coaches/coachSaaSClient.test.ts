@@ -11,6 +11,7 @@ import {
   recordTraineePayment,
   getCoachInquiries,
   updateCoachInquiryStatus,
+  addCoachInquiry,
   getCoachSaaSSummary,
   registerCustomCoach,
   confirmAndVerifyCoach,
@@ -92,6 +93,22 @@ describe('coachSaaSClient Unit Suite', () => {
     updateCoachInquiryStatus(first.id, 'enrolled')
     const updatedList = getCoachInquiries('zaheer-farooq-coach')
     expect(updatedList.find(i => i.id === first.id)?.status).toBe('enrolled')
+
+    // Test adding live inquiry from public profile
+    const addedInq = addCoachInquiry({
+      coachSlug: 'zaheer-farooq-coach',
+      athleteName: 'Devika Sharma',
+      parentName: 'Ramesh Sharma',
+      phone: '9811223344',
+      sport: 'Cricket',
+      ageCategory: 'U-14',
+      preferredBatch: 'Morning Camp',
+      objective: 'Fast Bowling Trials',
+    })
+    expect(addedInq.id).toContain('inq-')
+    expect(addedInq.athleteName).toBe('Devika Sharma')
+    const inquiriesAfter = getCoachInquiries('zaheer-farooq-coach')
+    expect(inquiriesAfter.some(i => i.athleteName === 'Devika Sharma')).toBe(true)
   })
 
   it('calculates coach SaaS summary accurately', () => {

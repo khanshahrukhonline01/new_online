@@ -21,6 +21,19 @@ import {
   generateUpiPayLink,
   type RegisteredCoach,
 } from './coachSaaSClient'
+import {
+  parseCoachTraineeCsvRows,
+  getSampleCoachTraineeCsv,
+  getDailyAttendance,
+  saveDailyAttendance,
+  generateWhatsAppAttendanceAlertUrl,
+  generateDigitalFeeReceipt,
+  generateWhatsAppReceiptMessageUrl,
+  generateWhatsAppShareProfileUrl,
+  type DailyAttendanceRecord,
+  type DigitalFeeReceipt,
+  type ParsedCoachTraineeImportRow,
+} from '../../shared/saas/saasSharedOperations'
 import './CoachDashboardPage.css'
 
 export interface CoachDashboardPageProps {
@@ -47,7 +60,7 @@ export default function CoachDashboardPage({
   const registeredCoaches = getRegisteredCoaches()
   const currentCoach: RegisteredCoach = getCurrentCoach(selectedSlug)
 
-  const [activeTab, setActiveTab] = useState<'trainees' | 'inquiries' | 'batches' | 'earnings' | 'credentials'>('trainees')
+  const [activeTab, setActiveTab] = useState<'trainees' | 'inquiries' | 'batches' | 'attendance' | 'earnings' | 'credentials'>('trainees')
 
   // Data
   const trainees = getCoachTrainees(selectedSlug)
@@ -63,6 +76,36 @@ export default function CoachDashboardPage({
   const [isAddTraineeModalOpen, setIsAddTraineeModalOpen] = useState(false)
   const [isAddBatchModalOpen, setIsAddBatchModalOpen] = useState(false)
   const [isRegisterCoachModalOpen, setIsRegisterCoachModalOpen] = useState(false)
+  const [isImportCsvModalOpen, setIsImportCsvModalOpen] = useState(false)
+  const [activeReceipt, setActiveReceipt] = useState<DigitalFeeReceipt | null>(null)
+
+  // CSV Import State
+  const [importCsvText, setImportCsvText] = useState('')
+  const [importCsvErrors, setImportCsvErrors] = useState<string[]>([])
+  const [importPreviewRows, setImportPreviewRows] = useState<ParsedCoachTraineeImportRow[]>([])
+
+  // Attendance State
+  const [attendanceDate, setAttendanceDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [attendanceBatchId, setAttendanceBatchId] = useState(() => batches[0]?.id || '')
+  const [attendanceStatuses, setAttendanceStatuses] = useState<Record<string, 'present' | 'absent' | 'excused'>>(() => {
+    const existing = getDailyAttendance(selectedSlug, batches[0]?.id || '', new Date().toISOString().slice(0, 10))
+    const map: Record<string, 'present' | 'absent' | 'excused'> = {}
+    existing?.attendees.forEach(a => {
+      map[a.studentId] = a.status
+    })
+    return map
+  })
+  const [attendanceSavedNotice, setAttendanceSavedNotice] = useState(false)
+
+  // Share Profile Card Link
+  const shareWhatsAppCardUrl = generateWhatsAppShareProfileUrl({
+    entityType: 'coach',
+    entityName: currentCoach.name,
+    slug: currentCoach.slug,
+    sport: currentCoach.sport || 'Sports',
+    city: currentCoach.city,
+    isVerified: currentCoach.verificationStatus === 'verified',
+  })
 
   // Add Trainee State
   const [traineeName, setTraineeName] = useState('')
@@ -126,6 +169,49 @@ export default function CoachDashboardPage({
     setTraineeName('')
     setParentName('')
     setParentPhone('')
+    triggerRefresh()
+  }
+
+  const handleCsvInputChange = (text: string) => {
+    setImportCsvText(text)
+    if (!text.trim()) {
+      setImportCsvErrors([])
+      setImportPreviewRows([])
+      return
+    }
+    const { valid, errors } = parseCoachTraineeCsvRows(text)
+    setImportPreviewRows(valid)
+    setImportCsvErrors(errors)
+  }
+
+  const handleConfirmImportCsv = () => {
+    if (importPreviewRows.length === 0) return
+    const now = new Date()
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 5)
+    const defaultBatch = batches[0]
+
+    importPreviewRows.forEach(row => {
+      const targetBatch = batches.find(b => b.batchName.toLowerCase() === (row.batchName || '').toLowerCase()) || defaultBatch
+      saveCoachTrainee({
+        coachSlug: selectedSlug,
+        traineeName: row.traineeName,
+        parentName: row.parentName,
+        parentPhone: row.parentPhone,
+        batchId: targetBatch?.id || 'batch-default',
+        batchName: targetBatch?.batchName || 'Foundation Clinic',
+        sport: currentCoach.sport || 'Cricket',
+        ageCategory: row.ageGroup || 'U-14',
+        monthlyFee: row.monthlyFee || targetBatch?.monthlyFee || 3500,
+        feeStatus: 'paid',
+        lastPaymentDate: now.toISOString().slice(0, 10),
+        nextDueDate: nextMonth.toISOString().slice(0, 10),
+      })
+    })
+
+    setIsImportCsvModalOpen(false)
+    setImportCsvText('')
+    setImportPreviewRows([])
+    setImportCsvErrors([])
     triggerRefresh()
   }
 
@@ -249,6 +335,44 @@ export default function CoachDashboardPage({
               <SiteIcon name="plus" size={14} />
               <span>+ Register Coach</span>
             </button>
+            <a
+              href="#/coaches"
+              className="coach-hub-btn-outline"
+              onClick={e => onNavigate ? onNavigate(e, '/coaches') : undefined}
+              style={{
+                padding: '8px 12px',
+                fontSize: '13px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                textDecoration: 'none',
+                color: '#0f172a',
+              }}
+              title="Preview how parents view your verified profile on the public directory"
+            >
+              <SiteIcon name="external-link" size={14} />
+              <span>Public Profile</span>
+            </a>
+            <a
+              href={shareWhatsAppCardUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="coach-hub-btn-outline"
+              style={{
+                padding: '8px 12px',
+                fontSize: '13px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                textDecoration: 'none',
+                color: '#047857',
+                borderColor: '#10b981',
+              }}
+              title="Broadcast your coaching profile and open trials on WhatsApp"
+            >
+              <SiteIcon name="share" size={14} />
+              <span>Share WhatsApp Card</span>
+            </a>
           </div>
         </div>
       </div>
@@ -411,6 +535,17 @@ export default function CoachDashboardPage({
         <button
           type="button"
           role="tab"
+          aria-selected={activeTab === 'attendance'}
+          className={`coach-tab-btn ${activeTab === 'attendance' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('attendance')}
+        >
+          <SiteIcon name="check-circle" size={15} />
+          <span>Daily Attendance</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
           aria-selected={activeTab === 'earnings'}
           className={`coach-tab-btn ${activeTab === 'earnings' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('earnings')}
@@ -459,6 +594,22 @@ export default function CoachDashboardPage({
                   </option>
                 ))}
               </select>
+
+              <button
+                type="button"
+                className="coach-hub-btn-outline"
+                onClick={() => {
+                  setImportCsvText('')
+                  setImportCsvErrors([])
+                  setImportPreviewRows([])
+                  setIsImportCsvModalOpen(true)
+                }}
+                style={{ padding: '8px 12px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                title="Bulk import trainees from CSV or Excel"
+              >
+                <SiteIcon name="upload" size={14} />
+                <span>Import CSV</span>
+              </button>
 
               <button
                 type="button"
@@ -539,29 +690,58 @@ export default function CoachDashboardPage({
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                            {t.feeStatus !== 'paid' && (
+                            {t.feeStatus === 'paid' ? (
                               <button
                                 type="button"
-                                className="coach-action-btn mark-paid"
+                                className="coach-action-btn receipt"
                                 onClick={() => {
-                                  recordTraineePayment(t.id)
-                                  triggerRefresh()
+                                  const r = generateDigitalFeeReceipt({
+                                    entityType: 'coach',
+                                    entityName: currentCoach.name,
+                                    entitySlug: currentCoach.slug,
+                                    isVerified: currentCoach.verificationStatus === 'verified',
+                                    studentId: t.id,
+                                    studentName: t.traineeName,
+                                    parentName: t.parentName,
+                                    parentPhone: t.parentPhone,
+                                    batchName: t.batchName,
+                                    sport: currentCoach.sport || 'Cricket',
+                                    amount: t.monthlyFee,
+                                    paymentDate: t.lastPaymentDate,
+                                    upiVpa: currentCoach.upiVpa,
+                                  })
+                                  setActiveReceipt(r)
                                 }}
-                                title="Record offline UPI or cash payment"
+                                title="View & Send Official Fee Receipt"
                               >
-                                Mark Paid
+                                <SiteIcon name="file-text" size={12} />
+                                <span>Receipt</span>
                               </button>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  className="coach-action-btn mark-paid"
+                                  onClick={() => {
+                                    recordTraineePayment(t.id)
+                                    triggerRefresh()
+                                  }}
+                                  title="Record offline UPI or cash payment"
+                                >
+                                  Mark Paid
+                                </button>
+                                <a
+                                  href={waUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="coach-action-btn whatsapp"
+                                  title="Send WhatsApp payment reminder with direct UPI link"
+                                >
+                                  <SiteIcon name="phone" size={12} />
+                                  <span>Remind</span>
+                                </a>
+                              </>
                             )}
-                            <a
-                              href={waUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="coach-action-btn whatsapp"
-                              title="Send WhatsApp payment reminder with direct UPI link"
-                            >
-                              <SiteIcon name="phone" size={12} />
-                              <span>Remind</span>
-                            </a>
                           </div>
                         </td>
                       </tr>
@@ -749,6 +929,207 @@ export default function CoachDashboardPage({
                 </div>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* TAB: DAILY ATTENDANCE & WHATSAPP ROLL CALL */}
+      {activeTab === 'attendance' && (
+        <div className="coach-card-panel">
+          <div className="coach-att-toolbar">
+            <div className="coach-att-controls">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>TRAINING BATCH</label>
+                <select
+                  className="coach-filter-select"
+                  value={attendanceBatchId}
+                  onChange={e => {
+                    const bId = e.target.value
+                    setAttendanceBatchId(bId)
+                    const existing = getDailyAttendance(selectedSlug, bId, attendanceDate)
+                    const map: Record<string, 'present' | 'absent' | 'excused'> = {}
+                    existing?.attendees.forEach(a => {
+                      map[a.studentId] = a.status
+                    })
+                    setAttendanceStatuses(map)
+                  }}
+                >
+                  {batches.map(b => (
+                    <option key={b.id} value={b.id}>
+                      {b.batchName} ({b.timings})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>SESSION DATE</label>
+                <input
+                  type="date"
+                  value={attendanceDate}
+                  onChange={e => {
+                    const d = e.target.value
+                    setAttendanceDate(d)
+                    const existing = getDailyAttendance(selectedSlug, attendanceBatchId, d)
+                    const map: Record<string, 'present' | 'absent' | 'excused'> = {}
+                    existing?.attendees.forEach(a => {
+                      map[a.studentId] = a.status
+                    })
+                    setAttendanceStatuses(map)
+                  }}
+                  className="coach-search-input"
+                  style={{ width: 'auto' }}
+                />
+              </div>
+            </div>
+
+            <div className="coach-att-stats">
+              {(() => {
+                const batchTrainees = trainees.filter(t => t.batchId === attendanceBatchId || batches.length === 1)
+                const total = batchTrainees.length
+                const presentCount = batchTrainees.filter(t => attendanceStatuses[t.id] === 'present').length
+                const absentCount = batchTrainees.filter(t => attendanceStatuses[t.id] === 'absent').length
+                const rate = total > 0 ? Math.round((presentCount / total) * 100) : 0
+
+                return (
+                  <>
+                    <span className="coach-att-chip">Total Squad: {total}</span>
+                    <span className="coach-att-chip present">Present: {presentCount} ({rate}%)</span>
+                    <span className="coach-att-chip absent">Absent: {absentCount}</span>
+                    <button
+                      type="button"
+                      className="coach-primary-btn"
+                      onClick={() => {
+                        const batch = batches.find(b => b.id === attendanceBatchId) || batches[0]
+                        const record: DailyAttendanceRecord = {
+                          id: `att-${Date.now()}`,
+                          entityType: 'coach',
+                          entitySlug: selectedSlug,
+                          batchId: attendanceBatchId,
+                          batchName: batch?.batchName || 'Coaching Clinic',
+                          date: attendanceDate,
+                          markedAt: new Date().toISOString(),
+                          attendees: batchTrainees.map(t => ({
+                            studentId: t.id,
+                            studentName: t.traineeName,
+                            parentPhone: t.parentPhone,
+                            status: attendanceStatuses[t.id] || 'present',
+                            checkInTime: batch?.timings.split('–')[0]?.trim() || '06:30 AM',
+                          })),
+                        }
+                        saveDailyAttendance(record)
+                        setAttendanceSavedNotice(true)
+                        setTimeout(() => setAttendanceSavedNotice(false), 3000)
+                      }}
+                    >
+                      <SiteIcon name="check" size={14} />
+                      <span>{attendanceSavedNotice ? '✓ Roll Call Saved' : 'Save Attendance'}</span>
+                    </button>
+                  </>
+                )
+              })()}
+            </div>
+          </div>
+
+          <div className="coach-table-container">
+            <table className="coach-datatable">
+              <thead>
+                <tr>
+                  <th>Trainee</th>
+                  <th>Parent Contact</th>
+                  <th>Status (1-Tap Mark)</th>
+                  <th>WhatsApp Alert to Parent</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const batchTrainees = trainees.filter(t => t.batchId === attendanceBatchId || batches.length === 1)
+                  const currentBatch = batches.find(b => b.id === attendanceBatchId) || batches[0]
+
+                  if (batchTrainees.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                          No trainees registered in this batch yet.
+                        </td>
+                      </tr>
+                    )
+                  }
+
+                  return batchTrainees.map(t => {
+                    const status = attendanceStatuses[t.id] || 'present'
+                    const waAlertUrl = generateWhatsAppAttendanceAlertUrl({
+                      studentName: t.traineeName,
+                      parentPhone: t.parentPhone,
+                      status,
+                      batchName: currentBatch?.batchName || 'Coaching Clinic',
+                      entityName: currentCoach.name,
+                      date: attendanceDate,
+                      checkInTime: currentBatch?.timings.split('–')[0]?.trim() || '06:30 AM',
+                    })
+
+                    return (
+                      <tr key={t.id}>
+                        <td>
+                          <strong>{t.traineeName}</strong>
+                          <span style={{ display: 'block', fontSize: '11px', color: '#64748b' }}>
+                            {t.ageCategory} · {currentCoach.sport}
+                          </span>
+                        </td>
+                        <td>
+                          <span>{t.parentName}</span>
+                          <span style={{ display: 'block', fontSize: '11px', color: '#64748b' }}>
+                            +91 {t.parentPhone}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="coach-att-pills">
+                            <button
+                              type="button"
+                              className={`coach-att-btn ${status === 'present' ? 'active present' : ''}`}
+                              onClick={() => setAttendanceStatuses(prev => ({ ...prev, [t.id]: 'present' }))}
+                            >
+                              Present
+                            </button>
+                            <button
+                              type="button"
+                              className={`coach-att-btn ${status === 'absent' ? 'active absent' : ''}`}
+                              onClick={() => setAttendanceStatuses(prev => ({ ...prev, [t.id]: 'absent' }))}
+                            >
+                              Absent
+                            </button>
+                            <button
+                              type="button"
+                              className={`coach-att-btn ${status === 'excused' ? 'active excused' : ''}`}
+                              onClick={() => setAttendanceStatuses(prev => ({ ...prev, [t.id]: 'excused' }))}
+                            >
+                              Excused
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          <a
+                            href={waAlertUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`coach-action-btn ${status === 'present' ? 'whatsapp' : ''}`}
+                            style={{
+                              background: status === 'absent' ? 'rgba(239, 68, 68, 0.1)' : undefined,
+                              color: status === 'absent' ? '#dc2626' : undefined,
+                              borderColor: status === 'absent' ? 'rgba(239, 68, 68, 0.3)' : undefined,
+                            }}
+                            title={`Send ${status} WhatsApp notice to ${t.parentName}`}
+                          >
+                            <SiteIcon name="phone" size={12} />
+                            <span>Notify Parent ({status})</span>
+                          </a>
+                        </td>
+                      </tr>
+                    )
+                  })
+                })()}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -1233,6 +1614,227 @@ export default function CoachDashboardPage({
                 Launch Coach Workspace
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: BULK IMPORT TRAINEES FROM CSV / EXCEL */}
+      {isImportCsvModalOpen && (
+        <div className="coach-modal-backdrop" onClick={() => setIsImportCsvModalOpen(false)}>
+          <div className="coach-modal-card" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+            <div className="coach-modal-header">
+              <h3>Bulk Import Trainees from CSV / Excel</h3>
+              <button
+                type="button"
+                className="coach-modal-close-btn"
+                onClick={() => setIsImportCsvModalOpen(false)}
+              >
+                <SiteIcon name="close" size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.25rem' }}>
+              <div className="coach-csv-template-box">
+                <div>
+                  <strong style={{ fontSize: '13px' }}>Need the format template?</strong>
+                  <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>
+                    Columns: Trainee Name, Parent Name, Parent WhatsApp, Batch Name, Monthly Fee, Age
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="coach-hub-btn-outline"
+                  onClick={() => {
+                    const sample = getSampleCoachTraineeCsv()
+                    handleCsvInputChange(sample)
+                  }}
+                  style={{ fontSize: '12px', padding: '6px 10px', whiteSpace: 'nowrap' }}
+                >
+                  Load Sample Data
+                </button>
+              </div>
+
+              <div className="coach-modal-field">
+                <label>Paste CSV / Spreadsheet Text</label>
+                <textarea
+                  className="coach-csv-textarea"
+                  placeholder="Paste rows copied from Excel or CSV here..."
+                  value={importCsvText}
+                  onChange={e => handleCsvInputChange(e.target.value)}
+                />
+              </div>
+
+              {importCsvErrors.length > 0 && (
+                <div style={{ marginTop: '8px', padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px', color: '#dc2626', fontSize: '12px' }}>
+                  <strong>Validation Notices:</strong>
+                  <ul style={{ margin: '4px 0 0', paddingLeft: '20px' }}>
+                    {importCsvErrors.slice(0, 3).map((err, idx) => (
+                      <li key={idx}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {importPreviewRows.length > 0 && (
+                <div style={{ marginTop: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ fontSize: '12.5px', color: '#059669' }}>
+                      ✓ {importPreviewRows.length} Trainees Ready to Import
+                    </strong>
+                  </div>
+                  <div style={{ maxHeight: '160px', overflowY: 'auto', marginTop: '6px' }}>
+                    <table className="coach-csv-preview-table">
+                      <thead>
+                        <tr>
+                          <th>Trainee</th>
+                          <th>Parent Contact</th>
+                          <th>Batch</th>
+                          <th>Fee</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importPreviewRows.map((r, i) => (
+                          <tr key={i}>
+                            <td>{r.traineeName} ({r.ageGroup})</td>
+                            <td>{r.parentName} (+91 {r.parentPhone})</td>
+                            <td>{r.batchName || batches[0]?.batchName}</td>
+                            <td>₹{r.monthlyFee}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '1.25rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="coach-hub-btn-outline"
+                  onClick={() => setIsImportCsvModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="coach-primary-btn"
+                  disabled={importPreviewRows.length === 0}
+                  onClick={handleConfirmImportCsv}
+                  style={{ opacity: importPreviewRows.length === 0 ? 0.5 : 1 }}
+                >
+                  Import {importPreviewRows.length} Trainees Now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: OFFICIAL DIGITAL FEE RECEIPT VOUCHER */}
+      {activeReceipt && (
+        <div className="coach-modal-backdrop" onClick={() => setActiveReceipt(null)}>
+          <div className="coach-receipt-card" onClick={e => e.stopPropagation()}>
+            <div className="coach-receipt-header">
+              <div>
+                <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.9 }}>
+                  Official Payment Receipt
+                </span>
+                <h3 style={{ margin: '2px 0 0', fontSize: '1.2rem', color: '#ffffff' }}>
+                  {activeReceipt.entityName}
+                </h3>
+                {activeReceipt.isVerified && (
+                  <span style={{ fontSize: '11px', color: '#a7f3d0', fontWeight: 600 }}>
+                    🛡️ Official KhelGrid Verified Coach
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                className="coach-modal-close-btn"
+                style={{ color: '#ffffff' }}
+                onClick={() => setActiveReceipt(null)}
+              >
+                <SiteIcon name="close" size={16} />
+              </button>
+            </div>
+
+            <div className="coach-receipt-body">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Receipt Voucher</span>
+                  <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{activeReceipt.receiptNumber}</strong>
+                </div>
+                <div className="coach-receipt-stamp">PAID IN FULL</div>
+              </div>
+
+              <table className="coach-receipt-table">
+                <tbody>
+                  <tr>
+                    <td>Athlete / Trainee:</td>
+                    <td>{activeReceipt.studentName}</td>
+                  </tr>
+                  <tr>
+                    <td>Parent / Guardian:</td>
+                    <td>{activeReceipt.parentName} (+91 {activeReceipt.parentPhone})</td>
+                  </tr>
+                  <tr>
+                    <td>Batch &amp; Timings:</td>
+                    <td>{activeReceipt.batchName}</td>
+                  </tr>
+                  <tr>
+                    <td>Sport:</td>
+                    <td>{activeReceipt.sport}</td>
+                  </tr>
+                  <tr>
+                    <td>Billing Period:</td>
+                    <td>{activeReceipt.paymentMonth}</td>
+                  </tr>
+                  <tr>
+                    <td>Payment Date:</td>
+                    <td>{activeReceipt.paymentDate}</td>
+                  </tr>
+                  <tr>
+                    <td>Payment Mode:</td>
+                    <td>{activeReceipt.paymentMethod}</td>
+                  </tr>
+                  <tr>
+                    <td>Settlement UPI ID:</td>
+                    <td>{activeReceipt.upiVpa}</td>
+                  </tr>
+                  <tr style={{ borderTop: '2px solid #e2e8f0' }}>
+                    <td style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>Total Amount Paid:</td>
+                    <td style={{ fontSize: '1.25rem', fontWeight: 800, color: '#059669' }}>
+                      ₹{activeReceipt.amount.toLocaleString('en-IN')}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '1.25rem' }}>
+                <a
+                  href={generateWhatsAppReceiptMessageUrl(activeReceipt)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="coach-action-btn whatsapp"
+                  style={{ flex: 1, padding: '10px', justifyContent: 'center', fontSize: '13px' }}
+                >
+                  <SiteIcon name="phone" size={14} />
+                  <span>Send Receipt on WhatsApp</span>
+                </a>
+                <button
+                  type="button"
+                  className="coach-hub-btn-outline"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') window.print()
+                  }}
+                  style={{ padding: '10px 14px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  title="Print or save as PDF"
+                >
+                  <SiteIcon name="download" size={14} />
+                  <span>Print PDF</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
