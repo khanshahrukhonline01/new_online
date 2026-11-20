@@ -404,3 +404,102 @@ html.dark .admin-bulk-table th {
 .admin-bulk-table tr:hover td {
   background: rgba(255, 255, 255, 0.04);
 }
+
+/* ==========================================================================
+   AdminLTE v4 & ngx-admin Cosmic Neon Enhancements
+   ========================================================================== */
+
+.admin-analytics-kpi-card {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.admin-analytics-kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+:root[data-theme='dark'] .admin-analytics-kpi-card:hover,
+html.dark .admin-analytics-kpi-card:hover {
+  box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+/* Activity Feed Timeline Enhancements */
+.admin-activity-feed {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.admin-activity-item {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+/* ngx-admin Cosmic Neon Theme Theme Overrides */
+html.cosmic .admin-analytics-root,
+html[data-admin-theme="cosmic"] .admin-analytics-root {
+  color: #e4e4f5;
+}
+
+html.cosmic .admin-analytics-kpi-card,
+html[data-admin-theme="cosmic"] .admin-analytics-kpi-card {
+  background: #1b1b38;
+  border-color: rgba(115, 92, 255, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+html.cosmic .admin-analytics-kpi-card:hover,
+html[data-admin-theme="cosmic"] .admin-analytics-kpi-card:hover {
+  border-color: rgba(115, 92, 255, 0.6);
+  box-shadow: 0 8px 28px rgba(115, 92, 255, 0.25);
+}
+
+html.cosmic .admin-analytics-kpi-card.highlight,
+html[data-admin-theme="cosmic"] .admin-analytics-kpi-card.highlight {
+  background: linear-gradient(135deg, rgba(0, 214, 143, 0.15), rgba(27, 27, 56, 0.9));
+  border-color: #00d68f;
+}
+
+html.cosmic .admin-analytics-kpi-val,
+html[data-admin-theme="cosmic"] .admin-analytics-kpi-val {
+  color: #ffffff;
+}
+
+html.cosmic .admin-analytics-card,
+html[data-admin-theme="cosmic"] .admin-analytics-card {
+  background: #1b1b38;
+  border-color: rgba(115, 92, 255, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+html.cosmic .admin-analytics-card-header,
+html[data-admin-theme="cosmic"] .admin-analytics-card-header {
+  border-bottom-color: rgba(115, 92, 255, 0.2);
+}
+
+html.cosmic .admin-activity-item,
+html[data-admin-theme="cosmic"] .admin-activity-item {
+  background: rgba(22, 22, 46, 0.7);
+  border-color: rgba(115, 92, 255, 0.2);
+}
+
+html.cosmic .admin-activity-item:hover,
+html[data-admin-theme="cosmic"] .admin-activity-item:hover {
+  background: rgba(115, 92, 255, 0.12);
+  border-color: rgba(115, 92, 255, 0.45);
+}
+
+html.cosmic .admin-bulk-section,
+html[data-admin-theme="cosmic"] .admin-bulk-section {
+  background: #1b1b38;
+  border-color: rgba(115, 92, 255, 0.25);
+}
+
+html.cosmic .admin-bulk-bar,
+html[data-admin-theme="cosmic"] .admin-bulk-bar {
+  background: rgba(115, 92, 255, 0.15);
+  border-color: rgba(115, 92, 255, 0.35);
+}
+

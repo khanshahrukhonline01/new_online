@@ -497,6 +497,19 @@ export default function App() {
                 <SiteIcon name="bookmark" size={15} />
                 <span>Saved Deadlines</span>
               </a>
+              {authUser.role === 'admin' && (
+                <a
+                  href={typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3001' : 'https://admin.khelgrid.com'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="header-user-dropdown-item"
+                  role="menuitem"
+                  onClick={() => setUserMenuOpen(false)}
+                >
+                  <SiteIcon name="shield-check" size={15} />
+                  <span>Admin Operations Desk (admin.khelgrid.com)</span>
+                </a>
+              )}
               {(authUser.role === 'host' || authUser.role === 'admin') && (
                 <a
                   href="/host"
