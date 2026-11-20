@@ -8,13 +8,18 @@ import {
   confirmAndVerifyAcademy,
   revokeAcademyVerification,
 } from '../../../../src/modules/academies/academySaaSClient'
+import {
+  getRegisteredCoaches,
+  confirmAndVerifyCoach,
+  revokeCoachVerification,
+} from '../../../../src/modules/coaches/coachSaaSClient'
 
 export interface AdminGroundOversightViewProps {
-  initialDesk?: 'gate' | 'turf' | 'academy'
+  initialDesk?: 'gate' | 'turf' | 'academy' | 'coach'
 }
 
 export function AdminGroundOversightView({ initialDesk = 'gate' }: AdminGroundOversightViewProps) {
-  const [activeSubDesk, setActiveSubDesk] = useState<'gate' | 'turf' | 'academy'>(initialDesk)
+  const [activeSubDesk, setActiveSubDesk] = useState<'gate' | 'turf' | 'academy' | 'coach'>(initialDesk)
   const [gateFilter, setGateFilter] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -24,6 +29,7 @@ export function AdminGroundOversightView({ initialDesk = 'gate' }: AdminGroundOv
   const turfBookings = useMemo(() => getAllTurfBookings(), [])
   const academies = useMemo(() => getRegisteredAcademies(), [refreshTrigger])
   const academyPasses = useMemo(() => getAllAcademyTrialPasses(), [])
+  const coaches = useMemo(() => getRegisteredCoaches(), [refreshTrigger])
 
   // Filtered gate logs
   const filteredGateLogs = useMemo(() => {
@@ -70,6 +76,14 @@ export function AdminGroundOversightView({ initialDesk = 'gate' }: AdminGroundOv
           >
             <SiteIcon name="building" size={16} />
             <span>Academy SaaS &amp; Trial Passes ({academies.length})</span>
+          </button>
+          <button
+            type="button"
+            className={`admin-ground-tab-btn ${activeSubDesk === 'coach' ? 'is-active' : ''}`}
+            onClick={() => setActiveSubDesk('coach')}
+          >
+            <SiteIcon name="award" size={16} />
+            <span>Coach SaaS &amp; NIS Reviews ({coaches.length})</span>
           </button>
         </div>
 
@@ -319,6 +333,97 @@ export function AdminGroundOversightView({ initialDesk = 'gate' }: AdminGroundOv
                       className="admin-ground-btn outline full"
                     >
                       <span>Inspect Academy Public Listing</span>
+                      <SiteIcon name="external-link" size={13} />
+                    </a>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* SUB-DESK 4: COACH SAAS & CREDENTIALS OVERSIGHT */}
+      {activeSubDesk === 'coach' && (
+        <section className="admin-ground-section">
+          <header className="admin-ground-header">
+            <div>
+              <h3>Coaching Operations &amp; Verification Desk</h3>
+              <p>Review registered NIS Patiala, BCCI, and federation certified coaches across India. Grant verified credentials tags.</p>
+            </div>
+            <div className="admin-ground-filter-row">
+              <span className="admin-ground-count-badge">{coaches.length} Coaches</span>
+            </div>
+          </header>
+
+          <div className="admin-ground-academy-grid">
+            {coaches.map(c => {
+              const isVerified = c.verificationStatus === 'verified'
+
+              return (
+                <div key={c.slug} className="admin-ground-academy-card" style={{ borderLeft: isVerified ? '4px solid #059669' : '4px solid #f59e0b' }}>
+                  <div className="admin-ground-academy-card-top">
+                    <div>
+                      <span className="admin-ground-sport-tag">{c.sport}</span>
+                      <h4>{c.name}</h4>
+                      <p>{c.city}, {c.state} · {c.certification}</p>
+                    </div>
+                    {isVerified ? (
+                      <span className="admin-ground-status-badge verified" style={{ background: '#d1fae5', color: '#065f46', border: '1px solid #10b981', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '3px 8px', borderRadius: '999px', fontWeight: 700 }}>
+                        <SiteIcon name="shield-check" size={12} /> Verified Tag Active
+                      </span>
+                    ) : (
+                      <span className="admin-ground-status-badge pending" style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #f59e0b', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '3px 8px', borderRadius: '999px', fontWeight: 700 }}>
+                        <SiteIcon name="alert-triangle" size={12} /> Pending Confirmation
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="admin-ground-academy-metrics">
+                    <div className="admin-ground-metric-pill">
+                      <span>Experience:</span>
+                      <strong>{c.experienceYears} Years</strong>
+                    </div>
+                    <div className="admin-ground-metric-pill">
+                      <span>Monthly Fee:</span>
+                      <strong>₹{c.monthlyFee}</strong>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {!isVerified ? (
+                      <button
+                        type="button"
+                        className="admin-ground-btn primary full"
+                        style={{ background: '#059669', color: '#ffffff', border: 'none', cursor: 'pointer', padding: '8px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        onClick={() => {
+                          confirmAndVerifyCoach(c.slug)
+                          setRefreshTrigger(k => k + 1)
+                        }}
+                      >
+                        <SiteIcon name="shield-check" size={14} />
+                        <span>Confirm &amp; Grant Verified Tag</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="admin-ground-btn outline"
+                        style={{ color: '#dc2626', borderColor: '#fca5a5', cursor: 'pointer', padding: '5px 10px', borderRadius: '6px', fontSize: '0.78rem' }}
+                        onClick={() => {
+                          revokeCoachVerification(c.slug)
+                          setRefreshTrigger(k => k + 1)
+                        }}
+                      >
+                        <span>Revoke Verified Tag</span>
+                      </button>
+                    )}
+                    <a
+                      href={`/coach-dashboard?coach=${c.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="admin-ground-btn outline full"
+                    >
+                      <span>Inspect Coach Workspace Hub</span>
                       <SiteIcon name="external-link" size={13} />
                     </a>
                   </div>

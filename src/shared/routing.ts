@@ -35,7 +35,7 @@ const khelchronicleCategories = new Set([
 const featurePages: Record<string, string> = {
   '/play/lacrosse-sixes': 'Lacrosse Sixes Arcade Game',
   '/dashboard': 'My Dashboard', '/host': 'Host & Partner Dashboard', '/partner-dashboard': 'Host & Partner Dashboard', '/live': 'Live Scores', '/live-scores': 'Live Scores', '/play': 'Play · Find Games',
-  '/coaches': 'Coaches Directory', '/events': 'Events & Tournaments', '/tournaments': 'Events & Tournaments',
+  '/coaches': 'Coaches Directory', '/coach-dashboard': 'Coach Operations Hub', '/coach/hub': 'Coach Operations Hub', '/coach/manage': 'Coach Operations Hub', '/events': 'Events & Tournaments', '/tournaments': 'Events & Tournaments',
   '/stats': 'Athlete Statistics', '/sports-cv': 'Sports CV Wizard', '/talent-scanner': 'Talent Scanner',
   '/scout-portal': 'Scout Portal', '/verification': 'Athlete Verification',
   '/learning': 'Sports & Learning Hub', '/learning-hub': 'Sports & Learning Hub', '/guides': 'Sports Guides', '/ai-guide': 'AI Sports Guide',
@@ -126,6 +126,9 @@ export function resolveRoute(pathname: string): RouteMatch {
   }
   if (path === '/academy-hub' || path === '/academies/manage' || path === '/partner-signup' || path === '/academy/signup') {
     return { name: 'feature', canonicalPath: '/academy-hub', slug: 'Academy Admissions & Operations Hub' }
+  }
+  if (path === '/coach-dashboard' || path === '/coach/hub' || path === '/coach/manage') {
+    return { name: 'feature', canonicalPath: '/coach-dashboard', slug: 'Coach Operations Hub' }
   }
   if (path === '/turf-calendar' || path === '/venues/manage' || path === '/turf') {
     return { name: 'feature', canonicalPath: '/turf-calendar', slug: 'Turf & Facility Slot Booking Calendar' }

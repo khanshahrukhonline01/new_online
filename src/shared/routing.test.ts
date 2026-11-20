@@ -113,6 +113,19 @@ describe('platform route coverage', () => {
     expect(resolveRoute('/play/lacrosse-sixes/').name).toBe('feature')
   })
 
+  it('routes Coach Operations Hub correctly', () => {
+    expect(resolveRoute('/coach-dashboard')).toMatchObject({
+      name: 'feature',
+      canonicalPath: '/coach-dashboard',
+      slug: 'Coach Operations Hub',
+    })
+    expect(resolveRoute('/coach/hub')).toMatchObject({
+      name: 'feature',
+      canonicalPath: '/coach-dashboard',
+      slug: 'Coach Operations Hub',
+    })
+  })
+
   it('routes KhelChronicle repository pages correctly', () => {
     expect(resolveRoute('/khelchronicle').name).toBe('khelchronicle-index')
     expect(resolveRoute('/chronicle').name).toBe('khelchronicle-index')

@@ -10,6 +10,7 @@ import {
   type AuthUserProfile,
 } from '../../integrations/supabase/auth-client'
 import { registerCustomAcademy } from '../../modules/academies/academySaaSClient'
+import { registerCustomCoach } from '../../modules/coaches/coachSaaSClient'
 import './AuthModal.css'
 
 export type AuthModalTab = 'login' | 'signup' | 'partner' | 'forgot_password' | 'expired_link' | 'set_new_password'
@@ -125,10 +126,12 @@ export default function AuthModal({
   const [showPassword, setShowPassword] = useState(false)
 
   // Partner Form Fields
+  const [partnerCategory, setPartnerCategory] = useState<'academy' | 'coach' | 'host'>('academy')
   const [partnerAcademyName, setPartnerAcademyName] = useState('')
   const [partnerSport, setPartnerSport] = useState('Cricket')
   const [partnerCity, setPartnerCity] = useState('Delhi NCR')
   const [partnerDirectorName, setPartnerDirectorName] = useState('')
+  const [partnerCoachCert, setPartnerCoachCert] = useState('SAI / NIS Patiala Diploma')
   const [partnerWhatsApp, setPartnerWhatsApp] = useState('')
   const [partnerUpi, setPartnerUpi] = useState('')
 
@@ -190,6 +193,8 @@ export default function AuthModal({
             onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/academy-hub')
           } else if (res.user?.role === 'host' || res.user?.role === 'venue_owner') {
             onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/host')
+          } else if (res.user?.role === 'coach') {
+            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/coach-dashboard')
           }
         }, 600)
       } else if (res.requiresEmailVerification) {
@@ -258,6 +263,8 @@ export default function AuthModal({
               onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/academy-hub')
             } else if (role === 'host' || role === 'venue_owner') {
               onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/host')
+            } else if (role === 'coach') {
+              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/coach-dashboard')
             } else if (role === 'athlete' || role === 'parent') {
               onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/dashboard')
             }
@@ -280,12 +287,12 @@ export default function AuthModal({
     setSubmitting(true)
 
     try {
-      if (!partnerAcademyName.trim()) {
-        setErrorMsg('Please enter your Academy or Facility Name.')
+      if (!partnerDirectorName.trim()) {
+        setErrorMsg(partnerCategory === 'coach' ? 'Please enter Coach Name.' : 'Please enter the Director or Manager Name.')
         return
       }
-      if (!partnerDirectorName.trim()) {
-        setErrorMsg('Please enter the Director or Manager Name.')
+      if (partnerCategory !== 'coach' && !partnerAcademyName.trim()) {
+        setErrorMsg('Please enter your Academy or Facility Name.')
         return
       }
       if (!partnerWhatsApp.trim() || partnerWhatsApp.replace(/\D/g, '').length < 10) {
@@ -301,6 +308,42 @@ export default function AuthModal({
         return
       }
 
+      if (partnerCategory === 'coach') {
+        const coachName = partnerDirectorName.trim()
+        const registeredCoach = registerCustomCoach({
+          name: coachName,
+          sport: partnerSport || 'Cricket',
+          city: partnerCity || 'Delhi NCR',
+          phone: partnerWhatsApp.trim(),
+          email: email.trim(),
+          certification: partnerCoachCert || 'SAI NIS / Federation Certified Coach',
+          monthlyFee: 3500,
+          upiVpa: partnerUpi.trim(),
+        })
+
+        const res = await signUpWithEmail({
+          email,
+          password,
+          fullName: coachName,
+          role: 'coach',
+          city: partnerCity || 'Delhi NCR',
+          phone: partnerWhatsApp.trim(),
+        })
+
+        if (res.user) {
+          setSuccessMsg(`Welcome, ${coachName}! Coach profile registered successfully.`)
+          onSuccess?.(res.user)
+        } else {
+          setSuccessMsg(`Coach profile registered! Launching Coach Hub...`)
+        }
+
+        setTimeout(() => {
+          onClose()
+          onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, `/coach-dashboard?coach=${registeredCoach.slug}`)
+        }, 700)
+        return
+      }
+
       // 1. Register Academy in local SaaS storage with pending_review status
       const registered = registerCustomAcademy({
         name: partnerAcademyName.trim(),
@@ -311,26 +354,31 @@ export default function AuthModal({
         upiVpa: partnerUpi.trim() || `${partnerAcademyName.toLowerCase().replace(/[^a-z0-9]/g, '')}@upi`,
       })
 
-      // 2. Create User Account with role 'academy'
+      // 2. Create User Account with role 'academy' or 'host'
+      const assignedRole = partnerCategory === 'host' ? 'host' : 'academy'
       const res = await signUpWithEmail({
         email,
         password,
         fullName: partnerDirectorName.trim(),
-        role: 'academy',
+        role: assignedRole,
         city: partnerCity || 'Delhi NCR',
         phone: partnerWhatsApp.trim(),
       })
 
       if (res.user) {
-        setSuccessMsg(`Welcome, ${partnerDirectorName}! Academy "${registered.name}" registered successfully.`)
+        setSuccessMsg(`Welcome, ${partnerDirectorName}! ${partnerCategory === 'host' ? 'Facility' : 'Academy'} "${registered.name}" registered successfully.`)
         onSuccess?.(res.user)
       } else {
-        setSuccessMsg(`Academy "${registered.name}" registered! Launching workspace...`)
+        setSuccessMsg(`Partner workspace registered! Launching hub...`)
       }
 
       setTimeout(() => {
         onClose()
-        onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, `/academy-hub?academy=${registered.slug}`)
+        if (partnerCategory === 'host') {
+          onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/host')
+        } else {
+          onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, `/academy-hub?academy=${registered.slug}`)
+        }
       }, 700)
     } catch {
       setErrorMsg('Could not complete partner registration. Please try again.')
@@ -437,6 +485,8 @@ export default function AuthModal({
             onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/academy-hub')
           } else if (demo.role === 'host') {
             onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/host')
+          } else if (demo.role === 'coach') {
+            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/coach-dashboard')
           }
         }, 600)
       } else {
@@ -456,6 +506,8 @@ export default function AuthModal({
               onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/academy-hub')
             } else if (demo.role === 'host') {
               onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/host')
+            } else if (demo.role === 'coach') {
+              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/coach-dashboard')
             }
           }, 600)
         }
@@ -940,26 +992,75 @@ export default function AuthModal({
         {tab === 'partner' && !emailVerificationPending && (
           <form className="kg-auth-form" onSubmit={handlePartnerSubmit}>
             <h2 id="kg-auth-title" className="kg-auth-title">
-              Register Academy or Sports Facility
+              {partnerCategory === 'coach' ? 'Register Coach Operations Profile' : 'Register Academy or Sports Facility'}
             </h2>
             <p className="kg-auth-subtitle">
-              Free admissions CRM, turf slot scheduling, and UPI fee collections for sports academies &amp; venues.
+              {partnerCategory === 'coach'
+                ? 'Manage trainees, coaching batches, parent inquiries, and direct 0% commission UPI fee collections.'
+                : 'Free admissions CRM, turf slot scheduling, and UPI fee collections for sports academies & venues.'}
             </p>
 
+            {/* Partner Track Selector */}
             <div className="kg-auth-field">
-              <label htmlFor="partner-name-input">Academy / Facility Name</label>
-              <div className="kg-auth-input-wrap">
-                <SiteIcon name="building" size={16} className="kg-input-icon" />
-                <input
-                  id="partner-name-input"
-                  type="text"
-                  required
-                  placeholder="e.g. Apex Cricket Academy, Kickoff Turf"
-                  value={partnerAcademyName}
-                  onChange={e => setPartnerAcademyName(e.target.value)}
-                />
+              <span className="kg-auth-role-label">I AM REGISTERING AS:</span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
+                <button
+                  type="button"
+                  className={`kg-role-card ${partnerCategory === 'academy' ? 'is-selected' : ''}`}
+                  onClick={() => setPartnerCategory('academy')}
+                  style={{ padding: '8px 10px' }}
+                >
+                  <SiteIcon name="building" size={15} />
+                  <div className="kg-role-info">
+                    <strong>Sports Academy</strong>
+                    <span style={{ fontSize: '10.5px' }}>Admissions &amp; Batches</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`kg-role-card ${partnerCategory === 'coach' ? 'is-selected' : ''}`}
+                  onClick={() => setPartnerCategory('coach')}
+                  style={{ padding: '8px 10px' }}
+                >
+                  <SiteIcon name="award" size={15} />
+                  <div className="kg-role-info">
+                    <strong>Certified Coach</strong>
+                    <span style={{ fontSize: '10.5px' }}>Trainees &amp; Inquiries</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`kg-role-card ${partnerCategory === 'host' ? 'is-selected' : ''}`}
+                  onClick={() => setPartnerCategory('host')}
+                  style={{ padding: '8px 10px' }}
+                >
+                  <SiteIcon name="venues" size={15} />
+                  <div className="kg-role-info">
+                    <strong>Turf &amp; Venue</strong>
+                    <span style={{ fontSize: '10.5px' }}>Hourly Slots</span>
+                  </div>
+                </button>
               </div>
             </div>
+
+            {partnerCategory !== 'coach' && (
+              <div className="kg-auth-field">
+                <label htmlFor="partner-name-input">Academy / Facility Name</label>
+                <div className="kg-auth-input-wrap">
+                  <SiteIcon name="building" size={16} className="kg-input-icon" />
+                  <input
+                    id="partner-name-input"
+                    type="text"
+                    required
+                    placeholder="e.g. Apex Cricket Academy, Kickoff Turf"
+                    value={partnerAcademyName}
+                    onChange={e => setPartnerAcademyName(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="kg-auth-row">
               <div className="kg-auth-field">
@@ -1002,14 +1103,16 @@ export default function AuthModal({
 
             <div className="kg-auth-row">
               <div className="kg-auth-field">
-                <label htmlFor="partner-director-input">Director / Manager Name</label>
+                <label htmlFor="partner-director-input">
+                  {partnerCategory === 'coach' ? 'Coach Full Name' : 'Director / Manager Name'}
+                </label>
                 <div className="kg-auth-input-wrap">
                   <SiteIcon name="user-round" size={16} className="kg-input-icon" />
                   <input
                     id="partner-director-input"
                     type="text"
                     required
-                    placeholder="e.g. Coach Rajesh Kumar"
+                    placeholder={partnerCategory === 'coach' ? 'e.g. Coach Ramesh Powar' : 'e.g. Coach Rajesh Kumar'}
                     value={partnerDirectorName}
                     onChange={e => setPartnerDirectorName(e.target.value)}
                   />
@@ -1017,7 +1120,9 @@ export default function AuthModal({
               </div>
 
               <div className="kg-auth-field">
-                <label htmlFor="partner-phone-input">Director WhatsApp / Mobile</label>
+                <label htmlFor="partner-phone-input">
+                  {partnerCategory === 'coach' ? 'WhatsApp (Inquiries)' : 'Director WhatsApp / Mobile'}
+                </label>
                 <div className="kg-auth-input-wrap">
                   <SiteIcon name="phone" size={16} className="kg-input-icon" />
                   <input
@@ -1031,6 +1136,23 @@ export default function AuthModal({
                 </div>
               </div>
             </div>
+
+            {partnerCategory === 'coach' && (
+              <div className="kg-auth-field">
+                <label htmlFor="partner-cert-input">Certification / Accreditation</label>
+                <div className="kg-auth-input-wrap">
+                  <SiteIcon name="award" size={16} className="kg-input-icon" />
+                  <input
+                    id="partner-cert-input"
+                    type="text"
+                    required
+                    placeholder="e.g. BCCI Level 2 · SAI / NIS Patiala Diploma"
+                    value={partnerCoachCert}
+                    onChange={e => setPartnerCoachCert(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="kg-auth-row">
               <div className="kg-auth-field">
