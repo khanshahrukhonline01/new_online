@@ -99,6 +99,7 @@ export interface RegisteredAcademy {
   directorWhatsApp?: string
   upiVpa?: string
   isCustom?: boolean
+  verificationStatus?: 'unverified' | 'pending_review' | 'verified' | 'rejected'
 }
 
 export const INITIAL_REGISTERED_ACADEMIES: RegisteredAcademy[] = [
@@ -112,6 +113,7 @@ export const INITIAL_REGISTERED_ACADEMIES: RegisteredAcademy[] = [
     directorName: 'Director John K.',
     directorWhatsApp: '9845012345',
     upiVpa: 'bengalurufc@okhdfcbank',
+    verificationStatus: 'verified',
   },
   {
     id: 'pullela-gopichand-badminton-academy',
@@ -123,6 +125,7 @@ export const INITIAL_REGISTERED_ACADEMIES: RegisteredAcademy[] = [
     directorName: 'Coach Pullela G.',
     directorWhatsApp: '9849012345',
     upiVpa: 'gopichandacademy@icici',
+    verificationStatus: 'verified',
   },
   {
     id: 'tata-football-academy',
@@ -134,6 +137,7 @@ export const INITIAL_REGISTERED_ACADEMIES: RegisteredAcademy[] = [
     directorName: 'Director Mukul C.',
     directorWhatsApp: '9835012345',
     upiVpa: 'tatafootball@sbi',
+    verificationStatus: 'verified',
   },
   {
     id: 'kanpur-cricket-association-academy',
@@ -145,6 +149,7 @@ export const INITIAL_REGISTERED_ACADEMIES: RegisteredAcademy[] = [
     directorName: 'Coach R. K. Singh',
     directorWhatsApp: '9415012345',
     upiVpa: 'greenparkcricket@paytm',
+    verificationStatus: 'verified',
   },
 ]
 
@@ -762,6 +767,7 @@ export function registerCustomAcademy(params: {
     directorWhatsApp: params.directorWhatsApp.replace(/\D/g, ''),
     upiVpa: params.upiVpa.trim(),
     isCustom: true,
+    verificationStatus: 'pending_review',
   }
 
   const updated = [newAcademy, ...existing]
@@ -780,6 +786,44 @@ export function registerCustomAcademy(params: {
 
   markOnboardingCompleted()
   return newAcademy
+}
+
+export function confirmAndVerifyAcademy(slug: string): boolean {
+  const academies = getRegisteredAcademies()
+  let found = false
+  const updated = academies.map(a => {
+    if (a.slug === slug) {
+      found = true
+      return { ...a, verificationStatus: 'verified' as const }
+    }
+    return a
+  })
+  if (found) {
+    saveToStorage(STORAGE_KEYS.REGISTERED_ACADEMIES, updated)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('khelgrid:academy-verified', { detail: { slug } }))
+    }
+  }
+  return found
+}
+
+export function revokeAcademyVerification(slug: string): boolean {
+  const academies = getRegisteredAcademies()
+  let found = false
+  const updated = academies.map(a => {
+    if (a.slug === slug) {
+      found = true
+      return { ...a, verificationStatus: 'pending_review' as const }
+    }
+    return a
+  })
+  if (found) {
+    saveToStorage(STORAGE_KEYS.REGISTERED_ACADEMIES, updated)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('khelgrid:academy-verification-revoked', { detail: { slug } }))
+    }
+  }
+  return found
 }
 
 export function hasCompletedOnboarding(): boolean {

@@ -482,6 +482,44 @@ export async function getAcademyBySlug(slug: string): Promise<Academy | undefine
   const communityFound = getCommunityAcademyBySlug(clean)
   if (communityFound) return communityFound
 
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('khelgrid_academy_saas_registered_academies')
+      if (stored) {
+        const academies = JSON.parse(stored) as Array<{
+          id: string
+          slug: string
+          name: string
+          city: string
+          state?: string
+          sport: string
+          directorName?: string
+          directorWhatsApp?: string
+          verificationStatus?: string
+        }>
+        const match = academies.find(a => a.slug.toLowerCase() === clean)
+        if (match) {
+          return {
+            id: match.id,
+            slug: match.slug,
+            name: match.name,
+            description: `${match.name} is a grassroots sports academy operating in ${match.city}.`,
+            city: match.city,
+            state: match.state || 'India',
+            sport: match.sport,
+            head_coach: match.directorName,
+            phone: match.directorWhatsApp,
+            admission_open: true,
+            verification_status: match.verificationStatus === 'verified' ? 'verified' : 'unverified',
+            is_featured: false,
+          } as unknown as Academy
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   const client = getSupabaseClient()
   if (client) {
     try {

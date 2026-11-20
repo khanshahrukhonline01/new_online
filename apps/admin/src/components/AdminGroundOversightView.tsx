@@ -2,7 +2,12 @@ import { useState, useMemo } from 'react'
 import { SiteIcon } from '../../../../src/shared/components/SiteIcon'
 import { getGateAdmissionLogs } from '../../../../src/modules/verification/passVerifierService'
 import { getAllTurfBookings } from '../../../../src/modules/venues/turfSlotManager'
-import { getRegisteredAcademies, getAllAcademyTrialPasses } from '../../../../src/modules/academies/academySaaSClient'
+import {
+  getRegisteredAcademies,
+  getAllAcademyTrialPasses,
+  confirmAndVerifyAcademy,
+  revokeAcademyVerification,
+} from '../../../../src/modules/academies/academySaaSClient'
 
 export interface AdminGroundOversightViewProps {
   initialDesk?: 'gate' | 'turf' | 'academy'
@@ -12,11 +17,12 @@ export function AdminGroundOversightView({ initialDesk = 'gate' }: AdminGroundOv
   const [activeSubDesk, setActiveSubDesk] = useState<'gate' | 'turf' | 'academy'>(initialDesk)
   const [gateFilter, setGateFilter] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   // Load real-time data from platform stores
   const gateLogs = useMemo(() => getGateAdmissionLogs(), [])
   const turfBookings = useMemo(() => getAllTurfBookings(), [])
-  const academies = useMemo(() => getRegisteredAcademies(), [])
+  const academies = useMemo(() => getRegisteredAcademies(), [refreshTrigger])
   const academyPasses = useMemo(() => getAllAcademyTrialPasses(), [])
 
   // Filtered gate logs
@@ -249,6 +255,7 @@ export function AdminGroundOversightView({ initialDesk = 'gate' }: AdminGroundOv
           <div className="admin-ground-cards-grid">
             {academies.map(a => {
               const passesForAcademy = academyPasses.filter(p => p.academySlug === a.slug)
+              const isVerified = a.verificationStatus === 'verified'
               return (
                 <div key={a.slug} className="admin-ground-academy-card">
                   <div className="admin-ground-academy-header">
@@ -256,7 +263,15 @@ export function AdminGroundOversightView({ initialDesk = 'gate' }: AdminGroundOv
                       <h4>{a.name}</h4>
                       <span className="admin-ground-academy-city">{a.city} · {a.sport}</span>
                     </div>
-                    <span className="admin-ground-status-badge">SaaS Active</span>
+                    {isVerified ? (
+                      <span className="admin-ground-status-badge verified" style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #10b981', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '3px 8px', borderRadius: '999px', fontWeight: 700 }}>
+                        <SiteIcon name="shield-check" size={12} /> Verified Tag Active
+                      </span>
+                    ) : (
+                      <span className="admin-ground-status-badge pending" style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #f59e0b', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '3px 8px', borderRadius: '999px', fontWeight: 700 }}>
+                        <SiteIcon name="alert-triangle" size={12} /> Pending Confirmation
+                      </span>
+                    )}
                   </div>
 
                   <div className="admin-ground-academy-metrics">
@@ -270,7 +285,33 @@ export function AdminGroundOversightView({ initialDesk = 'gate' }: AdminGroundOv
                     </div>
                   </div>
 
-                  <div style={{ marginTop: '0.85rem' }}>
+                  <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {!isVerified ? (
+                      <button
+                        type="button"
+                        className="admin-ground-btn primary full"
+                        style={{ background: '#059669', color: '#ffffff', border: 'none', cursor: 'pointer', padding: '8px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        onClick={() => {
+                          confirmAndVerifyAcademy(a.slug)
+                          setRefreshTrigger(k => k + 1)
+                        }}
+                      >
+                        <SiteIcon name="shield-check" size={14} />
+                        <span>Confirm &amp; Grant Verified Tag</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="admin-ground-btn outline"
+                        style={{ color: '#dc2626', borderColor: '#fca5a5', cursor: 'pointer', padding: '5px 10px', borderRadius: '6px', fontSize: '0.78rem' }}
+                        onClick={() => {
+                          revokeAcademyVerification(a.slug)
+                          setRefreshTrigger(k => k + 1)
+                        }}
+                      >
+                        <span>Revoke Verified Tag</span>
+                      </button>
+                    )}
                     <a
                       href={`/academies/${a.slug}`}
                       target="_blank"

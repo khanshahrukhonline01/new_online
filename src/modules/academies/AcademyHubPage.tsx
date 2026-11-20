@@ -22,6 +22,8 @@ import {
   generateUpiPayLink,
   getRegisteredAcademies,
   registerCustomAcademy,
+  confirmAndVerifyAcademy,
+  revokeAcademyVerification,
   hasCompletedOnboarding,
   type AcademyLead,
   type AcademyBatch,
@@ -55,15 +57,26 @@ export default function AcademyHubPage({
   const registeredAcademies = getRegisteredAcademies()
 
   // Selected Academy details
-  const currentAcademy = registeredAcademies.find(a => a.slug === selectedSlug) ||
-    CURATED_ACADEMIES.find(a => a.slug === selectedSlug) || {
+  const fallbackCurated = CURATED_ACADEMIES.find(a => a.slug === selectedSlug)
+  const currentAcademy: RegisteredAcademy = registeredAcademies.find(a => a.slug === selectedSlug) || (fallbackCurated ? {
+    id: fallbackCurated.slug,
+    slug: fallbackCurated.slug,
+    name: fallbackCurated.name,
+    city: fallbackCurated.city,
+    state: fallbackCurated.state || '',
+    sport: fallbackCurated.sport,
+    verificationStatus: 'verified',
+    isCustom: false,
+  } : {
     id: 'custom-academy',
     slug: selectedSlug,
     name: 'National Sports Academy',
     city: 'Bengaluru',
     state: 'Karnataka',
     sport: 'Football',
-  }
+    verificationStatus: 'pending_review',
+    isCustom: true,
+  })
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'leads' | 'batches' | 'fees' | 'trial_passes' | 'settings'>('leads')
@@ -509,7 +522,20 @@ export default function AcademyHubPage({
       {/* Top Header & Academy Switcher */}
       <div className="academy-hub-header-row">
         <div className="academy-hub-title">
-          <p className="eyebrow" style={{ color: '#059669', fontWeight: 800 }}>KHELGRID · B2B ACADEMY HUB</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+            <p className="eyebrow" style={{ color: '#059669', fontWeight: 800, margin: 0 }}>
+              KHELGRID · B2B ACADEMY HUB
+            </p>
+            {currentAcademy.verificationStatus === 'verified' ? (
+              <span className="academy-verified-pill verified">
+                <SiteIcon name="shield-check" size={13} /> KhelGrid Verified Academy
+              </span>
+            ) : (
+              <span className="academy-verified-pill pending">
+                <SiteIcon name="alert-triangle" size={13} /> Pending Admin Verification
+              </span>
+            )}
+          </div>
           <h1>{currentAcademy.name}</h1>
           <p style={{ color: '#64748b', margin: 0 }}>
             {currentAcademy.city}{currentAcademy.state ? `, ${currentAcademy.state}` : ''} · {currentAcademy.sport || 'Multi-Sport'} Academy Operations
@@ -547,6 +573,60 @@ export default function AcademyHubPage({
           </div>
         </div>
       </div>
+
+      {/* Verification Status Alert Banner */}
+      {currentAcademy.verificationStatus !== 'verified' ? (
+        <div className="academy-verification-status-banner pending">
+          <div className="academy-verification-status-text">
+            <SiteIcon name="alert-triangle" size={20} className="status-banner-icon pending" />
+            <div>
+              <strong>Verification Tag Pending · Admin Confirmation Required</strong>
+              <p>
+                Your academy is registered and your internal batch management, students CRM, and UPI fees are fully operational.
+                The official public <strong>&quot;KhelGrid Verified&quot;</strong> badge will appear on your public listing once verified by the KhelGrid Editorial Moderation Desk.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="academy-hub-verify-now-btn"
+            onClick={() => {
+              confirmAndVerifyAcademy(currentAcademy.slug)
+              triggerRefresh()
+            }}
+            title="Moderator / Admin Action: Confirm credentials and grant verified badge"
+          >
+            <SiteIcon name="shield-check" size={14} />
+            <span>Confirm &amp; Grant Verified Tag (Admin)</span>
+          </button>
+        </div>
+      ) : (
+        <div className="academy-verification-status-banner verified">
+          <div className="academy-verification-status-text">
+            <SiteIcon name="shield-check" size={20} className="status-banner-icon verified" />
+            <div>
+              <strong style={{ color: '#065f46' }}>Official KhelGrid Verified Partner</strong>
+              <p style={{ color: '#047857', margin: 0, fontSize: '0.84rem' }}>
+                Credentials and facility verified by KhelGrid Admin Desk. Your public listing displays the official verified badge across search and player trial discovery.
+              </p>
+            </div>
+          </div>
+          {currentAcademy.isCustom && (
+            <button
+              type="button"
+              className="academy-hub-btn-outline"
+              style={{ fontSize: '0.75rem', padding: '4px 8px' }}
+              onClick={() => {
+                revokeAcademyVerification(currentAcademy.slug)
+                triggerRefresh()
+              }}
+              title="Admin Action: Revert to pending review"
+            >
+              Revoke Tag (Admin)
+            </button>
+          )}
+        </div>
+      )}
 
       {/* KPI Metrics Strip */}
       <div className="academy-hub-kpi-grid">

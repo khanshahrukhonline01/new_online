@@ -19,6 +19,8 @@ import {
   generateUpiPayLink,
   getRegisteredAcademies,
   registerCustomAcademy,
+  confirmAndVerifyAcademy,
+  revokeAcademyVerification,
   hasCompletedOnboarding,
 } from './academySaaSClient'
 
@@ -216,9 +218,20 @@ describe('academySaaSClient Unit Suite', () => {
 
     expect(registered.slug).toBe('shivaji-cricket-academy')
     expect(registered.isCustom).toBe(true)
+    expect(registered.verificationStatus).toBe('pending_review')
     expect(hasCompletedOnboarding()).toBe(true)
 
     const all = getRegisteredAcademies()
     expect(all.some(a => a.slug === 'shivaji-cricket-academy')).toBe(true)
+
+    // Admin confirmation action grants official Verified Tag
+    expect(confirmAndVerifyAcademy('shivaji-cricket-academy')).toBe(true)
+    const verifiedAcad = getRegisteredAcademies().find(a => a.slug === 'shivaji-cricket-academy')
+    expect(verifiedAcad?.verificationStatus).toBe('verified')
+
+    // Admin revocation reverts status
+    expect(revokeAcademyVerification('shivaji-cricket-academy')).toBe(true)
+    const revokedAcad = getRegisteredAcademies().find(a => a.slug === 'shivaji-cricket-academy')
+    expect(revokedAcad?.verificationStatus).toBe('pending_review')
   })
 })
