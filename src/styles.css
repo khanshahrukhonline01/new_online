@@ -613,6 +613,12 @@ html.dark .foundation-v1 .site-header .header-play-pill.is-active {
   }
 }
 
+@media (max-width: 440px) {
+  .foundation-v1 .site-header .header-saas-pill {
+    display: none;
+  }
+}
+
 .foundation-v1 .site-header .header-actions{
   order: 3;
   margin-left: auto;

@@ -12,7 +12,7 @@ describe('shared navigation registry', () => {
 
   it('groups features by the journeys users expect to complete', () => {
     expect(navigationModules.map(section => section.id)).toEqual([
-      'your-space', 'discover', 'play-train', 'athlete-tools', 'learn-community', 'network',
+      'your-space', 'discover', 'play-train', 'athlete-tools', 'partner-saas', 'learn-community', 'network',
     ])
     expect(navigationModules.find(section => section.id === 'discover')?.items.map(item => item.href))
       .toEqual(['/sports', '/opportunities', '/venues', '/search', '/for-you'])
@@ -20,6 +20,8 @@ describe('shared navigation registry', () => {
       .toContain('/live')
     expect(navigationModules.find(section => section.id === 'athlete-tools')?.items.map(item => item.href))
       .toContain('/sports-cv')
+    expect(navigationModules.find(section => section.id === 'partner-saas')?.items.map(item => item.href))
+      .toEqual(['/academy-hub', '/coach-dashboard', '/host', '/gate-checkin'])
   })
 
   it('keeps header destinations separate from the full sidebar registry', () => {

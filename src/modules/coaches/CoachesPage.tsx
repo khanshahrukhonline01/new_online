@@ -210,15 +210,26 @@ export function CoachesPage({ onNavigate }: CoachesPageProps) {
         </p>
       </header>
 
-      <DirectoryCallout
-        variant="coach"
-        tag="Free coach listing"
-        title="Are you a sports coach? Get listed at no charge."
-        description="Submit your professional profile and qualification evidence. KhelGrid reviews credentials before publishing a verified claim."
-        buttonLabel="Submit coach listing"
-        buttonHref="/submit-listing?type=coach"
-        onNavigate={onNavigate}
-      />
+      <div className="coaches-callouts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        <DirectoryCallout
+          variant="coach"
+          tag="Free coach listing"
+          title="Are you a sports coach? Get listed at no charge."
+          description="Submit your professional profile and qualification evidence. KhelGrid reviews credentials before publishing a verified claim."
+          buttonLabel="Submit coach listing"
+          buttonHref="/submit-listing?type=coach"
+          onNavigate={onNavigate}
+        />
+        <DirectoryCallout
+          variant="coach"
+          tag="Coach Operations Suite"
+          title="Manage batches, roll-call attendance &amp; 0% UPI fees."
+          description="Access student rosters, WhatsApp attendance parent notices, and issue official verified fee receipts."
+          buttonLabel="Open Coach Hub"
+          buttonHref="/coach-dashboard"
+          onNavigate={onNavigate}
+        />
+      </div>
 
       {/* Sport Category Filter Tabs */}
       <div className="coaches-sport-pills" role="tablist" aria-label="Filter by sport">

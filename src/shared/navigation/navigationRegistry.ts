@@ -54,10 +54,8 @@ export const navigationModules: NavigationModule[] = [
       { id: 'find-games', label: 'Play · Find games', href: '/play', icon: 'sports', module: 'play-train', available: true },
       { id: 'lacrosse-sixes', label: 'Lacrosse Sixes Game', href: '/play/lacrosse-sixes', icon: 'trophy', module: 'play-train', available: true },
       { id: 'turf-calendar', label: 'Turf Hourly Slots', href: '/turf-calendar', icon: 'calendar-check', module: 'play-train', available: true },
-      { id: 'gate-checkin', label: 'Gate Check-In Desk', href: '/gate-checkin', icon: 'shield-check', module: 'play-train', available: true },
       { id: 'coaches', label: 'Coaches Directory', href: '/coaches', icon: 'users', module: 'play-train', available: true },
       { id: 'academies', label: 'Sports Academies', href: '/academies', icon: 'building', module: 'play-train', available: true },
-      { id: 'academy-hub', label: 'Academy SaaS Hub', href: '/academy-hub', icon: 'building', module: 'play-train', available: true },
       { id: 'events', label: 'Events & Tournaments', href: '/events', icon: 'calendar', module: 'play-train', available: true },
       { id: 'calendar', label: 'Sports Calendar', href: '/calendar', icon: 'calendar-check', module: 'play-train', available: true },
       { id: 'live-scores', label: 'Live Scores', href: '/live', icon: 'activity', module: 'play-train', available: true },
@@ -73,6 +71,17 @@ export const navigationModules: NavigationModule[] = [
       { id: 'talent-scanner', label: 'Talent Scanner', href: '/talent-scanner', icon: 'target', module: 'athlete-tools', available: true },
       { id: 'scout-portal', label: 'Scout Portal', href: '/scout-portal', icon: 'users', module: 'athlete-tools', available: true },
       { id: 'verification', label: 'Athlete Verification', href: '/verification', icon: 'badge-check', module: 'athlete-tools', available: true },
+    ],
+  },
+  {
+    id: 'partner-saas',
+    label: 'Partner & Coaching Suite',
+    icon: 'handshake',
+    items: [
+      { id: 'academy-hub', label: 'Academy Admissions Hub', href: '/academy-hub', icon: 'building', module: 'partner-saas', available: true },
+      { id: 'coach-dashboard', label: 'Coach Operations Hub', href: '/coach-dashboard', icon: 'award', module: 'partner-saas', available: true },
+      { id: 'host-dashboard', label: 'Turf & Host Dashboard', href: '/host', icon: 'calendar-check', module: 'partner-saas', available: true },
+      { id: 'gate-checkin', label: 'Gate QR Check-In Desk', href: '/gate-checkin', icon: 'shield-check', module: 'partner-saas', available: true },
     ],
   },
   {

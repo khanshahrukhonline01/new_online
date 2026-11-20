@@ -386,6 +386,40 @@ export default function App() {
         <SiteIcon name="users" size={15} />
         <span>{t('play', 'Play')}</span>
       </a>
+      {authUser?.role === 'coach' ? (
+        <a
+          href="/coach-dashboard"
+          className={`header-play-pill header-saas-pill ${path === '/coach-dashboard' ? 'is-active' : ''}`}
+          aria-current={path === '/coach-dashboard' ? 'page' : undefined}
+          onClick={event => navigate(event, '/coach-dashboard')}
+          title="Coach Operations Hub — batches, attendance & fees"
+        >
+          <SiteIcon name="award" size={15} />
+          <span>Coach Hub</span>
+        </a>
+      ) : (authUser?.role === 'academy' || authUser?.role === 'host' || authUser?.role === 'venue_owner') ? (
+        <a
+          href="/academy-hub"
+          className={`header-play-pill header-saas-pill ${path === '/academy-hub' ? 'is-active' : ''}`}
+          aria-current={path === '/academy-hub' ? 'page' : undefined}
+          onClick={event => navigate(event, '/academy-hub')}
+          title="Academy Admissions Hub — squads, attendance & passes"
+        >
+          <SiteIcon name="building" size={15} />
+          <span>Academy Hub</span>
+        </a>
+      ) : (
+        <a
+          href="/academy-hub"
+          className={`header-play-pill header-saas-pill ${path === '/academy-hub' || path === '/coach-dashboard' ? 'is-active' : ''}`}
+          aria-current={path === '/academy-hub' || path === '/coach-dashboard' ? 'page' : undefined}
+          onClick={event => navigate(event, '/academy-hub')}
+          title="Academy Admissions & Coach Operations Hub"
+        >
+          <SiteIcon name="building" size={15} />
+          <span>Academy Hub</span>
+        </a>
+      )}
       <nav className="header-actions" aria-label="KhelGrid actions">
         <a
           className="header-action-link header-action-add"
@@ -525,19 +559,47 @@ export default function App() {
                   <span>Admin Operations Desk (admin.khelgrid.com)</span>
                 </a>
               )}
-              {(authUser.role === 'host' || authUser.role === 'admin') && (
+              {authUser.role === 'coach' && (
                 <a
-                  href="/host"
+                  href="/coach-dashboard"
                   className="header-user-dropdown-item"
                   role="menuitem"
                   onClick={e => {
                     setUserMenuOpen(false)
-                    navigate(e, '/host')
+                    navigate(e, '/coach-dashboard')
                   }}
                 >
-                  <SiteIcon name="building" size={15} />
-                  <span>Host &amp; Partner Dashboard</span>
+                  <SiteIcon name="award" size={15} />
+                  <span>Coach Operations Hub</span>
                 </a>
+              )}
+              {(authUser.role === 'academy' || authUser.role === 'host' || authUser.role === 'venue_owner' || authUser.role === 'admin') && (
+                <>
+                  <a
+                    href="/academy-hub"
+                    className="header-user-dropdown-item"
+                    role="menuitem"
+                    onClick={e => {
+                      setUserMenuOpen(false)
+                      navigate(e, '/academy-hub')
+                    }}
+                  >
+                    <SiteIcon name="building" size={15} />
+                    <span>Academy Admissions Hub</span>
+                  </a>
+                  <a
+                    href="/host"
+                    className="header-user-dropdown-item"
+                    role="menuitem"
+                    onClick={e => {
+                      setUserMenuOpen(false)
+                      navigate(e, '/host')
+                    }}
+                  >
+                    <SiteIcon name="calendar-check" size={15} />
+                    <span>Host &amp; Partner Dashboard</span>
+                  </a>
+                </>
               )}
               <a
                 href="/settings"
@@ -650,6 +712,7 @@ export default function App() {
           <a href="/coaches" onClick={event => navigate(event, '/coaches')}>Coaches</a>
           <a href="/academies" onClick={event => navigate(event, '/academies')}>Academies</a>
           <a href="/academy-hub" onClick={event => navigate(event, '/academy-hub')}>Academy Hub <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
+          <a href="/coach-dashboard" onClick={event => navigate(event, '/coach-dashboard')}>Coach Hub <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
           <span className="footer-coming-soon">Sports CV Wizard <small>Coming soon</small></span>
         </nav>
         <nav className="footer-column" aria-label="Learn and discover">

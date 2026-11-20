@@ -128,15 +128,26 @@ export default function AcademiesPage({ onOpenIntake, onNavigate }: AcademiesPag
         Explore certified sports academies, Khelo India accredited centers, SAI NCOE hubs, cricket academies, and wrestling akhadas across India.
       </p>
 
-      <DirectoryCallout
-        variant="venue"
-        tag="Verified Center"
-        title="Operate a sports academy or coaching club? List with 0% Fee"
-        description="Showcase your training curriculum, age-group batches, and ground facilities to athletes across India."
-        buttonLabel="+ Register Academy"
-        buttonHref={onOpenIntake ? '#' : 'mailto:khelgrid@gmail.com?subject=Register%20a%20sports%20academy%20on%20KhelGrid'}
-        onButtonClick={onOpenIntake}
-      />
+      <div className="academies-callouts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        <DirectoryCallout
+          variant="venue"
+          tag="Verified Center"
+          title="Operate a sports academy or coaching club? List with 0% Fee"
+          description="Showcase your training curriculum, age-group batches, and ground facilities to athletes across India."
+          buttonLabel="+ Register Academy"
+          buttonHref={onOpenIntake ? '#' : 'mailto:khelgrid@gmail.com?subject=Register%20a%20sports%20academy%20on%20KhelGrid'}
+          onButtonClick={onOpenIntake}
+        />
+        <DirectoryCallout
+          variant="venue"
+          tag="Academy Admissions SaaS"
+          title="Manage squads, trial passes &amp; daily attendance."
+          description="Roster student trainees, bulk import spreadsheets, take daily WhatsApp roll-call, and issue verified 0% platform fee receipts."
+          buttonLabel="Open Academy Hub"
+          buttonHref="/academy-hub"
+          onNavigate={onNavigate}
+        />
+      </div>
 
       <div className="kg-catalogue-layout">
         <CatalogueFilterPanel
