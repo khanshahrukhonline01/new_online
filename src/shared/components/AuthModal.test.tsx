@@ -27,7 +27,12 @@ describe('AuthModal Component', () => {
     // Tab switcher
     expect(html).toContain('Sign In')
     expect(html).toContain('Create Account')
+    expect(html).toContain('Partner Signup')
     expect(html).toContain('Recovery')
+
+    // Merged Partner login callout
+    expect(html).toContain('Operating a Sports Academy or Turf?')
+    expect(html).toContain('30s Partner Signup')
 
     // Login form fields
     expect(html).toContain('Sign in to your KhelGrid profile')
@@ -117,5 +122,26 @@ describe('AuthModal Component', () => {
     expect(html).toContain('Confirm New Password')
     expect(html).toContain('Save New Password &amp; Sign In')
     expect(html).toContain('Back to Sign In')
+  })
+
+  it('7. renders express partner onboarding form when opened in partner mode', () => {
+    const html = renderToStaticMarkup(
+      <AuthModal isOpen={true} initialTab="partner" onClose={vi.fn()} />
+    )
+
+    expect(html).toContain('Register Academy or Sports Facility')
+    expect(html).toContain('Free admissions CRM, turf slot scheduling, and UPI fee collections')
+    expect(html).toContain('Academy / Facility Name')
+    expect(html).toContain('Primary Sport')
+    expect(html).toContain('Operating City')
+    expect(html).toContain('Director / Manager Name')
+    expect(html).toContain('Director WhatsApp / Mobile')
+    expect(html).toContain('Account Email')
+    expect(html).toContain('Password (min 6 characters)')
+    expect(html).toContain('UPI ID for Direct Fee Collection (Optional)')
+    expect(html).toContain('Register Academy &amp; Launch Hub (30s)')
+    expect(html).toContain('Express Launch &amp; Verification Protocol')
+    expect(html).toContain('Already registered your academy or turf?')
+    expect(html).toContain('Sign In here')
   })
 })

@@ -9,9 +9,10 @@ import {
   type UserRole,
   type AuthUserProfile,
 } from '../../integrations/supabase/auth-client'
+import { registerCustomAcademy } from '../../modules/academies/academySaaSClient'
 import './AuthModal.css'
 
-export type AuthModalTab = 'login' | 'signup' | 'forgot_password' | 'expired_link' | 'set_new_password'
+export type AuthModalTab = 'login' | 'signup' | 'partner' | 'forgot_password' | 'expired_link' | 'set_new_password'
 
 export interface AuthModalProps {
   isOpen: boolean
@@ -122,6 +123,14 @@ export default function AuthModal({
   const [city, setCity] = useState('Delhi NCR')
   const [phone, setPhone] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+
+  // Partner Form Fields
+  const [partnerAcademyName, setPartnerAcademyName] = useState('')
+  const [partnerSport, setPartnerSport] = useState('Cricket')
+  const [partnerCity, setPartnerCity] = useState('Delhi NCR')
+  const [partnerDirectorName, setPartnerDirectorName] = useState('')
+  const [partnerWhatsApp, setPartnerWhatsApp] = useState('')
+  const [partnerUpi, setPartnerUpi] = useState('')
 
   // Status & Feedback
   const [submitting, setSubmitting] = useState(false)
@@ -259,6 +268,72 @@ export default function AuthModal({
       }
     } catch {
       setErrorMsg('Could not register account. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handlePartnerSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setErrorMsg('')
+    setSuccessMsg('')
+    setSubmitting(true)
+
+    try {
+      if (!partnerAcademyName.trim()) {
+        setErrorMsg('Please enter your Academy or Facility Name.')
+        return
+      }
+      if (!partnerDirectorName.trim()) {
+        setErrorMsg('Please enter the Director or Manager Name.')
+        return
+      }
+      if (!partnerWhatsApp.trim() || partnerWhatsApp.replace(/\D/g, '').length < 10) {
+        setErrorMsg('Please provide a valid 10-digit WhatsApp/mobile number.')
+        return
+      }
+      if (!email.trim() || !email.includes('@')) {
+        setErrorMsg('Please provide a valid account email address.')
+        return
+      }
+      if (password.length < 6) {
+        setErrorMsg('Password must be at least 6 characters long.')
+        return
+      }
+
+      // 1. Register Academy in local SaaS storage with pending_review status
+      const registered = registerCustomAcademy({
+        name: partnerAcademyName.trim(),
+        sport: partnerSport || 'Multi-Sport',
+        city: partnerCity || 'Delhi NCR',
+        directorName: partnerDirectorName.trim(),
+        directorWhatsApp: partnerWhatsApp.trim(),
+        upiVpa: partnerUpi.trim() || `${partnerAcademyName.toLowerCase().replace(/[^a-z0-9]/g, '')}@upi`,
+      })
+
+      // 2. Create User Account with role 'academy'
+      const res = await signUpWithEmail({
+        email,
+        password,
+        fullName: partnerDirectorName.trim(),
+        role: 'academy',
+        city: partnerCity || 'Delhi NCR',
+        phone: partnerWhatsApp.trim(),
+      })
+
+      if (res.user) {
+        setSuccessMsg(`Welcome, ${partnerDirectorName}! Academy "${registered.name}" registered successfully.`)
+        onSuccess?.(res.user)
+      } else {
+        setSuccessMsg(`Academy "${registered.name}" registered! Launching workspace...`)
+      }
+
+      setTimeout(() => {
+        onClose()
+        onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, `/academy-hub?academy=${registered.slug}`)
+      }, 700)
+    } catch {
+      setErrorMsg('Could not complete partner registration. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -425,7 +500,7 @@ export default function AuthModal({
         </div>
 
         {/* Tab Switcher */}
-        <div className={`kg-auth-tabs ${tab === 'expired_link' ? 'has-four-tabs' : ''}`} role="tablist" aria-label="Sign in or register">
+        <div className={`kg-auth-tabs ${tab === 'expired_link' ? 'has-five-tabs' : 'has-four-tabs'}`} role="tablist" aria-label="Sign in or register">
           <button
             type="button"
             role="tab"
@@ -453,6 +528,20 @@ export default function AuthModal({
           >
             <SiteIcon name="plus" size={14} />
             <span>Create Account</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'partner'}
+            className={`kg-auth-tab kg-auth-tab-partner ${tab === 'partner' ? 'is-active' : ''}`}
+            onClick={() => {
+              setTab('partner')
+              setErrorMsg('')
+              setSuccessMsg('')
+            }}
+          >
+            <SiteIcon name="sparkles" size={14} />
+            <span>Partner Signup</span>
           </button>
           <button
             type="button"
@@ -517,8 +606,27 @@ export default function AuthModal({
               Sign in to your KhelGrid profile
             </h2>
             <p className="kg-auth-subtitle">
-              Access your saved trials, sports turf bookings, athlete CV, and hosted games.
+              Access your saved trials, sports turf bookings, athlete CV, and academy management workspace.
             </p>
+
+            {/* Merged Partner Portal Callout */}
+            <div className="kg-auth-partner-login-callout">
+              <div className="kg-auth-partner-login-text">
+                <SiteIcon name="building" size={15} />
+                <span>Operating a Sports Academy or Turf?</span>
+              </div>
+              <button
+                type="button"
+                className="kg-auth-partner-login-btn"
+                onClick={() => {
+                  setTab('partner')
+                  setErrorMsg('')
+                  setSuccessMsg('')
+                }}
+              >
+                ⚡ 30s Partner Signup →
+              </button>
+            </div>
 
             <div className="kg-auth-field">
               <label htmlFor={emailInputId}>Email Address</label>
@@ -808,21 +916,209 @@ export default function AuthModal({
                 <span>Operating a Sports Academy or Turf?</span>
               </div>
               <p>Launch your Admissions CRM &amp; Turf Slot Manager in under 30 seconds.</p>
-              <a
-                href="/partner-signup"
+              <button
+                type="button"
                 className="kg-auth-partner-btn"
-                onClick={e => {
-                  onClose()
-                  onNavigate?.(e, '/partner-signup')
+                onClick={() => {
+                  setTab('partner')
+                  setErrorMsg('')
+                  setSuccessMsg('')
                 }}
               >
                 ⚡ 30-Second Express Partner Onboarding →
-              </a>
+              </button>
             </div>
 
             <p className="kg-auth-terms-note">
               By registering, you agree to KhelGrid’s <a href="/terms">Terms of Use</a>,{' '}
               <a href="/privacy">Privacy Policy</a>, and DPDP Act standards.
+            </p>
+          </form>
+        )}
+
+        {/* TAB: PARTNER SIGNUP */}
+        {tab === 'partner' && !emailVerificationPending && (
+          <form className="kg-auth-form" onSubmit={handlePartnerSubmit}>
+            <h2 id="kg-auth-title" className="kg-auth-title">
+              Register Academy or Sports Facility
+            </h2>
+            <p className="kg-auth-subtitle">
+              Free admissions CRM, turf slot scheduling, and UPI fee collections for sports academies &amp; venues.
+            </p>
+
+            <div className="kg-auth-field">
+              <label htmlFor="partner-name-input">Academy / Facility Name</label>
+              <div className="kg-auth-input-wrap">
+                <SiteIcon name="building" size={16} className="kg-input-icon" />
+                <input
+                  id="partner-name-input"
+                  type="text"
+                  required
+                  placeholder="e.g. Apex Cricket Academy, Kickoff Turf"
+                  value={partnerAcademyName}
+                  onChange={e => setPartnerAcademyName(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="kg-auth-row">
+              <div className="kg-auth-field">
+                <label htmlFor="partner-sport-input">Primary Sport</label>
+                <select
+                  id="partner-sport-input"
+                  value={partnerSport}
+                  onChange={e => setPartnerSport(e.target.value)}
+                >
+                  <option value="Cricket">Cricket</option>
+                  <option value="Football">Football</option>
+                  <option value="Badminton">Badminton</option>
+                  <option value="Multi-Sport">Multi-Sport</option>
+                  <option value="Tennis">Tennis</option>
+                  <option value="Basketball">Basketball</option>
+                  <option value="Swimming">Swimming</option>
+                  <option value="Martial Arts">Martial Arts</option>
+                  <option value="Athletics">Athletics</option>
+                  <option value="Table Tennis">Table Tennis</option>
+                  <option value="Squash">Squash</option>
+                  <option value="Hockey">Hockey</option>
+                </select>
+              </div>
+
+              <div className="kg-auth-field">
+                <label htmlFor="partner-city-input">Operating City</label>
+                <select
+                  id="partner-city-input"
+                  value={partnerCity}
+                  onChange={e => setPartnerCity(e.target.value)}
+                >
+                  {MAJOR_CITIES.map(c => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="kg-auth-row">
+              <div className="kg-auth-field">
+                <label htmlFor="partner-director-input">Director / Manager Name</label>
+                <div className="kg-auth-input-wrap">
+                  <SiteIcon name="user-round" size={16} className="kg-input-icon" />
+                  <input
+                    id="partner-director-input"
+                    type="text"
+                    required
+                    placeholder="e.g. Coach Rajesh Kumar"
+                    value={partnerDirectorName}
+                    onChange={e => setPartnerDirectorName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="kg-auth-field">
+                <label htmlFor="partner-phone-input">Director WhatsApp / Mobile</label>
+                <div className="kg-auth-input-wrap">
+                  <SiteIcon name="phone" size={16} className="kg-input-icon" />
+                  <input
+                    id="partner-phone-input"
+                    type="tel"
+                    required
+                    placeholder="9845012345 (for admissions)"
+                    value={partnerWhatsApp}
+                    onChange={e => setPartnerWhatsApp(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="kg-auth-row">
+              <div className="kg-auth-field">
+                <label htmlFor="partner-email-input">Account Email</label>
+                <div className="kg-auth-input-wrap">
+                  <SiteIcon name="mail" size={16} className="kg-input-icon" />
+                  <input
+                    id="partner-email-input"
+                    type="email"
+                    required
+                    placeholder="director@academy.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="kg-auth-field">
+                <label htmlFor="partner-password-input">Password (min 6 characters)</label>
+                <div className="kg-auth-input-wrap">
+                  <SiteIcon name="shield-check" size={16} className="kg-input-icon" />
+                  <input
+                    id="partner-password-input"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    placeholder="Create password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="kg-password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <SiteIcon name={showPassword ? 'eye-off' : 'eye'} size={15} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="kg-auth-field">
+              <label htmlFor="partner-upi-input">UPI ID for Direct Fee Collection (Optional)</label>
+              <div className="kg-auth-input-wrap">
+                <SiteIcon name="sparkles" size={16} className="kg-input-icon" />
+                <input
+                  id="partner-upi-input"
+                  type="text"
+                  placeholder="e.g. apexcricket@okhdfcbank (or configure in settings)"
+                  value={partnerUpi}
+                  onChange={e => setPartnerUpi(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="kg-auth-partner-trust-note">
+              <SiteIcon name="shield-check" size={18} style={{ color: '#d97706', flexShrink: 0 }} />
+              <div>
+                <strong>Express Launch &amp; Verification Protocol</strong>
+                <p style={{ margin: 0 }}>
+                  Your internal batch manager, student CRM, and UPI fee tracking activate immediately. The public <strong>&quot;KhelGrid Verified&quot;</strong> badge will appear on your listing upon review by the KhelGrid Editorial Moderation Desk.
+                </p>
+              </div>
+            </div>
+
+            <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
+              {submitting ? 'Setting Up Workspace…' : '⚡ Register Academy & Launch Hub (30s)'}
+            </button>
+
+            <p className="kg-auth-switch-note">
+              Already registered your academy or turf?{' '}
+              <button
+                type="button"
+                className="kg-text-link"
+                onClick={() => {
+                  setTab('login')
+                  setErrorMsg('')
+                  setSuccessMsg('')
+                }}
+              >
+                Sign In here →
+              </button>
+            </p>
+
+            <p className="kg-auth-terms-note">
+              By registering, you agree to KhelGrid’s <a href="/terms">Terms of Use</a>,{' '}
+              <a href="/privacy">Privacy Policy</a>, and Grassroots Host Agreement.
             </p>
           </form>
         )}

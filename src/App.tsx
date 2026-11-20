@@ -188,7 +188,12 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    setPath(currentPath())
+    const initialP = currentPath()
+    setPath(initialP)
+    if (initialP === '/partner-signup' || initialP === '/partner-login' || initialP === '/academy/signup') {
+      setAuthModalTab('partner')
+      setAuthModalOpen(true)
+    }
     setHeaderQuery(new URLSearchParams(window.location.search).get('q') ?? '')
     setSearchQuery(new URLSearchParams(window.location.search).get('q') ?? '')
     const handlePopState = () => { setPath(currentPath()); setHeaderQuery(new URLSearchParams(window.location.search).get('q') ?? ''); setSearchQuery(new URLSearchParams(window.location.search).get('q') ?? ''); setMenuOpen(false) }
@@ -230,6 +235,11 @@ export default function App() {
     }
     if (nextPath === '/signup') {
       setAuthModalTab('signup')
+      setAuthModalOpen(true)
+      return
+    }
+    if (nextPath === '/partner-signup' || nextPath === '/partner-login' || nextPath === '/academy/signup') {
+      setAuthModalTab('partner')
       setAuthModalOpen(true)
       return
     }
@@ -564,23 +574,14 @@ export default function App() {
             setAuthModalOpen(true)
           }}
           aria-label="Your profile"
-          title="Sign in or register on KhelGrid"
+          title="Sign in to your account or register as an Academy / Turf Partner"
         >
           <SiteIcon name="user-round" size={17} />
           <span>
-            {t('login', 'Login')} <small>Sign In</small>
+            {t('login', 'Login')} <small>Sign In · Partner</small>
           </span>
         </button>
       )}
-      <a
-        className="header-partner-link"
-        href="/partner-signup"
-        onClick={event => navigate(event, '/partner-signup')}
-        title="Partner with KhelGrid: Academy Admissions Hub & Turf Slot Management (Free Grassroots Access)"
-      >
-        <SiteIcon name="building" size={15} />
-        <span>Partner Signup</span>
-      </a>
       <a
         className="header-go-pro"
         href="/pricing"
