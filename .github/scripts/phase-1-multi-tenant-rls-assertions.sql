@@ -189,4 +189,49 @@ BEGIN
   RAISE NOTICE 'Phase 1 Multi-Tenant RLS & Architectural Assertions: ALL GATES PASSED.';
 END $$;
 
+
+-- 14. Exercise real trigger lifecycle in this isolated transaction.
+DO $$
+DECLARE
+  v_test_id uuid := gen_random_uuid();
+  v_slug text;
+  v_name text;
+BEGIN
+  v_slug := 'phase1-trigger-' || replace(v_test_id::text, '-', '');
+
+  INSERT INTO public.tenants (id, slug, name, tenant_type, status)
+  VALUES (v_test_id, v_slug, 'Phase 1 Trigger Test', 'academy', 'pending_verification');
+
+  IF EXISTS (SELECT 1 FROM public.tenant_public_directory WHERE id = v_test_id) THEN
+    RAISE EXCEPTION 'Projection trigger leaked a pending tenant';
+  END IF;
+
+  UPDATE public.tenants SET status = 'active' WHERE id = v_test_id;
+  IF NOT EXISTS (SELECT 1 FROM public.tenant_public_directory WHERE id = v_test_id AND status = 'active') THEN
+    RAISE EXCEPTION 'Projection trigger did not publish an active tenant';
+  END IF;
+
+  UPDATE public.tenants SET name = 'Phase 1 Trigger Updated' WHERE id = v_test_id;
+  SELECT name INTO v_name FROM public.tenant_public_directory WHERE id = v_test_id;
+  IF v_name IS DISTINCT FROM 'Phase 1 Trigger Updated' THEN
+    RAISE EXCEPTION 'Projection trigger did not synchronize tenant updates';
+  END IF;
+
+  UPDATE public.tenants SET status = 'suspended' WHERE id = v_test_id;
+  IF EXISTS (SELECT 1 FROM public.tenant_public_directory WHERE id = v_test_id) THEN
+    RAISE EXCEPTION 'Projection trigger retained a suspended tenant';
+  END IF;
+
+  UPDATE public.tenants SET status = 'active' WHERE id = v_test_id;
+  IF NOT EXISTS (SELECT 1 FROM public.tenant_public_directory WHERE id = v_test_id) THEN
+    RAISE EXCEPTION 'Projection trigger did not restore a reactivated tenant';
+  END IF;
+
+  DELETE FROM public.tenants WHERE id = v_test_id;
+  IF EXISTS (SELECT 1 FROM public.tenant_public_directory WHERE id = v_test_id) THEN
+    RAISE EXCEPTION 'Projection trigger retained a deleted tenant';
+  END IF;
+END
+$$;
+
 COMMIT;
