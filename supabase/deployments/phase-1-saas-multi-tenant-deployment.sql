@@ -1,3 +1,11 @@
+-- ============================================================================
+-- LEGACY DEPLOYMENT ARTIFACT — DO NOT EXECUTE
+-- Superseded by the ordered, timestamped migrations in supabase/migrations/.
+-- This file still defines the former security-barrier tenant_public_directory
+-- view and does not include the latest projection-trigger ACL hardening.
+-- It is retained for historical reference only. Do not paste into Supabase SQL
+-- Editor or run against development/production.
+-- ============================================================================
 -- ==============================================================================
 -- KhelGrid SaaS Platform — Phase 1: Multi-Tenant Database Architecture
 -- Migration: 20261121160000_phase1_multi_tenant_core_schema.sql
