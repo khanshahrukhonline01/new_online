@@ -39,5 +39,6 @@ describe('KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Integration Sui
     expect(data.total_vectors).toBe(49)
     expect(data.passed).toBe(49)
     expect(data.failed).toBe(0)
+    expect(data.supplemental_checks?.projection_trigger_acl_and_lifecycle).toBe(true)
   }, 90000)
 })
