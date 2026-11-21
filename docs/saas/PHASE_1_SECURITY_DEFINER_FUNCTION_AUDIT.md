@@ -1,3 +1,8 @@
+> **SCOPE CLARIFICATION — 2026-11-21**  
+> This document's 17/17 figure refers only to a selected Phase 1 tenant-function subset. It is not a complete audit of all public SECURITY DEFINER functions and does not close the live Supabase Advisor findings. Current live inventory: 73 total / 13 anon-executable / 54 authenticated-executable. See [the live 73-function inventory](./PHASE_1_SECURITY_DEFINER_LIVE_INVENTORY_20261121.md). Function-body review and regression validation for all exposed functions remain pending.  
+>
+> ---
+>
 # KhelGrid SaaS Platform — Phase 1: Security Definer Function Security Audit & Hardening Matrix
 ## Granular Inspection, Privilege Least-Privilege Grants, Calling Context, and Search Path Verification
 
