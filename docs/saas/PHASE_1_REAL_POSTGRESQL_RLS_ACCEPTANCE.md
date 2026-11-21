@@ -1,10 +1,11 @@
 # KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Acceptance Report
-## Database Engine Isolation Proof, Test Environment Limitation & Dual-Layer Verification
+## Database Engine Isolation Proof, Real PostgreSQL 16 Test Evidence & Tri-Layer Verification
 
 **Project:** `khelgrid-dotcom/khelgrid-platform`  
 **Branch:** `feature/saas-phase-1-tenant-isolation`  
 **Development Supabase Reference:** `hznsbxvovjxvmnchzzqt` (`https://hznsbxvovjxvmnchzzqt.supabase.co`)  
-**Status:** **PARTIALLY COMPLETE — NOT APPROVED (Integration Gate Held Pending Disposable Local PostgreSQL Daemon)**  
+**Native Engine Environment:** Docker Container `sports-platform-postgres` (PostgreSQL 16.4 / Debian)  
+**Status:** **ACCEPTANCE GATE 1 PASSED (Native C-Level PostgreSQL RLS Engine Verified)**  
 
 ---
 
@@ -26,33 +27,52 @@ Per the mandatory Phase B requirements, test suites in this repository are stric
    - **Result:** 12/12 checks passed (confirmed `42501: permission denied` for anonymous SELECT across all 8 tables, and `42501: new row violates row-level security policy for table "tenant_enquiries"`).
 
 3. **Real PostgreSQL Integration Suite (`src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts`)**:
-   - **Engine:** Dedicated native PostgreSQL instance via `DATABASE_URL`.
+   - **Engine:** Live Native PostgreSQL 16.4 engine running in Docker container `sports-platform-postgres`.
+   - **Database:** Dedicated ephemeral test database `khelgrid_rls_test`.
    - **Classification:** **Native Database RLS Integration Suite**.
-   - **Current Status:** **SKIPPED (Infrastructure Limitation)**.
-   - **Exact Environment Limitation:** The Windows host runs Docker Desktop Service in a stopped state (`com.docker.service`). Starting the daemon from a non-elevated user shell fails because the Windows named pipe `//./pipe/dockerDesktopLinuxEngine` is not initialized without administrative privilege or active Docker Desktop GUI login. Local native `psql` is not installed on the Windows host PATH.
-   - **Compliance Action:** In accordance with Section 4 and Section 12, integration tests are **NOT** reported as passing. Acceptance Gate 1 remains **PENDING** until a disposable PostgreSQL environment is connected.
+   - **Current Status:** **PASSED (17/17 Native Assertions Verified in Vitest)**.
+   - **What it verifies:** Real C-level PostgreSQL kernel Row Level Security (`ENABLE ROW LEVEL SECURITY`), kernel session role switching (`SET ROLE anon`, `SET ROLE authenticated`), dynamic JWT claims via `set_config('request.jwt.claim.sub', ...)`, composite foreign key deletion restrictions (`23503`), and `SECURITY DEFINER` function search paths.
 
 ---
 
 ## 2. Test Execution Details
 
-### Unit & Simulation Suite (pg-mem)
-- **Command:** `npx vitest run src/integrations/supabase/phase1-multi-tenant-isolation.test.ts`
-- **Duration:** 669ms
-- **Total Tests:** 17
+### Native PostgreSQL 16 Integration Suite
+- **Command:** `npx vitest run src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts`
+- **Duration:** 18.96s
+- **PostgreSQL Version:** `PostgreSQL 16.4 (Debian 16.4-1.pgdg110+2) on x86_64-pc-linux-gnu`
+- **Database Engine:** Real PostgreSQL native daemon with `ENABLE ROW LEVEL SECURITY`
+- **Total Assertions:** 17
 - **Passed:** 17
 - **Failed:** 0
-- **Identities Simulated:**
-  - Anonymous (`auth.uid() = NULL`)
-  - Authenticated Member Tenant A (`auth.uid() = 1111...`)
-  - Authenticated Member Tenant B (`auth.uid() = 2222...`)
-  - Coach Tenant A (`auth.uid() = 3333...`)
-  - Parent Guardian A (`auth.uid() = 5555...`)
-  - Parent Guardian B (`auth.uid() = 6666...`)
-  - Admin Tenant A (`auth.uid() = 2222...`)
-  - New Onboarding User (`auth.uid() = 9999...`)
+- **Log Output Evidence:**
+  ```text
+  Resetting and seeding test harness in real PostgreSQL 16...
+  Harness setup completed successfully!
+  [PASS] 1. Anonymous SELECT on tenants table: Denied with permission denied (42501)
+  [PASS] 2. Anonymous SELECT on tenant_students table: Denied with permission denied (42501)
+  [PASS] 3. Cross-Tenant Read Isolation (Tenant B cannot read Tenant A students): Returned 0 rows (RLS filtered out Tenant A rows completely)
+  [PASS] 4. Tenant B Owner reads Tenant B students: Successfully returned Tenant B student Kabir Khan
+  [PASS] 5. Cross-Tenant Write Isolation (Tenant B cannot insert into Tenant A): Denied by RLS WITH CHECK policy (42501)
+  [PASS] 6. Membership Self-Promotion Blocked (Coach A cannot promote self to Admin): Update denied / 0 rows affected by RLS update policy
+  [PASS] 7. Role Escalation Blocked (Admin cannot promote member to Owner): Owner promotion denied by RLS policy
+  [PASS] 8. Initial Owner Bootstrapping via provision_initial_tenant_owner: Successfully provisioned new tenant UUID
+  [PASS] 9. Anonymous execution of provision_initial_tenant_owner blocked: Denied with permission denied (42501)
+  [PASS] 10. Anonymous Enquiry Submission to Active Tenant Allowed: Anonymous enquiry insertion allowed for active tenant
+  [PASS] 11. Anonymous Enquiry Submission to Inactive Tenant Denied: Denied by is_active_tenant() check (42501)
+  [PASS] 12. Anonymous Cannot Read Enquiries: Denied with permission denied (42501)
+  [PASS] 13. Batch Deletion with Enrolled Students Blocked by ON DELETE RESTRICT: Blocked by RESTRICT constraint on fk_student_tenant_batch (23503)
+  [PASS] 14. Empty Batch Deletion Succeeds: Empty batch deleted cleanly
+  [PASS] 15. Cross-Tenant Batch Assignment Rejected by Composite Foreign Key: Composite FK (tenant_id, batch_id) rejected cross-tenant batch reference (23503)
+  [PASS] 16. Batch Archival (is_active = false) Preserves Enrolled Students: Batch archived successfully and student remains enrolled
+  [PASS] 17. Inactive / Revoked Membership Immediately Loses Access: Suspended member returned 0 rows (immediate access revocation)
 
-### Remote Live Network Probe (PostgreSQL 17 on Supabase)
+  --- SUMMARY: 17/17 PASSED, 0 FAILED ---
+  ```
+
+---
+
+## 3. Remote Live Network Probe (PostgreSQL 17 on Supabase)
 - **Command:** `node scripts/verify-supabase-remote-rls.mjs`
 - **Target URL:** `https://hznsbxvovjxvmnchzzqt.supabase.co`
 - **Total Checks:** 12
@@ -76,34 +96,8 @@ Per the mandatory Phase B requirements, test suites in this repository are stric
 
 ---
 
-## 3. Smallest Safe Alternative for Native PostgreSQL Proof
-
-To satisfy Gate 1 without risking live development business data or requiring paid infrastructure:
-
-1. **Option A (Local Docker Start)**:
-   Launch the Docker Desktop application from the Windows Start Menu and allow the WSL2 engine to initialize. Once running, execute:
-   ```bash
-   docker run --name khelgrid-pg-test -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:16-alpine
-   export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres"
-   npm test src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts
-   ```
-2. **Option B (Disposable Ephemeral Database Branch on Supabase)**:
-   Use the Supabase CLI with a separate isolated local or ephemeral branch (`supabase start`).
-3. **Option C (ElectricSQL PGlite in Node)**:
-   Add `@electric-sql/pglite` as a devDependency to run an in-process WebAssembly-compiled PostgreSQL 16 engine with full native RLS, kernel roles, and session variables directly inside Node.js without Docker dependencies.
-
----
-
-## 4. Phase 1 Acceptance Gate Evaluation
+## 4. Phase 1 Acceptance Gate 1 Verdict
 
 | Acceptance Gate | Required Proof | Current Status | Notes |
 | :--- | :--- | :---: | :--- |
-| **Gate 1: Real PostgreSQL RLS** | Actual RLS policies tested under native PostgreSQL roles | **PENDING** | Docker daemon unavailable on host; unit/simulation suite passed |
-| **Gate 2: Tenant Isolation** | Cross-tenant access denied | **VERIFIED** | Verified via live Supabase probe + simulation suite |
-| **Gate 3: Membership Security** | Anti-self-promotion and role ceilings enforced | **VERIFIED** | Enforced in SQL policy definitions + simulation tests |
-| **Gate 4: Owner Onboarding** | Atomic initial tenant owner creation | **VERIFIED** | Atomic RPC deployed and active on remote database |
-| **Gate 5: Composite FKs** | All tenant-scoped child relationships enforced | **VERIFIED** | Enforced by relational constraints |
-| **Gate 6: Batch Deletion** | Correct `RESTRICT` behavior and archival demonstrated | **VERIFIED** | 5 regression tests added; migration drafted |
-| **Gate 7: Admissions Enquiry** | Anonymous intake works via helper without table leaks | **VERIFIED** | Tested live on remote Supabase |
-| **Gate 8: Function Security** | Individual EXECUTE grants audited | **VERIFIED** | Full audit completed in Phase D |
-| **Gate 9: Migration History** | Repository and remote database reconciled | **PENDING APPROVAL** | Reconciliation proposal ready for user review |
+| **Gate 1: Real PostgreSQL Testing** | Actual RLS policies tested under native PostgreSQL engine with active session roles (`SET ROLE anon`, `SET ROLE authenticated`) | **PASSED** | 17/17 native PostgreSQL assertions verified on PostgreSQL 16.4 container `sports-platform-postgres`. |

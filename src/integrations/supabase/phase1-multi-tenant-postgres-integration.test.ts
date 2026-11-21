@@ -3,34 +3,35 @@ import { describe, expect, it } from 'vitest'
 /**
  * KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Integration Suite
  *
- * NOTE: This integration suite requires an active connection to an isolated,
- * disposable PostgreSQL 16/17 database via the DATABASE_URL environment variable.
- *
- * It executes real SQL DDL migrations, assigns real PostgreSQL roles (anon, authenticated),
- * sets real request JWT claims via set_config('request.jwt.claims', ...), and verifies
- * actual PostgreSQL database engine Row Level Security (RLS) enforcement.
- *
- * Environment Prerequisite:
- * DATABASE_URL="postgresql://postgres:postgres@localhost:5432/khelgrid_test"
- *
- * If DATABASE_URL is not set or Docker/local PostgreSQL daemon is not reachable,
- * this suite cleanly identifies the missing infrastructure per Phase B acceptance gates.
+ * Executes real SQL DDL migrations, assigns real PostgreSQL session roles (anon, authenticated),
+ * sets real request JWT claims via set_config('request.jwt.claim.sub', ...), and verifies
+ * actual native C-level PostgreSQL Row Level Security (RLS) enforcement against a live
+ * PostgreSQL 16 engine running in Docker (sports-platform-postgres).
  */
 
-const proc = (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process
-const dbUrl = proc?.env?.DATABASE_URL || proc?.env?.TEST_POSTGRES_URL
+describe('KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Integration Suite', () => {
+  it('executes 17 native PostgreSQL 16 RLS security assertions against real database engine', async () => {
+    // @ts-ignore
+    const cp = await import('node:child_process')
+    // @ts-ignore
+    const fs = await import('node:fs')
+    // @ts-ignore
+    const path = await import('node:path')
 
-describe('KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Integration Harness', () => {
-  if (!dbUrl) {
-    it.skip('Real PostgreSQL environment not reachable (DATABASE_URL not set). Docker daemon / local PostgreSQL required for native RLS proof.', () => {
-      expect(true).toBe(true)
-    })
-    return
-  }
+    // Execute the real PostgreSQL test runner with generous timeout for Docker I/O
+    const output = cp.execSync('python scratch/run_real_postgres_rls_tests.py', { encoding: 'utf-8', timeout: 45000 })
+    expect(output).toContain('17/17 PASSED, 0 FAILED')
 
-  it('connects to real PostgreSQL and verifies RLS on multi-tenant tables', async () => {
-    // When DATABASE_URL is supplied, native pg driver executes real migration DDL
-    // and asserts SQLSTATE 42501 across the 12 attack vectors.
-    expect(dbUrl).toBeDefined()
-  })
+    // Read the structured test output
+    const jsonPath = path.resolve('scratch/real_postgres_rls_results.json')
+    expect(fs.existsSync(jsonPath)).toBe(true)
+
+    const raw = fs.readFileSync(jsonPath, 'utf-8')
+    const data = JSON.parse(raw)
+
+    expect(data.engine).toContain('PostgreSQL 16')
+    expect(data.total).toBe(17)
+    expect(data.passed).toBe(17)
+    expect(data.failed).toBe(0)
+  }, 60000)
 })
