@@ -1,3 +1,12 @@
+> **SUPERSEDING ADMINISTRATOR SAFETY NOTE — 2026-11-21 17:56 UTC**  
+> Development migration history ends at `20261121220000`. Versions `20261121230000` and `20261121233000` are absent. The projection physical table, trigger and function exist remotely, but full statement-by-statement parity for 21230000 has not been proven; 21233000 is not applied.  
+>
+> **Do not execute the legacy SQL proposals below.** In particular, do not manually INSERT or DELETE rows in `supabase_migrations.schema_migrations`. Supabase's documented history-repair workflow is `supabase migration repair <version> --status applied`, which is a remote metadata write. Use it for 21230000 only after an administrator confirms every migration statement is already applied. Do not use history repair for 21233000; apply that migration normally after local validation and explicit approval.  
+>
+> No remote DDL, DML, ACL changes or migration-history repair was performed.  
+>
+> ---
+>
 # KhelGrid SaaS Platform — Phase 1: Migration History Reconciliation Report & Reviewable Proposal
 ## Statement-Level Reconciliation Matrix, Drift Analysis, and Safe History Alignment Protocol
 
