@@ -1,3 +1,9 @@
+> **SUPERSEDING LIVE SNAPSHOT — 2026-11-21 17:56 UTC**  
+> The earlier 72 / 12 / 53 inventory below is stale. A fresh read-only catalog query reports **73 public SECURITY DEFINER functions**, **13 executable by anon**, **54 executable by authenticated**, **8 attached to non-internal triggers**, and **0 without an explicit function-level search_path**. See [PHASE_1_SECURITY_DEFINER_LIVE_INVENTORY_20261121.md](./PHASE_1_SECURITY_DEFINER_LIVE_INVENTORY_20261121.md) for the exact signatures and catalog metadata.  
+> This is an exposure inventory, not proof that all function bodies were individually reviewed. Body-level caller, authorization, token, data-return and dynamic-SQL review remains incomplete. No broad ACL revocations are approved.  
+>
+> ---
+>
 # KhelGrid SaaS Platform — Phase 1: Full SECURITY DEFINER Function Audit & Reconciled Inventory
 ## Comprehensive Catalog of Public Schema Functions, Least-Privilege Grants, and Risk Classifications
 
