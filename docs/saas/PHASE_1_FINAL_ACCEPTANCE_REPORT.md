@@ -1,5 +1,5 @@
 > **SUPERSEDING AUDIT STATUS — 2026-11-21 17:56 UTC**  
-> Latest feature commit: `a06f684f3e3d9a9258737801cbd99995e4ac9975`. Branch comparison: **23 ahead / 0 behind** `main`. No PR exists for this branch. No GitHub Actions workflow runs exist. Latest Vercel checks are **pending**, not passed.  
+> Snapshot before this report correction: `9a2ba1e954b72201a3919f3834a6f9a90d5db51e`. At that snapshot the branch was **31 ahead / 0 behind** `main`; use the live branch link below for the current HEAD. No PR exists for this branch. No GitHub Actions workflow runs exist. Latest Vercel checks are **pending**, not passed.  
 > **Current verdict: PARTIALLY COMPLETE — NOT APPROVED.** The projection trigger ACL hardening migration and local test gates have been added to the branch, but they have not been run locally or applied remotely. The development database still exposes `sync_tenant_public_directory()` to anon/authenticated and migration versions `20261121230000` and `20261121233000` are absent from migration history.  
 > The older report below is historical Antigravity evidence and must not be interpreted as current acceptance or independently verified test output. Current live function inventory is 73 / 13 anon / 54 authenticated, not 72 / 12 / 53. The runner defines 14 fixture identities, not 11.  
 >
@@ -11,8 +11,8 @@
 **Project:** `khelgrid-dotcom/khelgrid-platform`  
 **Repository Branch:** `feature/saas-phase-1-acceptance-remediation`  
 **Base Commit:** `b86fe736436ca135fd5c24ddd37d19e6492e3ccf`  
-**Latest Feature Commit:** `a06f684f3e3d9a9258737801cbd99995e4ac9975`  
-**Ahead / Behind:** 23 ahead, 0 behind  
+**Latest Feature Commit at prior snapshot:** `9a2ba1e954b72201a3919f3834a6f9a90d5db51e`  
+**Ahead / Behind at prior snapshot:** 31 ahead, 0 behind  
 **GitHub Compare URL (not a PR):** [main...feature/saas-phase-1-acceptance-remediation](https://github.com/khelgrid-dotcom/khelgrid-platform/compare/main...feature/saas-phase-1-acceptance-remediation)  
 **Execution Environment:** Windows 11 / Node v24.12.0 / Docker PostgreSQL 16.4 Container (`sports-platform-postgres`)  
 **Development Database:** `hznsbxvovjxvmnchzzqt` (`https://hznsbxvovjxvmnchzzqt.supabase.co`)  
