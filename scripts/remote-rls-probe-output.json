@@ -1,0 +1,74 @@
+[
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.tenants",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for table tenants",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_memberships",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for table tenant_memberships",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_batches",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for table tenant_batches",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_students",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for table tenant_students",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_enquiries",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for table tenant_enquiries",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_fee_invoices",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for table tenant_fee_invoices",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_fee_transactions",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for table tenant_fee_transactions",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_attendance_events",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for table tenant_attendance_events",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-02: Anonymous EXECUTE on public.is_tenant_member",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for function is_tenant_member",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-02: Anonymous EXECUTE on public.has_tenant_role",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for function has_tenant_role",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-02: Anonymous EXECUTE on public.provision_initial_tenant_owner",
+    "expected": "42501 permission denied",
+    "actual": "PGRST202: Could not find the function public.provision_initial_tenant_owner(p_name, p_slug, p_tenant_type) in the schema cache",
+    "passed": false
+  },
+  {
+    "test": "SEC-PROBE-03: Anonymous INSERT on tenant_enquiries for non-existent tenant",
+    "expected": "Denied by RLS WITH CHECK or Foreign Key",
+    "actual": "42501: permission denied for table tenants",
+    "passed": true
+  }
+]

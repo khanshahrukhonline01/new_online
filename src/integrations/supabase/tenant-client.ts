@@ -290,3 +290,154 @@ export async function getTenantFeeTransactions(tenantId: string): Promise<DbTena
     return []
   }
 }
+
+/**
+ * Provision a new tenant and assign the current authenticated user as initial owner
+ * Uses the atomic SECURITY DEFINER RPC to bypass circular membership authorization.
+ */
+export async function provisionInitialTenantOwner(params: {
+  slug: string
+  name: string
+  tenantType: 'academy' | 'coach' | 'venue' | 'tournament'
+  city?: string
+  state?: string
+  sport?: string
+  contactPhone?: string
+  contactEmail?: string
+  metadata?: Record<string, unknown>
+}): Promise<{ success: boolean; tenantId?: string; message: string }> {
+  const client = getSupabaseClient()
+  if (!client) {
+    return { success: false, message: 'Supabase client unconfigured' }
+  }
+
+  try {
+    const { data, error } = await client.rpc('provision_initial_tenant_owner', {
+      p_slug: params.slug,
+      p_name: params.name,
+      p_tenant_type: params.tenantType,
+      p_city: params.city || null,
+      p_state: params.state || null,
+      p_sport: params.sport || null,
+      p_contact_phone: params.contactPhone || null,
+      p_contact_email: params.contactEmail || null,
+      p_metadata: params.metadata || {},
+    })
+
+    if (error) {
+      return { success: false, message: error.message }
+    }
+
+    return {
+      success: true,
+      tenantId: data as string,
+      message: 'Successfully provisioned tenant and initial owner membership',
+    }
+  } catch (err) {
+    return { success: false, message: (err as Error).message }
+  }
+}
+
+/**
+ * Public parent enquiry submission (CRM Lead)
+ * Works for unauthenticated parents via is_active_tenant() SECURITY DEFINER helper.
+ */
+export async function submitTenantEnquiry(enquiry: {
+  tenantId: string
+  enquiryToken?: string
+  parentName: string
+  parentPhone: string
+  parentEmail?: string
+  studentName: string
+  studentAge?: number
+  sport: string
+  requestType: 'free_trial' | 'regular_admission' | 'scholarship_assessment'
+  notes?: string
+}): Promise<{ success: boolean; enquiryId?: string; enquiryToken?: string; message: string }> {
+  const client = getSupabaseClient()
+  if (!client) {
+    return { success: false, message: 'Supabase client unconfigured' }
+  }
+
+  const token = enquiry.enquiryToken || `ENQ-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`
+
+  try {
+    const { data, error } = await client
+      .from('tenant_enquiries')
+      .insert({
+        tenant_id: enquiry.tenantId,
+        enquiry_token: token,
+        parent_name: enquiry.parentName,
+        parent_phone: enquiry.parentPhone,
+        parent_email: enquiry.parentEmail || null,
+        student_name: enquiry.studentName,
+        student_age: enquiry.studentAge || null,
+        sport: enquiry.sport,
+        request_type: enquiry.requestType,
+        notes: enquiry.notes || null,
+        status: 'new',
+      })
+      .select('id, enquiry_token')
+      .single()
+
+    if (error) {
+      return { success: false, message: error.message }
+    }
+
+    return {
+      success: true,
+      enquiryId: data.id,
+      enquiryToken: data.enquiry_token,
+      message: 'Enquiry submitted successfully',
+    }
+  } catch (err) {
+    return { success: false, message: (err as Error).message }
+  }
+}
+
+/**
+ * Create a new coaching batch for an authorized tenant
+ */
+export async function createTenantBatch(
+  batch: Omit<DbTenantBatch, 'id' | 'created_at' | 'updated_at'>
+): Promise<{ success: boolean; batch?: DbTenantBatch; message: string }> {
+  const client = getSupabaseClient()
+  if (!client) return { success: false, message: 'Supabase client unconfigured' }
+
+  try {
+    const { data, error } = await client
+      .from('tenant_batches')
+      .insert(batch)
+      .select()
+      .single()
+
+    if (error) return { success: false, message: error.message }
+    return { success: true, batch: data as DbTenantBatch, message: 'Batch created successfully' }
+  } catch (err) {
+    return { success: false, message: (err as Error).message }
+  }
+}
+
+/**
+ * Register a new student trainee for an authorized tenant
+ * Enforces composite key check (student.tenant_id must match batch.tenant_id)
+ */
+export async function createTenantStudent(
+  student: Omit<DbTenantStudent, 'id' | 'created_at' | 'updated_at'>
+): Promise<{ success: boolean; student?: DbTenantStudent; message: string }> {
+  const client = getSupabaseClient()
+  if (!client) return { success: false, message: 'Supabase client unconfigured' }
+
+  try {
+    const { data, error } = await client
+      .from('tenant_students')
+      .insert(student)
+      .select()
+      .single()
+
+    if (error) return { success: false, message: error.message }
+    return { success: true, student: data as DbTenantStudent, message: 'Student registered successfully' }
+  } catch (err) {
+    return { success: false, message: (err as Error).message }
+  }
+}
