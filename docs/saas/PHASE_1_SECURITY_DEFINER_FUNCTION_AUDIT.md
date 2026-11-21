@@ -278,24 +278,21 @@ All Phase 1 tenant functions have been audited and hardened with:
 
 ---
 
-## 3. Function Permissions Summary Matrix
+## 3. Individual Function Audit Table (Phase E Requirement)
 
-| # | Function Name | Execution Mode | Anonymous Required? | Authenticated Required? | `search_path` | Status |
-| :-: | :--- | :---: | :---: | :---: | :---: | :---: |
-| 1 | `has_tenant_role` | `SECURITY DEFINER` | NO | YES | `public, pg_temp` | Audited / Active |
-| 2 | `is_active_tenant` | `SECURITY DEFINER` | YES | YES | `public, pg_temp` | Audited / Active |
-| 3 | `is_tenant_member` | `SECURITY DEFINER` | NO | YES | `public, pg_temp` | Audited / Active |
-| 4 | `provision_initial_tenant_owner` | `SECURITY DEFINER` | NO | YES | `public, pg_temp` | Audited / Active |
-| 5 | `update_tenant_membership_role` | `SECURITY DEFINER` | NO | YES | `public, pg_temp` | Future Phase 2 Spec |
-| 6 | `record_batch_attendance` | `SECURITY DEFINER` | NO | YES | `public, pg_temp` | Future Phase 2-3 Spec |
-| 7 | `record_fee_payment` | `SECURITY DEFINER` | NO | YES | `public, pg_temp` | Future Phase 4 Spec |
-| 8 | `reconcile_invoice_on_transaction` | `SECURITY DEFINER` | NO | NO (Trigger) | `public, pg_temp` | Future Phase 4 Spec |
-| 9 | `set_listing_moderator_access` | `SECURITY DEFINER` | NO | YES | `public, pg_temp` | Audited / Active |
-| 10 | `publish_listing_submission` | `SECURITY DEFINER` | NO | YES | `public, pg_temp` | Audited / Active |
-| 11 | `verify_listing_submission` | `SECURITY DEFINER` | NO | YES | `public, pg_temp` | Audited / Active |
-| 12 | `moderate_athlete_profile` | `SECURITY DEFINER` | NO | YES | `public, pg_temp` | Audited / Active |
-| 13 | `reserve_venue_slot_atomic` | `SECURITY DEFINER` | YES | YES | `public, pg_temp` | Audited / Active |
-| 14 | `rsvp_pickup_game` | `SECURITY DEFINER` | YES | YES | `public, pg_temp` | Audited / Active |
-| 15 | `get_pickup_game_whatsapp_invite`| `SECURITY DEFINER` | YES | YES | `public, pg_temp` | Audited / Active |
-| 16 | `get_venue_booking_voucher` | `SECURITY DEFINER` | YES | YES | `public, pg_temp` | Audited / Active |
-| 17 | `get_submission_tracking_status` | `SECURITY DEFINER` | YES | YES | `public, pg_temp` | Audited / Active |
+| Function | Current grants | Required grants | Risk | Action | Test evidence |
+| :--- | :--- | :--- | :---: | :--- | :--- |
+| `public.provision_initial_tenant_owner` | `authenticated` | `authenticated` | Low | Hardened: requires `auth.uid() IS NOT NULL`, creates tenant & membership in one atomic transaction; search_path locked | `PROV-AUTH-USER-OK` (True), `PROV-ANON-BLOCKED` (42501), `PROV-DUPLICATE-SLUG-FAIL` (23505) |
+| `public.is_tenant_member` | `authenticated` | `authenticated` | Low | Hardened: evaluates `auth.uid()`, enforces both active membership and active tenant status; locked search_path | `TENANT-MEMBER-ACCESS-OK` (Active OK), `ROLE-REVOKED-MEMBER-READ` (0 rows), `ROLE-SUSPENDED-TENANT-BATCHES` (0 rows) |
+| `public.has_tenant_role` | `authenticated` | `authenticated` | Low | Hardened: checks `auth.uid()` against required roles for active membership in tenant; locked search_path | `ROLE-COACH-SELF-PROMOTE` (0 rows), `ROLE-ADMIN-PROMOTE-OWNER` (42501), `FK-BATCH-DELETE-RESTRICT` (23503) |
+| `public.is_active_tenant` | `anon, authenticated` | `anon, authenticated` | Low | Safe: returns pure boolean whether tenant is active; zero data leakage; locked search_path | `ANON-ENQ-ACTIVE-OK` (INSERT 0 1), `ANON-ENQ-INACTIVE-FAIL` (42501) |
+| `public.update_tenant_membership_role` | *(Phase 2 Spec)* | `authenticated` | Med | Architecture specified: must check `has_tenant_role(..., ARRAY['owner'])` before role elevation; not deployed in Phase 1 | Handled via fine-grained RLS policies in Phase 1 (`ROLE-ADMIN-PROMOTE-OWNER` 42501) |
+| `public.moderate_athlete_profile` | `authenticated` | `authenticated` | Low | Protected: enforces platform moderator check, appends to immutable audit table `athlete_profile_moderation_audit` | Unit tested in platform test suite |
+| `public.publish_listing_submission` | `authenticated` | `authenticated` | Low | Protected: requires listing moderator role, writes to `listing_submission_audits` | Unit tested in publication integrity test suite |
+| `public.set_listing_moderator_access` | `authenticated` | `authenticated` | Low | Protected: requires platform admin role, writes to `listing_moderator_access_audits` | Unit tested in moderation access suite |
+| `public.verify_listing_submission` | `authenticated` | `authenticated` | Low | Protected: requires moderator role | Unit tested in moderation queue suite |
+| `public.reserve_venue_slot_atomic` | `anon, authenticated` | `anon, authenticated` | Low | Safe: atomic slot booking, idempotency key checks, token-gated voucher generation | Unit tested in venue checkout suite |
+| `public.rsvp_pickup_game` | `anon, authenticated` | `anon, authenticated` | Low | Safe: capacity-gated RSVP intake, guest tokens | Unit tested in pickup games suite |
+| `public.get_pickup_game_whatsapp_invite`| `anon, authenticated`| `anon, authenticated`| Low | Protected: requires valid reservation ID and bearer guest token | Token-gated access verified |
+| `public.get_venue_booking_voucher` | `anon, authenticated` | `anon, authenticated` | Low | Protected: requires matching booking ID and cryptographic voucher token | Token-gated access verified |
+| `public.get_submission_tracking_status` | `anon, authenticated` | `anon, authenticated` | Low | Protected: requires matching tracking reference and tracking key | Dual-token gate verified |

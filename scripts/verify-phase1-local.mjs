@@ -54,6 +54,9 @@ console.log(` Node Version: ${process.version}`)
 console.log(` Platform: ${process.platform}`)
 console.log('='.repeat(75))
 
+// Ensure explicit local test opt-in
+process.env.KHELGRID_LOCAL_RLS_TEST = '1'
+
 // 1. Lint
 runStage('1. ESLint', 'npm run lint', 'Checking code hygiene and React rules')
 
@@ -103,7 +106,7 @@ validateMigrations()
 runStage('6. Application Build', 'npm run build', 'Compiling production client bundle with Vite')
 
 // 7. Security Regression Test Suite
-runStage('7. Supabase Security Regression', 'npx vitest run src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts src/integrations/supabase/database-security-foundation.test.ts', 'Verifying security suite regression stability')
+runStage('7. Supabase Security Regression', 'npx vitest run src/integrations/supabase/phase1-runner-safety.test.ts src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts src/integrations/supabase/database-security-foundation.test.ts', 'Verifying security suite regression stability')
 
 const endTime = new Date().toISOString()
 

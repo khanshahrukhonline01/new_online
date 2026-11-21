@@ -88,10 +88,12 @@ SET search_path = public, pg_temp
 AS $$
   SELECT EXISTS (
     SELECT 1
-    FROM public.tenant_memberships
-    WHERE tenant_id = p_tenant_id
-      AND user_id = auth.uid()
-      AND status = 'active'
+    FROM public.tenant_memberships m
+    JOIN public.tenants t ON t.id = m.tenant_id
+    WHERE m.tenant_id = p_tenant_id
+      AND m.user_id = auth.uid()
+      AND m.status = 'active'
+      AND t.status = 'active'
   );
 $$;
 
@@ -354,8 +356,8 @@ CREATE POLICY "tenants_member_select"
     owner_id = auth.uid()
   );
 
--- Public directory projection with security barrier: safe non-sensitive columns only
-CREATE VIEW public.tenant_public_directory
+-- Public directory projection with security barrier: safe non-sensitive columns only (ZERO CASCADE)
+CREATE OR REPLACE VIEW public.tenant_public_directory
 WITH (security_barrier = true) AS
 SELECT
   id,

@@ -1,18 +1,18 @@
 ================================================================================
 KHELGRID SAAS PHASE 1 — LOCAL VERIFICATION EVIDENCE REPORT
 ================================================================================
-Generated At: 2026-11-21T15:36:31.206Z
+Generated At: 2026-11-21T16:11:59.916Z
 Host Environment: Windows / Node v24.12.0 / Docker PostgreSQL 16.4
 Overall Status: ALL STAGES PASSED (100%)
 
 SUMMARY OF STAGES:
-[PASS] 1. ESLint (9.60s)
-[PASS] 2. TypeScript Check (20.51s)
-[PASS] 3. Unit RLS Simulation (5.58s)
-[PASS] 4. Native PostgreSQL RLS Engine (20.98s)
+[PASS] 1. ESLint (15.52s)
+[PASS] 2. TypeScript Check (30.45s)
+[PASS] 3. Unit RLS Simulation (7.88s)
+[PASS] 4. Native PostgreSQL RLS Engine (31.44s)
 [PASS] 5. Migration Safety (0.05s)
-[PASS] 6. Application Build (33.35s)
-[PASS] 7. Supabase Security Regression (28.81s)
+[PASS] 6. Application Build (45.76s)
+[PASS] 7. Supabase Security Regression (42.59s)
 
 ================================================================================
 DETAILED STAGE OUTPUTS
@@ -20,7 +20,7 @@ DETAILED STAGE OUTPUTS
 
 --- STAGE: 1. ESLint (PASS) ---
 Command: npm run lint
-Duration: 9.60s
+Duration: 15.52s
 Output:
 > khelgrid-platform@0.2.0 lint
 > eslint .
@@ -53,31 +53,31 @@ C:\Users\7khan\OneDrive\Desktop\Live score\src\shared\sports\sportIcons.tsx
 
 --- STAGE: 2. TypeScript Check (PASS) ---
 Command: npm run typecheck
-Duration: 20.51s
+Duration: 30.45s
 Output:
 > khelgrid-platform@0.2.0 typecheck
 > tsc -b --pretty
 
 --- STAGE: 3. Unit RLS Simulation (PASS) ---
 Command: npx vitest run src/integrations/supabase/phase1-multi-tenant-isolation.test.ts
-Duration: 5.58s
+Duration: 7.88s
 Output:
 [1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mC:/Users/7khan/OneDrive/Desktop/Live score[39m
 
- [32m✓[39m src/integrations/supabase/phase1-multi-tenant-isolation.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 440[2mms[22m[39m
+ [32m✓[39m src/integrations/supabase/phase1-multi-tenant-isolation.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 862[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
 [2m      Tests [22m [1m[32m17 passed[39m[22m[90m (17)[39m
-[2m   Start at [22m 21:05:06
-[2m   Duration [22m 1.27s[2m (transform 63ms, setup 0ms, collect 222ms, tests 440ms, environment 0ms, prepare 244ms)[22m
+[2m   Start at [22m 21:39:57
+[2m   Duration [22m 2.13s[2m (transform 131ms, setup 0ms, collect 521ms, tests 862ms, environment 0ms, prepare 227ms)[22m
 
 --- STAGE: 4. Native PostgreSQL RLS Engine (PASS) ---
 Command: python scripts/run-comprehensive-postgres-rls-suite.py
-Duration: 20.98s
+Duration: 31.44s
 Output:
-[SAFETY VERIFIED] Running against verified local test database: khelgrid_rls_test
+[SAFETY & MIGRATION VERIFIED] Running against verified local test database: khelgrid_rls_test
 
-Executing 44 native PostgreSQL RLS attack vectors...
+Executing 49 native PostgreSQL RLS attack vectors...
 [PASS] ANON-SEL-TENANTS-PRIV: Anonymous SELECT on private public.tenants denied
 [PASS] ANON-SEL-TENANT_MEMBERSHIPS: Anonymous SELECT on public.tenant_memberships denied
 [PASS] ANON-SEL-TENANT_BATCHES: Anonymous SELECT on public.tenant_batches denied
@@ -101,18 +101,23 @@ Executing 44 native PostgreSQL RLS attack vectors...
 [PASS] TENANT-CROSS-OWNER-DENIED: Tenant B owner cannot view Tenant A private tenant row (gets 0 rows)
 [PASS] TENANT-OWNER-ACCESS-OK: Tenant A owner successfully accesses own private tenant details and UPI
 [PASS] TENANT-MEMBER-ACCESS-OK: Tenant A active coach accesses own tenant record via is_tenant_member
+[PASS] TENANT-SUSPENDED-OWNER-ACCESS-OK: Owner of suspended tenant accesses own tenant row via owner_id
+[PASS] TENANT-SUSPENDED-STRANGER-DENIED: Stranger querying suspended tenant row gets 0 rows
 [PASS] ISOL-READ-STUDENTS: Owner B querying Tenant A students returns 0 rows
 [PASS] ISOL-READ-DIRECT-ID: Owner B direct query by student UUID returns 0 rows
 [PASS] ISOL-READ-INVOICES: Owner B direct query by invoice UUID returns 0 rows
 [PASS] ISOL-WRITE-STUDENT: Owner B inserting student into Tenant A blocked by RLS
 [PASS] ISOL-WRITE-UPDATE-CROSS: Owner B updating Tenant A student affects 0 rows
 [PASS] ISOL-WRITE-DELETE-CROSS: Owner B deleting Tenant A student affects 0 rows
+[PASS] STAFF-READ-STUDENTS-OK: Tenant A staff member reads student record via is_tenant_member
 [PASS] ROLE-COACH-SELF-PROMOTE: Coach self-promoting to admin affects 0 rows
 [PASS] ROLE-ADMIN-PROMOTE-OWNER: Admin promoting self to owner blocked by RLS WITH CHECK policy
 [PASS] ROLE-DIRECTOR-PROMOTE-OWNER: Director promoting self to owner blocked by RLS WITH CHECK policy
 [PASS] ROLE-UNAUTH-STEAL-TENANT: Malicious user hijacking tenant ownership affects 0 rows
 [PASS] ROLE-REVOKED-MEMBER-READ: Suspended member receives 0 rows immediately
-[PASS] ROLE-INACTIVE-TENANT-MEMBER: Member of suspended tenant cannot access batches (0 rows)
+[PASS] ROLE-REVOKED-STATUS-MEMBER-READ: Revoked status member receives 0 rows immediately
+[PASS] ROLE-SUSPENDED-TENANT-BATCHES: Member of suspended tenant cannot access batches (0 rows)
+[PASS] ROLE-SUSPENDED-TENANT-STUDENTS: Member of suspended tenant cannot access students (0 rows)
 [PASS] PROV-AUTH-USER-OK: Authenticated caller creates new tenant & initial owner membership atomically
 [PASS] PROV-DUPLICATE-SLUG-FAIL: Duplicate tenant slug provision rejected by unique constraint
 [PASS] PROV-ANON-BLOCKED: Anonymous caller cannot execute provision_initial_tenant_owner (permission denied)
@@ -124,7 +129,7 @@ Executing 44 native PostgreSQL RLS attack vectors...
 [PASS] ANON-ENQ-INACTIVE-FAIL: Anonymous enquiry to suspended tenant blocked by is_active_tenant()
 
 ======================================================================
-COMPREHENSIVE RLS SUITE: 44/44 PASSED, 0 FAILED
+COMPREHENSIVE RLS SUITE: 49/49 PASSED, 0 FAILED
 Detailed evidence written to: scripts/comprehensive_postgres_rls_matrix.json
 ======================================================================
 
@@ -136,7 +141,7 @@ Verified safe migrations: 20261121160000_phase1_multi_tenant_core_schema.sql, 20
 
 --- STAGE: 6. Application Build (PASS) ---
 Command: npm run build
-Duration: 33.35s
+Duration: 45.76s
 Output:
 > khelgrid-platform@0.2.0 build
 > node --experimental-strip-types scripts/generate-sitemap.mjs && node --experimental-strip-types scripts/generate-feed.mjs && tsc -b && vite build
@@ -308,20 +313,23 @@ computing gzip size...
 [2mdist/[22m[36massets/vendor-supabase-CB7MGzWB.js                [39m[1m[2m223.73 kB[22m[1m[22m[2m │ gzip: 58.62 kB[22m
 [2mdist/[22m[36massets/vendor-react-Cf7cRl2r.js                   [39m[1m[2m246.93 kB[22m[1m[22m[2m │ gzip: 78.17 kB[22m
 [2mdist/[22m[36massets/index-C9xkwkf-.js                          [39m[1m[2m328.82 kB[22m[1m[22m[2m │ gzip: 91.46 kB[22m
-[32m✓ built in 6.54s[39m
+[32m✓ built in 10.70s[39m
 
 --- STAGE: 7. Supabase Security Regression (PASS) ---
-Command: npx vitest run src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts src/integrations/supabase/database-security-foundation.test.ts
-Duration: 28.81s
+Command: npx vitest run src/integrations/supabase/phase1-runner-safety.test.ts src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts src/integrations/supabase/database-security-foundation.test.ts
+Duration: 42.59s
 Output:
 [1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mC:/Users/7khan/OneDrive/Desktop/Live score[39m
 
- [32m✓[39m src/integrations/supabase/database-security-foundation.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 5[2mms[22m[39m
- [32m✓[39m src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 24479[2mms[22m[39m
-   [33m[2m✓[22m[39m KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Integration Suite[2m > [22mexecutes comprehensive 44-test native PostgreSQL RLS attack matrix across 11 test identities [33m 24478[2mms[22m[39m
+ [32m✓[39m src/integrations/supabase/database-security-foundation.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/integrations/supabase/phase1-runner-safety.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 922[2mms[22m[39m
+   [33m[2m✓[22m[39m KhelGrid SaaS Platform — Phase 1 Test Runner Safety Verification[2m > [22msuccessfully passes the internal safety rejection test suite [33m 533[2mms[22m[39m
+   [33m[2m✓[22m[39m KhelGrid SaaS Platform — Phase 1 Test Runner Safety Verification[2m > [22mfails closed when KHELGRID_LOCAL_RLS_TEST is missing [33m 386[2mms[22m[39m
+ [32m✓[39m src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 35519[2mms[22m[39m
+   [33m[2m✓[22m[39m KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Integration Suite[2m > [22mexecutes comprehensive 44-test native PostgreSQL RLS attack matrix across 11 test identities [33m 35516[2mms[22m[39m
 
-[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
-[2m      Tests [22m [1m[32m14 passed[39m[22m[90m (14)[39m
-[2m   Start at [22m 21:06:05
-[2m   Duration [22m 25.13s[2m (transform 51ms, setup 0ms, collect 58ms, tests 24.48s, environment 0ms, prepare 483ms)[22m
+[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m16 passed[39m[22m[90m (16)[39m
+[2m   Start at [22m 21:41:23
+[2m   Duration [22m 36.34s[2m (transform 74ms, setup 0ms, collect 113ms, tests 36.45s, environment 1ms, prepare 628ms)[22m
 

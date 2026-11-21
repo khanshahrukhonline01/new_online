@@ -22,7 +22,7 @@ No speculative or breaking permission changes were introduced. All audit logs, p
 
 | Finding Category | Historical Count | Recalculated Scope | Severity | Exposure Intentional? | Remediation & Controlled State |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| **Tables with RLS Enabled but No Policies** | 4 | 4 tables (`listing_submission_evidence`, `listing_moderator_access_audits`, `listing_submission_audits`, `payment_manual_verification_audit`) | Medium (Info) | **YES (Intentional)** | These are sensitive append-only audit logs. With RLS enabled and 0 policies, PostgREST denies ALL direct client access (`anon` & `authenticated`). Only internal `SECURITY DEFINER` moderation RPCs can write to them. |
+| **Tables with RLS Enabled but No Policies** | 4 | 4 tables (`athlete_profile_moderation_audit`, `listing_moderator_access_audits`, `listing_submission_evidence`, `payment_manual_verification_audit`) | Medium (Info) | **YES (Intentional)** | These are sensitive append-only audit logs. With RLS enabled and 0 policies, PostgREST denies ALL direct client access (`anon` & `authenticated`). Only internal `SECURITY DEFINER` moderation RPCs can write to them. |
 | **`SECURITY DEFINER` Functions Executable by `anon`** | 11 | 5 operational functions (`is_active_tenant`, `submit_listing_intake`, `increment_chronicle_paper_views`, `increment_chronicle_paper_downloads`, `increment_chronicle_comment_helpful`) | Medium | **YES (Intentional)** | Audited in detail. Each function is required for unauthenticated visitors (submitting directory listings, reading open research papers, or validating active tenant status for prospective inquiries). All functions use immutable `search_path = public, pg_temp` and leak zero sensitive data. |
 | **`SECURITY DEFINER` Functions Executable by `authenticated`** | 51 | Multi-tenant core + Moderation + Booking/RSVP RPCs | Low | **YES (Intentional)** | Required for authenticated user workflows (tenant owner onboarding, pickup game bookings, profile management, and review submissions). Caller identities are enforced via `auth.uid()`. |
 | **Leaked Password Protection Disabled** | 1 | Auth Project Configuration | Medium | Unintentional (Default setting) | Auth control-plane setting in Supabase Dashboard. Cannot be modified via SQL DDL migrations. Detailed manual enablement procedure provided below. |
@@ -32,21 +32,30 @@ No speculative or breaking permission changes were introduced. All audit logs, p
 
 ## 3. Detailed Investigation of Findings
 
-### 3.1 Four Tables with RLS Enabled but No Policies
-- **Objects:**
-  1. `public.listing_submission_evidence`
-  2. `public.listing_moderator_access_audits`
-  3. `public.listing_submission_audits`
-  4. `public.payment_manual_verification_audit`
-- **Severity:** Medium / Informational.
-- **Analysis:**
-  Under PostgreSQL Row Level Security:
-  When `ALTER TABLE t ENABLE ROW LEVEL SECURITY;` is executed and **no policies** (`CREATE POLICY`) are created:
-  - Any query executed by non-superuser roles (`anon`, `authenticated`) returns an empty set or `42501 permission denied`.
-  - Only database superusers, table owners, and `SECURITY DEFINER` functions running under `postgres` can read or insert.
-- **Why Exposure is NOT a Vulnerability:**
-  These tables hold immutable moderation evidence, moderator access records, and audit logs. Exposing them via REST API policies to frontend clients would introduce a data exposure risk. Keeping them without public policies is the intended defense-in-depth posture.
-- **Action:** Retained as-is. Documented as safe and intentional.
+### 3.1 Four Tables with RLS Enabled but No Policies (Phase F Audit)
+
+The 4 tables flagged by Supabase Security Advisor were independently investigated:
+1. `public.athlete_profile_moderation_audit`
+2. `public.listing_moderator_access_audits`
+3. `public.listing_submission_evidence`
+4. `public.payment_manual_verification_audit`
+
+#### Independent Table Assessment Matrix
+
+| Table Name | RLS Enabled? | Direct Role Grants (`anon`/`auth`) | Can `anon`/`auth` Read or Write? | Service-Role / Definer Only Intentional? | Contains Sensitive Data? | Application Dependency | Deliberately Deny-All? |
+| :--- | :---: | :---: | :---: | :---: | :---: | :--- | :---: |
+| `athlete_profile_moderation_audit` | **YES** | `REVOKE ALL` | **NO** (Denied `42501`) | **YES** | Moderator notes, verification changes, moderator actor UUIDs | Written exclusively by `moderate_athlete_profile()` | **YES** |
+| `listing_moderator_access_audits` | **YES** | `REVOKE ALL` | **NO** (Denied `42501`) | **YES** | Moderator review access history, IP/session timestamps | Written exclusively by `set_listing_moderator_access()` | **YES** |
+| `listing_submission_evidence` | **YES** | `REVOKE ALL` | **NO** (Denied `42501`) | **YES** | Confidential academy ownership certificates, registration proofs | Written and read exclusively by verified listing moderation RPCs | **YES** |
+| `payment_manual_verification_audit`| **YES** | `REVOKE ALL` | **NO** (Denied `42501`) | **YES** | Offline UPI payment UTR references, amounts, verification notes | Written exclusively by `admin_verify_manual_payment()`. Payment collection remains disabled. | **YES** |
+
+#### Why Deliberate Deny-All is Required & Secure
+Under PostgreSQL Row Level Security:
+When `ALTER TABLE t ENABLE ROW LEVEL SECURITY;` is executed and **no policies** (`CREATE POLICY`) are created:
+- Any query executed by non-superuser roles (`anon`, `authenticated`) is blocked by default (`DEFAULT DENY`).
+- Table privileges (`REVOKE ALL FROM PUBLIC, anon, authenticated; GRANT ALL TO service_role;`) provide defense-in-depth at the relation level.
+- Creating permissive RLS policies on these tables would introduce an immediate confidentiality breach, allowing users to enumerate internal moderator decisions or confidential registration certificates.
+- Retaining them as intentional deny-all tables guarantees tamper-proof audit trails. For `payment_manual_verification_audit`, live payment collection remains completely disabled in compliance with Phase 1 constraints.
 
 ---
 

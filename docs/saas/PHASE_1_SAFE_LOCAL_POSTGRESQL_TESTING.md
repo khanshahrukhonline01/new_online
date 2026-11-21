@@ -59,32 +59,59 @@ LOCAL_HOST_PATTERNS = [
 ```
 
 ### Safety Rules Enforced:
-1. **Remote Host Rejection:** Rejects any `DATABASE_URL` containing cloud domains (`supabase.co`, `aws.com`, `neon.tech`, etc.).
-2. **Development Reference Rejection:** Explicitly rejects the remote development project identifier `hznsbxvovjxvmnchzzqt`.
-3. **Local Loopback Enforcement:** Verifies that connection hostnames match strictly local loopback addresses (`localhost`, `127.0.0.1`, or local Docker alias `postgres`).
-4. **Database Name Whitelist:** Target database name must be explicitly in `{'khelgrid_rls_test', 'khelgrid_rls_ci'}`. Refuses to run against `postgres`, `template1`, `production`, etc.
-5. **Live Probe Query:** Queries the connected database engine:
+1. **Explicit Local Opt-In Requirement:** Mandates that environment variable `KHELGRID_LOCAL_RLS_TEST=1` is explicitly set before execution can begin.
+2. **Remote Host Rejection:** Rejects any `DATABASE_URL` containing cloud domains (`supabase.co`, `aws.com`, `neon.tech`, etc.).
+3. **Development Reference Rejection:** Explicitly rejects the remote development project identifier `hznsbxvovjxvmnchzzqt`.
+4. **Local Loopback Enforcement:** Verifies that connection hostnames match strictly local loopback addresses (`localhost`, `127.0.0.1`, or local Docker alias `postgres`).
+5. **Database Name Whitelist:** Target database name must be explicitly in `{'khelgrid_rls_test', 'khelgrid_rls_ci'}`. Refuses to run against `postgres`, `template1`, `production`, etc.
+6. **Live Probe Query:** Queries the connected database engine:
    ```sql
    SELECT current_database(), current_user;
    ```
    and double-checks that the returned active database name matches the approved whitelist.
-6. **Docker Status Check:** If `DATABASE_URL` is omitted, verifies that the local Docker container `sports-platform-postgres` is active and responsive.
-7. **Zero Blind Resets:** Never executes `supabase db reset` or unguided migrations.
-8. **Fail-Closed on Unmet Preconditions:** If Docker or local PostgreSQL is unreachable, terminates with exit code 1 and prints an actionable `[FATAL BLOCKED]` status message.
-9. **Zero Secret Logging:** Never logs passwords, connection strings with credentials, or API keys to disk.
+7. **Docker Status Check:** If `DATABASE_URL` is omitted, verifies that the local Docker container `sports-platform-postgres` is active and responsive.
+8. **Migration Presence Check:** Validates that `tenant_public_directory` view exists and `public.tenants` policy excludes `status = 'active'` before running tests.
+9. **Fail-Closed on Unmet Preconditions:** If Docker or local PostgreSQL is unreachable, terminates with exit code 1 and prints an actionable `[FATAL BLOCKED]` status message.
+10. **Zero Secret Logging:** Never logs passwords, connection strings with credentials, or API keys to disk.
 
 ---
 
-## 3. Local Test Commands
+## 3. Runner Safety Rejection Self-Test
 
-### 3.1 Run PostgreSQL RLS Attack Matrix:
+To prove that the runner safely rejects prohibited cloud connection strings and missing opt-in flags:
 ```bash
-npm run test:phase1:postgres
+python scripts/run-comprehensive-postgres-rls-suite.py --test-safety-rejection
 ```
-- **What it does:** Verifies host safety, seeds 11 disposable test identities, executes all 44 native PostgreSQL RLS attack vectors via real session switching (`SET ROLE`, `set_config`), cleans up test rows, and outputs structured evidence to `scripts/comprehensive_postgres_rls_matrix.json`.
-- **Duration:** ~12–15 seconds.
+Output:
+```
+Executing runner safety rejection suite...
+[PASS] Safety test 'Missing opt-in': correctly rejected
+[PASS] Safety test 'Remote Supabase host': correctly rejected
+[PASS] Safety test 'Supabase pooler': correctly rejected
+[PASS] Safety test 'AWS cloud host': correctly rejected
+[PASS] Safety test 'Local production db': correctly rejected
+[PASS] Safety test 'Valid local test db': correctly allowed
+[SAFETY REJECTION VERIFIED] All prohibited connection strings and flags were safely rejected.
+```
+This is also verified programmatically in Vitest via `src/integrations/supabase/phase1-runner-safety.test.ts`.
 
-### 3.2 Run Full Local CI Validation Pipeline:
+---
+
+## 4. Local Test Commands
+
+### 4.1 Run PostgreSQL RLS Attack Matrix (49 Vectors):
+- **Windows PowerShell:**
+  ```powershell
+  $env:KHELGRID_LOCAL_RLS_TEST="1"; npm run test:phase1:postgres
+  ```
+- **Linux / macOS:**
+  ```bash
+  KHELGRID_LOCAL_RLS_TEST=1 npm run test:phase1:postgres
+  ```
+- **What it does:** Verifies host safety, seeds 14 disposable test identities across 3 tenants, executes all 49 native PostgreSQL RLS attack vectors via real session switching (`SET ROLE`, `set_config`), cleans up test rows, and outputs structured evidence to `scripts/comprehensive_postgres_rls_matrix.json`.
+- **Duration:** ~15–20 seconds.
+
+### 4.2 Run Full Local CI Validation Pipeline:
 ```bash
 npm run verify:phase1
 ```
@@ -92,11 +119,11 @@ npm run verify:phase1
   1. ESLint (`npm run lint`)
   2. TypeScript strict compilation (`npm run typecheck`)
   3. Unit RLS simulation in `pg-mem` (`phase1-multi-tenant-isolation.test.ts`)
-  4. Native PostgreSQL 16 engine integration suite (44 vectors)
+  4. Native PostgreSQL 16 engine integration suite (49 vectors)
   5. SQL migration safety scanner (verifies zero destructive DDL)
   6. Vite production application build (`npm run build`)
-  7. Supabase security regression suite
-- **Duration:** ~1 minute 15 seconds.
+  7. Supabase security regression suite (`phase1-runner-safety.test.ts`, `phase1-multi-tenant-postgres-integration.test.ts`)
+- **Duration:** ~1 minute 30 seconds.
 - **Evidence Produced:**
   - `docs/saas/evidence/phase1_local_verification_report.txt`
   - `docs/saas/evidence/postgres_rls_attack_matrix.json`
