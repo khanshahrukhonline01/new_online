@@ -1,3 +1,16 @@
+> **LATEST READ-ONLY RECONCILIATION — 2026-11-21 17:56 UTC**  
+> Repository now contains six Phase 1 migrations, ending with `20261121233000_phase1_projection_trigger_execute_hardening.sql`. Development Supabase migration history still ends at `20261121220000`; versions `20261121230000` and `20261121233000` are not recorded.  
+>
+> Observed remote schema: `tenant_public_directory` is a physical table with nine public columns; its synchronization trigger and SECURITY DEFINER function exist. The table has zero rows, consistent with the source `public.tenants` table also having zero rows at the snapshot. This does not prove every statement in migration `21230000` matches the remote schema.  
+>
+> Observed remote ACL for `sync_tenant_public_directory()`: anon EXECUTE = true, authenticated EXECUTE = true, service_role EXECUTE = true; search_path = `public, pg_temp`. Thus the new `21233000` hardening migration is **not applied remotely**.  
+>
+> **Do not mark 21230000 applied in migration history until a complete statement-by-statement schema/grant/trigger comparison proves that migration was fully applied.** Supabase's supported history repair command is `supabase migration repair 20261121230000 --status applied`, but it is a remote metadata write and is not authorized or executed in this task. Migration `21233000` must be applied as a normal reviewed migration after local validation; do not mark it applied without executing it.  
+>
+> Remote DDL/DML and migration-history writes were not performed.  
+>
+> ---
+>
 # KhelGrid SaaS Platform — Phase 1 Migration Reconciliation
 ## Schema Versioning, Remote State Alignment & Idempotent Deployment Protocol
 
