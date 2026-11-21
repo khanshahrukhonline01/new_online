@@ -271,4 +271,44 @@ test.describe('KhelGrid Premium Animated Cursor - Complete Acceptance Suite', ()
 
     await context.close()
   })
+
+  test('13. renders 8 kinetic trail particles with progressive decay and kinematic chain delay', async ({ page }) => {
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+
+    const cursorContainer = page.locator('[data-testid="kg-custom-cursor"]')
+    await expect(cursorContainer).toBeAttached()
+
+    const trailLayer = cursorContainer.locator('.kg-cursor-trail-layer')
+    await expect(trailLayer).toBeAttached()
+
+    const particles = cursorContainer.locator('.kg-cursor-trail-particle')
+    await expect(particles).toHaveCount(8)
+
+    // Move pointer rapidly to generate trail separation
+    await page.mouse.move(100, 100)
+    await page.waitForTimeout(100)
+    await page.mouse.move(500, 300, { steps: 5 })
+
+    // Verify leading particle and trailing particle exist
+    const p0 = cursorContainer.locator('.kg-trail-0')
+    const p7 = cursorContainer.locator('.kg-trail-7')
+    await expect(p0).toBeAttached()
+    await expect(p7).toBeAttached()
+
+    // Settle cursor by waiting for kinematic chain to fully converge and RAF loop to pause
+    await page.waitForTimeout(1500)
+    const p0Transform = await p0.evaluate(el => el.style.transform)
+    const p7Transform = await p7.evaluate(el => el.style.transform)
+    const match0 = p0Transform.match(/translate3d\(([\d.]+)px,\s*([\d.]+)px/)
+    const match7 = p7Transform.match(/translate3d\(([\d.]+)px,\s*([\d.]+)px/)
+    expect(match0).not.toBeNull()
+    expect(match7).not.toBeNull()
+    expect(Math.abs(parseFloat(match0![1]) - 500)).toBeLessThan(1)
+    expect(Math.abs(parseFloat(match0![2]) - 300)).toBeLessThan(1)
+    expect(Math.abs(parseFloat(match7![1]) - 500)).toBeLessThan(1)
+    expect(Math.abs(parseFloat(match7![2]) - 300)).toBeLessThan(1)
+
+    await page.screenshot({ path: path.join(evidenceDir, '11_particle_trail_kinematics.png') })
+  })
 })

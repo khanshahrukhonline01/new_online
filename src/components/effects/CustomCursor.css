@@ -74,6 +74,103 @@
               opacity 0.2s ease;
 }
 
+/* Kinetic Particle Trail Layer */
+.kg-cursor-trail-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Individual Trail Particle Base */
+.kg-cursor-trail-particle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  background-color: #10b981;
+  pointer-events: none;
+  will-change: transform;
+  transition: opacity 0.25s cubic-bezier(0.2, 0.7, 0.2, 1),
+              background-color 0.2s ease,
+              filter 0.25s ease;
+}
+
+/* Progressive Trail Sizing, Offset & Emerald Glow Decay (Leading -> Tip) */
+.kg-trail-0 {
+  width: 7.5px;
+  height: 7.5px;
+  margin-top: -3.75px;
+  margin-left: -3.75px;
+  opacity: 0.75;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.85), 0 0 2px #ffffff;
+}
+
+.kg-trail-1 {
+  width: 6.5px;
+  height: 6.5px;
+  margin-top: -3.25px;
+  margin-left: -3.25px;
+  opacity: 0.65;
+  box-shadow: 0 0 7px rgba(16, 185, 129, 0.75);
+}
+
+.kg-trail-2 {
+  width: 5.6px;
+  height: 5.6px;
+  margin-top: -2.8px;
+  margin-left: -2.8px;
+  opacity: 0.55;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.65);
+}
+
+.kg-trail-3 {
+  width: 4.8px;
+  height: 4.8px;
+  margin-top: -2.4px;
+  margin-left: -2.4px;
+  opacity: 0.45;
+  box-shadow: 0 0 5px rgba(16, 185, 129, 0.55);
+}
+
+.kg-trail-4 {
+  width: 4.0px;
+  height: 4.0px;
+  margin-top: -2.0px;
+  margin-left: -2.0px;
+  opacity: 0.35;
+  box-shadow: 0 0 4px rgba(16, 185, 129, 0.45);
+}
+
+.kg-trail-5 {
+  width: 3.2px;
+  height: 3.2px;
+  margin-top: -1.6px;
+  margin-left: -1.6px;
+  opacity: 0.26;
+  box-shadow: 0 0 3px rgba(16, 185, 129, 0.35);
+}
+
+.kg-trail-6 {
+  width: 2.5px;
+  height: 2.5px;
+  margin-top: -1.25px;
+  margin-left: -1.25px;
+  opacity: 0.18;
+  box-shadow: 0 0 2.5px rgba(16, 185, 129, 0.25);
+}
+
+.kg-trail-7 {
+  width: 1.8px;
+  height: 1.8px;
+  margin-top: -0.9px;
+  margin-left: -0.9px;
+  opacity: 0.10;
+  box-shadow: 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
 /* Ripple Pulse Container & Ring */
 .kg-cursor-ripple {
   position: absolute;
@@ -129,6 +226,11 @@
   box-shadow: 0 0 12px #10b981;
 }
 
+.kg-custom-cursor-container.hover-button .kg-cursor-trail-particle {
+  opacity: 0.85;
+  filter: drop-shadow(0 0 3px #10b981);
+}
+
 /* 2. Link Hover: Refined accent ring */
 .kg-custom-cursor-container.hover-link .kg-cursor-follower {
   width: 44px;
@@ -144,6 +246,10 @@
   transform: scale(1.15);
 }
 
+.kg-custom-cursor-container.hover-link .kg-cursor-trail-particle {
+  opacity: 0.75;
+}
+
 /* 3. Card / Tile Hover: Expansive boundary preview */
 .kg-custom-cursor-container.hover-card .kg-cursor-follower {
   width: 60px;
@@ -153,6 +259,10 @@
   border-color: rgba(16, 185, 129, 0.65);
   background-color: rgba(16, 185, 129, 0.06);
   box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);
+}
+
+.kg-custom-cursor-container.hover-card .kg-cursor-trail-particle {
+  filter: drop-shadow(0 0 2px rgba(16, 185, 129, 0.5));
 }
 
 /* 4. Media / Image Hover: Subtle focus ring */
@@ -170,7 +280,7 @@
   background-color: #10b981;
 }
 
-/* 5. Input / Form Control Hover: Fades out outer ring to let native I-beam be crystal clear */
+/* 5. Input / Form Control Hover: Fades out outer ring and trail to let native I-beam be crystal clear */
 .kg-custom-cursor-container.hover-input .kg-cursor-follower {
   width: 14px;
   height: 14px;
@@ -186,6 +296,10 @@
   transform: scale(0.7);
 }
 
+.kg-custom-cursor-container.hover-input .kg-cursor-trail-particle {
+  opacity: 0 !important;
+}
+
 /* --- Click Interaction (Pointer Down) --- */
 .kg-custom-cursor-container.is-clicking .kg-cursor-follower {
   transform: scale(0.82) !important;
@@ -195,6 +309,11 @@
 
 .kg-custom-cursor-container.is-clicking .kg-cursor-dot {
   transform: scale(0.7) !important;
+}
+
+.kg-custom-cursor-container.is-clicking .kg-cursor-trail-particle {
+  opacity: 0.9;
+  filter: drop-shadow(0 0 4px #10b981);
 }
 
 /* --- Accessibility & Fallback --- */

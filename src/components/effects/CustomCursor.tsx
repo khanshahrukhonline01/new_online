@@ -9,12 +9,15 @@ export type CursorHoverType =
   | 'hover-media'
   | 'hover-input'
 
+const TRAIL_LENGTH = 8
+
 /**
  * KhelGrid Premium Animated Cursor
  *
  * Implements a high-performance, athletic, hardware-accelerated cursor
- * with smooth pointer tracking, contextual hover states, restrained click pulse,
- * and complete zero-interference with clicks, scrolling, and text selection.
+ * with smooth pointer tracking, kinetic particle trail, contextual hover states,
+ * restrained click pulse, and complete zero-interference with clicks, scrolling,
+ * and text selection.
  *
  * Automatically disabled on touch devices and respects prefers-reduced-motion.
  */
@@ -50,10 +53,14 @@ export default function CustomCursor() {
   const dotRef = useRef<HTMLDivElement | null>(null)
   const followerRef = useRef<HTMLDivElement | null>(null)
   const rippleRef = useRef<HTMLDivElement | null>(null)
+  const trailRefs = useRef<(HTMLDivElement | null)[]>([])
 
   // Mutable animation state (stored in refs to avoid layout thrashing and re-renders)
   const mousePos = useRef({ x: -100, y: -100 })
   const followerPos = useRef({ x: -100, y: -100 })
+  const trailPositions = useRef<{ x: number; y: number }[]>(
+    Array.from({ length: TRAIL_LENGTH }, () => ({ x: -100, y: -100 }))
+  )
   const rafId = useRef<number | null>(null)
   const isLoopRunning = useRef<boolean>(false)
 
@@ -99,7 +106,7 @@ export default function CustomCursor() {
       return
     }
 
-    const lerpFactor = 0.18
+    const followerLerp = 0.18
 
     const renderLoop = () => {
       const targetX = mousePos.current.x
@@ -108,10 +115,10 @@ export default function CustomCursor() {
       let currentY = followerPos.current.y
 
       // Lerp outer follower towards pointer
-      const dx = targetX - currentX
-      const dy = targetY - currentY
-      currentX += dx * lerpFactor
-      currentY += dy * lerpFactor
+      const dxF = targetX - currentX
+      const dyF = targetY - currentY
+      currentX += dxF * followerLerp
+      currentY += dyF * followerLerp
 
       followerPos.current.x = currentX
       followerPos.current.y = currentY
@@ -124,13 +131,50 @@ export default function CustomCursor() {
         dotRef.current.style.transform = `translate3d(${targetX}px, ${targetY}px, 0)`
       }
 
+      // Kinematic chain: Particle 0 follows mouse pointer
+      const p0 = trailPositions.current[0]
+      const dx0 = targetX - p0.x
+      const dy0 = targetY - p0.y
+      p0.x += dx0 * 0.42
+      p0.y += dy0 * 0.42
+
+      // Subsequent particles progressively follow preceding particle
+      for (let i = 1; i < TRAIL_LENGTH; i++) {
+        const prev = trailPositions.current[i - 1]
+        const curr = trailPositions.current[i]
+        const dx = prev.x - curr.x
+        const dy = prev.y - curr.y
+        const factor = 0.36 - i * 0.025
+        curr.x += dx * factor
+        curr.y += dy * factor
+      }
+
+      // Direct DOM update on all trail particle elements
+      for (let i = 0; i < TRAIL_LENGTH; i++) {
+        const el = trailRefs.current[i]
+        if (el) {
+          el.style.transform = `translate3d(${trailPositions.current[i].x}px, ${trailPositions.current[i].y}px, 0)`
+        }
+      }
+
       // Check distance to settle and pause RAF loop when stationary to conserve CPU
-      const distance = Math.hypot(dx, dy)
-      if (distance < 0.08) {
+      const followerDist = Math.hypot(dxF, dyF)
+      const tailTip = trailPositions.current[TRAIL_LENGTH - 1]
+      const tailDist = Math.hypot(targetX - tailTip.x, targetY - tailTip.y)
+
+      if (followerDist < 0.08 && tailDist < 0.1) {
         followerPos.current.x = targetX
         followerPos.current.y = targetY
         if (followerRef.current) {
           followerRef.current.style.transform = `translate3d(${targetX}px, ${targetY}px, 0)`
+        }
+        for (let i = 0; i < TRAIL_LENGTH; i++) {
+          trailPositions.current[i].x = targetX
+          trailPositions.current[i].y = targetY
+          const el = trailRefs.current[i]
+          if (el) {
+            el.style.transform = `translate3d(${targetX}px, ${targetY}px, 0)`
+          }
         }
         isLoopRunning.current = false
         rafId.current = null
@@ -199,7 +243,7 @@ export default function CustomCursor() {
       const x = Math.max(0, Math.min(window.innerWidth, e.clientX))
       const y = Math.max(0, Math.min(window.innerHeight, e.clientY))
 
-      // If initial position, snap follower immediately without sliding from (-100, -100)
+      // If initial position, snap follower and all trail particles immediately
       if (mousePos.current.x === -100 && mousePos.current.y === -100) {
         followerPos.current.x = x
         followerPos.current.y = y
@@ -208,6 +252,14 @@ export default function CustomCursor() {
         }
         if (dotRef.current) {
           dotRef.current.style.transform = `translate3d(${x}px, ${y}px, 0)`
+        }
+        for (let i = 0; i < TRAIL_LENGTH; i++) {
+          trailPositions.current[i].x = x
+          trailPositions.current[i].y = y
+          const el = trailRefs.current[i]
+          if (el) {
+            el.style.transform = `translate3d(${x}px, ${y}px, 0)`
+          }
         }
       }
 
@@ -264,6 +316,17 @@ export default function CustomCursor() {
       setIsVisible(true)
     }
 
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.hidden) {
+        if (rafId.current) {
+          cancelAnimationFrame(rafId.current)
+          rafId.current = null
+        }
+        isLoopRunning.current = false
+        setIsVisible(false)
+      }
+    }
+
     const handleWindowBlur = () => {
       setIsVisible(false)
     }
@@ -283,6 +346,7 @@ export default function CustomCursor() {
     window.addEventListener('mouseover', handlePointerOver, { capture: true, passive: true })
     document.addEventListener('mouseleave', handleDocMouseLeave)
     document.addEventListener('mouseenter', handleDocMouseEnter)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('blur', handleWindowBlur)
     window.addEventListener('focus', handleWindowFocus)
 
@@ -297,6 +361,7 @@ export default function CustomCursor() {
       window.removeEventListener('mouseover', handlePointerOver, { capture: true })
       document.removeEventListener('mouseleave', handleDocMouseLeave)
       document.removeEventListener('mouseenter', handleDocMouseEnter)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('blur', handleWindowBlur)
       window.removeEventListener('focus', handleWindowFocus)
 
@@ -330,6 +395,17 @@ export default function CustomCursor() {
     >
       <div ref={rippleRef} className="kg-cursor-ripple" />
       <div ref={followerRef} className="kg-cursor-follower" />
+      <div className="kg-cursor-trail-layer" aria-hidden="true">
+        {Array.from({ length: TRAIL_LENGTH }).map((_, i) => (
+          <div
+            key={i}
+            ref={el => {
+              trailRefs.current[i] = el
+            }}
+            className={`kg-cursor-trail-particle kg-trail-${i}`}
+          />
+        ))}
+      </div>
       <div ref={dotRef} className="kg-cursor-dot" />
     </div>
   )

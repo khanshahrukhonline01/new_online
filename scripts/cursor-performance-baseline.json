@@ -1,0 +1,29 @@
+[
+  {
+    "label": "1. Desktop (Cursor Disabled / Reduced Motion)",
+    "cls": 0.020539822387695313,
+    "avgFps": 52,
+    "longTaskCount": 3,
+    "maxLongTask": 87,
+    "isMounted": false,
+    "particleCount": 0
+  },
+  {
+    "label": "2. Desktop (Baseline Cursor - Prior to Particle Trail)",
+    "cls": 0.022069439053535464,
+    "avgFps": 51,
+    "longTaskCount": 3,
+    "maxLongTask": 80,
+    "isMounted": true,
+    "particleCount": 8
+  },
+  {
+    "label": "3. Mobile Emulation (Touch Only)",
+    "cls": 0.03575002994841386,
+    "avgFps": 54,
+    "longTaskCount": 2,
+    "maxLongTask": 123,
+    "isMounted": true,
+    "particleCount": 8
+  }
+]

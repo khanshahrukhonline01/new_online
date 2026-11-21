@@ -84,5 +84,12 @@ describe('CustomCursor Component', () => {
     expect(html).toContain('kg-cursor-ripple')
     expect(html).toContain('kg-cursor-follower')
     expect(html).toContain('kg-cursor-dot')
+
+    // Verify kinetic particle trail layer and 8 decay particles
+    expect(html).toContain('kg-cursor-trail-layer')
+    expect(html).toContain('kg-cursor-trail-particle')
+    for (let i = 0; i < 8; i++) {
+      expect(html).toContain(`kg-trail-${i}`)
+    }
   })
 })
