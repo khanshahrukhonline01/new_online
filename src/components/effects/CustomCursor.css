@@ -33,14 +33,14 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 6px;
-  height: 6px;
-  margin-top: -3px;
-  margin-left: -3px;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  margin-left: -4px;
   background-color: #10b981;
   border-radius: 50%;
   pointer-events: none;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.65), 0 0 2px #ffffff;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.9), 0 0 2px #ffffff;
   will-change: transform;
   transition: transform 0.15s cubic-bezier(0.2, 0.7, 0.2, 1),
               opacity 0.2s cubic-bezier(0.2, 0.7, 0.2, 1),
@@ -52,18 +52,19 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 34px;
-  height: 34px;
-  margin-top: -17px;
-  margin-left: -17px;
+  width: 36px;
+  height: 36px;
+  margin-top: -18px;
+  margin-left: -18px;
   border-radius: 50%;
-  border: 1.5px solid rgba(16, 185, 129, 0.55);
-  background: rgba(16, 185, 129, 0.05);
+  border: 2px solid rgba(16, 185, 129, 0.75);
+  background: rgba(16, 185, 129, 0.08);
   pointer-events: none;
   will-change: transform;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
   transition: width 0.28s cubic-bezier(0.2, 0.7, 0.2, 1),
               height 0.28s cubic-bezier(0.2, 0.7, 0.2, 1),
               margin 0.28s cubic-bezier(0.2, 0.7, 0.2, 1),
@@ -203,7 +204,7 @@
   }
 }
 
-@media (pointer: coarse) {
+@media (hover: none) and (pointer: coarse) {
   .kg-custom-cursor-container {
     display: none !important;
   }

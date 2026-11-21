@@ -18,16 +18,30 @@ export type CursorHoverType =
  *
  * Automatically disabled on touch devices and respects prefers-reduced-motion.
  */
-export default function CustomCursor() {
-  const [isEnabled, setIsEnabled] = useState<boolean>(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return false
-    }
-    const finePointer = window.matchMedia('(pointer: fine)').matches
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    return finePointer && !reducedMotion
-  })
+function checkPointerCapability(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return false
+  }
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (reducedMotion) {
+    return false
+  }
+  // Exclude purely touch-only devices without hover capability (e.g. mobile phones, iPads without mouse)
+  const isTouchOnly = window.matchMedia('(hover: none) and (pointer: coarse)').matches
+  if (isTouchOnly) {
+    return false
+  }
+  // Desktop/laptop with mouse, trackpad, or any fine pointer (including Windows touchscreen laptops)
+  const hasPointer =
+    window.matchMedia('(pointer: fine)').matches ||
+    window.matchMedia('(any-pointer: fine)').matches ||
+    window.matchMedia('(hover: hover)').matches ||
+    window.matchMedia('(any-hover: hover)').matches
+  return hasPointer
+}
 
+export default function CustomCursor() {
+  const [isEnabled, setIsEnabled] = useState<boolean>(checkPointerCapability)
   const [isVisible, setIsVisible] = useState<boolean>(false)
   const [isClicking, setIsClicking] = useState<boolean>(false)
   const [hoverType, setHoverType] = useState<CursorHoverType>('')
@@ -49,21 +63,33 @@ export default function CustomCursor() {
       return
     }
 
-    const fineQuery = window.matchMedia('(pointer: fine)')
     const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const touchOnlyQuery = window.matchMedia('(hover: none) and (pointer: coarse)')
 
     const updateCapability = () => {
-      const fine = fineQuery.matches
-      const reduced = reducedMotionQuery.matches
-      setIsEnabled(fine && !reduced)
+      setIsEnabled(checkPointerCapability())
     }
 
-    fineQuery.addEventListener?.('change', updateCapability)
     reducedMotionQuery.addEventListener?.('change', updateCapability)
+    touchOnlyQuery.addEventListener?.('change', updateCapability)
+
+    // Fallback: If user moves a fine pointer (mouse/trackpad), ensure enabled immediately
+    const handleInitialMove = (e: MouseEvent | PointerEvent) => {
+      if ('pointerType' in e && e.pointerType === 'touch') {
+        return
+      }
+      if (!reducedMotionQuery.matches) {
+        setIsEnabled(true)
+      }
+    }
+    window.addEventListener('mousemove', handleInitialMove, { once: true, passive: true })
+    window.addEventListener('pointermove', handleInitialMove, { once: true, passive: true })
 
     return () => {
-      fineQuery.removeEventListener?.('change', updateCapability)
       reducedMotionQuery.removeEventListener?.('change', updateCapability)
+      touchOnlyQuery.removeEventListener?.('change', updateCapability)
+      window.removeEventListener('mousemove', handleInitialMove)
+      window.removeEventListener('pointermove', handleInitialMove)
     }
   }, [])
 
