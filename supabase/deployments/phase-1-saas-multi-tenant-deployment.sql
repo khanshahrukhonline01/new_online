@@ -1,22 +1,32 @@
+-- ============================================================================
+-- LEGACY DEPLOYMENT ARTIFACT — DO NOT EXECUTE
+-- Superseded by the ordered, timestamped migrations in supabase/migrations/.
+-- This file still defines the former security-barrier tenant_public_directory
+-- view and does not include the latest projection-trigger ACL hardening.
+-- It is retained for historical reference only. Do not paste into Supabase SQL
+-- Editor or run against development/production.
+-- ============================================================================
 -- ==============================================================================
--- KhelGrid SaaS Platform: Phase 1 Multi-Tenant Core Database Deployment
--- Target Database: Development Project hznsbxvovjxvmnchzzqt (Supabase SQL Editor)
+-- KhelGrid SaaS Platform — Phase 1: Multi-Tenant Database Architecture
+-- Migration: 20261121160000_phase1_multi_tenant_core_schema.sql
+-- Target: Development Database hznsbxvovjxvmnchzzqt
 --
--- Deployment Package:
---   - Migration 20261121160000: Phase 1 Multi-Tenant Core Schema
---
--- Safety Contract:
---   - Atomic transaction (wrapped in BEGIN; ... COMMIT;).
---   - Completely non-destructive (no DROP TABLE, no TRUNCATE, zero data loss).
---   - Zero modifications to public catalogue tables (academies, venues, coaches).
---   - Idempotent and fail-closed RLS policies.
---
--- Execution Instructions:
---   1. Open the Supabase Dashboard for project hznsbxvovjxvmnchzzqt:
---      https://supabase.com/dashboard/project/hznsbxvovjxvmnchzzqt/sql
---   2. Click "New Query" in the SQL Editor.
---   3. Paste this entire script and click "Run" (Ctrl+Enter / Cmd+Enter).
---   4. Verify success confirmation and table counts.
+-- Purpose:
+-- 1. Create canonical multi-tenant hierarchy:
+--    - public.tenants (canonical organizations with UUIDs, type, status, audit)
+--    - public.tenant_memberships (user memberships with role, status, invitation)
+-- 2. Create tenant-scoped business entities with immutable foreign keys:
+--    - public.tenant_batches (coaching schedules & squad capacities)
+--    - public.tenant_students (trainee roster & parent linkage)
+--    - public.tenant_enquiries (admissions CRM pipeline)
+--    - public.tenant_fee_invoices (billing records)
+--    - public.tenant_fee_transactions (immutable ledger receipts)
+--    - public.tenant_attendance_events (daily roll-call logs with unique constraint)
+-- 3. Install security functions and evaluate permissions server-side:
+--    - public.is_tenant_member(p_tenant_id uuid)
+--    - public.has_tenant_role(p_tenant_id uuid, p_roles text[])
+-- 4. Enable Row Level Security (RLS) on all tenant tables with strict
+--    cross-tenant isolation policies and fail-closed anonymous access denial.
 -- ==============================================================================
 
 BEGIN;
@@ -86,10 +96,12 @@ SET search_path = public, pg_temp
 AS $$
   SELECT EXISTS (
     SELECT 1
-    FROM public.tenant_memberships
-    WHERE tenant_id = p_tenant_id
-      AND user_id = auth.uid()
-      AND status = 'active'
+    FROM public.tenant_memberships m
+    JOIN public.tenants t ON t.id = m.tenant_id
+    WHERE m.tenant_id = p_tenant_id
+      AND m.user_id = auth.uid()
+      AND m.status = 'active'
+      AND t.status = 'active'
   );
 $$;
 
@@ -116,6 +128,79 @@ GRANT EXECUTE ON FUNCTION public.is_tenant_member(uuid) TO authenticated;
 REVOKE EXECUTE ON FUNCTION public.has_tenant_role(uuid, text[]) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.has_tenant_role(uuid, text[]) TO authenticated;
 
+CREATE OR REPLACE FUNCTION public.is_active_tenant(p_tenant_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.tenants
+    WHERE id = p_tenant_id
+      AND status = 'active'
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.is_active_tenant(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_active_tenant(uuid) TO anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.provision_initial_tenant_owner(
+  p_slug text,
+  p_name text,
+  p_tenant_type text,
+  p_city text DEFAULT NULL,
+  p_state text DEFAULT NULL,
+  p_sport text DEFAULT NULL,
+  p_contact_phone text DEFAULT NULL,
+  p_contact_email text DEFAULT NULL,
+  p_metadata jsonb DEFAULT '{}'::jsonb
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_user_id uuid;
+  v_tenant_id uuid;
+BEGIN
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication required to provision tenant';
+  END IF;
+
+  IF p_tenant_type NOT IN ('academy', 'coach', 'venue', 'tournament') THEN
+    RAISE EXCEPTION 'Invalid tenant_type: %', p_tenant_type;
+  END IF;
+
+  IF p_slug !~ '^[a-z0-9-]+$' THEN
+    RAISE EXCEPTION 'Invalid slug format: %', p_slug;
+  END IF;
+
+  INSERT INTO public.tenants (
+    slug, name, tenant_type, status, owner_id,
+    city, state, sport, contact_phone, contact_email, metadata
+  ) VALUES (
+    p_slug, p_name, p_tenant_type, 'active', v_user_id,
+    p_city, p_state, p_sport, p_contact_phone, p_contact_email, p_metadata
+  )
+  RETURNING id INTO v_tenant_id;
+
+  INSERT INTO public.tenant_memberships (
+    tenant_id, user_id, role, status
+  ) VALUES (
+    v_tenant_id, v_user_id, 'owner', 'active'
+  );
+
+  RETURN v_tenant_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.provision_initial_tenant_owner(text, text, text, text, text, text, text, text, jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.provision_initial_tenant_owner(text, text, text, text, text, text, text, text, jsonb) TO authenticated;
+
 -- -----------------------------------------------------------------------------
 -- 4. TENANT BATCHES (SQUAD SCHEDULES)
 -- -----------------------------------------------------------------------------
@@ -133,7 +218,8 @@ CREATE TABLE IF NOT EXISTS public.tenant_batches (
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT unique_batch_per_tenant UNIQUE (tenant_id, batch_name)
+  CONSTRAINT unique_batch_per_tenant UNIQUE (tenant_id, batch_name),
+  CONSTRAINT uq_tenant_batch UNIQUE (tenant_id, id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_tenant_batches_tenant ON public.tenant_batches(tenant_id, is_active);
@@ -144,7 +230,7 @@ CREATE INDEX IF NOT EXISTS idx_tenant_batches_tenant ON public.tenant_batches(te
 CREATE TABLE IF NOT EXISTS public.tenant_students (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-  batch_id uuid REFERENCES public.tenant_batches(id) ON DELETE SET NULL,
+  batch_id uuid,
   student_name text NOT NULL CHECK (char_length(trim(student_name)) >= 2),
   parent_name text NOT NULL,
   parent_phone text NOT NULL,
@@ -159,7 +245,9 @@ CREATE TABLE IF NOT EXISTS public.tenant_students (
   is_active boolean NOT NULL DEFAULT true,
   metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_tenant_student UNIQUE (tenant_id, id),
+  CONSTRAINT fk_student_tenant_batch FOREIGN KEY (tenant_id, batch_id) REFERENCES public.tenant_batches(tenant_id, id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_tenant_students_tenant_batch ON public.tenant_students(tenant_id, batch_id, is_active);
@@ -193,14 +281,16 @@ CREATE INDEX IF NOT EXISTS idx_tenant_enquiries_tenant_status ON public.tenant_e
 CREATE TABLE IF NOT EXISTS public.tenant_fee_invoices (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-  student_id uuid NOT NULL REFERENCES public.tenant_students(id) ON DELETE RESTRICT,
+  student_id uuid NOT NULL,
   invoice_number text NOT NULL UNIQUE,
   amount integer NOT NULL CHECK (amount >= 0),
   billing_month text NOT NULL,
   due_date date NOT NULL,
   status text NOT NULL DEFAULT 'issued' CHECK (status IN ('draft', 'issued', 'paid', 'partially_paid', 'cancelled', 'refunded')),
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_tenant_fee_invoice UNIQUE (tenant_id, id),
+  CONSTRAINT fk_invoice_tenant_student FOREIGN KEY (tenant_id, student_id) REFERENCES public.tenant_students(tenant_id, id) ON DELETE RESTRICT
 );
 
 CREATE INDEX IF NOT EXISTS idx_tenant_fee_invoices_lookup ON public.tenant_fee_invoices(tenant_id, student_id, status);
@@ -208,8 +298,8 @@ CREATE INDEX IF NOT EXISTS idx_tenant_fee_invoices_lookup ON public.tenant_fee_i
 CREATE TABLE IF NOT EXISTS public.tenant_fee_transactions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-  invoice_id uuid REFERENCES public.tenant_fee_invoices(id) ON DELETE RESTRICT,
-  student_id uuid NOT NULL REFERENCES public.tenant_students(id) ON DELETE RESTRICT,
+  invoice_id uuid,
+  student_id uuid NOT NULL,
   receipt_number text NOT NULL UNIQUE,
   amount integer NOT NULL CHECK (amount > 0),
   payment_mode text NOT NULL CHECK (payment_mode IN ('cash', 'direct_upi', 'bank_transfer', 'cheque')),
@@ -219,7 +309,9 @@ CREATE TABLE IF NOT EXISTS public.tenant_fee_transactions (
   billing_month text NOT NULL,
   status text NOT NULL DEFAULT 'cash_in_hand' CHECK (status IN ('settled', 'cash_in_hand', 'refunded')),
   notes text,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT fk_transaction_tenant_invoice FOREIGN KEY (tenant_id, invoice_id) REFERENCES public.tenant_fee_invoices(tenant_id, id) ON DELETE RESTRICT,
+  CONSTRAINT fk_transaction_tenant_student FOREIGN KEY (tenant_id, student_id) REFERENCES public.tenant_students(tenant_id, id) ON DELETE RESTRICT
 );
 
 CREATE INDEX IF NOT EXISTS idx_tenant_fee_transactions_lookup ON public.tenant_fee_transactions(tenant_id, student_id, status);
@@ -231,8 +323,8 @@ CREATE INDEX IF NOT EXISTS idx_tenant_fee_transactions_date ON public.tenant_fee
 CREATE TABLE IF NOT EXISTS public.tenant_attendance_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-  batch_id uuid NOT NULL REFERENCES public.tenant_batches(id) ON DELETE CASCADE,
-  student_id uuid NOT NULL REFERENCES public.tenant_students(id) ON DELETE CASCADE,
+  batch_id uuid NOT NULL,
+  student_id uuid NOT NULL,
   session_date date NOT NULL DEFAULT CURRENT_DATE,
   check_in_time timestamptz,
   status text NOT NULL CHECK (status IN ('present', 'absent', 'excused')),
@@ -240,7 +332,9 @@ CREATE TABLE IF NOT EXISTS public.tenant_attendance_events (
   marked_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   notes text,
-  CONSTRAINT unique_attendance_session UNIQUE (tenant_id, batch_id, student_id, session_date)
+  CONSTRAINT unique_attendance_session UNIQUE (tenant_id, batch_id, student_id, session_date),
+  CONSTRAINT fk_attendance_tenant_batch FOREIGN KEY (tenant_id, batch_id) REFERENCES public.tenant_batches(tenant_id, id) ON DELETE CASCADE,
+  CONSTRAINT fk_attendance_tenant_student FOREIGN KEY (tenant_id, student_id) REFERENCES public.tenant_students(tenant_id, id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_tenant_attendance_lookup ON public.tenant_attendance_events(tenant_id, batch_id, session_date);
@@ -260,18 +354,32 @@ ALTER TABLE public.tenant_fee_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tenant_attendance_events ENABLE ROW LEVEL SECURITY;
 
 -- 9.1 TENANTS POLICIES
-DROP POLICY IF EXISTS "tenants_member_select" ON public.tenants;
+-- Only verified active members or the tenant owner can view private tenant records
 CREATE POLICY "tenants_member_select"
   ON public.tenants
   FOR SELECT
   TO authenticated
   USING (
     public.is_tenant_member(id) OR
-    owner_id = auth.uid() OR
-    status = 'active'
+    owner_id = auth.uid()
   );
 
-DROP POLICY IF EXISTS "tenants_owner_update" ON public.tenants;
+-- Public directory projection with security barrier: safe non-sensitive columns only (ZERO CASCADE)
+CREATE OR REPLACE VIEW public.tenant_public_directory
+WITH (security_barrier = true) AS
+SELECT
+  id,
+  slug,
+  name,
+  tenant_type,
+  sport,
+  city,
+  state,
+  status,
+  created_at
+FROM public.tenants
+WHERE status = 'active';
+
 CREATE POLICY "tenants_owner_update"
   ON public.tenants
   FOR UPDATE
@@ -279,7 +387,6 @@ CREATE POLICY "tenants_owner_update"
   USING (owner_id = auth.uid() OR public.has_tenant_role(id, ARRAY['owner', 'director']))
   WITH CHECK (owner_id = auth.uid() OR public.has_tenant_role(id, ARRAY['owner', 'director']));
 
-DROP POLICY IF EXISTS "tenants_auth_insert" ON public.tenants;
 CREATE POLICY "tenants_auth_insert"
   ON public.tenants
   FOR INSERT
@@ -287,7 +394,6 @@ CREATE POLICY "tenants_auth_insert"
   WITH CHECK (owner_id = auth.uid());
 
 -- 9.2 TENANT MEMBERSHIPS POLICIES
-DROP POLICY IF EXISTS "tenant_memberships_select" ON public.tenant_memberships;
 CREATE POLICY "tenant_memberships_select"
   ON public.tenant_memberships
   FOR SELECT
@@ -297,23 +403,49 @@ CREATE POLICY "tenant_memberships_select"
     public.is_tenant_member(tenant_id)
   );
 
-DROP POLICY IF EXISTS "tenant_memberships_admin_manage" ON public.tenant_memberships;
-CREATE POLICY "tenant_memberships_admin_manage"
+CREATE POLICY "tenant_memberships_insert"
   ON public.tenant_memberships
-  FOR ALL
+  FOR INSERT
   TO authenticated
-  USING (public.has_tenant_role(tenant_id, ARRAY['owner', 'director', 'admin']))
-  WITH CHECK (public.has_tenant_role(tenant_id, ARRAY['owner', 'director', 'admin']));
+  WITH CHECK (
+    (public.has_tenant_role(tenant_id, ARRAY['owner', 'director'])) OR
+    (public.has_tenant_role(tenant_id, ARRAY['admin']) AND role NOT IN ('owner', 'director'))
+  );
+
+CREATE POLICY "tenant_memberships_update"
+  ON public.tenant_memberships
+  FOR UPDATE
+  TO authenticated
+  USING (
+    public.has_tenant_role(tenant_id, ARRAY['owner', 'director', 'admin'])
+  )
+  WITH CHECK (
+    user_id != auth.uid() AND
+    (
+      (public.has_tenant_role(tenant_id, ARRAY['owner'])) OR
+      (public.has_tenant_role(tenant_id, ARRAY['director']) AND role != 'owner') OR
+      (public.has_tenant_role(tenant_id, ARRAY['admin']) AND role NOT IN ('owner', 'director'))
+    )
+  );
+
+CREATE POLICY "tenant_memberships_delete"
+  ON public.tenant_memberships
+  FOR DELETE
+  TO authenticated
+  USING (
+    (user_id = auth.uid() AND role != 'owner') OR
+    (public.has_tenant_role(tenant_id, ARRAY['owner']) AND role != 'owner') OR
+    (public.has_tenant_role(tenant_id, ARRAY['director']) AND role NOT IN ('owner', 'director')) OR
+    (public.has_tenant_role(tenant_id, ARRAY['admin']) AND role NOT IN ('owner', 'director', 'admin'))
+  );
 
 -- 9.3 TENANT BATCHES POLICIES
-DROP POLICY IF EXISTS "tenant_batches_select" ON public.tenant_batches;
 CREATE POLICY "tenant_batches_select"
   ON public.tenant_batches
   FOR SELECT
   TO authenticated
   USING (public.is_tenant_member(tenant_id));
 
-DROP POLICY IF EXISTS "tenant_batches_manage" ON public.tenant_batches;
 CREATE POLICY "tenant_batches_manage"
   ON public.tenant_batches
   FOR ALL
@@ -322,7 +454,6 @@ CREATE POLICY "tenant_batches_manage"
   WITH CHECK (public.has_tenant_role(tenant_id, ARRAY['owner', 'director', 'admin', 'head_coach']));
 
 -- 9.4 TENANT STUDENTS POLICIES
-DROP POLICY IF EXISTS "tenant_students_member_select" ON public.tenant_students;
 CREATE POLICY "tenant_students_member_select"
   ON public.tenant_students
   FOR SELECT
@@ -332,7 +463,6 @@ CREATE POLICY "tenant_students_member_select"
     guardian_user_id = auth.uid()
   );
 
-DROP POLICY IF EXISTS "tenant_students_manage" ON public.tenant_students;
 CREATE POLICY "tenant_students_manage"
   ON public.tenant_students
   FOR ALL
@@ -341,23 +471,20 @@ CREATE POLICY "tenant_students_manage"
   WITH CHECK (public.has_tenant_role(tenant_id, ARRAY['owner', 'director', 'admin', 'head_coach', 'front_desk']));
 
 -- 9.5 TENANT ENQUIRIES (LEADS CRM) POLICIES
-DROP POLICY IF EXISTS "tenant_enquiries_member_select" ON public.tenant_enquiries;
 CREATE POLICY "tenant_enquiries_member_select"
   ON public.tenant_enquiries
   FOR SELECT
   TO authenticated
   USING (public.is_tenant_member(tenant_id));
 
-DROP POLICY IF EXISTS "tenant_enquiries_public_insert" ON public.tenant_enquiries;
 CREATE POLICY "tenant_enquiries_public_insert"
   ON public.tenant_enquiries
   FOR INSERT
   TO anon, authenticated
   WITH CHECK (
-    EXISTS (SELECT 1 FROM public.tenants WHERE id = tenant_id AND status = 'active')
+    public.is_active_tenant(tenant_id)
   );
 
-DROP POLICY IF EXISTS "tenant_enquiries_manage" ON public.tenant_enquiries;
 CREATE POLICY "tenant_enquiries_manage"
   ON public.tenant_enquiries
   FOR UPDATE
@@ -366,7 +493,6 @@ CREATE POLICY "tenant_enquiries_manage"
   WITH CHECK (public.has_tenant_role(tenant_id, ARRAY['owner', 'director', 'admin', 'front_desk']));
 
 -- 9.6 TENANT FEE INVOICES & TRANSACTIONS POLICIES
-DROP POLICY IF EXISTS "tenant_invoices_member_select" ON public.tenant_fee_invoices;
 CREATE POLICY "tenant_invoices_member_select"
   ON public.tenant_fee_invoices
   FOR SELECT
@@ -376,7 +502,6 @@ CREATE POLICY "tenant_invoices_member_select"
     EXISTS (SELECT 1 FROM public.tenant_students WHERE id = student_id AND guardian_user_id = auth.uid())
   );
 
-DROP POLICY IF EXISTS "tenant_invoices_manage" ON public.tenant_fee_invoices;
 CREATE POLICY "tenant_invoices_manage"
   ON public.tenant_fee_invoices
   FOR ALL
@@ -384,7 +509,6 @@ CREATE POLICY "tenant_invoices_manage"
   USING (public.has_tenant_role(tenant_id, ARRAY['owner', 'director', 'admin', 'accountant']))
   WITH CHECK (public.has_tenant_role(tenant_id, ARRAY['owner', 'director', 'admin', 'accountant']));
 
-DROP POLICY IF EXISTS "tenant_transactions_member_select" ON public.tenant_fee_transactions;
 CREATE POLICY "tenant_transactions_member_select"
   ON public.tenant_fee_transactions
   FOR SELECT
@@ -394,7 +518,6 @@ CREATE POLICY "tenant_transactions_member_select"
     EXISTS (SELECT 1 FROM public.tenant_students WHERE id = student_id AND guardian_user_id = auth.uid())
   );
 
-DROP POLICY IF EXISTS "tenant_transactions_manage" ON public.tenant_fee_transactions;
 CREATE POLICY "tenant_transactions_manage"
   ON public.tenant_fee_transactions
   FOR ALL
@@ -403,7 +526,6 @@ CREATE POLICY "tenant_transactions_manage"
   WITH CHECK (public.has_tenant_role(tenant_id, ARRAY['owner', 'director', 'admin', 'accountant', 'front_desk']));
 
 -- 9.7 TENANT ATTENDANCE EVENTS POLICIES
-DROP POLICY IF EXISTS "tenant_attendance_member_select" ON public.tenant_attendance_events;
 CREATE POLICY "tenant_attendance_member_select"
   ON public.tenant_attendance_events
   FOR SELECT
@@ -413,7 +535,6 @@ CREATE POLICY "tenant_attendance_member_select"
     EXISTS (SELECT 1 FROM public.tenant_students WHERE id = student_id AND guardian_user_id = auth.uid())
   );
 
-DROP POLICY IF EXISTS "tenant_attendance_mark" ON public.tenant_attendance_events;
 CREATE POLICY "tenant_attendance_mark"
   ON public.tenant_attendance_events
   FOR ALL
@@ -437,17 +558,13 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.tenant_memberships TO authenticat
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.tenant_batches TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.tenant_students TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.tenant_enquiries TO authenticated;
-GRANT INSERT ON public.tenant_enquiries TO anon;
+GRANT INSERT ON public.tenant_enquiries TO anon; -- Public parent enquiry intake
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.tenant_fee_invoices TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.tenant_fee_transactions TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.tenant_attendance_events TO authenticated;
 
-COMMIT;
+-- Public directory view grants
+REVOKE ALL ON public.tenant_public_directory FROM PUBLIC;
+GRANT SELECT ON public.tenant_public_directory TO anon, authenticated;
 
--- -----------------------------------------------------------------------------
--- VERIFICATION QUERY: Run this to confirm successful deployment
--- -----------------------------------------------------------------------------
--- SELECT table_name, (SELECT count(*) FROM information_schema.columns WHERE table_name = t.table_name) as col_count
--- FROM information_schema.tables t
--- WHERE table_schema = 'public' AND table_name LIKE 'tenant%'
--- ORDER BY table_name;
+COMMIT;

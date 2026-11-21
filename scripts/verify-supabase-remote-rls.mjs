@@ -1,0 +1,121 @@
+/**
+ * KhelGrid SaaS Platform — Phase 1 Remote Supabase PostgreSQL RLS Probe
+ *
+ * Connects directly to the live development Supabase database (hznsbxvovjxvmnchzzqt)
+ * and verifies PostgreSQL-level RLS policy enforcement, role privilege revokes,
+ * and least-privilege boundary compliance.
+ */
+
+import { createClient } from '@supabase/supabase-js'
+import fs from 'node:fs'
+
+const envContent = fs.readFileSync('.env', 'utf-8')
+const supabaseUrl = envContent.match(/VITE_SUPABASE_URL=(.*)/)?.[1]?.trim()
+const supabaseAnonKey = envContent.match(/VITE_SUPABASE_ANON_KEY=(.*)/)?.[1]?.trim()
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase configuration in .env')
+  process.exit(1)
+}
+
+const client = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: { persistSession: false }
+})
+
+console.log('='.repeat(80))
+console.log('KHELGRID SAAS PHASE 1: REMOTE SUPABASE POSTGRESQL RLS PROBE')
+console.log('Target Project:', supabaseUrl)
+console.log('Execution Mode: Real Database Network Probe (PostgreSQL 17 / PostgREST)')
+console.log('='.repeat(80))
+
+const results = []
+
+async function probeTableSelect(tableName) {
+  const { data, error } = await client.from(tableName).select('*').limit(5)
+  const passed = !!error && (error.code === '42501' || error.message.includes('permission denied'))
+  results.push({
+    test: `SEC-PROBE-01: Anonymous SELECT on public.${tableName}`,
+    expected: '42501 permission denied',
+    actual: error ? `${error.code}: ${error.message}` : `Unexpected 200 OK (${data?.length} rows)`,
+    passed
+  })
+  console.log(`[${passed ? 'PASS' : 'FAIL'}] public.${tableName} SELECT ->`, error ? `${error.code}: ${error.message}` : 'EXPOSED!')
+}
+
+async function probeRpcFunction(functionName, params) {
+  const { data, error } = await client.rpc(functionName, params)
+  const passed = !!error && (error.code === '42501' || error.message.includes('permission denied'))
+  results.push({
+    test: `SEC-PROBE-02: Anonymous EXECUTE on public.${functionName}`,
+    expected: '42501 permission denied',
+    actual: error ? `${error.code}: ${error.message}` : `Unexpected return: ${JSON.stringify(data)}`,
+    passed
+  })
+  console.log(`[${passed ? 'PASS' : 'FAIL'}] RPC public.${functionName} ->`, error ? `${error.code}: ${error.message}` : 'EXPOSED!')
+}
+
+async function probeEnquiryInsert() {
+  const dummyTenantId = '00000000-0000-0000-0000-000000000000'
+  const token = 'ENQ-PROBE-' + Date.now()
+  const { data, error } = await client.from('tenant_enquiries').insert({
+    tenant_id: dummyTenantId,
+    enquiry_token: token,
+    parent_name: 'Security Auditor',
+    parent_phone: '9999999999',
+    student_name: 'Candidate Trainee',
+    sport: 'Football',
+    request_type: 'free_trial'
+  })
+
+  // Should fail because tenant 0000... does not exist / is not active
+  const passed = !!error
+  results.push({
+    test: 'SEC-PROBE-03: Anonymous INSERT on tenant_enquiries for non-existent tenant',
+    expected: 'Denied by RLS WITH CHECK or Foreign Key',
+    actual: error ? `${error.code}: ${error.message}` : 'Unexpected success',
+    passed
+  })
+  console.log(`[${passed ? 'PASS' : 'FAIL'}] tenant_enquiries invalid insert ->`, error ? `${error.code}: ${error.message}` : 'EXPOSED!')
+}
+
+async function run() {
+  const tables = [
+    'tenants',
+    'tenant_memberships',
+    'tenant_batches',
+    'tenant_students',
+    'tenant_enquiries',
+    'tenant_fee_invoices',
+    'tenant_fee_transactions',
+    'tenant_attendance_events'
+  ]
+
+  console.log('\n--- 1. Testing Fail-Closed Anonymous Access on Tenant Tables ---')
+  for (const table of tables) {
+    await probeTableSelect(table)
+  }
+
+  console.log('\n--- 2. Testing Least-Privilege Function Grants for Anonymous Role ---')
+  await probeRpcFunction('is_tenant_member', { p_tenant_id: '00000000-0000-0000-0000-000000000000' })
+  await probeRpcFunction('has_tenant_role', { p_tenant_id: '00000000-0000-0000-0000-000000000000', p_roles: ['owner'] })
+  await probeRpcFunction('provision_initial_tenant_owner', {
+    p_slug: 'probe-tenant',
+    p_name: 'Probe Tenant',
+    p_tenant_type: 'academy'
+  })
+
+  console.log('\n--- 3. Testing Public Admissions Intake Validation ---')
+  await probeEnquiryInsert()
+
+  console.log('\n' + '='.repeat(80))
+  const allPassed = results.every(r => r.passed)
+  console.log(`PROBE SUMMARY: ${results.filter(r => r.passed).length}/${results.length} security checks PASSED.`)
+  console.log('='.repeat(80))
+
+  fs.writeFileSync('scripts/remote-rls-probe-output.json', JSON.stringify(results, null, 2))
+}
+
+run().catch(err => {
+  console.error('Probe execution fatal error:', err)
+  process.exit(1)
+})
