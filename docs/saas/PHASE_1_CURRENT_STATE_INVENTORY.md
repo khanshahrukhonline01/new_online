@@ -45,7 +45,7 @@ The branch `feature/saas-phase-1-acceptance-remediation` contains the complete c
 
 ## 3. Chronological Migration Inventory
 
-The repository contains 4 Phase 1 migrations in `supabase/migrations/`:
+The repository contains 5 Phase 1 migrations in `supabase/migrations/`:
 
 ### 1. `20261121160000_phase1_multi_tenant_core_schema.sql` (23.0 KB)
 - **Scope:** Creates base 8 multi-tenant tables (`tenants`, `tenant_memberships`, `tenant_batches`, `tenant_students`, `tenant_attendance_events`, `tenant_fee_invoices`, `tenant_fee_transactions`, `tenant_enquiries`).
@@ -68,9 +68,16 @@ The repository contains 4 Phase 1 migrations in `supabase/migrations/`:
 - **Scope:**
   1. Drops information-disclosure vulnerability on `public.tenants`: removes `OR status = 'active'` from `tenants_member_select`.
   2. Hardens `public.is_tenant_member(p_tenant_id uuid)` to require both active membership (`m.status = 'active'`) and active tenant status (`t.status = 'active'`).
-  3. Creates `public.tenant_public_directory` view with `security_barrier = true` owned by `postgres`, exposing an explicit 9-column projection allowlist (`id, slug, name, tenant_type, sport, city, state, status, created_at`).
-  4. Dependency-safe deployment: uses `CREATE OR REPLACE VIEW` with pre-flight dependency guard (zero `CASCADE`).
-- **Status:** **[SRC]** Committed. **[LOCAL]** Fully tested and passing in `khelgrid_rls_test`. **[PENDING-ADMIN]** Staged as Proposal A for remote development database execution.
+  3. Pre-flight dependency safe guard.
+- **Status:** **[SRC]** Committed. **[LOCAL]** Applied to `khelgrid_rls_test`. **[PENDING-ADMIN]** Staged for remote application.
+
+### 5. `20261121230000_phase1_tenant_public_directory_projection_table.sql` (5.4 KB)
+- **Scope:**
+  1. Resolves Supabase Security Advisor "Security Definer View" Finding (0010).
+  2. Transitions public directory discovery from legacy view to a dedicated, RLS-protected, synchronized projection table.
+  3. Sensitive columns (`owner_id`, `contact_phone`, `contact_email`, `upi_vpa`, `metadata`) are physically omitted from schema (impossible to leak).
+  4. Atomic real-time trigger `trg_sync_tenant_public_directory` synchronizes active records and purges inactive/suspended tenants.
+- **Status:** **[SRC]** Committed. **[LOCAL]** Fully tested in `khelgrid_rls_test`. **[PENDING-ADMIN]** Staged as Proposal A for remote application.
 
 ---
 

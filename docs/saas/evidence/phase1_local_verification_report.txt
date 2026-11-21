@@ -1,18 +1,18 @@
 ================================================================================
 KHELGRID SAAS PHASE 1 — LOCAL VERIFICATION EVIDENCE REPORT
 ================================================================================
-Generated At: 2026-11-21T16:55:43.962Z
+Generated At: 2026-11-21T17:18:17.696Z
 Host Environment: Windows / Node v24.12.0 / Docker PostgreSQL 16.4
 Overall Status: ALL STAGES PASSED (100%)
 
 SUMMARY OF STAGES:
-[PASS] 1. ESLint (26.32s)
-[PASS] 2. TypeScript Check (35.03s)
-[PASS] 3. Unit RLS Simulation (11.48s)
-[PASS] 4. Native PostgreSQL RLS Engine (30.36s)
+[PASS] 1. ESLint (8.83s)
+[PASS] 2. TypeScript Check (18.79s)
+[PASS] 3. Unit RLS Simulation (3.55s)
+[PASS] 4. Native PostgreSQL RLS Engine (22.58s)
 [PASS] 5. Migration Safety (0.05s)
-[PASS] 6. Application Build (49.46s)
-[PASS] 7. Supabase Security Regression (42.30s)
+[PASS] 6. Application Build (25.84s)
+[PASS] 7. Supabase Security Regression (27.93s)
 
 ================================================================================
 DETAILED STAGE OUTPUTS
@@ -20,7 +20,7 @@ DETAILED STAGE OUTPUTS
 
 --- STAGE: 1. ESLint (PASS) ---
 Command: npm run lint
-Duration: 26.32s
+Duration: 8.83s
 Output:
 > khelgrid-platform@0.2.0 lint
 > eslint .
@@ -53,27 +53,27 @@ C:\Users\7khan\OneDrive\Desktop\Live score\src\shared\sports\sportIcons.tsx
 
 --- STAGE: 2. TypeScript Check (PASS) ---
 Command: npm run typecheck
-Duration: 35.03s
+Duration: 18.79s
 Output:
 > khelgrid-platform@0.2.0 typecheck
 > tsc -b --pretty
 
 --- STAGE: 3. Unit RLS Simulation (PASS) ---
 Command: npx vitest run src/integrations/supabase/phase1-multi-tenant-isolation.test.ts
-Duration: 11.48s
+Duration: 3.55s
 Output:
 [1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mC:/Users/7khan/OneDrive/Desktop/Live score[39m
 
- [32m✓[39m src/integrations/supabase/phase1-multi-tenant-isolation.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 807[2mms[22m[39m
+ [32m✓[39m src/integrations/supabase/phase1-multi-tenant-isolation.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 383[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
 [2m      Tests [22m [1m[32m17 passed[39m[22m[90m (17)[39m
-[2m   Start at [22m 22:23:36
-[2m   Duration [22m 4.93s[2m (transform 140ms, setup 0ms, collect 3.28s, tests 807ms, environment 0ms, prepare 286ms)[22m
+[2m   Start at [22m 22:46:59
+[2m   Duration [22m 1.27s[2m (transform 47ms, setup 0ms, collect 311ms, tests 383ms, environment 0ms, prepare 209ms)[22m
 
 --- STAGE: 4. Native PostgreSQL RLS Engine (PASS) ---
 Command: python scripts/run-comprehensive-postgres-rls-suite.py
-Duration: 30.36s
+Duration: 22.58s
 Output:
 [SAFETY & MIGRATION VERIFIED] Running against verified local test database: khelgrid_rls_test
 
@@ -137,11 +137,11 @@ Detailed evidence written to: scripts/comprehensive_postgres_rls_matrix.json
 Command: internal check
 Duration: 0.05s
 Output:
-Verified safe migrations: 20261121160000_phase1_multi_tenant_core_schema.sql, 20261121200000_phase1_security_remediation_and_composite_keys.sql, 20261121210000_phase1_fk_deletion_and_function_hardening.sql, 20261121220000_phase1_tenant_information_disclosure_remediation.sql
+Verified safe migrations: 20261121160000_phase1_multi_tenant_core_schema.sql, 20261121200000_phase1_security_remediation_and_composite_keys.sql, 20261121210000_phase1_fk_deletion_and_function_hardening.sql, 20261121220000_phase1_tenant_information_disclosure_remediation.sql, 20261121230000_phase1_tenant_public_directory_projection_table.sql
 
 --- STAGE: 6. Application Build (PASS) ---
 Command: npm run build
-Duration: 49.46s
+Duration: 25.84s
 Output:
 > khelgrid-platform@0.2.0 build
 > node --experimental-strip-types scripts/generate-sitemap.mjs && node --experimental-strip-types scripts/generate-feed.mjs && tsc -b && vite build
@@ -313,23 +313,23 @@ computing gzip size...
 [2mdist/[22m[36massets/vendor-supabase-CB7MGzWB.js                [39m[1m[2m223.73 kB[22m[1m[22m[2m │ gzip: 58.62 kB[22m
 [2mdist/[22m[36massets/vendor-react-Cf7cRl2r.js                   [39m[1m[2m246.93 kB[22m[1m[22m[2m │ gzip: 78.17 kB[22m
 [2mdist/[22m[36massets/index-C9xkwkf-.js                          [39m[1m[2m328.82 kB[22m[1m[22m[2m │ gzip: 91.46 kB[22m
-[32m✓ built in 9.56s[39m
+[32m✓ built in 5.09s[39m
 
 --- STAGE: 7. Supabase Security Regression (PASS) ---
-Command: npx vitest run src/integrations/supabase/phase1-runner-safety.test.ts src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts src/integrations/supabase/database-security-foundation.test.ts
-Duration: 42.30s
+Command: npx vitest run src/integrations/supabase/phase1-runner-safety.test.ts src/integrations/supabase/phase1-ci-migration-drift.test.ts src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts src/integrations/supabase/database-security-foundation.test.ts
+Duration: 27.93s
 Output:
 [1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mC:/Users/7khan/OneDrive/Desktop/Live score[39m
 
- [32m✓[39m src/integrations/supabase/database-security-foundation.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 13[2mms[22m[39m
- [32m✓[39m src/integrations/supabase/phase1-runner-safety.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 996[2mms[22m[39m
-   [33m[2m✓[22m[39m KhelGrid SaaS Platform — Phase 1 Test Runner Safety Verification[2m > [22msuccessfully passes the internal safety rejection test suite [33m 562[2mms[22m[39m
-   [33m[2m✓[22m[39m KhelGrid SaaS Platform — Phase 1 Test Runner Safety Verification[2m > [22mfails closed when KHELGRID_LOCAL_RLS_TEST is missing [33m 431[2mms[22m[39m
- [32m✓[39m src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 35603[2mms[22m[39m
-   [33m[2m✓[22m[39m KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Integration Suite[2m > [22mexecutes comprehensive 49-vector native PostgreSQL RLS attack matrix across 11 test identities [33m 35599[2mms[22m[39m
+ [32m✓[39m src/integrations/supabase/phase1-ci-migration-drift.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/integrations/supabase/database-security-foundation.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/integrations/supabase/phase1-runner-safety.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 536[2mms[22m[39m
+   [33m[2m✓[22m[39m KhelGrid SaaS Platform — Phase 1 Test Runner Safety Verification[2m > [22msuccessfully passes the internal safety rejection test suite [33m 333[2mms[22m[39m
+ [32m✓[39m src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 24770[2mms[22m[39m
+   [33m[2m✓[22m[39m KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Integration Suite[2m > [22mexecutes comprehensive 49-vector native PostgreSQL RLS attack matrix across 11 test identities [33m 24768[2mms[22m[39m
 
-[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
-[2m      Tests [22m [1m[32m16 passed[39m[22m[90m (16)[39m
-[2m   Start at [22m 22:25:07
-[2m   Duration [22m 36.47s[2m (transform 151ms, setup 0ms, collect 248ms, tests 36.61s, environment 1ms, prepare 730ms)[22m
+[2m Test Files [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m      Tests [22m [1m[32m17 passed[39m[22m[90m (17)[39m
+[2m   Start at [22m 22:47:51
+[2m   Duration [22m 25.43s[2m (transform 118ms, setup 0ms, collect 185ms, tests 25.32s, environment 1ms, prepare 897ms)[22m
 

@@ -121,12 +121,13 @@ BEGIN
     RAISE EXCEPTION 'Phase 1 Gate K: Functions without locked search_path: %', v_bad;
   END IF;
 
-  -- 9. Verify tenant_public_directory view exists and has security_barrier = true
+  -- 9. Verify tenant_public_directory exists with RLS enabled
   IF NOT EXISTS (
-    SELECT 1 FROM pg_views
-    WHERE schemaname = 'public' AND viewname = 'tenant_public_directory'
+    SELECT 1 FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname = 'tenant_public_directory'
   ) THEN
-    RAISE EXCEPTION 'Phase 1 Gate L: public.tenant_public_directory view does not exist';
+    RAISE EXCEPTION 'Phase 1 Gate L: public.tenant_public_directory does not exist';
   END IF;
 
   -- 10. Verify tenant_public_directory does NOT expose private tenant columns

@@ -152,9 +152,9 @@ if live_db not in APPROVED_TEST_DATABASES:
     sys.exit(1)
 
 # Verify Migration 20261121220000 Presence
-check_view_out, _, check_view_rc = run_psql("SELECT count(*) FROM information_schema.views WHERE table_schema = 'public' AND table_name = 'tenant_public_directory';")
+check_view_out, _, check_view_rc = run_psql("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'tenant_public_directory';")
 if check_view_rc != 0 or check_view_out != "1":
-    print("[FATAL BLOCKED] Migration 20261121220000 missing: public.tenant_public_directory view does not exist.")
+    print("[FATAL BLOCKED] Migration 20261121220000 missing: public.tenant_public_directory does not exist.")
     sys.exit(1)
 
 check_policy_out, _, check_policy_rc = run_psql("SELECT qual FROM pg_policies WHERE schemaname = 'public' AND tablename = 'tenants' AND policyname = 'tenants_member_select';")

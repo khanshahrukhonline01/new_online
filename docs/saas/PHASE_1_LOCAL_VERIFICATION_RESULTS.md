@@ -29,7 +29,7 @@ Zero GitHub Actions minutes were consumed. All 7 stages completed successfully w
 | 4 | **Native PostgreSQL RLS Engine** | Docker Postgres 16.4 RLS enforcement (49 vectors) | `python scripts/run-comprehensive-postgres-rls-suite.py` | **PASSED** (49/49 vectors passed) |
 | 5 | **Migration Safety** | DDL idempotency & non-destructive check | Internal script inspection | **PASSED** (0 DROP/TRUNCATE) |
 | 6 | **Application Build** | Vite production bundle | `npm run build` | **PASSED** (1,938 modules transformed) |
-| 7 | **Supabase Security Regression** | End-to-end security test suite | `npx vitest run phase1-runner-safety.test.ts phase1-multi-tenant-postgres-integration.test.ts database-security-foundation.test.ts` | **PASSED** (16/16 tests passed) |
+| 7 | **Supabase Security Regression** | End-to-end security test suite | `npx vitest run phase1-runner-safety.test.ts phase1-ci-migration-drift.test.ts phase1-multi-tenant-postgres-integration.test.ts database-security-foundation.test.ts` | **PASSED** (17/17 tests passed) |
 
 **Total Local Verification Pipeline Duration:** ~125s  
 **Overall Pipeline Result:** **100% PASSED (0 Failures, 0 Regressions)**

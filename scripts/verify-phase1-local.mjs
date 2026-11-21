@@ -106,7 +106,7 @@ validateMigrations()
 runStage('6. Application Build', 'npm run build', 'Compiling production client bundle with Vite')
 
 // 7. Security Regression Test Suite
-runStage('7. Supabase Security Regression', 'npx vitest run src/integrations/supabase/phase1-runner-safety.test.ts src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts src/integrations/supabase/database-security-foundation.test.ts', 'Verifying security suite regression stability')
+runStage('7. Supabase Security Regression', 'npx vitest run src/integrations/supabase/phase1-runner-safety.test.ts src/integrations/supabase/phase1-ci-migration-drift.test.ts src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts src/integrations/supabase/database-security-foundation.test.ts', 'Verifying security suite regression stability')
 
 const endTime = new Date().toISOString()
 

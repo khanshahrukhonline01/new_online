@@ -9,6 +9,7 @@
 2. [20261121200000_phase1_security_remediation_and_composite_keys.sql](../../supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql)
 3. [20261121210000_phase1_fk_deletion_and_function_hardening.sql](../../supabase/migrations/20261121210000_phase1_fk_deletion_and_function_hardening.sql)
 4. [20261121220000_phase1_tenant_information_disclosure_remediation.sql](../../supabase/migrations/20261121220000_phase1_tenant_information_disclosure_remediation.sql)
+5. [20261121230000_phase1_tenant_public_directory_projection_table.sql](../../supabase/migrations/20261121230000_phase1_tenant_public_directory_projection_table.sql)
 **Unified Deployment Script:** [phase-1-saas-multi-tenant-deployment.sql](../../supabase/deployments/phase-1-saas-multi-tenant-deployment.sql)  
 **Remote Database Changes Made:** **NONE (Awaiting Human Approval)**
 
@@ -193,6 +194,14 @@ VALUES (
   '20261121220000',
   ARRAY['-- phase1_tenant_information_disclosure_remediation'],
   'phase1_tenant_information_disclosure_remediation'
+)
+ON CONFLICT (version) DO NOTHING;
+
+INSERT INTO supabase_migrations.schema_migrations (version, statements, name)
+VALUES (
+  '20261121230000',
+  ARRAY['-- phase1_tenant_public_directory_projection_table'],
+  'phase1_tenant_public_directory_projection_table'
 )
 ON CONFLICT (version) DO NOTHING;
 

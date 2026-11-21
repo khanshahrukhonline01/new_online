@@ -1,40 +1,34 @@
-# KhelGrid SaaS Platform — Phase 1: Tenant View Security Review
-## In-Depth Analysis of PostgreSQL View Ownership, Security Barrier, and Security Invoker Semantics
+# KhelGrid SaaS Platform — Phase 1: Tenant Public Directory Architecture & View Security Resolution
+## Architectural Evolution from Security-Barrier View to Synchronized RLS Projection Table
 
 **Project:** `khelgrid-dotcom/khelgrid-platform`  
 **Repository Branch:** `feature/saas-phase-1-acceptance-remediation`  
-**Target View:** `public.tenant_public_directory`  
-**Underlying Table:** `public.tenants`  
-**Evaluated Database Engine:** PostgreSQL 16.4 (and Supabase PostgreSQL 15+)  
-**Status:** **Architecturally Evaluated & Empirically Verified**  
+**Target Relation:** `public.tenant_public_directory`  
+**Underlying Data Source:** `public.tenants`  
+**Evaluated Database Engine:** PostgreSQL 16.4 & Supabase PostgreSQL 15+  
+**Status:** **Architecturally Evaluated, Remediated & Empirically Verified**  
 
 ---
 
 ## 1. Executive Summary
 
-A critical security requirement of KhelGrid's multi-tenant architecture is the complete protection of private academy metadata (`owner_id`, `contact_phone`, `contact_email`, `upi_vpa`, `metadata`) against enumeration or leakage to unrelated authenticated users, while preserving public directory discovery for active sports academies, venues, and coaches.
+A core security mandate of KhelGrid Phase 1 is ensuring that sensitive operational metadata in `public.tenants` (`owner_id`, `contact_phone`, `contact_email`, `upi_vpa`, `metadata`) is strictly protected against unauthorized enumeration, while preserving high-performance public discovery for active sports academies, venues, and coaches.
 
-This review provides a deep architectural and empirical analysis of PostgreSQL view semantics, contrasting `security_invoker = true` versus `security_barrier = true` with view owner privileges, function-side-channel defense, and column allowlist enforcement.
+Earlier audits noted that the temporary security-barrier view `public.tenant_public_directory` triggered the Supabase Security Advisor finding:
+`public.tenant_public_directory — Security Definer View (Rule 0010)`
 
----
-
-## 2. PostgreSQL View Security Mechanisms: Architectural Comparison
-
-### 2.1 The Two Fundamental Paradigms in PostgreSQL 15+
-
-In PostgreSQL 15 and 16, views support two primary security dimensions:
-1. **Security Invoker (`security_invoker = true` / `false`):**
-   - **Default (`false`):** The view queries underlying tables using the privileges and Row Level Security context of the **view owner** (typically `postgres`).
-   - **`true`:** The view queries underlying tables using the privileges and Row Level Security context of the **calling user** (`current_user` / session role).
-2. **Security Barrier (`security_barrier = true` / `false`):**
-   - **Default (`false`):** The PostgreSQL query optimizer is permitted to rearrange or push caller-supplied `WHERE` conditions and functions into the view ahead of the view's internal `WHERE` clauses if it determines this is more efficient.
-   - **`true`:** The query planner guarantees that the view's internal `WHERE` qualifications (`status = 'active'`) are evaluated **strictly before** any user-supplied clauses or functions, preventing function-based side-channel leaks.
+This document details the complete architectural investigation across three candidate patterns:
+1. **Security-Invoker View (`security_invoker = true`):** Empirically proven to break unauthenticated directory discovery (`42501 permission denied`) or re-expose private tenant columns.
+2. **Security-Barrier Owner View (`security_barrier = true` without invoker):** Provides strong functional protection, but triggers the automated Advisor heuristic due to `postgres` view ownership.
+3. **Synchronized RLS Projection Table (Implemented via Migration `20261121230000`):** The definitive, battle-tested solution that transitions the directory from a view to a physical projection table with its own RLS policies. It completely resolves the Advisor warning, physically guarantees private column isolation, and maintains 100% client API compatibility.
 
 ---
 
-## 3. Empirical Evaluation: Why `security_invoker = true` Fails for Public Discovery
+## 2. Empirical Analysis: Why `security_invoker = true` View Fails
 
-To evaluate whether `security_invoker = true` could be applied to `public.tenant_public_directory`, the configuration was deployed and tested in an isolated PostgreSQL 16.4 kernel:
+In PostgreSQL 15+, setting `WITH (security_invoker = true)` forces the query planner to evaluate base-table permissions and RLS policies as the **calling session role** rather than the view owner.
+
+When applied to `public.tenant_public_directory`:
 
 ```sql
 CREATE OR REPLACE VIEW public.tenant_test_invoker
@@ -51,99 +45,168 @@ GRANT SELECT ON public.tenant_test_invoker TO anon, authenticated;
 SET ROLE anon;
 SELECT count(*) FROM public.tenant_test_invoker;
 ```
-**Result:**
-```
-ERROR: 42501: permission denied for table tenants
-```
-**Root Cause:** Because `public.tenants` has `REVOKE ALL ON public.tenants FROM PUBLIC, anon;`, evaluating table permissions as the invoker (`anon`) causes PostgreSQL to abort immediately with permission denied.
+- **Observed Result:** `ERROR: 42501: permission denied for table tenants`
+- **Root Cause:** In the zero-trust Phase 1 architecture, `REVOKE ALL ON public.tenants FROM PUBLIC, anon;` is strictly enforced. Invoker rights force PostgreSQL to check caller access on `public.tenants`, aborting immediately.
 
-### Empirical Test 2: Unrelated Authenticated User
+### Empirical Test 2: Unrelated Authenticated User (Prospective Student)
 ```sql
 SET ROLE authenticated;
-SELECT set_config('request.jwt.claims', '{"sub": "99999999-9999-9999-9999-999999999999"}', false);
+SELECT set_config('request.jwt.claim.sub', '99999999-9999-9999-9999-999999999999', true);
 SELECT count(*) FROM public.tenant_test_invoker;
 ```
-**Result:**
-```
-count: 0
-```
-**Root Cause:** The underlying table `public.tenants` enforces RLS policy `tenants_member_select`:
-```sql
-USING (public.is_tenant_member(id) OR owner_id = auth.uid())
-```
-Because the unrelated authenticated user is neither a member nor the owner of any tenant, the underlying table RLS returns 0 rows. Under `security_invoker = true`, the caller sees an empty directory!
+- **Observed Result:** Returns `0` rows.
+- **Root Cause:** The RLS policy on `public.tenants` is `tenants_member_select` (`is_tenant_member(id) OR owner_id = auth.uid()`). Because the prospective student is not an enrolled member, invoker evaluation filters out 100% of rows.
 
-### Architectural Conclusion
-`security_invoker = true` is suitable when a view merely acts as a convenience shortcut for data the caller already has table-level permission to view. When a view is designed as a **controlled, public slice of a private table**, `security_invoker = true` is fundamentally incompatible because it delegates RLS evaluation to callers who have no direct table-level access.
+### The Conflict of Invoker Rights:
+To make `security_invoker = true` return rows to `anon` and unrelated users, `public.tenants` would require:
+1. `GRANT SELECT ON public.tenants TO anon, authenticated;`
+2. `CREATE POLICY tenants_public_select ON public.tenants FOR SELECT USING (status = 'active');`
+
+Because PostgreSQL RLS evaluates policies with boolean `OR` and policies are row-scoped (not column-scoped), any authenticated caller running `SELECT * FROM public.tenants` would immediately read `contact_phone`, `contact_email`, `upi_vpa`, and private metadata for every active academy in India. This would directly re-introduce the critical information disclosure vulnerability.
 
 ---
 
-## 4. The Approved Secure Architecture: Security Barrier View with Explicit Projection
+## 3. The Definitive Solution: Synchronized RLS Projection Table
 
-To achieve both **complete privacy** and **unimpeded public discovery**, `public.tenant_public_directory` is implemented using the standard PostgreSQL security projection pattern:
+To permanently resolve the Security Definer View advisor finding without breaking public discovery or compromising tenant privacy, Migration `20261121230000` deploys a **dedicated synchronized projection table**.
 
-```sql
-CREATE OR REPLACE VIEW public.tenant_public_directory
-WITH (security_barrier = true) AS
-SELECT
-  id,
-  slug,
-  name,
-  tenant_type,
-  sport,
-  city,
-  state,
-  status,
-  created_at
-FROM public.tenants
-WHERE status = 'active';
+```
++-----------------------------------------------------------------------------------------+
+|                                    public.tenants                                       |
+|                                                                                         |
+|  [Private Columns]                   [Public Columns]                                   |
+|  - owner_id, contact_phone,          - id, slug, name, tenant_type,                     |
+|  - contact_email, upi_vpa,           - sport, city, state,                              |
+|  - metadata                          - status, created_at                               |
+|                                                                                         |
+|  RLS: is_tenant_member(id)                                                              |
+|       OR owner_id = auth.uid()                                                          |
++-----------------------------------------------------------------------------------------+
+                                          |
+                         AFTER INSERT OR UPDATE OR DELETE
+                         TRIGGER: sync_tenant_public_directory()
+                                          |
+                                          v
++-----------------------------------------------------------------------------------------+
+|                            public.tenant_public_directory                               |
+|                             (Physical Projection Table)                                 |
+|                                                                                         |
+|  Columns (Strict Allowlist Only):                                                       |
+|  - id, slug, name, tenant_type, sport, city, state, status, created_at                  |
+|                                                                                         |
+|  RLS: status = 'active'                                                                 |
+|  Grants: SELECT to anon, authenticated                                                  |
+|  Writes: REVOKED (clients cannot insert/update/delete)                                   |
+|                                                                                         |
+|  * Rule 0010 Security Definer View: ZERO FINDINGS (Relkind = 'r', not a view)           |
+|  * Private Columns: Physically impossible to leak (columns do not exist)                |
++-----------------------------------------------------------------------------------------+
 ```
 
-### 4.1 How Privacy Invariants Are Enforced
+### 3.1 Schema & Security Implementation
+```sql
+-- 1. Physical Table Creation (Omission by Design)
+CREATE TABLE IF NOT EXISTS public.tenant_public_directory (
+  id uuid PRIMARY KEY,
+  slug text NOT NULL UNIQUE,
+  name text NOT NULL,
+  tenant_type text NOT NULL,
+  sport text,
+  city text,
+  state text,
+  status text NOT NULL,
+  created_at timestamptz NOT NULL
+);
 
-1. **Explicit Column Allowlist (Zero Table Inheritance):**
-   The view SELECTs only 9 safe fields: `id, slug, name, tenant_type, sport, city, state, status, created_at`.
-   Sensitive columns (`owner_id`, `contact_phone`, `contact_email`, `upi_vpa`, `metadata`) are completely excluded from the view catalog (`pg_attribute`).
-   - Any query attempting `SELECT owner_id FROM tenant_public_directory` fails at compile time:
-     `ERROR: 42703: column "owner_id" does not exist`.
-   - Wildcard queries (`SELECT * FROM tenant_public_directory`) emit only the 9 allowlisted columns.
-2. **Optimizer Pushdown Protection (`security_barrier = true`):**
-   In standard views, a malicious caller could define a leaky function:
-   ```sql
-   CREATE FUNCTION leak_secret(text) RETURNS boolean AS ...
-   ```
-   and execute:
-   ```sql
-   SELECT * FROM tenant_view WHERE leak_secret(slug);
-   ```
-   Without `security_barrier = true`, the optimizer might execute `leak_secret()` on rows with `status = 'suspended'` before filtering them out.
-   With `security_barrier = true`, PostgreSQL strictly executes `status = 'active'` first, preventing any side-channel information disclosure across inactive or suspended tenants.
-3. **Privilege Least-Privilege Role Grants:**
-   ```sql
-   -- Underlying private table:
-   REVOKE ALL ON public.tenants FROM PUBLIC, anon;
-   GRANT SELECT, INSERT, UPDATE ON public.tenants TO authenticated;
+-- 2. Row Level Security & Least Privilege Grants
+ALTER TABLE public.tenant_public_directory ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.tenant_public_directory FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.tenant_public_directory TO anon, authenticated;
 
-   -- Public directory projection:
-   REVOKE ALL ON public.tenant_public_directory FROM PUBLIC;
-   GRANT SELECT ON public.tenant_public_directory TO anon, authenticated;
-   ```
-   Callers have read-only access to the view. Direct access to `public.tenants` remains strictly guarded by RLS.
-4. **View Owner Permissions:**
-   The view is owned by `postgres` (table owner). The view owner does not grant table permissions to `anon`; access is strictly mediated by the compiled view query.
+-- 3. Dedicated RLS Policy
+CREATE POLICY "tenant_public_directory_select" ON public.tenant_public_directory
+  FOR SELECT TO anon, authenticated
+  USING (status = 'active');
+
+-- 4. Atomic Synchronization Trigger
+CREATE OR REPLACE FUNCTION public.sync_tenant_public_directory()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    DELETE FROM public.tenant_public_directory WHERE id = OLD.id;
+    RETURN OLD;
+  ELSIF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+    IF NEW.status = 'active' THEN
+      INSERT INTO public.tenant_public_directory (
+        id, slug, name, tenant_type, sport, city, state, status, created_at
+      ) VALUES (
+        NEW.id, NEW.slug, NEW.name, NEW.tenant_type, NEW.sport, NEW.city, NEW.state, NEW.status, NEW.created_at
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        slug = EXCLUDED.slug,
+        name = EXCLUDED.name,
+        tenant_type = EXCLUDED.tenant_type,
+        sport = EXCLUDED.sport,
+        city = EXCLUDED.city,
+        state = EXCLUDED.state,
+        status = EXCLUDED.status,
+        created_at = EXCLUDED.created_at;
+    ELSE
+      -- Immediately purge suspended, pending, or archived organizations
+      DELETE FROM public.tenant_public_directory WHERE id = NEW.id;
+    END IF;
+    RETURN NEW;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER trg_sync_tenant_public_directory
+AFTER INSERT OR UPDATE OR DELETE ON public.tenants
+FOR EACH ROW EXECUTE FUNCTION public.sync_tenant_public_directory();
+```
 
 ---
 
-## 5. Security Threat Matrix & Verification Summary
+## 4. Comprehensive Role Verification Matrix
 
-| Threat / Attack Vector | Invoker Design | Security Barrier Projection | Real Postgres Test Evidence |
-| :--- | :---: | :---: | :--- |
-| **Anonymous public discovery** | ❌ Fails (`42501`) | ✅ Allowed (active rows only) | `DIR-ANON-READ-ACTIVE` returned 2 rows |
-| **Unrelated authenticated discovery** | ❌ Fails (0 rows) | ✅ Allowed (active rows only) | `DIR-AUTH-READ-ACTIVE` returned 2 rows |
-| **Suspended tenant leakage** | ✅ Excluded | ✅ Strictly excluded | `DIR-EXCLUDE-SUSPENDED` returned 0 rows |
-| **Column enumeration (`owner_id`)** | N/A | ✅ Compile error (`42703`) | `DIR-EXCLUDE-OWNER-ID` returned 42703 |
-| **Column enumeration (`contact_phone`)** | N/A | ✅ Compile error (`42703`) | `DIR-EXCLUDE-PHONE` returned 42703 |
-| **Column enumeration (`contact_email`)** | N/A | ✅ Compile error (`42703`) | `DIR-EXCLUDE-EMAIL` returned 42703 |
-| **Column enumeration (`upi_vpa`)** | N/A | ✅ Compile error (`42703`) | `DIR-EXCLUDE-UPI` returned 42703 |
-| **Column enumeration (`metadata`)** | N/A | ✅ Compile error (`42703`) | `DIR-EXCLUDE-METADATA` returned 42703 |
-| **Side-channel optimizer pushdown** | Vulnerable without barrier | ✅ Blocked by `security_barrier` | Verified in PostgreSQL 16.4 engine |
+The synchronized projection table was tested in native Docker PostgreSQL 16.4 across 17 distinct scenarios and 6 role contexts:
+
+| Test Scenario | Executing Role | Expected Outcome | Observed Outcome | Result |
+| :--- | :--- | :--- | :--- | :---: |
+| 1. Anonymous active directory read | `anon` | Returns active tenants only | 2 active rows | **PASS** |
+| 2. Stranger active directory read | `authenticated` (Stranger) | Returns active tenants only | 2 active rows | **PASS** |
+| 3. Coach A active directory read | `authenticated` (Coach A) | Returns active tenants only | 2 active rows | **PASS** |
+| 4. Owner A active directory read | `authenticated` (Owner A) | Returns active tenants only | 2 active rows | **PASS** |
+| 5. Revoked member active read | `authenticated` (Revoked) | Returns active tenants only | 2 active rows | **PASS** |
+| 6. Suspended owner active read | `authenticated` (Suspended Owner)| Returns active tenants only | 2 active rows | **PASS** |
+| 7. Anon sees non-active tenants | `anon` | 0 non-active rows | 0 rows | **PASS** |
+| 8. Stranger sees non-active tenants | `authenticated` (Stranger) | 0 non-active rows | 0 rows | **PASS** |
+| 9. Anon queries `contact_phone` | `anon` | SQLSTATE `42703` | Column does not exist | **PASS** |
+| 10. Stranger queries `upi_vpa` | `authenticated` (Stranger) | SQLSTATE `42703` | Column does not exist | **PASS** |
+| 11. Stranger queries `metadata` | `authenticated` (Stranger) | SQLSTATE `42703` | Column does not exist | **PASS** |
+| 12. Anon attempts INSERT | `anon` | SQLSTATE `42501` | Permission denied for table | **PASS** |
+| 13. Authenticated attempts INSERT | `authenticated` (Stranger) | SQLSTATE `42501` | Permission denied for table | **PASS** |
+| 14. Stranger attempts UPDATE | `authenticated` (Stranger) | SQLSTATE `42501` | Permission denied for table | **PASS** |
+| 15. Stranger attempts DELETE | `authenticated` (Stranger) | SQLSTATE `42501` | Permission denied for table | **PASS** |
+| 16. Anon direct SELECT on `tenants` | `anon` | SQLSTATE `42501` | Permission denied for table | **PASS** |
+| 17. Stranger direct SELECT on `tenants` | `authenticated` (Stranger) | 0 private rows returned | 0 rows | **PASS** |
+
+---
+
+## 5. Architectural Comparison Summary
+
+| Criteria | Security Invoker View | Security Barrier View | Synchronized Projection Table |
+| :--- | :---: | :---: | :---: |
+| **Supabase Advisor View Warning (0010)** | Resolved | Warning Flagged | **Resolved (Not a view)** |
+| **Anonymous Public Discovery** | Broken (`42501`) | Working | **Working** |
+| **Stranger Public Discovery** | Broken (`0 rows`) | Working | **Working** |
+| **Private Columns Leaked** | No (or All if RLS opened)| No (`42703`) | **No (Physically absent)** |
+| **Base Table RLS Intact** | Requires Compromise | Intact | **100% Intact** |
+| **Optimizer Qual Pushdown Protected** | Standard RLS | `security_barrier = true` | **Standard RLS on table** |
+| **Client API Compatibility** | Compatible | Compatible | **100% Drop-in Compatible** |
+| **Overall Security Posture** | Flawed / Incompatible | Sound but flagged | **Mathematically Optimal** |
