@@ -3,147 +3,96 @@
 
 **Repository:** `khelgrid-dotcom/khelgrid-platform`  
 **Current Branch:** `feature/saas-phase-1-acceptance-remediation`  
-**Head Commit:** `85f558da93472155e3baf13a74505726e0c7579f`  
-**Date of Audit:** 2026-11-22  
+**Audit Baseline Commit:** `85f558da93472155e3baf13a74505726e0c7579f` (Short: `85f558d`)  
+**Audit Documentation Commit:** `fd7a0f16ca68a2f5845216a10b6859ad8e2f7932` (Short: `fd7a0f1`)  
+**Premature Implementation Commit:** `38e5b0b55fa3e74a3d164f5c489d9710caf32233` (Short: `38e5b0b`)  
+**Current Branch HEAD SHA:** `38e5b0b55fa3e74a3d164f5c489d9710caf32233`  
+**Date of Audit & Reconciliation:** 2026-11-22  
+**Implementation Governance:** **PHASE 1 AUDIT ONLY — PHASE 2 NOT APPROVED — PROTOTYPES PRESERVED AS UNACCEPTED WORK**
 
 ---
 
 ## 1. Executive Summary: The Split-Brain Architecture
 
-The KhelGrid SaaS platform currently exhibits a classic "split-brain" architectural disconnect:
+The KhelGrid SaaS platform exhibits an architectural disconnect between backend database controls and frontend user interfaces:
 - **Backend (PostgreSQL):** Advanced multi-tenant relational schema with 8 isolated tables, composite foreign keys preventing cross-tenant corruption, robust RLS policies, atomic owner provisioning, and a synchronized public directory projection table.
-- **Frontend (React / TypeScript):** High-fidelity B2B academy management UI (`AcademyHubPage.tsx`) covering 12 operational tabs, but entirely powered by browser `localStorage`, in-memory fallback constants, and an unauthenticated client role switcher.
-- **Connection Bridge:** Completely absent. The Supabase client adapter (`src/integrations/supabase/tenant-client.ts`) is fully written with TypeScript interfaces and queries, but is imported by **0 application views**.
+- **Frontend (React / TypeScript):** High-fidelity B2B academy management UI (`AcademyHubPage.tsx`) covering 12 operational tabs. In commit `38e5b0b`, premature wiring to `tenant-client.ts` was introduced, but it still falls back to browser `localStorage` and mock constants when unauthenticated.
+- **Route Guard Protection Gap (HIGH):** The `<RequireTenantMember>` route guard is **NOT mounted** in `src/App.tsx`.
+- **Client-Side Role Selector (MEDIUM):** An unauthenticated role dropdown (`#academy-role-select`) remains accessible in preview mode.
 
 ---
 
 ## 2. Key Architectural Disconnects & Gaps
 
-### GAP 1: LocalStorage Persistence vs. Relational Database
+### GAP 1: Route Guard Unmounted in `App.tsx` (HIGH Severity Finding)
 
-| Dimension | Frontend (`academySaaSClient.ts`) | Backend Database (`supabase/migrations/`) | Impact & Risk |
-| :--- | :--- | :--- | :--- |
-| **Primary Keys** | String slugs (e.g. `'bengaluru-fc-academy'`) | Standard UUIDs (`gen_random_uuid()`) | Complete impedance mismatch. Frontend cannot query database tables without translating slugs to tenant UUIDs. |
-| **Storage Mechanism** | `window.localStorage` with JSON serialization | PostgreSQL tables with type constraints | Data exists only on the local user's browser. Refreshing on another device or incognito window wipes all changes or reverts to hardcoded mock data. |
-| **Integrity Checks** | Basic JS string length checks | Composite foreign keys (`ON DELETE RESTRICT`) | Trainees can be assigned to non-existent batches in localStorage; fees can be recorded against non-existent students. |
-| **Data Synchronization** | None; single browser tab only | Real-time WAL triggers & transactional ACID | Multiple coaches or staff editing attendance simultaneously will overwrite localStorage keys with zero concurrency control. |
+An independent investigation of the route protection hierarchy revealed:
+- `src/shared/components/RequireTenantMember.tsx` was created in commit `38e5b0b`.
+- It implements checks for authentication (`user === null`), tenant loading, active tenant resolution, and tenant membership status (`status === 'active'`).
+- **However, in `src/App.tsx` (lines 340–344), `RequireTenantMember` is neither imported nor mounted on the `/academy-hub` route:**
+  ```tsx
+  // src/App.tsx lines 340-344
+  <Route
+    path="/academy-hub"
+    element={
+      <TenantProvider>
+        <AcademyHubPage />
+      </TenantProvider>
+    }
+  />
+  ```
+- **Consequence:** Any anonymous visitor can navigate directly to `/academy-hub` or `/academies/manage`.
+- Because the route is not protected, `AcademyHubPage.tsx` falls back to its demo sandbox mode, rendering administrative interfaces with mock data.
+- While authoritative database RLS prevents unauthorized data access, the frontend route fails open to an interactive preview rather than failing closed to an authentication barrier.
 
 ---
 
-### GAP 2: Client-Side Role Switcher vs. PostgreSQL RLS
+### GAP 2: Client-Side Role Selector in Academy Hub (MEDIUM Severity Finding)
 
-In `src/modules/academies/AcademyHubPage.tsx`:
-- **Line 143:**
-  ```typescript
-  const [userRole, setUserRole] = useState<AcademyUserRole>('director')
-  ```
-- **Line 832–848:**
+In `src/modules/academies/AcademyHubPage.tsx` (lines 948–994):
+- When `verifiedRole` is absent (unauthenticated / unlinked visitor), a role selector `<select id="academy-role-select">` is rendered.
+- **Code Inspection:**
   ```tsx
   <select
     id="academy-role-select"
-    aria-label="Current Staff Role (Demo Sandbox Only)"
     value={userRole}
-    onChange={e => setUserRole(e.target.value as AcademyUserRole)}
+    onChange={(e) => setUserRole(e.target.value as AcademyRole)}
   >
-    <option value="director">Director (Full Access)</option>
-    <option value="head_coach">Head Coach (Batches, Attendance &amp; Kits)</option>
-    <option value="front_desk">Front Desk (Leads, Passes &amp; Fee Receipts)</option>
+    <option value="director">Academy Director</option>
+    <option value="head_coach">Head Coach</option>
+    <option value="front_desk">Front Desk / Operations</option>
   </select>
   ```
-- **The Gap:** The UI controls tab visibility (`canRoleAccessTab`) and permission flags based entirely on this React state variable. Any visitor can grant themselves Director privileges with one click.
-- **Contrast with Backend:** The database `tenant_memberships` table enforces that non-members receive zero rows, and role updates reject self-promotion (`user_id != auth.uid()`). But because the frontend never queries the database, the backend RLS policies are never exercised during UI usage.
+- **Behavioral Impact:**
+  1. The selector controls local React state (`userRole`).
+  2. It does not modify PostgreSQL memberships or bypass database RLS on Supabase API queries.
+  3. However, within the client application, it allows an unauthenticated visitor to freely toggle between Director, Head Coach, and Front Desk roles.
+  4. This dynamically reconfigures the visible UI tabs, exposing administrative views (such as the financial ledger, fee records, and settings) for inspection in demo mode.
 
 ---
 
-### GAP 3: Unauthenticated Tenant Switching
+### GAP 3: LocalStorage Fallback vs. Relational Database
 
-In `src/modules/academies/AcademyHubPage.tsx`:
-- **Line 816–827:**
-  ```tsx
-  <select
-    id="academy-hub-select"
-    className="academy-hub-select"
-    value={selectedSlug}
-    onChange={e => setSelectedSlug(e.target.value)}
-  >
-    {registeredAcademies.map(a => (
-      <option key={a.slug} value={a.slug}>
-        {a.name} ({a.city} · {a.sport}) {a.isCustom ? '★ Your Academy' : ''}
-      </option>
-    ))}
-  </select>
-  ```
-- **The Gap:** The user can select any academy from the dropdown, immediately loading that academy's student list, financial ledger, and leads from `localStorage` or `DEFAULT_*` constants.
-- **Contrast with Backend:** Under PostgreSQL RLS, querying `public.tenants` or child tables fails unless `public.is_tenant_member(tenant_id)` returns true. The frontend switcher completely circumvents this by passing a slug to a client-side filter: `allLeads.filter(l => l.academySlug === academySlug)`.
+| Dimension | Frontend UI Layer | Backend Database Layer | Impact & Risk |
+| :--- | :--- | :--- | :--- |
+| **Primary Keys** | String slugs (`bengaluru-fc-academy`) | Standard UUIDs (`gen_random_uuid()`) | Impedance mismatch. Translation between slugs and tenant UUIDs required. |
+| **Storage Mechanism** | `window.localStorage` with JSON serialization | PostgreSQL tables with type constraints | Data exists only in local browser state when unauthenticated. Refreshing on another device reverts to mock data. |
+| **Integrity Checks** | Basic JS string length checks | Composite foreign keys (`ON DELETE RESTRICT`) | Trainees can be assigned to non-existent batches in localStorage; fees can be recorded against non-existent students. |
+| **Data Synchronization** | None; single browser tab only | Real-time WAL triggers & transactional ACID | Multiple coaches editing attendance simultaneously overwrite localStorage keys with zero concurrency control. |
 
 ---
 
-### GAP 4: Client Adapter Detachment (`tenant-client.ts`)
+### GAP 4: Service Layer Reality (`tenant-client.ts`)
 
-- File: `src/integrations/supabase/tenant-client.ts`
-- Status: Defines excellent methods:
-  - `getPublicTenantBySlug(slug: string)`
-  - `getTenantBatches(tenantId: string)`
-  - `createTenantBatch(batch: Partial<DbTenantBatch>)`
-  - `getTenantStudents(tenantId: string)`
-  - `createTenantStudent(student: Partial<DbTenantStudent>)`
-  - `getTenantFeeInvoices(tenantId: string)`
-  - `recordTenantFeeTransaction(tx: Partial<DbTenantFeeTransaction>)`
-  - `recordTenantAttendance(event: Partial<DbTenantAttendanceEvent>)`
-- **Inspection Finding:** Running a repository-wide search for imports of `tenant-client.ts` yields **0 results** across all views and pages in `src/`. The entire adapter is orphaned and unused by the application.
+- In commit `38e5b0b`, `tenant-client.ts` was extended with functions for soft-deleting students and batches, converting enquiries, creating invitations, and fetching audit logs.
+- `AcademyHubPage.tsx` now imports `tenant-client.ts`.
+- **However, calls are wrapped in try-catch blocks that fall back to `localStorage` whenever Supabase is unavailable or the user is unauthenticated.**
+- Consequently, while client adapter methods exist in the codebase, the user experience for unauthenticated visitors remains a client-side simulation.
 
 ---
 
-### GAP 5: Partner Onboarding Bypasses Authentication
+## 3. Authoritative Status Declaration
 
-In `src/modules/partner/PartnerOnboardingPage.tsx`:
-- **Line 41–51:** When the registration form is submitted:
-  ```typescript
-  const newAcademy = registerCustomAcademy({
-    name: entityName.trim(),
-    sport,
-    city,
-    state: 'India',
-    directorName: 'Academy Director',
-    directorWhatsApp: phone.trim(),
-    upiVpa: upiVpa.trim(),
-  })
-  targetRoute = `/academy-hub?academy=${newAcademy.slug}`
-  ```
-- **The Gap:**
-  1. No Supabase Auth call (`supabase.auth.signUp`) is initiated.
-  2. No database RPC (`provision_initial_tenant_owner`) is executed.
-  3. The user is redirected to the academy hub as an unauthenticated visitor.
-  4. The registered academy is saved solely in the browser's `localStorage` array.
-
----
-
-### GAP 6: Missing Route Guards & Route Protection
-
-In `src/App.tsx`:
-- The route `/academy-hub` is rendered directly as:
-  ```tsx
-  <AcademyHubPage onNavigate={handleInternalNavigate} />
-  ```
-- There is no `<RequireAuth>` or `<RequireTenantMembership>` route wrapper.
-- Any direct HTTP navigation to `http://localhost:3000/academy-hub` renders the full director dashboard immediately.
-
----
-
-### GAP 7: Missing Database RPCs & Workflows
-
-To bridge the gap between frontend features and database tables, several critical database functions are missing from `supabase/migrations/`:
-1. **Lead Conversion RPC:** An atomic function `convert_enquiry_to_student(p_enquiry_id uuid, p_batch_id uuid, p_monthly_fee integer)` to safely transfer admissions CRM leads into active trainees.
-2. **Staff Invitation & Acceptance Flow:** Secure cryptographic token generation, email dispatch integration, and `accept_tenant_invitation(p_token text)` RPC to associate invited emails with new `auth.users(id)` records.
-3. **Parent Verification & Linking RPC:** A secure mechanism for a parent (`auth.uid()`) to claim or link to their child's record in `tenant_students` via phone number and OTP verification.
-4. **Data Export & Erasure (DPDP DSAR):** Authoritative database RPC to export or anonymize minor trainee data upon statutory request.
-
----
-
-## 3. Remediation Roadmap for Bridging the Gaps
-
-1. **Phase 2:** Complete database security baseline and native PostgreSQL verification.
-2. **Phase 3:** Introduce Supabase Auth wrappers, owner signup flow, and session-aware route guards (`RequireTenantMember`).
-3. **Phase 4:** Wire `AcademyHubPage.tsx` to `tenant-client.ts`, replacing localStorage reads/writes with authenticated Supabase queries.
-4. **Phase 5:** Implement real invitation acceptance and parent-child linking flows.
-5. **Phase 6:** Implement real attendance and fee transaction recording to PostgreSQL tables.
+- **Phase 1: Current-State Audit and Baseline — COMPLETE & ACCEPTED.**
+- **Phase 2: Secure Database and Tenant Isolation — NOT APPROVED & NOT STARTED.**
+- **Premature Implementation Changes: Preserved on branch but not accepted.**

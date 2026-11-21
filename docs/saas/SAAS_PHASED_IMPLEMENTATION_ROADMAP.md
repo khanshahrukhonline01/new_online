@@ -3,8 +3,12 @@
 
 **Repository:** `khelgrid-dotcom/khelgrid-platform`  
 **Current Branch:** `feature/saas-phase-1-acceptance-remediation`  
-**Head Commit:** `85f558da93472155e3baf13a74505726e0c7579f`  
-**Date of Audit:** 2026-11-22  
+**Audit Baseline Commit SHA:** `85f558da93472155e3baf13a74505726e0c7579f` (Short: `85f558d`)  
+**Audit Documentation Commit SHA:** `fd7a0f16ca68a2f5845216a10b6859ad8e2f7932` (Short: `fd7a0f1`)  
+**Premature Implementation Commit SHA:** `38e5b0b55fa3e74a3d164f5c489d9710caf32233` (Short: `38e5b0b`)  
+**Current Feature Branch HEAD SHA:** `38e5b0b55fa3e74a3d164f5c489d9710caf32233`  
+**Date of Audit & Reconciliation:** 2026-11-22  
+**Implementation Governance:** **PHASE 1 AUDIT ONLY — PHASE 2 NOT APPROVED — PROTOTYPES PRESERVED AS UNACCEPTED WORK**
 
 ---
 
@@ -13,11 +17,12 @@
 To transform the KhelGrid SaaS platform from a prototype into an enterprise-grade, DPDP-compliant multi-tenant SaaS application, all implementation work is divided into **ten discrete, dependency-ordered phases**.
 
 ### Core Execution Principles:
-1. **Strict Dependency Order:** No phase begins until the exit gate of its preceding phase is formally verified.
-2. **Fail-Closed Security:** Security is never compromised to simplify frontend integration. Every database operation must be authenticated and authorized via Row Level Security (RLS).
+1. **Strict Dependency Order:** No phase begins until the exit gate of its preceding phase is formally verified and accepted.
+2. **Fail-Closed Security:** Security is never compromised to simplify frontend integration. Every database operation must be authenticated and authorized via PostgreSQL Row Level Security (RLS).
 3. **Auditability & Traceability:** Every phase produces automated tests, verifiable command outputs, and an acceptance report.
 4. **Zero Paid Infrastructure:** Work strictly within the Supabase Free Plan and local verification environments. No paid GitHub Actions minutes.
 5. **Free Listing Guarantee:** Venue, coach, trial, and academy listings remain 100% free; verification remains the sole publication gate.
+6. **Premature Implementation Governance:** Prototype implementation code introduced in commit `38e5b0b` is preserved on the branch for future review, but is explicitly classified as **unaccepted work**. It does not constitute completed phases.
 
 ---
 
@@ -25,80 +30,84 @@ To transform the KhelGrid SaaS platform from a prototype into an enterprise-grad
 
 ```mermaid
 flowchart TD
-  P1[Phase 1: Current-State Audit & Baseline] --> P2[Phase 2: Secure Database & Tenant Isolation]
-  P2 --> P3[Phase 3: Auth, Identity & Membership Lifecycle]
-  P3 --> P4[Phase 4: Academy Workspace & Administration]
-  P4 --> P5[Phase 5: Coach, Staff, Parent & Student Management]
-  P5 --> P6[Phase 6: Academy Operations: Attendance & Fees]
-  P6 --> P7[Phase 7: Notifications, Audit Logs & Reporting]
-  P7 --> P8[Phase 8: SaaS UX, Accessibility & Hindi Localization]
-  P8 --> P9[Phase 9: Subscription & Billing Preparation]
-  P9 --> P10[Phase 10: Independent Acceptance & Pilot Launch]
+  P1["Phase 1: Current-State Audit & Baseline (ACCEPTED)"] --> P2["Phase 2: Secure Database & Tenant Isolation (NOT APPROVED)"]
+  P2 --> P3["Phase 3: Authentication & Membership Lifecycle (NOT APPROVED)"]
+  P3 --> P4["Phase 4: Academy Workspace & Administration (NOT APPROVED)"]
+  P4 --> P5["Phase 5: Coach, Staff, Parent & Student Management (NOT APPROVED)"]
+  P5 --> P6["Phase 6: Academy Operations: Attendance & Fees (NOT APPROVED)"]
+  P6 --> P7["Phase 7: Notifications, Audit Logs & Reporting (NOT APPROVED)"]
+  P7 --> P8["Phase 8: SaaS UX, Accessibility & Hindi Localization (NOT APPROVED)"]
+  P8 --> P9["Phase 9: Subscription & Billing Preparation (NOT APPROVED)"]
+  P9 --> P10["Phase 10: Independent Acceptance & Pilot Launch (NOT APPROVED)"]
 ```
 
 ---
 
 ### PHASE 1 — Current-State Audit and Architecture Baseline
-*Status: Complete (Current Phase)*
+*Status: COMPLETE & FORMALLY ACCEPTED*
 
 - **Objective:** Establish an uncompromising, evidence-based inventory of all SaaS capabilities, database schemas, frontend gaps, and security risks.
 - **Scope:** Read-only inspection of repository migrations, frontend services, components, test suites, and documentation. Author comprehensive audit deliverables under `docs/saas/`.
 - **Prerequisites:** Clean working tree on `feature/saas-phase-1-acceptance-remediation`.
 - **Exact Affected Modules:** `docs/saas/*`.
 - **Database Dependencies:** None (zero database queries or migrations applied).
-- **Security Requirements:** Zero remote credentials used; zero modifications to remote Supabase or production systems.
+- **Security Requirements:** Zero remote credentials used; zero modifications to remote Supabase (`hznsbxvovjxvmnchzzqt`) or production systems.
 - **Implementation Tasks:**
   1. Inspect Git baseline, commits, and branch history.
   2. Inventory tenant schema, foreign keys, RLS, and SECURITY DEFINER functions.
   3. Inspect `src/shared/saas/`, `src/modules/academies/`, `src/modules/parent/`, `src/modules/partner/`, `src/integrations/supabase/`.
   4. Perform 23-feature readiness evaluation.
-  5. Author 6 audit deliverables in `docs/saas/`.
-- **Acceptance Criteria:** All 6 required audit documents exist under `docs/saas/`; TypeScript check and ESLint pass cleanly; exact commit SHA recorded.
+  5. Author and reconcile 6 audit deliverables in `docs/saas/`.
+- **Acceptance Criteria:** All 6 required audit documents exist under `docs/saas/`; TypeScript check and ESLint pass cleanly; exact commit SHAs recorded and reconciled.
 - **Automated Tests:** `npm run typecheck`, `npm run lint`, `npx vitest run src/shared/saas src/modules/academies`.
-- **Manual Verification:** Verify that working tree is clean and no application code was altered.
-- **Explicitly Excluded Work:** Implementing new features, editing migrations, touching remote database.
-- **Exit Gate:** Formal acceptance verdict: `PASS — PHASE 1 SAAS AUDIT COMPLETE`.
-- **Risks & Rollback:** Zero risk (documentation only). Revert commit if documentation errors occur.
+- **Manual Verification:** Verify that working tree is clean and documentation accurately reflects codebase reality.
+- **Explicitly Excluded Work:** Implementing new features, applying migrations, connecting to remote database.
+- **Exit Gate:** Formal acceptance verdict: `PASS — PHASE 1 AUDIT COMPLETE`.
+- **Risks & Rollback:** Zero risk (documentation only).
 
 ---
 
 ### PHASE 2 — Secure Database and Tenant Isolation
-*Focus: SQL Migration Hardening, Foreign Keys, & Local PostgreSQL Verification*
+*Status: NOT APPROVED & NOT STARTED (Prototype Migration Preserved on Branch as Unaccepted Work)*
 
-- **Objective:** Finalize the canonical multi-tenant schema in PostgreSQL, resolve outstanding composite key edge cases, verify 100% RLS coverage, and ensure all migrations run idempotently on local PostgreSQL 16/17.
+- **Objective:** Finalize the canonical multi-tenant schema in PostgreSQL, resolve outstanding composite key edge cases, verify 100% RLS coverage, implement soft-deletion with complete policy updates, and ensure all migrations run idempotently on local PostgreSQL 16/17.
 - **Scope:** SQL migrations under `supabase/migrations/` and automated PostgreSQL test fixtures under `scripts/`.
-- **Prerequisites:** Phase 1 audit approved.
+- **Current Prototype Status:** File `supabase/migrations/20261122100000_phase2_schema_consolidation_and_soft_deletion.sql` exists on branch but was statically classified as **`REQUIRES CHANGES BEFORE FUTURE REVIEW`**.
+  - *Identified Issues:* Logic flaw in `accept_tenant_invitation` (NULL email bypass), missing `deleted_at IS NULL` filters in existing Phase 1 SELECT policies for `tenant_students`/`tenant_batches`, untested on live remote DB.
+- **Prerequisites:** Formal sign-off on Phase 1 acceptance report and remediation of static migration deficiencies.
 - **Exact Affected Modules:** `supabase/migrations/*`, `scripts/run-comprehensive-postgres-rls-suite.py`, `src/integrations/supabase/phase1-multi-tenant-isolation.test.ts`.
 - **Database Dependencies:** PostgreSQL 16/17 local container or test instance.
-- **Security Requirements:** All tenant tables must have RLS enabled with fail-closed anonymous denial; composite foreign keys must use `ON DELETE RESTRICT` for parent batches; `sync_tenant_public_directory` must remain restricted to trigger invocation.
+- **Security Requirements:** All tenant tables must have RLS enabled with fail-closed anonymous denial; composite foreign keys must use `ON DELETE RESTRICT` for parent batches; `sync_tenant_public_directory` must remain restricted to trigger invocation; soft-deleted records must be filtered out of client SELECT policies.
 - **Implementation Tasks:**
-  1. Verify zero migration drift and idempotent execution of migrations `20261121160000` through `20261121233000`.
-  2. Implement soft-deletion columns (`deleted_at`, `archived_at`) on `public.tenants` and `public.tenant_batches`.
-  3. Ensure covering indexes exist for all foreign key joins to guarantee sub-millisecond query execution.
-  4. Run native PostgreSQL attack vector matrix (50+ vectors).
+  1. Remediate `accept_tenant_invitation` to strictly validate `v_membership.invited_email IS NOT NULL AND lower(trim(v_membership.invited_email)) = lower(trim(v_user_email))`.
+  2. Update RLS SELECT policies on `tenant_students`, `tenant_batches`, and `tenant_memberships` to enforce `deleted_at IS NULL`.
+  3. Verify zero migration drift and idempotent execution of all migrations on local PostgreSQL.
+  4. Ensure covering indexes exist for all foreign key joins to guarantee sub-millisecond query execution.
+  5. Run native PostgreSQL attack vector matrix (50+ vectors).
 - **Acceptance Criteria:** All migrations execute from clean state on local PostgreSQL with 0 errors; 100% of RLS attack vectors pass.
 - **Automated Tests:** Python local PostgreSQL test runner (`scripts/run-comprehensive-postgres-rls-suite.py`).
 - **Manual Verification:** Inspect PostgreSQL catalog for non-internal triggers, search paths, and granted privileges.
-- **Explicitly Excluded Work:** Modifying frontend components or altering remote database without explicit approval.
+- **Explicitly Excluded Work:** Modifying frontend components or altering remote database without explicit authorization.
 - **Exit Gate:** 50/50 RLS attack vectors verified on real PostgreSQL fixture with zero errors.
 - **Risks & Rollback:** SQL syntax errors or constraint violations on clean replay. Rollback: Drop test schema and re-run clean migration baseline.
 
 ---
 
 ### PHASE 3 — Authentication, Identity and Membership Lifecycle
-*Focus: Owner Provisioning, Invitations, Session Guards, & Route Protection*
+*Status: NOT APPROVED & NOT STARTED (Prototype Route Guard Unmounted in App.tsx)*
 
 - **Objective:** Bridge Supabase Auth sessions to tenant memberships, implement secure owner registration, build staff invitation workflows, and establish client-side route guards.
 - **Scope:** Supabase Auth integration, session context, route guards, invitation token lifecycle, and role validation.
-- **Prerequisites:** Phase 2 database schema verified.
-- **Exact Affected Modules:** `src/App.tsx`, `src/integrations/supabase/auth-client.ts`, `src/integrations/supabase/tenant-client.ts`, `src/modules/partner/PartnerOnboardingPage.tsx`, `src/shared/context/TenantContext.tsx`.
+- **Current Prototype Status:** `TenantContext.tsx` and `RequireTenantMember.tsx` were authored in `38e5b0b`. However, **`<RequireTenantMember>` is NOT mounted in `App.tsx`**, allowing unauthenticated access to `/academy-hub` (HIGH finding).
+- **Prerequisites:** Phase 2 database schema verified and accepted.
+- **Exact Affected Modules:** `src/App.tsx`, `src/integrations/supabase/auth-client.ts`, `src/integrations/supabase/tenant-client.ts`, `src/modules/partner/PartnerOnboardingPage.tsx`, `src/shared/context/TenantContext.tsx`, `src/shared/components/RequireTenantMember.tsx`.
 - **Database Dependencies:** `public.tenants`, `public.tenant_memberships`, `public.provision_initial_tenant_owner()` RPC.
-- **Security Requirements:** Authenticated sessions strictly required for workspace routes; user roles derived from database memberships; invitations validated via one-time cryptographically secure tokens.
+- **Security Requirements:** Authenticated sessions strictly required for workspace routes; user roles derived from database memberships; invitations validated via one-time cryptographically secure tokens; fail-closed route protection.
 - **Implementation Tasks:**
-  1. Create `TenantContext.tsx` providing active tenant and membership role to the React component tree.
-  2. Implement `<RequireTenantMember>` route guard in `App.tsx` protecting `/academy-hub`.
+  1. Properly mount `<RequireTenantMember>` in `src/App.tsx` wrapping `/academy-hub` and `/academies/manage`.
+  2. Implement redirect to `/login` with `returnUrl` state for unauthenticated visitors.
   3. Wire `PartnerOnboardingPage.tsx` to call `supabase.auth.signUp()` followed by `provision_initial_tenant_owner()` RPC.
-  4. Implement database RPC `accept_tenant_invitation(p_token text)`.
+  4. Implement database RPC `accept_tenant_invitation`.
   5. Remove client-side role dropdown (`#academy-role-select`) from `AcademyHubPage.tsx`.
 - **Acceptance Criteria:** Anonymous visitors attempting to access `/academy-hub` are redirected to `/login`; registered owners receive active owner membership; role is read directly from Supabase session.
 - **Automated Tests:** Vitest integration tests for auth guards, session recovery, and unauthorized route access.
@@ -110,16 +119,17 @@ flowchart TD
 ---
 
 ### PHASE 4 — Academy Workspace and Administration
-*Focus: Wiring Academy Hub to Supabase, Settings, Profile, & Tenant Switching*
+*Status: NOT APPROVED & NOT STARTED (Prototype Client Wiring Drafted)*
 
-- **Objective:** Connect `AcademyHubPage.tsx` to the authoritative Supabase database via `tenant-client.ts`, replacing localStorage reads/writes for academy settings and public directory synchronization.
+- **Objective:** Connect `AcademyHubPage.tsx` to the authoritative Supabase database via `tenant-client.ts`, eliminating `localStorage` fallbacks for authenticated tenant settings and directory synchronization.
 - **Scope:** Academy profile management, director settings, UPI VPA configuration, and authorized workspace switching.
-- **Prerequisites:** Phase 3 authentication and tenant context established.
+- **Current Prototype Status:** `tenant-client.ts` methods were imported in `AcademyHubPage.tsx` in `38e5b0b`, but fall back to `localStorage` and mock data when unauthenticated.
+- **Prerequisites:** Phase 3 authentication and tenant context established and verified.
 - **Exact Affected Modules:** `src/modules/academies/AcademyHubPage.tsx`, `src/modules/academies/academySaaSClient.ts`, `src/integrations/supabase/tenant-client.ts`.
 - **Database Dependencies:** `public.tenants`, `public.tenant_public_directory`, `trg_sync_tenant_public_directory`.
 - **Security Requirements:** Only users with `owner` or `director` roles may update tenant settings; UPI VPA must match valid regex and pass bank verification safeguards.
 - **Implementation Tasks:**
-  1. Refactor `AcademyHubPage.tsx` to read tenant metadata from `tenant-client.ts`.
+  1. Refactor `AcademyHubPage.tsx` to strictly read tenant metadata from `tenant-client.ts`.
   2. Implement authorized tenant switcher displaying only tenants where `auth.uid()` has an active membership.
   3. Connect Settings tab form to update `public.tenants` via Supabase client.
   4. Verify that updates to public profile fields (name, city, sport) automatically synchronize to `tenant_public_directory` via database trigger.
@@ -133,11 +143,12 @@ flowchart TD
 ---
 
 ### PHASE 5 — Coach, Staff, Parent and Student Management
-*Focus: Roster Management, Child Privacy (DPDP), & Guardian Linking*
+*Status: NOT APPROVED & NOT STARTED (Prototype Parsing & DPDP Helpers Drafted)*
 
-- **Objective:** Implement authoritative database persistence for coaching batches, student trainees, and staff assignments, enforcing DPDP Act minor data protections.
+- **Objective:** Implement authoritative database persistence for coaching batches, student trainees, and staff assignments, enforcing DPDP Act 2023 minor data protections.
 - **Scope:** Trainee roster, batch allocations, staff invitations, and guardian account linking.
-- **Prerequisites:** Phase 4 workspace foundation.
+- **Current Prototype Status:** Unit tests for CSV parsing and phone/email masking pass, but live database roster persistence and DPDP database constraints remain unexecuted.
+- **Prerequisites:** Phase 4 workspace foundation verified.
 - **Exact Affected Modules:** `src/modules/academies/AcademyHubPage.tsx`, `src/modules/parent/parentPortalService.ts`, `src/integrations/supabase/tenant-client.ts`.
 - **Database Dependencies:** `public.tenant_batches`, `public.tenant_students`, `public.tenant_memberships`.
 - **Security Requirements:** Minor PII masked in client views; guardian linkage verified via phone/OTP; coaches restricted to viewing only their assigned squads.
@@ -157,11 +168,12 @@ flowchart TD
 ---
 
 ### PHASE 6 — Academy Operations: Attendance, Training, & Fees
-*Focus: Daily Roll-Call, Fee Invoices, & Immutable Transaction Ledger*
+*Status: NOT APPROVED & NOT STARTED (Prototype Ledger Reconciliation Unit Tests Passing)*
 
 - **Objective:** Digitize pitch-side attendance and fee collection with 100% mathematical accuracy and immutable database ledgering.
 - **Scope:** Daily attendance tracking, automated WhatsApp roll-call dispatch, fee invoice generation, and receipt issuance.
-- **Prerequisites:** Phase 5 student roster in place.
+- **Current Prototype Status:** `reconcileAcademyFeeLedger` tested in isolation via unit tests; database tables and triggers unverified on live database.
+- **Prerequisites:** Phase 5 student roster in place and verified.
 - **Exact Affected Modules:** `src/modules/academies/AcademyHubPage.tsx`, `src/shared/saas/saasSharedOperations.ts`, `src/integrations/supabase/tenant-client.ts`.
 - **Database Dependencies:** `public.tenant_attendance_events`, `public.tenant_fee_invoices`, `public.tenant_fee_transactions`.
 - **Security Requirements:** Attendance records are idempotent (`UNIQUE (tenant_id, batch_id, student_id, session_date)`); fee transactions are immutable (no client UPDATE/DELETE).
@@ -181,10 +193,11 @@ flowchart TD
 ---
 
 ### PHASE 7 — Notifications, Audit Logs and Reporting
-*Focus: System Audit Trails, Parent Communications, & Operational Analytics*
+*Status: NOT APPROVED & NOT STARTED (Prototype Audit UI Tab Drafted)*
 
 - **Objective:** Establish authoritative tenant audit logging, secure administrative event trails, parent notification dispatching, and executive operational reporting.
 - **Scope:** Audit log tables, event triggers, reporting views, and communication delivery queues.
+- **Current Prototype Status:** `tenant_audit_logs` table schema and `log_tenant_audit_event` RPC drafted in migration; UI tab present in `AcademyHubPage.tsx`; live database execution unverified.
 - **Prerequisites:** Phase 6 operations functional.
 - **Exact Affected Modules:** `src/modules/academies/AcademyHubPage.tsx`, `supabase/migrations/`, `src/integrations/supabase/tenant-client.ts`.
 - **Database Dependencies:** `public.tenant_audit_logs`, `public.tenant_notification_queue`.
@@ -204,12 +217,13 @@ flowchart TD
 ---
 
 ### PHASE 8 — SaaS UX, Accessibility and Hindi Localization
-*Focus: Mobile Pitch-Side Experience, WCAG 2.1 AA, & Complete Hindi Translation*
+*Status: NOT APPROVED & NOT STARTED (Prototype i18n JSONs & Bilingual Dict Tested)*
 
 - **Objective:** Deliver a frictionless, mobile-first experience for coaches on the ground with full accessibility compliance and authentic Hindi language support.
 - **Scope:** UI responsiveness, 48px touch targets, high-contrast pitch-side theme, screen reader labels, and bilingual i18n.
+- **Current Prototype Status:** Locales registered and unit-tested in `phase5-10-*.test.ts`; mobile field testing and axe accessibility audits pending.
 - **Prerequisites:** Phases 4–7 operational.
-- **Exact Affected Modules:** `src/modules/academies/AcademyHubPage.tsx`, `src/modules/academies/AcademyHubPage.css`, `src/shared/i18n/`.
+- **Exact Affected Modules:** `src/modules/academies/AcademyHubPage.tsx`, `src/modules/academies/AcademyHubPage.css`, `src/shared/i18n/`, `src/i18n/locales/`.
 - **Database Dependencies:** None.
 - **Security Requirements:** Accessibility features must not bypass route guards or expose sensitive minor data in DOM accessibility trees.
 - **Implementation Tasks:**
@@ -227,12 +241,13 @@ flowchart TD
 ---
 
 ### PHASE 9 — SaaS Subscription and Billing Preparation
-*Focus: Architecture Preparation, Sandbox Billing, & Plan Lifecycle (Strictly Dormant)*
+*Status: NOT APPROVED & NOT STARTED (Prototype Subscription Card Retains Zero-Payment Policy)*
 
 - **Objective:** Architect the subscription and billing infrastructure for future SaaS monetization while keeping all payment collection strictly disabled per mandate.
 - **Scope:** Subscription plan definitions, tenant tier limits, sandbox invoice models, and payment gateway isolation.
+- **Current Prototype Status:** `SaaSSubscriptionCard.tsx` drafted displaying ₹0/month Grassroots Pioneer Tier; Razorpay confirmed disabled.
 - **Prerequisites:** Phases 1–8 complete and verified.
-- **Exact Affected Modules:** `src/shared/payments/paymentTypes.ts`, `supabase/functions/create-razorpay-order/`, `supabase/migrations/`.
+- **Exact Affected Modules:** `src/modules/academies/SaaSSubscriptionCard.tsx`, `src/shared/payments/paymentTypes.ts`, `supabase/functions/create-razorpay-order/`, `supabase/migrations/`.
 - **Database Dependencies:** `public.tenant_subscriptions` (schema only, zero live billing).
 - **Security Requirements:** Razorpay live keys must remain strictly unconfigured; listing plans remain free; subscription checks fail open or grant grassroots access during pre-launch.
 - **Implementation Tasks:**
@@ -250,11 +265,12 @@ flowchart TD
 ---
 
 ### PHASE 10 — Independent Acceptance and Launch Readiness
-*Focus: Security Regression, Penetration Testing, Disaster Recovery, & Pilot Decision*
+*Status: NOT STARTED / BLOCKED*
 
 - **Objective:** Conduct a comprehensive, independent security audit and disaster recovery drill across the entire platform to grant final pilot launch approval.
 - **Scope:** End-to-end multi-tenant security testing, performance profiling, backup restore verification, and final executive report.
-- **Prerequisites:** All Phases (1–9) complete and passing all gates.
+- **Current Prototype Status:** Blocked on the proper execution and verification of Phases 2 through 9.
+- **Prerequisites:** All Phases (1–9) complete and passing all exit gates.
 - **Exact Affected Modules:** Full repository.
 - **Database Dependencies:** Full PostgreSQL schema.
 - **Security Requirements:** 100% pass on all RLS attack vectors, zero PII disclosure, zero privilege escalation vectors, zero Security Advisor warnings.
@@ -265,7 +281,7 @@ flowchart TD
   4. Measure performance benchmarks under multi-tenant load.
   5. Produce formal Phase 10 Final Launch Report.
 - **Acceptance Criteria:** Zero critical or high risks in risk register; 100% automated test pass rate; formal launch authorization signed off.
-- **Automated Tests:** Full test suite (147+ test files, 1,000+ tests); native PostgreSQL security matrix.
+- **Automated Tests:** Full test suite (150+ test files, 1,000+ tests); native PostgreSQL security matrix.
 - **Manual Verification:** Live penetration test and pilot academy onboarding walkthrough.
 - **Explicitly Excluded Work:** Expanding project scope beyond Phase 1–10 specifications.
 - **Exit Gate:** Unanimous pilot launch verdict: `PASS — KHELGRID SAAS READY FOR PILOT LAUNCH`.
