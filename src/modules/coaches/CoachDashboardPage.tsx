@@ -216,7 +216,7 @@ export default function CoachDashboardPage({
   const [onboardCity, setOnboardCity] = useState('Delhi NCR')
   const [onboardPhone, setOnboardPhone] = useState('')
   const [onboardEmail, setOnboardEmail] = useState('')
-  const [onboardCert, setOnboardCert] = useState('SAI / NIS Patiala Diploma')
+  const [onboardCert, setOnboardCert] = useState('')
   const [onboardFee, setOnboardFee] = useState(3500)
   const [onboardUpi, setOnboardUpi] = useState('')
 

@@ -174,6 +174,7 @@ export function createGuardianConsentRecord(params: {
   guardianName: string
   guardianRelationship: 'Father' | 'Mother' | 'Legal Guardian'
   guardianPhone: string
+  isVerifiableOtpSigned?: boolean
 }): GuardianConsentRecord {
   return {
     studentId: params.studentId,
@@ -183,7 +184,7 @@ export function createGuardianConsentRecord(params: {
     guardianRelationship: params.guardianRelationship,
     guardianPhone: params.guardianPhone,
     consentRecordedAt: new Date().toISOString(),
-    dpdpConsentVerified: true,
+    dpdpConsentVerified: Boolean(params.isVerifiableOtpSigned),
     purpose: 'Academy sports training, attendance verification, emergency medical care, and 0% UPI fee invoicing',
   }
 }
@@ -213,6 +214,10 @@ export function reconcileAcademyFeeLedger(params: {
   let upiCollected = 0
 
   for (const tx of params.transactions) {
+    // Strictly filter for settled or cash-in-hand transactions; ignore pending, failed, cancelled, or refunded
+    const isSettled = tx.status === 'settled' || tx.status === 'cash_in_hand'
+    if (!isSettled) continue
+
     const amt = Math.round(tx.amount) || 0
     if (tx.paymentMode === 'cash') {
       cashCollected += amt
@@ -382,10 +387,12 @@ export function getAcademyPreLaunchChecklist(params: {
   hasUpiVpa: boolean
   hasTakenAttendance: boolean
   hasConfiguredStaff: boolean
+  isDatabaseVerified?: boolean
 }): {
   steps: OnboardingStep[]
   progressPercentage: number
   isReadyForLaunch: boolean
+  readinessNotice?: string
 } {
   const steps: OnboardingStep[] = [
     {
@@ -427,12 +434,17 @@ export function getAcademyPreLaunchChecklist(params: {
 
   const completedCount = steps.filter(s => s.isCompleted).length
   const progressPercentage = Math.round((completedCount / steps.length) * 100)
-  const isReadyForLaunch = completedCount === steps.length
+  const isDatabaseVerified = Boolean(params.isDatabaseVerified)
+  const isReadyForLaunch = completedCount === steps.length && isDatabaseVerified
+  const readinessNotice = !isDatabaseVerified
+    ? 'Sandbox Demo Mode: Live server-side database verification is required before pilot launch.'
+    : undefined
 
   return {
     steps,
     progressPercentage,
     isReadyForLaunch,
+    readinessNotice,
   }
 }
 

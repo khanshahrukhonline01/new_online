@@ -46,7 +46,7 @@ export default function PartnerOnboardingPage({
         state: 'India',
         directorName: 'Academy Director',
         directorWhatsApp: phone.trim(),
-        upiVpa: upiVpa.trim() || `${phone.trim()}@okhdfcbank`,
+        upiVpa: upiVpa.trim(),
       })
       targetRoute = `/academy-hub?academy=${newAcademy.slug}`
     } else if (selectedRole === 'coach') {
@@ -56,9 +56,9 @@ export default function PartnerOnboardingPage({
         city,
         phone: phone.trim(),
         email: email.trim() || `${entityName.toLowerCase().replace(/[^a-z0-9]/g, '')}@coach.khelgrid.com`,
-        certification: 'SAI / NIS Patiala Certified Coach',
+        certification: 'Unverified / Pending Credential Verification',
         monthlyFee: 3000,
-        upiVpa: upiVpa.trim() || `${phone.trim()}@okhdfcbank`,
+        upiVpa: upiVpa.trim(),
       })
       targetRoute = `/coach-dashboard?coach=${newCoach.slug}`
     } else if (selectedRole === 'venue') {
@@ -68,7 +68,7 @@ export default function PartnerOnboardingPage({
         venueName: entityName.trim(),
         managerName: 'Facility Manager',
         managerWhatsApp: phone.trim(),
-        upiVpa: upiVpa.trim() || `${phone.trim()}@okhdfcbank`,
+        upiVpa: upiVpa.trim(),
         allowPayAtVenue: true,
         autoWhatsAppConfirmEnabled: true,
       })

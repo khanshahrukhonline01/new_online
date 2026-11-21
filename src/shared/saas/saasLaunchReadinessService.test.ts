@@ -65,7 +65,7 @@ describe('SaaS Launch Readiness & Pre-Flight Core Service', () => {
     expect(maskEmail('rahul.parent@gmail.com')).toBe('ra***@gmail.com')
     expect(maskGovtId('1234 5678 9012')).toBe('**** **** 9012')
 
-    const consent = createGuardianConsentRecord({
+    const unverifiedConsent = createGuardianConsentRecord({
       studentId: 'std-88',
       studentName: 'Vihaan Sharma',
       age: 14,
@@ -74,10 +74,21 @@ describe('SaaS Launch Readiness & Pre-Flight Core Service', () => {
       guardianPhone: '9876543210',
     })
 
-    expect(consent.isMinor).toBe(true)
-    expect(consent.dpdpConsentVerified).toBe(true)
-    expect(consent.guardianRelationship).toBe('Father')
-    expect(consent.purpose).toContain('attendance')
+    expect(unverifiedConsent.isMinor).toBe(true)
+    expect(unverifiedConsent.dpdpConsentVerified).toBe(false)
+    expect(unverifiedConsent.guardianRelationship).toBe('Father')
+    expect(unverifiedConsent.purpose).toContain('attendance')
+
+    const verifiedConsent = createGuardianConsentRecord({
+      studentId: 'std-88',
+      studentName: 'Vihaan Sharma',
+      age: 14,
+      guardianName: 'Rajesh Sharma',
+      guardianRelationship: 'Father',
+      guardianPhone: '9876543210',
+      isVerifiableOtpSigned: true,
+    })
+    expect(verifiedConsent.dpdpConsentVerified).toBe(true)
   })
 
   // Requirement 4: Attendance and Fee Accuracy Reconciliation
@@ -90,6 +101,9 @@ describe('SaaS Launch Readiness & Pre-Flight Core Service', () => {
     const transactions = [
       { amount: 2500, paymentMode: 'cash', status: 'settled' },
       { amount: 2500, paymentMode: 'direct_upi', status: 'settled' },
+      { amount: 3000, paymentMode: 'direct_upi', status: 'pending' }, // Unsettled: must be ignored
+      { amount: 1500, paymentMode: 'cash', status: 'failed' },        // Failed: must be ignored
+      { amount: 2000, paymentMode: 'direct_upi', status: 'cancelled' }, // Cancelled: must be ignored
     ]
 
     const result = reconcileAcademyFeeLedger({ students, transactions })
@@ -177,9 +191,22 @@ describe('SaaS Launch Readiness & Pre-Flight Core Service', () => {
       hasStudents: true,
       hasTakenAttendance: true,
       hasConfiguredStaff: true,
+      isDatabaseVerified: true,
     })
     expect(fullChecklist.progressPercentage).toBe(100)
     expect(fullChecklist.isReadyForLaunch).toBe(true)
+
+    // In sandbox demo mode without database verification, isReadyForLaunch remains false
+    const demoChecklist = getAcademyPreLaunchChecklist({
+      hasUpiVpa: true,
+      hasBatches: true,
+      hasStudents: true,
+      hasTakenAttendance: true,
+      hasConfiguredStaff: true,
+      isDatabaseVerified: false,
+    })
+    expect(demoChecklist.isReadyForLaunch).toBe(false)
+    expect(demoChecklist.readinessNotice).toContain('Sandbox Demo Mode')
 
     const conciergeUrl = generateSupportConciergeWhatsAppUrl({
       academyName: 'Bengaluru FC Academy',
