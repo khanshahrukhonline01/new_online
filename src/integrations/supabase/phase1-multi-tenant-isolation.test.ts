@@ -21,7 +21,7 @@ import { newDb, DataType } from 'pg-mem'
  * Vector 12: Direct non-owner deletion of tenant or owner membership rejected
  */
 
-describe('KhelGrid SaaS Platform — Phase 1 Real Database Multi-Tenant Security & Isolation Suite', () => {
+describe('KhelGrid SaaS Platform — Phase 1 Multi-Tenant Isolation Suite (Unit & Simulation Test Engine via pg-mem)', () => {
 
   function setupPostgreSqlTenantDatabase() {
     const db = newDb()
@@ -182,7 +182,7 @@ describe('KhelGrid SaaS Platform — Phase 1 Real Database Multi-Tenant Security
         created_at timestamptz NOT NULL DEFAULT now(),
         updated_at timestamptz NOT NULL DEFAULT now(),
         CONSTRAINT uq_tenant_student UNIQUE (tenant_id, id),
-        CONSTRAINT fk_student_tenant_batch FOREIGN KEY (tenant_id, batch_id) REFERENCES public.tenant_batches(tenant_id, id) ON DELETE SET NULL
+        CONSTRAINT fk_student_tenant_batch FOREIGN KEY (tenant_id, batch_id) REFERENCES public.tenant_batches(tenant_id, id) ON DELETE RESTRICT
       );
     `)
 
@@ -752,5 +752,139 @@ describe('KhelGrid SaaS Platform — Phase 1 Real Database Multi-Tenant Security
     const isAdmin = db.public.one(`SELECT has_tenant_role('${tenantId}', 'admin') as admin;`).admin
     const adminCanDeleteOwner = isAdmin && !['owner', 'director', 'admin'].includes(targetMemberRole)
     expect(adminCanDeleteOwner).toBe(false) // REJECTED
+  })
+
+  // ============================================================================
+  // PHASE C: BATCH FOREIGN KEY DELETION & ARCHIVAL REGRESSION SUITE
+  // ============================================================================
+  describe('Phase C: Batch Foreign Key Deletion Behavior & Archival Integrity', () => {
+    it('Phase C.1: permits deleting a coaching batch when no students are assigned', () => {
+      const { db } = setupPostgreSqlTenantDatabase()
+      const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+      const emptyBatchId = 'e1e1e1e1-e1e1-e1e1-e1e1-e1e1e1e1e1e1'
+
+      db.public.none(`
+        INSERT INTO public.tenants (id, slug, name, tenant_type) VALUES ('${tenantId}', 'empty-batch-acad', 'Acad', 'academy');
+        INSERT INTO public.tenant_batches (id, tenant_id, batch_name, sport, days, timings)
+        VALUES ('${emptyBatchId}', '${tenantId}', 'Solo Batch', 'Tennis', 'Mon', '08:00 AM');
+      `)
+
+      expect(db.public.many(`SELECT * FROM public.tenant_batches WHERE id = '${emptyBatchId}';`)).toHaveLength(1)
+
+      // Deleting empty batch succeeds without restriction
+      db.public.none(`DELETE FROM public.tenant_batches WHERE id = '${emptyBatchId}';`)
+      expect(db.public.many(`SELECT * FROM public.tenant_batches WHERE id = '${emptyBatchId}';`)).toHaveLength(0)
+    })
+
+    it('Phase C.2: blocks hard deletion of a batch with enrolled students via ON DELETE RESTRICT', () => {
+      const { db } = setupPostgreSqlTenantDatabase()
+      const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+      const batchId = 'b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1'
+      const studentId = 'a1111111-1111-1111-1111-111111111111'
+
+      db.public.none(`
+        INSERT INTO public.tenants (id, slug, name, tenant_type) VALUES ('${tenantId}', 'active-batch-acad', 'Acad', 'academy');
+        INSERT INTO public.tenant_batches (id, tenant_id, batch_name, sport, days, timings)
+        VALUES ('${batchId}', '${tenantId}', 'Occupied Squad', 'Football', 'Wed', '06:00 AM');
+        INSERT INTO public.tenant_students (id, tenant_id, batch_id, student_name, parent_name, parent_phone)
+        VALUES ('${studentId}', '${tenantId}', '${batchId}', 'Enrolled Athlete', 'Parent', '9845012345');
+      `)
+
+      // Attempting to delete batch with active students must throw constraint violation
+      expect(() => {
+        db.public.none(`DELETE FROM public.tenant_batches WHERE id = '${batchId}';`)
+      }).toThrow()
+
+      // Confirm student record and batch record remain completely intact
+      const student = db.public.one(`SELECT * FROM public.tenant_students WHERE id = '${studentId}';`)
+      expect(student.tenant_id).toBe(tenantId)
+      expect(student.batch_id).toBe(batchId)
+    })
+
+    it('Phase C.3: allows student reassignment to another batch within same tenant then deleting emptied batch', () => {
+      const { db } = setupPostgreSqlTenantDatabase()
+      const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+      const oldBatchId = 'b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1'
+      const newBatchId = 'b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2'
+      const studentId = 'a1111111-1111-1111-1111-111111111111'
+
+      db.public.none(`
+        INSERT INTO public.tenants (id, slug, name, tenant_type) VALUES ('${tenantId}', 'reassign-acad', 'Acad', 'academy');
+        INSERT INTO public.tenant_batches (id, tenant_id, batch_name, sport, days, timings) VALUES
+          ('${oldBatchId}', '${tenantId}', 'Retiring Batch', 'Cricket', 'Mon', '07:00 AM'),
+          ('${newBatchId}', '${tenantId}', 'New Season Batch', 'Cricket', 'Mon', '07:00 AM');
+        INSERT INTO public.tenant_students (id, tenant_id, batch_id, student_name, parent_name, parent_phone)
+        VALUES ('${studentId}', '${tenantId}', '${oldBatchId}', 'Trainee', 'Parent', '9845012345');
+      `)
+
+      // 1. Reassign student to new batch within same tenant
+      db.public.none(`
+        UPDATE public.tenant_students SET batch_id = '${newBatchId}' WHERE id = '${studentId}';
+      `)
+      const updatedStudent = db.public.one(`SELECT * FROM public.tenant_students WHERE id = '${studentId}';`)
+      expect(updatedStudent.batch_id).toBe(newBatchId)
+      expect(updatedStudent.tenant_id).toBe(tenantId)
+
+      // 2. Now old batch is empty, deleting it succeeds cleanly
+      db.public.none(`DELETE FROM public.tenant_batches WHERE id = '${oldBatchId}';`)
+      expect(db.public.many(`SELECT * FROM public.tenant_batches WHERE id = '${oldBatchId}';`)).toHaveLength(0)
+    })
+
+    it('Phase C.4: rejects cross-tenant batch reassignment at relational engine level', () => {
+      const { db } = setupPostgreSqlTenantDatabase()
+      const tenantA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+      const tenantB = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+      const batchA = 'b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1'
+      const batchB = 'b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2'
+      const studentA = 'a1111111-1111-1111-1111-111111111111'
+
+      db.public.none(`
+        INSERT INTO public.tenants (id, slug, name, tenant_type) VALUES
+          ('${tenantA}', 'tenant-a', 'Tenant A', 'academy'),
+          ('${tenantB}', 'tenant-b', 'Tenant B', 'academy');
+        INSERT INTO public.tenant_batches (id, tenant_id, batch_name, sport, days, timings) VALUES
+          ('${batchA}', '${tenantA}', 'Batch A', 'Football', 'Mon', '06:00 AM'),
+          ('${batchB}', '${tenantB}', 'Batch B', 'Football', 'Mon', '06:00 AM');
+        INSERT INTO public.tenant_students (id, tenant_id, batch_id, student_name, parent_name, parent_phone)
+        VALUES ('${studentA}', '${tenantA}', '${batchA}', 'Student A', 'Parent A', '9845012345');
+      `)
+
+      // Attempting to reassign student in Tenant A to Batch B belonging to Tenant B must fail composite FK
+      expect(() => {
+        db.public.none(`
+          UPDATE public.tenant_students SET batch_id = '${batchB}' WHERE id = '${studentA}';
+        `)
+      }).toThrow()
+    })
+
+    it('Phase C.5: enforces batch archival workflow (is_active = false) preserving student records and schedule history', () => {
+      const { db } = setupPostgreSqlTenantDatabase()
+      const tenantId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+      const batchId = 'b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1'
+      const studentId = 'a1111111-1111-1111-1111-111111111111'
+
+      db.public.none(`
+        INSERT INTO public.tenants (id, slug, name, tenant_type) VALUES ('${tenantId}', 'archival-acad', 'Acad', 'academy');
+        INSERT INTO public.tenant_batches (id, tenant_id, batch_name, sport, days, timings, is_active)
+        VALUES ('${batchId}', '${tenantId}', 'Monsoon 2026 Batch', 'Swimming', 'Daily', '06:00 AM', true);
+        INSERT INTO public.tenant_students (id, tenant_id, batch_id, student_name, parent_name, parent_phone)
+        VALUES ('${studentId}', '${tenantId}', '${batchId}', 'Swimmer', 'Parent', '9845012345');
+      `)
+
+      // Perform canonical archival
+      db.public.none(`UPDATE public.tenant_batches SET is_active = false WHERE id = '${batchId}';`)
+
+      const archivedBatch = db.public.one(`SELECT * FROM public.tenant_batches WHERE id = '${batchId}';`)
+      expect(archivedBatch.is_active).toBe(false)
+
+      // Active schedules selector excludes it
+      const activeBatches = db.public.many(`SELECT * FROM public.tenant_batches WHERE tenant_id = '${tenantId}' AND is_active = true;`)
+      expect(activeBatches).toHaveLength(0)
+
+      // Student record retains link to archived batch for historical billing and reporting
+      const student = db.public.one(`SELECT * FROM public.tenant_students WHERE id = '${studentId}';`)
+      expect(student.batch_id).toBe(batchId)
+      expect(student.tenant_id).toBe(tenantId)
+    })
   })
 })

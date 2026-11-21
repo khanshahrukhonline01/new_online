@@ -14,3 +14,4 @@ npm-debug.log*
 supabase/.temp/
 
 dist-admin/
+scratch/
