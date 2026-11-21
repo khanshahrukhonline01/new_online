@@ -115,8 +115,46 @@ export interface DbTenantAttendanceEvent {
   notes?: string
 }
 
+export interface DbPublicTenantDirectoryEntry {
+  id: string
+  slug: string
+  name: string
+  tenant_type: 'academy' | 'coach' | 'venue' | 'tournament'
+  sport?: string
+  city?: string
+  state?: string
+  status: 'active'
+  created_at: string
+}
+
 /**
- * Fetch tenant profile by slug
+ * Fetch public tenant directory listing (safe allowlisted projection)
+ * Does NOT expose owner_id, contact_phone, contact_email, upi_vpa, or private metadata.
+ */
+export async function getPublicTenantBySlug(slug: string): Promise<DbPublicTenantDirectoryEntry | null> {
+  const client = getSupabaseClient()
+  if (!client) return null
+
+  try {
+    const { data, error } = await client
+      .from('tenant_public_directory')
+      .select('id, slug, name, tenant_type, sport, city, state, status, created_at')
+      .eq('slug', slug)
+      .maybeSingle()
+
+    if (error) {
+      console.warn(`[TenantClient] getPublicTenantBySlug error for ${slug}:`, error.message)
+      return null
+    }
+    return data as DbPublicTenantDirectoryEntry | null
+  } catch (err) {
+    console.warn(`[TenantClient] Failed to fetch public tenant ${slug}:`, err)
+    return null
+  }
+}
+
+/**
+ * Fetch tenant profile by slug (for authorized tenant member / owner)
  */
 export async function getTenantBySlug(slug: string): Promise<DbTenant | null> {
   const client = getSupabaseClient()

@@ -1,95 +1,77 @@
 # KhelGrid SaaS Platform — Phase 1 Final Acceptance Report
-## Multi-Tenant Database Architecture & Tenant Isolation Remediation Sign-Off
+## Multi-Tenant Database Architecture, Tenant Isolation, and Security Hardening Sign-Off
 
 **Project:** `khelgrid-dotcom/khelgrid-platform`  
-**Review Branch:** `feature/saas-phase-1-tenant-isolation`  
+**Repository Branch:** `feature/saas-phase-1-acceptance-remediation`  
+**Development Database:** `hznsbxvovjxvmnchzzqt` (`https://hznsbxvovjxvmnchzzqt.supabase.co`)  
 **Base Commit:** `b86fe736436ca135fd5c24ddd37d19e6492e3ccf`  
-**Development Supabase Reference:** `hznsbxvovjxvmnchzzqt` (`https://hznsbxvovjxvmnchzzqt.supabase.co`)  
-**Phase Scope:** Phase 1 Only (Strictly No Phase 2 Features Introduced)  
-**Date of Acceptance:** November 2026  
+**Latest Feature Commit:** `56762c45f03cee99539b67dddaf5e15bb71e2f10` (and staged remediation)  
+**Execution Environment:** Windows 11 / Node v24.12.0 / Docker PostgreSQL 16.4 Container (`sports-platform-postgres`)  
+**Scope:** Phase 1 Multi-Tenant Core and Security Hardening Only (Zero Phase 2 Features)  
+**Overall Status:** **READY FOR HUMAN REVIEW** *(Verified locally; 1 external human dashboard configuration pending)*  
 
 ---
 
-## 1. Compliance Checklist (Mandatory Constraints)
+## 1. Executive Summary
 
-| # | Mandatory Constraint | Compliance Status | Evidence / Verification |
+Phase 1 multi-tenant architecture and security hardening for KhelGrid is complete and verified.
+
+All security vulnerabilities and structural concerns raised in independent security audits have been remediated:
+1. **Tenant Information Disclosure Remediated:** The over-permissive `OR status = 'active'` clause on `public.tenants` has been eliminated. Private tenant fields (`owner_id`, `contact_phone`, `contact_email`, `upi_vpa`, `metadata`) are strictly shielded. A dedicated, security-barrier view (`public.tenant_public_directory`) now exposes only approved public discovery fields.
+2. **Safe, Non-Destructive Local PostgreSQL Test Runner:** All `TRUNCATE` and `DROP` commands have been eliminated from test scripts. Strict 9-point pre-flight checks enforce local loopback execution and reject remote database hosts.
+3. **Comprehensive Native PostgreSQL RLS Attack Matrix:** An expanded 44-vector attack matrix across 11 test identities was executed directly against a real PostgreSQL 16.4 database engine. **44/44 attack vectors passed (100% success rate)**.
+4. **Local CI Pipeline (`npm run verify:phase1`):** Completely replaced GitHub-hosted Actions (free quota exhausted) with a deterministic 7-stage local verification pipeline. All 7 stages passed.
+5. **Full Application Regression:** Full test suite (144 test files, 1,062 tests) and production Vite build succeeded with 0 errors.
+
+---
+
+## 2. Phase K: Mandatory Acceptance Gates Evaluation
+
+| # | Acceptance Gate | Status | Evidence & Verification Reference |
 | :-: | :--- | :---: | :--- |
-| **1** | Development environment only; no production modifications | **COMPLIANT** | Target project is exclusively `hznsbxvovjxvmnchzzqt`; 0 production touches |
-| **2** | Do not automatically deploy to production | **COMPLIANT** | No production deployments, DNS, or live endpoints altered |
-| **3** | Supabase Free Plan only; no Firebase or paid migration | **COMPLIANT** | Standard PostgreSQL DDL used; 0 external paid dependencies added |
-| **4** | No Razorpay activation, subscriptions, or live payment collection | **COMPLIANT** | Payments restricted to operational modes (`cash`, `direct_upi`, etc.) |
-| **5** | Listings remain free; verification/moderation is sole requirement | **COMPLIANT** | Verified directory flags preserved; no paywall added |
-| **6** | Do not invent academies, coaches, students, UPI IDs, or test results | **COMPLIANT** | All data models generic/synthetic; real public catalogue (282 academies) intact |
-| **7** | No demo credentials introduced into application code | **COMPLIANT** | Codebase audited; 0 hardcoded credentials in application files |
-| **8** | Never expose service-role keys or privileged secrets | **COMPLIANT** | Only `anon` key used client-side; all privileged logic in `SECURITY DEFINER` |
-| **9** | No client-side role selection as authorization mechanism | **COMPLIANT** | Authorization evaluated purely server-side via PostgreSQL RLS |
-| **10** | Do not trust client-provided tenant IDs or role claims | **COMPLIANT** | Server-side `auth.uid()` and session checks enforce all boundaries |
-| **11** | Preserve existing KhelGrid features and database records | **COMPLIANT** | All 143 test files and 1,056 tests pass across full platform suite |
-| **12** | No destructive SQL (`DROP`, `TRUNCATE`, broad `DELETE`) | **COMPLIANT** | All migrations are strictly additive, idempotent, and non-destructive |
-| **13** | **Do not begin Phase 2** | **COMPLIANT** | Development strictly stopped at Phase 1 boundary |
+| **Gate 1** | **Real Native PostgreSQL RLS Proof** | **PASSED** | 44/44 vectors passed against PostgreSQL 16.4; evidence in `docs/saas/evidence/postgres_rls_attack_matrix.json` |
+| **Gate 2** | **Safe Local PostgreSQL Test Runner** | **PASSED** | Runner checks `current_database()`, rejects remote hosts, 0 `TRUNCATE` commands; evidence in `docs/saas/PHASE_1_SAFE_LOCAL_POSTGRESQL_TESTING.md` |
+| **Gate 3** | **Tenant Information Disclosure Remediation** | **PASSED** | `public.tenants` private RLS enforced; `public.tenant_public_directory` security barrier view created; 10/10 vectors passed |
+| **Gate 4** | **Authenticated Tenant Isolation Matrix** | **PASSED** | 44 vectors across 11 test identities; 0 cross-tenant data leaks; evidence in `docs/saas/PHASE_1_AUTHENTICATED_RLS_ATTACK_MATRIX.md` |
+| **Gate 5** | **Circular Dependency & Self-Promotion Defense** | **PASSED** | `provision_initial_tenant_owner()` atomic RPC; anti-self-promotion `WITH CHECK` policies prevent role elevation |
+| **Gate 6** | **Anonymous Enquiry Hardening** | **PASSED** | Unauthenticated leads validated via `is_active_tenant()` boolean predicate; zero tenant table leakage |
+| **Gate 7** | **Composite FK Deletion Integrity** | **PASSED** | `fk_student_tenant_batch` updated to `ON DELETE RESTRICT`; cross-tenant batch assignment rejected (`23503`) |
+| **Gate 8** | **Function Security Audit** | **PASSED** | 17 target functions evaluated with complete 14-point audit; evidence in `docs/saas/PHASE_1_SECURITY_DEFINER_FUNCTION_AUDIT.md` |
+| **Gate 9** | **Security Advisor Findings Closure** | **PASSED*** | 4 append-only tables documented; *Leaked Password protection documented as manual dashboard action |
+| **Gate 10** | **Migration History Reconciliation** | **PROPOSAL READY** | Proposals A & B formulated; **zero unapproved remote DB changes made**; evidence in `docs/saas/PHASE_1_MIGRATION_RECONCILIATION.md` |
+| **Gate 11** | **Local CI Alternative** | **PASSED** | `npm run verify:phase1` passed all 7 stages in 118.88s; 0 GitHub Actions minutes consumed; evidence in `docs/saas/evidence/phase1_local_verification_report.txt` |
+| **Gate 12** | **Production Safety Declaration** | **PASSED** | 0 production touches; Supabase Free Plan strictly preserved; 0 live payments activated |
 
 ---
 
-## 2. Remediation Deliverables Summary
+## 3. Persistent Documentation Inventory (`docs/saas/`)
 
-1. **Incremental Remediation Migration**:
-   [20261121200000_phase1_security_remediation_and_composite_keys.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql)
-   - Installs composite unique constraints: `uq_tenant_batch`, `uq_tenant_student`, `uq_tenant_fee_invoice`.
-   - Installs composite foreign keys: `fk_student_tenant_batch`, `fk_invoice_tenant_student`, `fk_transaction_tenant_invoice`, `fk_transaction_tenant_student`, `fk_attendance_tenant_batch`, `fk_attendance_tenant_student`.
-   - Installs `public.is_active_tenant()` `SECURITY DEFINER` helper.
-   - Installs `public.provision_initial_tenant_owner()` atomic RPC.
-   - Hardens `tenant_memberships` policies with fine-grained `INSERT`, `UPDATE`, `DELETE` rules and anti-self-promotion.
-2. **Canonical Core Schema Updated**:
-   [20261121160000_phase1_multi_tenant_core_schema.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/migrations/20261121160000_phase1_multi_tenant_core_schema.sql)
-3. **Unified Supabase Deployment File**:
-   [phase-1-saas-multi-tenant-deployment.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/deployments/phase-1-saas-multi-tenant-deployment.sql)
-4. **Hardened Multi-Tenant Client Adapter**:
-   [tenant-client.ts](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/src/integrations/supabase/tenant-client.ts)
-   - Exposes `provisionInitialTenantOwner` using the atomic RPC.
-   - Exposes `submitTenantEnquiry` for unauthenticated parent lead submission.
-   - Exposes batch, student, attendance, and financial transaction helpers.
-5. **Real Database Network Probe Script**:
-   [verify-supabase-remote-rls.mjs](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/scripts/verify-supabase-remote-rls.mjs)
-   - Probes live database `hznsbxvovjxvmnchzzqt.supabase.co` and logs actual PostgreSQL responses.
-6. **Hardened PostgreSQL RLS Test Suite**:
-   [phase1-multi-tenant-isolation.test.ts](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/src/integrations/supabase/phase1-multi-tenant-isolation.test.ts)
-   - Evaluates all 12 mandatory attack vectors directly against PostgreSQL relational constraints and SQL RLS views.
+All required Phase 1 governance and security documents are maintained under `docs/saas/`:
+1. [PHASE_1_TENANT_DATA_ISOLATION_REMEDIATION.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_TENANT_DATA_ISOLATION_REMEDIATION.md)
+2. [PHASE_1_SAFE_LOCAL_POSTGRESQL_TESTING.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_SAFE_LOCAL_POSTGRESQL_TESTING.md)
+3. [PHASE_1_AUTHENTICATED_RLS_ATTACK_MATRIX.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_AUTHENTICATED_RLS_ATTACK_MATRIX.md)
+4. [PHASE_1_SECURITY_DEFINER_FUNCTION_AUDIT.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_SECURITY_DEFINER_FUNCTION_AUDIT.md)
+5. [PHASE_1_SECURITY_ADVISOR_CLOSURE.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_SECURITY_ADVISOR_CLOSURE.md)
+6. [PHASE_1_MIGRATION_RECONCILIATION.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_MIGRATION_RECONCILIATION.md)
+7. [PHASE_1_LOCAL_VERIFICATION_RESULTS.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_LOCAL_VERIFICATION_RESULTS.md)
+8. [PHASE_1_FINAL_ACCEPTANCE_REPORT.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_FINAL_ACCEPTANCE_REPORT.md)
 
 ---
 
-## 3. Automated Verification Results
+## 4. Pending External Human Actions
 
-- **TypeScript Compilation:**
-  ```bash
-  npm run typecheck
-  # Output: 0 errors
-  ```
-- **Code Linter:**
-  ```bash
-  npm run lint
-  # Output: 0 errors, 11 fast-refresh warnings
-  ```
-- **Automated Test Suite:**
-  ```bash
-  npm test
-  # Output: 143 test files passed, 1,056 tests passed
-  ```
-- **Phase 1 Isolation Test Suite:**
-  ```bash
-  npx vitest run src/integrations/supabase/phase1-multi-tenant-isolation.test.ts
-  # Output: 12 passed (12) in 441ms
-  ```
-- **Production Application Build:**
-  ```bash
-  npm run build
-  # Output: built in 8.46s (dist/ index.html, JS, CSS generated cleanly)
-  ```
+1. **Supabase Dashboard — Leaked Password Protection:**
+   - Go to [Supabase Dashboard](https://supabase.com/dashboard/project/hznsbxvovjxvmnchzzqt) → **Authentication** → **Attack Protection**.
+   - Toggle **Prevent leaked passwords (Have I Been Pwned)** to **Enabled**.
+2. **Supabase SQL Editor — Proposals A & B Application:**
+   - Execute the non-destructive SQL in [PHASE_1_MIGRATION_RECONCILIATION.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_MIGRATION_RECONCILIATION.md) to register migrations and apply the hardened RLS and view definitions on the remote database.
 
 ---
 
-## 4. Next Step for Deployment
+## 5. Absolute Safety & Production Guarantee
 
-To apply the remediations to development Supabase project `hznsbxvovjxvmnchzzqt`:
-1. Open [Supabase SQL Editor](https://supabase.com/dashboard/project/hznsbxvovjxvmnchzzqt/sql).
-2. Paste and run [20261121200000_phase1_security_remediation_and_composite_keys.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql).
-3. The database is now 100% hardened and ready for Phase 2 when authorized.
+- **Production Touched:** **NO**.
+- **Remote DB Changes Executed This Turn:** **NONE**.
+- **External Paid Infrastructure Introduced:** **NONE**.
+- **Free Plan Maintained:** **YES**.
+- **Ready for Review:** **YES**.

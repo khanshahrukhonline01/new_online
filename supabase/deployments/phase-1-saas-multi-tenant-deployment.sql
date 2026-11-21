@@ -344,16 +344,31 @@ ALTER TABLE public.tenant_fee_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tenant_attendance_events ENABLE ROW LEVEL SECURITY;
 
 -- 9.1 TENANTS POLICIES
--- Anyone authenticated can view active tenants they belong to, or public directory summaries
+-- Only verified active members or the tenant owner can view private tenant records
 CREATE POLICY "tenants_member_select"
   ON public.tenants
   FOR SELECT
   TO authenticated
   USING (
     public.is_tenant_member(id) OR
-    owner_id = auth.uid() OR
-    status = 'active'
+    owner_id = auth.uid()
   );
+
+-- Public directory projection with security barrier: safe non-sensitive columns only
+CREATE VIEW public.tenant_public_directory
+WITH (security_barrier = true) AS
+SELECT
+  id,
+  slug,
+  name,
+  tenant_type,
+  sport,
+  city,
+  state,
+  status,
+  created_at
+FROM public.tenants
+WHERE status = 'active';
 
 CREATE POLICY "tenants_owner_update"
   ON public.tenants
@@ -537,5 +552,9 @@ GRANT INSERT ON public.tenant_enquiries TO anon; -- Public parent enquiry intake
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.tenant_fee_invoices TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.tenant_fee_transactions TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.tenant_attendance_events TO authenticated;
+
+-- Public directory view grants
+REVOKE ALL ON public.tenant_public_directory FROM PUBLIC;
+GRANT SELECT ON public.tenant_public_directory TO anon, authenticated;
 
 COMMIT;
