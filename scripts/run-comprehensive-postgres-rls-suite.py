@@ -913,6 +913,83 @@ for idx, t in enumerate(test_matrix, 1):
         "status": status_str
     })
 
+# Supplemental native PostgreSQL projection-trigger ACL and lifecycle gate.
+# This is separate from the fixed 49-vector tenant RLS matrix.
+projection_trigger_sql = """
+BEGIN;
+DO $
+DECLARE
+  v_test_id uuid := gen_random_uuid();
+  v_slug text;
+  v_name text;
+BEGIN
+  IF has_function_privilege('anon', 'public.sync_tenant_public_directory()', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public.sync_tenant_public_directory()', 'EXECUTE') THEN
+    RAISE EXCEPTION 'Client role can directly execute projection trigger function';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc
+    WHERE oid = 'public.sync_tenant_public_directory()'::regprocedure
+      AND proconfig @> ARRAY['search_path=pg_catalog, pg_temp']::text[]
+  ) THEN
+    RAISE EXCEPTION 'Projection trigger function search_path is not hardened';
+  END IF;
+
+  IF has_table_privilege('anon', 'public.tenant_public_directory', 'INSERT')
+     OR has_table_privilege('anon', 'public.tenant_public_directory', 'UPDATE')
+     OR has_table_privilege('anon', 'public.tenant_public_directory', 'DELETE')
+     OR has_table_privilege('authenticated', 'public.tenant_public_directory', 'INSERT')
+     OR has_table_privilege('authenticated', 'public.tenant_public_directory', 'UPDATE')
+     OR has_table_privilege('authenticated', 'public.tenant_public_directory', 'DELETE') THEN
+    RAISE EXCEPTION 'Client role has direct write access to projection table';
+  END IF;
+
+  v_slug := 'phase1-trigger-' || replace(v_test_id::text, '-', '');
+  INSERT INTO public.tenants (id, slug, name, tenant_type, status)
+  VALUES (v_test_id, v_slug, 'Phase 1 Trigger Test', 'academy', 'pending_verification');
+
+  IF EXISTS (SELECT 1 FROM public.tenant_public_directory WHERE id = v_test_id) THEN
+    RAISE EXCEPTION 'Pending tenant leaked into public projection';
+  END IF;
+
+  UPDATE public.tenants SET status = 'active' WHERE id = v_test_id;
+  IF NOT EXISTS (SELECT 1 FROM public.tenant_public_directory WHERE id = v_test_id) THEN
+    RAISE EXCEPTION 'Active tenant missing from public projection';
+  END IF;
+
+  UPDATE public.tenants SET name = 'Phase 1 Trigger Updated' WHERE id = v_test_id;
+  SELECT name INTO v_name FROM public.tenant_public_directory WHERE id = v_test_id;
+  IF v_name IS DISTINCT FROM 'Phase 1 Trigger Updated' THEN
+    RAISE EXCEPTION 'Tenant update was not synchronized';
+  END IF;
+
+  UPDATE public.tenants SET status = 'suspended' WHERE id = v_test_id;
+  IF EXISTS (SELECT 1 FROM public.tenant_public_directory WHERE id = v_test_id) THEN
+    RAISE EXCEPTION 'Suspended tenant remained publicly discoverable';
+  END IF;
+
+  UPDATE public.tenants SET status = 'active' WHERE id = v_test_id;
+  IF NOT EXISTS (SELECT 1 FROM public.tenant_public_directory WHERE id = v_test_id) THEN
+    RAISE EXCEPTION 'Reactivated tenant was not restored to projection';
+  END IF;
+
+  DELETE FROM public.tenants WHERE id = v_test_id;
+  IF EXISTS (SELECT 1 FROM public.tenant_public_directory WHERE id = v_test_id) THEN
+    RAISE EXCEPTION 'Deleted tenant remained in projection';
+  END IF;
+END
+$;
+ROLLBACK;
+"""
+projection_out, projection_err, projection_rc = run_psql(projection_trigger_sql, on_error_stop=True)
+projection_gate_passed = projection_rc == 0
+if projection_gate_passed:
+    print("[PASS] PROJECTION-TRIGGER-ACL-LIFECYCLE: trigger-only execution and active/suspended/reactivated/deleted synchronization")
+else:
+    print("[FAIL] PROJECTION-TRIGGER-ACL-LIFECYCLE")
+    print(projection_err)
+
 # Targeted teardown cleanup
 run_psql(cleanup_sql, on_error_stop=False)
 
