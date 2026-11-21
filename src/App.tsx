@@ -83,6 +83,7 @@ const UserConsentModal = lazy(() => import('./shared/components/UserConsentModal
 const GoProModal = lazy(() => import('./shared/components/GoProModal'))
 import type { AuthModalTab } from './shared/components/AuthModal'
 const AuthModal = lazy(() => import('./shared/components/AuthModal'))
+import CustomCursor from './components/effects/CustomCursor'
 
 function PageFallbackLoader() {
   return (
@@ -378,6 +379,7 @@ export default function App() {
   }
 
   return <div className={`app-shell foundation-v1 ${sidebarCollapsed ? 'sidebar-is-collapsed' : 'sidebar-is-expanded'}`}>
+    <CustomCursor />
     <a className="skip-link" href="#main-content">Skip to content</a>
     <header className="site-header">
       <button ref={menuToggleRef} className="menu-toggle" type="button" aria-expanded={isMobile ? menuOpen : !sidebarCollapsed} aria-controls={isMobile ? 'mobile-sidebar-drawer' : 'app-sidebar'} onClick={toggleMainMenu} aria-label="Toggle main navigation"><SiteIcon name={isMobile && menuOpen ? 'close' : 'menu'} size={20} /></button>

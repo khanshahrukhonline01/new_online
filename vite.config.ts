@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     testTimeout: 15000,
     hookTimeout: 15000,
+    exclude: ['tests/**', 'node_modules/**', 'dist/**'],
   },
   server: {
     port: 3000,

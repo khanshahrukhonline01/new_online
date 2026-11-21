@@ -1,0 +1,210 @@
+/**
+ * KhelGrid Premium Animated Cursor Styles
+ * Athletic, technologically advanced, emerald-accented pointer follower.
+ *
+ * Design System Tokens Used:
+ * - Primary Emerald: #10B981 (var(--accent, #10b981))
+ * - Deep Navy: #0B192C (var(--navy, #10233f))
+ * - Surface Light/Dark Adaptability
+ */
+
+/* Container fixed to viewport, zero interaction overhead */
+.kg-custom-cursor-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none !important;
+  user-select: none !important;
+  z-index: 99999;
+  overflow: hidden;
+  contain: layout style size;
+  opacity: 0;
+  transition: opacity 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.kg-custom-cursor-container.is-visible {
+  opacity: 1;
+}
+
+/* Inner Leading Dot */
+.kg-cursor-dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  margin-left: -3px;
+  background-color: #10b981;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.65), 0 0 2px #ffffff;
+  will-change: transform;
+  transition: transform 0.15s cubic-bezier(0.2, 0.7, 0.2, 1),
+              opacity 0.2s cubic-bezier(0.2, 0.7, 0.2, 1),
+              background-color 0.2s ease;
+}
+
+/* Outer Follower Ring */
+.kg-cursor-follower {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 34px;
+  height: 34px;
+  margin-top: -17px;
+  margin-left: -17px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(16, 185, 129, 0.55);
+  background: rgba(16, 185, 129, 0.05);
+  pointer-events: none;
+  will-change: transform;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: width 0.28s cubic-bezier(0.2, 0.7, 0.2, 1),
+              height 0.28s cubic-bezier(0.2, 0.7, 0.2, 1),
+              margin 0.28s cubic-bezier(0.2, 0.7, 0.2, 1),
+              border-color 0.25s cubic-bezier(0.2, 0.7, 0.2, 1),
+              background-color 0.25s cubic-bezier(0.2, 0.7, 0.2, 1),
+              box-shadow 0.25s cubic-bezier(0.2, 0.7, 0.2, 1),
+              opacity 0.2s ease;
+}
+
+/* Ripple Pulse Container & Ring */
+.kg-cursor-ripple {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 34px;
+  height: 34px;
+  margin-top: -17px;
+  margin-left: -17px;
+  border-radius: 50%;
+  border: 1.5px solid #10b981;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.kg-cursor-ripple.is-pulsing {
+  animation: kg-cursor-pulse 0.45s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes kg-cursor-pulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.85;
+    border-color: #10b981;
+  }
+  50% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(1.95);
+    opacity: 0;
+    border-color: rgba(16, 185, 129, 0);
+  }
+}
+
+/* --- Contextual Hover States --- */
+
+/* 1. Button Hover: Expanded, energetic emerald glow */
+.kg-custom-cursor-container.hover-button .kg-cursor-follower {
+  width: 52px;
+  height: 52px;
+  margin-top: -26px;
+  margin-left: -26px;
+  border-color: #10b981;
+  background-color: rgba(16, 185, 129, 0.12);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
+}
+
+.kg-custom-cursor-container.hover-button .kg-cursor-dot {
+  transform: scale(1.3);
+  background-color: #ffffff;
+  box-shadow: 0 0 12px #10b981;
+}
+
+/* 2. Link Hover: Refined accent ring */
+.kg-custom-cursor-container.hover-link .kg-cursor-follower {
+  width: 44px;
+  height: 44px;
+  margin-top: -22px;
+  margin-left: -22px;
+  border-color: rgba(16, 185, 129, 0.85);
+  background-color: rgba(16, 185, 129, 0.08);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
+.kg-custom-cursor-container.hover-link .kg-cursor-dot {
+  transform: scale(1.15);
+}
+
+/* 3. Card / Tile Hover: Expansive boundary preview */
+.kg-custom-cursor-container.hover-card .kg-cursor-follower {
+  width: 60px;
+  height: 60px;
+  margin-top: -30px;
+  margin-left: -30px;
+  border-color: rgba(16, 185, 129, 0.65);
+  background-color: rgba(16, 185, 129, 0.06);
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);
+}
+
+/* 4. Media / Image Hover: Subtle focus ring */
+.kg-custom-cursor-container.hover-media .kg-cursor-follower {
+  width: 48px;
+  height: 48px;
+  margin-top: -24px;
+  margin-left: -24px;
+  border-color: rgba(255, 255, 255, 0.75);
+  background-color: rgba(11, 25, 44, 0.25);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
+}
+
+.kg-custom-cursor-container.hover-media .kg-cursor-dot {
+  background-color: #10b981;
+}
+
+/* 5. Input / Form Control Hover: Fades out outer ring to let native I-beam be crystal clear */
+.kg-custom-cursor-container.hover-input .kg-cursor-follower {
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  margin-left: -7px;
+  border-color: rgba(16, 185, 129, 0.4);
+  background-color: transparent;
+  opacity: 0.35;
+}
+
+.kg-custom-cursor-container.hover-input .kg-cursor-dot {
+  opacity: 0.4;
+  transform: scale(0.7);
+}
+
+/* --- Click Interaction (Pointer Down) --- */
+.kg-custom-cursor-container.is-clicking .kg-cursor-follower {
+  transform: scale(0.82) !important;
+  background-color: rgba(16, 185, 129, 0.22);
+  border-color: #10b981;
+}
+
+.kg-custom-cursor-container.is-clicking .kg-cursor-dot {
+  transform: scale(0.7) !important;
+}
+
+/* --- Accessibility & Fallback --- */
+@media (prefers-reduced-motion: reduce) {
+  .kg-custom-cursor-container {
+    display: none !important;
+  }
+}
+
+@media (pointer: coarse) {
+  .kg-custom-cursor-container {
+    display: none !important;
+  }
+}

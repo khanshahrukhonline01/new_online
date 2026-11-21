@@ -15,6 +15,7 @@
     "typecheck": "tsc -b --pretty",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:cursor:e2e": "playwright test tests/custom-cursor.spec.ts",
     "test:phase1:postgres": "node -e \"process.env.KHELGRID_LOCAL_RLS_TEST='1'; const { spawnSync } = require('child_process'); const res = spawnSync('python', ['scripts/run-comprehensive-postgres-rls-suite.py'], { stdio: 'inherit', env: process.env }); process.exit(res.status ?? 1);\"",
     "verify:phase1": "node scripts/verify-phase1-local.mjs",
     "dev:admin": "vite --config apps/admin/vite.config.ts",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
+    "@playwright/test": "^1.65.1",
     "@types/leaflet": "^1.9.22",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

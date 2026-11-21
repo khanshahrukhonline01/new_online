@@ -15,3 +15,5 @@ supabase/.temp/
 
 dist-admin/
 scratch/
+test-results/
+test.png
