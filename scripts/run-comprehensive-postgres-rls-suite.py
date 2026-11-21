@@ -167,6 +167,23 @@ if "t.status = 'active'" not in check_fn_out:
     print("[FATAL BLOCKED] Migration 20261121220000 not applied: is_tenant_member() does not enforce tenant status check.")
     sys.exit(1)
 
+# Verify the projection-trigger hardening migration has been applied.
+acl_sql = """
+SELECT
+  (NOT has_function_privilege('anon', 'public.sync_tenant_public_directory()', 'EXECUTE'))
+  AND (NOT has_function_privilege('authenticated', 'public.sync_tenant_public_directory()', 'EXECUTE'))
+  AND EXISTS (
+    SELECT 1 FROM pg_proc
+    WHERE oid = 'public.sync_tenant_public_directory()'::regprocedure
+      AND proconfig @> ARRAY['search_path=pg_catalog, pg_temp']::text[]
+  );
+"""
+acl_out, acl_err, acl_rc = run_psql(acl_sql)
+if acl_rc != 0 or acl_out.strip().lower() != "t":
+    print("[FATAL BLOCKED] Projection trigger ACL hardening migration 20261121233000 is missing or incomplete.")
+    print(acl_err)
+    sys.exit(1)
+
 print(f"[SAFETY & MIGRATION VERIFIED] Running against verified local test database: {live_db}")
 
 # ==============================================================================
@@ -276,7 +293,7 @@ if rc != 0:
     sys.exit(1)
 
 # ==============================================================================
-# 3. 47-VECTOR NATIVE POSTGRESQL ATTACK MATRIX
+# 3. 49-VECTOR NATIVE POSTGRESQL ATTACK MATRIX
 # ==============================================================================
 
 test_matrix = [
