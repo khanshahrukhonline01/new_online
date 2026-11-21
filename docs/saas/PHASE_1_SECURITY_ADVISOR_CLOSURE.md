@@ -1,3 +1,10 @@
+> **SUPERSEDING LIVE SECURITY ADVISOR SNAPSHOT — 2026-11-21 17:34 UTC**  
+> Current live Advisor findings: Security Definer View = **0**; SECURITY DEFINER executable by anon = **13**; executable by authenticated = **54**; RLS enabled with no policies = **4** (INFO); leaked-password protection disabled = **1** (WARN). The physical projection table has replaced the old view, but its synchronization trigger function is still directly executable by anon/authenticated in the live database.  
+> The 4 no-policy tables have no direct anon/authenticated SELECT or INSERT grants in the read-only catalog inspection; retain deny-all unless a real workflow requires otherwise. The 73-function inventory is in [PHASE_1_SECURITY_DEFINER_LIVE_INVENTORY_20261121.md](./PHASE_1_SECURITY_DEFINER_LIVE_INVENTORY_20261121.md). These counts are a timestamped snapshot, not closure.  
+> **Verdict: NOT CLOSED.** No remote ACL or Auth setting changes were made.  
+>
+> ---
+>
 # KhelGrid SaaS Platform — Phase 1: Security Advisor Closure Report
 ## Recalculated Findings, Exposure Assessment, Audit Log Invariants, and Auth Security Review
 
