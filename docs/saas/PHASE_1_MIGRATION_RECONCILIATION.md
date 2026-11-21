@@ -53,10 +53,11 @@ A direct API probe on the live Supabase development instance confirms the follow
    - `public.tenant_attendance_events`
 2. **Access Revocations Live**:
    All 8 tables return `42501: permission denied` for anonymous `SELECT`.
-3. **Pending Remote Remediation**:
-   - `public.provision_initial_tenant_owner()` returns `PGRST202: Could not find function in schema cache` (pending execution of `20261121200000`).
-   - `public.is_active_tenant()` is pending execution of `20261121200000`.
-   - Composite foreign keys `(tenant_id, ...)` are pending execution of `20261121200000`.
+3. **Remediation Migration Successfully Executed & Active**:
+   - `public.provision_initial_tenant_owner()` is deployed, active, and confirmed restricted to authenticated callers (`42501` for anon).
+   - `public.is_active_tenant()` is deployed, active, and callable by anon (returns boolean without table leaks).
+   - `tenant_enquiries` RLS evaluation confirmed working via `is_active_tenant()`.
+   - All composite unique constraints and composite foreign keys are active.
 
 ---
 

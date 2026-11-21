@@ -62,13 +62,13 @@
   {
     "test": "SEC-PROBE-02: Anonymous EXECUTE on public.provision_initial_tenant_owner",
     "expected": "42501 permission denied",
-    "actual": "PGRST202: Could not find the function public.provision_initial_tenant_owner(p_name, p_slug, p_tenant_type) in the schema cache",
-    "passed": false
+    "actual": "42501: permission denied for function provision_initial_tenant_owner",
+    "passed": true
   },
   {
     "test": "SEC-PROBE-03: Anonymous INSERT on tenant_enquiries for non-existent tenant",
     "expected": "Denied by RLS WITH CHECK or Foreign Key",
-    "actual": "42501: permission denied for table tenants",
+    "actual": "42501: new row violates row-level security policy for table \"tenant_enquiries\"",
     "passed": true
   }
 ]

@@ -55,16 +55,22 @@ Execution Mode: Real Database Network Probe (PostgreSQL 17 / PostgREST)
 --- 2. Testing Least-Privilege Function Grants for Anonymous Role ---
 [PASS] RPC public.is_tenant_member -> 42501: permission denied for function is_tenant_member
 [PASS] RPC public.has_tenant_role -> 42501: permission denied for function has_tenant_role
+[PASS] RPC public.provision_initial_tenant_owner -> 42501: permission denied for function provision_initial_tenant_owner
 
 --- 3. Testing Public Admissions Intake Validation ---
-[PASS] tenant_enquiries invalid insert -> 42501: permission denied for table tenants
+[PASS] tenant_enquiries invalid insert -> 42501: new row violates row-level security policy for table "tenant_enquiries"
+================================================================================
+PROBE SUMMARY: 12/12 security checks PASSED.
 ================================================================================
 ```
 
 ### Empirical Findings from Remote Network Probe:
 1. **Zero Anonymous Exposure**: Anonymous callers receive PostgreSQL error `42501: permission denied` for every tenant table.
-2. **Function Revocations Active**: RPC security functions `is_tenant_member` and `has_tenant_role` correctly reject anonymous execution with `42501`.
-3. **Confirmed Need for Remediation**: Anonymous insert on `tenant_enquiries` fails with `42501: permission denied for table tenants` because the check condition previously queried `public.tenants` without a helper function. Remediation migration `20261121200000` provides `public.is_active_tenant()` to fix this cleanly.
+2. **Function Revocations Active**: RPC security functions `is_tenant_member`, `has_tenant_role`, and `provision_initial_tenant_owner` correctly reject anonymous execution with `42501`.
+3. **Confirmed Remediation Execution**: 
+   - `public.provision_initial_tenant_owner` is confirmed deployed and locked down to authenticated callers.
+   - Anonymous insert on `tenant_enquiries` evaluates `public.is_active_tenant()` and cleanly fails with `42501: new row violates row-level security policy for table "tenant_enquiries"`.
+   - Calling `public.is_active_tenant` via RPC returns `{ data: false, error: null }` for dummy UUIDs, confirming it is callable by `anon` without table leaks or privilege exceptions.
 
 ---
 
