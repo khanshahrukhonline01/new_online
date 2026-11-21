@@ -67,4 +67,44 @@ describe('academyExportUtils Suite', () => {
     expect(roster.students.length).toBe(1)
     expect(roster.students[0].studentName).toBe('Rohit')
   })
+
+  it('exports attendance register and financial fee ledger to formatted CSV', async () => {
+    const { exportAttendanceToCsv, exportTransactionsToCsv } = await import('./academyExportUtils')
+
+    const attendanceCsv = exportAttendanceToCsv('Morning Elite Squad', '2026-11-21', [
+      { studentName: 'Aarav Sharma', status: 'present', checkInTime: '06:15 AM' },
+      { studentName: 'Vihaan Verma', status: 'absent' },
+    ])
+    expect(attendanceCsv).toContain('Morning Elite Squad')
+    expect(attendanceCsv).toContain('"Aarav Sharma"')
+    expect(attendanceCsv).toContain('"PRESENT"')
+    expect(attendanceCsv).toContain('"ABSENT"')
+
+    const txCsv = exportTransactionsToCsv(
+      [
+        {
+          id: 'tx-1',
+          academySlug: 'test',
+          studentId: 's1',
+          studentName: 'Aarav Sharma',
+          parentName: 'Rajesh Sharma',
+          parentPhone: '9845012345',
+          batchId: 'b1',
+          batchName: 'Morning Elite Squad',
+          amount: 2500,
+          paymentMode: 'direct_upi',
+          collectedByStaffName: 'Director Suresh',
+          collectedDate: '2026-11-20',
+          billingMonth: 'November 2026',
+          receiptNumber: 'KGR-2026-9912',
+          status: 'settled',
+        },
+      ],
+      'Test Academy'
+    )
+    expect(txCsv).toContain('Audited Financial Fee Ledger — Test Academy')
+    expect(txCsv).toContain('KGR-2026-9912')
+    expect(txCsv).toContain('"DIRECT_UPI"')
+    expect(txCsv).toContain('2500')
+  })
 })

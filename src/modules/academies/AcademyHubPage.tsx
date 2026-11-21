@@ -50,7 +50,23 @@ import {
   getAcademyStaffSafeguarding,
   getAcademySafetyIncidents,
 } from './academyInventoryService'
-import { exportStudentsToCsv, downloadBlobFile } from './academyExportUtils'
+import {
+  exportStudentsToCsv,
+  exportAttendanceToCsv,
+  exportTransactionsToCsv,
+  downloadBlobFile,
+} from './academyExportUtils'
+import {
+  type AcademyUserRole,
+  canRoleAccessTab,
+  maskPhone,
+  reconcileAcademyFeeLedger,
+  calculateProratedCancellationRefund,
+  generateAcademyDisasterBackup,
+  validateAndRestoreAcademyBackup,
+  getAcademyPreLaunchChecklist,
+  generateSupportConciergeWhatsAppUrl,
+} from '../../shared/saas/saasLaunchReadinessService'
 import {
   parseStudentCsvRows,
   getSampleStudentCsv,
@@ -122,8 +138,21 @@ export default function AcademyHubPage({
   const feeTransactions = getAcademyFeeTransactions(selectedSlug)
   const ledgerSummary = getAcademyLedgerSummary(selectedSlug)
 
-  // Active Tab
+  // Active Tab & Role Permissions
   const [activeTab, setActiveTab] = useState<'leads' | 'batches' | 'fees' | 'ledger' | 'attendance' | 'staff' | 'trial_passes' | 'kits' | 'safeguarding' | 'settings'>('leads')
+  const [userRole, setUserRole] = useState<AcademyUserRole>('director')
+  const [dpdpSafeMode, setDpdpSafeMode] = useState(true)
+  const [showOnboardingChecklist, setShowOnboardingChecklist] = useState(true)
+  const [pitchSideMode, setPitchSideMode] = useState(false)
+
+  // Subscription Cancellation & Prorated Refund Modal State
+  const [cancellationModalStudent, setCancellationModalStudent] = useState<AcademyStudent | null>(null)
+  const [cancellationReason, setCancellationReason] = useState<'injury' | 'relocation' | 'dissatisfied' | 'other'>('injury')
+  const [cancellationSessionsAttended, setCancellationSessionsAttended] = useState(3)
+  const [cancellationSuccessMsg, setCancellationSuccessMsg] = useState('')
+
+  // Disaster Backup State
+  const [backupRestoreMsg, setBackupRestoreMsg] = useState('')
 
   // Inventory & Safeguarding Data
   const kits = getAcademyKitDistributions(selectedSlug)
@@ -131,6 +160,56 @@ export default function AcademyHubPage({
   const safeguardingStaff = getAcademyStaffSafeguarding(selectedSlug)
   const safetyIncidents = getAcademySafetyIncidents(selectedSlug)
   const availableTournaments = getAvailableTournaments()
+
+  // Pre-Launch Checklist & Mathematical Reconciliation
+  const preLaunchChecklist = getAcademyPreLaunchChecklist({
+    hasUpiVpa: Boolean(settings.upiVpa && settings.upiVpa.includes('@')),
+    hasBatches: batches.length > 0,
+    hasStudents: students.length > 0,
+    hasTakenAttendance: students.some(s => s.feeStatus === 'paid'),
+    hasConfiguredStaff: staff.length > 0,
+  })
+
+  const feeReconciliation = reconcileAcademyFeeLedger({
+    students,
+    transactions: feeTransactions,
+  })
+
+  const handleDownloadBackup = () => {
+    const backup = generateAcademyDisasterBackup(selectedSlug, currentAcademy.name, {
+      settings,
+      batches,
+      students,
+      leads,
+      staff,
+      transactions: feeTransactions,
+      passes,
+      kits,
+      safeguarding: safeguardingStaff,
+    })
+    downloadBlobFile(
+      `${selectedSlug}-disaster-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      JSON.stringify(backup, null, 2),
+      'application/json;charset=utf-8;'
+    )
+  }
+
+  const handleRestoreBackupFile = (fileContent: string) => {
+    const res = validateAndRestoreAcademyBackup(fileContent, selectedSlug)
+    setBackupRestoreMsg(res.message)
+    if (res.success) {
+      triggerRefresh()
+    }
+  }
+
+  const proratedRefund = cancellationModalStudent
+    ? calculateProratedCancellationRefund({
+        monthlyFee: cancellationModalStudent.monthlyFee,
+        totalSessionsInMonth: 12,
+        sessionsAttended: cancellationSessionsAttended,
+        reason: cancellationReason,
+      })
+    : null
 
   // Tournament Squad Registration Modal State
   const [isTournamentSquadModalOpen, setIsTournamentSquadModalOpen] = useState(false)
@@ -746,6 +825,79 @@ export default function AcademyHubPage({
                 </option>
               ))}
             </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <label htmlFor="academy-role-select" style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+                Staff Role:
+              </label>
+              <select
+                id="academy-role-select"
+                aria-label="Current Staff Role"
+                value={userRole}
+                onChange={e => setUserRole(e.target.value as AcademyUserRole)}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  background: '#f8fafc',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#1e293b',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="director">Director (Full Access)</option>
+                <option value="head_coach">Head Coach (Batches, Attendance & Kits)</option>
+                <option value="front_desk">Front-Desk (Leads, Students & Inquiries)</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              className="academy-hub-btn-outline"
+              onClick={() => setDpdpSafeMode(v => !v)}
+              style={{
+                padding: '7px 11px',
+                fontSize: '12px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: dpdpSafeMode ? '#ecfdf5' : '#ffffff',
+                borderColor: dpdpSafeMode ? '#10b981' : '#cbd5e1',
+                color: dpdpSafeMode ? '#047857' : '#475569',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+              title="DPDP Act 2023 Minor Privacy Safe Mode (masks phone & emails by default)"
+            >
+              <SiteIcon name="shield-check" size={14} />
+              <span>DPDP Minor Shield: {dpdpSafeMode ? 'ON (Masked)' : 'OFF (Admin Visible)'}</span>
+            </button>
+            <a
+              href={generateSupportConciergeWhatsAppUrl({
+                academyName: currentAcademy.name,
+                directorName: settings.directorName || 'Director',
+                queryType: 'onboarding'
+              })}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="academy-hub-btn-outline"
+              style={{
+                padding: '7px 11px',
+                fontSize: '12px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                textDecoration: 'none',
+                color: '#15803d',
+                borderColor: '#86efac',
+                background: '#f0fdf4',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+              title="KhelGrid Onboarding & Support Concierge on WhatsApp"
+            >
+              <SiteIcon name="message" size={14} />
+              <span>Support Concierge</span>
+            </a>
             <button
               type="button"
               className="academy-hub-btn-outline"
@@ -838,6 +990,75 @@ export default function AcademyHubPage({
         </div>
       )}
 
+      {/* 5-Step Pre-Launch Checklist Banner */}
+      {showOnboardingChecklist && (
+        <div
+          data-testid="pre-launch-checklist"
+          style={{
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderLeft: preLaunchChecklist.isReadyForLaunch ? '4px solid #10b981' : '4px solid #f59e0b',
+            borderRadius: '10px',
+            padding: '16px 20px',
+            marginBottom: '1.25rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <SiteIcon name={preLaunchChecklist.isReadyForLaunch ? 'check-circle' : 'sparkles'} size={18} />
+              <strong style={{ fontSize: '15px', color: '#0f172a' }}>
+                Pre-Launch Readiness Checklist ({preLaunchChecklist.steps.filter(s => s.isCompleted).length}/{preLaunchChecklist.steps.length} Complete · {preLaunchChecklist.progressPercentage}%)
+              </strong>
+              {preLaunchChecklist.isReadyForLaunch ? (
+                <span style={{ fontSize: '12px', background: '#ecfdf5', color: '#047857', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                  Ready to Launch
+                </span>
+              ) : (
+                <span style={{ fontSize: '12px', background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                  Setup In Progress
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowOnboardingChecklist(false)}
+              style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', cursor: 'pointer', padding: '4px' }}
+              title="Dismiss checklist"
+            >
+              ✕ Dismiss
+            </button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+            {preLaunchChecklist.steps.map(step => (
+              <div
+                key={step.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                  padding: '8px 10px',
+                  background: step.isCompleted ? '#f0fdf4' : '#f8fafc',
+                  border: step.isCompleted ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '13px'
+                }}
+              >
+                <SiteIcon name={step.isCompleted ? 'check-circle' : 'sparkles'} size={16} />
+                <div>
+                  <div style={{ fontWeight: 600, color: step.isCompleted ? '#166534' : '#334155' }}>
+                    {step.title}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>
+                    {step.description}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* KPI Metrics Strip */}
       <div className="academy-hub-kpi-grid">
         <div className="academy-hub-kpi-card">
@@ -887,87 +1108,107 @@ export default function AcademyHubPage({
 
       {/* Navigation Tabs */}
       <nav className="academy-hub-nav-tabs" aria-label="Academy Hub Workspaces">
-        <button
-          type="button"
-          className={`academy-hub-tab-btn ${activeTab === 'leads' ? 'active' : ''}`}
-          onClick={() => setActiveTab('leads')}
-        >
-          <SiteIcon name="mail" size={18} /> Admissions CRM &amp; Leads
-          {summary.newLeadsCount > 0 && <span className="academy-hub-tab-badge">+{summary.newLeadsCount}</span>}
-        </button>
+        {canRoleAccessTab(userRole, 'leads') && (
+          <button
+            type="button"
+            className={`academy-hub-tab-btn ${activeTab === 'leads' ? 'active' : ''}`}
+            onClick={() => setActiveTab('leads')}
+          >
+            <SiteIcon name="mail" size={18} /> Admissions CRM &amp; Leads
+            {summary.newLeadsCount > 0 && <span className="academy-hub-tab-badge">+{summary.newLeadsCount}</span>}
+          </button>
+        )}
 
-        <button
-          type="button"
-          className={`academy-hub-tab-btn ${activeTab === 'batches' ? 'active' : ''}`}
-          onClick={() => setActiveTab('batches')}
-        >
-          <SiteIcon name="calendar" size={18} /> Batch Schedules ({batches.length})
-        </button>
+        {canRoleAccessTab(userRole, 'batches') && (
+          <button
+            type="button"
+            className={`academy-hub-tab-btn ${activeTab === 'batches' ? 'active' : ''}`}
+            onClick={() => setActiveTab('batches')}
+          >
+            <SiteIcon name="calendar" size={18} /> Batch Schedules ({batches.length})
+          </button>
+        )}
 
-        <button
-          type="button"
-          className={`academy-hub-tab-btn ${activeTab === 'fees' ? 'active' : ''}`}
-          onClick={() => setActiveTab('fees')}
-        >
-          <SiteIcon name="award" size={18} /> Student Fees &amp; UPI
-        </button>
+        {canRoleAccessTab(userRole, 'fees') && (
+          <button
+            type="button"
+            className={`academy-hub-tab-btn ${activeTab === 'fees' ? 'active' : ''}`}
+            onClick={() => setActiveTab('fees')}
+          >
+            <SiteIcon name="award" size={18} /> Student Fees &amp; UPI
+          </button>
+        )}
 
-        <button
-          type="button"
-          className={`academy-hub-tab-btn ${activeTab === 'ledger' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ledger')}
-        >
-          <SiteIcon name="wallet" size={18} /> Cash &amp; UPI Ledger
-          {ledgerSummary.cashInHand > 0 && <span className="academy-hub-tab-badge" style={{ background: '#f59e0b' }}>₹{ledgerSummary.cashInHand}</span>}
-        </button>
+        {canRoleAccessTab(userRole, 'ledger') && (
+          <button
+            type="button"
+            className={`academy-hub-tab-btn ${activeTab === 'ledger' ? 'active' : ''}`}
+            onClick={() => setActiveTab('ledger')}
+          >
+            <SiteIcon name="wallet" size={18} /> Cash &amp; UPI Ledger
+            {ledgerSummary.cashInHand > 0 && <span className="academy-hub-tab-badge" style={{ background: '#f59e0b' }}>₹{ledgerSummary.cashInHand}</span>}
+          </button>
+        )}
 
-        <button
-          type="button"
-          className={`academy-hub-tab-btn ${activeTab === 'attendance' ? 'active' : ''}`}
-          onClick={() => setActiveTab('attendance')}
-        >
-          <SiteIcon name="check-circle" size={18} /> Daily Attendance
-        </button>
+        {canRoleAccessTab(userRole, 'attendance') && (
+          <button
+            type="button"
+            className={`academy-hub-tab-btn ${activeTab === 'attendance' ? 'active' : ''}`}
+            onClick={() => setActiveTab('attendance')}
+          >
+            <SiteIcon name="check-circle" size={18} /> Daily Attendance
+          </button>
+        )}
 
-        <button
-          type="button"
-          className={`academy-hub-tab-btn ${activeTab === 'staff' ? 'active' : ''}`}
-          onClick={() => setActiveTab('staff')}
-        >
-          <SiteIcon name="users" size={18} /> Staff &amp; Coaches ({staff.length})
-        </button>
+        {canRoleAccessTab(userRole, 'staff') && (
+          <button
+            type="button"
+            className={`academy-hub-tab-btn ${activeTab === 'staff' ? 'active' : ''}`}
+            onClick={() => setActiveTab('staff')}
+          >
+            <SiteIcon name="users" size={18} /> Staff &amp; Coaches ({staff.length})
+          </button>
+        )}
 
-        <button
-          type="button"
-          className={`academy-hub-tab-btn ${activeTab === 'trial_passes' ? 'active' : ''}`}
-          onClick={() => setActiveTab('trial_passes')}
-        >
-          <SiteIcon name="shield-check" size={18} /> Trial Passes ({passes.length})
-        </button>
+        {canRoleAccessTab(userRole, 'trial_passes') && (
+          <button
+            type="button"
+            className={`academy-hub-tab-btn ${activeTab === 'trial_passes' ? 'active' : ''}`}
+            onClick={() => setActiveTab('trial_passes')}
+          >
+            <SiteIcon name="shield-check" size={18} /> Trial Passes ({passes.length})
+          </button>
+        )}
 
-        <button
-          type="button"
-          className={`academy-hub-tab-btn ${activeTab === 'kits' ? 'active' : ''}`}
-          onClick={() => setActiveTab('kits')}
-        >
-          <SiteIcon name="award" size={18} /> Kit &amp; Gear Locker ({kits.length})
-        </button>
+        {canRoleAccessTab(userRole, 'kits') && (
+          <button
+            type="button"
+            className={`academy-hub-tab-btn ${activeTab === 'kits' ? 'active' : ''}`}
+            onClick={() => setActiveTab('kits')}
+          >
+            <SiteIcon name="award" size={18} /> Kit &amp; Gear Locker ({kits.length})
+          </button>
+        )}
 
-        <button
-          type="button"
-          className={`academy-hub-tab-btn ${activeTab === 'safeguarding' ? 'active' : ''}`}
-          onClick={() => setActiveTab('safeguarding')}
-        >
-          <SiteIcon name="shield-check" size={18} /> POCSO &amp; Safeguarding ({safeguardingStaff.length})
-        </button>
+        {canRoleAccessTab(userRole, 'safeguarding') && (
+          <button
+            type="button"
+            className={`academy-hub-tab-btn ${activeTab === 'safeguarding' ? 'active' : ''}`}
+            onClick={() => setActiveTab('safeguarding')}
+          >
+            <SiteIcon name="shield-check" size={18} /> POCSO &amp; Safeguarding ({safeguardingStaff.length})
+          </button>
+        )}
 
-        <button
-          type="button"
-          className={`academy-hub-tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
-          onClick={() => setActiveTab('settings')}
-        >
-          <SiteIcon name="share" size={18} /> WhatsApp &amp; UPI Setup
-        </button>
+        {canRoleAccessTab(userRole, 'settings') && (
+          <button
+            type="button"
+            className={`academy-hub-tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('settings')}
+          >
+            <SiteIcon name="share" size={18} /> WhatsApp &amp; UPI Setup
+          </button>
+        )}
       </nav>
 
       {/* TAB 1: Admissions CRM & Inbound Parent Leads */}
@@ -1298,7 +1539,9 @@ export default function AcademyHubPage({
                     <td>{student.batchName}</td>
                     <td>
                       <div>{student.parentName}</div>
-                      <small style={{ fontFamily: 'monospace', color: '#047857' }}>{student.parentPhone}</small>
+                      <small style={{ fontFamily: 'monospace', color: '#047857' }}>
+                        {dpdpSafeMode ? maskPhone(student.parentPhone) : student.parentPhone}
+                      </small>
                     </td>
                     <td><strong>₹{student.monthlyFee.toLocaleString('en-IN')}</strong></td>
                     <td>
@@ -1393,6 +1636,20 @@ export default function AcademyHubPage({
                         >
                           <SiteIcon name="shield-check" size={15} />
                         </a>
+
+                        <button
+                          type="button"
+                          className="crm-action-btn"
+                          title="Cancel / Pause Membership & Calculate Prorated Refund"
+                          aria-label={`Cancel or pause membership for ${student.studentName}`}
+                          onClick={() => {
+                            setCancellationModalStudent(student)
+                            setCancellationSessionsAttended(2)
+                            setCancellationSuccessMsg('')
+                          }}
+                        >
+                          <SiteIcon name="alert-triangle" size={15} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1416,13 +1673,59 @@ export default function AcademyHubPage({
               </p>
             </div>
 
-            <button
-              type="button"
-              className="academy-hub-primary-btn"
-              onClick={() => setIsRecordPaymentModalOpen(true)}
-            >
-              <SiteIcon name="plus" size={16} /> Record Offline Fee Payment
-            </button>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="academy-hub-btn-outline"
+                style={{ padding: '0.5rem 0.85rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                onClick={() => {
+                  const csv = exportTransactionsToCsv(feeTransactions, currentAcademy.name)
+                  downloadBlobFile(`${currentAcademy.slug}-financial-ledger.csv`, csv)
+                }}
+              >
+                <SiteIcon name="download" size={15} /> Export Ledger CSV
+              </button>
+              <button
+                type="button"
+                className="academy-hub-primary-btn"
+                onClick={() => setIsRecordPaymentModalOpen(true)}
+              >
+                <SiteIcon name="plus" size={16} /> Record Offline Fee Payment
+              </button>
+            </div>
+          </div>
+
+          {/* Mathematical Reconciliation Audit Card */}
+          <div
+            data-testid="fee-reconciliation-card"
+            style={{
+              background: feeReconciliation.isReconciled ? '#f0fdf4' : '#fffbeb',
+              border: feeReconciliation.isReconciled ? '1px solid #bbf7d0' : '1px solid #fde68a',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '1rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '10px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <SiteIcon name={feeReconciliation.isReconciled ? 'check-circle' : 'alert-triangle'} size={20} />
+              <div>
+                <strong style={{ color: feeReconciliation.isReconciled ? '#166534' : '#92400e', fontSize: '14px' }}>
+                  Fee Ledger Mathematical Reconciliation Audit
+                </strong>
+                <p style={{ margin: 0, fontSize: '12px', color: feeReconciliation.isReconciled ? '#15803d' : '#b45309' }}>
+                  Enrolled Expected: ₹{feeReconciliation.totalExpectedMonthly.toLocaleString('en-IN')} = Collected: ₹{feeReconciliation.totalCollected.toLocaleString('en-IN')} + Pending Dues: ₹{feeReconciliation.outstandingArrears.toLocaleString('en-IN')}
+                  {feeReconciliation.isReconciled ? ' · Zero Discrepancy Verified' : ` · Discrepancies: ${feeReconciliation.discrepancies.join('; ')}`}
+                </p>
+              </div>
+            </div>
+            <span style={{ fontSize: '12px', padding: '4px 8px', borderRadius: '4px', background: feeReconciliation.isReconciled ? '#dcfce7' : '#fef3c7', fontWeight: 700, color: feeReconciliation.isReconciled ? '#15803d' : '#b45309' }}>
+              {feeReconciliation.isReconciled ? '100% Balanced' : 'Audit Variance'}
+            </span>
           </div>
 
           <div className="academy-ledger-grid">
@@ -1632,35 +1935,80 @@ export default function AcademyHubPage({
                     <span className="coach-att-chip absent">Absent: {absentCount}</span>
                   </div>
 
-                  <button
-                    type="button"
-                    className="academy-hub-primary-btn"
-                    onClick={() => {
-                      const batch = batches.find(b => b.id === attendanceBatchId) || batches[0]
-                      const record: DailyAttendanceRecord = {
-                        id: `att-${Date.now()}`,
-                        entityType: 'academy',
-                        entitySlug: selectedSlug,
-                        batchId: attendanceBatchId,
-                        batchName: batch?.batchName || 'Coaching Squad',
-                        date: attendanceDate,
-                        markedAt: new Date().toISOString(),
-                        attendees: batchStudents.map(s => ({
-                          studentId: s.id,
-                          studentName: s.studentName,
-                          parentPhone: s.parentPhone,
-                          status: attendanceStatuses[s.id] || 'present',
-                          checkInTime: batch?.timings.split('–')[0]?.trim() || '06:00 AM',
-                        })),
-                      }
-                      saveDailyAttendance(record)
-                      setAttendanceSavedNotice(true)
-                      setTimeout(() => setAttendanceSavedNotice(false), 3000)
-                    }}
-                  >
-                    <SiteIcon name="check" size={15} />
-                    <span>{attendanceSavedNotice ? '✓ Attendance Saved' : 'Save Attendance Roll Call'}</span>
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="academy-hub-btn-outline"
+                      style={{
+                        padding: '0.45rem 0.8rem',
+                        fontSize: '0.85rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer',
+                        background: pitchSideMode ? '#1e293b' : '#ffffff',
+                        color: pitchSideMode ? '#38bdf8' : '#334155',
+                        borderColor: pitchSideMode ? '#38bdf8' : '#cbd5e1',
+                        fontWeight: 650,
+                      }}
+                      onClick={() => setPitchSideMode(v => !v)}
+                      title="High-contrast 48px touch targets for direct on-field smartphone roll call"
+                    >
+                      <SiteIcon name="sparkles" size={15} />
+                      <span>{pitchSideMode ? 'Pitch-Side Mode: ON' : 'Pitch-Side Mode: OFF'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="academy-hub-btn-outline"
+                      style={{ padding: '0.45rem 0.8rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                      onClick={() => {
+                        const batch = batches.find(b => b.id === attendanceBatchId) || batches[0]
+                        const csv = exportAttendanceToCsv(
+                          batch?.batchName || 'Squad',
+                          attendanceDate,
+                          batchStudents.map(s => ({
+                            studentName: s.studentName,
+                            status: attendanceStatuses[s.id] || 'present',
+                            checkInTime: batch?.timings.split('–')[0]?.trim() || '06:00 AM',
+                          }))
+                        )
+                        downloadBlobFile(`${currentAcademy.slug}-attendance-${attendanceDate}.csv`, csv)
+                      }}
+                    >
+                      <SiteIcon name="download" size={15} /> Export Attendance CSV
+                    </button>
+
+                    <button
+                      type="button"
+                      className="academy-hub-primary-btn"
+                      onClick={() => {
+                        const batch = batches.find(b => b.id === attendanceBatchId) || batches[0]
+                        const record: DailyAttendanceRecord = {
+                          id: `att-${Date.now()}`,
+                          entityType: 'academy',
+                          entitySlug: selectedSlug,
+                          batchId: attendanceBatchId,
+                          batchName: batch?.batchName || 'Coaching Squad',
+                          date: attendanceDate,
+                          markedAt: new Date().toISOString(),
+                          attendees: batchStudents.map(s => ({
+                            studentId: s.id,
+                            studentName: s.studentName,
+                            parentPhone: s.parentPhone,
+                            status: attendanceStatuses[s.id] || 'present',
+                            checkInTime: batch?.timings.split('–')[0]?.trim() || '06:00 AM',
+                          })),
+                        }
+                        saveDailyAttendance(record)
+                        setAttendanceSavedNotice(true)
+                        setTimeout(() => setAttendanceSavedNotice(false), 3000)
+                      }}
+                    >
+                      <SiteIcon name="check" size={15} />
+                      <span>{attendanceSavedNotice ? '✓ Attendance Saved' : 'Save Attendance Roll Call'}</span>
+                    </button>
+                  </div>
                 </>
               )
             })()}
@@ -1711,12 +2059,15 @@ export default function AcademyHubPage({
                         </td>
                         <td>
                           <span>{s.parentName}</span>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>+91 {s.parentPhone}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>
+                            {dpdpSafeMode ? maskPhone(s.parentPhone) : `+91 ${s.parentPhone}`}
+                          </div>
                         </td>
                         <td>
                           <div className="coach-att-pills">
                             <button
                               type="button"
+                              style={pitchSideMode ? { minHeight: '48px', minWidth: '48px', fontSize: '14px', fontWeight: 700 } : undefined}
                               className={`coach-att-btn ${status === 'present' ? 'active present' : ''}`}
                               onClick={() => setAttendanceStatuses(prev => ({ ...prev, [s.id]: 'present' }))}
                             >
@@ -1724,6 +2075,7 @@ export default function AcademyHubPage({
                             </button>
                             <button
                               type="button"
+                              style={pitchSideMode ? { minHeight: '48px', minWidth: '48px', fontSize: '14px', fontWeight: 700 } : undefined}
                               className={`coach-att-btn ${status === 'absent' ? 'active absent' : ''}`}
                               onClick={() => setAttendanceStatuses(prev => ({ ...prev, [s.id]: 'absent' }))}
                             >
@@ -1731,6 +2083,7 @@ export default function AcademyHubPage({
                             </button>
                             <button
                               type="button"
+                              style={pitchSideMode ? { minHeight: '48px', minWidth: '48px', fontSize: '14px', fontWeight: 700 } : undefined}
                               className={`coach-att-btn ${status === 'excused' ? 'active excused' : ''}`}
                               onClick={() => setAttendanceStatuses(prev => ({ ...prev, [s.id]: 'excused' }))}
                             >
@@ -2063,6 +2416,80 @@ export default function AcademyHubPage({
               Save Operations Settings
             </button>
           </form>
+
+          {/* Disaster Recovery Backup & Restore Panel */}
+          <div
+            data-testid="disaster-recovery-panel"
+            style={{
+              marginTop: '2rem',
+              padding: '1.25rem',
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '10px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <SiteIcon name="shield-check" size={20} />
+              <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a' }}>
+                Disaster Recovery &amp; Offline Data Backup
+              </h3>
+            </div>
+            <p style={{ margin: '0 0 1rem', fontSize: '13px', color: '#64748b' }}>
+              Export an encrypted, checksum-verified snapshot of all academy data (students, batches, transactions, staff, kits) or restore from an existing backup with full multi-tenant integrity.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="academy-hub-btn-outline"
+                style={{ padding: '8px 14px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', background: '#fff' }}
+                onClick={handleDownloadBackup}
+              >
+                <SiteIcon name="download" size={15} /> Export Backup Snapshot (JSON)
+              </button>
+
+              <label
+                className="academy-hub-btn-outline"
+                style={{ padding: '8px 14px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', background: '#fff' }}
+              >
+                <SiteIcon name="upload" size={15} /> Restore From Backup (JSON)
+                <input
+                  type="file"
+                  accept=".json"
+                  style={{ display: 'none' }}
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      const reader = new FileReader()
+                      reader.onload = ev => {
+                        const content = ev.target?.result as string
+                        handleRestoreBackupFile(content)
+                      }
+                      reader.readAsText(file)
+                    }
+                  }}
+                />
+              </label>
+            </div>
+
+            {backupRestoreMsg && (
+              <p
+                role="status"
+                style={{
+                  marginTop: '0.85rem',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  background: backupRestoreMsg.includes('Successfully') ? '#f0fdf4' : '#fef2f2',
+                  color: backupRestoreMsg.includes('Successfully') ? '#166534' : '#991b1b',
+                  border: backupRestoreMsg.includes('Successfully') ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                  fontWeight: 600
+                }}
+              >
+                {backupRestoreMsg}
+              </p>
+            )}
+          </div>
         </section>
       )}
 
@@ -3881,6 +4308,129 @@ export default function AcademyHubPage({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Subscription Cancellation & Prorated Refund Controls */}
+      {cancellationModalStudent && (
+        <div
+          className="academy-hub-modal-overlay"
+          onClick={() => setCancellationModalStudent(null)}
+          data-testid="cancellation-modal"
+        >
+          <div className="academy-hub-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="academy-hub-modal-header">
+              <h3>Cancel / Pause Membership &amp; Prorated Refund</h3>
+              <button
+                type="button"
+                className="academy-hub-modal-close"
+                onClick={() => setCancellationModalStudent(null)}
+                aria-label="Close modal"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ padding: '1rem 0' }}>
+              <p style={{ margin: '0 0 1rem', fontSize: '14px', color: '#475569' }}>
+                Manage fair, transparent student exit or pause with automated prorated refund calculation in compliance with consumer protection guidelines.
+              </p>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', marginBottom: '1rem' }}>
+                <div style={{ fontWeight: 700, color: '#0f172a' }}>{cancellationModalStudent.studentName}</div>
+                <div style={{ fontSize: '13px', color: '#64748b' }}>
+                  Batch: {cancellationModalStudent.batchName} · Monthly Tuition: ₹{cancellationModalStudent.monthlyFee.toLocaleString('en-IN')}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 600 }}>
+                  Exit / Cancellation Reason:
+                  <select
+                    value={cancellationReason}
+                    onChange={e => setCancellationReason(e.target.value as 'injury' | 'relocation' | 'dissatisfied' | 'other')}
+                    style={{ width: '100%', marginTop: '4px', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                  >
+                    <option value="injury">Medical / Sports Injury (Full Prorated Refund)</option>
+                    <option value="relocation">Relocation / Transfer (Full Prorated Refund)</option>
+                    <option value="dissatisfied">Dissatisfied / Schedule Conflict</option>
+                    <option value="other">Other Personal Grounds</option>
+                  </select>
+                </label>
+
+                <label style={{ fontSize: '13px', fontWeight: 600 }}>
+                  Coaching Sessions Attended (Out of 12 this month):
+                  <input
+                    type="number"
+                    min="0"
+                    max="12"
+                    value={cancellationSessionsAttended}
+                    onChange={e => setCancellationSessionsAttended(Number(e.target.value))}
+                    style={{ width: '100%', marginTop: '4px', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                  />
+                </label>
+              </div>
+
+              {proratedRefund && (
+                <div
+                  style={{
+                    marginTop: '1rem',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    fontSize: '13px'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span>Sessions Remaining:</span>
+                    <strong>{proratedRefund.totalDaysInMonth - proratedRefund.attendedDays} / {proratedRefund.totalDaysInMonth}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span>Academy Retained:</span>
+                    <span>₹{proratedRefund.academyDeduction.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', color: '#1d4ed8', paddingTop: '6px', borderTop: '1px dashed #bfdbfe' }}>
+                    <strong>Prorated Refund Due:</strong>
+                    <strong>₹{proratedRefund.eligibleRefundAmount.toLocaleString('en-IN')}</strong>
+                  </div>
+                  <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#64748b' }}>
+                    Transparent consumer exit calculation: {proratedRefund.reason === 'injury' ? '100% prorated medical waiver' : 'Prorated with 10% administrative processing fee'}.
+                  </p>
+                </div>
+              )}
+
+              {cancellationSuccessMsg && (
+                <p style={{ marginTop: '1rem', padding: '8px 12px', background: '#dcfce7', color: '#166534', borderRadius: '6px', fontSize: '13px', fontWeight: 600 }}>
+                  {cancellationSuccessMsg}
+                </p>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="academy-hub-primary-btn"
+                  style={{ background: '#dc2626', borderColor: '#b91c1c', flex: 1 }}
+                  onClick={() => {
+                    setCancellationSuccessMsg(`Membership cancelled for ${cancellationModalStudent.studentName}. Refund voucher generated: ₹${proratedRefund?.eligibleRefundAmount}.`)
+                    setTimeout(() => {
+                      setCancellationModalStudent(null)
+                      triggerRefresh()
+                    }, 1200)
+                  }}
+                >
+                  Confirm Cancellation &amp; Refund
+                </button>
+                <button
+                  type="button"
+                  className="academy-hub-btn-outline"
+                  onClick={() => setCancellationModalStudent(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

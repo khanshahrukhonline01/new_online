@@ -58,4 +58,27 @@ describe('AcademyHubPage SaaS Workspace Suite', () => {
     expect(html).toContain('Bengaluru FC Residential Academy')
     expect(html).toContain('Pullela Gopichand Badminton Academy')
   })
+
+  it('renders role selector, DPDP minor shield toggle, and support concierge', () => {
+    const html = renderToStaticMarkup(<AcademyHubPage initialAcademySlug="bengaluru-fc-academy" />)
+
+    expect(html).toContain('Staff Role:')
+    expect(html).toContain('Director (Full Access)')
+    expect(html).toContain('Head Coach (Batches, Attendance &amp; Kits)')
+    expect(html).toContain('Front-Desk (Leads, Students &amp; Inquiries)')
+    expect(html).toContain('DPDP Minor Shield: ON (Masked)')
+    expect(html).toContain('Support Concierge')
+    expect(html).toContain('https://wa.me/919876543210?text=')
+  })
+
+  it('renders 5-step pre-launch onboarding checklist banner', () => {
+    const html = renderToStaticMarkup(<AcademyHubPage initialAcademySlug="bengaluru-fc-academy" />)
+
+    expect(html).toContain('Pre-Launch Readiness Checklist')
+    expect(html).toContain('Configure Direct Bank UPI VPA')
+    expect(html).toContain('Create Your First Training Batch')
+    expect(html).toContain('Import or Enroll Student Trainees')
+    expect(html).toContain('Execute Pitch-Side Ground Roll-Call')
+    expect(html).toContain('Assign Coaching Staff &amp; POCSO Officer')
+  })
 })
