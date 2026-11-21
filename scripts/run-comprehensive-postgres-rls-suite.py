@@ -12,7 +12,7 @@ SAFETY GUARANTEES:
      ('khelgrid_rls_test' or 'khelgrid_rls_ci').
 3. Non-destructive lifecycle:
    - ZERO TRUNCATE or DROP commands.
-   - Targeted cleanup strictly limited to isolated test IDs and slugs.
+   - Targeted cleanup strictly limited to reserved fixture IDs and dedicated test-owner IDs.
 4. Native PostgreSQL kernel evaluation:
    - Evaluates real C-level Row Level Security via SET ROLE and set_config jwt claims.
 5. Migration presence validation:
