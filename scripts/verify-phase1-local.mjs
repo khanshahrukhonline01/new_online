@@ -6,7 +6,7 @@
  * 1. Code Linting & Static Analysis (eslint)
  * 2. TypeScript Compilation & Strict Typechecking (tsc)
  * 3. Unit & Simulation RLS Tests (pg-mem)
- * 4. Native PostgreSQL 16 RLS Integration Tests (Docker PostgreSQL 16 / 44 Attack Vectors)
+ * 4. Native PostgreSQL 16 RLS Integration Tests (Docker PostgreSQL 16 / 49 Attack Vectors)
  * 5. SQL Migration Safety & Catalog Parity Check
  * 6. Production Application Build (Vite)
  * 7. Security Regression Test Suite (Vitest)
@@ -67,7 +67,7 @@ runStage('2. TypeScript Check', 'npm run typecheck', 'Verifying strict TypeScrip
 runStage('3. Unit RLS Simulation', 'npx vitest run src/integrations/supabase/phase1-multi-tenant-isolation.test.ts', 'Testing SQL AST constraints and policies in pg-mem')
 
 // 4. Native PostgreSQL RLS Integration Suite
-runStage('4. Native PostgreSQL RLS Engine', 'python scripts/run-comprehensive-postgres-rls-suite.py', 'Executing 44-vector attack matrix in Docker PostgreSQL 16')
+runStage('4. Native PostgreSQL RLS Engine', 'python scripts/run-comprehensive-postgres-rls-suite.py', 'Executing 49-vector attack matrix in Docker PostgreSQL 16')
 
 // 5. Migration Safety Check
 function validateMigrations() {

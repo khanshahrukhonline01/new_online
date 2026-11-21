@@ -214,6 +214,6 @@ describe('Phase C — Composite Foreign Key Deletion Correction & Archival Integ
 
 ## 7. Migration & Approval Status
 
-- **Migration File:** [20261121210000_phase1_fk_deletion_and_function_hardening.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/migrations/20261121210000_phase1_fk_deletion_and_function_hardening.sql)
+- **Migration File:** [20261121210000_phase1_fk_deletion_and_function_hardening.sql](../../supabase/migrations/20261121210000_phase1_fk_deletion_and_function_hardening.sql)
 - **Local Git State:** Staged on branch `feature/saas-phase-1-tenant-isolation`.
 - **Remote Development State:** **Pending Human Approval** prior to remote execution in Supabase SQL Editor.

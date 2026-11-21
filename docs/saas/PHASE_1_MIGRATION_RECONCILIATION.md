@@ -5,11 +5,11 @@
 **Target Database:** Development Supabase Project `hznsbxvovjxvmnchzzqt` (`https://hznsbxvovjxvmnchzzqt.supabase.co`)  
 **Repository Branch:** `feature/saas-phase-1-acceptance-remediation`  
 **Migration Files:**
-1. [20261121160000_phase1_multi_tenant_core_schema.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/migrations/20261121160000_phase1_multi_tenant_core_schema.sql)
-2. [20261121200000_phase1_security_remediation_and_composite_keys.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql)
-3. [20261121210000_phase1_fk_deletion_and_function_hardening.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/migrations/20261121210000_phase1_fk_deletion_and_function_hardening.sql)
-4. [20261121220000_phase1_tenant_information_disclosure_remediation.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/migrations/20261121220000_phase1_tenant_information_disclosure_remediation.sql)
-**Unified Deployment Script:** [phase-1-saas-multi-tenant-deployment.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/deployments/phase-1-saas-multi-tenant-deployment.sql)  
+1. [20261121160000_phase1_multi_tenant_core_schema.sql](../../supabase/migrations/20261121160000_phase1_multi_tenant_core_schema.sql)
+2. [20261121200000_phase1_security_remediation_and_composite_keys.sql](../../supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql)
+3. [20261121210000_phase1_fk_deletion_and_function_hardening.sql](../../supabase/migrations/20261121210000_phase1_fk_deletion_and_function_hardening.sql)
+4. [20261121220000_phase1_tenant_information_disclosure_remediation.sql](../../supabase/migrations/20261121220000_phase1_tenant_information_disclosure_remediation.sql)
+**Unified Deployment Script:** [phase-1-saas-multi-tenant-deployment.sql](../../supabase/deployments/phase-1-saas-multi-tenant-deployment.sql)  
 **Remote Database Changes Made:** **NONE (Awaiting Human Approval)**
 
 ---

@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
  */
 
 describe('KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Integration Suite', () => {
-  it('executes comprehensive 44-test native PostgreSQL RLS attack matrix across 11 test identities', async () => {
+  it('executes comprehensive 49-vector native PostgreSQL RLS attack matrix across 11 test identities', async () => {
     // @ts-expect-error - node built-in in browser tsconfig
     const cp = await import('node:child_process')
     // @ts-expect-error - node built-in in browser tsconfig
@@ -36,7 +36,8 @@ describe('KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Integration Sui
     const data = JSON.parse(raw)
 
     expect(data.engine).toContain('PostgreSQL')
-    expect(data.passed).toBeGreaterThanOrEqual(44)
+    expect(data.total_vectors).toBe(49)
+    expect(data.passed).toBe(49)
     expect(data.failed).toBe(0)
   }, 90000)
 })

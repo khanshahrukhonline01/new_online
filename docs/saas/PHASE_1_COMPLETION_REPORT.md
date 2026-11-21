@@ -193,13 +193,13 @@ Automated probe executed against remote development database:
 
 ## 14. Documentation Deliverables
 
-1. [docs/saas/PHASE_1_IMPLEMENTATION_AUDIT.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_IMPLEMENTATION_AUDIT.md)
-2. [docs/saas/PHASE_1_MULTI_TENANT_ARCHITECTURE.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_MULTI_TENANT_ARCHITECTURE.md)
-3. [docs/saas/PHASE_1_MIGRATION_REVIEW.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_MIGRATION_REVIEW.md)
-4. [docs/saas/PHASE_1_RLS_POLICY_MATRIX.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_RLS_POLICY_MATRIX.md)
-5. [docs/saas/PHASE_1_TENANT_ISOLATION_TESTS.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_TENANT_ISOLATION_TESTS.md)
-6. [docs/saas/PHASE_1_SECURITY_FINDINGS.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_SECURITY_FINDINGS.md)
-7. [docs/saas/PHASE_1_COMPLETION_REPORT.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_COMPLETION_REPORT.md)
+1. [docs/saas/PHASE_1_IMPLEMENTATION_AUDIT.md](./PHASE_1_IMPLEMENTATION_AUDIT.md)
+2. [docs/saas/PHASE_1_MULTI_TENANT_ARCHITECTURE.md](./PHASE_1_MULTI_TENANT_ARCHITECTURE.md)
+3. [docs/saas/PHASE_1_MIGRATION_REVIEW.md](./PHASE_1_MIGRATION_REVIEW.md)
+4. [docs/saas/PHASE_1_RLS_POLICY_MATRIX.md](./PHASE_1_RLS_POLICY_MATRIX.md)
+5. [docs/saas/PHASE_1_TENANT_ISOLATION_TESTS.md](./PHASE_1_TENANT_ISOLATION_TESTS.md)
+6. [docs/saas/PHASE_1_SECURITY_FINDINGS.md](./PHASE_1_SECURITY_FINDINGS.md)
+7. [docs/saas/PHASE_1_COMPLETION_REPORT.md](./PHASE_1_COMPLETION_REPORT.md)
 
 ---
 

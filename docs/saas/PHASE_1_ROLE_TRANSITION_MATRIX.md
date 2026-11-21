@@ -2,8 +2,8 @@
 ## RBAC Permission Boundaries, Role Ceilings & Privilege Escalation Defenses
 
 **Project:** `khelgrid-dotcom/khelgrid-platform`  
-**Migration Reference:** [20261121200000_phase1_security_remediation_and_composite_keys.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql)  
-**Schema Reference:** [20261121160000_phase1_multi_tenant_core_schema.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/migrations/20261121160000_phase1_multi_tenant_core_schema.sql)  
+**Migration Reference:** [20261121200000_phase1_security_remediation_and_composite_keys.sql](../../supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql)  
+**Schema Reference:** [20261121160000_phase1_multi_tenant_core_schema.sql](../../supabase/migrations/20261121160000_phase1_multi_tenant_core_schema.sql)  
 
 ---
 
@@ -82,7 +82,7 @@ Any non-owner member can voluntarily resign / leave a tenant organization by exe
 
 ## 4. PostgreSQL RLS Policy Implementation
 
-The following granular policies in [20261121200000_phase1_security_remediation_and_composite_keys.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql) enforce these boundaries:
+The following granular policies in [20261121200000_phase1_security_remediation_and_composite_keys.sql](../../supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql) enforce these boundaries:
 
 ```sql
 -- 1. Fine-Grained INSERT Policy

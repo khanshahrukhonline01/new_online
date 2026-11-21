@@ -76,7 +76,7 @@ The repository contains 4 Phase 1 migrations in `supabase/migrations/`:
 
 ## 4. Tenant Client and Query Layer Inspection
 
-The client adapter is located at [src/integrations/supabase/tenant-client.ts](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/src/integrations/supabase/tenant-client.ts).
+The client adapter is located at [src/integrations/supabase/tenant-client.ts](../../src/integrations/supabase/tenant-client.ts).
 
 ### Architectural Separation of Queries
 1. **Public Discovery (`getPublicTenantBySlug`):**
@@ -97,7 +97,7 @@ The client adapter is located at [src/integrations/supabase/tenant-client.ts](fi
 
 ## 5. Local PostgreSQL Test Runner & Fixture Safety Inspection
 
-The test runner is located at [scripts/run-comprehensive-postgres-rls-suite.py](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/scripts/run-comprehensive-postgres-rls-suite.py).
+The test runner is located at [scripts/run-comprehensive-postgres-rls-suite.py](../../scripts/run-comprehensive-postgres-rls-suite.py).
 
 ### Safety Controls Implemented and Verified
 - **Explicit Opt-in Guard:** Requires environment variable `KHELGRID_LOCAL_RLS_TEST=1`. Exits immediately with error code `1` if unset.
@@ -107,7 +107,7 @@ The test runner is located at [scripts/run-comprehensive-postgres-rls-suite.py](
   - Verifies local host resolution: `localhost` or `127.0.0.1`.
   - Verifies local database whitelist: `khelgrid_rls_test` or `khelgrid_rls_ci`.
   - Verifies live server via `SELECT current_database(), inet_server_addr()`.
-- **Automated Rejection Self-Test:** Invoked via `--test-safety-rejection`. Tested and asserted in [src/integrations/supabase/phase1-runner-safety.test.ts](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/src/integrations/supabase/phase1-runner-safety.test.ts).
+- **Automated Rejection Self-Test:** Invoked via `--test-safety-rejection`. Tested and asserted in [src/integrations/supabase/phase1-runner-safety.test.ts](../../src/integrations/supabase/phase1-runner-safety.test.ts).
 - **Non-Destructive Targeted Cleanup:**
   - Zero `TRUNCATE` statements in test runner.
   - Zero `DROP TABLE` or `DROP SCHEMA` statements in test runner.

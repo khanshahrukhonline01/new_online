@@ -2,8 +2,8 @@
 ## Composite Foreign Key Architecture & Relational Isolation Specification
 
 **Project:** `khelgrid-dotcom/khelgrid-platform`  
-**Migration Reference:** [20261121200000_phase1_security_remediation_and_composite_keys.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql)  
-**Schema Definition:** [20261121160000_phase1_multi_tenant_core_schema.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/migrations/20261121160000_phase1_multi_tenant_core_schema.sql)  
+**Migration Reference:** [20261121200000_phase1_security_remediation_and_composite_keys.sql](../../supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql)  
+**Schema Definition:** [20261121160000_phase1_multi_tenant_core_schema.sql](../../supabase/migrations/20261121160000_phase1_multi_tenant_core_schema.sql)  
 
 ---
 

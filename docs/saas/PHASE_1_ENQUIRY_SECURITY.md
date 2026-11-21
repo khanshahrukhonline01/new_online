@@ -2,8 +2,8 @@
 ## Public Ingestion Architecture, Token Tracking & CRM Privacy Controls
 
 **Project:** `khelgrid-dotcom/khelgrid-platform`  
-**Migration Reference:** [20261121200000_phase1_security_remediation_and_composite_keys.sql](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql)  
-**TypeScript Client Reference:** [tenant-client.ts](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/src/integrations/supabase/tenant-client.ts)  
+**Migration Reference:** [20261121200000_phase1_security_remediation_and_composite_keys.sql](../../supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql)  
+**TypeScript Client Reference:** [tenant-client.ts](../../src/integrations/supabase/tenant-client.ts)  
 
 ---
 
@@ -124,7 +124,7 @@ sequenceDiagram
 
 ## 4. TypeScript Client Implementation
 
-In [tenant-client.ts](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/src/integrations/supabase/tenant-client.ts), the `submitTenantEnquiry` client adapter wraps public submission:
+In [tenant-client.ts](../../src/integrations/supabase/tenant-client.ts), the `submitTenantEnquiry` client adapter wraps public submission:
 
 ```typescript
 export async function submitTenantEnquiry(enquiry: {

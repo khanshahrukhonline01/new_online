@@ -35,15 +35,15 @@ All gaps identified in the latest independent audit have been resolved:
 | :-: | :--- | :---: | :--- |
 | 1 | **Private tenant data is inaccessible to unrelated users** | **PASS** (Locally Verified) | `TENANT-STRANGER-DENIED` (0 rows), `TENANT-CROSS-OWNER-DENIED` (0 rows) |
 | 2 | **Public directory exposes only approved fields** | **PASS** (Locally Verified) | View excludes private columns; `DIR-EXCLUDE-PHONE`, `DIR-EXCLUDE-UPI` return `42703` |
-| 3 | **View security semantics proven using real PostgreSQL** | **PASS** (Locally Verified) | Empirically proved `security_barrier` with owner privileges vs `security_invoker` in [PHASE_1_TENANT_VIEW_SECURITY_REVIEW.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_TENANT_VIEW_SECURITY_REVIEW.md) |
+| 3 | **View security semantics proven using real PostgreSQL** | **PASS** (Locally Verified) | Empirically proved `security_barrier` with owner privileges vs `security_invoker` in [PHASE_1_TENANT_VIEW_SECURITY_REVIEW.md](./PHASE_1_TENANT_VIEW_SECURITY_REVIEW.md) |
 | 4 | **New privacy migration passes isolated local tests** | **PASS** (Locally Verified) | `20261121220000` applied to local database, all 49 vectors pass |
 | 5 | **Test runner cannot execute against remote Supabase** | **PASS** (Locally Verified) | `--test-safety-rejection` and Vitest `phase1-runner-safety.test.ts` assert rejection of remote hosts |
 | 6 | **No destructive TRUNCATE or broad DELETE exists in test workflow**| **PASS** (Locally Verified) | Scanned in Stage 5; test runner uses targeted ID cleanup only |
 | 7 | **Authenticated cross-tenant RLS attack matrix passes** | **PASS** (Locally Verified) | Category 4 (7 vectors) passed without cross-tenant leakage |
 | 8 | **Membership escalation tests pass** | **PASS** (Locally Verified) | Category 5 (8 vectors) passed; self-promotion rejected (`42501`) |
-| 9 | **SECURITY DEFINER functions have individually reviewed privileges**| **PASS** (Locally Verified) | All 17 target functions audited with 6-column table in [PHASE_1_SECURITY_DEFINER_FINAL_AUDIT.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_SECURITY_DEFINER_FINAL_AUDIT.md) |
-| 10 | **Four no-policy tables have documented and tested access behavior** | **PASS** (Locally Verified) | Documented in [PHASE_1_RLS_TABLE_POLICY_AUDIT.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_RLS_TABLE_POLICY_AUDIT.md); intentional deny-all defense-in-depth |
-| 11 | **Security Advisor findings accurately classified** | **PASS** (Locally Verified) | All findings categorized in [PHASE_1_SECURITY_ADVISOR_CLOSURE.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_SECURITY_ADVISOR_CLOSURE.md) |
+| 9 | **SECURITY DEFINER functions have individually reviewed privileges**| **PASS** (Locally Verified) | All 17 target functions audited with 6-column table in [PHASE_1_SECURITY_DEFINER_FINAL_AUDIT.md](./PHASE_1_SECURITY_DEFINER_FINAL_AUDIT.md) |
+| 10 | **Four no-policy tables have documented and tested access behavior** | **PASS** (Locally Verified) | Documented in [PHASE_1_RLS_TABLE_POLICY_AUDIT.md](./PHASE_1_RLS_TABLE_POLICY_AUDIT.md); intentional deny-all defense-in-depth |
+| 11 | **Security Advisor findings accurately classified** | **PASS** (Locally Verified) | All findings categorized in [PHASE_1_SECURITY_ADVISOR_CLOSURE.md](./PHASE_1_SECURITY_ADVISOR_CLOSURE.md) |
 | 12 | **All existing application regression tests pass** | **PASS** (Locally Verified) | 145 test files, 1,064 tests passed (`npm test`) |
 | 13 | **Local build succeeds** | **PASS** (Locally Verified) | `npm run build` succeeds cleanly in 45.76s; Vite emits production bundle |
 | 14 | **Documentation and test counts are consistent** | **PASS** (Locally Verified) | Authoritative count of exactly 49 vectors reconciled across all 11 documents |
@@ -54,17 +54,17 @@ All gaps identified in the latest independent audit have been resolved:
 
 ## 3. Persistent Documentation Inventory (`docs/saas/`)
 
-1. [PHASE_1_CURRENT_STATE_INVENTORY.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_CURRENT_STATE_INVENTORY.md): Comprehensive inventory of git commits, migrations, tenant queries, and local vs remote verification states.
-2. [PHASE_1_FINAL_SECURITY_REMEDIATION.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_FINAL_SECURITY_REMEDIATION.md): Overview of tenant privacy remediation, view architecture, and safe local testing.
-3. [PHASE_1_TENANT_VIEW_SECURITY_REVIEW.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_TENANT_VIEW_SECURITY_REVIEW.md): In-depth empirical proof comparing `security_barrier = true` vs `security_invoker = true`.
-4. [PHASE_1_SAFE_LOCAL_POSTGRESQL_TESTING.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_SAFE_LOCAL_POSTGRESQL_TESTING.md): Runner safety controls, opt-in requirement, rejection self-test, and zero TRUNCATE proof.
-5. [PHASE_1_AUTHENTICATED_RLS_ATTACK_MATRIX.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_AUTHENTICATED_RLS_ATTACK_MATRIX.md): Complete catalog of all 49 native PostgreSQL attack vectors with SQL statements and expected results.
-6. [PHASE_1_SECURITY_DEFINER_FINAL_AUDIT.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_SECURITY_DEFINER_FINAL_AUDIT.md): Granular review of all 17 target database functions with callers, execution privileges, search paths, and Phase E table.
-7. [PHASE_1_RLS_TABLE_POLICY_AUDIT.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_RLS_TABLE_POLICY_AUDIT.md): Individual audit of the 4 tables with 0 policies, proving intentional deny-all defense-in-depth posture.
-8. [PHASE_1_SECURITY_ADVISOR_CLOSURE.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_SECURITY_ADVISOR_CLOSURE.md): Resolution and categorization of all Security Advisor items, including HIBP dashboard instructions.
-9. [PHASE_1_MIGRATION_RECONCILIATION.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_MIGRATION_RECONCILIATION.md): Exact migration reconciliation plan and SQL Proposals A & B for administrator approval.
-10. [PHASE_1_LOCAL_VERIFICATION_RESULTS.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_LOCAL_VERIFICATION_RESULTS.md): Step-by-step logs and execution times for the 7 local CI pipeline stages.
-11. [PHASE_1_FINAL_ACCEPTANCE_REPORT.md](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/PHASE_1_FINAL_ACCEPTANCE_REPORT.md): This overarching acceptance report and sign-off evaluation.
+1. [PHASE_1_CURRENT_STATE_INVENTORY.md](./PHASE_1_CURRENT_STATE_INVENTORY.md): Comprehensive inventory of git commits, migrations, tenant queries, and local vs remote verification states.
+2. [PHASE_1_FINAL_SECURITY_REMEDIATION.md](./PHASE_1_FINAL_SECURITY_REMEDIATION.md): Overview of tenant privacy remediation, view architecture, and safe local testing.
+3. [PHASE_1_TENANT_VIEW_SECURITY_REVIEW.md](./PHASE_1_TENANT_VIEW_SECURITY_REVIEW.md): In-depth empirical proof comparing `security_barrier = true` vs `security_invoker = true`.
+4. [PHASE_1_SAFE_LOCAL_POSTGRESQL_TESTING.md](./PHASE_1_SAFE_LOCAL_POSTGRESQL_TESTING.md): Runner safety controls, opt-in requirement, rejection self-test, and zero TRUNCATE proof.
+5. [PHASE_1_AUTHENTICATED_RLS_ATTACK_MATRIX.md](./PHASE_1_AUTHENTICATED_RLS_ATTACK_MATRIX.md): Complete catalog of all 49 native PostgreSQL attack vectors with SQL statements and expected results.
+6. [PHASE_1_SECURITY_DEFINER_FINAL_AUDIT.md](./PHASE_1_SECURITY_DEFINER_FINAL_AUDIT.md): Granular review of all 17 target database functions with callers, execution privileges, search paths, and Phase E table.
+7. [PHASE_1_RLS_TABLE_POLICY_AUDIT.md](./PHASE_1_RLS_TABLE_POLICY_AUDIT.md): Individual audit of the 4 tables with 0 policies, proving intentional deny-all defense-in-depth posture.
+8. [PHASE_1_SECURITY_ADVISOR_CLOSURE.md](./PHASE_1_SECURITY_ADVISOR_CLOSURE.md): Resolution and categorization of all Security Advisor items, including HIBP dashboard instructions.
+9. [PHASE_1_MIGRATION_RECONCILIATION.md](./PHASE_1_MIGRATION_RECONCILIATION.md): Exact migration reconciliation plan and SQL Proposals A & B for administrator approval.
+10. [PHASE_1_LOCAL_VERIFICATION_RESULTS.md](./PHASE_1_LOCAL_VERIFICATION_RESULTS.md): Step-by-step logs and execution times for the 7 local CI pipeline stages.
+11. [PHASE_1_FINAL_ACCEPTANCE_REPORT.md](./PHASE_1_FINAL_ACCEPTANCE_REPORT.md): This overarching acceptance report and sign-off evaluation.
 
 ---
 

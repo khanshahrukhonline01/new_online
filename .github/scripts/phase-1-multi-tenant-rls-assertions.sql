@@ -121,6 +121,46 @@ BEGIN
     RAISE EXCEPTION 'Phase 1 Gate K: Functions without locked search_path: %', v_bad;
   END IF;
 
+  -- 9. Verify tenant_public_directory view exists and has security_barrier = true
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_views
+    WHERE schemaname = 'public' AND viewname = 'tenant_public_directory'
+  ) THEN
+    RAISE EXCEPTION 'Phase 1 Gate L: public.tenant_public_directory view does not exist';
+  END IF;
+
+  -- 10. Verify tenant_public_directory does NOT expose private tenant columns
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'tenant_public_directory'
+      AND column_name IN ('owner_id', 'contact_phone', 'contact_email', 'upi_vpa', 'metadata')
+  ) THEN
+    RAISE EXCEPTION 'Phase 1 Gate M: tenant_public_directory exposes sensitive private columns';
+  END IF;
+
+  -- 11. Verify tenants RLS policy does NOT contain the broad 'status = active' leak
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'tenants'
+      AND policyname = 'tenants_member_select'
+      AND qual ILIKE '%status = ''active''%'
+  ) THEN
+    RAISE EXCEPTION 'Phase 1 Gate N: tenants_member_select still contains status = active leakage';
+  END IF;
+
+  -- 12. Verify tenants_member_select strictly checks membership or owner_id
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'tenants'
+      AND policyname = 'tenants_member_select'
+      AND qual ILIKE '%is_tenant_member%'
+  ) THEN
+    RAISE EXCEPTION 'Phase 1 Gate O: tenants_member_select does not enforce is_tenant_member()';
+  END IF;
+
   RAISE NOTICE 'Phase 1 Multi-Tenant RLS & Architectural Assertions: ALL GATES PASSED.';
 END $$;
 

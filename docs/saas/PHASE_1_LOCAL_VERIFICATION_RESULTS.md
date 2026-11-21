@@ -100,5 +100,5 @@ Zero GitHub Actions minutes were consumed. All 7 stages completed successfully w
 
 ## 4. Persisted Evidence References
 
-- Full execution text log: [phase1_local_verification_report.txt](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/evidence/phase1_local_verification_report.txt)
-- Full 49-vector JSON matrix: [postgres_rls_attack_matrix.json](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/docs/saas/evidence/postgres_rls_attack_matrix.json)
+- Full execution text log: [phase1_local_verification_report.txt](./evidence/phase1_local_verification_report.txt)
+- Full 49-vector JSON matrix: [postgres_rls_attack_matrix.json](./evidence/postgres_rls_attack_matrix.json)

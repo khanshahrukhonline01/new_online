@@ -4,8 +4,8 @@
 **Project:** `khelgrid-dotcom/khelgrid-platform`  
 **Test Harness:** Dual-Layer Verification (Live Remote Supabase Network Probe + PostgreSQL Isolation Test Suite)  
 **Target Environment:** Development Database `hznsbxvovjxvmnchzzqt`  
-**Test Suite Path:** [phase1-multi-tenant-isolation.test.ts](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/src/integrations/supabase/phase1-multi-tenant-isolation.test.ts)  
-**Remote Network Probe Path:** [verify-supabase-remote-rls.mjs](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/scripts/verify-supabase-remote-rls.mjs)  
+**Test Suite Path:** [phase1-multi-tenant-isolation.test.ts](../../src/integrations/supabase/phase1-multi-tenant-isolation.test.ts)  
+**Remote Network Probe Path:** [verify-supabase-remote-rls.mjs](../../scripts/verify-supabase-remote-rls.mjs)  
 
 ---
 
@@ -76,7 +76,7 @@ PROBE SUMMARY: 12/12 security checks PASSED.
 
 ## 3. Mandatory 12-Attack-Vector Matrix & Test Results
 
-The full test suite in [phase1-multi-tenant-isolation.test.ts](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/src/integrations/supabase/phase1-multi-tenant-isolation.test.ts) exercises 12 distinct attack vectors directly against PostgreSQL relational constraints and SQL view evaluation:
+The full test suite in [phase1-multi-tenant-isolation.test.ts](../../src/integrations/supabase/phase1-multi-tenant-isolation.test.ts) exercises 12 distinct attack vectors directly against PostgreSQL relational constraints and SQL view evaluation:
 
 | Vector | Attack Vector Description | Target Entity | Actor Context | Policy / Constraint Under Test | Test Outcome | Status |
 | :---: | :--- | :--- | :--- | :--- | :--- | :---: |
