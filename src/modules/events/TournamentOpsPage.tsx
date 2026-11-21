@@ -9,10 +9,13 @@ import {
   getTournamentCertificates,
   issueTournamentCertificate,
   generateWhatsAppCertificateUrl,
+  getRegisteredSquads,
+  bookVenueSlotForTournamentMatch,
   SAMPLE_SQUAD_ROSTER,
   type TournamentBracketNode,
   type LiveScorerState,
   type TournamentCertificate,
+  type RegisteredAcademySquad,
 } from './tournamentOpsEngine'
 import './TournamentOpsPage.css'
 
@@ -29,11 +32,27 @@ export default function TournamentOpsPage({ onNavigate }: TournamentOpsPageProps
 
   // Data
   const matches: TournamentBracketNode[] = getTournamentBracket(selectedTournamentId)
+  const registeredSquads: RegisteredAcademySquad[] = getRegisteredSquads(selectedTournamentId)
   const squadRoster = SAMPLE_SQUAD_ROSTER
   const [ageCutoff, setAgeCutoff] = useState<number>(16)
   const squadScan = verifySquadAgeEligibility('Delhi Colts FC', squadRoster, ageCutoff)
   const scorerState: LiveScorerState = getLiveScorerState(matches[0]?.id || 'match-qf-1')
   const certificates: TournamentCertificate[] = getTournamentCertificates(selectedTournamentId)
+  const [matchSlotReserved, setMatchSlotReserved] = useState<Record<string, string>>({})
+
+  const handleReserveCourtForMatch = (m: TournamentBracketNode) => {
+    const res = bookVenueSlotForTournamentMatch({
+      matchId: m.id,
+      tournamentId: selectedTournamentId,
+      tournamentTitle: 'All-India National Youth Championship 2026',
+      venueSlug: 'khel-complex-delhi',
+      courtId: 'court-1',
+      date: '2026-11-23',
+      timeSlot: '18:00 - 19:30',
+      matchTitle: m.matchTitle,
+    })
+    setMatchSlotReserved(prev => ({ ...prev, [m.id]: res.bookingRef }))
+  }
 
   // Bracket Generation Modal State
   const [isGenerateBracketModalOpen, setIsGenerateBracketModalOpen] = useState(false)
@@ -317,9 +336,31 @@ export default function TournamentOpsPage({ onNavigate }: TournamentOpsPageProps
                     <span>{m.teamB.name}</span>
                     <strong>{m.teamB.score || '—'}</strong>
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', textAlign: 'right' }}>
-                    {m.scheduledTime}
-                  </span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                      {m.scheduledTime}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleReserveCourtForMatch(m)}
+                      style={{
+                        fontSize: '0.68rem',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        border: '1px solid #cbd5e1',
+                        background: matchSlotReserved[m.id] ? '#dcfce7' : '#f8fafc',
+                        color: matchSlotReserved[m.id] ? '#166534' : '#475569',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                      }}
+                      title="Reserve pitch slot on Turf Calendar"
+                    >
+                      <SiteIcon name={matchSlotReserved[m.id] ? 'badge-check' : 'calendar-check'} size={11} />
+                      <span>{matchSlotReserved[m.id] ? 'Reserved' : 'Reserve Slot'}</span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -345,9 +386,31 @@ export default function TournamentOpsPage({ onNavigate }: TournamentOpsPageProps
                     <span>{m.teamB.name}</span>
                     <strong>{m.teamB.score || '—'}</strong>
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', textAlign: 'right' }}>
-                    {m.scheduledTime}
-                  </span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                      {m.scheduledTime}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleReserveCourtForMatch(m)}
+                      style={{
+                        fontSize: '0.68rem',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        border: '1px solid #cbd5e1',
+                        background: matchSlotReserved[m.id] ? '#dcfce7' : '#f8fafc',
+                        color: matchSlotReserved[m.id] ? '#166534' : '#475569',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                      }}
+                      title="Reserve pitch slot on Turf Calendar"
+                    >
+                      <SiteIcon name={matchSlotReserved[m.id] ? 'badge-check' : 'calendar-check'} size={11} />
+                      <span>{matchSlotReserved[m.id] ? 'Reserved' : 'Reserve Slot'}</span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -371,9 +434,31 @@ export default function TournamentOpsPage({ onNavigate }: TournamentOpsPageProps
                     <span>{m.teamB.name}</span>
                     <strong>{m.teamB.score || '—'}</strong>
                   </div>
-                  <span style={{ fontSize: '0.72rem', color: '#92400e', textAlign: 'right', fontWeight: 600 }}>
-                    {m.scheduledTime}
-                  </span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#92400e', textAlign: 'right', fontWeight: 600 }}>
+                      {m.scheduledTime}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleReserveCourtForMatch(m)}
+                      style={{
+                        fontSize: '0.68rem',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        border: '1px solid #fcd34d',
+                        background: matchSlotReserved[m.id] ? '#dcfce7' : '#fffbeb',
+                        color: matchSlotReserved[m.id] ? '#166534' : '#92400e',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                      }}
+                      title="Reserve final arena slot on Turf Calendar"
+                    >
+                      <SiteIcon name={matchSlotReserved[m.id] ? 'badge-check' : 'calendar-check'} size={11} />
+                      <span>{matchSlotReserved[m.id] ? 'Arena Reserved' : 'Reserve Arena'}</span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -474,6 +559,53 @@ export default function TournamentOpsPage({ onNavigate }: TournamentOpsPageProps
               })}
             </tbody>
           </table>
+
+          {/* Cross-SaaS: Academy Squads Enrolled via Academy Hub */}
+          <div style={{ marginTop: '2rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <SiteIcon name="building" size={16} />
+                  <span>Academy Batch Squads (Direct from Academy Hub)</span>
+                </h4>
+                <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '0.82rem' }}>
+                  Live squads enrolled directly by sports academies through KhelGrid&apos;s 1-click tournament flywheel.
+                </p>
+              </div>
+              <span style={{ fontSize: '0.8rem', padding: '4px 10px', borderRadius: '999px', background: '#f0fdf4', color: '#166534', fontWeight: 700, border: '1px solid #bbf7d0' }}>
+                {registeredSquads.length} Squads Active
+              </span>
+            </div>
+
+            {registeredSquads.length === 0 ? (
+              <p style={{ fontSize: '0.85rem', color: '#64748b', fontStyle: 'italic' }}>
+                No external academy squads registered yet. Academies can click &apos;Enter Tournament&apos; on any batch in Academy Hub.
+              </p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', marginTop: '0.75rem' }}>
+                {registeredSquads.map(sq => (
+                  <div key={sq.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
+                      <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{sq.teamName}</strong>
+                      <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: '4px', background: sq.status === 'APPROVED' ? '#dcfce7' : '#fef3c7', color: sq.status === 'APPROVED' ? '#166534' : '#92400e', fontWeight: 700 }}>
+                        {sq.status}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: '#475569', marginBottom: '0.2rem' }}>
+                      Academy: <strong>{sq.academyName}</strong> ({sq.division})
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                      Roster: {sq.players.length} Players ({sq.verification.verifiedCount} Verified Passports)
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>WA: {sq.contactPhone}</span>
+                      <span>Enrolled: {sq.submittedAt}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

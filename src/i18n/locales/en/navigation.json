@@ -41,5 +41,13 @@
   "promoText": "Create a Sports CV and prepare a profile-ready PDF on your device.",
   "openSportsCv": "Open Sports CV",
   "helpAndFeedback": "Help & feedback",
-  "postGame": "Post a Game"
+  "postGame": "Post a Game",
+  "parent-portal": "Parent & Athlete Passbook",
+  "partner-onboarding": "Partner Setup & Login",
+  "tournament-ops": "Tournament Operations",
+  "academy-hub": "Academy Admissions Hub",
+  "coach-dashboard": "Coach Operations Hub",
+  "host-dashboard": "Turf & Host Dashboard",
+  "gate-checkin": "Gate QR Check-In Desk",
+  "my-passes": "My Passes & Vouchers"
 }

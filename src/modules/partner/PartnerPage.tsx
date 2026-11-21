@@ -17,6 +17,8 @@ interface PartnerTrack {
   benefits: string[]
   formValue: string
   ctaText: string
+  directSaaSLink?: string
+  dashboardLink?: string
   directoryLink: string
   directoryLabel: string
 }
@@ -38,6 +40,8 @@ const PARTNER_TRACKS: PartnerTrack[] = [
     ],
     formValue: 'Sports Academy',
     ctaText: 'Join as Sports Academy',
+    directSaaSLink: '/partner-signup?role=academy',
+    dashboardLink: '/academy-hub',
     directoryLink: '/academies',
     directoryLabel: 'Explore Academies Directory',
   },
@@ -57,6 +61,8 @@ const PARTNER_TRACKS: PartnerTrack[] = [
     ],
     formValue: 'Turf & Venue',
     ctaText: 'Join as Venue / Turf Owner',
+    directSaaSLink: '/partner-signup?role=venue',
+    dashboardLink: '/turf-calendar',
     directoryLink: '/venues',
     directoryLabel: 'Explore Venues Directory',
   },
@@ -76,8 +82,31 @@ const PARTNER_TRACKS: PartnerTrack[] = [
     ],
     formValue: 'Tournament Organizer',
     ctaText: 'Join as Tournament Organizer',
+    directSaaSLink: '/partner-signup?role=tournament',
+    dashboardLink: '/tournament-ops',
     directoryLink: '/calendar',
     directoryLabel: 'Explore Sports Calendar',
+  },
+  {
+    id: 'coaches',
+    icon: 'award',
+    title: 'Coaches, Physical Trainers & NIS Specialists',
+    tag: 'Rosters & Combines',
+    colorTone: 'amber',
+    description:
+      'Manage training squads, conduct Khelo India battery combines, log attendance, and issue verified skill endorsements directly to youth athlete profiles.',
+    benefits: [
+      'Official KhelGrid Certified Coach Registry entry',
+      'Khelo India & SAI 7-parameter physical assessment calculator',
+      'Direct 0% fee UPI payment collection from student parents',
+      'Digital skill endorsement seal displayed on public Athlete CVs',
+    ],
+    formValue: 'Coach',
+    ctaText: 'Join as Coach / Trainer',
+    directSaaSLink: '/partner-signup?role=coach',
+    dashboardLink: '/coach-dashboard',
+    directoryLink: '/coaches',
+    directoryLabel: 'Explore Coaches Directory',
   },
   {
     id: 'sponsors',
@@ -95,6 +124,8 @@ const PARTNER_TRACKS: PartnerTrack[] = [
     ],
     formValue: 'Brand Sponsor',
     ctaText: 'Join as Sponsor / CSR Partner',
+    directSaaSLink: '/partner-signup',
+    dashboardLink: '/scout-portal',
     directoryLink: '/talent-scanner',
     directoryLabel: 'Explore Talent Scanner',
   },
@@ -421,8 +452,19 @@ export default function PartnerPage({ onNavigate, onOpenIntake }: PartnerPagePro
 
             <div className="partner-hero-actions">
               <a
-                href="#partner-form-section"
+                href="/partner-signup"
                 className="partner-btn-primary"
+                onClick={e => handleLink(e, '/partner-signup')}
+                style={{ background: '#059669', borderColor: '#059669' }}
+                title="Instant Partner Onboarding & Login (30 seconds)"
+              >
+                <SiteIcon name="sparkles" size={14} />
+                <span>⚡ Instant SaaS Setup &amp; Login (30s)</span>
+              </a>
+
+              <a
+                href="#partner-form-section"
+                className="partner-btn-secondary"
                 onClick={e => {
                   e.preventDefault()
                   document.getElementById('partner-form-section')?.scrollIntoView({ behavior: 'smooth' })
@@ -532,22 +574,46 @@ export default function PartnerPage({ onNavigate, onOpenIntake }: PartnerPagePro
                 </div>
 
                 <div className="partner-track-footer">
-                  <button
-                    type="button"
-                    className="partner-track-action-btn"
-                    onClick={() => handleSelectTrack(track.formValue)}
-                  >
-                    <span>{track.ctaText}</span>
-                    <SiteIcon name="arrow-right" size={13} />
-                  </button>
-                  <a
-                    href={track.directoryLink}
-                    onClick={e => handleLink(e, track.directoryLink)}
-                    className="partner-track-dir-link"
-                  >
-                    <span>{track.directoryLabel}</span>
-                    <SiteIcon name="arrow-up-right" size={11} />
-                  </a>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', width: '100%', marginBottom: '0.4rem' }}>
+                    <a
+                      href={track.directSaaSLink || '/partner-signup'}
+                      onClick={e => handleLink(e, track.directSaaSLink || '/partner-signup')}
+                      className="partner-track-action-btn"
+                      style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                    >
+                      <span>{track.ctaText}</span>
+                      <SiteIcon name="arrow-right" size={13} />
+                    </a>
+                    {track.dashboardLink && (
+                      <a
+                        href={track.dashboardLink}
+                        onClick={e => handleLink(e, track.dashboardLink!)}
+                        className="partner-track-dash-link"
+                        style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: 'inherit', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                      >
+                        <SiteIcon name="sliders" size={12} />
+                        <span>SaaS Hub</span>
+                      </a>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                    <a
+                      href={track.directoryLink}
+                      onClick={e => handleLink(e, track.directoryLink)}
+                      className="partner-track-dir-link"
+                    >
+                      <span>{track.directoryLabel}</span>
+                      <SiteIcon name="arrow-up-right" size={11} />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectTrack(track.formValue)}
+                      style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.72rem', cursor: 'pointer', padding: 0 }}
+                      title="Select category in application form below"
+                    >
+                      Apply via Form ↓
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

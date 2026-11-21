@@ -1383,6 +1383,16 @@ export default function AcademyHubPage({
                         >
                           <SiteIcon name="file-text" size={15} />
                         </button>
+
+                        <a
+                          href={`/parent-portal?student=${student.id}&tab=fees`}
+                          onClick={e => onNavigate?.(e, `/parent-portal?student=${student.id}&tab=fees`)}
+                          className="crm-action-btn"
+                          title="Open Student Parent Passbook & UPI Invoicing"
+                          aria-label={`Parent passbook for ${student.studentName}`}
+                        >
+                          <SiteIcon name="shield-check" size={15} />
+                        </a>
                       </div>
                     </td>
                   </tr>
@@ -2734,7 +2744,7 @@ export default function AcademyHubPage({
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
                 <a
                   href={`https://wa.me/${activeReceiptStudent.parentPhone.startsWith('91') ? activeReceiptStudent.parentPhone : `91${activeReceiptStudent.parentPhone}`}?text=${encodeURIComponent(
-                    `🧾 *Coaching Fee Receipt — ${currentAcademy.name}*\n\nDear ${activeReceiptStudent.parentName},\nFee receipt for *${activeReceiptStudent.studentName}* (${activeReceiptStudent.batchName}):\nAmount Paid: *₹${activeReceiptStudent.monthlyFee.toLocaleString('en-IN')}*\nNext Due Date: *${activeReceiptStudent.nextDueDate}*\n\nThank you!`
+                    `🧾 *Coaching Fee Receipt — ${currentAcademy.name}*\n\nDear ${activeReceiptStudent.parentName},\nFee receipt for *${activeReceiptStudent.studentName}* (${activeReceiptStudent.batchName}):\nAmount Paid: *₹${activeReceiptStudent.monthlyFee.toLocaleString('en-IN')}*\nNext Due Date: *${activeReceiptStudent.nextDueDate}*\n\n📱 *View Live Passbook & Pay via UPI:* https://khelgrid.com/parent-portal?student=${activeReceiptStudent.id}&tab=fees\n\nThank you!`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"

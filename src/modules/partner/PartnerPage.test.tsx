@@ -132,4 +132,16 @@ describe('PartnerPage — Institutional Partnerships with KhelGrid', () => {
     expect(html).toContain('"@type":"SportsOrganization"')
     expect(html).toContain('"url":"https://khelgrid.com/partner"')
   })
+
+  it('renders the Coach & Physical Trainer track and instant 30-second SaaS setup action', () => {
+    const html = renderToStaticMarkup(<PartnerPage />)
+
+    expect(html).toContain('Instant SaaS Setup &amp; Login (30s)')
+    expect(html).toContain('/partner-signup')
+    expect(html).toContain('Coaches, Physical Trainers &amp; NIS Specialists')
+    expect(html).toContain('Rosters &amp; Combines')
+    expect(html).toContain('Join as Coach / Trainer')
+    expect(html).toContain('/partner-signup?role=coach')
+    expect(html).toContain('/coach-dashboard')
+  })
 })

@@ -23,8 +23,34 @@ export default function ParentPortalPage({
   initialTab = 'attendance',
 }: ParentPortalPageProps) {
   const students = getParentStudentProfiles()
-  const [selectedStudentId, setSelectedStudentId] = useState(initialStudentId)
-  const [activeTab, setActiveTab] = useState<'attendance' | 'fees' | 'health'>(initialTab)
+  const [selectedStudentId, setSelectedStudentId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const param = new URLSearchParams(window.location.search).get('student')
+      if (param && students.some(s => s.studentId === param)) return param
+    }
+    return initialStudentId
+  })
+  const [activeTab, setActiveTab] = useState<'attendance' | 'fees' | 'health'>(() => {
+    if (typeof window !== 'undefined') {
+      const tabParam = new URLSearchParams(window.location.search).get('tab')
+      if (tabParam === 'fees' || tabParam === 'health' || tabParam === 'attendance') return tabParam
+    }
+    return initialTab
+  })
+
+  // Share link state
+  const [copiedLink, setCopiedLink] = useState(false)
+  const handleCopyPassbookLink = () => {
+    if (typeof window === 'undefined') return
+    const url = `${window.location.origin}/parent-portal?student=${selectedStudentId}&tab=${activeTab}`
+    try {
+      navigator.clipboard.writeText(url)
+      setCopiedLink(true)
+      setTimeout(() => setCopiedLink(false), 2000)
+    } catch {
+      // fallback
+    }
+  }
 
   // Payment Modal state
   const [payingInvoice, setPayingInvoice] = useState<ParentFeeInvoice | null>(null)
@@ -79,20 +105,51 @@ export default function ParentPortalPage({
           </p>
         </div>
 
-        <div className="student-switcher-box">
-          <label htmlFor={studentSelectId}>Select Child / Athlete:</label>
-          <select
-            id={studentSelectId}
-            value={selectedStudentId}
-            onChange={e => setSelectedStudentId(e.target.value)}
-            className="student-select"
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div className="student-switcher-box">
+            <label htmlFor={studentSelectId}>Select Child / Athlete:</label>
+            <select
+              id={studentSelectId}
+              value={selectedStudentId}
+              onChange={e => {
+                setSelectedStudentId(e.target.value)
+                if (typeof window !== 'undefined') {
+                  const url = new URL(window.location.href)
+                  url.searchParams.set('student', e.target.value)
+                  window.history.replaceState({}, '', url.toString())
+                }
+              }}
+              className="student-select"
+            >
+              {students.map(s => (
+                <option key={s.studentId} value={s.studentId}>
+                  {s.studentName} · {s.academyName} ({s.rollNumber})
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={handleCopyPassbookLink}
+            style={{
+              padding: '0.55rem 0.9rem',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              background: copiedLink ? '#dcfce7' : '#ffffff',
+              color: copiedLink ? '#166534' : '#334155',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              height: 'fit-content',
+            }}
+            title="Copy link to this athlete passbook"
           >
-            {students.map(s => (
-              <option key={s.studentId} value={s.studentId}>
-                {s.studentName} · {s.academyName} ({s.rollNumber})
-              </option>
-            ))}
-          </select>
+            <SiteIcon name={copiedLink ? 'check' : 'share'} size={14} />
+            <span>{copiedLink ? 'Link Copied!' : 'Share Passbook'}</span>
+          </button>
         </div>
       </header>
 
@@ -162,14 +219,28 @@ export default function ParentPortalPage({
         <button
           type="button"
           className={`portal-tab-btn ${activeTab === 'attendance' ? 'active' : ''}`}
-          onClick={() => setActiveTab('attendance')}
+          onClick={() => {
+            setActiveTab('attendance')
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href)
+              url.searchParams.set('tab', 'attendance')
+              window.history.replaceState({}, '', url.toString())
+            }
+          }}
         >
           <SiteIcon name="calendar-check" size={16} /> Attendance Passbook
         </button>
         <button
           type="button"
           className={`portal-tab-btn ${activeTab === 'fees' ? 'active' : ''}`}
-          onClick={() => setActiveTab('fees')}
+          onClick={() => {
+            setActiveTab('fees')
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href)
+              url.searchParams.set('tab', 'fees')
+              window.history.replaceState({}, '', url.toString())
+            }
+          }}
         >
           <SiteIcon name="credit-card" size={16} /> Fee Invoices &amp; Receipts
           {pendingInvoices.length > 0 && <span className="tab-pill-badge">{pendingInvoices.length}</span>}
@@ -177,7 +248,14 @@ export default function ParentPortalPage({
         <button
           type="button"
           className={`portal-tab-btn ${activeTab === 'health' ? 'active' : ''}`}
-          onClick={() => setActiveTab('health')}
+          onClick={() => {
+            setActiveTab('health')
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href)
+              url.searchParams.set('tab', 'health')
+              window.history.replaceState({}, '', url.toString())
+            }
+          }}
         >
           <SiteIcon name="activity" size={16} /> Health, Injury &amp; RTP
         </button>

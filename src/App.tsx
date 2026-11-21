@@ -579,6 +579,20 @@ export default function App() {
                   <span>Coach Operations Hub</span>
                 </a>
               )}
+              {(authUser.role === 'coach' || authUser.role === 'admin' || authUser.role === 'host') && (
+                <a
+                  href="/tournament-ops"
+                  className="header-user-dropdown-item"
+                  role="menuitem"
+                  onClick={e => {
+                    setUserMenuOpen(false)
+                    navigate(e, '/tournament-ops')
+                  }}
+                >
+                  <SiteIcon name="trophy" size={15} />
+                  <span>Tournament Operations</span>
+                </a>
+              )}
               {(authUser.role === 'academy' || authUser.role === 'host' || authUser.role === 'venue_owner' || authUser.role === 'admin') && (
                 <>
                   <a
@@ -607,6 +621,18 @@ export default function App() {
                   </a>
                 </>
               )}
+              <a
+                href="/parent-portal"
+                className="header-user-dropdown-item"
+                role="menuitem"
+                onClick={e => {
+                  setUserMenuOpen(false)
+                  navigate(e, '/parent-portal')
+                }}
+              >
+                <SiteIcon name="shield-check" size={15} />
+                <span>Parent &amp; Athlete Passbook</span>
+              </a>
               <a
                 href="/settings"
                 className="header-user-dropdown-item"
@@ -715,10 +741,12 @@ export default function App() {
           <a href="/play" onClick={event => navigate(event, '/play')}>Find a game</a>
           <a href="/venues" onClick={event => navigate(event, '/venues')}>Book venues</a>
           <a href="/turf-calendar" onClick={event => navigate(event, '/turf-calendar')}>Turf Calendar <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
+          <a href="/parent-portal" onClick={event => navigate(event, '/parent-portal')}>Parent Passbook <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
           <a href="/coaches" onClick={event => navigate(event, '/coaches')}>Coaches</a>
           <a href="/academies" onClick={event => navigate(event, '/academies')}>Academies</a>
           <a href="/academy-hub" onClick={event => navigate(event, '/academy-hub')}>Academy Hub <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
           <a href="/coach-dashboard" onClick={event => navigate(event, '/coach-dashboard')}>Coach Hub <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
+          <a href="/tournament-ops" onClick={event => navigate(event, '/tournament-ops')}>Tournament Ops <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
           <span className="footer-coming-soon">Sports CV Wizard <small>Coming soon</small></span>
         </nav>
         <nav className="footer-column" aria-label="Learn and discover">
@@ -732,6 +760,7 @@ export default function App() {
           <h2>Grow with KhelGrid</h2>
           <a href="/partner-signup" onClick={event => navigate(event, '/partner-signup')} style={{ color: '#059669', fontWeight: 700 }}>⚡ Fast Partner Setup (30s)</a>
           <a href="/partner" onClick={event => navigate(event, '/partner')}><strong>Partner with KhelGrid</strong></a>
+          <a href="/tournament-ops" onClick={event => navigate(event, '/tournament-ops')}>Host a Tournament</a>
           <a href="/submit-listing?type=venue" onClick={e => { e.preventDefault(); openListingSubmission('venue') }}>List your venue</a>
           <a href="/submit-listing?type=opportunity" onClick={e => { e.preventDefault(); openListingSubmission('opportunity') }}>Submit a trial</a>
           <a href="/submit-listing?type=coach" onClick={event => navigate(event, '/submit-listing?type=coach')}>Join as Coach</a>

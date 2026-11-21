@@ -30,6 +30,7 @@ export const navigationModules: NavigationModule[] = [
     items: [
       { id: 'home', label: 'Home', href: '/', icon: 'home', module: 'your-space', available: true },
       { id: 'dashboard', label: 'My Dashboard', href: '/dashboard', icon: 'chart', module: 'your-space', available: true },
+      { id: 'parent-portal', label: 'Parent & Athlete Passbook', href: '/parent-portal', icon: 'shield-check', module: 'your-space', available: true },
       { id: 'my-passes', label: 'My Passes & Vouchers', href: '/my-passes', icon: 'badge-check', module: 'your-space', available: true },
       { id: 'saved', label: 'Saved Items', href: '/saved', icon: 'bookmark', module: 'your-space', available: true },
     ],
@@ -78,8 +79,10 @@ export const navigationModules: NavigationModule[] = [
     label: 'Partner & Coaching Suite',
     icon: 'handshake',
     items: [
+      { id: 'partner-onboarding', label: 'Partner Setup & Login (30s)', href: '/partner-signup', icon: 'handshake', module: 'partner-saas', available: true },
       { id: 'academy-hub', label: 'Academy Admissions Hub', href: '/academy-hub', icon: 'building', module: 'partner-saas', available: true },
       { id: 'coach-dashboard', label: 'Coach Operations Hub', href: '/coach-dashboard', icon: 'award', module: 'partner-saas', available: true },
+      { id: 'tournament-ops', label: 'Tournament Operations', href: '/tournament-ops', icon: 'trophy', module: 'partner-saas', available: true },
       { id: 'host-dashboard', label: 'Turf & Host Dashboard', href: '/host', icon: 'calendar-check', module: 'partner-saas', available: true },
       { id: 'gate-checkin', label: 'Gate QR Check-In Desk', href: '/gate-checkin', icon: 'shield-check', module: 'partner-saas', available: true },
     ],
