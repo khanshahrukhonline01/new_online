@@ -917,7 +917,7 @@ for idx, t in enumerate(test_matrix, 1):
 # This is separate from the fixed 49-vector tenant RLS matrix.
 projection_trigger_sql = """
 BEGIN;
-DO $
+DO $$
 DECLARE
   v_test_id uuid := gen_random_uuid();
   v_slug text;
@@ -978,8 +978,8 @@ BEGIN
   IF EXISTS (SELECT 1 FROM public.tenant_public_directory WHERE id = v_test_id) THEN
     RAISE EXCEPTION 'Deleted tenant remained in projection';
   END IF;
-END
-$;
+END;
+$$;
 ROLLBACK;
 """
 projection_out, projection_err, projection_rc = run_psql(projection_trigger_sql, on_error_stop=True)
@@ -1006,6 +1006,9 @@ output_payload = {
     "passed": passed_count,
     "failed": failed_count,
     "success_rate": f"{(passed_count / len(test_matrix)) * 100:.1f}%",
+    "supplemental_checks": {
+        "projection_trigger_acl_and_lifecycle": projection_gate_passed
+    },
     "results": results
 }
 
