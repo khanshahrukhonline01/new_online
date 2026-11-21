@@ -831,9 +831,10 @@ export default function AcademyHubPage({
               </label>
               <select
                 id="academy-role-select"
-                aria-label="Current Staff Role"
+                aria-label="Current Staff Role (Demo Sandbox Only)"
                 value={userRole}
                 onChange={e => setUserRole(e.target.value as AcademyUserRole)}
+                title="Client-side sandbox role switcher for UI preview. Production authorization is enforced by PostgreSQL RLS."
                 style={{
                   padding: '6px 10px',
                   borderRadius: '6px',
@@ -846,9 +847,25 @@ export default function AcademyHubPage({
                 }}
               >
                 <option value="director">Director (Full Access)</option>
-                <option value="head_coach">Head Coach (Batches, Attendance & Kits)</option>
-                <option value="front_desk">Front-Desk (Leads, Students & Inquiries)</option>
+                <option value="head_coach">Head Coach (Batches, Attendance &amp; Kits)</option>
+                <option value="front_desk">Front-Desk (Leads, Students &amp; Inquiries)</option>
               </select>
+              <span
+                style={{
+                  fontSize: '10px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  padding: '2px 6px',
+                  background: '#fef3c7',
+                  color: '#92400e',
+                  border: '1px solid #fde68a',
+                  borderRadius: '4px',
+                  fontWeight: 700
+                }}
+                title="Client-side sandbox role switcher for UI preview. Production authorization is enforced by PostgreSQL RLS."
+              >
+                Sandbox Preview
+              </span>
             </div>
             <button
               type="button"
@@ -3858,7 +3875,7 @@ export default function AcademyHubPage({
                 Cancellation / Alert Reason *
                 <select
                   value={broadcastReason}
-                  onChange={e => setBroadcastReason(e.target.value as any)}
+                  onChange={e => setBroadcastReason(e.target.value as 'rain_weather' | 'ground_maintenance' | 'heat_pollution' | 'holiday' | 'coach_emergency' | 'custom')}
                 >
                   <option value="rain_weather">🌧️ Heavy Rain / Pitch Waterlogging</option>
                   <option value="ground_maintenance">🚜 Scheduled Turf Maintenance &amp; Relaying</option>
@@ -3977,7 +3994,7 @@ export default function AcademyHubPage({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <label>
                   Technical Skill
-                  <select value={evalTechGrade} onChange={e => setEvalTechGrade(e.target.value as any)}>
+                  <select value={evalTechGrade} onChange={e => setEvalTechGrade(e.target.value as 'A+' | 'A' | 'B+' | 'B' | 'C')}>
                     <option value="A+">Grade A+ (Elite)</option>
                     <option value="A">Grade A (Advanced)</option>
                     <option value="B+">Grade B+ (Proficient)</option>
@@ -3988,7 +4005,7 @@ export default function AcademyHubPage({
 
                 <label>
                   Tactical Awareness
-                  <select value={evalTactGrade} onChange={e => setEvalTactGrade(e.target.value as any)}>
+                  <select value={evalTactGrade} onChange={e => setEvalTactGrade(e.target.value as 'A+' | 'A' | 'B+' | 'B' | 'C')}>
                     <option value="A+">Grade A+ (Elite Vision)</option>
                     <option value="A">Grade A (Sharp)</option>
                     <option value="B+">Grade B+ (Good)</option>
@@ -3999,7 +4016,7 @@ export default function AcademyHubPage({
 
                 <label>
                   Physical Conditioning
-                  <select value={evalFitGrade} onChange={e => setEvalFitGrade(e.target.value as any)}>
+                  <select value={evalFitGrade} onChange={e => setEvalFitGrade(e.target.value as 'A+' | 'A' | 'B+' | 'B' | 'C')}>
                     <option value="A+">Grade A+ (Match Fit)</option>
                     <option value="A">Grade A (High Stamina)</option>
                     <option value="B+">Grade B+ (Good)</option>
@@ -4010,7 +4027,7 @@ export default function AcademyHubPage({
 
                 <label>
                   Discipline &amp; Punctuality
-                  <select value={evalDiscGrade} onChange={e => setEvalDiscGrade(e.target.value as any)}>
+                  <select value={evalDiscGrade} onChange={e => setEvalDiscGrade(e.target.value as 'A+' | 'A' | 'B+' | 'B' | 'C')}>
                     <option value="A+">Grade A+ (Exemplary)</option>
                     <option value="A">Grade A (Consistent)</option>
                     <option value="B+">Grade B+ (Good)</option>
@@ -4114,7 +4131,7 @@ export default function AcademyHubPage({
                   Operational Role *
                   <select
                     value={staffRole}
-                    onChange={e => setStaffRole(e.target.value as any)}
+                    onChange={e => setStaffRole(e.target.value as AcademyStaffMember['role'])}
                   >
                     <option value="head_coach">Head Coach</option>
                     <option value="assistant_coach">Assistant Coach</option>
@@ -4263,7 +4280,7 @@ export default function AcademyHubPage({
                   Payment Mode *
                   <select
                     value={payMode}
-                    onChange={e => setPayMode(e.target.value as any)}
+                    onChange={e => setPayMode(e.target.value as AcademyFeeTransaction['paymentMode'])}
                   >
                     <option value="cash">💵 On-Ground Cash</option>
                     <option value="direct_upi">⚡ Direct UPI QR</option>

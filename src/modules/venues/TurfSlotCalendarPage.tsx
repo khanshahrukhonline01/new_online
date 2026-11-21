@@ -1071,7 +1071,7 @@ export default function TurfSlotCalendarPage({
                   id="walkin-pay-status"
                   className="turf-form-input"
                   value={walkInPaymentStatus}
-                  onChange={e => setWalkInPaymentStatus(e.target.value as any)}
+                  onChange={e => setWalkInPaymentStatus(e.target.value as 'fully_paid' | 'upi_advance_paid' | 'pay_at_venue')}
                 >
                   <option value="fully_paid">Fully Paid (Cash / UPI at Counter)</option>
                   <option value="upi_advance_paid">Advance Deposit Paid</option>
