@@ -223,7 +223,7 @@ DELETE FROM public.tenant_enquiries WHERE tenant_id IN ('{"','".join(TEST_TENANT
 DELETE FROM public.tenant_students WHERE tenant_id IN ('{"','".join(TEST_TENANT_IDS)}') OR tenant_id IN (SELECT id FROM public.tenants WHERE owner_id IN ('{"','".join(TEST_USER_IDS)}'));
 DELETE FROM public.tenant_batches WHERE tenant_id IN ('{"','".join(TEST_TENANT_IDS)}') OR tenant_id IN (SELECT id FROM public.tenants WHERE owner_id IN ('{"','".join(TEST_USER_IDS)}'));
 DELETE FROM public.tenant_memberships WHERE tenant_id IN ('{"','".join(TEST_TENANT_IDS)}') OR user_id IN ('{"','".join(TEST_USER_IDS)}') OR tenant_id IN (SELECT id FROM public.tenants WHERE owner_id IN ('{"','".join(TEST_USER_IDS)}'));
-DELETE FROM public.tenants WHERE id IN ('{"','".join(TEST_TENANT_IDS)}') OR slug IN ('tenant-alpha', 'tenant-beta', 'tenant-suspended', 'new-academy-99', 'new-academy-88') OR owner_id IN ('{"','".join(TEST_USER_IDS)}');
+DELETE FROM public.tenants WHERE id IN ('{"','".join(TEST_TENANT_IDS)}') OR owner_id IN ('{"','".join(TEST_USER_IDS)}');
 DELETE FROM auth.users WHERE id IN ('{"','".join(TEST_USER_IDS)}');
 """
 
