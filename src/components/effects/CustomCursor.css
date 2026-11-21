@@ -17,7 +17,7 @@
   height: 100vh;
   pointer-events: none !important;
   user-select: none !important;
-  z-index: 99999;
+  z-index: 2147483647;
   overflow: hidden;
   contain: layout style size;
   opacity: 0;
@@ -321,6 +321,10 @@
   .kg-custom-cursor-container {
     display: none !important;
   }
+}
+
+html[data-reduced-motion="true"] .kg-custom-cursor-container {
+  display: none !important;
 }
 
 @media (hover: none) and (pointer: coarse) {

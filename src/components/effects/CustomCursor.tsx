@@ -25,7 +25,10 @@ function checkPointerCapability(): boolean {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
     return false
   }
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const reducedMotion =
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+    (typeof document !== 'undefined' &&
+      document.documentElement.getAttribute('data-reduced-motion') === 'true')
   if (reducedMotion) {
     return false
   }
