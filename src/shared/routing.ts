@@ -44,6 +44,7 @@ const featurePages: Record<string, string> = {
   '/pricing': 'Pricing & Memberships', '/mobile-app': 'KhelGrid Mobile App', '/careers': 'Careers',
   '/academy-hub': 'Academy Admissions & Operations Hub', '/academies/manage': 'Academy Admissions & Operations Hub',
   '/partner-signup': 'Partner Onboarding Wizard', '/academy/signup': 'Academy Admissions & Operations Hub',
+  '/organizations': 'Organizations & SaaS Workspaces', '/workspaces': 'Organizations & SaaS Workspaces',
   '/parent-portal': 'Parent & Athlete Passbook', '/parent': 'Parent & Athlete Passbook', '/passbook': 'Parent & Athlete Passbook',
   '/tournament-ops': 'Tournament Operations Suite', '/tournaments/manage': 'Tournament Operations Suite', '/tournament-management': 'Tournament Operations Suite',
   '/turf-calendar': 'Turf & Facility Slot Booking Calendar', '/venues/manage': 'Turf & Facility Slot Booking Calendar', '/turf': 'Turf & Facility Slot Booking Calendar',
@@ -131,6 +132,9 @@ export function resolveRoute(pathname: string): RouteMatch {
   }
   if (path === '/partner-signup' || path === '/partner/signup' || path === '/partner/login') {
     return { name: 'feature', canonicalPath: '/partner-signup', slug: 'Partner Onboarding Wizard' }
+  }
+  if (path === '/organizations' || path === '/workspaces') {
+    return { name: 'feature', canonicalPath: '/organizations', slug: 'Organizations & SaaS Workspaces' }
   }
   if (path === '/coach-dashboard' || path === '/coach/hub' || path === '/coach/manage') {
     return { name: 'feature', canonicalPath: '/coach-dashboard', slug: 'Coach Operations Hub' }

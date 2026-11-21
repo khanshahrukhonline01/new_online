@@ -74,6 +74,7 @@ const ScoutPortalPage = lazy(() => import('./modules/scouting/ScoutPortalPage'))
 const AthleteVerificationPage = lazy(() => import('./modules/verification/AthleteVerificationPage'))
 const GateCheckInPage = lazy(() => import('./modules/verification/GateCheckInPage').then(m => ({ default: m.GateCheckInPage })))
 const MyPassesVaultPage = lazy(() => import('./modules/passes/MyPassesVaultPage').then(m => ({ default: m.MyPassesVaultPage })))
+const OrganizationsWorkspacePage = lazy(() => import('./modules/organizations/OrganizationsWorkspacePage'))
 
 // Code-split heavyweight modal dialogs
 const NotificationCenterDrawer = lazy(() => import('./shared/components/NotificationCenterDrawer'))
@@ -335,6 +336,7 @@ export default function App() {
       else if (match.canonicalPath === '/referrals') page = <ReferralsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/book') page = <VenuesPage onOpenIntake={() => openListingSubmission('venue')} onNavigate={navigate} />
       else if (match.canonicalPath === '/train') page = <AcademiesPage onOpenIntake={() => openListingSubmission('academy')} onNavigate={navigate} />
+      else if (match.canonicalPath === '/organizations' || match.canonicalPath === '/workspaces') page = <OrganizationsWorkspacePage onNavigate={navigate} />
       else if (match.canonicalPath === '/partner-signup' || match.canonicalPath === '/partner/signup' || match.canonicalPath === '/partner/login') page = <PartnerOnboardingPage onNavigate={navigate} />
       else if (match.canonicalPath === '/academy-hub' || match.canonicalPath === '/academies/manage') page = <AcademyHubPage onNavigate={navigate} />
       else if (match.canonicalPath === '/coach-dashboard' || match.canonicalPath === '/coach/hub' || match.canonicalPath === '/coach/manage') page = <CoachDashboardPage onNavigate={navigate} />

@@ -1,53 +1,36 @@
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  test: {
-    testTimeout: 15000,
-    hookTimeout: 15000,
-    exclude: ['tests/**', 'node_modules/**', 'dist/**'],
-  },
   server: {
+    host: '0.0.0.0',
     port: 3000,
-    strictPort: false,
+    allowedHosts: true,
+    cors: true,
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 3000,
+    allowedHosts: true,
   },
   build: {
     target: 'esnext',
+    outDir: 'dist',
+    emptyOutDir: true,
     cssCodeSplit: true,
-    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'vendor-react'
-            }
-            if (id.includes('i18next') || id.includes('react-i18next')) {
-              return 'vendor-i18n'
-            }
-            if (id.includes('@supabase')) {
-              return 'vendor-supabase'
-            }
-            if (id.includes('lucide-react')) {
-              return 'vendor-icons'
-            }
-          }
-          if (id.includes('booksData')) {
-            return 'sports-books-data'
-          }
-          if (id.includes('faqData')) {
-            return 'faq-data'
-          }
-          if (id.includes('khelchronicleData')) {
-            return 'khelchronicle-data'
-          }
-          if (id.includes('curatedEntitiesData')) {
-            return 'curated-entities-data'
+            if (id.includes('react') || id.includes('react-dom')) return 'vendor-react'
+            if (id.includes('@supabase')) return 'vendor-supabase'
+            if (id.includes('lucide-react')) return 'vendor-icons'
+            if (id.includes('leaflet')) return 'vendor-leaflet'
+            if (id.includes('i18next')) return 'vendor-i18n'
           }
         },
       },
     },
   },
 })
-

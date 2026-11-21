@@ -12,14 +12,17 @@
  */
 
 import { getSupabaseClient } from './realtime-client'
+import type { OrganizationType } from '../../shared/saas/saasTypes'
 
 export interface DbTenant {
   id: string
   slug: string
   name: string
-  tenant_type: 'academy' | 'coach' | 'venue' | 'tournament'
+  tenant_type: OrganizationType
   status: 'active' | 'pending_verification' | 'suspended' | 'archived'
+  verification_status?: 'unverified' | 'pending_review' | 'verified' | 'rejected'
   owner_id?: string
+  parent_tenant_id?: string | null
   city?: string
   state?: string
   sport?: string
@@ -119,7 +122,7 @@ export interface DbPublicTenantDirectoryEntry {
   id: string
   slug: string
   name: string
-  tenant_type: 'academy' | 'coach' | 'venue' | 'tournament'
+  tenant_type: OrganizationType
   sport?: string
   city?: string
   state?: string
@@ -336,7 +339,7 @@ export async function getTenantFeeTransactions(tenantId: string): Promise<DbTena
 export async function provisionInitialTenantOwner(params: {
   slug: string
   name: string
-  tenantType: 'academy' | 'coach' | 'venue' | 'tournament'
+  tenantType: OrganizationType
   city?: string
   state?: string
   sport?: string

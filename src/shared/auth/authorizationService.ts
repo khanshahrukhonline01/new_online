@@ -438,3 +438,15 @@ export function canUpdateLiveScore(
 export function canManageRoles(context: AuthContext): boolean {
   return context.roles.includes('admin')
 }
+
+export {
+  hasOrganizationPermission,
+  hasStrictPlatformRole,
+  validateRoleChange,
+  validateOwnershipTransfer,
+  canManageOwnedResource,
+  evaluateEntitlement,
+  ORGANIZATION_ROLE_PERMISSIONS,
+  PLATFORM_ROLES,
+} from '../saas/saasCoreEngine'
+

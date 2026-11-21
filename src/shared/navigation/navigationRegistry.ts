@@ -79,6 +79,7 @@ export const navigationModules: NavigationModule[] = [
     label: 'Partner & Coaching Suite',
     icon: 'handshake',
     items: [
+      { id: 'organizations-hub', label: 'Organizations & SaaS Hub', href: '/organizations', icon: 'building', module: 'partner-saas', available: true },
       { id: 'partner-onboarding', label: 'Partner Setup & Login (30s)', href: '/partner-signup', icon: 'handshake', module: 'partner-saas', available: true },
       { id: 'academy-hub', label: 'Academy Admissions Hub', href: '/academy-hub', icon: 'building', module: 'partner-saas', available: true },
       { id: 'coach-dashboard', label: 'Coach Operations Hub', href: '/coach-dashboard', icon: 'award', module: 'partner-saas', available: true },

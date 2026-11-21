@@ -21,7 +21,7 @@ describe('shared navigation registry', () => {
     expect(navigationModules.find(section => section.id === 'athlete-tools')?.items.map(item => item.href))
       .toContain('/sports-cv')
     expect(navigationModules.find(section => section.id === 'partner-saas')?.items.map(item => item.href))
-      .toEqual(['/partner-signup', '/academy-hub', '/coach-dashboard', '/tournament-ops', '/host', '/gate-checkin'])
+      .toEqual(['/organizations', '/partner-signup', '/academy-hub', '/coach-dashboard', '/tournament-ops', '/host', '/gate-checkin'])
     expect(navigationModules.find(section => section.id === 'your-space')?.items.map(item => item.href))
       .toEqual(['/', '/dashboard', '/parent-portal', '/my-passes', '/saved'])
   })
