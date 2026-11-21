@@ -181,6 +181,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261121220000_phase1_tenant_information_disclosure_remediation.sql
       - name: Transition to Tenant Public Directory Projection Table
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261121230000_phase1_tenant_public_directory_projection_table.sql
+      - name: Harden Tenant Public Directory Trigger Function Execution
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261121233000_phase1_projection_trigger_execute_hardening.sql
       - name: Verify Phase 1 Multi-Tenant RLS & Architectural Assertions
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-1-multi-tenant-rls-assertions.sql
       - name: Validate SQL migration safety
@@ -280,6 +282,8 @@ jobs:
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261121220000_phase1_tenant_information_disclosure_remediation.sql
       - name: Transition to Tenant Public Directory Projection Table
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261121230000_phase1_tenant_public_directory_projection_table.sql
+      - name: Harden Tenant Public Directory Trigger Function Execution
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261121233000_phase1_projection_trigger_execute_hardening.sql
       - name: Verify Phase 1 Multi-Tenant RLS Assertions
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-1-multi-tenant-rls-assertions.sql
       - run: npm install
