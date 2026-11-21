@@ -18,6 +18,7 @@ import {
   clearAuthUrlHash,
   type AuthUserProfile,
 } from './integrations/supabase/auth-client'
+import { TenantProvider } from './shared/context/TenantContext'
 import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAndShare'
 
 // Code-split route components via React.lazy()
@@ -336,7 +337,11 @@ export default function App() {
       else if (match.canonicalPath === '/book') page = <VenuesPage onOpenIntake={() => openListingSubmission('venue')} onNavigate={navigate} />
       else if (match.canonicalPath === '/train') page = <AcademiesPage onOpenIntake={() => openListingSubmission('academy')} onNavigate={navigate} />
       else if (match.canonicalPath === '/partner-signup' || match.canonicalPath === '/partner/signup' || match.canonicalPath === '/partner/login') page = <PartnerOnboardingPage onNavigate={navigate} />
-      else if (match.canonicalPath === '/academy-hub' || match.canonicalPath === '/academies/manage') page = <AcademyHubPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/academy-hub' || match.canonicalPath === '/academies/manage') page = (
+        <TenantProvider>
+          <AcademyHubPage onNavigate={navigate} />
+        </TenantProvider>
+      )
       else if (match.canonicalPath === '/coach-dashboard' || match.canonicalPath === '/coach/hub' || match.canonicalPath === '/coach/manage') page = <CoachDashboardPage onNavigate={navigate} />
       else if (match.canonicalPath === '/turf-calendar' || match.canonicalPath === '/venues/manage' || match.canonicalPath === '/turf') page = <TurfSlotCalendarPage onNavigate={navigate} />
       else if (match.canonicalPath === '/tournament-ops' || match.canonicalPath === '/tournaments/manage' || match.canonicalPath === '/tournament-management') page = <TournamentOpsPage onNavigate={navigate} />

@@ -9,6 +9,7 @@ import enHome from './locales/en/home.json'
 import enPlay from './locales/en/play.json'
 import enOpportunities from './locales/en/opportunities.json'
 import enReviews from './locales/en/reviews.json'
+import enSaas from './locales/en/saas.json'
 
 // Hindi resources
 import hiCommon from './locales/hi/common.json'
@@ -17,6 +18,7 @@ import hiHome from './locales/hi/home.json'
 import hiPlay from './locales/hi/play.json'
 import hiOpportunities from './locales/hi/opportunities.json'
 import hiReviews from './locales/hi/reviews.json'
+import hiSaas from './locales/hi/saas.json'
 
 // Bengali resources
 import bnCommon from './locales/bn/common.json'
@@ -66,6 +68,7 @@ const resources = {
     play: enPlay,
     opportunities: enOpportunities,
     reviews: enReviews,
+    saas: enSaas,
   },
   hi: {
     common: hiCommon,
@@ -74,6 +77,7 @@ const resources = {
     play: hiPlay,
     opportunities: hiOpportunities,
     reviews: hiReviews,
+    saas: hiSaas,
   },
   bn: {
     common: bnCommon,
@@ -133,7 +137,7 @@ i18n
     lng: getStoredLang(),
     fallbackLng: DEFAULT_LANGUAGE,
     defaultNS: 'common',
-    ns: ['common', 'navigation', 'home', 'play', 'opportunities', 'reviews'],
+    ns: ['common', 'navigation', 'home', 'play', 'opportunities', 'reviews', 'saas'],
     interpolation: {
       escapeValue: false, // React already escapes XSS
     },

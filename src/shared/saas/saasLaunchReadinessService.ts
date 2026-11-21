@@ -61,6 +61,7 @@ export type AcademyHubTab =
   | 'kits'
   | 'safeguarding'
   | 'settings'
+  | 'audit_logs'
 
 export interface RolePermissions {
   allowedTabs: AcademyHubTab[]
@@ -89,6 +90,7 @@ export const ACADEMY_ROLE_PERMISSIONS: Record<AcademyUserRole, RolePermissions> 
       'kits',
       'safeguarding',
       'settings',
+      'audit_logs',
     ],
     canManageFinancials: true,
     canDeleteBatches: true,

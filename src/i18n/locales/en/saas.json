@@ -1,0 +1,85 @@
+{
+  "hubTitle": "Academy Pro Hub",
+  "launchBannerBadge": "100% Free Grassroots Launch Access",
+  "launchBannerTitle": "Academy Pro Hub (₹3,499/mo Value) Unlocked Without Charges",
+  "launchBannerDesc": "KhelGrid is empowering grassroots sports academies across India with full admissions CRM, batch scheduling, automated UPI fee collection, and trial passes completely free during our launch phase.",
+  "tabs": {
+    "leads": "Admissions & Leads",
+    "batches": "Batches & Schedules",
+    "fees": "Trainee Roster & Fees",
+    "ledger": "Cash & UPI Ledger",
+    "attendance": "Roll Call Attendance",
+    "staff": "Coaching Staff",
+    "trialPasses": "Trial Passes",
+    "settings": "Academy Settings",
+    "auditLogs": "Security & Audit Logs"
+  },
+  "attendance": {
+    "heading": "Pitch-Side Attendance Roll Call",
+    "subheading": "Mark on-ground attendance for morning & evening squads with 1-click WhatsApp arrival notifications to parents.",
+    "present": "Present",
+    "absent": "Absent",
+    "excused": "Excused",
+    "saveRollCall": "Save Attendance Roll Call",
+    "saved": "Attendance Saved",
+    "exportCsv": "Export Attendance CSV",
+    "parentNotice": "WhatsApp Parent Notice",
+    "sendNotice": "Send WhatsApp Alert"
+  },
+  "fees": {
+    "heading": "Active Student Roster & UPI Fee Tracker",
+    "subheading": "Track fee dues, generate instant UPI scan codes, and dispatch 1-click WhatsApp payment reminders with 0% platform deductions.",
+    "enrollStudent": "Enroll New Student",
+    "importCsv": "Import CSV",
+    "exportCsv": "Export CSV Roster",
+    "monthlyFee": "Monthly Fee",
+    "feeStatus": "Fee Status",
+    "paid": "Paid",
+    "dueSoon": "Due Soon",
+    "overdue": "Overdue",
+    "nextDue": "Next Due",
+    "actions": "Actions"
+  },
+  "ledger": {
+    "heading": "Cash & Direct UPI Financial Ledger",
+    "subheading": "Complete audit trail of monthly tuition fees collected across UPI, on-ground cash, and bank transfers with 0% platform deductions.",
+    "exportCsv": "Export Ledger CSV",
+    "recordOffline": "Record Offline Fee Payment",
+    "reconciled": "100% Balanced",
+    "auditVariance": "Audit Variance",
+    "expectedMonthly": "Total Monthly Expected",
+    "collectedThisMonth": "Total Collected This Month",
+    "directUpi": "Direct UPI Collections",
+    "cashInHand": "Cash-in-Hand Held by Coaches",
+    "pendingDues": "Pending / Overdue Balance",
+    "settleToBank": "Settle to Bank"
+  },
+  "staff": {
+    "heading": "Coaching Staff & Operational Roles",
+    "subheading": "Manage head coaches, assistant trainers, accountants, and ground staff with role-based dashboard permissions.",
+    "addStaff": "Add Staff Member",
+    "roles": {
+      "headCoach": "Head Coach",
+      "assistantCoach": "Assistant Coach",
+      "accountant": "Accountant / Front Desk",
+      "groundStaff": "Ground Staff",
+      "director": "Director / Admin"
+    }
+  },
+  "audit": {
+    "heading": "Immutable Tenant Audit Log",
+    "subheading": "Cryptographically-timestamped append-only record of all administrative, financial, and roster events.",
+    "action": "Action",
+    "entity": "Entity",
+    "timestamp": "Timestamp",
+    "actor": "Initiated By",
+    "empty": "No audit log entries recorded yet."
+  },
+  "billing": {
+    "tierName": "Grassroots Pioneer Tier",
+    "tierCost": "₹0 / month",
+    "tierDescription": "Lifetime free grassroots access. Zero commission on direct UPI collections.",
+    "status": "Active (Free Launch Tier)",
+    "noCharges": "No hidden platform fees, subscription deductions, or payment gateway charges."
+  }
+}

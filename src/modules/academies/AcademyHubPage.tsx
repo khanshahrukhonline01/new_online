@@ -1,4 +1,4 @@
-import { useState, useId, type MouseEvent, type FormEvent } from 'react'
+import { useState, useId, useEffect, type MouseEvent, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { generateQrSvgString } from '../../shared/utils/qrCodeGenerator'
 import { CURATED_ACADEMIES } from '../../shared/data/curatedEntitiesData'
@@ -81,6 +81,22 @@ import {
   type ParsedStudentImportRow,
   type StudentProgressReport,
 } from '../../shared/saas/saasSharedOperations'
+import { useTenant } from '../../shared/context/useTenant'
+import {
+  updateTenantSettings,
+  createTenantBatch,
+  createTenantStudent,
+  saveTenantDailyAttendance,
+  recordTenantFeeTransaction,
+  recordTenantAuditLog,
+  getTenantAuditLogs,
+  softDeleteTenantStudent,
+  softDeleteTenantBatch,
+  convertEnquiryToStudent,
+  createTenantInvitation,
+  type DbTenantAuditLog,
+} from '../../integrations/supabase/tenant-client'
+import { SaaSSubscriptionCard } from './SaaSSubscriptionCard'
 import './AcademyHubPage.css'
 
 export interface AcademyHubPageProps {
@@ -139,11 +155,31 @@ export default function AcademyHubPage({
   const ledgerSummary = getAcademyLedgerSummary(selectedSlug)
 
   // Active Tab & Role Permissions
-  const [activeTab, setActiveTab] = useState<'leads' | 'batches' | 'fees' | 'ledger' | 'attendance' | 'staff' | 'trial_passes' | 'kits' | 'safeguarding' | 'settings'>('leads')
-  const [userRole, setUserRole] = useState<AcademyUserRole>('director')
+  const { currentTenant, userRole: verifiedRole } = useTenant()
+  const [activeTab, setActiveTab] = useState<'leads' | 'batches' | 'fees' | 'ledger' | 'attendance' | 'staff' | 'trial_passes' | 'kits' | 'safeguarding' | 'settings' | 'audit_logs'>('leads')
+  const [userRole, setUserRole] = useState<AcademyUserRole>(() => {
+    if (verifiedRole === 'head_coach') return 'head_coach'
+    if (verifiedRole === 'front_desk') return 'front_desk'
+    return 'director'
+  })
   const [dpdpSafeMode, setDpdpSafeMode] = useState(true)
   const [showOnboardingChecklist, setShowOnboardingChecklist] = useState(true)
   const [pitchSideMode, setPitchSideMode] = useState(false)
+  const [bilingualMode, setBilingualMode] = useState(false)
+
+  // Tenant Security Audit Logs State
+  const [auditLogs, setAuditLogs] = useState<DbTenantAuditLog[]>([])
+  const [isLoadingAuditLogs, setIsLoadingAuditLogs] = useState(false)
+
+  useEffect(() => {
+    if (activeTab === 'audit_logs' && currentTenant?.id) {
+      setIsLoadingAuditLogs(true)
+      getTenantAuditLogs(currentTenant.id)
+        .then(logs => setAuditLogs(logs))
+        .catch(err => console.warn('[AcademyHub] Failed to fetch audit logs:', err))
+        .finally(() => setIsLoadingAuditLogs(false))
+    }
+  }, [activeTab, currentTenant?.id])
 
   // Subscription Cancellation & Prorated Refund Modal State
   const [cancellationModalStudent, setCancellationModalStudent] = useState<AcademyStudent | null>(null)
@@ -466,6 +502,28 @@ export default function AcademyHubPage({
       isActive: true,
     })
 
+    if (currentTenant?.id) {
+      createTenantBatch({
+        tenant_id: currentTenant.id,
+        batch_name: batchNameInput.trim(),
+        sport: batchSportInput,
+        days: batchDaysInput.trim(),
+        timings: batchTimingsInput.trim(),
+        coach_name: batchCoachInput.trim() || 'Academy Coaching Staff',
+        age_group: batchAgeGroupInput.trim(),
+        monthly_fee: Number(batchMonthlyFeeInput) || 1500,
+        max_capacity: Number(batchCapacityInput) || 20,
+        is_active: true,
+      }).catch(err => console.warn('[AcademyHub] Remote batch create error:', err))
+
+      recordTenantAuditLog({
+        tenantId: currentTenant.id,
+        action: 'create_batch',
+        entityType: 'tenant_batches',
+        details: { batchName: batchNameInput.trim() },
+      }).catch(err => console.warn('[AcademyHub] Audit log error:', err))
+    }
+
     setIsAddBatchModalOpen(false)
     setBatchNameInput('')
     setBatchCoachInput('')
@@ -493,6 +551,26 @@ export default function AcademyHubPage({
       lastPaymentDate: now.toISOString().slice(0, 10),
       nextDueDate: nextMonth.toISOString().slice(0, 10),
     })
+
+    if (currentTenant?.id) {
+      createTenantStudent({
+        tenant_id: currentTenant.id,
+        batch_id: selectedBatch?.id && selectedBatch.id.length > 30 ? selectedBatch.id : undefined,
+        student_name: studentNameInput.trim(),
+        parent_name: studentParentNameInput.trim() || 'Parent',
+        parent_phone: studentParentPhoneInput.trim(),
+        monthly_fee: Number(studentFeeInput) || 2000,
+        fee_status: 'paid',
+        is_active: true,
+      }).catch(err => console.warn('[AcademyHub] Remote student create error:', err))
+
+      recordTenantAuditLog({
+        tenantId: currentTenant.id,
+        action: 'enroll_student',
+        entityType: 'tenant_students',
+        details: { studentName: studentNameInput.trim() },
+      }).catch(err => console.warn('[AcademyHub] Audit log error:', err))
+    }
 
     setIsAddStudentModalOpen(false)
     setStudentNameInput('')
@@ -534,7 +612,29 @@ export default function AcademyHubPage({
         lastPaymentDate: now.toISOString().slice(0, 10),
         nextDueDate: nextMonth.toISOString().slice(0, 10),
       })
+
+      if (currentTenant?.id) {
+        createTenantStudent({
+          tenant_id: currentTenant.id,
+          batch_id: targetBatch?.id && targetBatch.id.length > 30 ? targetBatch.id : undefined,
+          student_name: row.studentName,
+          parent_name: row.parentName,
+          parent_phone: row.parentPhone,
+          monthly_fee: row.monthlyFee || targetBatch?.monthlyFee || 2500,
+          fee_status: 'paid',
+          is_active: true,
+        }).catch(err => console.warn('[AcademyHub] Remote CSV import student error:', err))
+      }
     })
+
+    if (currentTenant?.id) {
+      recordTenantAuditLog({
+        tenantId: currentTenant.id,
+        action: 'bulk_import_students_csv',
+        entityType: 'tenant_students',
+        details: { count: importPreviewRows.length },
+      }).catch(err => console.warn('[AcademyHub] Audit log error:', err))
+    }
 
     setIsImportCsvModalOpen(false)
     setImportCsvText('')
@@ -699,6 +799,26 @@ export default function AcademyHubPage({
       autoWhatsAppRoutingEnabled: true,
       isProUnlocked: true,
     })
+
+    if (currentTenant?.id) {
+      updateTenantSettings(currentTenant.id, {
+        name: currentAcademy.name,
+        contact_phone: directorWhatsAppInput.trim(),
+        upi_vpa: upiVpaInput.trim(),
+      }).catch(err => console.warn('[AcademyHub] Remote settings update error:', err))
+
+      recordTenantAuditLog({
+        tenantId: currentTenant.id,
+        action: 'update_tenant_settings',
+        entityType: 'tenants',
+        entityId: currentTenant.id,
+        details: {
+          directorName: directorNameInput.trim(),
+          upiVpa: upiVpaInput.trim(),
+        },
+      }).catch(err => console.warn('[AcademyHub] Audit log error:', err))
+    }
+
     setSettingsSavedNotice(true)
     setTimeout(() => setSettingsSavedNotice(false), 3000)
     triggerRefresh()
@@ -825,48 +945,90 @@ export default function AcademyHubPage({
                 </option>
               ))}
             </select>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <label htmlFor="academy-role-select" style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
-                Staff Role:
-              </label>
-              <select
-                id="academy-role-select"
-                aria-label="Current Staff Role (Demo Sandbox Only)"
-                value={userRole}
-                onChange={e => setUserRole(e.target.value as AcademyUserRole)}
-                title="Client-side sandbox role switcher for UI preview. Production authorization is enforced by PostgreSQL RLS."
-                style={{
-                  padding: '6px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1',
-                  background: '#f8fafc',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#1e293b',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="director">Director (Full Access)</option>
-                <option value="head_coach">Head Coach (Batches, Attendance &amp; Kits)</option>
-                <option value="front_desk">Front-Desk (Leads, Students &amp; Inquiries)</option>
-              </select>
-              <span
-                style={{
-                  fontSize: '10px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                  padding: '2px 6px',
-                  background: '#fef3c7',
-                  color: '#92400e',
-                  border: '1px solid #fde68a',
-                  borderRadius: '4px',
-                  fontWeight: 700
-                }}
-                title="Client-side sandbox role switcher for UI preview. Production authorization is enforced by PostgreSQL RLS."
-              >
-                Sandbox Preview
-              </span>
-            </div>
+            {verifiedRole ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+                  Role:
+                </span>
+                <span
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    background: '#ecfdf5',
+                    border: '1px solid #a7f3d0',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: '#065f46',
+                  }}
+                  title="Role authorized by PostgreSQL tenant_memberships"
+                >
+                  ✓ {verifiedRole.toUpperCase()}
+                </span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <label htmlFor="academy-role-select" style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+                  Staff Role:
+                </label>
+                <select
+                  id="academy-role-select"
+                  aria-label="Current Staff Role (Demo Sandbox Only)"
+                  value={userRole}
+                  onChange={e => setUserRole(e.target.value as AcademyUserRole)}
+                  title="Client-side sandbox role switcher for UI preview. Production authorization is enforced by PostgreSQL RLS."
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#1e293b',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="director">Director (Full Access)</option>
+                  <option value="head_coach">Head Coach (Batches, Attendance &amp; Kits)</option>
+                  <option value="front_desk">Front-Desk (Leads, Students &amp; Inquiries)</option>
+                </select>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                    padding: '2px 6px',
+                    background: '#fef3c7',
+                    color: '#92400e',
+                    border: '1px solid #fde68a',
+                    borderRadius: '4px',
+                    fontWeight: 700
+                  }}
+                  title="Client-side sandbox role switcher for UI preview. Production authorization is enforced by PostgreSQL RLS."
+                >
+                  Sandbox Preview
+                </span>
+              </div>
+            )}
+            <button
+              type="button"
+              className="academy-hub-btn-outline"
+              onClick={() => setBilingualMode(v => !v)}
+              style={{
+                padding: '7px 11px',
+                fontSize: '12px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: bilingualMode ? '#eff6ff' : '#ffffff',
+                borderColor: bilingualMode ? '#3b82f6' : '#cbd5e1',
+                color: bilingualMode ? '#1d4ed8' : '#475569',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+              title="Toggle Hindi/English bilingual mode for pitch-side coaching and parent interactions"
+            >
+              <span>🌐 {bilingualMode ? 'English UI' : 'हिंदी / द्विभाषी'}</span>
+            </button>
             <button
               type="button"
               className="academy-hub-btn-outline"
@@ -1226,6 +1388,16 @@ export default function AcademyHubPage({
             <SiteIcon name="share" size={18} /> WhatsApp &amp; UPI Setup
           </button>
         )}
+
+        {canRoleAccessTab(userRole, 'audit_logs') && (
+          <button
+            type="button"
+            className={`academy-hub-tab-btn ${activeTab === 'audit_logs' ? 'active' : ''}`}
+            onClick={() => setActiveTab('audit_logs')}
+          >
+            <SiteIcon name="shield-check" size={18} /> {bilingualMode ? 'सुरक्षा ऑडिट लॉग (Audit Log)' : 'Security Audit Log'}
+          </button>
+        )}
       </nav>
 
       {/* TAB 1: Admissions CRM & Inbound Parent Leads */}
@@ -1320,7 +1492,25 @@ export default function AcademyHubPage({
                           style={{ cursor: 'pointer', border: 'none', background: 'transparent' }}
                           value={lead.status}
                           onChange={e => {
-                            updateLeadStatus(lead.id, e.target.value as AcademyLead['status'])
+                            const newStatus = e.target.value as AcademyLead['status']
+                            updateLeadStatus(lead.id, newStatus)
+                            if (newStatus === 'enrolled' && currentTenant?.id && lead.id.length > 30) {
+                              const defaultBatch = batches[0]
+                              convertEnquiryToStudent({
+                                tenantId: currentTenant.id,
+                                enquiryId: lead.id,
+                                batchId: defaultBatch?.id && defaultBatch.id.length > 30 ? defaultBatch.id : '00000000-0000-0000-0000-000000000000',
+                                monthlyFee: defaultBatch?.monthlyFee || 2500,
+                              }).catch(err => console.warn('[AcademyHub] Remote enquiry conversion error:', err))
+
+                              recordTenantAuditLog({
+                                tenantId: currentTenant.id,
+                                action: 'convert_enquiry_to_student',
+                                entityType: 'tenant_enquiries',
+                                entityId: lead.id,
+                                details: { studentName: lead.studentName },
+                              }).catch(err => console.warn('[AcademyHub] Audit log error:', err))
+                            }
                             triggerRefresh()
                           }}
                         >
@@ -1473,6 +1663,18 @@ export default function AcademyHubPage({
                         type="button"
                         style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.78rem', cursor: 'pointer' }}
                         onClick={() => {
+                          if (currentTenant?.id && batch.id.length > 30) {
+                            softDeleteTenantBatch(currentTenant.id, batch.id)
+                              .catch(err => console.warn('[AcademyHub] Remote soft delete batch error:', err))
+
+                            recordTenantAuditLog({
+                              tenantId: currentTenant.id,
+                              action: 'soft_delete_batch',
+                              entityType: 'tenant_batches',
+                              entityId: batch.id,
+                              details: { batchName: batch.batchName },
+                            }).catch(err => console.warn('[AcademyHub] Audit log error:', err))
+                          }
                           deleteAcademyBatch(batch.id)
                           triggerRefresh()
                         }}
@@ -2018,6 +2220,33 @@ export default function AcademyHubPage({
                           })),
                         }
                         saveDailyAttendance(record)
+
+                        if (currentTenant?.id) {
+                          const remoteAttendees = batchStudents.map(s => ({
+                            studentId: s.id,
+                            status: attendanceStatuses[s.id] || 'present',
+                            checkInTime: new Date().toISOString(),
+                          }))
+                          saveTenantDailyAttendance(
+                            currentTenant.id,
+                            attendanceBatchId.length > 30 ? attendanceBatchId : '00000000-0000-0000-0000-000000000000',
+                            attendanceDate,
+                            remoteAttendees
+                          ).catch(err => console.warn('[AcademyHub] Remote attendance save error:', err))
+
+                          recordTenantAuditLog({
+                            tenantId: currentTenant.id,
+                            action: 'save_attendance_roll_call',
+                            entityType: 'tenant_attendance_events',
+                            details: {
+                              date: attendanceDate,
+                              batchId: attendanceBatchId,
+                              presentCount,
+                              absentCount,
+                            },
+                          }).catch(err => console.warn('[AcademyHub] Audit log error:', err))
+                        }
+
                         setAttendanceSavedNotice(true)
                         setTimeout(() => setAttendanceSavedNotice(false), 3000)
                       }}
@@ -2376,7 +2605,10 @@ export default function AcademyHubPage({
 
       {/* TAB 5: WhatsApp & UPI Setup */}
       {activeTab === 'settings' && (
-        <section aria-labelledby="settings-section-heading" style={{ maxWidth: '650px' }}>
+        <section aria-labelledby="settings-section-heading" style={{ maxWidth: '750px' }}>
+          {/* Phase 9: Grassroots Free Plan & Sandbox Subscription Tier */}
+          <SaaSSubscriptionCard academyName={currentAcademy.name} />
+
           <h2 id="settings-section-heading" className="academy-hub-section-title">
             Director WhatsApp &amp; UPI Routing Setup
           </h2>
@@ -2628,6 +2860,105 @@ export default function AcademyHubPage({
                 ))}
               </div>
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* TAB 7: Tenant Security Audit Logs */}
+      {activeTab === 'audit_logs' && (
+        <section aria-labelledby="audit-logs-section-heading" data-testid="saas-audit-logs-section">
+          <div className="academy-hub-section-header">
+            <div>
+              <h2 id="audit-logs-section-heading" className="academy-hub-section-title">
+                {bilingualMode ? 'अपरिवर्तनीय टेनेंट ऑडिट लॉग (Security & Audit Trail)' : 'Tenant Security & Immutable Audit Log'}
+              </h2>
+              <p style={{ color: '#64748b', margin: '0.25rem 0 0', fontSize: '0.9rem' }}>
+                {bilingualMode
+                  ? 'सभी प्रशासनिक, वित्तीय और छात्र सूची परिवर्तनों का टाइमस्टैम्प-युक्त सुरक्षित रिकॉर्ड।'
+                  : 'Cryptographically-timestamped append-only record of all administrative, financial, and roster modifications.'}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                className="academy-hub-btn-outline"
+                style={{ padding: '0.5rem 0.85rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                onClick={() => {
+                  const rows = [
+                    ['ID', 'Action', 'Entity Type', 'Entity ID', 'Timestamp'],
+                    ...auditLogs.map(l => [l.id, l.action, l.entity_type, l.entity_id || '', l.created_at]),
+                  ]
+                  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+                  downloadBlobFile(`${currentAcademy.slug}-security-audit-log.csv`, csv)
+                }}
+              >
+                <SiteIcon name="download" size={15} /> Export Audit CSV
+              </button>
+              <button
+                type="button"
+                className="academy-hub-primary-btn"
+                onClick={() => {
+                  if (currentTenant?.id) {
+                    setIsLoadingAuditLogs(true)
+                    getTenantAuditLogs(currentTenant.id)
+                      .then(logs => setAuditLogs(logs))
+                      .finally(() => setIsLoadingAuditLogs(false))
+                  }
+                }}
+              >
+                <SiteIcon name="arrow-up-right" size={15} /> Refresh Logs
+              </button>
+            </div>
+          </div>
+
+          <div className="academy-hub-table-wrapper">
+            <table className="academy-hub-table" role="table" aria-label="Tenant Audit Logs">
+              <thead>
+                <tr>
+                  <th scope="col">Timestamp</th>
+                  <th scope="col">Action</th>
+                  <th scope="col">Entity</th>
+                  <th scope="col">Initiated By</th>
+                  <th scope="col">Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoadingAuditLogs ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                      Loading secure tenant audit records...
+                    </td>
+                  </tr>
+                ) : auditLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                      No audit log records found for this workspace. Standard operational actions (attendance, fees, roster changes) are automatically appended here.
+                    </td>
+                  </tr>
+                ) : (
+                  auditLogs.map(log => (
+                    <tr key={log.id}>
+                      <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#64748b' }}>
+                        {new Date(log.created_at).toLocaleString('en-IN')}
+                      </td>
+                      <td>
+                        <strong style={{ color: '#0f172a' }}>{log.action}</strong>
+                      </td>
+                      <td>
+                        <span className="lead-status-pill enrolled">{log.entity_type}</span>
+                      </td>
+                      <td style={{ fontSize: '0.85rem' }}>
+                        {log.actor_user_id ? `${log.actor_user_id.slice(0, 8)}...` : 'System / Direct'}
+                      </td>
+                      <td style={{ fontSize: '0.8rem', fontFamily: 'monospace', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {JSON.stringify(log.details)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </section>
       )}
@@ -4106,6 +4437,33 @@ export default function AcademyHubPage({
                   status: 'active',
                   joinedDate: new Date().toISOString().slice(0, 10),
                 })
+
+                if (currentTenant?.id && staffEmail) {
+                  const roleMap: Record<string, 'director' | 'admin' | 'head_coach' | 'coach' | 'accountant' | 'front_desk' | 'staff'> = {
+                    director: 'director',
+                    head_coach: 'head_coach',
+                    assistant_coach: 'coach',
+                    accountant: 'accountant',
+                    ground_staff: 'staff',
+                  }
+                  createTenantInvitation({
+                    tenantId: currentTenant.id,
+                    invitedEmail: staffEmail.trim(),
+                    role: roleMap[staffRole] || 'coach',
+                  }).catch(err => console.warn('[AcademyHub] Remote staff invitation error:', err))
+
+                  recordTenantAuditLog({
+                    tenantId: currentTenant.id,
+                    action: 'invite_staff_member',
+                    entityType: 'tenant_membership',
+                    details: {
+                      name: staffName,
+                      email: staffEmail,
+                      role: staffRole,
+                    },
+                  }).catch(err => console.warn('[AcademyHub] Audit log error:', err))
+                }
+
                 setIsAddStaffModalOpen(false)
                 setStaffName('')
                 setStaffPhone('')
@@ -4240,6 +4598,34 @@ export default function AcademyHubPage({
                   notes: payNotes,
                 })
                 recordStudentPayment(std.id, payAmount, payMode === 'cash' ? 'cash' : 'upi')
+
+                if (currentTenant?.id) {
+                  recordTenantFeeTransaction({
+                    tenant_id: currentTenant.id,
+                    student_id: std.id.length > 30 ? std.id : '00000000-0000-0000-0000-000000000000',
+                    receipt_number: `REC-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+                    amount: payAmount,
+                    payment_mode: payMode === 'cash' ? 'cash' : 'direct_upi',
+                    collected_by_name: payStaffName || 'Academy Staff',
+                    collected_date: new Date().toISOString().slice(0, 10),
+                    billing_month: new Date().toLocaleString('default', { month: 'long', year: 'numeric' }),
+                    status: payMode === 'cash' ? 'cash_in_hand' : 'settled',
+                    notes: payNotes || undefined,
+                  }).catch(err => console.warn('[AcademyHub] Remote fee transaction error:', err))
+
+                  recordTenantAuditLog({
+                    tenantId: currentTenant.id,
+                    action: 'record_fee_payment',
+                    entityType: 'tenant_fee_transactions',
+                    details: {
+                      studentId: std.id,
+                      studentName: std.studentName,
+                      amount: payAmount,
+                      paymentMode: payMode,
+                    },
+                  }).catch(err => console.warn('[AcademyHub] Audit log error:', err))
+                }
+
                 setIsRecordPaymentModalOpen(false)
                 triggerRefresh()
               }}
@@ -4430,6 +4816,23 @@ export default function AcademyHubPage({
                   className="academy-hub-primary-btn"
                   style={{ background: '#dc2626', borderColor: '#b91c1c', flex: 1 }}
                   onClick={() => {
+                    if (currentTenant?.id && cancellationModalStudent.id.length > 30) {
+                      softDeleteTenantStudent(currentTenant.id, cancellationModalStudent.id)
+                        .catch(err => console.warn('[AcademyHub] Remote soft delete error:', err))
+
+                      recordTenantAuditLog({
+                        tenantId: currentTenant.id,
+                        action: 'cancel_student_membership',
+                        entityType: 'tenant_students',
+                        entityId: cancellationModalStudent.id,
+                        details: {
+                          reason: cancellationReason,
+                          refundAmount: proratedRefund?.eligibleRefundAmount,
+                          sessionsAttended: cancellationSessionsAttended,
+                        },
+                      }).catch(err => console.warn('[AcademyHub] Audit log error:', err))
+                    }
+
                     setCancellationSuccessMsg(`Membership cancelled for ${cancellationModalStudent.studentName}. Refund voucher generated: ₹${proratedRefund?.eligibleRefundAmount}.`)
                     setTimeout(() => {
                       setCancellationModalStudent(null)

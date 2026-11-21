@@ -3,6 +3,7 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 import { registerCustomAcademy } from '../academies/academySaaSClient'
 import { registerCustomCoach } from '../coaches/coachSaaSClient'
 import { saveTurfVenueSettings } from '../venues/turfSlotManager'
+import { provisionInitialTenantOwner } from '../../integrations/supabase/tenant-client'
 import './PartnerOnboardingPage.css'
 
 export interface PartnerOnboardingPageProps {
@@ -48,6 +49,15 @@ export default function PartnerOnboardingPage({
         directorWhatsApp: phone.trim(),
         upiVpa: upiVpa.trim(),
       })
+      provisionInitialTenantOwner({
+        slug: newAcademy.slug,
+        name: entityName.trim(),
+        tenantType: 'academy',
+        city,
+        sport,
+        contactPhone: phone.trim(),
+        contactEmail: email.trim() || undefined,
+      }).catch(err => console.warn('[PartnerOnboarding] Remote tenant provision error:', err))
       targetRoute = `/academy-hub?academy=${newAcademy.slug}`
     } else if (selectedRole === 'coach') {
       const newCoach = registerCustomCoach({
