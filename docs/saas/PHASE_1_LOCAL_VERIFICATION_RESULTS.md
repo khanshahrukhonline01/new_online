@@ -1,3 +1,9 @@
+> **HISTORICAL EVIDENCE — NOT A CURRENT PASS**  
+> The run below predates the projection-trigger ACL migration `20261121233000` and the latest supplemental PostgreSQL assertions. It is Antigravity-provided historical local output; this assistant did not independently execute it. Current changes have not been run because this execution environment has neither Docker nor psql available. Re-run locally in the isolated approved PostgreSQL container before approval.  
+> The runner contains **14 fixture identities** and a fixed **49-vector** RLS matrix. The new projection lifecycle gate is supplemental to those 49 vectors and must also pass.  
+>
+> ---
+>
 # KhelGrid SaaS Platform — Phase 1: Local Verification Results
 ## Non-Destructive Local CI Pipeline Execution & Acceptance Evidence
 
