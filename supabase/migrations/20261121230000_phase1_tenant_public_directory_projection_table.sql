@@ -16,17 +16,23 @@
 -- 6. Read-only for anon and authenticated; all client writes return 42501.
 --
 -- Safe Rollback Guidance:
--- To rollback: remove trigger, replace relation with legacy security_barrier view:
+-- There is intentionally NO automatic rollback that recreates the old public view.
+-- The old view was flagged by Supabase as SECURITY DEFINER and its owner bypassed
+-- base-table RLS. Do not restore public grants to that view.
+--
+-- If an administrator explicitly approves disabling the physical projection:
 --   BEGIN;
 --   DROP TRIGGER IF EXISTS trg_sync_tenant_public_directory ON public.tenants;
---   DROP FUNCTION IF EXISTS public.sync_tenant_public_directory();
---   revert projection table;
---   CREATE OR REPLACE VIEW public.tenant_public_directory WITH (security_barrier = true) AS
---     SELECT id, slug, name, tenant_type, sport, city, state, status, created_at
---     FROM public.tenants WHERE status = 'active';
---   ALTER VIEW public.tenant_public_directory OWNER TO postgres;
---   GRANT SELECT ON public.tenant_public_directory TO anon, authenticated;
+--   ALTER TABLE public.tenant_public_directory
+--     RENAME TO tenant_public_directory_projection_archive_20261121;
+--   REVOKE ALL ON FUNCTION public.sync_tenant_public_directory() FROM PUBLIC, anon, authenticated;
 --   COMMIT;
+-- This preserves all projection rows in the renamed archive table and leaves
+-- source tenant data untouched. Public directory reads will be unavailable until
+-- a separately reviewed safe replacement is implemented. Do not create or grant
+-- the legacy security-definer view as part of rollback.
+-- To restore the projection, rename the archive table back and re-create the
+-- trigger only after verifying the exact current migration and ACL state.
 -- ==============================================================================
 
 BEGIN;
