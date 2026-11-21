@@ -44,9 +44,9 @@ describe('KhelGrid SaaS Platform — CI Migration Drift Verification', () => {
       rlsMigrations.push(m[1])
     }
 
-    // Both jobs must apply all 5 Phase 1 migrations
-    expect(qualityMigrations).toHaveLength(5)
-    expect(rlsMigrations).toHaveLength(5)
+    // Both jobs must apply all 6 Phase 1 migrations
+    expect(qualityMigrations).toHaveLength(6)
+    expect(rlsMigrations).toHaveLength(6)
 
     // The sequence must be identical
     expect(rlsMigrations).toEqual(qualityMigrations)
@@ -54,6 +54,7 @@ describe('KhelGrid SaaS Platform — CI Migration Drift Verification', () => {
     // Specifically verify the final privacy remediation and projection table migrations are in the sequence
     expect(rlsMigrations[3]).toBe('20261121220000_phase1_tenant_information_disclosure_remediation.sql')
     expect(rlsMigrations[4]).toBe('20261121230000_phase1_tenant_public_directory_projection_table.sql')
+    expect(rlsMigrations[5]).toBe('20261121233000_phase1_projection_trigger_execute_hardening.sql')
 
     // Verify assertion script executes after migrations in both jobs
     expect(qualitySection).toContain('phase-1-multi-tenant-rls-assertions.sql')
