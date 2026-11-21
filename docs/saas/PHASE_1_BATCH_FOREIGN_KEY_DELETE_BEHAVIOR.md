@@ -2,7 +2,7 @@
 ## Analysis, Empirical Reproduction, Architectural Justification, and Regression Proof
 
 **Project:** `khelgrid-dotcom/khelgrid-platform`  
-**Repository Branch:** `feature/saas-phase-1-tenant-isolation`  
+**Repository Branch:** `feature/saas-phase-1-acceptance-remediation`  
 **Target Migration:** `supabase/migrations/20261121210000_phase1_fk_deletion_and_function_hardening.sql`  
 **Status:** **Remediated Locally & Validated in Regression Suite (Pending Remote Migration Approval)**
 

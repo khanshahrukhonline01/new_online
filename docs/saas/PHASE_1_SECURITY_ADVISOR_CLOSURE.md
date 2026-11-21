@@ -3,7 +3,7 @@
 
 **Project:** `khelgrid-dotcom/khelgrid-platform`  
 **Development Supabase Reference:** `hznsbxvovjxvmnchzzqt` (`https://hznsbxvovjxvmnchzzqt.supabase.co`)  
-**Repository Branch:** `feature/saas-phase-1-tenant-isolation`  
+**Repository Branch:** `feature/saas-phase-1-acceptance-remediation`  
 **Status:** **Audited & Documented (Pending Leaked Password Setting Verification in Dashboard)**
 
 ---

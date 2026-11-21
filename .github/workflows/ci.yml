@@ -171,6 +171,14 @@ jobs:
       - name: Verify KhelChronicle submission and editorial schema
         if: hashFiles('.github/scripts/khelchronicle-submission-schema-assertions.sql') != ''
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/khelchronicle-submission-schema-assertions.sql
+      - name: Apply Phase 1 Multi-Tenant Core Schema migration
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261121160000_phase1_multi_tenant_core_schema.sql
+      - name: Apply Phase 1 Security Remediation & Composite Keys migration
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql
+      - name: Apply Phase 1 FK Deletion Correction migration
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261121210000_phase1_fk_deletion_and_function_hardening.sql
+      - name: Verify Phase 1 Multi-Tenant RLS & Architectural Assertions
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-1-multi-tenant-rls-assertions.sql
       - name: Validate SQL migration safety
         shell: bash
         run: |
@@ -222,3 +230,56 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://hznsbxvovjxvmnchzzqt.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key
+
+  postgres-rls-integration:
+    name: Phase 1 Multi-Tenant PostgreSQL RLS Integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: khelgrid_rls_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d khelgrid_rls_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/khelgrid_rls_ci
+      VITE_SUPABASE_URL: https://example.invalid
+      VITE_SUPABASE_ANON_KEY: test-anon-key
+      RLS_MATRIX_OUTPUT_PATH: scripts/comprehensive_postgres_rls_matrix.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Bootstrap auth schema and roles in isolated PostgreSQL
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-1-init-auth.sql
+      - name: Apply Phase 1 Multi-Tenant Core Schema migration
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261121160000_phase1_multi_tenant_core_schema.sql
+      - name: Apply Phase 1 Security Remediation & Composite Keys migration
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261121200000_phase1_security_remediation_and_composite_keys.sql
+      - name: Apply Phase 1 FK Deletion Correction migration
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261121210000_phase1_fk_deletion_and_function_hardening.sql
+      - name: Verify Phase 1 Multi-Tenant RLS Assertions
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-1-multi-tenant-rls-assertions.sql
+      - run: npm install
+      - name: Run Phase 1 Native PostgreSQL RLS Integration Suite
+        run: npx vitest run src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts
+      - name: Publish RLS Test Results Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: postgres-rls-test-results
+          path: scripts/comprehensive_postgres_rls_matrix.json
