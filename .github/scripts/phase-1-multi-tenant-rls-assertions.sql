@@ -162,6 +162,30 @@ BEGIN
     RAISE EXCEPTION 'Phase 1 Gate O: tenants_member_select does not enforce is_tenant_member()';
   END IF;
 
+
+  -- 13. Verify projection trigger function is trigger-only and hardened.
+  IF has_function_privilege('anon', 'public.sync_tenant_public_directory()', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public.sync_tenant_public_directory()', 'EXECUTE') THEN
+    RAISE EXCEPTION 'Phase 1 Gate P: Client role can directly execute projection trigger function';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p
+    WHERE p.oid = 'public.sync_tenant_public_directory()'::regprocedure
+      AND p.proconfig @> ARRAY['search_path=pg_catalog, pg_temp']::text[]
+  ) THEN
+    RAISE EXCEPTION 'Phase 1 Gate Q: Projection trigger function search_path is not hardened';
+  END IF;
+
+  IF has_table_privilege('anon', 'public.tenant_public_directory', 'INSERT')
+     OR has_table_privilege('anon', 'public.tenant_public_directory', 'UPDATE')
+     OR has_table_privilege('anon', 'public.tenant_public_directory', 'DELETE')
+     OR has_table_privilege('authenticated', 'public.tenant_public_directory', 'INSERT')
+     OR has_table_privilege('authenticated', 'public.tenant_public_directory', 'UPDATE')
+     OR has_table_privilege('authenticated', 'public.tenant_public_directory', 'DELETE') THEN
+    RAISE EXCEPTION 'Phase 1 Gate R: Client role has direct write access to public directory projection';
+  END IF;
+
   RAISE NOTICE 'Phase 1 Multi-Tenant RLS & Architectural Assertions: ALL GATES PASSED.';
 END $$;
 
