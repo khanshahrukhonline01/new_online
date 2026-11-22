@@ -119,7 +119,7 @@ export const navigationModules: NavigationModule[] = [
 export const primaryNavigation = navigationModules.flatMap(section => section.items)
 
 /** Header actions are maintained separately from feature navigation. */
-export const headerNavigation = (navigationModules.find(section => section.id === 'your-space')?.items ?? []).filter(item => ['/', '/dashboard', '/saved'].includes(item.href))
+export const headerNavigation = (navigationModules.find(section => section.id === 'your-space')?.items ?? []).filter(item => ['/', '/workspace', '/dashboard', '/saved'].includes(item.href))
 
 export function getNavigationHref(item: NavigationItem): string {
   return item.href
