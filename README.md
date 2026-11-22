@@ -45,6 +45,9 @@ Use only the current Ready Vercel development deployment URL and append `/admin/
 A sports-industry campaign marketplace is documented as a product proposal. It connects eligible sports organisations and businesses with creators for brief-based, reviewed social content campaigns. The proposal covers advertiser and creator roles, campaign lifecycle, content submissions, analytics provenance, reward ledger controls, policy safeguards, and phased implementation. It is documentation only: no routes, database migrations, live payments, or payouts are enabled by this document.
 
 - [KhelGrid Sports Creator Campaign Marketplace — Product & Architecture Proposal](docs/product/KHELGRID_SPORTS_CREATOR_CAMPAIGN_MARKETPLACE.md)
+- [Marketplace Architecture & Security Review](docs/product/KHELGRID_SPORTS_CREATOR_CAMPAIGN_MARKETPLACE_ARCHITECTURE_SECURITY_REVIEW.md)
+
+**Review decision:** implementation is on hold pending canonical RBAC consolidation, organisation identity mapping, authentication verification, Admin Control Center/database security reconciliation, and a separately approved no-payment architecture. The review is read-only and does not assert current remote database state or passing tests.
 
 ## Architecture & Development Record
 
@@ -114,10 +117,9 @@ Implemented and verified production routes:
 
 Before release, run `npm run typecheck`, `npm run lint`, `npm run test`, and `npm run build`, then manually visit every registered route and verify internal navigation, browser back/forward behavior, mobile navigation, and not-found handling.
 
-
 ### Feature route page foundation
 
-The feature route component now renders route-specific information rather than one identical generic placeholder. Athlete tools, live sports, play, coaching, events, learning, community, account, organisation and support routes explain the planned scope, current service status and relevant next steps. About, Contact, Help, Trust Center and Partners provide basic informational content and contact links. Privacy, Terms and Cookies clearly state that their content is not yet a complete, reviewed policy and must be replaced before public launch.
+The feature route component now renders route-specific information rather than one identical generic placeholder. Athlete tools, live sports, play, coaching, events, learning, account, organisation and support routes explain the planned scope, current service status and relevant next steps. About, Contact, Help, Trust Center and Partners provide basic informational content and contact links. Privacy, Terms and Cookies clearly state that their content is not yet a complete, reviewed policy and must be replaced before public launch.
 
 This is still a page-content foundation, not a claim that the underlying features are implemented. Authentication, live sports feeds, account data, payments, booking confirmation, athlete verification, user-generated community content and other unavailable services remain disabled. Route tests cover the registered paths; a successful test run and deployed preview still need to be verified separately.
 
@@ -132,7 +134,6 @@ The footer links for IPR & Copyright, Cancellation, POSH, Editorial, Verificatio
 - `/correction-policy`
 
 These are explicitly marked as requiring review before launch. Their presence is not a claim that a formal legal, workplace, verification, editorial, refund, or correction workflow exists. Review the content with appropriate qualified advisers and align it with actual operating practices before relying on it publicly.
-
 
 ## Permanent sidebar architecture and layout contract
 
