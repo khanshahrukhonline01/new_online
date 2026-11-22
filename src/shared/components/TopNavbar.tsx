@@ -5,6 +5,7 @@ import NavbarSettingsMenu from './NavbarSettingsMenu'
 import { SiteIcon } from './SiteIcon'
 import {
   TOP_NAV_SUBMIT_ACTIONS,
+  TOP_NAV_WORKSPACE_LINKS,
 } from './topNavActions'
 
 export interface TopNavbarProps {
@@ -47,7 +48,7 @@ export default function TopNavbar({
   onOpenGoPro,
 }: TopNavbarProps) {
   const { t } = useTranslation(['common', 'navigation'])
-  const [submitMenuOpen, setSubmitMenuOpen] = useState(false)
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
   const submitWrapRef = useRef<HTMLDivElement>(null)
   const submitTriggerRef = useRef<HTMLButtonElement>(null)
   const userMenuWrapRef = useRef<HTMLDivElement>(null)
@@ -60,16 +61,16 @@ export default function TopNavbar({
   )
 
   useEffect(() => {
-    setSubmitMenuOpen(false)
+    setMoreMenuOpen(false)
   }, [path])
 
   useEffect(() => {
-    if (!submitMenuOpen && !userMenuOpen) return
+    if (!moreMenuOpen && !userMenuOpen) return
 
     function handleOutsideClick(event: globalThis.MouseEvent) {
       const target = event.target as Node
-      if (submitMenuOpen && submitWrapRef.current && !submitWrapRef.current.contains(target)) {
-        setSubmitMenuOpen(false)
+      if (moreMenuOpen && submitWrapRef.current && !submitWrapRef.current.contains(target)) {
+        setMoreMenuOpen(false)
       }
       if (userMenuOpen && userMenuWrapRef.current && !userMenuWrapRef.current.contains(target)) {
         onCloseUserMenu()
@@ -78,8 +79,8 @@ export default function TopNavbar({
 
     function handleKeyDown(event: globalThis.KeyboardEvent) {
       if (event.key !== 'Escape') return
-      if (submitMenuOpen) {
-        setSubmitMenuOpen(false)
+      if (moreMenuOpen) {
+        setMoreMenuOpen(false)
         submitTriggerRef.current?.focus()
       }
       if (userMenuOpen) {
@@ -94,7 +95,7 @@ export default function TopNavbar({
       document.removeEventListener('pointerdown', handleOutsideClick)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [submitMenuOpen, userMenuOpen, onCloseUserMenu])
+  }, [moreMenuOpen, userMenuOpen, onCloseUserMenu])
 
   return (
     <header className="site-header">
@@ -182,32 +183,63 @@ export default function TopNavbar({
             <button
               ref={submitTriggerRef}
               type="button"
-              className={`header-submit-trigger header-submit-more-trigger ${submitMenuOpen ? 'is-open' : ''}`}
-              aria-label="More ways to contribute to KhelGrid"
-              aria-expanded={submitMenuOpen}
+              className={`header-submit-trigger header-submit-more-trigger ${moreMenuOpen ? 'is-open' : ''}`}
+              aria-label="More KhelGrid features and workspaces"
+              aria-expanded={moreMenuOpen}
               aria-controls="header-submit-popover"
-              onClick={() => setSubmitMenuOpen(open => !open)}
-              title="More ways to contribute to KhelGrid"
+              onClick={() => setMoreMenuOpen(open => !open)}
+              title="More KhelGrid features and workspaces"
             >
               <SiteIcon name="plus" size={15} />
               <span className="header-submit-trigger-label">More</span>
               <SiteIcon
                 name="chevron-down"
                 size={14}
-                className={`header-submit-chevron ${submitMenuOpen ? 'is-rotated' : ''}`}
+                className={`header-submit-chevron ${moreMenuOpen ? 'is-rotated' : ''}`}
               />
             </button>
 
             <nav
               id="header-submit-popover"
-              className={`header-actions header-submit-popover ${submitMenuOpen ? 'is-open' : ''}`}
-              aria-label="More ways to contribute to KhelGrid"
-              aria-hidden={!submitMenuOpen}
-              hidden={!submitMenuOpen}
+              className={`header-actions header-submit-popover ${moreMenuOpen ? 'is-open' : ''}`}
+              aria-label="More KhelGrid features and workspaces"
+              aria-hidden={!moreMenuOpen}
+              hidden={!moreMenuOpen}
             >
               <div className="header-submit-popover-head">
-                <strong>More ways to contribute</strong>
-                <span>Free listing review and research submissions</span>
+                <strong>SaaS workspaces</strong>
+                <span>Access the tools for your organisation and team</span>
+              </div>
+              <div className="header-submit-popover-list">
+                {TOP_NAV_WORKSPACE_LINKS.map(link => {
+                  const active = path === link.href || path.startsWith(`${link.href}/`)
+                  return (
+                    <a
+                      key={link.id}
+                      className={`header-action-link${active ? ' is-active' : ''}`}
+                      href={link.href}
+                      aria-current={active ? 'page' : undefined}
+                      onClick={event => {
+                        setMoreMenuOpen(false)
+                        onNavigate(event, link.href)
+                      }}
+                      title={link.description}
+                    >
+                      <span className="header-action-icon-box" aria-hidden="true">
+                        <SiteIcon name={link.icon} size={16} />
+                      </span>
+                      <span className="header-action-copy">
+                        <span className="header-action-title">{link.label}</span>
+                        <small className="header-action-desc">{link.description}</small>
+                      </span>
+                      <SiteIcon name="arrow-up-right" size={14} className="header-action-arrow" />
+                    </a>
+                  )
+                })}
+              </div>
+              <div className="header-submit-popover-section">
+                <strong>Contribute to KhelGrid</strong>
+                <span>Submit listings, coaching profiles and research</span>
               </div>
               <div className="header-submit-popover-list">
                 {additionalSubmitActions.map(action => {
@@ -218,7 +250,7 @@ export default function TopNavbar({
                       className={action.className}
                       href={action.href}
                       onClick={event => {
-                        setSubmitMenuOpen(false)
+                        setMoreMenuOpen(false)
                         onNavigate(event, action.href)
                       }}
                       title={action.title}
@@ -231,16 +263,12 @@ export default function TopNavbar({
                         <span className="header-action-title">{label}</span>
                         <small className="header-action-desc">{action.description}</small>
                       </span>
-                      <SiteIcon
-                        name="arrow-up-right"
-                        size={14}
-                        className="header-action-arrow"
-                      />
+                      <SiteIcon name="arrow-up-right" size={14} className="header-action-arrow" />
                     </a>
                   )
                 })}
               </div>
-            </nav>
+            </nav>      </nav>
           </div>
 
           <span className="header-divider header-divider-utilities" aria-hidden="true" />
