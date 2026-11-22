@@ -259,3 +259,38 @@ Record actual results in the PR or release notes. Do not mark untested items as 
 - Sidebar V1 reference: `docs/sidebar-v1.md`
 
 **Maintenance rule:** This file is the V1 reference for future top-navigation work. If code and documentation disagree, inspect the live implementation, decide the intended behavior, update code and documentation together, and record the verification result.
+
+
+## 16. V1.1 navigation refinement (22 November 2026)
+
+The current development branch introduces a focused refinement without changing the overall KhelGrid brand system or application route model.
+
+### Updated desktop hierarchy
+
+- The menu toggle and official KhelGrid logo/wordmark remain in the left zone.
+- The global search shortcut remains in the center zone and opens the existing Spotlight search modal. The keyboard shortcut supports both Ctrl+K and Cmd+K; the visual hint now communicates both.
+- **List your venue** is a direct, high-visibility primary action.
+- **Submit a trial** is a direct, secondary action.
+- The More popover contains the remaining general listing, coach and KhelChronicle submission destinations; the existing destination paths and translation keys are retained.
+- Notifications and settings remain utility controls. The hardcoded sample unread count has been removed from the header; no fabricated notification count should be displayed.
+- Account and Go Pro actions retain their existing application callbacks and routes.
+
+### Updated responsive behavior
+
+- At compact desktop widths, primary submission actions collapse to icon controls with their title text retained for pointer users; their accessible names remain available from the anchor text and icon context.
+- At mobile widths (760 px and below), the header becomes a two-row layout: brand/menu and compact actions on the first row, full-width search on the second row.
+- At very narrow widths, primary action labels are visually suppressed while their icon controls and accessible action destinations remain available.
+- Popovers are viewport-constrained and scroll internally rather than extending beyond the viewport.
+
+### Interaction/accessibility refinements
+
+- The More popover is a semantic navigation region rather than claiming an ARIA application menu without implementing the full menu keyboard interaction pattern.
+- Closed popover content is removed from display and the tab order using the native hidden state; opening/closing remains exposed through `aria-expanded`.
+- Pointer-based outside-click handling is used consistently for mouse, touch and pen input.
+- Escape closes the More or account popover and restores focus to its trigger.
+- Header controls have consistent visible keyboard focus styling and reduced-motion-safe transitions.
+- The brand image is decorative inside the already-labelled home link, avoiding duplicate screen-reader naming.
+
+### Verification status
+
+This is a source-level implementation update. Do not interpret it as proof of a successful Vite build, browser test, screen-reader test, or live responsive rendering. Those checks must be run against the exact PR head SHA before merge or deployment. The existing V1 checklist remains applicable, with additional checks for the direct venue/trial links, More popover, 320 px width, 760/761 px boundary, touch outside-click, and Escape focus restoration.
