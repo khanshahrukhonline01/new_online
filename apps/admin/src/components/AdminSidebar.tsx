@@ -7,6 +7,7 @@ export type AdminWorkspaceTab =
   | 'analytics'
   | 'chronicle_desk'
   | 'fraud_disputes'
+  | 'creator_campaigns'
   | 'gate_desk'
   | 'turf_oversight'
   | 'academy_oversight'
@@ -66,6 +67,16 @@ export function AdminSidebar({
       badgeVariant: 'purple',
     },
     { id: 'fraud_disputes', label: 'Trust & Dispute Claims', section: 'RESEARCH & FRAUD', icon: 'flag', badge: 'Safety' },
+
+    // CREATOR CAMPAIGN MARKETPLACE
+    {
+      id: 'creator_campaigns',
+      label: 'Sports Creator Campaigns',
+      section: 'CREATOR MARKETPLACE',
+      icon: 'award',
+      badge: 'Moderation',
+      badgeVariant: 'purple',
+    },
 
     // ON-GROUND & SAAS
     { id: 'gate_desk', label: 'Universal Gate Check-In', section: 'FACILITY & SAAS', icon: 'shield-check', badge: 'Ground' },

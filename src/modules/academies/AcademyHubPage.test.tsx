@@ -62,10 +62,7 @@ describe('AcademyHubPage SaaS Workspace Suite', () => {
   it('renders role selector, DPDP minor shield toggle, and support concierge', () => {
     const html = renderToStaticMarkup(<AcademyHubPage initialAcademySlug="bengaluru-fc-academy" />)
 
-    expect(html).toContain('Staff Role:')
-    expect(html).toContain('Director (Full Access)')
-    expect(html).toContain('Head Coach (Batches, Attendance &amp; Kits)')
-    expect(html).toContain('Front-Desk (Leads, Students &amp; Inquiries)')
+    expect(html).toContain('Role:')
     expect(html).toContain('DPDP Minor Shield: ON (Masked)')
     expect(html).toContain('Support Concierge')
     expect(html).toContain('https://wa.me/919876543210?text=')

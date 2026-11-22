@@ -8,6 +8,7 @@ import { AdminSidebar, type AdminWorkspaceTab } from './components/AdminSidebar'
 import { AdminHeader, type AdminThemeMode } from './components/AdminHeader'
 import { AdminCommandPalette, type CommandPaletteAction } from './components/AdminCommandPalette'
 import { AdminGroundOversightView } from './components/AdminGroundOversightView'
+import { AdminCampaignMarketplaceDesk } from './components/AdminCampaignMarketplaceDesk'
 import {
   getAdminModerationQueue,
   clearCatalogueCache,
@@ -162,6 +163,14 @@ export function AdminApp() {
       onSelect: () => setActiveWorkspace('chronicle_desk'),
     },
     {
+      id: 'cmd-creator-campaigns',
+      title: 'Sports Creator Campaigns & Deliverable Desk',
+      section: 'Creator Economy',
+      icon: 'award',
+      badge: 'Moderation',
+      onSelect: () => setActiveWorkspace('creator_campaigns'),
+    },
+    {
       id: 'cmd-gate',
       title: 'Universal Gate Check-In Audit Logs',
       section: 'Ground & SaaS',
@@ -243,6 +252,7 @@ export function AdminApp() {
     analytics: { title: 'Operations & KPI Analytics', section: 'Intelligence' },
     chronicle_desk: { title: 'Chronicle Peer-Review Desk', section: 'Research Governance' },
     fraud_disputes: { title: 'Trust & Dispute Claims', section: 'Safety & Integrity' },
+    creator_campaigns: { title: 'Sports Creator Campaign Desk', section: 'Creator Economy' },
     gate_desk: { title: 'Universal Gate Check-In Logs', section: 'Ground Access' },
     turf_oversight: { title: 'Turf Court Slot Engine', section: 'Facility Operations' },
     academy_oversight: { title: 'Academy SaaS Admissions Hub', section: 'Grassroots SaaS' },
@@ -298,6 +308,8 @@ export function AdminApp() {
               <AdminModerationPage />
             ) : activeWorkspace === 'analytics' ? (
               <AdminAnalyticsDashboard />
+            ) : activeWorkspace === 'creator_campaigns' ? (
+              <AdminCampaignMarketplaceDesk />
             ) : activeWorkspace === 'gate_desk' ? (
               <AdminGroundOversightView initialDesk="gate" />
             ) : activeWorkspace === 'turf_oversight' ? (
