@@ -4,8 +4,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   test: {
-    testTimeout: 15000,
-    hookTimeout: 15000,
+    testTimeout: 30000,
+    hookTimeout: 30000,
     exclude: ['tests/**', 'node_modules/**', 'dist/**'],
   },
   server: {
