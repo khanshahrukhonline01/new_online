@@ -7,7 +7,7 @@
 ## Navigation placement
 
 - Workspace is a primary item in the existing `Your Space` sidebar module, shared by desktop sidebar, collapsed rail, and mobile drawer through the existing navigation registry.
-- The desktop top navigation uses the label **Workspace** in place of the former **SaaS** label for the organization entry point. It links to `/workspace`.
+- The desktop top navigation uses **Organizations** as the public organization entry point instead of the former **SaaS** label. Workspace itself remains in the sidebar and authenticated account menu, avoiding duplicate primary navigation.
 - Guests see a compact account icon at the top right. Its accessible menu offers **Sign in** and **Create account**, which open the existing authentication modal.
 - Signed-in users retain the existing profile/account dropdown, with a new Workspace shortcut. Existing dashboard, profile, saved items, settings, role-specific links and sign-out entries remain.
 
