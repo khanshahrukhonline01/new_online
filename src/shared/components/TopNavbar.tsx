@@ -88,7 +88,7 @@ export default function TopNavbar({
       }
     }
 
-    document.addEventListener('mousedown', handleOutsideClick)
+    document.addEventListener('pointerdown', handleOutsideClick)
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('pointerdown', handleOutsideClick)
@@ -141,14 +141,14 @@ export default function TopNavbar({
             type="button"
             onClick={onOpenSearch}
             aria-label={t('searchCatalogueAria', 'Search KhelGrid catalogue')}
-            title="Search KhelGrid (Ctrl+K)"
+            title="Search KhelGrid (Ctrl or ⌘ + K)"
           >
             <SiteIcon name="search" size={17} />
             <span className="header-search-placeholder">
               {t('searchKhelgrid', 'Search KhelGrid')}…
             </span>
             <kbd className="header-search-kbd" aria-hidden="true">
-              ⌘K
+              Ctrl K
             </kbd>
           </button>
         </div>
