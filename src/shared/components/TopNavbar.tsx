@@ -96,9 +96,6 @@ export default function TopNavbar({
     }
   }, [submitMenuOpen, userMenuOpen, onCloseUserMenu])
 
-  const isSubmitRouteActive =
-    path === '/submit-listing' || path === '/khelchronicle/submit'
-
   return (
     <header className="site-header">
       <div className="site-header-inner">
@@ -148,7 +145,7 @@ export default function TopNavbar({
               {t('searchKhelgrid', 'Search KhelGrid')}…
             </span>
             <kbd className="header-search-kbd" aria-hidden="true">
-              Ctrl K
+              ⌘ / Ctrl K
             </kbd>
           </button>
         </div>
