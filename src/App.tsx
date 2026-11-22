@@ -113,7 +113,6 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const [unreadNotifCount, setUnreadNotifCount] = useState(3)
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [consentModalOpen, setConsentModalOpen] = useState(false)
   const [consentInitialTab, setConsentInitialTab] = useState<'sports_pass' | 'rules_privacy'>('sports_pass')
@@ -391,7 +390,6 @@ export default function App() {
       onNavigate={navigate}
       onOpenSearch={() => setSearchModalOpen(true)}
       onOpenNotifications={() => setNotificationsOpen(true)}
-      unreadNotifCount={unreadNotifCount}
       onOpenFeedback={() => setFeedbackModalOpen(true)}
       authUser={authUser}
       userMenuOpen={userMenuOpen}
