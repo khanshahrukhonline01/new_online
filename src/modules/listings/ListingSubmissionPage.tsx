@@ -428,17 +428,17 @@ export default function ListingSubmissionPage({ defaultTab = 'submit', initialTr
             <span className="contributor-category-icon"><SiteIcon name="user-round" size={22} /></span><span className="contributor-category-title">Coaches</span><span className="contributor-category-description">Coaches, trainers and verified professional profiles.</span><span className="contributor-category-link">Join as a coach <SiteIcon name="arrow-up-right" size={15} /></span>
           </button>
           <button type="button" className={kind === 'academy' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('academy'); setActiveTab('submit'); document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>
-            <span className="contributor-category-icon"><SiteIcon name="building-2" size={22} /></span><span className="contributor-category-title">Sports Academies</span><span className="contributor-category-description">Training centres, programmes and development pathways.</span><span className="contributor-category-link">List an academy <SiteIcon name="arrow-up-right" size={15} /></span>
+            <span className="contributor-category-icon"><SiteIcon name="building" size={22} /></span><span className="contributor-category-title">Sports Academies</span><span className="contributor-category-description">Training centres, programmes and development pathways.</span><span className="contributor-category-link">List an academy <SiteIcon name="arrow-up-right" size={15} /></span>
           </button>
           <button type="button" className={kind === 'event' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('event'); setActiveTab('submit'); document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>
-            <span className="contributor-category-icon"><SiteIcon name="calendar-days" size={22} /></span><span className="contributor-category-title">Events &amp; Competitions</span><span className="contributor-category-description">Tournaments, meets, leagues and sports events.</span><span className="contributor-category-link">Submit an event <SiteIcon name="arrow-up-right" size={15} /></span>
+            <span className="contributor-category-icon"><SiteIcon name="calendar" size={22} /></span><span className="contributor-category-title">Events &amp; Competitions</span><span className="contributor-category-description">Tournaments, meets, leagues and sports events.</span><span className="contributor-category-link">Submit an event <SiteIcon name="arrow-up-right" size={15} /></span>
           </button>
           <button type="button" className={kind === 'pickup_game' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('pickup_game'); setActiveTab('submit'); document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>
             <span className="contributor-category-icon"><SiteIcon name="users" size={22} /></span><span className="contributor-category-title">Community &amp; Games</span><span className="contributor-category-description">Local pickup games and community sports activities.</span><span className="contributor-category-link">Share a community game <SiteIcon name="arrow-up-right" size={15} /></span>
           </button>
         </div>
         <button type="button" className="contributor-sport-suggestion" onClick={() => { setKind('sport'); setActiveTab('submit'); document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>
-          <SiteIcon name="plus-circle" size={17} /> Suggest a sport not yet covered <SiteIcon name="arrow-right" size={15} />
+          <SiteIcon name="plus" size={17} /> Suggest a sport not yet covered <SiteIcon name="arrow-right" size={15} />
         </button>
       </section>
 
