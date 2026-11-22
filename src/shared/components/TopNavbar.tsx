@@ -2,10 +2,10 @@ import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 're
 import { useTranslation } from 'react-i18next'
 import type { AuthUserProfile } from '../../integrations/supabase/auth-client'
 import NavbarSettingsMenu from './NavbarSettingsMenu'
+import { navigationModules } from '../navigation/navigationRegistry'
 import { SiteIcon } from './SiteIcon'
 import {
   TOP_NAV_SUBMIT_ACTIONS,
-  TOP_NAV_WORKSPACE_LINKS,
 } from './topNavActions'
 
 export interface TopNavbarProps {
@@ -207,35 +207,54 @@ export default function TopNavbar({
               hidden={!moreMenuOpen}
             >
               <div className="header-submit-popover-head">
-                <strong>SaaS workspaces</strong>
-                <span>Access the tools for your organisation and team</span>
+                <strong>All KhelGrid actions</strong>
+                <span>Explore, manage, create and access every platform area</span>
               </div>
-              <div className="header-submit-popover-list">
-                {TOP_NAV_WORKSPACE_LINKS.map(link => {
-                  const active = path === link.href || path.startsWith(`${link.href}/`)
-                  return (
-                    <a
-                      key={link.id}
-                      className={`header-action-link${active ? ' is-active' : ''}`}
-                      href={link.href}
-                      aria-current={active ? 'page' : undefined}
-                      onClick={event => {
-                        setMoreMenuOpen(false)
-                        onNavigate(event, link.href)
-                      }}
-                      title={link.description}
-                    >
-                      <span className="header-action-icon-box" aria-hidden="true">
-                        <SiteIcon name={link.icon} size={16} />
-                      </span>
-                      <span className="header-action-copy">
-                        <span className="header-action-title">{link.label}</span>
-                        <small className="header-action-desc">{link.description}</small>
-                      </span>
-                      <SiteIcon name="arrow-up-right" size={14} className="header-action-arrow" />
-                    </a>
-                  )
-                })}
+              <div className="header-submit-popover-modules">
+                {navigationModules.map(section => (
+                  <section className="header-submit-popover-module" key={section.id} aria-label={section.label}>
+                    <div className="header-submit-popover-module-title">
+                      <SiteIcon name={section.icon} size={14} />
+                      <strong>{section.label}</strong>
+                    </div>
+                    <div className="header-submit-popover-list">
+                      {section.items.map(item => {
+                        const active = path === item.href || (item.href !== '/' && path.startsWith(`${item.href}/`))
+                        const label = t(item.id, item.label)
+                        if (!item.available) {
+                          return (
+                            <span key={item.id} className="header-action-link is-disabled" aria-disabled="true" title={`${label} — Coming soon`}>
+                              <span className="header-action-icon-box" aria-hidden="true"><SiteIcon name={item.icon} size={16} /></span>
+                              <span className="header-action-copy">
+                                <span className="header-action-title">{label}</span>
+                                <small className="header-action-desc">Coming soon</small>
+                              </span>
+                            </span>
+                          )
+                        }
+                        return (
+                          <a
+                            key={item.id}
+                            className={`header-action-link${active ? ' is-active' : ''}`}
+                            href={item.href}
+                            aria-current={active ? 'page' : undefined}
+                            onClick={event => {
+                              setMoreMenuOpen(false)
+                              onNavigate(event, item.href)
+                            }}
+                            title={label}
+                          >
+                            <span className="header-action-icon-box" aria-hidden="true"><SiteIcon name={item.icon} size={16} /></span>
+                            <span className="header-action-copy">
+                              <span className="header-action-title">{label}</span>
+                            </span>
+                            <SiteIcon name="arrow-up-right" size={14} className="header-action-arrow" />
+                          </a>
+                        )
+                      })}
+                    </div>
+                  </section>
+                ))}
               </div>
               <div className="header-submit-popover-section">
                 <strong>Contribute to KhelGrid</strong>
@@ -268,7 +287,7 @@ export default function TopNavbar({
                   )
                 })}
               </div>
-            </nav>      </nav>
+            </nav>
           </div>
 
           <span className="header-divider header-divider-utilities" aria-hidden="true" />
