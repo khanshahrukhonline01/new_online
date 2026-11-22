@@ -281,7 +281,18 @@ export default function App() {
     case 'khelchronicle-author': page = <KhelChronicleAuthorPage authorSlug={match.author} onNavigate={navigate} />; break
     case 'khelchronicle-paper': page = <KhelChroniclePaperPage slug={match.slug} onNavigate={navigate} />; break
     case 'feature':
-      if (match.canonicalPath === '/dashboard') {
+      if (match.canonicalPath === '/workspace') {
+        page = (
+          <WorkspacePage
+            authUser={authUser}
+            onOpenAuth={tab => {
+              setAuthModalTab(tab)
+              setAuthModalOpen(true)
+            }}
+            onNavigate={navigate}
+          />
+        )
+      } else if (match.canonicalPath === '/dashboard') {
         page = (
           <UserDashboardPage
             onNavigate={navigate}
@@ -398,6 +409,10 @@ export default function App() {
       onCloseUserMenu={() => setUserMenuOpen(false)}
       onOpenLogin={() => {
         setAuthModalTab('login')
+        setAuthModalOpen(true)
+      }}
+      onOpenSignup={() => {
+        setAuthModalTab('signup')
         setAuthModalOpen(true)
       }}
       onSignOut={() => {
