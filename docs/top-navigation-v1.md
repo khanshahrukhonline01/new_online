@@ -43,6 +43,7 @@ The header currently contains these elements in order:
 2. **KhelGrid brand** — logo and wordmark, links to the home page.
 3. **Global search form** — searches sports, trials, venues, athletes, and the catalogue.
 4. **Primary header actions** — “List your venue” and “Submit a trial.”
+5. **All KhelGrid actions** — a scrollable, grouped action directory backed by the canonical navigation registry; available routes navigate, while unavailable routes remain visible and disabled.
 5. **More** — grouped SaaS workspace destinations first, followed by secondary contribution actions.
 5. **Notifications** — currently disabled and labeled “coming soon.”
 6. **Settings help** — currently links to a KhelGrid settings-help email.
@@ -273,15 +274,15 @@ The current development branch introduces a focused refinement without changing 
 - The global search shortcut remains in the center zone and opens the existing Spotlight search modal. The keyboard shortcut supports both Ctrl+K and Cmd+K; the visual hint now communicates both.
 - **List your venue** is a direct, high-visibility primary action.
 - **Submit a trial** is a direct, secondary action.
-- The More popover contains the remaining general listing, coach and KhelChronicle submission destinations; the existing destination paths and translation keys are retained.
+- The More popover is the **All KhelGrid actions** directory. It renders the canonical navigation registry as grouped sections (Your Space, Discover, Play & Match Center, Athlete & Scouting Tools, Partner & Coaching Suite, Learn & Community, and KhelGrid Network), then keeps secondary listing, coach and KhelChronicle submissions in a separate contribution group. Existing unavailable destinations remain visible but non-clickable with a Coming soon label.
 - Notifications and settings remain utility controls. The hardcoded sample unread count has been removed from the header; no fabricated notification count should be displayed.
 - Account and Go Pro actions retain their existing application callbacks and routes.
 
 ### Updated responsive behavior
 
 - At compact desktop widths, primary submission actions collapse to icon controls with their title text retained for pointer users; their accessible names remain available from the anchor text and icon context.
-- At mobile widths (760 px and below), the header becomes a two-row layout: brand/menu and compact actions on the first row, full-width search on the second row.
-- At very narrow widths, primary action labels are visually suppressed while their icon controls and accessible action destinations remain available.
+- The header stays on one horizontal line at every viewport width. On desktop the five primary product areas are visible between the brand and utility actions; at compact widths those links move into the comprehensive More directory, and search becomes an icon-only action. The header never wraps into a second row.
+- At very narrow widths, primary action labels are visually suppressed while their icon controls and accessible action destinations remain available. The header remains a single row with horizontal overflow prevented.
 - Popovers are viewport-constrained and scroll internally rather than extending beyond the viewport.
 
 ### Interaction/accessibility refinements
