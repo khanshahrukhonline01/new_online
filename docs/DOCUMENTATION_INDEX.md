@@ -57,3 +57,14 @@
 - [KhelChronicle Open Science & Research Policy](khelchronicle/KHELCHRONICLE_OPEN_SCIENCE_POLICY.md) — comprehensive policy covering Diamond Open Access (CC BY 4.0), ICMR / Helsinki participant ethics, minor athlete consent, FAIR data/code transparency, COPE peer discourse conduct, Crossref DOIs, and retraction/withdrawal standards.
 - [KhelChronicle Author Submission Guidelines](khelchronicle/KHELCHRONICLE_AUTHOR_SUBMISSION_GUIDELINES.md) — complete manuscript formatting, structured abstract, supplementary dataset formats, Open Science Badges, and journal transition workflows.
 - [KhelChronicle Editorial Moderation & Peer Review SOP](khelchronicle/KHELCHRONICLE_MODERATION_AND_PEER_REVIEW_SOP.md) — standard operating procedure for two-tier pre-moderation screening, ethical clearance verification, author identification, and community peer review moderation.
+
+## Contributor Centre — List on KhelGrid
+
+- [Contributor Centre overview](contributor-centre/README.md) — module purpose, source-reviewed baseline, category scope and contributor journey.
+- [Contributor Centre architecture](contributor-centre/architecture.md) — frontend/backend boundaries, current intake integration, category mapping, routes and data ownership.
+- [Contributor submission workflows](contributor-centre/submission-workflows.md) — existing intake types, evidence expectations, status vocabulary, tracking and corrections.
+- [Contributor security and moderation](contributor-centre/security-and-moderation.md) — privacy, RLS/RPC boundaries, evidence handling, moderator responsibilities and acceptance tests.
+- [Contributor Centre implementation roadmap](contributor-centre/implementation-roadmap.md) — phased delivery plan, dependencies, acceptance criteria and separate KhelChronicle track.
+
+These documents are a repository source-review and target architecture baseline. They are not evidence of deployed runtime behavior, remote database migration state, or production readiness.
+
