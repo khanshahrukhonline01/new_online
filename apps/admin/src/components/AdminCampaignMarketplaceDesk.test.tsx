@@ -52,6 +52,7 @@ describe('AdminCampaignMarketplaceDesk Component & Moderation Views', () => {
     // Sub-desk navigation pills
     expect(html).toContain('Campaign Moderation')
     expect(html).toContain('Deliverable Verification')
+    expect(html).toContain('Disputes')
     expect(html).toContain('Creator Profiles')
     expect(html).toContain('Reward Ledger &amp; Audit Trail')
 

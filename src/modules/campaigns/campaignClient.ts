@@ -205,10 +205,63 @@ export interface CampaignAuditEvent {
   campaignId: string
   actor: string
   action: string
-  entityType: 'campaign' | 'application' | 'deliverable' | 'reward'
+  entityType: 'campaign' | 'application' | 'deliverable' | 'reward' | 'dispute'
   entityId: string
   reason?: string
   timestamp: string
+}
+
+export interface CampaignDispute {
+  id: string
+  campaignId: string
+  submissionId: string
+  campaignTitle: string
+  creatorId: string
+  creatorName: string
+  advertiserName: string
+  raisedBy: 'creator' | 'advertiser'
+  reason: string
+  statement: string
+  status: 'open' | 'under_review' | 'resolved'
+  resolution?: 'creator_favored' | 'advertiser_favored' | 'split'
+  resolutionNotes?: string
+  resolvedBy?: string
+  resolvedAt?: string
+  createdAt: string
+}
+
+export interface PolicyScanResult {
+  isCompliant: boolean
+  flaggedTerms: string[]
+  hasMandatoryDisclosureNotice: boolean
+  score: number // 0 - 100
+  recommendations: string[]
+}
+
+export interface UrlValidationResult {
+  valid: boolean
+  platform: SocialPlatform | 'unknown'
+  canonicalUrl: string
+  domain: string
+  error?: string
+}
+
+export interface CampaignBudgetBreakdown {
+  campaignId: string
+  totalBudgetPaise: number
+  committedPaise: number
+  approvedAndPaidPaise: number
+  availableReservePaise: number
+  activeAssignmentsCount: number
+  completedDeliverablesCount: number
+}
+
+export interface CreatorEarningsSummary {
+  clearedPaise: number
+  pendingReviewPaise: number
+  disputedPaise: number
+  lifetimeEarnedPaise: number
+  completedDeliverablesCount: number
 }
 
 // STORAGE KEYS
@@ -219,6 +272,7 @@ const STORAGE_KEYS = {
   CREATORS: 'khelgrid_creator_profiles',
   REWARD_LEDGER: 'khelgrid_creator_reward_ledger',
   AUDIT_LOGS: 'khelgrid_creator_audit_logs',
+  DISPUTES: 'khelgrid_creator_disputes',
 }
 
 // INITIAL SEED DATA: Realistic Sports Creator Campaigns across India
@@ -408,6 +462,43 @@ export const INITIAL_REWARD_LEDGER: RewardLedgerEntry[] = [
   },
 ]
 
+export const INITIAL_SUBMISSIONS: DeliverableSubmission[] = [
+  {
+    id: 'sub-sample-1',
+    campaignId: 'cmp-dca-summer-2026',
+    campaignTitle: 'Delhi Cricket Academy — High Performance Summer Trials 2026',
+    creatorId: 'creator-rohan-cricket',
+    creatorName: 'Rohan Sharma',
+    deliverableSpecId: 'deliv-dca-1',
+    deliverableType: 'reel_short',
+    canonicalPostUrl: 'https://youtube.com/shorts/delhi-cricket-trial',
+    platform: 'youtube',
+    evidenceScreenshotUrl: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e',
+    disclosureVerified: true,
+    status: 'submitted',
+    reviewNotes: 'Pending advertiser review',
+    rewardAmountPaise: 400000,
+    submittedAt: '2026-11-22T10:00:00Z',
+  },
+]
+
+export const INITIAL_DISPUTES: CampaignDispute[] = [
+  {
+    id: 'disp-sample-1',
+    campaignId: 'cmp-dca-summer-2026',
+    submissionId: 'sub-sample-1',
+    campaignTitle: 'Delhi Cricket Academy — High Performance Summer Trials 2026',
+    creatorId: 'creator-rohan-cricket',
+    creatorName: 'Rohan Sharma',
+    advertiserName: 'Delhi Cricket Academy',
+    raisedBy: 'creator',
+    reason: 'Rejected without specific revision guidance',
+    statement: 'I included all three hashtags and the mandatory #Ad disclosure in the caption, but deliverable was rejected without clear feedback.',
+    status: 'open',
+    createdAt: '2026-11-22T14:30:00Z',
+  },
+]
+
 // In-memory fallback cache to guarantee safe operation across SSR, Node/Vitest, and browser
 const memoryStorage = new Map<string, string>()
 
@@ -507,6 +598,139 @@ export function validateCanonicalSocialUrl(url: string, platform: SocialPlatform
     return true
   } catch {
     return false
+  }
+}
+
+/**
+ * Enhanced Deliverable URL Validator with canonical domain detection & format check
+ */
+export function validateDeliverableUrl(url: string, expectedPlatform?: SocialPlatform): UrlValidationResult {
+  if (!url || typeof url !== 'string') {
+    return { valid: false, platform: 'unknown', canonicalUrl: '', domain: '', error: 'URL cannot be empty' }
+  }
+
+  const trimmed = url.trim()
+  try {
+    const parsed = new URL(trimmed)
+    if (parsed.protocol !== 'https:') {
+      return { valid: false, platform: 'unknown', canonicalUrl: trimmed, domain: parsed.hostname, error: 'URL must use secure https:// protocol' }
+    }
+
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, '')
+    let detectedPlatform: SocialPlatform | 'unknown' = 'unknown'
+
+    if (host === 'youtube.com' || host === 'youtu.be') {
+      detectedPlatform = 'youtube'
+    } else if (host === 'instagram.com') {
+      detectedPlatform = 'instagram'
+    } else if (host === 'x.com' || host === 'twitter.com') {
+      detectedPlatform = 'x_twitter'
+    } else if (host === 'linkedin.com') {
+      detectedPlatform = 'linkedin'
+    } else if (host === 'facebook.com') {
+      detectedPlatform = 'facebook'
+    }
+
+    if (detectedPlatform === 'unknown') {
+      return { valid: false, platform: 'unknown', canonicalUrl: trimmed, domain: host, error: 'Domain is not a supported social platform (Instagram, YouTube, X/Twitter, LinkedIn, Facebook)' }
+    }
+
+    if (expectedPlatform && detectedPlatform !== expectedPlatform) {
+      return {
+        valid: false,
+        platform: detectedPlatform,
+        canonicalUrl: trimmed,
+        domain: host,
+        error: `Expected a ${expectedPlatform} URL, but received link from ${detectedPlatform}`,
+      }
+    }
+
+    // Path check for Instagram & YouTube
+    if (detectedPlatform === 'instagram' && !parsed.pathname.includes('/reel/') && !parsed.pathname.includes('/p/')) {
+      return {
+        valid: false,
+        platform: detectedPlatform,
+        canonicalUrl: trimmed,
+        domain: host,
+        error: 'Instagram link should point directly to a post or reel (/reel/... or /p/...)',
+      }
+    }
+
+    if (detectedPlatform === 'youtube' && !parsed.pathname.includes('/shorts/') && !parsed.searchParams.has('v') && !parsed.pathname.includes('/watch')) {
+      return {
+        valid: false,
+        platform: detectedPlatform,
+        canonicalUrl: trimmed,
+        domain: host,
+        error: 'YouTube link should point directly to a video or Short (/shorts/... or /watch?v=...)',
+      }
+    }
+
+    return {
+      valid: true,
+      platform: detectedPlatform,
+      canonicalUrl: trimmed,
+      domain: host,
+    }
+  } catch {
+    return { valid: false, platform: 'unknown', canonicalUrl: trimmed, domain: '', error: 'Malformed URL. Please enter a valid https:// web address.' }
+  }
+}
+
+/**
+ * Scans campaign brief text or description for regulatory/policy compliance (prohibited claims, mandatory disclosures)
+ */
+export function scanCampaignPolicyCompliance(text: string): PolicyScanResult {
+  if (!text) {
+    return {
+      isCompliant: false,
+      flaggedTerms: [],
+      hasMandatoryDisclosureNotice: false,
+      score: 50,
+      recommendations: ['Provide campaign description and key deliverables.'],
+    }
+  }
+
+  const lower = text.toLowerCase()
+  const PROHIBITED_PATTERNS = [
+    { term: '100% selection guarantee', reason: 'Guaranteed selections or trials violate KhelGrid Fair Selection policy' },
+    { term: 'sure shot admission', reason: 'Guaranteed admission claims are prohibited' },
+    { term: 'banned supplements', reason: 'Supplements violating anti-doping regulations are prohibited' },
+    { term: 'steroid', reason: 'Performance-enhancing drugs are strictly banned' },
+    { term: 'buy followers', reason: 'Artificial engagement schemes are strictly prohibited' },
+    { term: 'buy views', reason: 'Purchasing views violates platform anti-fraud standards' },
+    { term: 'pay per view', reason: 'Pay-per-view artificial traffic schemes are prohibited' },
+    { term: 'cash prize gamble', reason: 'Unlicensed gambling or speculative wagering claims are prohibited' },
+  ]
+
+  const flagged: string[] = []
+  const recommendations: string[] = []
+
+  for (const item of PROHIBITED_PATTERNS) {
+    if (lower.includes(item.term)) {
+      flagged.push(item.term)
+      recommendations.push(item.reason)
+    }
+  }
+
+  const hasMandatoryDisclosureNotice =
+    lower.includes('#ad') ||
+    lower.includes('#sponsored') ||
+    lower.includes('paid partnership') ||
+    lower.includes('disclosure')
+
+  if (!hasMandatoryDisclosureNotice) {
+    recommendations.push('Add explicit #Ad or #Sponsored disclosure instructions in deliverable guidelines.')
+  }
+
+  const score = Math.max(0, 100 - (flagged.length * 35) - (hasMandatoryDisclosureNotice ? 0 : 20))
+
+  return {
+    isCompliant: flagged.length === 0 && hasMandatoryDisclosureNotice,
+    flaggedTerms: flagged,
+    hasMandatoryDisclosureNotice,
+    score,
+    recommendations,
   }
 }
 
@@ -698,7 +922,7 @@ export function updateApplicationStatus(
 // -------------------------------------------------------------------------
 
 export function getDeliverableSubmissions(filter?: { campaignId?: string; creatorId?: string }): DeliverableSubmission[] {
-  const all = loadFromStorage<DeliverableSubmission[]>(STORAGE_KEYS.SUBMISSIONS, [])
+  const all = loadFromStorage<DeliverableSubmission[]>(STORAGE_KEYS.SUBMISSIONS, INITIAL_SUBMISSIONS)
   return all.filter(s => {
     if (filter?.campaignId && s.campaignId !== filter.campaignId) return false
     if (filter?.creatorId && s.creatorId !== filter.creatorId) return false
@@ -736,7 +960,7 @@ export function submitDeliverable(params: {
   const campaign = getCampaignById(params.campaignId)
   if (!campaign) return { success: false, message: 'Campaign not found' }
 
-  const existing = loadFromStorage<DeliverableSubmission[]>(STORAGE_KEYS.SUBMISSIONS, [])
+  const existing = loadFromStorage<DeliverableSubmission[]>(STORAGE_KEYS.SUBMISSIONS, INITIAL_SUBMISSIONS)
 
   const newSub: DeliverableSubmission = {
     id: `sub-${Date.now()}`,
@@ -775,7 +999,7 @@ export function reviewDeliverable(
   reviewerName = 'Campaign Owner',
   reviewNotes?: string
 ): boolean {
-  const existing = loadFromStorage<DeliverableSubmission[]>(STORAGE_KEYS.SUBMISSIONS, [])
+  const existing = loadFromStorage<DeliverableSubmission[]>(STORAGE_KEYS.SUBMISSIONS, INITIAL_SUBMISSIONS)
   const index = existing.findIndex(s => s.id === submissionId)
   if (index === -1) return false
 
@@ -849,6 +1073,263 @@ export function appendRewardLedgerEntry(params: Omit<RewardLedgerEntry, 'id' | '
   })
 
   return newEntry
+}
+
+// -------------------------------------------------------------------------
+// CAMPAIGN DISPUTE APIS
+// -------------------------------------------------------------------------
+
+export function getCampaignDisputes(filter?: { campaignId?: string; creatorId?: string }): CampaignDispute[] {
+  const all = loadFromStorage<CampaignDispute[]>(STORAGE_KEYS.DISPUTES, INITIAL_DISPUTES)
+  return all.filter(d => {
+    if (filter?.campaignId && d.campaignId !== filter.campaignId) return false
+    if (filter?.creatorId && d.creatorId !== filter.creatorId) return false
+    return true
+  })
+}
+
+export function fileCampaignDispute(params: {
+  campaignId: string
+  submissionId: string
+  raisedBy: 'creator' | 'advertiser'
+  reason: string
+  statement: string
+  actorName: string
+}): { success: boolean; dispute?: CampaignDispute; message: string } {
+  if (!params.reason.trim() || !params.statement.trim()) {
+    return { success: false, message: 'Dispute reason and detailed statement are required.' }
+  }
+
+  const campaign = getCampaignById(params.campaignId)
+  if (!campaign) return { success: false, message: 'Campaign not found.' }
+
+  const submissions = loadFromStorage<DeliverableSubmission[]>(STORAGE_KEYS.SUBMISSIONS, INITIAL_SUBMISSIONS)
+  const subIndex = submissions.findIndex(s => s.id === params.submissionId)
+  if (subIndex === -1) return { success: false, message: 'Deliverable submission not found.' }
+
+  const submission = submissions[subIndex]
+  const updatedSubmissions = [...submissions]
+  updatedSubmissions[subIndex] = {
+    ...submission,
+    status: 'disputed',
+  }
+  saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions)
+
+  const existingDisputes = loadFromStorage<CampaignDispute[]>(STORAGE_KEYS.DISPUTES, INITIAL_DISPUTES)
+  const newDispute: CampaignDispute = {
+    id: `disp-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    campaignId: params.campaignId,
+    submissionId: params.submissionId,
+    campaignTitle: campaign.title,
+    creatorId: submission.creatorId,
+    creatorName: submission.creatorName,
+    advertiserName: campaign.advertiserName,
+    raisedBy: params.raisedBy,
+    reason: params.reason.trim(),
+    statement: params.statement.trim(),
+    status: 'open',
+    createdAt: new Date().toISOString(),
+  }
+
+  saveToStorage(STORAGE_KEYS.DISPUTES, [newDispute, ...existingDisputes])
+
+  recordCampaignAuditEvent({
+    campaignId: params.campaignId,
+    actor: params.actorName,
+    action: 'dispute_filed',
+    entityType: 'dispute',
+    entityId: newDispute.id,
+    reason: `Dispute filed by ${params.raisedBy}: ${params.reason}`,
+  })
+
+  return { success: true, dispute: newDispute, message: 'Dispute filed. KhelGrid marketplace arbitration team will review.' }
+}
+
+export function resolveCampaignDispute(
+  disputeId: string,
+  resolution: 'creator_favored' | 'advertiser_favored' | 'split',
+  notes: string,
+  resolvedBy = 'Arbitration Desk'
+): boolean {
+  const existingDisputes = loadFromStorage<CampaignDispute[]>(STORAGE_KEYS.DISPUTES, INITIAL_DISPUTES)
+  const index = existingDisputes.findIndex(d => d.id === disputeId)
+  if (index === -1) return false
+
+  const target = existingDisputes[index]
+  const updated = [...existingDisputes]
+  updated[index] = {
+    ...target,
+    status: 'resolved',
+    resolution,
+    resolutionNotes: notes,
+    resolvedBy,
+    resolvedAt: new Date().toISOString(),
+  }
+  saveToStorage(STORAGE_KEYS.DISPUTES, updated)
+
+  const submissions = loadFromStorage<DeliverableSubmission[]>(STORAGE_KEYS.SUBMISSIONS, INITIAL_SUBMISSIONS)
+  const subIdx = submissions.findIndex(s => s.id === target.submissionId)
+  if (subIdx >= 0) {
+    const sub = submissions[subIdx]
+    const updatedSubs = [...submissions]
+    const newStatus = resolution === 'creator_favored' ? 'accepted' : 'rejected'
+    updatedSubs[subIdx] = {
+      ...sub,
+      status: newStatus,
+      reviewNotes: `Dispute resolved (${resolution}): ${notes}`,
+      reviewedAt: new Date().toISOString(),
+    }
+    saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubs)
+
+    if (resolution === 'creator_favored') {
+      appendRewardLedgerEntry({
+        creatorId: sub.creatorId,
+        campaignId: sub.campaignId,
+        deliverableSubmissionId: sub.id,
+        amountPaise: sub.rewardAmountPaise,
+        currency: 'INR',
+        status: 'approved',
+        description: `Dispute resolved in creator favor: ${target.campaignTitle}`,
+        payoutLockdownNote: 'Arbitration payout approved.',
+      })
+    }
+  }
+
+  recordCampaignAuditEvent({
+    campaignId: target.campaignId,
+    actor: resolvedBy,
+    action: 'dispute_resolved',
+    entityType: 'dispute',
+    entityId: disputeId,
+    reason: `Dispute resolved with decision: ${resolution}. ${notes}`,
+  })
+
+  return true
+}
+
+// -------------------------------------------------------------------------
+// ESCROW & BUDGET CALCULATOR
+// -------------------------------------------------------------------------
+
+export function getCampaignBudgetBreakdown(campaignId: string): CampaignBudgetBreakdown {
+  const campaign = getCampaignById(campaignId)
+  if (!campaign) {
+    return {
+      campaignId,
+      totalBudgetPaise: 0,
+      committedPaise: 0,
+      approvedAndPaidPaise: 0,
+      availableReservePaise: 0,
+      activeAssignmentsCount: 0,
+      completedDeliverablesCount: 0,
+    }
+  }
+
+  const applications = loadFromStorage<CampaignApplication[]>(STORAGE_KEYS.APPLICATIONS, [])
+  const activeApps = applications.filter(a => a.campaignId === campaignId && a.status === 'accepted')
+  const committedPaise = activeApps.length * campaign.perDeliverableFeePaise
+
+  const ledger = loadFromStorage<RewardLedgerEntry[]>(STORAGE_KEYS.REWARD_LEDGER, INITIAL_REWARD_LEDGER)
+  const campaignRewards = ledger.filter(l => l.campaignId === campaignId && (l.status === 'approved' || l.status === 'paid' || l.status === 'payable'))
+  const approvedAndPaidPaise = campaignRewards.reduce((sum, r) => sum + r.amountPaise, 0)
+
+  const availableReservePaise = Math.max(0, campaign.totalBudgetPaise - committedPaise)
+
+  const submissions = loadFromStorage<DeliverableSubmission[]>(STORAGE_KEYS.SUBMISSIONS, INITIAL_SUBMISSIONS)
+  const completedSubs = submissions.filter(s => s.campaignId === campaignId && s.status === 'accepted')
+
+  return {
+    campaignId,
+    totalBudgetPaise: campaign.totalBudgetPaise,
+    committedPaise,
+    approvedAndPaidPaise,
+    availableReservePaise,
+    activeAssignmentsCount: activeApps.length,
+    completedDeliverablesCount: completedSubs.length,
+  }
+}
+
+// -------------------------------------------------------------------------
+// CREATOR EARNINGS SUMMARY
+// -------------------------------------------------------------------------
+
+export function getCreatorEarningsSummary(creatorId: string): CreatorEarningsSummary {
+  const ledger = loadFromStorage<RewardLedgerEntry[]>(STORAGE_KEYS.REWARD_LEDGER, INITIAL_REWARD_LEDGER)
+  const creatorLedger = ledger.filter(l => l.creatorId === creatorId)
+
+  let clearedPaise = 0
+  let pendingReviewPaise = 0
+  let disputedPaise = 0
+  let lifetimeEarnedPaise = 0
+
+  for (const entry of creatorLedger) {
+    if (entry.status === 'paid' || entry.status === 'payable') {
+      clearedPaise += entry.amountPaise
+      lifetimeEarnedPaise += entry.amountPaise
+    } else if (entry.status === 'approved') {
+      clearedPaise += entry.amountPaise
+      lifetimeEarnedPaise += entry.amountPaise
+    } else if (entry.status === 'pending_review' || entry.status === 'on_hold') {
+      pendingReviewPaise += entry.amountPaise
+    } else if (entry.status === 'disputed') {
+      disputedPaise += entry.amountPaise
+    }
+  }
+
+  const submissions = loadFromStorage<DeliverableSubmission[]>(STORAGE_KEYS.SUBMISSIONS, INITIAL_SUBMISSIONS)
+  const completedDeliverablesCount = submissions.filter(s => s.creatorId === creatorId && s.status === 'accepted').length
+
+  return {
+    clearedPaise,
+    pendingReviewPaise,
+    disputedPaise,
+    lifetimeEarnedPaise,
+    completedDeliverablesCount,
+  }
+}
+
+// -------------------------------------------------------------------------
+// DUAL-CONTROL PAYOUT BATCH APIS
+// -------------------------------------------------------------------------
+
+export function authorizeRewardPayoutBatch(
+  ledgerIds: string[],
+  approverName = 'Finance Controller'
+): { success: boolean; count: number; totalPaise: number } {
+  if (!ledgerIds.length) {
+    return { success: false, count: 0, totalPaise: 0 }
+  }
+
+  const existingLedger = loadFromStorage<RewardLedgerEntry[]>(STORAGE_KEYS.REWARD_LEDGER, INITIAL_REWARD_LEDGER)
+  let count = 0
+  let totalPaise = 0
+
+  const updatedLedger = existingLedger.map(entry => {
+    if (ledgerIds.includes(entry.id) && entry.status === 'approved') {
+      count++
+      totalPaise += entry.amountPaise
+      return {
+        ...entry,
+        status: 'payable' as RewardStatus,
+        payoutLockdownNote: `Authorized for payout by ${approverName} on ${new Date().toLocaleDateString('en-IN')}`,
+        updatedAt: new Date().toISOString(),
+      }
+    }
+    return entry
+  })
+
+  saveToStorage(STORAGE_KEYS.REWARD_LEDGER, updatedLedger)
+
+  recordCampaignAuditEvent({
+    campaignId: 'system-treasury',
+    actor: approverName,
+    action: 'payout_batch_authorized',
+    entityType: 'reward',
+    entityId: ledgerIds.join(','),
+    reason: `Authorized ${count} rewards totalling ${formatPaiseToInr(totalPaise)} for scheduled payout disbursement.`,
+  })
+
+  return { success: true, count, totalPaise }
 }
 
 // -------------------------------------------------------------------------

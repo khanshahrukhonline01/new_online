@@ -10,10 +10,20 @@ import {
   getCreatorProfile,
   saveCreatorProfile,
   formatPaiseToInr,
+  scanCampaignPolicyCompliance,
+  validateDeliverableUrl,
+  getCampaignDisputes,
+  resolveCampaignDispute,
+  authorizeRewardPayoutBatch,
   type Campaign,
 } from '../../../../src/modules/campaigns/campaignClient'
 
-export type AdminCampaignDeskSubTab = 'campaign_moderation' | 'deliverable_verification' | 'creator_verification' | 'ledger_audit'
+export type AdminCampaignDeskSubTab =
+  | 'campaign_moderation'
+  | 'deliverable_verification'
+  | 'dispute_arbitration'
+  | 'creator_verification'
+  | 'ledger_audit'
 
 export function AdminCampaignMarketplaceDesk() {
   const [subDesk, setSubDesk] = useState<AdminCampaignDeskSubTab>('campaign_moderation')
@@ -46,6 +56,11 @@ export function AdminCampaignMarketplaceDesk() {
 
   const rewardLedger = useMemo(() => {
     return getRewardLedger()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTrigger])
+
+  const allDisputes = useMemo(() => {
+    return getCampaignDisputes()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger])
 
@@ -143,6 +158,39 @@ export function AdminCampaignMarketplaceDesk() {
     triggerRefresh()
   }
 
+  const handleResolveDispute = (disputeId: string, resolution: 'creator_favored' | 'advertiser_favored' | 'split') => {
+    const ok = resolveCampaignDispute(
+      disputeId,
+      resolution,
+      `Resolved via Admin Desk (${resolution})`,
+      'KhelGrid Senior Arbiter'
+    )
+    if (ok) {
+      showToast(`Dispute resolved: ${resolution.replace('_', ' ')}`)
+      triggerRefresh()
+    }
+  }
+
+  const handleAuthorizeApprovedPayouts = () => {
+    const approvedIds = rewardLedger.filter(l => l.status === 'approved').map(l => l.id)
+    if (approvedIds.length === 0) {
+      showToast('No approved rewards pending payout authorization.')
+      return
+    }
+    const res = authorizeRewardPayoutBatch(approvedIds, 'KhelGrid Senior Treasury Officer')
+    if (res.success) {
+      showToast(`Authorized payout batch for ${res.count} rewards (${formatPaiseToInr(res.totalPaise)}).`)
+      triggerRefresh()
+    }
+  }
+
+  const activeCampaignPolicyScan = useMemo(() => {
+    if (!activeReviewCampaign) return null
+    return scanCampaignPolicyCompliance(
+      `${activeReviewCampaign.title} ${activeReviewCampaign.purpose} ${activeReviewCampaign.keyMessages.join(' ')} ${activeReviewCampaign.termsAndConditions} ${activeReviewCampaign.prohibitedClaims.join(' ')}`
+    )
+  }, [activeReviewCampaign])
+
   return (
     <div className="admin-ground-oversight-container">
       {/* Sub-Desk Navigation Pills */}
@@ -168,6 +216,17 @@ export function AdminCampaignMarketplaceDesk() {
           >
             <SiteIcon name="play" size={15} />
             <span>Deliverable Verification ({allDeliverables.filter(d => d.status === 'submitted').length})</span>
+          </button>
+
+          <button
+            type="button"
+            className={`admin-ground-tab-btn ${subDesk === 'dispute_arbitration' ? 'is-active' : ''}`}
+            onClick={() => setSubDesk('dispute_arbitration')}
+            role="tab"
+            aria-selected={subDesk === 'dispute_arbitration'}
+          >
+            <SiteIcon name="shield-check" size={15} />
+            <span>Disputes ({allDisputes.filter(d => d.status === 'open').length} open)</span>
           </button>
 
           <button
@@ -352,6 +411,36 @@ export function AdminCampaignMarketplaceDesk() {
                 </div>
 
                 <div className="modal-body">
+                  {activeCampaignPolicyScan && (
+                    <div style={{
+                      padding: '0.75rem 1rem',
+                      borderRadius: '8px',
+                      marginBottom: '1rem',
+                      background: activeCampaignPolicyScan.isCompliant ? '#f0fdf4' : '#fff7ed',
+                      border: `1px solid ${activeCampaignPolicyScan.isCompliant ? '#bbf7d0' : '#fed7aa'}`,
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ color: activeCampaignPolicyScan.isCompliant ? '#15803d' : '#9a3412', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <SiteIcon name={activeCampaignPolicyScan.isCompliant ? 'check-circle' : 'alert-triangle'} size={16} />
+                          <span>Policy Score: {activeCampaignPolicyScan.score}/100</span>
+                        </strong>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: activeCampaignPolicyScan.isCompliant ? '#15803d' : '#c2410c' }}>
+                          {activeCampaignPolicyScan.isCompliant ? 'Compliant with ASCI & Fair Selection' : 'Attention Required'}
+                        </span>
+                      </div>
+                      {activeCampaignPolicyScan.flaggedTerms.length > 0 && (
+                        <div style={{ marginTop: '0.4rem', fontSize: '0.8rem', color: '#9a3412' }}>
+                          <strong>Flagged prohibited terms:</strong> {activeCampaignPolicyScan.flaggedTerms.join(', ')}
+                        </div>
+                      )}
+                      {activeCampaignPolicyScan.recommendations.length > 0 && (
+                        <div style={{ marginTop: '0.35rem', fontSize: '0.75rem', color: '#64748b' }}>
+                          {activeCampaignPolicyScan.recommendations.join(' · ')}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="modal-data-grid">
                     <div>
                       <span className="data-label">Advertiser:</span>
@@ -508,6 +597,18 @@ export function AdminCampaignMarketplaceDesk() {
                             <span>Inspect Post</span>
                             <SiteIcon name="external-link" size={13} />
                           </a>
+                          {(() => {
+                            const urlCheck = validateDeliverableUrl(deliv.canonicalPostUrl, deliv.platform)
+                            return urlCheck.valid ? (
+                              <span style={{ display: 'block', fontSize: '0.7rem', color: '#059669', marginTop: '2px' }}>
+                                ✓ Canonical {urlCheck.domain}
+                              </span>
+                            ) : (
+                              <span style={{ display: 'block', fontSize: '0.7rem', color: '#dc2626', marginTop: '2px' }}>
+                                ⚠ {urlCheck.error}
+                              </span>
+                            )
+                          })()}
                         </td>
                         <td>
                           {deliv.disclosureVerified ? (
@@ -566,7 +667,102 @@ export function AdminCampaignMarketplaceDesk() {
         </div>
       )}
 
-      {/* SUB-TAB 3: CREATOR VERIFICATION */}
+      {/* SUB-TAB 3: DISPUTE ARBITRATION */}
+      {subDesk === 'dispute_arbitration' && (
+        <div className="admin-oversight-body">
+          <div className="admin-ground-table-card">
+            <div className="admin-table-card-header">
+              <h4>3-Way Campaign Dispute Arbitration ({allDisputes.length})</h4>
+              <span className="admin-table-hint">
+                Impartial review of delivery disagreements between sports advertisers and creators. Protects escrow and fair compensation.
+              </span>
+            </div>
+
+            <div className="admin-table-responsive">
+              <table className="admin-ground-data-table" aria-label="Disputes Table">
+                <thead>
+                  <tr>
+                    <th>Dispute Ref</th>
+                    <th>Campaign</th>
+                    <th>Parties</th>
+                    <th>Raised By</th>
+                    <th>Reason &amp; Statement</th>
+                    <th>Status</th>
+                    <th>Arbitration Decision</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allDisputes.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="admin-empty-cell">
+                        No active disputes found.
+                      </td>
+                    </tr>
+                  ) : (
+                    allDisputes.map(disp => (
+                      <tr key={disp.id}>
+                        <td><code>{disp.id}</code></td>
+                        <td><strong>{disp.campaignTitle}</strong></td>
+                        <td>
+                          <div><strong>Creator:</strong> {disp.creatorName}</div>
+                          <div><strong>Advertiser:</strong> {disp.advertiserName}</div>
+                        </td>
+                        <td>
+                          <span className={`admin-ground-status-badge status-${disp.raisedBy === 'creator' ? 'submitted' : 'changes_requested'}`}>
+                            {disp.raisedBy.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ maxWidth: '300px' }}>
+                          <strong style={{ display: 'block' }}>{disp.reason}</strong>
+                          <span style={{ fontSize: '0.8rem', color: '#475569' }}>{disp.statement}</span>
+                          {disp.resolutionNotes && (
+                            <div style={{ marginTop: '4px', fontSize: '0.75rem', color: '#0369a1' }}>
+                              <em>Resolution: {disp.resolutionNotes}</em>
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <span className={`admin-ground-status-badge status-${disp.status === 'open' ? 'submitted' : 'published'}`}>
+                            {disp.status.toUpperCase()}
+                          </span>
+                        </td>
+                        <td>
+                          {disp.status === 'open' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                              <button
+                                type="button"
+                                className="btn-action-accept"
+                                onClick={() => handleResolveDispute(disp.id, 'creator_favored')}
+                                title="Rule in favor of creator: Release escrowed payment"
+                              >
+                                Release to Creator
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-action-reject"
+                                onClick={() => handleResolveDispute(disp.id, 'advertiser_favored')}
+                                title="Rule in favor of advertiser: Refund escrow"
+                              >
+                                Refund Advertiser
+                              </button>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>
+                              Resolved ({disp.resolution})
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB 4: CREATOR VERIFICATION */}
       {subDesk === 'creator_verification' && (
         <div className="admin-oversight-body">
           <div className="admin-ground-table-card">
@@ -624,11 +820,25 @@ export function AdminCampaignMarketplaceDesk() {
         <div className="admin-oversight-body">
           {/* Append-Only Ledger */}
           <div className="admin-ground-table-card" style={{ marginBottom: '1.5rem' }}>
-            <div className="admin-table-card-header">
-              <h4>Append-Only Reward Ledger ({rewardLedger.length} entries)</h4>
-              <span className="admin-table-hint">
-                Immutable ledger recording all contracted creator rewards approved by advertisers and moderators.
-              </span>
+            <div className="admin-table-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h4>Append-Only Reward Ledger ({rewardLedger.length} entries)</h4>
+                <span className="admin-table-hint">
+                  Immutable ledger recording all contracted creator rewards approved by advertisers and moderators.
+                </span>
+              </div>
+              {rewardLedger.some(l => l.status === 'approved') && (
+                <button
+                  type="button"
+                  className="btn-action-accept"
+                  style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  onClick={handleAuthorizeApprovedPayouts}
+                  title="Dual-control authorization: Release approved rewards to payable status"
+                >
+                  <SiteIcon name="check-circle" size={14} />
+                  <span>Authorize Payout Batch ({rewardLedger.filter(l => l.status === 'approved').length})</span>
+                </button>
+              )}
             </div>
 
             <div className="admin-table-responsive">

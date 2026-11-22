@@ -16,6 +16,7 @@ interface CampaignMarketplacePageProps {
 export function CampaignMarketplacePage({ onNavigate }: CampaignMarketplacePageProps) {
   const [selectedSport, setSelectedSport] = useState<string>('All')
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
+  const [selectedMinFee, setSelectedMinFee] = useState<number>(0)
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [activeModalCampaign, setActiveModalCampaign] = useState<Campaign | null>(null)
   const [applyModalCampaign, setApplyModalCampaign] = useState<Campaign | null>(null)
@@ -49,15 +50,19 @@ export function CampaignMarketplacePage({ onNavigate }: CampaignMarketplacePageP
   }, [selectedSport, selectedCategory])
 
   const filteredCampaigns = useMemo(() => {
+    let result = campaigns
+    if (selectedMinFee > 0) {
+      result = result.filter(c => c.perDeliverableFeePaise >= selectedMinFee)
+    }
     const q = searchQuery.trim().toLowerCase()
-    if (!q) return campaigns
-    return campaigns.filter(c =>
+    if (!q) return result
+    return result.filter(c =>
       c.title.toLowerCase().includes(q) ||
       c.advertiserName.toLowerCase().includes(q) ||
       c.locationCity.toLowerCase().includes(q) ||
       c.sport.toLowerCase().includes(q)
     )
-  }, [campaigns, searchQuery])
+  }, [campaigns, searchQuery, selectedMinFee])
 
   const sportsList = ['All', 'Cricket', 'Football', 'Badminton', 'Tennis', 'Basketball', 'Athletics', 'Kabaddi']
   const categoriesList = [
@@ -226,6 +231,21 @@ export function CampaignMarketplacePage({ onNavigate }: CampaignMarketplacePageP
               ))}
             </select>
           </div>
+
+          <div className="category-select-wrap">
+            <label htmlFor="min-fee-filter" className="sr-only">Min Compensation Fee</label>
+            <select
+              id="min-fee-filter"
+              value={selectedMinFee}
+              onChange={e => setSelectedMinFee(Number(e.target.value))}
+              className="filter-select"
+            >
+              <option value={0}>All Stipend Tiers</option>
+              <option value={300000}>₹3,000+ per deliverable</option>
+              <option value={500000}>₹5,000+ per deliverable</option>
+              <option value={1000000}>₹10,000+ per deliverable</option>
+            </select>
+          </div>
         </div>
 
         {/* Sports Chips */}
@@ -281,6 +301,11 @@ export function CampaignMarketplacePage({ onNavigate }: CampaignMarketplacePageP
                   <span className="card-role-badge">{camp.advertiserRole.toUpperCase()}</span>
                   <span className="card-sport-badge">{camp.sport}</span>
                   <span className="card-city">{camp.locationCity}</span>
+                  {camp.advertiserVerified && (
+                    <span style={{ fontSize: '0.7rem', color: '#0369a1', background: '#e0f2fe', padding: '0.15rem 0.45rem', borderRadius: '4px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <SiteIcon name="check-circle" size={11} /> Verified Listing
+                    </span>
+                  )}
                 </div>
 
                 <h3 className="card-title">{camp.title}</h3>

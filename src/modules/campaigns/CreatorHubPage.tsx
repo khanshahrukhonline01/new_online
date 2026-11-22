@@ -9,6 +9,8 @@ import {
   getRewardLedger,
   formatPaiseToInr,
   validateCanonicalSocialUrl,
+  validateDeliverableUrl,
+  getCreatorEarningsSummary,
   type CreatorProfile,
   type SocialPlatform,
   type DeliverableType,
@@ -20,7 +22,7 @@ interface CreatorHubPageProps {
   onNavigate?: (event?: React.MouseEvent<HTMLAnchorElement>, target?: string) => void
 }
 
-type CreatorHubTab = 'opportunities' | 'applications' | 'submit_deliverable' | 'channels' | 'ledger'
+type CreatorHubTab = 'opportunities' | 'kanban_pipeline' | 'applications' | 'submit_deliverable' | 'channels' | 'ledger'
 
 export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
   const [activeTab, setActiveTab] = useState<CreatorHubTab>('opportunities')
@@ -82,6 +84,11 @@ export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
     return myLedger.reduce((sum, entry) => sum + entry.amountPaise, 0)
   }, [myLedger])
 
+  const earningsSummary = useMemo(() => {
+    return getCreatorEarningsSummary(profile.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile.id, refreshTrigger])
+
   // Selected campaigns eligible for deliverable submission
   const eligibleSelectedCampaigns = useMemo(() => {
     const selectedIds = new Set(
@@ -95,6 +102,34 @@ export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
     if (!subCanonicalUrl.trim()) return null
     return validateCanonicalSocialUrl(subCanonicalUrl, subPlatform)
   }, [subCanonicalUrl, subPlatform])
+
+  const liveUrlValidation = useMemo(() => {
+    if (!subCanonicalUrl.trim()) return null
+    return validateDeliverableUrl(subCanonicalUrl, subPlatform)
+  }, [subCanonicalUrl, subPlatform])
+
+  const handleDownloadStatement = () => {
+    if (typeof window === 'undefined') return
+    const rows = [
+      ['Transaction ID', 'Date', 'Description', 'Amount Paise', 'Amount INR', 'Status'],
+      ...myLedger.map(l => [
+        l.id,
+        new Date(l.createdAt).toLocaleDateString('en-IN'),
+        `"${l.description.replace(/"/g, '""')}"`,
+        l.amountPaise.toString(),
+        formatPaiseToInr(l.amountPaise).replace(/₹\s*/, 'INR '),
+        l.status,
+      ]),
+    ]
+    const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n')
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement('a')
+    link.setAttribute('href', encodedUri)
+    link.setAttribute('download', `khelgrid_creator_statement_${profile.handle.replace('@', '')}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   const handleSubmitDeliverable = (e: React.FormEvent) => {
     e.preventDefault()
@@ -259,6 +294,16 @@ export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
         </button>
         <button
           type="button"
+          className={`hub-tab-btn ${activeTab === 'kanban_pipeline' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('kanban_pipeline')}
+          role="tab"
+          aria-selected={activeTab === 'kanban_pipeline'}
+        >
+          <SiteIcon name="award" size={15} />
+          <span>Deliverable Pipeline</span>
+        </button>
+        <button
+          type="button"
           className={`hub-tab-btn ${activeTab === 'applications' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('applications')}
           role="tab"
@@ -348,7 +393,146 @@ export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
         </section>
       )}
 
-      {/* TAB 2: MY APPLICATIONS */}
+      {/* TAB 2: KANBAN PIPELINE */}
+      {activeTab === 'kanban_pipeline' && (
+        <section className="hub-tab-content" aria-label="Deliverable Pipeline">
+          <div className="content-sec-header">
+            <h3>Creator Deliverable Pipeline</h3>
+            <p>Track your content assignments from selection to verification and reward payout.</p>
+          </div>
+
+          <div className="kanban-board">
+            {/* Column 1: Contracted / In Production */}
+            <div className="kanban-column">
+              <div className="kanban-col-header">
+                <h4>1. In Production</h4>
+                <span className="kanban-col-count">
+                  {myApplications.filter(a => a.status === 'selected').length}
+                </span>
+              </div>
+              {myApplications.filter(a => a.status === 'selected').length === 0 ? (
+                <div style={{ padding: '1rem', color: '#94a3b8', fontSize: '0.8125rem', textAlign: 'center' }}>
+                  No active assignments
+                </div>
+              ) : (
+                myApplications.filter(a => a.status === 'selected').map(app => (
+                  <div key={app.id} className="kanban-card">
+                    <h5>{app.campaignTitle}</h5>
+                    <div className="kanban-meta-row">
+                      <span className="platform-tag">{app.platform}</span>
+                      <span className="kanban-fee">Contracted</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-submit-quick"
+                      onClick={() => {
+                        setSubCampaignId(app.campaignId)
+                        setActiveTab('submit_deliverable')
+                      }}
+                    >
+                      Submit Link
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Column 2: Submitted / Under Review */}
+            <div className="kanban-column">
+              <div className="kanban-col-header">
+                <h4>2. Under Review</h4>
+                <span className="kanban-col-count">
+                  {mySubmissions.filter(s => s.status === 'submitted').length}
+                </span>
+              </div>
+              {mySubmissions.filter(s => s.status === 'submitted').length === 0 ? (
+                <div style={{ padding: '1rem', color: '#94a3b8', fontSize: '0.8125rem', textAlign: 'center' }}>
+                  No pending reviews
+                </div>
+              ) : (
+                mySubmissions.filter(s => s.status === 'submitted').map(sub => (
+                  <div key={sub.id} className="kanban-card">
+                    <h5>{sub.campaignTitle}</h5>
+                    <div className="kanban-meta-row">
+                      <span className="platform-tag">{sub.platform}</span>
+                      <span className="kanban-fee">{formatPaiseToInr(sub.rewardAmountPaise)}</span>
+                    </div>
+                    <a href={sub.canonicalPostUrl} target="_blank" rel="noopener noreferrer" className="live-post-link">
+                      <span>View Live Post</span>
+                      <SiteIcon name="external-link" size={12} />
+                    </a>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Column 3: Revision Requested */}
+            <div className="kanban-column">
+              <div className="kanban-col-header">
+                <h4>3. Revisions</h4>
+                <span className="kanban-col-count">
+                  {mySubmissions.filter(s => s.status === 'revision_requested').length}
+                </span>
+              </div>
+              {mySubmissions.filter(s => s.status === 'revision_requested').length === 0 ? (
+                <div style={{ padding: '1rem', color: '#94a3b8', fontSize: '0.8125rem', textAlign: 'center' }}>
+                  Zero revisions required
+                </div>
+              ) : (
+                mySubmissions.filter(s => s.status === 'revision_requested').map(sub => (
+                  <div key={sub.id} className="kanban-card" style={{ borderLeft: '3px solid #f59e0b' }}>
+                    <h5>{sub.campaignTitle}</h5>
+                    <p style={{ fontSize: '0.75rem', color: '#b45309', margin: '4px 0' }}>
+                      <strong>Feedback:</strong> {sub.reviewNotes || 'Please adjust caption disclosure.'}
+                    </p>
+                    <button
+                      type="button"
+                      className="btn-submit-quick"
+                      onClick={() => {
+                        setSubCampaignId(sub.campaignId)
+                        setSubCanonicalUrl(sub.canonicalPostUrl)
+                        setActiveTab('submit_deliverable')
+                      }}
+                    >
+                      Resubmit Link
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Column 4: Approved & Rewarded */}
+            <div className="kanban-column">
+              <div className="kanban-col-header">
+                <h4>4. Approved &amp; Paid</h4>
+                <span className="kanban-col-count">
+                  {mySubmissions.filter(s => s.status === 'accepted').length}
+                </span>
+              </div>
+              {mySubmissions.filter(s => s.status === 'accepted').length === 0 ? (
+                <div style={{ padding: '1rem', color: '#94a3b8', fontSize: '0.8125rem', textAlign: 'center' }}>
+                  No approved items yet
+                </div>
+              ) : (
+                mySubmissions.filter(s => s.status === 'accepted').map(sub => (
+                  <div key={sub.id} className="kanban-card" style={{ borderLeft: '3px solid #10b981' }}>
+                    <h5>{sub.campaignTitle}</h5>
+                    <div className="kanban-meta-row">
+                      <span className="platform-tag">{sub.platform}</span>
+                      <span className="kanban-fee text-green">{formatPaiseToInr(sub.rewardAmountPaise)}</span>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600 }}>
+                      ✓ Credited in Ledger
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* TAB 3: MY APPLICATIONS */}
       {activeTab === 'applications' && (
         <section className="hub-tab-content" aria-label="My Applications">
           <div className="content-sec-header">
@@ -518,15 +702,27 @@ export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
                   onChange={e => setSubCanonicalUrl(e.target.value)}
                   required
                 />
-                {isUrlValid === true && (
-                  <small className="field-hint text-green">
-                    <SiteIcon name="check" size={13} /> Canonical HTTPS {subPlatform} domain verified.
-                  </small>
-                )}
-                {isUrlValid === false && (
-                  <small className="field-hint text-red">
-                    <SiteIcon name="alert-circle" size={13} /> Please provide an authentic HTTPS URL matching {subPlatform}.
-                  </small>
+                {liveUrlValidation && (
+                  <div style={{
+                    marginTop: '0.4rem',
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    background: liveUrlValidation.valid ? '#f0fdf4' : '#fef2f2',
+                    border: `1px solid ${liveUrlValidation.valid ? '#bbf7d0' : '#fecaca'}`,
+                  }}>
+                    {liveUrlValidation.valid ? (
+                      <span style={{ color: '#15803d', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <SiteIcon name="check-circle" size={14} />
+                        <strong>Valid {liveUrlValidation.platform} URL:</strong> {liveUrlValidation.domain} canonical post detected.
+                      </span>
+                    ) : (
+                      <span style={{ color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <SiteIcon name="alert-circle" size={14} />
+                        {liveUrlValidation.error}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -710,12 +906,45 @@ export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
         </section>
       )}
 
-      {/* TAB 5: REWARD LEDGER */}
+      {/* TAB 6: REWARD LEDGER */}
       {activeTab === 'ledger' && (
         <section className="hub-tab-content" aria-label="Append-Only Reward Ledger">
-          <div className="content-sec-header">
-            <h3>Append-Only Reward Ledger</h3>
-            <p>Tamper-evident record of all contracted creator rewards approved for verified deliverables.</p>
+          <div className="content-sec-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h3>Append-Only Reward Ledger</h3>
+              <p>Tamper-evident record of all contracted creator rewards approved for verified deliverables.</p>
+            </div>
+            {myLedger.length > 0 && (
+              <button
+                type="button"
+                className="btn-sec-action"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                onClick={handleDownloadStatement}
+                title="Export tamper-evident ledger as CSV statement"
+              >
+                <SiteIcon name="download" size={14} />
+                <span>Download Statement (CSV)</span>
+              </button>
+            )}
+          </div>
+
+          {/* Earnings Summary Banner */}
+          <div className="earnings-summary-banner">
+            <div className="earnings-box">
+              <span className="earnings-box-lbl">Cleared Balance</span>
+              <div className="earnings-box-val text-green">{formatPaiseToInr(earningsSummary.clearedPaise)}</div>
+              <small style={{ color: '#64748b' }}>Approved &amp; payable</small>
+            </div>
+            <div className="earnings-box">
+              <span className="earnings-box-lbl">In Review / Escrow</span>
+              <div className="earnings-box-val">{formatPaiseToInr(earningsSummary.pendingReviewPaise)}</div>
+              <small style={{ color: '#64748b' }}>Pending advertiser review</small>
+            </div>
+            <div className="earnings-box">
+              <span className="earnings-box-lbl">Lifetime Earned</span>
+              <div className="earnings-box-val">{formatPaiseToInr(earningsSummary.lifetimeEarnedPaise)}</div>
+              <small style={{ color: '#64748b' }}>{earningsSummary.completedDeliverablesCount} verified deliverables</small>
+            </div>
           </div>
 
           <div className="ledger-notice-callout">

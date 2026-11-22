@@ -15,6 +15,14 @@ import {
   getCreatorProfile,
   saveCreatorProfile,
   resetCampaignStorageForTesting,
+  validateDeliverableUrl,
+  scanCampaignPolicyCompliance,
+  getCampaignBudgetBreakdown,
+  getCreatorEarningsSummary,
+  fileCampaignDispute,
+  resolveCampaignDispute,
+  getCampaignDisputes,
+  authorizeRewardPayoutBatch,
 } from './campaignClient'
 
 describe('KhelGrid Sports Creator Campaign Marketplace — Client Engine', () => {
@@ -207,6 +215,101 @@ describe('KhelGrid Sports Creator Campaign Marketplace — Client Engine', () =>
 
       const reloaded = getCreatorProfile('usr-cr-1')
       expect(reloaded.bio).toBe('Updated bio for Indian athletics and cricket.')
+    })
+  })
+
+  describe('Policy Compliance & Claims Heuristic Scanner', () => {
+    it('flags prohibited selection guarantee claims and missing disclosure instructions', () => {
+      const badText = 'Join our academy camp! We offer 100% selection guarantee for state team.'
+      const res = scanCampaignPolicyCompliance(badText)
+      expect(res.isCompliant).toBe(false)
+      expect(res.flaggedTerms).toContain('100% selection guarantee')
+      expect(res.hasMandatoryDisclosureNotice).toBe(false)
+      expect(res.score).toBeLessThan(70)
+    })
+
+    it('passes compliant campaign briefs with proper disclosure notices', () => {
+      const goodText = 'Grassroots athletic clinic promoting sprint biomechanics. Mandatory disclosure: #Ad #KhelGrid in caption.'
+      const res = scanCampaignPolicyCompliance(goodText)
+      expect(res.isCompliant).toBe(true)
+      expect(res.flaggedTerms.length).toBe(0)
+      expect(res.hasMandatoryDisclosureNotice).toBe(true)
+      expect(res.score).toBe(100)
+    })
+  })
+
+  describe('Enhanced Deliverable URL Validator', () => {
+    it('validates canonical Instagram and YouTube video and reel links with format inspection', () => {
+      const validIg = validateDeliverableUrl('https://instagram.com/reel/DE_12345/', 'instagram')
+      expect(validIg.valid).toBe(true)
+      expect(validIg.platform).toBe('instagram')
+
+      const invalidIg = validateDeliverableUrl('https://instagram.com/stories/user/123/', 'instagram')
+      expect(invalidIg.valid).toBe(false)
+      expect(invalidIg.error).toContain('reel')
+
+      const validYt = validateDeliverableUrl('https://youtube.com/shorts/xyz123', 'youtube')
+      expect(validYt.valid).toBe(true)
+      expect(validYt.platform).toBe('youtube')
+    })
+  })
+
+  describe('Budget Escrow & Earnings Breakdown Invariants', () => {
+    it('computes campaign budget breakdown with integer paise arithmetic', () => {
+      const breakdown = getCampaignBudgetBreakdown('cmp-dca-summer-2026')
+      expect(breakdown.totalBudgetPaise).toBe(4000000)
+      expect(breakdown.availableReservePaise).toBeLessThanOrEqual(breakdown.totalBudgetPaise)
+      expect(breakdown.totalBudgetPaise).toBeGreaterThan(0)
+    })
+
+    it('computes creator earnings summary with cleared and pending balances', () => {
+      const summary = getCreatorEarningsSummary('creator-rohan-cricket')
+      expect(summary.clearedPaise).toBeGreaterThanOrEqual(0)
+      expect(summary.lifetimeEarnedPaise).toBeGreaterThanOrEqual(summary.clearedPaise)
+    })
+  })
+
+  describe('Campaign Disputes & Payout Authorization', () => {
+    it('files, reviews and resolves a 3-way dispute in creator favor with ledger credit', () => {
+      const allDisputesBefore = getCampaignDisputes()
+      expect(allDisputesBefore.length).toBeGreaterThanOrEqual(1)
+
+      const disputeRes = fileCampaignDispute({
+        campaignId: 'cmp-dca-summer-2026',
+        submissionId: 'sub-sample-1',
+        raisedBy: 'creator',
+        reason: 'Unjustified rejection',
+        statement: 'The reel contains all sponsor guidelines and required audio tracks.',
+        actorName: 'Rohan Sharma',
+      })
+      expect(disputeRes.success).toBe(true)
+      expect(disputeRes.dispute?.status).toBe('open')
+
+      const initialLedger = getRewardLedger('creator-rohan-cricket')
+      const countBefore = initialLedger.length
+
+      const resolved = resolveCampaignDispute(
+        disputeRes.dispute!.id,
+        'creator_favored',
+        'Moderator verified video meets all brief deliverables.',
+        'KhelGrid Senior Arbiter'
+      )
+      expect(resolved).toBe(true)
+
+      const updatedLedger = getRewardLedger('creator-rohan-cricket')
+      expect(updatedLedger.length).toBe(countBefore + 1)
+      expect(updatedLedger[0].description).toContain('Dispute resolved in creator favor')
+    })
+
+    it('authorizes reward payout batch for approved ledger entries', () => {
+      const ledger = getRewardLedger()
+      const approvedIds = ledger.filter(l => l.status === 'approved').map(l => l.id)
+      if (approvedIds.length > 0) {
+        const authRes = authorizeRewardPayoutBatch(approvedIds, 'Senior Treasury Officer')
+        expect(authRes.success).toBe(true)
+        expect(authRes.count).toBe(approvedIds.length)
+        expect(authRes.totalPaise).toBeGreaterThan(0)
+      }
     })
   })
 })

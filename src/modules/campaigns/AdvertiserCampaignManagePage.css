@@ -517,3 +517,93 @@
 .no-data-card p {
   margin-bottom: 1.5rem;
 }
+
+/* Escrow Budget Tracker */
+.escrow-budget-tracker {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.escrow-tracker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.escrow-tracker-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.escrow-meter-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: #f1f5f9;
+  margin: 0.75rem 0;
+  border: 1px solid #e2e8f0;
+}
+
+.escrow-segment-paid {
+  background: #10b981;
+  transition: width 0.3s ease;
+}
+
+.escrow-segment-committed {
+  background: #0284c7;
+  transition: width 0.3s ease;
+}
+
+.escrow-segment-reserve {
+  background: #cbd5e1;
+  transition: width 0.3s ease;
+}
+
+.escrow-legend {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  font-size: 0.8125rem;
+  color: #475569;
+}
+
+.escrow-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legend-dot.paid { background: #10b981; }
+.legend-dot.committed { background: #0284c7; }
+.legend-dot.reserve { background: #cbd5e1; }
+
+.btn-action-revision {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-action-revision:hover {
+  background: #fde68a;
+}

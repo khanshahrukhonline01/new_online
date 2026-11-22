@@ -7,6 +7,8 @@ import {
   reviewDeliverable,
   getRewardLedger,
   formatPaiseToInr,
+  getCampaignBudgetBreakdown,
+  fileCampaignDispute,
 } from './campaignClient'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import './AdvertiserCampaignManagePage.css'
@@ -20,6 +22,8 @@ export function AdvertiserCampaignManagePage({ onNavigate }: AdvertiserCampaignM
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [actionFeedback, setActionFeedback] = useState<string | null>(null)
+  const [revisionModalSubmissionId, setRevisionModalSubmissionId] = useState<string | null>(null)
+  const [revisionNotes, setRevisionNotes] = useState('')
 
   const handleNav = (targetPath: string, e?: React.MouseEvent<HTMLAnchorElement>) => {
     if (e) e.preventDefault()
@@ -77,6 +81,25 @@ export function AdvertiserCampaignManagePage({ onNavigate }: AdvertiserCampaignM
     return rewardLedger.reduce((acc, r) => acc + r.amountPaise, 0)
   }, [rewardLedger])
 
+  const budgetBreakdown = useMemo(() => {
+    if (selectedCampaignId !== 'all') {
+      return getCampaignBudgetBreakdown(selectedCampaignId)
+    }
+    const totalBudget = campaigns.reduce((acc, c) => acc + c.totalBudgetPaise, 0)
+    const committed = applications.filter(a => a.status === 'selected').length * 400000
+    const paid = rewardLedger.reduce((acc, r) => acc + r.amountPaise, 0)
+    const reserve = Math.max(0, totalBudget - committed)
+    return {
+      campaignId: 'all',
+      totalBudgetPaise: totalBudget,
+      committedPaise: committed,
+      approvedAndPaidPaise: paid,
+      availableReservePaise: reserve,
+      activeAssignmentsCount: applications.filter(a => a.status === 'selected').length,
+      completedDeliverablesCount: deliverables.filter(d => d.status === 'accepted').length,
+    }
+  }, [selectedCampaignId, campaigns, applications, rewardLedger, deliverables])
+
   const handleSelectCreator = (applicationId: string) => {
     const ok = updateApplicationStatus(applicationId, 'selected', 'Advertiser Director', 'Creator selected for campaign deliverable.')
     if (ok) {
@@ -110,6 +133,38 @@ export function AdvertiserCampaignManagePage({ onNavigate }: AdvertiserCampaignM
       setActionFeedback('Deliverable rejected.')
       triggerRefresh()
       setTimeout(() => setActionFeedback(null), 3000)
+    }
+  }
+
+  const handleRequestRevisionSubmit = () => {
+    if (!revisionModalSubmissionId) return
+    if (!revisionNotes.trim()) {
+      setActionFeedback('Please provide specific revision notes for the creator.')
+      return
+    }
+    const ok = reviewDeliverable(revisionModalSubmissionId, 'revision_requested', 'Advertiser Director', revisionNotes)
+    if (ok) {
+      setActionFeedback('Revision requested from creator.')
+      setRevisionModalSubmissionId(null)
+      setRevisionNotes('')
+      triggerRefresh()
+      setTimeout(() => setActionFeedback(null), 3000)
+    }
+  }
+
+  const handleEscalateDispute = (submission: (typeof deliverables)[0]) => {
+    const res = fileCampaignDispute({
+      campaignId: submission.campaignId,
+      submissionId: submission.id,
+      raisedBy: 'advertiser',
+      reason: 'Deliverable non-compliance / specifications not met',
+      statement: `Advertiser requested arbitration for deliverable ${submission.id}. Verification notes: ${submission.reviewNotes || 'Non-compliant format'}`,
+      actorName: 'Campaign Owner',
+    })
+    if (res.success) {
+      setActionFeedback('Dispute submitted for KhelGrid Admin arbitration.')
+      triggerRefresh()
+      setTimeout(() => setActionFeedback(null), 3500)
     }
   }
 
@@ -191,6 +246,51 @@ export function AdvertiserCampaignManagePage({ onNavigate }: AdvertiserCampaignM
           <span className="stat-label">Approved Rewards (Ledger)</span>
           <strong className="stat-value">{formatPaiseToInr(totalRewardsApprovedPaise)}</strong>
           <span className="stat-sub">Total budget: {formatPaiseToInr(totalBudgetPaise)}</span>
+        </div>
+      </section>
+
+      {/* Escrow Budget Tracker */}
+      <section className="escrow-budget-tracker" aria-label="Escrow Budget Allocation">
+        <div className="escrow-tracker-header">
+          <h3>
+            <SiteIcon name="shield-check" size={16} /> Escrow Budget Allocation
+            {selectedCampaignId !== 'all' ? ` · ${campaigns.find(c => c.id === selectedCampaignId)?.title || ''}` : ' (All Campaigns)'}
+          </h3>
+          <span>Total Funded: <strong>{formatPaiseToInr(budgetBreakdown.totalBudgetPaise)}</strong></span>
+        </div>
+
+        {/* Multi-segment progress bar */}
+        <div className="escrow-meter-bar">
+          <div
+            className="escrow-segment-paid"
+            style={{ width: `${Math.min(100, (budgetBreakdown.approvedAndPaidPaise / Math.max(1, budgetBreakdown.totalBudgetPaise)) * 100)}%` }}
+            title={`Paid: ${formatPaiseToInr(budgetBreakdown.approvedAndPaidPaise)}`}
+          />
+          <div
+            className="escrow-segment-committed"
+            style={{ width: `${Math.min(100, (budgetBreakdown.committedPaise / Math.max(1, budgetBreakdown.totalBudgetPaise)) * 100)}%` }}
+            title={`Committed: ${formatPaiseToInr(budgetBreakdown.committedPaise)}`}
+          />
+          <div
+            className="escrow-segment-reserve"
+            style={{ width: `${Math.min(100, (budgetBreakdown.availableReservePaise / Math.max(1, budgetBreakdown.totalBudgetPaise)) * 100)}%` }}
+            title={`Reserve: ${formatPaiseToInr(budgetBreakdown.availableReservePaise)}`}
+          />
+        </div>
+
+        <div className="escrow-legend">
+          <div className="escrow-legend-item">
+            <span className="legend-dot paid" />
+            <span>Approved &amp; Paid: <strong>{formatPaiseToInr(budgetBreakdown.approvedAndPaidPaise)}</strong></span>
+          </div>
+          <div className="escrow-legend-item">
+            <span className="legend-dot committed" />
+            <span>Committed to Creators: <strong>{formatPaiseToInr(budgetBreakdown.committedPaise)}</strong></span>
+          </div>
+          <div className="escrow-legend-item">
+            <span className="legend-dot reserve" />
+            <span>Unallocated Reserve: <strong>{formatPaiseToInr(budgetBreakdown.availableReservePaise)}</strong></span>
+          </div>
         </div>
       </section>
 
@@ -437,11 +537,31 @@ export function AdvertiserCampaignManagePage({ onNavigate }: AdvertiserCampaignM
                                     </button>
                                     <button
                                       type="button"
+                                      className="btn-action-revision"
+                                      onClick={() => {
+                                        setRevisionModalSubmissionId(sub.id)
+                                        setRevisionNotes('')
+                                      }}
+                                      title="Request structured revision from creator"
+                                    >
+                                      Revision
+                                    </button>
+                                    <button
+                                      type="button"
                                       className="btn-action-reject"
                                       onClick={() => handleRejectDeliverable(sub.id)}
                                       title="Reject deliverable"
                                     >
                                       Reject
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn-action-reject"
+                                      style={{ background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}
+                                      onClick={() => handleEscalateDispute(sub)}
+                                      title="Escalate dispute to KhelGrid Admin Desk"
+                                    >
+                                      Dispute
                                     </button>
                                   </div>
                                 )}
@@ -463,6 +583,61 @@ export function AdvertiserCampaignManagePage({ onNavigate }: AdvertiserCampaignM
           })
         )}
       </div>
+      {/* Structured Revision Request Modal */}
+      {revisionModalSubmissionId && (
+        <div className="modal-backdrop" onClick={() => setRevisionModalSubmissionId(null)}>
+          <div
+            className="campaign-modal-dialog"
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rev-modal-title"
+            style={{ maxWidth: '480px', margin: 'auto', background: '#fff', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 id="rev-modal-title" style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>
+                Request Deliverable Revision
+              </h3>
+              <button
+                type="button"
+                onClick={() => setRevisionModalSubmissionId(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                aria-label="Close"
+              >
+                <SiteIcon name="close" size={18} />
+              </button>
+            </div>
+            <p style={{ fontSize: '0.875rem', color: '#64748b', margin: '0 0 1rem 0' }}>
+              Specify the exact adjustments required from the creator (e.g. caption hashtag, audio level, or prominent disclosure).
+            </p>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <textarea
+                rows={4}
+                value={revisionNotes}
+                onChange={e => setRevisionNotes(e.target.value)}
+                placeholder="e.g. Please add #Ad disclosure in the first two lines of caption..."
+                style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button
+                type="button"
+                className="btn-sec-action"
+                onClick={() => setRevisionModalSubmissionId(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-pri-action"
+                onClick={handleRequestRevisionSubmit}
+              >
+                Send Revision Request
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
