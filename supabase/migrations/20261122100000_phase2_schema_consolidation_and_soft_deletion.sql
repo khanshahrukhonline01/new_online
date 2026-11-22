@@ -9,17 +9,22 @@
 --      public.tenant_batches, public.tenant_students.
 -- 2. Hardened authorization functions:
 --    - public.is_tenant_member(), public.has_tenant_role(), public.is_active_tenant()
---      strictly require deleted_at IS NULL.
+--      strictly require deleted_at IS NULL and status = 'active'.
 -- 3. Atomic projection trigger update:
 --    - public.sync_tenant_public_directory() purges soft-deleted tenants from directory.
--- 4. Authoritative operational RPCs:
+-- 4. Complete soft-delete RLS policy updates:
+--    - public.tenant_students, public.tenant_batches, public.tenant_memberships,
+--      public.tenants filter out soft-deleted records for standard queries.
+-- 5. Authoritative operational RPCs:
 --    - public.soft_delete_tenant_student()
+--    - public.restore_tenant_student()
 --    - public.soft_delete_tenant_batch()
 --    - public.convert_enquiry_to_student()
 --    - public.create_tenant_invitation()
---    - public.accept_tenant_invitation()
--- 5. Append-only audit logging:
---    - public.tenant_audit_logs table with immutable security policy.
+--    - public.accept_tenant_invitation() (Hardened with strict NOT NULL email validation)
+-- 6. Append-only tenant audit logging:
+--    - public.tenant_audit_logs table with immutable security policy and
+--      public.log_tenant_audit_event() RPC.
 -- ==============================================================================
 
 BEGIN;
@@ -208,10 +213,75 @@ $$;
 REVOKE ALL ON FUNCTION public.sync_tenant_public_directory() FROM PUBLIC, anon, authenticated;
 
 -- -----------------------------------------------------------------------------
--- 4. AUTHORITATIVE OPERATIONAL RPCs
+-- 4. SOFT-DELETION RLS POLICY ENFORCEMENT
 -- -----------------------------------------------------------------------------
 
--- 4.1 Soft-Delete Student Trainee
+-- 4.1 Tenant Students: Exclude soft-deleted records for standard queries; allow directors to view all
+DROP POLICY IF EXISTS "tenant_students_member_select" ON public.tenant_students;
+CREATE POLICY "tenant_students_member_select"
+  ON public.tenant_students
+  FOR SELECT
+  TO authenticated
+  USING (
+    (
+      public.is_tenant_member(tenant_id) OR
+      guardian_user_id = auth.uid()
+    ) AND (
+      deleted_at IS NULL OR
+      public.has_tenant_role(tenant_id, ARRAY['owner', 'director', 'admin'])
+    )
+  );
+
+-- 4.2 Tenant Batches: Exclude soft-deleted batches for standard queries; allow directors to view all
+DROP POLICY IF EXISTS "tenant_batches_select" ON public.tenant_batches;
+CREATE POLICY "tenant_batches_select"
+  ON public.tenant_batches
+  FOR SELECT
+  TO authenticated
+  USING (
+    public.is_tenant_member(tenant_id) AND (
+      deleted_at IS NULL OR
+      public.has_tenant_role(tenant_id, ARRAY['owner', 'director', 'admin'])
+    )
+  );
+
+-- 4.3 Tenant Memberships: Exclude soft-deleted memberships for standard queries
+DROP POLICY IF EXISTS "tenant_memberships_select" ON public.tenant_memberships;
+CREATE POLICY "tenant_memberships_select"
+  ON public.tenant_memberships
+  FOR SELECT
+  TO authenticated
+  USING (
+    (
+      user_id = auth.uid() OR
+      public.is_tenant_member(tenant_id)
+    ) AND (
+      deleted_at IS NULL OR
+      public.has_tenant_role(tenant_id, ARRAY['owner', 'director', 'admin'])
+    )
+  );
+
+-- 4.4 Tenants: Exclude soft-deleted tenants from member SELECT queries
+DROP POLICY IF EXISTS "tenants_member_select" ON public.tenants;
+CREATE POLICY "tenants_member_select"
+  ON public.tenants
+  FOR SELECT
+  TO authenticated
+  USING (
+    (
+      public.is_tenant_member(id) OR
+      owner_id = auth.uid()
+    ) AND (
+      deleted_at IS NULL OR
+      owner_id = auth.uid()
+    )
+  );
+
+-- -----------------------------------------------------------------------------
+-- 5. AUTHORITATIVE OPERATIONAL RPCs
+-- -----------------------------------------------------------------------------
+
+-- 5.1 Soft-Delete Student Trainee
 CREATE OR REPLACE FUNCTION public.soft_delete_tenant_student(
   p_tenant_id uuid,
   p_student_id uuid
@@ -239,7 +309,35 @@ $$;
 REVOKE ALL ON FUNCTION public.soft_delete_tenant_student(uuid, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.soft_delete_tenant_student(uuid, uuid) TO authenticated;
 
--- 4.2 Soft-Delete Batch (Safely verifies no active enrolled students remain)
+-- 5.2 Restore Soft-Deleted Student Trainee
+CREATE OR REPLACE FUNCTION public.restore_tenant_student(
+  p_tenant_id uuid,
+  p_student_id uuid
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF NOT public.has_tenant_role(p_tenant_id, ARRAY['owner', 'director', 'admin']) THEN
+    RAISE EXCEPTION 'Access denied: only directors and admins can restore archived students';
+  END IF;
+
+  UPDATE public.tenant_students
+  SET deleted_at = NULL,
+      is_active = true,
+      updated_at = now()
+  WHERE tenant_id = p_tenant_id AND id = p_student_id;
+
+  RETURN FOUND;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.restore_tenant_student(uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.restore_tenant_student(uuid, uuid) TO authenticated;
+
+-- 5.3 Soft-Delete Batch (Safely verifies no active enrolled students remain)
 CREATE OR REPLACE FUNCTION public.soft_delete_tenant_batch(
   p_tenant_id uuid,
   p_batch_id uuid
@@ -281,7 +379,7 @@ $$;
 REVOKE ALL ON FUNCTION public.soft_delete_tenant_batch(uuid, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.soft_delete_tenant_batch(uuid, uuid) TO authenticated;
 
--- 4.3 Atomic Lead Conversion (Admissions CRM -> Trainee Roster)
+-- 5.4 Atomic Lead Conversion (Admissions CRM -> Trainee Roster)
 CREATE OR REPLACE FUNCTION public.convert_enquiry_to_student(
   p_tenant_id uuid,
   p_enquiry_id uuid,
@@ -347,7 +445,7 @@ $$;
 REVOKE ALL ON FUNCTION public.convert_enquiry_to_student(uuid, uuid, uuid, integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.convert_enquiry_to_student(uuid, uuid, uuid, integer) TO authenticated;
 
--- 4.4 Staff Invitation Management
+-- 5.5 Staff Invitation Management
 CREATE OR REPLACE FUNCTION public.create_tenant_invitation(
   p_tenant_id uuid,
   p_invited_email text,
@@ -363,6 +461,10 @@ DECLARE
 BEGIN
   IF NOT public.has_tenant_role(p_tenant_id, ARRAY['owner', 'director']) THEN
     RAISE EXCEPTION 'Access denied: only owners and directors can invite staff';
+  END IF;
+
+  IF p_invited_email IS NULL OR trim(p_invited_email) = '' THEN
+    RAISE EXCEPTION 'Invited email address is required';
   END IF;
 
   IF p_role NOT IN ('director', 'admin', 'head_coach', 'coach', 'accountant', 'front_desk', 'staff') THEN
@@ -391,7 +493,7 @@ $$;
 REVOKE ALL ON FUNCTION public.create_tenant_invitation(uuid, text, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.create_tenant_invitation(uuid, text, text) TO authenticated;
 
--- 4.5 Accept Staff Invitation
+-- 5.6 Accept Staff Invitation (Hardened: Strict NOT NULL Email Match & Unique Constraint Safety)
 CREATE OR REPLACE FUNCTION public.accept_tenant_invitation(
   p_membership_id uuid
 )
@@ -412,6 +514,10 @@ BEGIN
   FROM auth.users
   WHERE id = auth.uid();
 
+  IF v_user_email IS NULL OR trim(v_user_email) = '' THEN
+    RAISE EXCEPTION 'Authenticated user has no verified email address';
+  END IF;
+
   SELECT * INTO v_membership
   FROM public.tenant_memberships
   WHERE id = p_membership_id AND status = 'invited'
@@ -421,13 +527,35 @@ BEGIN
     RAISE EXCEPTION 'Valid invitation not found';
   END IF;
 
-  IF lower(trim(v_membership.invited_email)) != lower(trim(v_user_email)) THEN
+  -- Strictly fail-closed: invited_email must exist and match authenticated user's email
+  IF v_membership.invited_email IS NULL OR lower(trim(v_membership.invited_email)) <> lower(trim(v_user_email)) THEN
     RAISE EXCEPTION 'Invitation email does not match authenticated user email';
+  END IF;
+
+  -- Handle existing membership for (tenant_id, auth.uid()) cleanly without violating unique_tenant_user
+  IF EXISTS (
+    SELECT 1 FROM public.tenant_memberships
+    WHERE tenant_id = v_membership.tenant_id
+      AND user_id = auth.uid()
+      AND id <> p_membership_id
+  ) THEN
+    -- Update the existing membership to active with the invited role
+    UPDATE public.tenant_memberships
+    SET role = v_membership.role,
+        status = 'active',
+        deleted_at = NULL,
+        updated_at = now()
+    WHERE tenant_id = v_membership.tenant_id AND user_id = auth.uid();
+
+    -- Remove the consumed invited membership placeholder
+    DELETE FROM public.tenant_memberships WHERE id = p_membership_id;
+    RETURN true;
   END IF;
 
   UPDATE public.tenant_memberships
   SET user_id = auth.uid(),
       status = 'active',
+      deleted_at = NULL,
       updated_at = now()
   WHERE id = p_membership_id;
 
@@ -439,7 +567,7 @@ REVOKE ALL ON FUNCTION public.accept_tenant_invitation(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.accept_tenant_invitation(uuid) TO authenticated;
 
 -- -----------------------------------------------------------------------------
--- 5. APPEND-ONLY TENANT AUDIT LOGGING
+-- 6. APPEND-ONLY TENANT AUDIT LOGGING
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.tenant_audit_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -464,10 +592,10 @@ CREATE POLICY "tenant_audit_logs_select"
   USING (public.has_tenant_role(tenant_id, ARRAY['owner', 'director', 'admin']));
 
 -- Restrict direct client inserts, updates, and deletes (append-only via internal RPCs/triggers)
-REVOKE ALL ON public.tenant_audit_logs FROM PUBLIC, anon;
+REVOKE ALL ON public.tenant_audit_logs FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.tenant_audit_logs TO authenticated;
 
--- 5.1 Append-Only Audit Logging RPC
+-- 6.1 Append-Only Audit Logging RPC
 CREATE OR REPLACE FUNCTION public.log_tenant_audit_event(
   p_tenant_id uuid,
   p_action text,

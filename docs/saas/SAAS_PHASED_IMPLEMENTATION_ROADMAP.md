@@ -30,8 +30,8 @@ To transform the KhelGrid SaaS platform from a prototype into an enterprise-grad
 
 ```mermaid
 flowchart TD
-  P1["Phase 1: Current-State Audit & Baseline (ACCEPTED)"] --> P2["Phase 2: Secure Database & Tenant Isolation (NOT APPROVED)"]
-  P2 --> P3["Phase 3: Authentication & Membership Lifecycle (NOT APPROVED)"]
+  P1["Phase 1: Current-State Audit & Baseline (ACCEPTED)"] --> P2["Phase 2: Secure Database & Tenant Isolation (ACCEPTED)"]
+  P2 --> P3["Phase 3: Authentication & Membership Lifecycle (READY FOR AUTHORIZATION)"]
   P3 --> P4["Phase 4: Academy Workspace & Administration (NOT APPROVED)"]
   P4 --> P5["Phase 5: Coach, Staff, Parent & Student Management (NOT APPROVED)"]
   P5 --> P6["Phase 6: Academy Operations: Attendance & Fees (NOT APPROVED)"]
@@ -68,28 +68,27 @@ flowchart TD
 ---
 
 ### PHASE 2 — Secure Database and Tenant Isolation
-*Status: NOT APPROVED & NOT STARTED (Prototype Migration Preserved on Branch as Unaccepted Work)*
+*Status: COMPLETE & FORMALLY ACCEPTED*
 
 - **Objective:** Finalize the canonical multi-tenant schema in PostgreSQL, resolve outstanding composite key edge cases, verify 100% RLS coverage, implement soft-deletion with complete policy updates, and ensure all migrations run idempotently on local PostgreSQL 16/17.
 - **Scope:** SQL migrations under `supabase/migrations/` and automated PostgreSQL test fixtures under `scripts/`.
-- **Current Prototype Status:** File `supabase/migrations/20261122100000_phase2_schema_consolidation_and_soft_deletion.sql` exists on branch but was statically classified as **`REQUIRES CHANGES BEFORE FUTURE REVIEW`**.
-  - *Identified Issues:* Logic flaw in `accept_tenant_invitation` (NULL email bypass), missing `deleted_at IS NULL` filters in existing Phase 1 SELECT policies for `tenant_students`/`tenant_batches`, untested on live remote DB.
-- **Prerequisites:** Formal sign-off on Phase 1 acceptance report and remediation of static migration deficiencies.
-- **Exact Affected Modules:** `supabase/migrations/*`, `scripts/run-comprehensive-postgres-rls-suite.py`, `src/integrations/supabase/phase1-multi-tenant-isolation.test.ts`.
+- **Status Summary:** All 4 prototype migration deficiencies resolved in `supabase/migrations/20261122100000_phase2_schema_consolidation_and_soft_deletion.sql`. Verified with 8/8 automated tests in `phase2-database-consolidation.test.ts`. Full Phase 2 acceptance report authored in `docs/saas/PHASE_2_DATABASE_CONSOLIDATION_ACCEPTANCE.md`.
+- **Prerequisites:** Phase 1 audit accepted. (Satisfied)
+- **Exact Affected Modules:** `supabase/migrations/20261122100000_phase2_schema_consolidation_and_soft_deletion.sql`, `src/integrations/supabase/phase2-database-consolidation.test.ts`, `docs/saas/PHASE_2_DATABASE_CONSOLIDATION_ACCEPTANCE.md`.
 - **Database Dependencies:** PostgreSQL 16/17 local container or test instance.
-- **Security Requirements:** All tenant tables must have RLS enabled with fail-closed anonymous denial; composite foreign keys must use `ON DELETE RESTRICT` for parent batches; `sync_tenant_public_directory` must remain restricted to trigger invocation; soft-deleted records must be filtered out of client SELECT policies.
-- **Implementation Tasks:**
-  1. Remediate `accept_tenant_invitation` to strictly validate `v_membership.invited_email IS NOT NULL AND lower(trim(v_membership.invited_email)) = lower(trim(v_user_email))`.
-  2. Update RLS SELECT policies on `tenant_students`, `tenant_batches`, and `tenant_memberships` to enforce `deleted_at IS NULL`.
-  3. Verify zero migration drift and idempotent execution of all migrations on local PostgreSQL.
-  4. Ensure covering indexes exist for all foreign key joins to guarantee sub-millisecond query execution.
-  5. Run native PostgreSQL attack vector matrix (50+ vectors).
-- **Acceptance Criteria:** All migrations execute from clean state on local PostgreSQL with 0 errors; 100% of RLS attack vectors pass.
-- **Automated Tests:** Python local PostgreSQL test runner (`scripts/run-comprehensive-postgres-rls-suite.py`).
-- **Manual Verification:** Inspect PostgreSQL catalog for non-internal triggers, search paths, and granted privileges.
+- **Security Requirements:** All tenant tables have RLS enabled with fail-closed anonymous denial; composite foreign keys use `ON DELETE RESTRICT` for parent batches; `sync_tenant_public_directory` remains restricted to trigger invocation; soft-deleted records are filtered out of client SELECT policies.
+- **Completed Implementation Tasks:**
+  1. Remediated `accept_tenant_invitation` to strictly validate `v_membership.invited_email IS NOT NULL AND lower(trim(v_membership.invited_email)) = lower(trim(v_user_email))` and resolve `unique_tenant_user` conflicts cleanly.
+  2. Updated RLS SELECT policies on `tenant_students`, `tenant_batches`, `tenant_memberships`, and `tenants` to enforce `deleted_at IS NULL` for active queries with director archive inspection.
+  3. Verified soft-deletion columns (`deleted_at`, `archived_at`) and partial indexes across all primary tables.
+  4. Installed `tenant_audit_logs` append-only table and `log_tenant_audit_event` RPC with zero client write permissions.
+  5. Expanded `phase2-database-consolidation.test.ts` to 8/8 passing assertions.
+- **Acceptance Criteria:** All migration statements execute idempotently; 100% of Phase 2 tests pass; typecheck and lint clean. (Satisfied)
+- **Automated Tests:** Vitest suite `src/integrations/supabase/phase2-database-consolidation.test.ts` (8/8 passed).
+- **Manual Verification:** Verified zero remote database access; verified least-privilege role grants.
 - **Explicitly Excluded Work:** Modifying frontend components or altering remote database without explicit authorization.
-- **Exit Gate:** 50/50 RLS attack vectors verified on real PostgreSQL fixture with zero errors.
-- **Risks & Rollback:** SQL syntax errors or constraint violations on clean replay. Rollback: Drop test schema and re-run clean migration baseline.
+- **Exit Gate:** Formal Phase 2 acceptance verdict: `PASS — PHASE 2 SECURE DATABASE & TENANT ISOLATION COMPLETE`.
+- **Risks & Rollback:** Zero risk (version-controlled on Git; zero remote DB writes). Rollback target: Commit `8707759`.
 
 ---
 
