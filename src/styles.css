@@ -1921,3 +1921,12 @@ independent of footer height. */
     transition: none !important;
   }
 }
+
+@media (max-width: 360px) {
+  .foundation-v1 .site-header .header-zone-right {
+    max-width: 164px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 3px;
+  }
+}
