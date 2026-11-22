@@ -132,27 +132,41 @@ export default function TopNavbar({
           </a>
         </div>
 
-        {/* Zone 2: Centered Spotlight Command Search on Large Screens */}
-        <div className="header-zone header-zone-center">
+        {/* Zone 2: Primary product areas — one horizontal navigation line */}
+        <nav className="header-zone header-zone-center header-primary-links" aria-label="Primary KhelGrid sections">
+          {[
+            { label: 'Discover', href: '/sports' },
+            { label: 'Play', href: '/play' },
+            { label: 'Athlete', href: '/sports-cv' },
+            { label: 'SaaS', href: '/organizations' },
+            { label: 'Learn', href: '/learning' },
+          ].map(item => {
+            const active = path === item.href || path.startsWith(`${item.href}/`)
+            return (
+              <a
+                key={item.href}
+                className={`header-primary-link${active ? ' is-active' : ''}`}
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                onClick={event => onNavigate(event, item.href)}
+              >
+                {item.label}
+              </a>
+            )
+          })}
+        </nav>
+
+        {/* Zone 3: Consolidated Submit Menu, Utilities, Account & Single Primary CTA */}
+        <div className="header-zone header-zone-right">
           <button
-            className="header-icon-button header-search-trigger"
+            className="header-icon-button header-search-trigger header-search-icon-only"
             type="button"
             onClick={onOpenSearch}
             aria-label={t('searchCatalogueAria', 'Search KhelGrid catalogue')}
             title="Search KhelGrid (Ctrl or ⌘ + K)"
           >
             <SiteIcon name="search" size={17} />
-            <span className="header-search-placeholder">
-              {t('searchKhelgrid', 'Search KhelGrid')}…
-            </span>
-            <kbd className="header-search-kbd" aria-hidden="true">
-              ⌘ / Ctrl K
-            </kbd>
           </button>
-        </div>
-
-        {/* Zone 3: Consolidated Submit Menu, Utilities, Account & Single Primary CTA */}
-        <div className="header-zone header-zone-right">
           {venueAction && (
             <a
               className="header-submit-direct header-submit-venue"
