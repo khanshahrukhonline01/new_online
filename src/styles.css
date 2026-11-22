@@ -1789,13 +1789,13 @@ independent of footer height. */
   transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
 }
 
-.foundation-v1 .site-header .header-submit-venue {
+.foundation-v1 .site-header .header-submit-listing {
   border-color: var(--accent, #07964f);
   color: #fff;
   background: var(--accent, #07964f);
 }
 
-.foundation-v1 .site-header .header-submit-venue:hover {
+.foundation-v1 .site-header .header-submit-listing:hover {
   border-color: var(--accent-hover, #067a41);
   color: #fff;
   background: var(--accent-hover, #067a41);
