@@ -8,6 +8,7 @@ import {
   parseAuthUrlCallback,
   clearAuthUrlHash,
 } from '../../integrations/supabase/auth-client'
+import { getSupabaseClient } from '../../integrations/supabase/realtime-client'
 import {
   getAdminModerationQueue,
   startListingReview,
@@ -21,10 +22,6 @@ import {
   getListingSubmissionVersions,
   getListingPublicationDetails,
   saveListingPublicationDetails,
-  addListingEvidence,
-  reviewListingEvidence,
-  verifyListingSubmission,
-  getListingEvidence,
   type AdminModerationQueue,
   type ModeratorQueueItem,
   type SubmissionAuditItem,
@@ -321,6 +318,35 @@ export function AdminModerationPage({
     }
   }, [])
 
+  useEffect(() => {
+    if (initialQueue !== undefined) return
+    const client = getSupabaseClient()
+    if (!client) return
+    let active = true
+    const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
+      if (!active) return
+      if (event === 'SIGNED_OUT' || !session) {
+        setQueue(null)
+        setChronicleQueue(null)
+        setSelectedItem(null)
+        setSelectedManuscript(null)
+        return
+      }
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        window.setTimeout(() => {
+          if (active) {
+            void loadQueue()
+            void loadChronicleQueue()
+          }
+        }, 0)
+      }
+    })
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
+  }, [initialQueue, loadQueue, loadChronicleQueue])
+
   const handleRequestPasswordReset = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setSigningIn(true)
@@ -345,8 +371,8 @@ export function AdminModerationPage({
 
   const handleSaveNewPassword = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long.')
+    if (newPassword.length < 12) {
+      setError('Admin passwords must be at least 12 characters long.')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -461,98 +487,25 @@ export function AdminModerationPage({
       } else if (actionDialog === 'publish') {
         let currentVersion = selectedItem.version
 
-        // Prepare verified structured facts ensuring DB constraints are met
-        const finalData = { ...publishStructured }
-        const cityVal = (finalData.city || selectedItem.city || '').trim()
-        finalData.city = cityVal && cityVal.toLowerCase() !== 'india' ? cityVal : 'Delhi'
+        // Save ONLY real, moderator-entered structured facts (never fabricate cities,
+        // addresses, qualifications, dates, or synthetic verification evidence URLs).
+        const explicitFacts = Object.fromEntries(
+          Object.entries(publishStructured)
+            .map(([k, v]) => [k, v.trim()])
+            .filter(([, v]) => v.length > 0),
+        )
 
-        if (selectedItem.listing_type === 'pickup_game') {
-          if (!finalData.sport) finalData.sport = 'Football'
-          if (!finalData.venue_name) finalData.venue_name = selectedItem.title
-          if (!finalData.host_name) finalData.host_name = 'Community Coordinator'
-          if (!finalData.starts_at) {
-            const tmrw = new Date(Date.now() + 86400000)
-            tmrw.setHours(17, 0, 0, 0)
-            finalData.starts_at = tmrw.toISOString()
-          }
-        } else if (selectedItem.listing_type === 'opportunity') {
-          if (!finalData.organizer_name) finalData.organizer_name = selectedItem.title
-          if (!finalData.venue_name) finalData.venue_name = `${finalData.city} Sports Ground`
-        } else if (selectedItem.listing_type === 'venue') {
-          if (!finalData.address || finalData.address.toLowerCase() === finalData.city.toLowerCase()) {
-            finalData.address = `Near Sports Ground, ${finalData.city}`
-          }
-          if (!finalData.sport) finalData.sport = 'Multi-sport'
-        } else if (selectedItem.listing_type === 'coach') {
-          if (!finalData.qualifications) finalData.qualifications = 'Certified Sports Coach & Trainer'
-        } else if (selectedItem.listing_type === 'academy') {
-          if (!finalData.state) finalData.state = finalData.city
-        } else if (selectedItem.listing_type === 'event') {
-          if (!finalData.organizer_name) finalData.organizer_name = selectedItem.title
-          if (!finalData.venue_name) finalData.venue_name = `${finalData.city} Sports Arena`
-          if (!finalData.starts_at) {
-            const nextWeek = new Date(Date.now() + 7 * 86400000)
-            nextWeek.setHours(10, 0, 0, 0)
-            finalData.starts_at = nextWeek.toISOString()
-          }
-        }
-
-        // 1. Save publication category facts to structured_data
-        try {
-          const newVer = await saveListingPublicationDetails(selectedItem.id, finalData, currentVersion)
+        if (Object.keys(explicitFacts).length > 0) {
+          const newVer = await saveListingPublicationDetails(selectedItem.id, explicitFacts, currentVersion)
           if (typeof newVer === 'number' && !isNaN(newVer)) currentVersion = newVer
-        } catch (detailErr) {
-          console.warn('Could not save publication details before publish:', detailErr)
         }
 
-        // 2. Ensure all category-mandated evidence rows exist & are marked 'supports'
-        try {
-          const evidenceRows = await getListingEvidence(selectedItem.id)
-          const supportedTypes = new Set(evidenceRows.filter(e => e.outcome === 'supports').map(e => e.evidence_type))
-
-          const requiredTypes: Record<string, string[]> = {
-            pickup_game: ['venue_address', 'organizer_identity'],
-            venue: ['venue_address'],
-            opportunity: ['official_source'],
-            academy: ['academy_identity'],
-            coach: ['coach_qualification'],
-            event: ['event_details'],
-            sport: ['official_source'],
-          }
-          const needed = (requiredTypes[selectedItem.listing_type] || ['official_source']).filter(t => !supportedTypes.has(t))
-
-          const evUrl = selectedItem.source_url?.startsWith('https://')
-            ? selectedItem.source_url
-            : `https://khelgrid.com/verify/${encodeURIComponent(selectedItem.reference_number)}`
-
-          for (const evType of needed) {
-            const evDesc =
-              evType === 'venue_address' ? `Venue location and address verified by KhelGrid moderation desk` :
-              evType === 'organizer_identity' ? `Host and organizer identity verified by KhelGrid moderation desk` :
-              evType === 'coach_qualification' ? `Coach certifications and credentials verified by KhelGrid moderation desk` :
-              evType === 'academy_identity' ? `Academy identity and facility verified by KhelGrid moderation desk` :
-              evType === 'event_details' ? `Event dates, rules and venue verified by KhelGrid moderation desk` :
-              `Official source and details verified by KhelGrid moderation desk`
-
-            const evId = await addListingEvidence({
-              submissionId: selectedItem.id,
-              evidenceType: evType,
-              evidenceUrl: evUrl,
-              description: evDesc,
-            })
-            if (evId) {
-              await reviewListingEvidence(evId, 'supports', 'Verified by KhelGrid staff')
-            }
-          }
-          await verifyListingSubmission(selectedItem.id, 'verified', 'Verified and approved for publication by moderation desk.')
-        } catch (verifyErr) {
-          console.warn('Auto-verification step note:', verifyErr)
-        }
-
-        // 3. Publish to live catalogue
-        const res = await publishListingSubmission(selectedItem.id, targetSlug.trim() || undefined, undefined)
+        // Publish strictly through server-enforced evidence & verification checks.
+        // If evidence is incomplete or verification is not marked 'verified' in Control Centre,
+        // the database RPC will reject publication rather than fabricating verification.
+        const res = await publishListingSubmission(selectedItem.id, targetSlug.trim() || undefined, undefined, currentVersion)
         clearCatalogueCache()
-        setNotice(`Published to public.${res.publishedTable} with slug "${res.slug}"! Live on khelgrid.com!`)
+        setNotice(`Published to public.${res.publishedTable} with slug "${res.slug}".`)
       } else if (actionDialog === 'unpublish') {
         if (!actionMessage.trim()) {
           setError('An unpublication reason is required.')
@@ -2189,7 +2142,7 @@ export function AdminModerationPage({
               className="admin-search-input"
               value={email}
               onChange={event => setEmail(event.target.value)}
-              placeholder="moderator@khelgrid.com"
+              placeholder="operator@example.com"
             />
           </label>
           <button type="submit" className="admin-btn admin-btn-approve" style={{ width: '100%', justifyContent: 'center' }} disabled={signingIn}>

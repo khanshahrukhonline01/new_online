@@ -21,13 +21,13 @@ describe('shared navigation registry', () => {
     expect(navigationModules.find(section => section.id === 'athlete-tools')?.items.map(item => item.href))
       .toContain('/sports-cv')
     expect(navigationModules.find(section => section.id === 'partner-saas')?.items.map(item => item.href))
-      .toEqual(['/partner-signup', '/academy-hub', '/coach-dashboard', '/tournament-ops', '/host', '/campaigns', '/creator', '/gate-checkin'])
+      .toEqual(['/organizations', '/partner-signup', '/academy-hub', '/coach-dashboard', '/tournament-ops', '/host', '/campaigns', '/creator', '/gate-checkin'])
     expect(navigationModules.find(section => section.id === 'your-space')?.items.map(item => item.href))
-      .toEqual(['/', '/dashboard', '/parent-portal', '/my-passes', '/saved'])
+      .toEqual(['/', '/workspace', '/parent-portal', '/my-passes', '/saved'])
   })
 
   it('keeps header destinations separate from the full sidebar registry', () => {
-    expect(headerNavigation.map(item => item.href)).toEqual(['/', '/dashboard', '/saved'])
+    expect(headerNavigation.map(item => item.href)).toEqual(['/', '/workspace', '/saved'])
   })
 
   it('does not mark unfinished personal and scouting tools as available', () => {
@@ -35,7 +35,7 @@ describe('shared navigation registry', () => {
       expect(primaryNavigation.find(item => item.href === href)?.available).not.toBe(true)
     }
     expect(primaryNavigation.find(item => item.href === '/for-you')?.available).toBe(true)
-    expect(primaryNavigation.find(item => item.href === '/dashboard')?.available).toBe(true)
+    expect(primaryNavigation.find(item => item.href === '/workspace')?.available).toBe(true)
     expect(primaryNavigation.find(item => item.href === '/saved')?.available).toBe(true)
     expect(primaryNavigation.find(item => item.href === '/scout-portal')?.available).toBe(true)
     expect(primaryNavigation.find(item => item.href === '/verification')?.available).toBe(true)

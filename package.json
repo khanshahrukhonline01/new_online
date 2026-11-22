@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0 --port 3000",
     "build:sitemap": "node --experimental-strip-types scripts/generate-sitemap.mjs",
     "build:feed": "node --experimental-strip-types scripts/generate-feed.mjs",
     "build": "node --experimental-strip-types scripts/generate-sitemap.mjs && node --experimental-strip-types scripts/generate-feed.mjs && tsc -b && vite build",

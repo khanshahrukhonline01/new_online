@@ -29,7 +29,7 @@ export const navigationModules: NavigationModule[] = [
     icon: 'user-round',
     items: [
       { id: 'home', label: 'Home', href: '/', icon: 'home', module: 'your-space', available: true },
-      { id: 'dashboard', label: 'My Dashboard', href: '/dashboard', icon: 'chart', module: 'your-space', available: true },
+      { id: 'workspace', label: 'Workspace', href: '/workspace', icon: 'chart', module: 'your-space', available: true },
       { id: 'parent-portal', label: 'Parent & Athlete Passbook', href: '/parent-portal', icon: 'shield-check', module: 'your-space', available: true },
       { id: 'my-passes', label: 'My Passes & Vouchers', href: '/my-passes', icon: 'badge-check', module: 'your-space', available: true },
       { id: 'saved', label: 'Saved Items', href: '/saved', icon: 'bookmark', module: 'your-space', available: true },
@@ -79,6 +79,7 @@ export const navigationModules: NavigationModule[] = [
     label: 'Partner & Coaching Suite',
     icon: 'handshake',
     items: [
+      { id: 'organizations-hub', label: 'Organizations & SaaS Hub', href: '/organizations', icon: 'building', module: 'partner-saas', available: true },
       { id: 'partner-onboarding', label: 'Partner Setup & Login (30s)', href: '/partner-signup', icon: 'handshake', module: 'partner-saas', available: true },
       { id: 'academy-hub', label: 'Academy Admissions Hub', href: '/academy-hub', icon: 'building', module: 'partner-saas', available: true },
       { id: 'coach-dashboard', label: 'Coach Operations Hub', href: '/coach-dashboard', icon: 'award', module: 'partner-saas', available: true },
@@ -120,7 +121,7 @@ export const navigationModules: NavigationModule[] = [
 export const primaryNavigation = navigationModules.flatMap(section => section.items)
 
 /** Header actions are maintained separately from feature navigation. */
-export const headerNavigation = (navigationModules.find(section => section.id === 'your-space')?.items ?? []).filter(item => ['/', '/dashboard', '/saved'].includes(item.href))
+export const headerNavigation = (navigationModules.find(section => section.id === 'your-space')?.items ?? []).filter(item => ['/', '/workspace', '/dashboard', '/saved'].includes(item.href))
 
 export function getNavigationHref(item: NavigationItem): string {
   return item.href

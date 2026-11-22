@@ -1,0 +1,1136 @@
+# KHELGRID — PHASE 1
+# COMPREHENSIVE SAAS ARCHITECTURE AUDIT
+## Multi-Tenancy, Organizations, Memberships, RBAC, Subscriptions, Entitlements & Platform-Wide SaaS Readiness
+
+Repository: `khelgrid-dotcom/khelgrid-platform`
+
+Primary branch: `main`
+
+Phase: 1 — SaaS Architecture Audit
+
+Audit type: READ-ONLY, EVIDENCE-BASED
+
+---
+
+# 1. MISSION
+
+Conduct a comprehensive architectural audit of the entire KhelGrid platform to determine whether its existing architecture can support a scalable, modular, multi-tenant SaaS ecosystem.
+
+This audit must cover the complete platform, not merely the existing SaaS implementation.
+
+We want to establish a reusable SaaS foundation that can eventually support every suitable KhelGrid module.
+
+The architecture must support:
+
+1. Individual users.
+2. Athletes.
+3. Coaches.
+4. Sports academies.
+5. Sports venues.
+6. Schools and colleges.
+7. Universities.
+8. Sports clubs.
+9. Sports federations.
+10. Tournament organizers.
+11. Event organizers.
+12. Sports associations.
+13. Corporate sports organizations.
+14. Training and development organizations.
+15. Sports service providers.
+16. Research and editorial organizations.
+17. Future enterprise customers.
+18. Platform administrators.
+19. Platform moderators.
+20. Organization administrators.
+21. Organization employees and staff.
+22. Organization-specific teams and departments.
+
+The goal is not to create unnecessary complexity.
+
+The goal is to build a strong foundation where new modules can adopt standardized tenancy, permissions, organization ownership and entitlements without repeatedly reinventing these systems.
+
+We want KhelGrid to be capable of evolving into a large sports technology ecosystem.
+
+---
+
+# 2. ABSOLUTE SAFETY REQUIREMENTS
+
+THIS IS AN AUDIT ONLY.
+
+Do not implement fixes.
+
+Do not modify any source files.
+
+Do not create or modify SQL migrations.
+
+Do not change database schemas.
+
+Do not apply migrations.
+
+Do not connect to production Supabase.
+
+Do not connect to remote development Supabase.
+
+Do not access production credentials.
+
+Do not create organizations or users.
+
+Do not modify authentication settings.
+
+Do not modify Vercel configuration.
+
+Do not deploy anything.
+
+Do not create commits, branches or pull requests.
+
+Do not reset, stash or overwrite existing work.
+
+Do not enable payments.
+
+Do not initiate actual payment transactions.
+
+Do not change listing prices or introduce mandatory listing payments.
+
+Do not introduce fake subscription data.
+
+Preserve all existing local and uncommitted changes.
+
+If a verification requires a remote database, privileged credentials or destructive execution, mark it NOT VERIFIED.
+
+---
+
+# 3. FIRST: ESTABLISH AUDIT BASELINE
+
+Before inspecting SaaS architecture, record:
+
+- Repository path.
+- Current branch.
+- Current commit SHA.
+- Git working-tree status.
+- Latest available main commit.
+- Relevant SaaS-related branches and merged pull requests.
+- Whether Phase 0 inventory is available.
+- Existing Phase 1 documentation.
+- Existing SaaS-related migrations.
+- Existing SaaS-related tests.
+
+Do not assume the local branch is identical to GitHub main.
+
+Use the actual checked-out code as the primary source of truth.
+
+Compare it with the latest main branch only when safely available.
+
+Document any discrepancy.
+
+---
+
+# 4. PART A — COMPLETE SAAS ARCHITECTURE DISCOVERY
+
+Search the entire repository for all SaaS-related functionality.
+
+Inspect:
+
+- Database schemas.
+- SQL migrations.
+- TypeScript interfaces.
+- React components.
+- API endpoints.
+- Supabase RPCs.
+- Edge Functions.
+- Authentication services.
+- Authorization helpers.
+- Organization services.
+- Tenant services.
+- Admin application.
+- Subscription interfaces.
+- Billing services.
+- Usage tracking.
+- Feature flags.
+- Entitlement checks.
+- Middleware.
+- Route guards.
+- Documentation.
+- Tests.
+
+Search for concepts including:
+
+tenant
+tenant_id
+organization
+organization_id
+membership
+member
+role
+permission
+RBAC
+subscription
+plan
+entitlement
+feature_flag
+usage_limit
+billing
+workspace
+team
+owner
+administrator
+moderator
+super_admin
+platform_admin
+organization_admin
+resource_owner
+
+Do not rely exclusively on search results.
+
+Follow actual data flows from frontend to backend and database.
+
+Produce a SaaS architecture dependency map.
+
+---
+
+# 5. PART B — MULTI-TENANCY ARCHITECTURE
+
+Determine whether KhelGrid has a genuinely functional multi-tenant architecture.
+
+Investigate:
+
+## B1. Tenant model
+
+Identify:
+
+- Tenant table.
+- Tenant identifier.
+- Tenant creation process.
+- Tenant ownership.
+- Tenant status.
+- Tenant lifecycle.
+- Tenant deletion or suspension.
+- Tenant metadata.
+- Tenant settings.
+- Tenant-specific configuration.
+
+Determine whether tenants are represented by organizations, workspaces, accounts or another entity.
+
+Identify duplicate or competing tenant models.
+
+## B2. Tenant isolation
+
+Inspect every tenant-owned table and determine:
+
+- Whether tenant_id exists where appropriate.
+- Whether tenant ownership is enforced by foreign keys.
+- Whether RLS is enabled.
+- Whether SELECT policies prevent cross-tenant access.
+- Whether INSERT policies prevent unauthorized tenant assignment.
+- Whether UPDATE policies prevent tenant reassignment.
+- Whether DELETE policies are appropriately restricted.
+- Whether joins and views preserve tenant isolation.
+- Whether RPC functions enforce tenant boundaries.
+- Whether SECURITY DEFINER functions can bypass isolation.
+- Whether background jobs preserve tenant context.
+
+Identify tables that can expose another organization's information.
+
+## B3. Tenant hierarchy
+
+Determine whether the current design supports:
+
+- Parent organizations.
+- Branches.
+- Regional offices.
+- Departments.
+- Teams.
+- Sub-organizations.
+- Multiple locations.
+- Organization-owned facilities.
+
+Assess whether hierarchical tenancy is necessary or whether simpler organization relationships are sufficient.
+
+Do not recommend unnecessary nested tenancy.
+
+## B4. Tenant resolution
+
+Inspect how the application determines the active organization.
+
+Evaluate:
+
+- Session-based tenant resolution.
+- User membership validation.
+- URL-based organization context.
+- Subdomain-based organization context.
+- API tenant resolution.
+- Server-side validation.
+- Tenant switching.
+- Multi-organization users.
+
+Never trust a client-supplied tenant_id without verifying membership and authorization.
+
+## B5. Tenant lifecycle
+
+Evaluate:
+
+- Organization registration.
+- Organization verification.
+- Organization approval.
+- Suspension.
+- Reactivation.
+- Closure.
+- Data retention.
+- Ownership transfer.
+- Member removal.
+- Account deletion.
+
+Classify each capability as implemented, partial, missing or not verified.
+
+---
+
+# 6. PART C — ORGANIZATION ARCHITECTURE
+
+Audit organization functionality across the entire platform.
+
+Determine whether KhelGrid supports different organization types through a consistent data model.
+
+Evaluate these organization categories:
+
+- Academy.
+- Sports club.
+- Venue operator.
+- School.
+- College.
+- University.
+- Federation.
+- Association.
+- Tournament organizer.
+- Event organizer.
+- Sports research organization.
+- Media organization.
+- Enterprise organization.
+- Other sports ecosystem participants.
+
+For each type, determine:
+
+1. Can it be created?
+2. Can it be verified?
+3. Can it have multiple members?
+4. Can it own resources?
+5. Can it assign roles?
+6. Can it manage its own content?
+7. Can it control publication?
+8. Can it be suspended?
+9. Can it use future premium modules?
+10. Can it operate without a paid subscription?
+
+Investigate the relationship between organizations and:
+
+- Venue listings.
+- Coach profiles.
+- Academy profiles.
+- Trial submissions.
+- Tournament listings.
+- Pickup games.
+- Events.
+- Athlete programs.
+- Research publications.
+- Editorial content.
+- Documents.
+- Notifications.
+- Bookings.
+- Payments.
+- Analytics.
+- Future SaaS products.
+
+Identify resources that currently lack a reliable ownership model.
+
+IMPORTANT:
+
+Do not assume that every listing must belong to an organization.
+
+Individual athletes, coaches and independent organizers may legitimately own resources.
+
+Recommend a model supporting both individual ownership and organization ownership without weakening security.
+
+---
+
+# 7. PART D — MEMBERSHIP AND IDENTITY ARCHITECTURE
+
+Inspect the relationship between users and organizations.
+
+Evaluate:
+
+- User identity.
+- Organization membership.
+- Membership status.
+- Invitation system.
+- Invitation expiration.
+- Acceptance and rejection.
+- Membership revocation.
+- Multiple memberships.
+- Membership history.
+- Ownership transfer.
+- Member suspension.
+- Member reactivation.
+- Audit trails.
+
+Determine whether a single user can:
+
+- Own an organization.
+- Belong to multiple organizations.
+- Have different roles in different organizations.
+- Switch between organizations.
+- Retain personal athlete or coach identity.
+- Access personal and organization resources independently.
+
+Investigate whether organization membership is incorrectly coupled to global user roles.
+
+A user being an administrator in one organization must not automatically make that user a platform administrator.
+
+---
+
+# 8. PART E — RBAC AND AUTHORIZATION ARCHITECTURE
+
+This is one of the highest-priority parts of the audit.
+
+Inspect all existing role and permission implementations.
+
+Separate the following security domains.
+
+## E1. Platform-level roles
+
+Potential roles:
+
+- Platform Super Administrator.
+- Platform Administrator.
+- Security Administrator.
+- Platform Moderator.
+- Content Moderator.
+- Verification Reviewer.
+- Support Operator.
+- Read-only Auditor.
+
+Determine which roles actually exist and how they are enforced.
+
+## E2. Organization-level roles
+
+Evaluate support for:
+
+- Organization Owner.
+- Organization Administrator.
+- Manager.
+- Finance Manager.
+- Content Manager.
+- Listing Manager.
+- Verification Coordinator.
+- Staff Member.
+- Read-only Member.
+
+Do not create unnecessary roles.
+
+Identify whether permissions are assigned by role or hardcoded throughout the frontend.
+
+## E3. Module-level permissions
+
+Determine whether permissions can be assigned independently for:
+
+- Venues.
+- Coaches.
+- Trials.
+- Events.
+- Tournaments.
+- Pickup games.
+- Bookings.
+- Athletes.
+- Editorial content.
+- Analytics.
+- Organization settings.
+- Team management.
+
+## E4. Authorization enforcement
+
+Inspect:
+
+- Frontend route guards.
+- Component-level permission checks.
+- Backend authorization.
+- Supabase RLS.
+- RPC authorization.
+- Edge Function authorization.
+- Service-role access.
+- Cross-tenant authorization.
+
+The backend must be the security authority.
+
+Frontend hiding is not authorization.
+
+## E5. Privilege escalation risks
+
+Investigate:
+
+- User self-assignment of privileged roles.
+- Organization role escalation.
+- Unauthorized ownership transfer.
+- Membership manipulation.
+- Tenant ID spoofing.
+- Forged organization context.
+- Unauthorized invitations.
+- Cross-organization resource modification.
+- Moderator privilege escalation.
+- Super-admin privilege escalation.
+
+Provide a threat matrix.
+
+---
+
+# 9. PART F — SUBSCRIPTION ARCHITECTURE
+
+Audit the current subscription and billing foundation without activating payments.
+
+Determine whether KhelGrid has a canonical subscription model.
+
+Inspect:
+
+- Plans.
+- Subscription records.
+- Subscription status.
+- Organization subscriptions.
+- Individual subscriptions.
+- Subscription ownership.
+- Plan changes.
+- Renewal periods.
+- Trial periods.
+- Cancellation.
+- Expiration.
+- Grace periods.
+- Suspension.
+- Refund-related states.
+- Subscription history.
+- Provider integration.
+- Payment verification.
+- Webhooks.
+- Idempotency.
+- Reconciliation.
+
+Evaluate whether the platform incorrectly mixes:
+
+- Listing verification.
+- Listing publication.
+- Paid subscriptions.
+- Organization verification.
+- Platform moderation.
+- Premium functionality.
+
+These must remain logically independent.
+
+## Important business requirement
+
+Venue, coach and trial listings must remain free to submit and publish, subject to verification and moderation requirements.
+
+Do not introduce listing fees as a prerequisite for publication.
+
+The existing payment infrastructure may remain in development, but payment collection must remain disabled.
+
+Determine whether subscriptions can eventually support:
+
+- Individual premium memberships.
+- Academy subscriptions.
+- Venue operator subscriptions.
+- Club subscriptions.
+- Enterprise subscriptions.
+- Organization-wide plans.
+- Optional premium modules.
+
+No subscription capability should be declared operational without actual enforcement evidence.
+
+---
+
+# 10. PART G — CENTRALIZED ENTITLEMENT ARCHITECTURE
+
+Evaluate whether KhelGrid has a centralized entitlement system.
+
+This is essential.
+
+We want future modules to ask one consistent authorization question:
+
+Does this user or organization have permission to use this feature under its current access configuration?
+
+Investigate whether the platform supports:
+
+- Feature entitlements.
+- Plan-based entitlements.
+- Organization-specific entitlements.
+- User-specific entitlements.
+- Role-based entitlements.
+- Temporary grants.
+- Administrative overrides.
+- Usage-based entitlements.
+- Trial entitlements.
+- Feature suspension.
+- Entitlement expiration.
+
+Assess whether entitlements are checked server-side.
+
+Identify duplicated plan checks or hardcoded premium conditions.
+
+## Potential future entitlement categories
+
+Evaluate these as architectural possibilities, not as approved commercial plans.
+
+### Organization management
+
+- Multiple organization members.
+- Advanced role management.
+- Multiple branches.
+- Team management.
+- Organization analytics.
+
+### Venue management
+
+- Multiple venue locations.
+- Advanced availability management.
+- Booking analytics.
+- Staff management.
+
+### Academy management
+
+- Student management.
+- Batch management.
+- Coach allocation.
+- Attendance.
+- Training analytics.
+
+### Coach management
+
+- Multiple coaching programs.
+- Advanced profile tools.
+- Performance reports.
+
+### Event and tournament management
+
+- Advanced registrations.
+- Participant management.
+- Event analytics.
+- Multiple event administrators.
+
+### Athlete ecosystem
+
+- Advanced athlete profiles.
+- Performance history.
+- Portfolio tools.
+- Program management.
+
+### Research and editorial
+
+- Organization publishing tools.
+- Editorial collaboration.
+- Research workspace.
+- Publication analytics.
+
+### Platform-wide tools
+
+- Advanced reporting.
+- Data exports.
+- API access.
+- Integrations.
+- Automation.
+- Advanced dashboards.
+
+Determine which modules can support entitlements with minimal architectural changes.
+
+IMPORTANT:
+
+Do not turn every capability into a paid feature.
+
+Free, public and community features must remain possible.
+
+Verification and trust requirements must not become paid entitlements.
+
+---
+
+# 11. PART H — USAGE METERING AND LIMIT ARCHITECTURE
+
+Inspect whether KhelGrid supports or needs a reusable usage measurement system.
+
+Potential metrics:
+
+- Organization members.
+- Branches.
+- Published events.
+- Managed venues.
+- API requests.
+- Storage usage.
+- Monthly reports.
+- Automation executions.
+- Data exports.
+
+Evaluate:
+
+- Usage aggregation.
+- Time windows.
+- Meter definitions.
+- Limit enforcement.
+- Quotas.
+- Soft limits.
+- Hard limits.
+- Overage handling.
+- Usage resets.
+- Auditability.
+
+Determine whether usage is calculated securely on the server.
+
+Avoid introducing unnecessary metering for free community functions.
+
+---
+
+# 12. PART I — PLATFORM-WIDE SAAS ADOPTION AUDIT
+
+This section is mandatory.
+
+Do not limit the audit to tables already named tenant or subscription.
+
+Inspect the complete KhelGrid application and determine which modules should adopt standardized SaaS architecture.
+
+Create a module-by-module matrix.
+
+Include at least:
+
+1. Public homepage.
+2. Sports directory.
+3. Venue directory.
+4. Academy directory.
+5. Coach directory.
+6. Trial listings.
+7. Scholarship listings.
+8. Camps.
+9. Combines.
+10. Tournaments.
+11. Events.
+12. Pickup games.
+13. Athlete profiles.
+14. Athlete dashboards.
+15. Organization dashboards.
+16. Venue management.
+17. Academy management.
+18. Booking system.
+19. Notification system.
+20. KhelChronicle.
+21. Editorial management.
+22. Research publishing.
+23. Analytics.
+24. Search.
+25. File and document management.
+26. Admin application.
+27. Moderation application.
+28. Verification workflows.
+29. Future API integrations.
+30. Future enterprise tools.
+
+For each module record:
+
+- Existing ownership model.
+- Existing tenant relationship.
+- Organization compatibility.
+- Individual ownership compatibility.
+- Role requirements.
+- Permission requirements.
+- Subscription relevance.
+- Entitlement requirements.
+- Usage metering relevance.
+- Current implementation.
+- Security risks.
+- Recommended architectural integration.
+- Whether integration is necessary now, later or not at all.
+
+Do not force public read-only pages or community features into organization tenancy unnecessarily.
+
+---
+
+# 13. PART J — DATABASE ARCHITECTURE REVIEW
+
+Review existing database structures for:
+
+- organizations.
+- tenants.
+- memberships.
+- invitations.
+- roles.
+- permissions.
+- role assignments.
+- subscriptions.
+- plans.
+- entitlements.
+- feature flags.
+- usage records.
+- billing records.
+- resource ownership.
+- audit logs.
+
+Evaluate:
+
+1. Canonical ownership relationships.
+2. Foreign key integrity.
+3. Tenant consistency.
+4. Unique constraints.
+5. Indexes.
+6. RLS.
+7. Referential integrity.
+8. Data duplication.
+9. Cascading delete risks.
+10. Historical records.
+11. Migration compatibility.
+12. Naming consistency.
+
+Identify conflicting models and redundant tables.
+
+Do not create replacement tables or migrations.
+
+Recommend a canonical model only after understanding the existing schema.
+
+---
+
+# 14. PART K — SAAS API AND SERVICE ARCHITECTURE
+
+Inspect whether common SaaS functionality is implemented in reusable services.
+
+Evaluate:
+
+- Tenant context service.
+- Organization service.
+- Membership service.
+- Role resolution service.
+- Permission service.
+- Entitlement service.
+- Subscription service.
+- Usage service.
+- Audit logging service.
+- Organization invitation service.
+
+Determine whether modules duplicate their own authorization logic.
+
+Identify appropriate reusable backend boundaries.
+
+Review how services communicate with Supabase and whether sensitive operations are performed on trusted server-side boundaries.
+
+---
+
+# 15. PART L — SAAS ADMINISTRATION AND CONTROL PLANE
+
+Inspect the separate admin application and identify whether it supports a secure platform control plane.
+
+Evaluate:
+
+- Organization discovery.
+- Organization verification.
+- Organization suspension.
+- Organization reactivation.
+- Tenant status management.
+- Membership oversight.
+- Role administration.
+- Subscription oversight.
+- Entitlement overrides.
+- Usage monitoring.
+- Security audit logs.
+- Administrative action history.
+
+Determine which actions are platform-only and which belong to organization administrators.
+
+A platform administrator must not accidentally inherit unrestricted access to all user data without a justified and audited permission model.
+
+Do not implement new admin features.
+
+---
+
+# 16. PART M — SAAS SECURITY TESTING GAP ANALYSIS
+
+Inspect all existing tests.
+
+Determine whether the current test suite verifies:
+
+## Tenant isolation
+
+- Tenant A cannot read Tenant B data.
+- Tenant A cannot modify Tenant B data.
+- Tenant A cannot delete Tenant B data.
+- Tenant A cannot insert resources under Tenant B.
+- Tenant A cannot change its tenant ownership.
+- Cross-tenant joins do not leak information.
+
+## Organization authorization
+
+- Non-members cannot access private organization data.
+- Members cannot assign themselves owner permissions.
+- Removed members lose access.
+- Suspended organizations cannot perform prohibited operations.
+- Users can belong to multiple organizations safely.
+
+## Role security
+
+- Organization admin cannot become platform admin.
+- Moderator cannot access super-admin controls.
+- Read-only roles cannot modify protected records.
+- Permissions are checked server-side.
+
+## Subscription and entitlements
+
+- Expired subscriptions lose applicable premium access.
+- Cancelled subscriptions follow defined access rules.
+- Free features remain accessible.
+- Admin overrides are audited.
+- Clients cannot forge entitlements.
+- Usage limits cannot be bypassed through direct API calls.
+
+## Identity isolation
+
+- Users retain independent personal identities.
+- Organization membership does not automatically transfer ownership of personal resources.
+- Organization switching cannot expose previous organization data.
+
+Classify every test as:
+
+PASS — verified by actual execution evidence.
+
+FAIL — reproduced failure.
+
+NOT EXECUTED — test exists but was not executed.
+
+MISSING — no corresponding test exists.
+
+NOT VERIFIED — evidence is insufficient.
+
+Do not report a test as passing simply because its source file exists.
+
+---
+
+# 17. PART N — ARCHITECTURAL GAP REGISTER
+
+Produce a complete list of identified problems.
+
+Every finding must include:
+
+- Finding ID.
+- Severity.
+- Category.
+- Exact source file or migration.
+- Evidence.
+- Current behavior.
+- Expected behavior.
+- Security or business impact.
+- Recommended remediation.
+- Dependencies.
+- Acceptance criteria.
+- Verification status.
+
+Severity definitions:
+
+P0 — Critical security, cross-tenant data exposure or major data-loss risk.
+
+P1 — High severity architectural or authorization failure.
+
+P2 — Medium severity reliability, maintainability or capability gap.
+
+P3 — Low severity optimization or technical debt.
+
+Distinguish confirmed defects from architectural recommendations.
+
+---
+
+# 18. PART O — PROPOSED TARGET SAAS ARCHITECTURE
+
+After completing the existing-state audit, propose a target architecture.
+
+Do not implement it.
+
+The target architecture should ideally have the following logical layers:
+
+1. Identity layer.
+2. Platform authorization layer.
+3. Organization and tenant layer.
+4. Membership layer.
+5. Role and permission layer.
+6. Resource ownership layer.
+7. Subscription layer.
+8. Entitlement layer.
+9. Usage metering layer.
+10. Audit and compliance layer.
+11. Module integration layer.
+
+Evaluate whether the current architecture can support this model with incremental changes.
+
+Do not recommend a full rewrite unless strong evidence demonstrates that incremental remediation is impractical.
+
+## Target architecture principles
+
+- Centralized identity.
+- Explicit tenant boundaries.
+- Secure individual and organization ownership.
+- Reusable authorization.
+- Backend-enforced permissions.
+- Independent platform and organization roles.
+- Optional subscriptions.
+- Centralized entitlements.
+- Free public functionality.
+- Modular feature adoption.
+- Auditable administrative actions.
+- Minimal duplication.
+- Backward compatibility.
+- Incremental migration.
+
+---
+
+# 19. REQUIRED FINAL DELIVERABLES
+
+Produce the following reports.
+
+## Report 1 — Executive SaaS Architecture Assessment
+
+Explain whether KhelGrid currently has a functional SaaS architecture.
+
+## Report 2 — Multi-Tenancy Assessment
+
+Document tenant boundaries, isolation and risks.
+
+## Report 3 — Organization and Membership Assessment
+
+Document organization lifecycle, ownership and membership capabilities.
+
+## Report 4 — RBAC and Authorization Assessment
+
+Document platform roles, organization roles and module permissions.
+
+## Report 5 — Subscription and Billing Assessment
+
+Document current capabilities and gaps without enabling payments.
+
+## Report 6 — Entitlement Architecture Assessment
+
+Determine whether future modules can use centralized entitlements.
+
+## Report 7 — Platform-Wide SaaS Adoption Matrix
+
+Show every module and its required SaaS integration.
+
+## Report 8 — Database and API Architecture Assessment
+
+Document canonical data models and service boundaries.
+
+## Report 9 — Security Test Coverage Matrix
+
+Show existing, missing, passing and failing verification.
+
+## Report 10 — Target Architecture and Remediation Roadmap
+
+Provide a phased implementation proposal with dependencies and acceptance gates.
+
+---
+
+# 20. FINAL SAAS READINESS SCORECARD
+
+Provide separate scores from 0–100 for:
+
+- Multi-tenancy.
+- Tenant isolation.
+- Organization architecture.
+- Membership management.
+- RBAC.
+- Resource ownership.
+- Subscription architecture.
+- Entitlement architecture.
+- Usage metering.
+- API architecture.
+- SaaS administration.
+- SaaS security testing.
+- Platform-wide module adoption.
+- Documentation quality.
+
+Scores must be evidence-based.
+
+A score of 100 must mean the capability has been verified, not merely documented.
+
+Mark insufficiently evidenced areas as NOT ASSESSED instead of inventing a score.
+
+Also provide an overall SaaS readiness assessment.
+
+Possible verdicts:
+
+- NOT SAAS READY.
+- FOUNDATION PARTIALLY READY.
+- SAAS ARCHITECTURE READY FOR CONTROLLED DEVELOPMENT.
+- SAAS ARCHITECTURE READY FOR PRODUCTION VALIDATION.
+
+Do not declare production readiness without the necessary security and operational evidence.
+
+---
+
+# 21. IMPLEMENTATION ROADMAP AFTER THE AUDIT
+
+Recommend a prioritized implementation sequence.
+
+Separate:
+
+A. Critical security remediation.
+
+B. Foundational SaaS architecture.
+
+C. Organization and membership capabilities.
+
+D. Reusable RBAC.
+
+E. Resource ownership integration.
+
+F. Centralized entitlement infrastructure.
+
+G. Optional subscription activation.
+
+H. Usage metering.
+
+I. Module-by-module SaaS adoption.
+
+J. Enterprise readiness.
+
+For every phase include:
+
+- Scope.
+- Dependencies.
+- Files or database areas likely affected.
+- Risks.
+- Tests required.
+- Acceptance criteria.
+- Rollback considerations.
+
+Do not start these implementation phases.
+
+---
+
+# 22. FINAL INSTRUCTIONS
+
+This is a comprehensive architectural audit.
+
+Inspect the whole repository.
+
+Trace actual implementations.
+
+Follow authorization from frontend to backend to database.
+
+Do not confuse interfaces with functional capabilities.
+
+Do not confuse schema existence with runtime enforcement.
+
+Do not confuse a successful unit test with tenant isolation.
+
+Do not invent missing functionality.
+
+Do not silently skip difficult areas.
+
+If something cannot be verified, explain exactly why.
+
+Preserve the working tree.
+
+Do not make changes.
+
+END THE REPORT WITH:
+
+1. Overall SaaS architecture verdict.
+2. Five most important confirmed problems.
+3. Five most important architectural improvements.
+4. Whether KhelGrid can support all its modules using one reusable SaaS foundation.
+5. Recommended Phase 2 scope.
+6. Explicit confirmation that no code, migrations, databases or deployments were modified.
+
+The task is complete only when the evidence-based audit report is delivered.

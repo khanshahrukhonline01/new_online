@@ -15,7 +15,8 @@ The top navigation bar is the global entry point for KhelGrid. It owns the brand
 
 - The KhelGrid logo/wordmark belongs in the top navigation; do not duplicate it in the desktop sidebar.
 - Global catalogue search belongs in the top navigation. Do not add a second desktop sidebar search.
-- “List your venue” and “Submit a trial” are prominent submission actions and remain in the header on layouts where space permits.
+- “List on KhelGrid” and “Submit a trial” are prominent submission actions and remain in the header on layouts where space permits.
+- The header More menu groups SaaS workspace destinations first (organisations, partner onboarding, academy, coach, venue/facility, tournament, gate check-in, and parent/athlete passbook), followed by secondary contribution actions. Keep these destinations aligned with the canonical route registry.
 - Notifications, Settings help, Login status, and Go Pro are header utility actions; do not copy them into the feature sidebar.
 - The header menu button controls the desktop sidebar collapse state or opens the mobile drawer, depending on viewport.
 - Header actions must not imply services are operational if they are currently disabled, coming soon, or only linked to an enquiry email.
@@ -28,7 +29,7 @@ Preserve the existing KhelGrid light header, navy text, green primary actions, m
 - Keep the header sticky at the top during page scrolling.
 - Align all controls vertically around the same center line.
 - Maintain consistent icon sizes and comfortable click/tap areas.
-- Use a clear green filled style for the primary “List your venue” action and “Go Pro”; use a quieter outlined treatment for “Submit a trial.”
+- Use a clear green filled style for the primary “List on KhelGrid” action and “Go Pro”; use a quieter outlined treatment for “Submit a trial.”
 - Search is a wide, low-contrast input with rounded corners, a leading search icon, and a trailing submit control.
 - Hover, focus, disabled, and active states must be visually distinct.
 - Avoid excessive shadows, extra dividers, duplicate brand/search, or a second competing primary CTA.
@@ -41,7 +42,9 @@ The header currently contains these elements in order:
 1. **Main menu toggle** — collapses/expands the desktop sidebar.
 2. **KhelGrid brand** — logo and wordmark, links to the home page.
 3. **Global search form** — searches sports, trials, venues, athletes, and the catalogue.
-4. **Primary header actions** — “List your venue” and “Submit a trial.”
+4. **Primary header actions** — “List on KhelGrid” and “Submit a trial.”
+5. **All KhelGrid actions** — a scrollable, grouped action directory backed by the canonical navigation registry; available routes navigate, while unavailable routes remain visible and disabled.
+5. **More** — grouped SaaS workspace destinations first, followed by secondary contribution actions.
 5. **Notifications** — currently disabled and labeled “coming soon.”
 6. **Settings help** — currently links to a KhelGrid settings-help email.
 7. **Login** — labeled “Coming Soon”; it must not be presented as working account authentication.
@@ -92,11 +95,12 @@ The exact rendered availability of items varies by responsive breakpoint. Preser
 
 ## 6. Header actions and honest service status
 
-### List your venue
+### List on KhelGrid
 
 - Primary green action with a plus icon.
-- Current target is an email enquiry link to `khelgrid@gmail.com` with a venue-listing subject.
-- Do not describe this as a completed online venue-submission workflow unless such a workflow is implemented.
+- Destination: `/submit-listing`, the existing general listing submission workflow.
+- Venue submissions are one listing category within this unified flow; do not expose a separate venue-only header action.
+- Preserve the existing submission and moderation workflow; do not change backend permissions or publication rules.
 
 ### Submit a trial
 
@@ -259,3 +263,49 @@ Record actual results in the PR or release notes. Do not mark untested items as 
 - Sidebar V1 reference: `docs/sidebar-v1.md`
 
 **Maintenance rule:** This file is the V1 reference for future top-navigation work. If code and documentation disagree, inspect the live implementation, decide the intended behavior, update code and documentation together, and record the verification result.
+
+
+## 16. V1.1 navigation refinement (22 November 2026)
+
+The current development branch introduces a focused refinement without changing the overall KhelGrid brand system or application route model.
+
+### Updated desktop hierarchy
+
+- The menu toggle and official KhelGrid logo/wordmark remain in the left zone.
+- The global search shortcut remains in the center zone and opens the existing Spotlight search modal. The keyboard shortcut supports both Ctrl+K and Cmd+K; the visual hint now communicates both.
+- **List on KhelGrid** is the direct, high-visibility primary action and the single entry point for venue, trial, academy, coach and game submissions.
+- **Submit a trial** is a direct, secondary action.
+- The More popover is the **All KhelGrid actions** directory. It renders the canonical navigation registry as grouped sections (Your Space, Discover, Play & Match Center, Athlete & Scouting Tools, Partner & Coaching Suite, Learn & Community, and KhelGrid Network), then keeps secondary listing, coach and KhelChronicle submissions in a separate contribution group. Existing unavailable destinations remain visible but non-clickable with a Coming soon label.
+- Notifications and settings remain utility controls. The hardcoded sample unread count has been removed from the header; no fabricated notification count should be displayed.
+- Account and Go Pro actions retain their existing application callbacks and routes.
+
+### Updated responsive behavior
+
+- At compact desktop widths, primary submission actions collapse to icon controls with their title text retained for pointer users; their accessible names remain available from the anchor text and icon context.
+- The header stays on one horizontal line at every viewport width. On desktop the five primary product areas are visible between the brand and utility actions; at compact widths those links move into the comprehensive More directory, and search becomes an icon-only action. The header never wraps into a second row.
+- At very narrow widths, primary action labels are visually suppressed while their icon controls and accessible action destinations remain available. The header remains a single row with horizontal overflow prevented.
+- Popovers are viewport-constrained and scroll internally rather than extending beyond the viewport.
+
+### Interaction/accessibility refinements
+
+- The More popover is a semantic navigation region rather than claiming an ARIA application menu without implementing the full menu keyboard interaction pattern.
+- Closed popover content is removed from display and the tab order using the native hidden state; opening/closing remains exposed through `aria-expanded`.
+- Pointer-based outside-click handling is used consistently for mouse, touch and pen input.
+- Escape closes the More or account popover and restores focus to its trigger.
+- Header controls have consistent visible keyboard focus styling and reduced-motion-safe transitions.
+- The brand image is decorative inside the already-labelled home link, avoiding duplicate screen-reader naming.
+
+### Verification status
+
+This is a source-level implementation update. Do not interpret it as proof of a successful Vite build, browser test, screen-reader test, or live responsive rendering. Those checks must be run against the exact PR head SHA before merge or deployment. The existing V1 checklist remains applicable, with additional checks for the direct venue/trial links, More popover, 320 px width, 760/761 px boundary, touch outside-click, and Escape focus restoration.
+
+
+## 17. Focused navbar update — unified listing entry point
+
+- Replaced the direct **List your venue** header action with **+ List on KhelGrid**.
+- The new primary action points to `/submit-listing` and uses the existing general listing submission workflow for venues, trials, academies, coaches and games.
+- The old venue-only `/submit-listing?type=venue` shortcut is no longer a separate top-level navbar action.
+- The general listing action is not duplicated in the More contribution list.
+- **Submit a trial** remains unchanged as a separate existing quick action in this first implementation step.
+- Coach registration and KhelChronicle research submission remain in their existing locations for a later navigation update.
+- No route handlers, database policies, moderation logic, publication rules or backend services were changed.

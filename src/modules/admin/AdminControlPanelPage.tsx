@@ -325,8 +325,8 @@ export function AdminControlPanelPage() {
 
   const handleSaveNewPassword = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long.')
+    if (newPassword.length < 12) {
+      setError('Admin passwords must be at least 12 characters long.')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -354,8 +354,8 @@ export function AdminControlPanelPage() {
 
   const handleInAppPasswordChange = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (inAppNewPassword.length < 6) {
-      setError('Password must be at least 6 characters long.')
+    if (inAppNewPassword.length < 12) {
+      setError('Admin passwords must be at least 12 characters long.')
       return
     }
     if (inAppNewPassword !== inAppConfirmPassword) {
@@ -390,6 +390,20 @@ export function AdminControlPanelPage() {
         : rawUrl.startsWith('https://')
           ? rawUrl
           : `https://${rawUrl}`
+      let parsedEvidence: URL
+      try {
+        parsedEvidence = new URL(cleanUrl)
+      } catch {
+        throw new Error('Provide a valid HTTPS external evidence URL.')
+      }
+      if (
+        parsedEvidence.protocol !== 'https:' ||
+        ((parsedEvidence.hostname.toLowerCase() === 'khelgrid.com' ||
+          parsedEvidence.hostname.toLowerCase().endsWith('.khelgrid.com')) &&
+          parsedEvidence.pathname.toLowerCase().startsWith('/verify'))
+      ) {
+        throw new Error('Synthetic internal verification URLs are prohibited. Provide a real, independently verifiable HTTPS source URL.')
+      }
       await addListingEvidence({ submissionId: selected.id, evidenceType, evidenceUrl: cleanUrl, description: evidenceDescription })
       setEvidence(await getListingEvidence(selected.id))
       setSelected(prev => prev ? { ...prev, version: prev.version + 1 } : prev)
@@ -607,7 +621,7 @@ export function AdminControlPanelPage() {
             autoComplete="username"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            placeholder="khelgrid@gmail.com"
+            placeholder="operator@example.com"
             required
           />
         </label>
@@ -634,7 +648,6 @@ export function AdminControlPanelPage() {
       <p role="alert" className="admin-control-error">You are signed in, but this account is not an active KhelGrid moderator. The private queue and evidence records are unavailable to your account.</p>
       <p>Ask an existing super-admin to grant access if you have an approved moderation responsibility.</p>
       <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
-        <button type="button" onClick={() => setAuthMode('set_new_password')}>Set / Update password</button>
         <button type="button" onClick={async () => { await signOut(); setSignedIn(false); setProfile(null) }}>Sign out</button>
       </div>
     </section>
@@ -835,18 +848,6 @@ export function AdminControlPanelPage() {
                       Use Submitter Source URL
                     </button>
                   )}
-                  <button
-                    type="button"
-                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: 'rgba(34, 197, 94, 0.15)', border: '1px solid rgba(34, 197, 94, 0.4)', borderRadius: '4px', color: '#86efac', cursor: 'pointer' }}
-                    onClick={() => {
-                      setEvidenceUrl(`https://khelgrid.com/verify/${encodeURIComponent(selected.reference_number)}`)
-                      if (!evidenceDescription) {
-                        setEvidenceDescription(`Community verification by KhelGrid moderation desk for ${selected.title}`)
-                      }
-                    }}
-                  >
-                    Auto-Fill Desk Verification URL ({selected.reference_number})
-                  </button>
                 </div>
                 <label>Evidence type<select value={evidenceType} onChange={e => setEvidenceType(e.target.value)}>{evidenceTypes.map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
                 <label>HTTPS evidence URL<input type="url" value={evidenceUrl} onChange={e => setEvidenceUrl(e.target.value)} placeholder="https://official-source.gov.in/…" required /></label>
@@ -895,7 +896,7 @@ export function AdminControlPanelPage() {
             <h4>Send password reset email to moderator</h4>
             <p>Send an official password recovery link to any registered moderator email address.</p>
             <form onSubmit={handleAdminSendModeratorReset} className="admin-control-form">
-              <label>Moderator email<input type="email" value={moderatorResetEmail} onChange={e => setModeratorResetEmail(e.target.value)} placeholder="moderator@khelgrid.com" required /></label>
+              <label>Moderator email<input type="email" value={moderatorResetEmail} onChange={e => setModeratorResetEmail(e.target.value)} placeholder="operator@example.com" required /></label>
               <button disabled={busy}>{busy ? 'Sending…' : 'Send password reset link'}</button>
             </form>
             <div id="access-audit"><h4>Moderator access history</h4>

@@ -16,7 +16,7 @@ describe('AdminCampaignMarketplaceDesk Component & Moderation Views', () => {
     createCampaign({
       title: 'Kolkata Football Academy Grassroots League',
       purpose: 'Promote junior grassroots football league.',
-      category: 'tournament_promotion',
+      category: 'tournament_awareness',
       sport: 'Football',
       locationCity: 'Kolkata',
       language: 'Bengali & English',

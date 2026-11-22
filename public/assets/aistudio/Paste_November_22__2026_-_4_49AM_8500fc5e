@@ -1,0 +1,915 @@
+# KHELGRID — ADMIN CONTROL CENTER
+## MASTER IMPLEMENTATION PROMPT: SECURE PLATFORM GOVERNANCE & FINAL LAUNCH READINESS
+
+**Repository:** `khelgrid-dotcom/khelgrid-platform`  
+**Primary objective:** Build a secure, independently governed Admin Control Center capable of reliably managing the entire KhelGrid platform as it scales across sports, cities, organisations, users, listings, editorial operations and future SaaS capabilities.
+
+This is an implementation programme, not a visual-dashboard exercise.
+
+The Admin Control Center must become the trusted operational control plane for KhelGrid. Every privileged action must be authenticated, authorized on the server/database, validated against explicit business rules and recorded in an auditable history.
+
+---
+
+# 1. NON-NEGOTIABLE SAFETY RULES
+
+These rules override every other instruction.
+
+### 1.1 Environment isolation
+
+1. Work exclusively in the current development repository and development branch.
+2. Establish the exact current branch, latest `main` SHA, working-tree status and remote configuration before changing files.
+3. Never connect to production Supabase.
+4. Never modify the live KhelGrid website, production database, DNS, domain configuration or production Vercel project.
+5. Never deploy or promote a production release.
+6. Never use production credentials, production user accounts or production data.
+7. Do not execute migrations against remote Supabase environments.
+8. Do not change existing real administrator, moderator or user roles without an explicitly approved migration and acceptance procedure.
+9. Do not overwrite uncommitted work or unrelated changes.
+10. Never silently merge, rebase, force-push, delete branches or rewrite Git history.
+
+If repository or environment identity cannot be established, stop before implementation.
+
+### 1.2 Database and infrastructure safety
+
+- Development Supabase Free Plan remains the target architecture.
+- Do not migrate to Firebase or paid infrastructure.
+- Do not introduce a mandatory paid service.
+- Never expose the Supabase service-role key in browser code.
+- Never use localStorage, sessionStorage, URL parameters, user metadata or client-controlled state as proof of administrator authority.
+- Never execute SQL against a remote database during this task.
+- SQL migrations may be authored, reviewed and tested against an isolated local PostgreSQL/Supabase environment only.
+- If isolated database testing is unavailable, explicitly mark database acceptance as NOT TESTED.
+- Never claim that a migration is safe merely because it compiles.
+
+### 1.3 Business rules
+
+1. Venue, coach and trial listings remain free.
+2. Listing verification and moderation are mandatory.
+3. Payment collection remains disabled.
+4. Subscription billing and paid entitlements must not be activated.
+5. No fake listings, venues, coaches, trials, prices, ratings, availability, evidence, verification results or moderation records.
+6. No fabricated dashboard statistics.
+7. No demo credentials or fake administrator identities.
+8. No synthetic evidence URLs.
+9. No automatic publication following a failed verification or incomplete review.
+10. Do not invent missing business information.
+
+When a capability is not implemented, display an honest status such as `Coming Soon`, `Unavailable` or `Requires configuration`.
+
+---
+
+# 2. FIRST: ESTABLISH THE IMPLEMENTATION BASELINE
+
+Before changing anything, inspect:
+
+- The latest `main` branch and its exact commit SHA.
+- The current working branch and uncommitted changes.
+- `apps/admin/` and its current implementation.
+- Admin build and output configuration, including `dist-admin/`.
+- Public application routes and admin entry points.
+- Vercel project configuration and deployment assumptions.
+- Authentication and session lifecycle.
+- Supabase schema, migrations, grants, RLS policies and database functions.
+- Existing platform roles and organisation roles.
+- Listing moderation and publication workflows.
+- KhelChronicle editorial workflows.
+- Existing audit logs and version-history functionality.
+- Existing Playwright, unit, integration and database tests.
+- CI workflows and migration ordering.
+
+Read these audit documents if they exist:
+
+- `docs/audits/ADMIN_CONTROL_CENTER_PHASE_0_AUDIT.md`
+- `docs/audits/ADMIN_CONTROL_CENTER_PHASE_0_1_VALIDATION.md`
+
+Use their findings as investigation leads, not unquestionable facts.
+
+For every finding, independently inspect the current source code and establish whether it remains applicable.
+
+Classify each issue:
+
+- CONFIRMED
+- PARTIALLY CONFIRMED
+- NOT REPRODUCED
+- INCORRECT
+- NOT TESTED
+
+Do not silently discard previous findings.
+
+If the Phase 0.1 validation report does not exist, perform its validation work before making security-sensitive changes.
+
+Create a fresh implementation branch from the verified current `main` only after preserving existing work and confirming that the branch operation is safe.
+
+Suggested branch:
+
+`feature/admin-control-center-secure-implementation`
+
+Do not use an outdated branch without checking its divergence.
+
+---
+
+# 3. TARGET ARCHITECTURE
+
+Build the Admin Control Center as a separately deployable application inside the existing repository.
+
+Preferred structure:
+
+`apps/admin/`
+
+Maintain a separate build output:
+
+`dist-admin/`
+
+Keep the public KhelGrid application independent.
+
+Do not assume that separate frontend deployment automatically provides security isolation. Enforce authorization in the database and trusted server-side execution paths.
+
+### 3.1 Three distinct security domains
+
+Design and document three separate concepts:
+
+**A. Platform administration**
+
+Controls KhelGrid as a whole.
+
+Examples:
+- Platform super administrator
+- Platform administrator
+- Platform security administrator
+- Platform moderator
+- Editorial administrator
+- Trust and verification administrator
+- Read-only platform auditor
+
+**B. Organisation administration**
+
+Controls only an organisation's own resources.
+
+Examples:
+- Organisation owner
+- Organisation administrator
+- Organisation manager
+- Organisation staff
+- Organisation reviewer
+- Organisation read-only member
+
+**C. Ordinary user access**
+
+Normal user capabilities, including athlete, coach, venue representative and other applicable roles.
+
+Organisation administrators must never automatically become platform administrators.
+
+Platform moderators must not automatically gain unrestricted access to every organisation's private information.
+
+A platform super administrator must not be represented by a hardcoded frontend identity.
+
+### 3.2 Authorization architecture
+
+Use one documented and consistent authorization model.
+
+The database must be the final authority for privileged actions.
+
+The frontend may hide unavailable controls, but frontend visibility must never determine authorization.
+
+Implement:
+
+- Canonical platform role definitions.
+- Canonical organisation membership and role definitions.
+- Explicit permission definitions.
+- Resource ownership checks.
+- Organisation-bound authorization.
+- Platform-wide permission checks.
+- Explicit permission boundaries.
+- Secure role assignment and revocation.
+- Session and authorization-state refresh.
+- Deny-by-default behavior.
+- Auditable authorization changes.
+
+Do not create another parallel role system without a documented migration and compatibility plan.
+
+Before consolidating existing role tables or functions, map every existing dependency and migration.
+
+Do not destroy existing role information.
+
+---
+
+# 4. IMPLEMENTATION PHASES
+
+Execute the phases in order.
+
+Do not skip a phase because the UI appears complete.
+
+Do not mark a phase complete until its acceptance criteria are demonstrated.
+
+## PHASE 1 — ADMIN APPLICATION AUTHENTICATION AND SHELL SECURITY
+
+**Priority: Critical**
+
+Establish a secure foundation before implementing privileged operations.
+
+### Requirements
+
+1. Implement a root-level authentication gate.
+2. Anonymous visitors must not see a usable admin workspace.
+3. Authenticated ordinary users must not receive administrator access.
+4. Remove hardcoded `Super Admin` identities and fake administrator profile data.
+5. Remove localStorage-based administrator authorization.
+6. Remove localStorage fallback behavior that converts authorization failures into default roles.
+7. Never trust `user_metadata` as a source of platform privilege.
+8. Fail closed when roles or permissions cannot be verified.
+9. Implement a working sign-out action.
+10. Handle expired sessions.
+11. Handle revoked sessions.
+12. Handle missing or invalid sessions.
+13. Handle authorization changes without requiring stale frontend state.
+14. Ensure protected admin routes cannot render privileged content before authorization is resolved.
+15. Avoid flashing protected content during authentication loading.
+16. Implement clear unauthorized and access-denied states.
+17. Use a safe configuration strategy for development Supabase settings.
+18. Remove insecure hardcoded environment fallbacks where they can cause environment confusion.
+19. Validate permitted origins exactly rather than using weak substring matching.
+20. Remove misleading placeholder administrator contact details.
+
+### Required behavior
+
+| Situation | Expected result |
+|---|---|
+| Anonymous visitor | Denied |
+| Authenticated ordinary user | Denied |
+| Moderator | Only authorized moderation functions |
+| Platform administrator | Explicitly granted platform permissions |
+| Super administrator | Explicitly granted super-admin permissions |
+| Expired session | Protected access stopped |
+| Revoked role | Privileged actions denied |
+| Authorization service unavailable | Deny privileged actions |
+
+### Acceptance tests
+
+- Anonymous route access.
+- Ordinary user route access.
+- Moderator route access.
+- Platform administrator route access.
+- Session expiration.
+- Sign-out.
+- Role revocation.
+- Permission refresh.
+- Failed authorization lookup.
+- Direct URL navigation.
+- Reloading protected routes.
+
+Do not create or assign real remote administrator roles during this phase.
+
+---
+
+## PHASE 2 — DATABASE AUTHORIZATION AND CANONICAL RBAC
+
+**Priority: Critical**
+
+The database must enforce all important permissions independently of the frontend.
+
+### 2.1 Inventory existing security mechanisms
+
+Inspect:
+
+- `user_roles`
+- `profiles.role`
+- `listing_moderators`
+- `has_role()`
+- `has_platform_role()`
+- `get_user_effective_permissions()`
+- `is_listing_moderator()`
+- `is_pickup_game_admin()`
+- All relevant SECURITY DEFINER functions.
+- Existing listing moderation RPCs.
+- KhelChronicle moderation operations.
+- Audit and version-history tables.
+- Every related RLS policy and table grant.
+
+Do not assume function signatures or migration history. Inspect actual definitions.
+
+### 2.2 Security requirements
+
+- Revoke unnecessary direct table privileges.
+- Use column-level grants when appropriate.
+- Enforce RLS for every protected table.
+- Prevent cross-organisation access.
+- Prevent ordinary users from granting themselves privileges.
+- Prevent users from changing their own platform roles.
+- Prevent clients from supplying trusted actor IDs.
+- Validate the authenticated actor from trusted database/session context.
+- Prevent arbitrary UUID role and permission enumeration.
+- Restrict SECURITY DEFINER execution privileges.
+- Set a safe `search_path` for applicable SECURITY DEFINER functions.
+- Avoid unsafe dynamic SQL.
+- Verify ownership and execution privileges.
+- Protect private schemas.
+- Ensure revoked privileges actually take effect.
+- Ensure authorization checks are consistent across RPCs and direct table access.
+
+### 2.3 Migration rules
+
+Every migration must:
+
+- Use the existing timestamp naming convention.
+- Include appropriate transaction handling.
+- Be forward-only unless the existing project convention requires otherwise.
+- Avoid destructive operations.
+- Preserve existing records.
+- Preserve existing role assignments.
+- Include comments explaining security-sensitive changes.
+- Include relevant regression assertions.
+- Be safe to run in the intended migration order.
+
+Do not use `DROP`, `TRUNCATE` or destructive schema changes without a separately justified and explicitly approved migration plan.
+
+### Acceptance gate
+
+Test migrations against an isolated local PostgreSQL/Supabase environment.
+
+Demonstrate that:
+
+- Anonymous access is denied where required.
+- Ordinary users cannot access administrator data.
+- Moderators cannot exceed their assigned permissions.
+- Organisation members cannot access another organisation's records.
+- Role escalation is rejected.
+- Unauthorized direct table updates are rejected.
+- Unauthorized RPC execution is rejected.
+- Authorized operations continue to work.
+
+If local database verification is unavailable, stop at migration authoring and report the limitation.
+
+---
+
+## PHASE 3 — PLATFORM ADMINISTRATION AND USER ACCESS MANAGEMENT
+
+Build the first genuinely operational admin module.
+
+### Required capabilities
+
+- Search and view users.
+- View account status.
+- View assigned platform roles.
+- View organisation memberships.
+- View relevant verification status.
+- Suspend or reactivate accounts where supported by the approved policy.
+- Assign and revoke approved roles.
+- Review role-change history.
+- Review administrator access history.
+- View permission summaries.
+- Enforce least privilege.
+
+### Safety controls
+
+- No self-escalation.
+- No unauthorized super-admin assignment.
+- No silent role changes.
+- No client-side role writes.
+- No direct table updates bypassing protected operations.
+- No deletion of important audit records.
+- Require an explicit reason for sensitive administrative actions.
+- Require appropriate confirmation for high-impact operations.
+- Record the real authenticated actor.
+
+If a feature cannot be implemented securely, show it as unavailable instead of simulating success.
+
+---
+
+## PHASE 4 — ORGANISATION AND MULTI-TENANT GOVERNANCE
+
+Build platform-level governance of organisations without confusing it with organisation-level administration.
+
+### Platform administrator capabilities
+
+- View organisations.
+- Review organisation submissions.
+- Verify organisation information.
+- Approve, reject or suspend organisations under an explicit policy.
+- Inspect organisation membership and role assignments.
+- Review organisation activity.
+- Investigate cross-tenant security incidents.
+- Review ownership changes.
+- Review organisation verification history.
+
+### Organisation administrator capabilities
+
+- Manage only their organisation.
+- Invite and manage permitted members.
+- Assign only allowed organisation roles.
+- Manage organisation-owned listings.
+- View their own organisation's audit history.
+- Never access another organisation's private records.
+- Never grant platform-wide roles.
+
+### Requirements
+
+- Enforce tenant boundaries in database policies and functions.
+- Validate resource ownership on every write.
+- Prevent arbitrary organisation ID substitution.
+- Secure invitation acceptance and token handling.
+- Bind invitation acceptance to the intended recipient.
+- Prevent expired or reused invitations.
+- Audit membership and ownership changes.
+
+Do not activate paid subscriptions or billing.
+
+---
+
+## PHASE 5 — LISTING VERIFICATION AND MODERATION CONTROL CENTER
+
+**Priority: Critical for KhelGrid operations**
+
+This is a core platform responsibility.
+
+Venue, coach and trial listings remain free. Verification is mandatory.
+
+### Required modules
+
+1. Venue verification.
+2. Coach verification.
+3. Trial verification.
+4. Academy and organisation verification.
+5. Listing submission review.
+6. Rejection and correction workflow.
+7. Re-review workflow.
+8. Unpublish and republish workflow.
+9. Moderator assignment.
+10. Moderation history.
+
+### Required workflow
+
+`Draft → Submitted → Pending Review → Under Review → Approved / Rejected → Published where eligible`
+
+The exact state machine must be derived from the actual schema and business requirements. Do not introduce contradictory statuses.
+
+### Mandatory safeguards
+
+- No direct publication by an ordinary user.
+- No client-controlled verification status.
+- No direct moderator table update that bypasses the approved workflow.
+- No fabricated evidence.
+- No generated evidence URLs.
+- No automatic verification based on missing fields.
+- No publication after a verification error.
+- No fabricated location or address.
+- No city name presented as a verified street address.
+- No invented organiser or host.
+- No fake phone number, website or supporting document.
+- Preserve reviewer identity and review timestamp.
+- Record approval/rejection reasons.
+- Record changes to published records.
+- Support correction requests.
+- Maintain version history.
+- Ensure only eligible approved records appear in public catalogue queries.
+
+Use protected database operations with explicit transition validation and audit recording.
+
+### Acceptance tests
+
+- User submission.
+- Moderator review.
+- Approval.
+- Rejection.
+- Correction and resubmission.
+- Unpublish.
+- Republish.
+- Concurrent review attempts.
+- Unauthorized publication.
+- Fabricated evidence rejection.
+- Published-only catalogue visibility.
+- Moderator role revocation during a session.
+
+---
+
+## PHASE 6 — KHELCHRONICLE EDITORIAL GOVERNANCE
+
+Implement an auditable editorial control system.
+
+Capabilities:
+
+- Article submission.
+- Editorial review.
+- Fact-check status.
+- Correction requests.
+- Approval.
+- Publication.
+- Unpublication.
+- Revision history.
+- Author and editor attribution.
+- Editorial audit history.
+
+Requirements:
+
+- Do not allow arbitrary direct UPDATE operations to bypass editorial workflow.
+- Use protected state transitions.
+- Prevent unauthorized publication.
+- Preserve previous versions.
+- Require a reason for sensitive corrections and unpublication.
+- Do not invent editorial verification or fact-check status.
+
+Keep editorial roles distinct from platform super-administrator permissions.
+
+---
+
+## PHASE 7 — PLATFORM SECURITY, AUDIT AND INCIDENT CONTROL
+
+Build a central security and audit interface.
+
+### Audit events
+
+At minimum, record:
+
+- Authentication and sign-out events where available.
+- Role assignments and revocations.
+- Permission changes.
+- Organisation ownership and membership changes.
+- Listing submission and moderation actions.
+- Verification changes.
+- Publication and unpublication.
+- Editorial decisions.
+- Account suspension and reactivation.
+- Sensitive platform setting changes.
+- Failed privileged operations where technically appropriate.
+
+### Audit requirements
+
+Every event should capture the relevant available information:
+
+- Actor ID from trusted authentication context.
+- Action.
+- Resource type.
+- Resource identifier.
+- Timestamp.
+- Outcome.
+- Reason or explanation where required.
+- Relevant before/after values where safe.
+- Correlation or request identifier where available.
+
+Never store passwords, access tokens, invitation secrets or sensitive credentials in audit logs.
+
+Make audit history append-only for application roles.
+
+Do not expose private security metadata to ordinary users.
+
+### Admin security interface
+
+Include:
+
+- Recent security events.
+- Failed privileged operations.
+- Role changes.
+- Unusual access patterns where reliable detection exists.
+- Suspended accounts.
+- Administrative action history.
+- Audit search and filtering.
+- Incident investigation records.
+
+Do not invent threat scores or claim detection capability without an implemented and tested detection mechanism.
+
+---
+
+## PHASE 8 — ADMINISTRATIVE PLATFORM SETTINGS AND OPERATIONS
+
+Implement controlled platform configuration.
+
+Potential settings:
+
+- Platform maintenance state.
+- Listing submission availability.
+- Moderation configuration.
+- Verification policy.
+- Supported sports.
+- Supported cities.
+- Public catalogue settings.
+- Editorial configuration.
+- Notification settings.
+- Feature availability.
+
+Requirements:
+
+- Define who can change each setting.
+- Validate values server-side.
+- Audit every sensitive change.
+- Keep secure defaults.
+- Prevent unauthenticated configuration changes.
+- Avoid exposing secrets in the UI.
+- Do not make settings appear active when they are not connected to the application.
+
+Payment, subscription and paid listing controls must remain disabled and unavailable until a separately approved future programme.
+
+---
+
+## PHASE 9 — ADMIN UX AND OPERATIONAL QUALITY
+
+Build a professional, consistent Admin Control Center.
+
+### Design direction
+
+- Deep navy: `#0B192C`
+- Emerald: `#10B981`
+- KhelGrid logo in the top navigation.
+- Consistent typography and spacing.
+- Responsive desktop, tablet and mobile layouts.
+- Persistent collapsible sidebar.
+- Clear module navigation.
+- Search and filters.
+- Pagination.
+- Result counts.
+- Loading states.
+- Empty states.
+- Error states.
+- Permission-denied states.
+- Confirmation dialogs for sensitive operations.
+- Accessible forms and keyboard navigation.
+
+### Suggested navigation
+
+1. Overview
+2. Users & Access
+3. Organisations
+4. Listing Verification
+5. Venues
+6. Coaches
+7. Trials
+8. KhelChronicle
+9. Security & Audit
+10. Platform Settings
+
+Only display modules that have real implementations and authorized access.
+
+A dashboard must never display fabricated metrics.
+
+Use honest unavailable states for unfinished modules.
+
+---
+
+## PHASE 10 — AUTOMATED SECURITY AND RELEASE ACCEPTANCE
+
+The Admin Control Center must not be considered launch-ready until the complete acceptance suite passes.
+
+### 10.1 Four-identity testing
+
+Establish isolated test identities for:
+
+1. Anonymous visitor.
+2. Ordinary authenticated user.
+3. Moderator.
+4. Super administrator.
+
+Add organisation-owner and organisation-member test identities for multi-tenant acceptance.
+
+Use dedicated development-only test accounts.
+
+Do not reuse production accounts.
+
+Do not alter existing real moderator or administrator identities to create test conditions.
+
+### 10.2 Browser tests
+
+Use Playwright to test:
+
+- Login.
+- Logout.
+- Session expiration.
+- Session revocation.
+- Direct URL access.
+- Unauthorized navigation.
+- Role-based navigation.
+- Role changes.
+- Listing moderation.
+- Organisation isolation.
+- Editorial authorization.
+- Audit visibility.
+- Error handling.
+- Mobile navigation.
+- Refresh and restored-session behavior.
+
+### 10.3 Database security tests
+
+Test:
+
+- RLS behavior.
+- Table grants.
+- Column grants.
+- RPC execution permissions.
+- SECURITY DEFINER behavior.
+- Role escalation.
+- Tenant isolation.
+- Ownership checks.
+- Moderation state transitions.
+- Audit integrity.
+- Concurrent state changes.
+- Revoked permissions.
+
+Use isolated local PostgreSQL/Supabase.
+
+### 10.4 Build and CI
+
+Verify:
+
+- Admin build.
+- Public application build.
+- TypeScript.
+- Lint.
+- Unit tests.
+- Integration tests.
+- Playwright tests.
+- Migration ordering.
+- SQL security assertions.
+- Dependency and secret scanning where available.
+
+Do not claim that a check passed if it was skipped or unavailable.
+
+Do not weaken existing CI requirements to make a build green.
+
+### 10.5 Deployment-readiness review
+
+Before any deployment, prepare a separate deployment checklist covering:
+
+- Separate admin deployment.
+- Correct development environment variables.
+- Protected access to the development admin deployment.
+- Exact permitted origins.
+- HTTPS.
+- Security headers.
+- Session-cookie configuration where applicable.
+- No production credential leakage.
+- No public admin route exposing privileged operations.
+- Monitoring and rollback plan.
+- Tested administrator recovery procedure.
+
+Do not deploy as part of this implementation programme.
+
+---
+
+# 5. RELEASE READINESS GATES
+
+A phase is complete only when all applicable conditions are met.
+
+| Gate | Requirement |
+|---|---|
+| G1 | Repository and environment identity verified |
+| G2 | Authentication and session controls tested |
+| G3 | Database authorization independently tested |
+| G4 | Canonical RBAC documented and validated |
+| G5 | Platform and organisation access separated |
+| G6 | Listing moderation secure and auditable |
+| G7 | KhelChronicle editorial workflow protected |
+| G8 | Audit history complete for implemented actions |
+| G9 | Four-identity Playwright acceptance passed |
+| G10 | Organisation isolation tests passed |
+| G11 | CI and builds passed |
+| G12 | Development deployment checklist reviewed |
+
+Final status must be one of:
+
+- `NOT READY`
+- `IMPLEMENTATION COMPLETE — TESTING INCOMPLETE`
+- `DEVELOPMENT ACCEPTANCE PASSED`
+- `PRODUCTION RELEASE CANDIDATE`
+
+Never label the system production-ready based solely on successful builds or UI screenshots.
+
+Production release approval is a separate decision and is outside the scope of this task.
+
+---
+
+# 6. IMPLEMENTATION DISCIPLINE
+
+For every phase:
+
+1. Inspect existing code before editing.
+2. Identify affected files and dependencies.
+3. Explain the intended security change.
+4. Implement the smallest safe change.
+5. Add regression tests.
+6. Run relevant tests.
+7. Inspect the final diff.
+8. Check for unrelated modifications.
+9. Document remaining risks.
+10. Report the exact acceptance status.
+
+Prefer small, reviewable changes over a large rewrite.
+
+Do not remove existing functionality without identifying its dependencies and replacement.
+
+Do not create duplicate authorization services or competing permission models.
+
+Do not add placeholder implementations that claim to perform real administrative actions.
+
+Do not suppress errors to make tests pass.
+
+Do not modify unrelated public application features.
+
+Do not automatically proceed through a phase if its security gate fails.
+
+If a critical finding requires a destructive migration, remote database change, production change, administrator provisioning or other action outside the approved scope, stop and request explicit approval.
+
+---
+
+# 7. REQUIRED DELIVERABLES
+
+Maintain implementation documentation under `docs/admin-control-center/`:
+
+1. `ARCHITECTURE.md`
+2. `AUTHORIZATION_MODEL.md`
+3. `PLATFORM_VS_ORGANISATION_ROLES.md`
+4. `DATABASE_SECURITY.md`
+5. `LISTING_MODERATION_WORKFLOW.md`
+6. `AUDIT_AND_INCIDENT_MODEL.md`
+7. `TEST_STRATEGY.md`
+8. `DEPLOYMENT_READINESS.md`
+9. `IMPLEMENTATION_STATUS.md`
+10. `KNOWN_RISKS.md`
+
+Also maintain phase-specific test reports under:
+
+`docs/admin-control-center/reports/`
+
+Documentation must reflect implemented and tested behavior, not planned behavior presented as complete.
+
+---
+
+# 8. FIRST EXECUTION: START WITH THE SAFEST IMPLEMENTATION SLICE
+
+Do not attempt to implement all ten phases in one uncontrolled operation.
+
+Start by:
+
+1. Establishing the verified repository baseline.
+2. Reviewing Phase 0 and Phase 0.1 audit findings.
+3. Confirming the current security architecture.
+4. Producing a concise implementation dependency map.
+5. Selecting the smallest safe Phase 1 changes.
+6. Implementing Phase 1 only.
+7. Running its available tests.
+8. Reviewing the complete diff.
+9. Producing the Phase 1 acceptance report.
+
+If Phase 0.1 validation is incomplete, complete the required read-only validation first.
+
+Do not begin Phase 2 database changes until Phase 1 is reviewed and accepted.
+
+Do not execute remote migrations.
+
+Do not deploy.
+
+Do not modify production.
+
+---
+
+# 9. FINAL RESPONSE FORMAT REQUIRED FROM ANTIGRAVITY
+
+At the end of the work, provide:
+
+**A. Repository baseline**
+- Branch.
+- Latest main SHA.
+- Working-tree status.
+- Environment verified.
+
+**B. Implementation**
+- Phase attempted.
+- Files changed.
+- Database migrations authored, if any.
+- Tests added.
+- Security controls implemented.
+
+**C. Verification**
+- Exact commands executed.
+- Tests passed.
+- Tests failed.
+- Tests skipped.
+- Database verification status.
+- Browser verification status.
+
+**D. Security findings**
+- Confirmed vulnerabilities fixed.
+- Remaining vulnerabilities.
+- Risks requiring manual review.
+
+**E. Git status**
+- Changed files.
+- Untracked files.
+- Diff summary.
+- Confirmation that no unrelated files were modified.
+
+**F. Acceptance decision**
+- READY FOR REVIEW
+- NOT READY
+- BLOCKED
+
+**G. Next phase**
+- Exact next recommended phase.
+- Dependencies.
+- Required approvals.
+
+Do not claim completion without evidence.
+
+## FINAL DIRECTIVE
+
+Build KhelGrid's Admin Control Center as a secure platform-governance system, not a collection of attractive dashboard screens.
+
+Security, correct authorization, tenant isolation, truthful data, traceable actions and recoverability take priority over speed and visual completeness.
+
+The first deliverable is a verified, secure Phase 1 foundation. Every later capability must build on that foundation and pass its own acceptance gate.

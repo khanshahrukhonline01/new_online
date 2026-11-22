@@ -6,15 +6,13 @@ import {
   approveListingSubmission,
   saveListingPublicationDetails,
   publishListingSubmission,
-  addListingEvidence,
-  reviewListingEvidence,
-  verifyListingSubmission,
   clearCatalogueCache,
   type OperationsKpiSummary,
   type GlobalModeratorActivityItem,
   type ModeratorQueueItem,
 } from '../../integrations/supabase/public-client'
 import { signInWithEmail } from '../../integrations/supabase/auth-client'
+import { getSupabaseClient } from '../../integrations/supabase/realtime-client'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import './AdminAnalyticsDashboard.css'
 
@@ -26,6 +24,7 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
   const [summary, setSummary] = useState<OperationsKpiSummary | null>(initialSummary || null)
   const [activity, setActivity] = useState<GlobalModeratorActivityItem[]>([])
   const [queueItems, setQueueItems] = useState<ModeratorQueueItem[]>([])
+  const [isAuthorized, setIsAuthorized] = useState(Boolean(initialSummary))
   const [loading, setLoading] = useState(!initialSummary)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -66,9 +65,14 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
       setSummary(sumRes)
       setActivity(actRes)
       setQueueItems(qRes.pendingSubmissions || [])
+      setIsAuthorized(true)
       setLastRefreshedAt(new Date())
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load operations telemetry.')
+      setIsAuthorized(false)
+      setSummary(null)
+      setActivity([])
+      setQueueItems([])
+      setError(err instanceof Error ? err.message : 'Could not verify operations analytics authorization.')
     } finally {
       setLoading(false)
     }
@@ -81,12 +85,39 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
   }, [initialSummary, loadData])
 
   useEffect(() => {
-    if (!autoRefresh) return
+    if (initialSummary) return
+    const client = getSupabaseClient()
+    if (!client) return
+    let active = true
+    const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
+      if (!active) return
+      if (event === 'SIGNED_OUT' || !session) {
+        setIsAuthorized(false)
+        setSummary(null)
+        setActivity([])
+        setQueueItems([])
+        setSelectedIds(new Set())
+        return
+      }
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        window.setTimeout(() => {
+          if (active) void loadData()
+        }, 0)
+      }
+    })
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
+  }, [initialSummary, loadData])
+
+  useEffect(() => {
+    if (!autoRefresh || !isAuthorized) return
     const interval = setInterval(() => {
       void loadData()
     }, 30000)
     return () => clearInterval(interval)
-  }, [autoRefresh, loadData])
+  }, [autoRefresh, isAuthorized, loadData])
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -207,84 +238,26 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
     await loadData()
   }
 
-  // Bulk Action 3: Bulk Live Publish
+  // Bulk Action 3: Bulk Live Publish (strictly requires server-verified evidence & complete facts)
   const handleExecuteBulkPublish = async () => {
     if (selectedIds.size === 0) return
     setIsProcessingBulk(true)
     setBulkProgress(`Publishing 0 of ${selectedIds.size}...`)
     let successCount = 0
+    let skippedCount = 0
 
     const selectedQueueItems = queueItems.filter(i => selectedIds.has(i.id) && i.status === 'approved')
     for (let i = 0; i < selectedQueueItems.length; i++) {
       const item = selectedQueueItems[i]
-      setBulkProgress(`Publishing item ${i + 1} of ${selectedQueueItems.length}: ${item.title}...`)
+      setBulkProgress(`Publishing verified item ${i + 1} of ${selectedQueueItems.length}: ${item.title}...`)
       try {
-        const cityClean = item.city && item.city.trim().toLowerCase() !== 'india' ? item.city.trim() : 'Delhi'
-        const defaults: Record<string, string> = {
-          city: cityClean,
-        }
-        const sportsList = ['Cricket', 'Football', 'Badminton', 'Tennis', 'Basketball', 'Pickleball', 'Athletics', 'Swimming']
-        const detected = sportsList.find(s => item.title.toLowerCase().includes(s.toLowerCase())) || 'Football'
-
-        if (item.listing_type === 'pickup_game') {
-          defaults.sport = detected
-          defaults.venue_name = item.title
-          defaults.host_name = 'Community Coordinator'
-          const tmrw = new Date(Date.now() + 86400000)
-          tmrw.setHours(17, 0, 0, 0)
-          defaults.starts_at = tmrw.toISOString()
-        } else if (item.listing_type === 'opportunity') {
-          defaults.organizer_name = item.title
-          defaults.venue_name = `${cityClean} Sports Ground`
-        } else if (item.listing_type === 'venue') {
-          defaults.address = `Near Sports Complex, ${cityClean}`
-          defaults.sport = detected
-        } else if (item.listing_type === 'coach') {
-          defaults.qualifications = 'Certified Sports Coach & Trainer'
-        } else if (item.listing_type === 'academy') {
-          defaults.state = cityClean
-        } else if (item.listing_type === 'event') {
-          defaults.organizer_name = item.title
-          defaults.venue_name = `${cityClean} Sports Arena`
-          const nextWeek = new Date(Date.now() + 7 * 86400000)
-          nextWeek.setHours(10, 0, 0, 0)
-          defaults.starts_at = nextWeek.toISOString()
-        }
-
-        // 1. Save publication details
-        await saveListingPublicationDetails(item.id, defaults).catch(() => {})
-
-        // 2. Add desk verification evidence
-        const evUrl = item.source_url?.startsWith('https://')
-          ? item.source_url
-          : `https://khelgrid.com/verify/${encodeURIComponent(item.reference_number)}`
-
-        const reqTypes =
-          item.listing_type === 'pickup_game' ? ['venue_address', 'organizer_identity'] :
-          item.listing_type === 'venue' ? ['venue_address'] :
-          item.listing_type === 'coach' ? ['coach_qualification'] :
-          item.listing_type === 'academy' ? ['academy_identity'] :
-          item.listing_type === 'event' ? ['event_details'] :
-          ['official_source']
-
-        for (const t of reqTypes) {
-          const evId = await addListingEvidence({
-            submissionId: item.id,
-            evidenceType: t,
-            evidenceUrl: evUrl,
-            description: `Batch verified by KhelGrid Operations Console for ${item.title}`,
-          }).catch(() => null)
-          if (evId) {
-            await reviewListingEvidence(evId, 'supports', 'Batch verified').catch(() => {})
-          }
-        }
-        await verifyListingSubmission(item.id, 'verified', 'Batch verified by moderation desk.').catch(() => {})
-
-        // 3. Publish to live catalogue
+        // Never fabricate missing publication facts or synthetic verification evidence.
+        // The server RPC enforces verified evidence and completeness before publishing.
         await publishListingSubmission(item.id)
         successCount++
       } catch (err) {
-        console.warn(`Bulk publish failed for ${item.reference_number}:`, err)
+        skippedCount++
+        console.warn(`Bulk publish rejected for ${item.reference_number}:`, err)
       }
     }
 
@@ -292,7 +265,11 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
     setIsProcessingBulk(false)
     setShowPublishModal(false)
     setSelectedIds(new Set())
-    setNotice(`Successfully published ${successCount} listings live to the public website!`)
+    setNotice(
+      skippedCount > 0
+        ? `Published ${successCount} verified listings. Skipped ${skippedCount} listings requiring complete facts or evidence verification in Command Centre.`
+        : `Published ${successCount} verified listings live.`,
+    )
     await loadData()
   }
 
@@ -302,23 +279,36 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
     return Math.max(...Object.values(summary.sportsBreakdown), 1)
   }, [summary])
 
-  if (error && error.includes('authorized')) {
+  if (loading && !isAuthorized) {
+    return (
+      <section className="admin-analytics-root" aria-busy="true">
+        <div className="admin-analytics-header">
+          <p className="admin-eyebrow">OPERATIONS ANALYTICS · RESTRICTED DESK</p>
+          <h1>Verifying analytics authorization…</h1>
+        </div>
+      </section>
+    )
+  }
+
+  if (!isAuthorized) {
     return (
       <section className="admin-analytics-root">
         <div className="admin-analytics-header">
           <p className="admin-eyebrow">OPERATIONS ANALYTICS · RESTRICTED DESK</p>
           <h1>Operations &amp; KPI Analytics</h1>
-          <p style={{ color: '#64748b' }}>Please authenticate with an authorized moderator account to view real-time platform telemetry.</p>
+          <p style={{ color: '#64748b' }}>
+            {error || 'Please authenticate with an authorized moderator account to view real-time platform telemetry.'}
+          </p>
         </div>
         <form onSubmit={handleSignIn} style={{ maxWidth: 420, padding: '1.5rem', background: 'rgba(255, 255, 255, 0.05)', borderRadius: 10, border: '1px solid rgba(148, 163, 184, 0.2)' }}>
           <label style={{ display: 'block', marginBottom: '0.75rem', fontSize: '0.85rem' }}>
-            Moderator Email:
+            Operator Email:
             <input
               type="email"
               required
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="moderator@khelgrid.com"
+              placeholder="operator@example.com"
               style={{ width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
             />
           </label>

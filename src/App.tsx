@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, lazy, Suspense, type MouseEvent } from 'react'
-import { useTranslation } from 'react-i18next'
 import HomePage from './modules/home/HomePage'
 import Sidebar from './shared/components/Sidebar'
 import SportsBar from './shared/components/SportsBar'
@@ -9,7 +8,7 @@ import TopSportsComplexes from './shared/components/TopSportsComplexes'
 import GameSportPlayAcrossIndia from './shared/components/GameSportPlayAcrossIndia'
 import FrequentlyAskedQuestions from './shared/components/FrequentlyAskedQuestions'
 import SiteAnnouncementBanner from './shared/components/SiteAnnouncementBanner'
-import NavbarSettingsMenu from './shared/components/NavbarSettingsMenu'
+import TopNavbar from './shared/components/TopNavbar'
 import {
   getStoredAuthUser,
   onAuthChange,
@@ -76,6 +75,8 @@ const ScoutPortalPage = lazy(() => import('./modules/scouting/ScoutPortalPage'))
 const AthleteVerificationPage = lazy(() => import('./modules/verification/AthleteVerificationPage'))
 const GateCheckInPage = lazy(() => import('./modules/verification/GateCheckInPage').then(m => ({ default: m.GateCheckInPage })))
 const MyPassesVaultPage = lazy(() => import('./modules/passes/MyPassesVaultPage').then(m => ({ default: m.MyPassesVaultPage })))
+const OrganizationsWorkspacePage = lazy(() => import('./modules/organizations/OrganizationsWorkspacePage'))
+const WorkspacePage = lazy(() => import('./modules/workspace/WorkspacePage'))
 const CampaignMarketplacePage = lazy(() => import('./modules/campaigns/CampaignMarketplacePage').then(m => ({ default: m.CampaignMarketplacePage })))
 const CampaignCreationPage = lazy(() => import('./modules/campaigns/CampaignCreationPage').then(m => ({ default: m.CampaignCreationPage })))
 const AdvertiserCampaignManagePage = lazy(() => import('./modules/campaigns/AdvertiserCampaignManagePage').then(m => ({ default: m.AdvertiserCampaignManagePage })))
@@ -111,7 +112,6 @@ function currentPath() {
 }
 
 export default function App() {
-  const { t } = useTranslation(['common', 'navigation'])
   const [path, setPath] = useState('/')
   const [menuOpen, setMenuOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
@@ -120,7 +120,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const [unreadNotifCount, setUnreadNotifCount] = useState(3)
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0)
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [consentModalOpen, setConsentModalOpen] = useState(false)
   const [consentInitialTab, setConsentInitialTab] = useState<'sports_pass' | 'rules_privacy'>('sports_pass')
@@ -288,7 +288,18 @@ export default function App() {
     case 'khelchronicle-author': page = <KhelChronicleAuthorPage authorSlug={match.author} onNavigate={navigate} />; break
     case 'khelchronicle-paper': page = <KhelChroniclePaperPage slug={match.slug} onNavigate={navigate} />; break
     case 'feature':
-      if (match.canonicalPath === '/dashboard') {
+      if (match.canonicalPath === '/workspace') {
+        page = (
+          <WorkspacePage
+            authUser={authUser}
+            onOpenAuth={(tab: 'login' | 'signup') => {
+              setAuthModalTab(tab)
+              setAuthModalOpen(true)
+            }}
+            onNavigate={navigate}
+          />
+        )
+      } else if (match.canonicalPath === '/dashboard') {
         page = (
           <UserDashboardPage
             onNavigate={navigate}
@@ -341,6 +352,7 @@ export default function App() {
       else if (match.canonicalPath === '/referrals') page = <ReferralsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/book') page = <VenuesPage onOpenIntake={() => openListingSubmission('venue')} onNavigate={navigate} />
       else if (match.canonicalPath === '/train') page = <AcademiesPage onOpenIntake={() => openListingSubmission('academy')} onNavigate={navigate} />
+      else if (match.canonicalPath === '/organizations' || match.canonicalPath === '/workspaces') page = <OrganizationsWorkspacePage onNavigate={navigate} />
       else if (match.canonicalPath === '/partner-signup' || match.canonicalPath === '/partner/signup' || match.canonicalPath === '/partner/login') page = <PartnerOnboardingPage onNavigate={navigate} />
       else if (match.canonicalPath === '/academy-hub' || match.canonicalPath === '/academies/manage') page = (
         <TenantProvider>
@@ -397,349 +409,34 @@ export default function App() {
   return <div className={`app-shell foundation-v1 ${sidebarCollapsed ? 'sidebar-is-collapsed' : 'sidebar-is-expanded'}`}>
     <CustomCursor />
     <a className="skip-link" href="#main-content">Skip to content</a>
-    <header className="site-header">
-      <button ref={menuToggleRef} className="menu-toggle" type="button" aria-expanded={isMobile ? menuOpen : !sidebarCollapsed} aria-controls={isMobile ? 'mobile-sidebar-drawer' : 'app-sidebar'} onClick={toggleMainMenu} aria-label="Toggle main navigation"><SiteIcon name={isMobile && menuOpen ? 'close' : 'menu'} size={20} /></button>
-      <a className="brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="brand-logo" src="/assets/kg-logo.webp" alt="KhelGrid Platform Logo" width="34" height="34" fetchPriority="high" /><span>KHELGRID</span></a>
-      <a
-        href="/play"
-        className={`header-play-pill ${path === '/play' ? 'is-active' : ''}`}
-        aria-current={path === '/play' ? 'page' : undefined}
-        onClick={event => navigate(event, '/play')}
-        title={t('findGames', { ns: 'navigation', defaultValue: 'Play pickup games & community matches' })}
-      >
-        <SiteIcon name="users" size={15} />
-        <span>{t('play', 'Play')}</span>
-      </a>
-      {authUser?.role === 'coach' ? (
-        <a
-          href="/coach-dashboard"
-          className={`header-play-pill header-saas-pill ${path === '/coach-dashboard' ? 'is-active' : ''}`}
-          aria-current={path === '/coach-dashboard' ? 'page' : undefined}
-          onClick={event => navigate(event, '/coach-dashboard')}
-          title="Coach Operations Hub — batches, attendance & fees"
-        >
-          <SiteIcon name="award" size={15} />
-          <span>Coach Hub</span>
-        </a>
-      ) : (authUser?.role === 'academy' || authUser?.role === 'host' || authUser?.role === 'venue_owner') ? (
-        <a
-          href="/academy-hub"
-          className={`header-play-pill header-saas-pill ${path === '/academy-hub' ? 'is-active' : ''}`}
-          aria-current={path === '/academy-hub' ? 'page' : undefined}
-          onClick={event => navigate(event, '/academy-hub')}
-          title="Academy Admissions Hub — squads, attendance & passes"
-        >
-          <SiteIcon name="building" size={15} />
-          <span>Academy Hub</span>
-        </a>
-      ) : (
-        <a
-          href="/academy-hub"
-          className={`header-play-pill header-saas-pill ${path === '/academy-hub' || path === '/coach-dashboard' ? 'is-active' : ''}`}
-          aria-current={path === '/academy-hub' || path === '/coach-dashboard' ? 'page' : undefined}
-          onClick={event => navigate(event, '/academy-hub')}
-          title="Academy Admissions & Coach Operations Hub"
-        >
-          <SiteIcon name="building" size={15} />
-          <span>Academy Hub</span>
-        </a>
-      )}
-      <a
-        href="/campaigns"
-        className={`header-play-pill header-campaigns-pill ${path.startsWith('/campaigns') || path.startsWith('/creator') ? 'is-active' : ''}`}
-        aria-current={path.startsWith('/campaigns') || path.startsWith('/creator') ? 'page' : undefined}
-        onClick={event => navigate(event, '/campaigns')}
-        title="Sports Creator Campaign Marketplace & Creator Hub"
-      >
-        <SiteIcon name="award" size={15} />
-        <span>Campaigns</span>
-      </a>
-      <nav className="header-actions" aria-label="KhelGrid actions">
-        <a
-          className="header-action-link header-action-add"
-          href="/submit-listing"
-          onClick={event => navigate(event, '/submit-listing')}
-          title="Submit a venue, coach, trial, academy or community listing for free review"
-          aria-label={t('listOnKhelgrid', '+ List on KhelGrid')}
-        >
-          <SiteIcon name="plus" size={16} />
-          <span>{t('listOnKhelgrid', '+ List on KhelGrid')}</span>
-        </a>
-        <a
-          className="header-action-link"
-          href="/submit-listing?type=venue"
-          onClick={event => navigate(event, '/submit-listing?type=venue')}
-          title="Submit a free venue listing for evidence review"
-          aria-label={t('listVenue', 'List your venue')}
-        >
-          <SiteIcon name="building" size={16} />
-          <span>{t('listVenue', 'List your venue')}</span>
-        </a>
-        <a
-          className="header-action-link header-action-secondary"
-          href="/submit-listing?type=opportunity"
-          onClick={event => navigate(event, '/submit-listing?type=opportunity')}
-          title="Submit a free sports trial listing for evidence review"
-          aria-label={t('submitTrial', 'Submit a trial')}
-        >
-          <SiteIcon name="calendar-check" size={16} />
-          <span>{t('submitTrial', 'Submit a trial')}</span>
-        </a>
-        <a className="header-action-link header-action-coach" href="/submit-listing?type=coach" onClick={event => navigate(event, '/submit-listing?type=coach')} title="Submit a free coach listing for evidence review" aria-label={t('joinAsCoach', 'Join as Coach')}><SiteIcon name="award" size={16} /><span>{t('joinAsCoach', 'Join as Coach')}</span></a>
-        <a className="header-action-link header-action-chronicle" href="/khelchronicle/submit" onClick={event => navigate(event, '/khelchronicle/submit')} title="Submit research manuscript to KhelChronicle" aria-label={t('submitPaper', 'Submit Paper')}><SiteIcon name="file-text" size={16} /><span>{t('submitPaper', 'Submit Paper')}</span></a>
-        <a
-          className={`header-action-link header-action-campaigns ${path.startsWith('/campaigns') || path.startsWith('/creator') ? 'is-active' : ''}`}
-          href="/campaigns"
-          onClick={event => navigate(event, '/campaigns')}
-          title="Sports Creator Campaign Marketplace — campaigns, deliverables & rewards"
-          aria-label="Creator Campaigns"
-        >
-          <SiteIcon name="award" size={16} />
-          <span>Campaigns</span>
-        </a>
-      </nav>
-      <button
-        className="header-icon-button header-search-trigger"
-        type="button"
-        onClick={() => setSearchModalOpen(true)}
-        aria-label={t('searchCatalogueAria', 'Search KhelGrid catalogue')}
-        title="Search KhelGrid (Ctrl+K)"
-      >
-        <SiteIcon name="search" size={19} />
-        <span className="sr-only">{t('searchKhelgrid', 'Search KhelGrid')}</span>
-      </button>
-      <button
-        className="header-icon-button header-notif-trigger"
-        type="button"
-        onClick={() => setNotificationsOpen(true)}
-        aria-label={t('notifications', 'Notifications')}
-        title={t('notifications', 'Notifications')}
-      >
-        <SiteIcon name="bell" size={19} />
-        {unreadNotifCount > 0 && (
-          <span className="header-notif-badge">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>
-        )}
-      </button>
-      <NavbarSettingsMenu
-        onNavigate={navigate}
-        onOpenFeedback={() => setFeedbackModalOpen(true)}
-      />
-      {authUser ? (
-        <div className="header-user-menu-wrap">
-          <button
-            className="header-user-btn"
-            type="button"
-            onClick={() => setUserMenuOpen(!userMenuOpen)}
-            aria-expanded={userMenuOpen}
-            aria-label={`User account menu for ${authUser.fullName}`}
-            title={`Signed in as ${authUser.fullName} (${authUser.role})`}
-          >
-            <span className="header-user-avatar">
-              {authUser.avatarUrl ? (
-                <img src={authUser.avatarUrl} alt={authUser.fullName || 'User Avatar'} width="32" height="32" loading="lazy" decoding="async" />
-              ) : (
-                authUser.fullName.charAt(0).toUpperCase()
-              )}
-            </span>
-            <span className="header-user-details">
-              <span className="header-user-name">{authUser.fullName.split(' ')[0]}</span>
-              <span className="header-user-role-badge">{authUser.role}</span>
-            </span>
-          </button>
-          {userMenuOpen && (
-            <div className="header-user-dropdown" role="menu">
-              <div className="header-user-dropdown-header">
-                <strong>{authUser.fullName}</strong>
-                <small>{authUser.email}</small>
-                <span className="header-user-role-pill">{authUser.role.toUpperCase()}</span>
-              </div>
-              <div className="header-user-dropdown-divider" />
-              <a
-                href="/dashboard"
-                className="header-user-dropdown-item"
-                role="menuitem"
-                onClick={e => {
-                  setUserMenuOpen(false)
-                  navigate(e, '/dashboard')
-                }}
-              >
-                <SiteIcon name="chart" size={15} />
-                <span>My Dashboard</span>
-              </a>
-              <a
-                href={`/u/@${authUser.fullName.toLowerCase().replace(/\s+/g, '-')}`}
-                className="header-user-dropdown-item"
-                role="menuitem"
-                onClick={e => {
-                  setUserMenuOpen(false)
-                  navigate(e, `/u/@${authUser.fullName.toLowerCase().replace(/\s+/g, '-')}`)
-                }}
-              >
-                <SiteIcon name="user-round" size={15} />
-                <span>My Athlete Profile</span>
-              </a>
-              <a
-                href="/saved"
-                className="header-user-dropdown-item"
-                role="menuitem"
-                onClick={e => {
-                  setUserMenuOpen(false)
-                  navigate(e, '/saved')
-                }}
-              >
-                <SiteIcon name="bookmark" size={15} />
-                <span>Saved Deadlines</span>
-              </a>
-              <a
-                href="/creator"
-                className="header-user-dropdown-item"
-                role="menuitem"
-                onClick={e => {
-                  setUserMenuOpen(false)
-                  navigate(e, '/creator')
-                }}
-              >
-                <SiteIcon name="award" size={15} />
-                <span>Sports Creator Hub</span>
-              </a>
-              {authUser.role === 'admin' && (
-                <a
-                  href={typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:3001' : 'https://admin.khelgrid.com'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="header-user-dropdown-item"
-                  role="menuitem"
-                  onClick={() => setUserMenuOpen(false)}
-                >
-                  <SiteIcon name="shield-check" size={15} />
-                  <span>Admin Operations Desk (admin.khelgrid.com)</span>
-                </a>
-              )}
-              {authUser.role === 'coach' && (
-                <a
-                  href="/coach-dashboard"
-                  className="header-user-dropdown-item"
-                  role="menuitem"
-                  onClick={e => {
-                    setUserMenuOpen(false)
-                    navigate(e, '/coach-dashboard')
-                  }}
-                >
-                  <SiteIcon name="award" size={15} />
-                  <span>Coach Operations Hub</span>
-                </a>
-              )}
-              {(authUser.role === 'coach' || authUser.role === 'admin' || authUser.role === 'host') && (
-                <a
-                  href="/tournament-ops"
-                  className="header-user-dropdown-item"
-                  role="menuitem"
-                  onClick={e => {
-                    setUserMenuOpen(false)
-                    navigate(e, '/tournament-ops')
-                  }}
-                >
-                  <SiteIcon name="trophy" size={15} />
-                  <span>Tournament Operations</span>
-                </a>
-              )}
-              {(authUser.role === 'academy' || authUser.role === 'host' || authUser.role === 'venue_owner' || authUser.role === 'admin') && (
-                <>
-                  <a
-                    href="/academy-hub"
-                    className="header-user-dropdown-item"
-                    role="menuitem"
-                    onClick={e => {
-                      setUserMenuOpen(false)
-                      navigate(e, '/academy-hub')
-                    }}
-                  >
-                    <SiteIcon name="building" size={15} />
-                    <span>Academy Admissions Hub</span>
-                  </a>
-                  <a
-                    href="/host"
-                    className="header-user-dropdown-item"
-                    role="menuitem"
-                    onClick={e => {
-                      setUserMenuOpen(false)
-                      navigate(e, '/host')
-                    }}
-                  >
-                    <SiteIcon name="calendar-check" size={15} />
-                    <span>Host &amp; Partner Dashboard</span>
-                  </a>
-                </>
-              )}
-              <a
-                href="/parent-portal"
-                className="header-user-dropdown-item"
-                role="menuitem"
-                onClick={e => {
-                  setUserMenuOpen(false)
-                  navigate(e, '/parent-portal')
-                }}
-              >
-                <SiteIcon name="shield-check" size={15} />
-                <span>Parent &amp; Athlete Passbook</span>
-              </a>
-              <a
-                href="/settings"
-                className="header-user-dropdown-item"
-                role="menuitem"
-                onClick={e => {
-                  setUserMenuOpen(false)
-                  navigate(e, '/settings')
-                }}
-              >
-                <SiteIcon name="sliders" size={15} />
-                <span>Account Settings</span>
-              </a>
-              <div className="header-user-dropdown-divider" />
-              <button
-                type="button"
-                className="header-user-dropdown-item is-signout"
-                role="menuitem"
-                onClick={() => {
-                  setUserMenuOpen(false)
-                  void signOut()
-                }}
-              >
-                <SiteIcon name="close" size={15} />
-                <span>Sign Out</span>
-              </button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <button
-          className="header-login-link"
-          type="button"
-          onClick={() => {
-            setAuthModalTab('login')
-            setAuthModalOpen(true)
-          }}
-          aria-label="Your profile"
-          title="Sign in to your account or register as an Academy / Turf Partner"
-        >
-          <SiteIcon name="user-round" size={17} />
-          <span>
-            {t('login', 'Login')} <small>Sign In · Partner</small>
-          </span>
-        </button>
-      )}
-      <a
-        className="header-go-pro"
-        href="/pricing"
-        onClick={event => {
-          event.preventDefault()
-          setGoProModalOpen(true)
-        }}
-      >
-        <SiteIcon name="star" size={16} />
-        <span>{t('goPro', 'Go Pro')}</span>
-      </a>
-    </header>
+    <TopNavbar
+      path={path}
+      isMobile={isMobile}
+      menuOpen={menuOpen}
+      sidebarCollapsed={sidebarCollapsed}
+      menuToggleRef={menuToggleRef}
+      onToggleMainMenu={toggleMainMenu}
+      onNavigate={navigate}
+      onOpenSearch={() => setSearchModalOpen(true)}
+      onOpenNotifications={() => setNotificationsOpen(true)}
+      onOpenFeedback={() => setFeedbackModalOpen(true)}
+      authUser={authUser}
+      userMenuOpen={userMenuOpen}
+      onToggleUserMenu={() => setUserMenuOpen(open => !open)}
+      onCloseUserMenu={() => setUserMenuOpen(false)}
+      onOpenLogin={() => {
+        setAuthModalTab('login')
+        setAuthModalOpen(true)
+      }}
+      onOpenSignup={() => {
+        setAuthModalTab('signup')
+        setAuthModalOpen(true)
+      }}
+      onSignOut={() => {
+        void signOut()
+      }}
+      onOpenGoPro={() => setGoProModalOpen(true)}
+    />
     <div className="app-workspace">
       <Sidebar
         activePath={path}
