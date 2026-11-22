@@ -13,7 +13,7 @@ type WorkspaceLink = {
   label: string
   description: string
   href: string
-  icon: 'user-round' | 'bookmark' | 'settings' | 'chart' | 'award' | 'building' | 'calendar-check' | 'shield-check'
+  icon: 'user-round' | 'bookmark' | 'settings' | 'chart' | 'award' | 'building' | 'calendar-check' | 'shield-check' | 'target'
 }
 
 export default function WorkspacePage({ authUser, onOpenAuth, onNavigate }: WorkspacePageProps) {
@@ -26,6 +26,7 @@ export default function WorkspacePage({ authUser, onOpenAuth, onNavigate }: Work
   const roleLinks: Partial<Record<AuthUserProfile['role'], WorkspaceLink[]>> = {
     athlete: [{ label: 'Athlete dashboard', description: 'Open your existing athlete dashboard.', href: '/dashboard', icon: 'chart' }],
     parent: [{ label: 'Parent & athlete passbook', description: 'Open the existing parent and athlete area.', href: '/parent-portal', icon: 'shield-check' }],
+    scout: [{ label: 'Scout portal', description: 'Open the scouting tools currently available to your account.', href: '/scout-portal', icon: 'target' }],
     coach: [{ label: 'Coach operations', description: 'Open the coach tools currently available to your account.', href: '/coach-dashboard', icon: 'award' }],
     academy: [{ label: 'Academy operations', description: 'Open the academy tools currently available to your account.', href: '/academy-hub', icon: 'building' }],
     host: [{ label: 'Host workspace', description: 'Open the host tools currently available to your account.', href: '/host', icon: 'calendar-check' }],
