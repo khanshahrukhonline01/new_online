@@ -140,7 +140,7 @@ export default function TopNavbar({
             { label: 'Discover', href: '/sports' },
             { label: 'Play', href: '/play' },
             { label: 'Athlete', href: '/sports-cv' },
-            { label: 'Workspace', href: '/workspace' },
+            { label: 'Organizations', href: '/organizations' },
             { label: 'Learn', href: '/learning' },
           ].map(item => {
             const active = path === item.href || path.startsWith(`${item.href}/`)
