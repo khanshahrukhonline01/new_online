@@ -60,8 +60,23 @@ export const KHELGRID_AUTH_SESSION_KEY = 'khelgrid_auth_session'
 
 let inMemoryUser: AuthUserProfile | null = null
 
+const PRIVILEGED_ROLES: ReadonlySet<string> = new Set(['admin', 'moderator'])
+
+/**
+ * Strips privileged roles when hydrating from untrusted client sources
+ * (localStorage or user-modifiable user_metadata).
+ */
+export function sanitizeUntrustedRole(rawRole: unknown, fallback: UserRole = 'athlete'): UserRole {
+  const candidate = typeof rawRole === 'string' ? rawRole.trim().toLowerCase() : ''
+  if (!candidate || PRIVILEGED_ROLES.has(candidate)) {
+    return fallback
+  }
+  return candidate as UserRole
+}
+
 /**
  * Returns the currently stored user from localStorage or memory.
+ * Never trusts privileged roles ('admin', 'moderator') read from localStorage.
  */
 export function getStoredAuthUser(): AuthUserProfile | null {
   if (inMemoryUser) return inMemoryUser
@@ -73,6 +88,7 @@ export function getStoredAuthUser(): AuthUserProfile | null {
     if (parsed && parsed.id && (parsed.fullName || parsed.name)) {
       if (!parsed.name && parsed.fullName) parsed.name = parsed.fullName
       if (!parsed.fullName && parsed.name) parsed.fullName = parsed.name
+      parsed.role = sanitizeUntrustedRole(parsed.role, 'athlete')
       inMemoryUser = parsed
       return parsed
     }
@@ -84,6 +100,7 @@ export function getStoredAuthUser(): AuthUserProfile | null {
 
 /**
  * Persists user profile to localStorage and broadcasts the change across tabs/components.
+ * Privileged roles are kept strictly in memory (never written as authority to localStorage).
  */
 export function setStoredAuthUser(user: AuthUserProfile | null): void {
   inMemoryUser = user
@@ -92,7 +109,11 @@ export function setStoredAuthUser(user: AuthUserProfile | null): void {
     if (user) {
       if (!user.name && user.fullName) user.name = user.fullName
       if (!user.fullName && user.name) user.fullName = user.name
-      window.localStorage.setItem(KHELGRID_AUTH_STORAGE_KEY, JSON.stringify(user))
+      const safeForStorage: AuthUserProfile = {
+        ...user,
+        role: sanitizeUntrustedRole(user.role, 'athlete'),
+      }
+      window.localStorage.setItem(KHELGRID_AUTH_STORAGE_KEY, JSON.stringify(safeForStorage))
     } else {
       window.localStorage.removeItem(KHELGRID_AUTH_STORAGE_KEY)
       window.localStorage.removeItem(KHELGRID_AUTH_SESSION_KEY)
@@ -399,6 +420,7 @@ export async function signInWithEmail(input: SignInInput): Promise<AuthResult> {
     const metaProfile = mapToUserProfile(
       {
         ...(data.user.user_metadata || {}),
+        role: sanitizeUntrustedRole(data.user.user_metadata?.role, 'athlete'),
         email_confirmed_at: data.user.email_confirmed_at,
       } as Record<string, unknown>,
       cleanEmail,
@@ -436,15 +458,28 @@ export async function sendPasswordReset(
   }
 
   try {
-    let redirectUrl: string
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://khelgrid.com'
+    const defaultRedirectPath = getSafeRedirectUrl('/login?type=recovery')
+    let redirectUrl = `${currentOrigin}${defaultRedirectPath}`
+
     if (redirectToOverride) {
-      redirectUrl = redirectToOverride
-    } else {
-      const redirectPath = getSafeRedirectUrl('/login?type=recovery')
-      redirectUrl =
-        typeof window !== 'undefined'
-          ? `${window.location.origin}${redirectPath}`
-          : `https://khelgrid.com${redirectPath}`
+      const trimmedOverride = redirectToOverride.trim()
+      if (trimmedOverride.startsWith('/')) {
+        redirectUrl = `${currentOrigin}${getSafeRedirectUrl(trimmedOverride)}`
+      } else {
+        try {
+          const parsedOverride = new URL(trimmedOverride)
+          const parsedCurrent = new URL(currentOrigin)
+          if (
+            parsedOverride.origin.toLowerCase() === parsedCurrent.origin.toLowerCase() &&
+            (parsedOverride.protocol === 'https:' || parsedOverride.protocol === 'http:')
+          ) {
+            redirectUrl = `${parsedOverride.origin}${parsedOverride.pathname}${parsedOverride.search}`
+          }
+        } catch {
+          // Invalid override URL falls back to safe current-origin redirect
+        }
+      }
     }
 
     const { error } = await client.auth.resetPasswordForEmail(cleanEmail, {
@@ -873,6 +908,8 @@ export function onAuthChange(callback: (user: AuthUserProfile | null) => void): 
         const user = mapToUserProfile(
           {
             ...(session.user.user_metadata || {}),
+            // Never elevate platform privileges from user-modifiable user_metadata
+            role: sanitizeUntrustedRole(session.user.user_metadata?.role, 'athlete'),
             email_confirmed_at: session.user.email_confirmed_at,
           } as Record<string, unknown>,
           session.user.email || '',

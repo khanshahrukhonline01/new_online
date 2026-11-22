@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { SiteIcon } from '../../../../src/shared/components/SiteIcon'
+import type { AdminPlatformRole } from '../auth/adminSecurityPolicy'
 
 export type AdminThemeMode = 'light' | 'dark' | 'cosmic' | 'system'
 
@@ -7,15 +8,22 @@ export interface AdminHeaderProps {
   onToggleSidebar: () => void
   onOpenCommandPalette: () => void
   onResetPassword: () => void
-  onSignOut?: () => void
+  onSignOut: () => void
   activeWorkspaceTitle: string
   activeWorkspaceSection?: string
   theme: AdminThemeMode
   onChangeTheme: (theme: AdminThemeMode) => void
   pendingSubmissionsCount?: number
   pendingManuscriptsCount?: number
-  dbLatencyMs?: number
-  databaseId?: string
+  dbLatencyMs?: number | null
+  databaseId: string
+  operatorEmail: string
+  operatorRole: AdminPlatformRole
+}
+
+function getOperatorInitials(email: string): string {
+  const local = email.split('@')[0]?.replace(/[^a-zA-Z0-9]/g, '') || 'OP'
+  return local.slice(0, 2).toUpperCase()
 }
 
 export function AdminHeader({
@@ -29,14 +37,18 @@ export function AdminHeader({
   onChangeTheme,
   pendingSubmissionsCount = 0,
   pendingManuscriptsCount = 0,
-  dbLatencyMs = 28,
-  databaseId = 'hznsbxvovjxvmnchzzqt',
+  dbLatencyMs = null,
+  databaseId,
+  operatorEmail,
+  operatorRole,
 }: AdminHeaderProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
 
   const totalAlerts = pendingSubmissionsCount + pendingManuscriptsCount
+  const roleLabel = operatorRole === 'super_admin' ? 'Super Admin' : 'Moderator'
+  const displayName = operatorEmail.includes('@') ? operatorEmail.split('@')[0] : operatorEmail
 
   const handleToggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -58,7 +70,6 @@ export function AdminHeader({
 
   return (
     <header className="admin-lte-topbar">
-      {/* Left: Sidebar Toggle, Command Search, and Breadcrumbs */}
       <div className="admin-topbar-left">
         <button
           type="button"
@@ -74,7 +85,6 @@ export function AdminHeader({
           KhelGrid Admin Operations
         </span>
 
-        {/* Command Palette Trigger */}
         <button
           type="button"
           className="admin-topbar-command-trigger"
@@ -86,7 +96,6 @@ export function AdminHeader({
           <kbd className="admin-topbar-kbd">Ctrl+K</kbd>
         </button>
 
-        {/* Workspace Breadcrumbs */}
         <nav className="admin-topbar-breadcrumbs" aria-label="Breadcrumb">
           <span className="admin-breadcrumb-section">{activeWorkspaceSection}</span>
           <SiteIcon name="chevron-right" size={12} className="admin-breadcrumb-separator" />
@@ -94,16 +103,16 @@ export function AdminHeader({
         </nav>
       </div>
 
-      {/* Right: Database Telemetry, Alerts, Fullscreen, Themes, Profile */}
       <div className="admin-topbar-right">
-        {/* Realtime DB Telemetry Badge */}
-        <div className="admin-topbar-db-badge" title={`Connected to Supabase project ${databaseId} (${dbLatencyMs}ms ping)`}>
+        <div
+          className="admin-topbar-db-badge"
+          title={`Connected to approved Supabase project ${databaseId}`}
+        >
           <span className="admin-topbar-status-dot online" />
           <span className="admin-topbar-db-label">Dev Database ({databaseId})</span>
-          <span className="admin-topbar-latency">{dbLatencyMs}ms</span>
+          {dbLatencyMs !== null && <span className="admin-topbar-latency">{dbLatencyMs}ms</span>}
         </div>
 
-        {/* Notifications Dropdown */}
         <div className="admin-topbar-dropdown-wrap">
           <button
             type="button"
@@ -148,7 +157,7 @@ export function AdminHeader({
                 {totalAlerts === 0 && (
                   <div className="admin-alert-row empty">
                     <SiteIcon name="check" size={16} />
-                    <span>All operational queues are clear!</span>
+                    <span>All operational queues are clear.</span>
                   </div>
                 )}
               </div>
@@ -156,7 +165,6 @@ export function AdminHeader({
           )}
         </div>
 
-        {/* Fullscreen Toggle */}
         <button
           type="button"
           className="admin-topbar-icon-btn"
@@ -167,7 +175,6 @@ export function AdminHeader({
           <SiteIcon name={isFullscreen ? 'close' : 'external-link'} size={16} />
         </button>
 
-        {/* Theme Switcher (Light, Dark Slate, Cosmic Neon, System) */}
         <div className="admin-theme-select-wrap">
           <SiteIcon name={theme === 'cosmic' ? 'sparkles' : theme === 'dark' ? 'moon' : 'sun'} size={15} />
           <select
@@ -183,7 +190,6 @@ export function AdminHeader({
           </select>
         </div>
 
-        {/* Moderator Profile Menu */}
         <div className="admin-topbar-dropdown-wrap">
           <button
             type="button"
@@ -192,21 +198,21 @@ export function AdminHeader({
               setIsProfileOpen(!isProfileOpen)
               setIsNotificationsOpen(false)
             }}
-            aria-label="Moderator Account Menu"
+            aria-label="Operator Account Menu"
             aria-expanded={isProfileOpen}
           >
             <div className="admin-topbar-avatar">
-              <span>KG</span>
+              <span>{getOperatorInitials(operatorEmail)}</span>
             </div>
-            <span className="admin-topbar-profile-name">Moderator</span>
+            <span className="admin-topbar-profile-name">{displayName}</span>
             <SiteIcon name="chevron-down" size={13} />
           </button>
 
           {isProfileOpen && (
             <div className="admin-topbar-popover admin-profile-popover" role="menu">
               <div className="admin-popover-header">
-                <strong>Platform Moderator</strong>
-                <span className="admin-popover-role">Super Admin</span>
+                <strong title={operatorEmail}>{operatorEmail}</strong>
+                <span className="admin-popover-role">{roleLabel}</span>
               </div>
               <div className="admin-popover-actions">
                 <button
@@ -220,23 +226,32 @@ export function AdminHeader({
                   <SiteIcon name="lock" size={14} />
                   <span>Reset Password</span>
                 </button>
-                {onSignOut && (
-                  <button
-                    type="button"
-                    className="admin-popover-action-btn text-danger"
-                    onClick={() => {
-                      setIsProfileOpen(false)
-                      onSignOut()
-                    }}
-                  >
-                    <SiteIcon name="logout" size={14} />
-                    <span>Sign Out</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="admin-popover-action-btn text-danger"
+                  onClick={() => {
+                    setIsProfileOpen(false)
+                    onSignOut()
+                  }}
+                >
+                  <SiteIcon name="logout" size={14} />
+                  <span>Sign Out</span>
+                </button>
               </div>
             </div>
           )}
         </div>
+
+        <button
+          type="button"
+          className="admin-topbar-signout-btn"
+          onClick={onSignOut}
+          title="Sign Out"
+          aria-label="Sign Out"
+        >
+          <SiteIcon name="logout" size={14} />
+          <span>Sign Out</span>
+        </button>
       </div>
     </header>
   )

@@ -79,7 +79,7 @@ describe('AdminAnalyticsDashboard Executive Operations & Telemetry Suite', () =>
     expect(html).toContain('venue')
   })
 
-  it('renders moderator activity feed section and bulk moderation console', () => {
+  it('renders moderator activity feed section and bulk moderation console when authorized', () => {
     const html = renderToStaticMarkup(<AdminAnalyticsDashboard initialSummary={mockSummary} />)
     expect(html).toContain('Moderator Activity Feed')
     expect(html).toContain('All Activity')
@@ -87,5 +87,13 @@ describe('AdminAnalyticsDashboard Executive Operations & Telemetry Suite', () =>
     expect(html).toContain('Quick-Tag Sport &amp; City')
     expect(html).toContain('Bulk Approve')
     expect(html).toContain('Bulk Live Publish')
+  })
+
+  it('fails closed and hides KPI cards and bulk controls before server authorization succeeds', () => {
+    const html = renderToStaticMarkup(<AdminAnalyticsDashboard />)
+    expect(html).toContain('Verifying analytics authorization')
+    expect(html).not.toContain('Total Published Listings')
+    expect(html).not.toContain('Bulk Live Publish')
+    expect(html).not.toContain('moderator@khelgrid.com')
   })
 })

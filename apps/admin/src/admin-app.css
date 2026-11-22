@@ -1815,12 +1815,7 @@ html[data-admin-theme="cosmic"] .admin-topbar-brand-title {
   border-right-color: rgba(115, 92, 255, 0.25);
 }
 
-/* 1. Hide duplicate top header inside AdminControlPanelPage when rendered inside AdminLTE */
-.admin-lte-content-canvas .admin-control-header {
-  display: none !important;
-}
-
-/* 2. Harmonize AdminControlPanelPage wrapper & inner sidebar into sleek top tabs */
+/* 1. Harmonize AdminControlPanelPage wrapper & inner sidebar without hiding security actions */
 .admin-lte-content-canvas .admin-control {
   max-width: 100% !important;
   padding: 1.25rem 1.5rem 3rem !important;
@@ -1882,14 +1877,263 @@ html[data-admin-theme="cosmic"] .admin-lte-content-canvas .admin-control-sidebar
   color: #042f2e !important;
 }
 
-/* 3. Hide redundant sign out buttons & duplicate role badges in AdminModerationPage */
-.admin-lte-content-canvas .admin-header .admin-mod-card-actions {
-  display: none !important;
-}
-
 .admin-lte-content-canvas .admin-page-root {
   max-width: 100% !important;
   padding: 1.25rem 1.5rem 3rem !important;
+}
+
+/* Topbar direct Sign Out button */
+.admin-topbar-signout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.admin-topbar-signout-btn:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+html.dark .admin-topbar-signout-btn,
+html.cosmic .admin-topbar-signout-btn {
+  color: #fca5a5;
+}
+
+/* Phase 1 Root Authentication Gate (Deep Navy #0B192C + Emerald #10B981) */
+.khelgrid-admin-gate-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+  background: radial-gradient(circle at top right, rgba(16, 185, 129, 0.14), transparent 45%),
+    linear-gradient(155deg, #0b192c 0%, #091322 100%);
+  color: #f8fafc;
+}
+
+.admin-gate-card {
+  width: 100%;
+  max-width: 480px;
+  background: #11223b;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.45);
+}
+
+.admin-gate-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.admin-gate-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #10b981;
+  color: #042f2e;
+  font-weight: 800;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.admin-gate-eyebrow {
+  margin: 0 0 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #10b981;
+  text-transform: uppercase;
+}
+
+.admin-gate-card h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.admin-gate-muted {
+  margin: 0.75rem 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #cbd5e1;
+}
+
+.admin-gate-alert {
+  margin: 0.9rem 0;
+  padding: 0.75rem 0.95rem;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  color: #fecaca;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.admin-gate-notice {
+  margin: 0.9rem 0;
+  padding: 0.75rem 0.95rem;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #a7f3d0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.admin-gate-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.admin-gate-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.admin-gate-form input {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: #0b192c;
+  color: #f8fafc;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+.admin-gate-form input:focus {
+  outline: 2px solid #10b981;
+  outline-offset: 1px;
+  border-color: #10b981;
+}
+
+.admin-gate-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.admin-gate-btn-primary {
+  padding: 0.7rem 1.25rem;
+  border-radius: 10px;
+  border: none;
+  background: #10b981;
+  color: #042f2e;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.admin-gate-btn-primary:hover:not(:disabled) {
+  background: #34d399;
+}
+
+.admin-gate-btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.admin-gate-btn-secondary {
+  padding: 0.68rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: transparent;
+  color: #e2e8f0;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.admin-gate-btn-secondary:hover:not(:disabled) {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.admin-gate-btn-link {
+  background: transparent;
+  border: none;
+  color: #34d399;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.4rem 0.25rem;
+}
+
+.admin-gate-btn-link:hover {
+  text-decoration: underline;
+}
+
+/* Honest Unavailable Desk Card */
+.admin-unavailable-desk {
+  padding: 2rem 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.admin-unavailable-card {
+  max-width: 640px;
+  width: 100%;
+  padding: 2rem;
+  border-radius: 14px;
+  background: #0b192c;
+  color: #f8fafc;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.admin-unavailable-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #10b981;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.admin-unavailable-card h2 {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 1.3rem;
+}
+
+.admin-unavailable-desc {
+  margin: 0 0 1.25rem;
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.admin-unavailable-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  font-size: 0.85rem;
+  color: #94a3b8;
 }
 
 /* Responsive collapse on smaller displays */

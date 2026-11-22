@@ -207,8 +207,12 @@ export interface AuthContext {
   email?: string
 }
 
+const PRIVILEGED_CLIENT_ROLES: ReadonlySet<string> = new Set(['admin', 'moderator', 'service_role'])
+
 /**
- * Resolves current user's active context from stored auth state or remote DB.
+ * Resolves current user's active context from stored auth state.
+ * Never accepts privileged platform roles ('admin', 'moderator', 'service_role')
+ * from client-side storage as proof of authority.
  */
 export function getCurrentAuthContext(): AuthContext {
   const user: AuthUserProfile | null = getStoredAuthUser()
@@ -220,18 +224,21 @@ export function getCurrentAuthContext(): AuthContext {
     }
   }
 
-  const role = (user.role as AppRole) || 'athlete'
+  const rawRole = (user.role as AppRole) || 'athlete'
+  const safeRole: AppRole = PRIVILEGED_CLIENT_ROLES.has(rawRole) ? 'visitor' : rawRole
+
   return {
     userId: user.id,
-    roles: [role],
+    roles: [safeRole],
     isVerified: Boolean(user.isVerified),
     email: user.email,
   }
 }
 
 /**
- * Fetches all roles assigned to a user from public.user_roles.
- * Falls back closed to ['visitor'] on network error or absent session.
+ * Fetches all roles assigned to a user from the server.
+ * Strictly fails closed to ['visitor'] whenever offline, unauthenticated,
+ * or on any database/authorization lookup failure.
  */
 export async function getCurrentUserRoles(userId?: string): Promise<AppRole[]> {
   const currentContext = getCurrentAuthContext()
@@ -243,8 +250,8 @@ export async function getCurrentUserRoles(userId?: string): Promise<AppRole[]> {
 
   const client = getSupabaseClient()
   if (!client) {
-    // Offline / Mock fallback
-    return currentContext.roles.length > 0 ? currentContext.roles : ['athlete']
+    // Strictly fail closed — never elevate or fall back to localStorage/athlete
+    return ['visitor']
   }
 
   try {
@@ -255,14 +262,14 @@ export async function getCurrentUserRoles(userId?: string): Promise<AppRole[]> {
       .eq('is_active', true)
 
     if (error || !data || data.length === 0) {
-      return currentContext.roles.length > 0 ? currentContext.roles : ['athlete']
+      return ['visitor']
     }
 
     const fetchedRoles = data.map(r => r.role as AppRole)
     return Array.from(new Set(fetchedRoles))
   } catch {
-    // Fail closed
-    return currentContext.roles
+    // Strictly fail closed
+    return ['visitor']
   }
 }
 
