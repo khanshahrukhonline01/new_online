@@ -29,7 +29,7 @@ export const navigationModules: NavigationModule[] = [
     icon: 'user-round',
     items: [
       { id: 'home', label: 'Home', href: '/', icon: 'home', module: 'your-space', available: true },
-      { id: 'workspace', label: 'Workspace', href: '/workspace', icon: 'layout-dashboard', module: 'your-space', available: true },
+      { id: 'workspace', label: 'Workspace', href: '/workspace', icon: 'chart', module: 'your-space', available: true },
       { id: 'parent-portal', label: 'Parent & Athlete Passbook', href: '/parent-portal', icon: 'shield-check', module: 'your-space', available: true },
       { id: 'my-passes', label: 'My Passes & Vouchers', href: '/my-passes', icon: 'badge-check', module: 'your-space', available: true },
       { id: 'saved', label: 'Saved Items', href: '/saved', icon: 'bookmark', module: 'your-space', available: true },
