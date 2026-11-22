@@ -5,8 +5,6 @@ import NavbarSettingsMenu from './NavbarSettingsMenu'
 import { SiteIcon } from './SiteIcon'
 import {
   TOP_NAV_SUBMIT_ACTIONS,
-  formatUnreadBadge,
-  resolveRoleHubLink,
 } from './topNavActions'
 
 export interface TopNavbarProps {
@@ -19,7 +17,6 @@ export interface TopNavbarProps {
   onNavigate: (event?: MouseEvent<HTMLAnchorElement>, target?: string) => void
   onOpenSearch: () => void
   onOpenNotifications: () => void
-  unreadNotifCount: number
   onOpenFeedback: () => void
   authUser: AuthUserProfile | null
   userMenuOpen: boolean
@@ -40,7 +37,6 @@ export default function TopNavbar({
   onNavigate,
   onOpenSearch,
   onOpenNotifications,
-  unreadNotifCount,
   onOpenFeedback,
   authUser,
   userMenuOpen,
@@ -56,8 +52,12 @@ export default function TopNavbar({
   const submitTriggerRef = useRef<HTMLButtonElement>(null)
   const userMenuWrapRef = useRef<HTMLDivElement>(null)
 
-  const hubLink = resolveRoleHubLink(authUser?.role, path)
-  const unreadBadge = formatUnreadBadge(unreadNotifCount)
+  const userMenuTriggerRef = useRef<HTMLButtonElement>(null)
+  const venueAction = TOP_NAV_SUBMIT_ACTIONS.find(action => action.id === 'venue')
+  const trialAction = TOP_NAV_SUBMIT_ACTIONS.find(action => action.id === 'trial')
+  const additionalSubmitActions = TOP_NAV_SUBMIT_ACTIONS.filter(
+    action => action.id !== 'venue' && action.id !== 'trial',
+  )
 
   useEffect(() => {
     setSubmitMenuOpen(false)
@@ -84,13 +84,14 @@ export default function TopNavbar({
       }
       if (userMenuOpen) {
         onCloseUserMenu()
+        userMenuTriggerRef.current?.focus()
       }
     }
 
     document.addEventListener('mousedown', handleOutsideClick)
     document.addEventListener('keydown', handleKeyDown)
     return () => {
-      document.removeEventListener('mousedown', handleOutsideClick)
+      document.removeEventListener('pointerdown', handleOutsideClick)
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [submitMenuOpen, userMenuOpen, onCloseUserMenu])
@@ -101,7 +102,7 @@ export default function TopNavbar({
   return (
     <header className="site-header">
       <div className="site-header-inner">
-        {/* Zone 1: Menu toggle, Brand wordmark & Primary links */}
+        {/* Zone 1: Persistent menu toggle and KhelGrid brand */}
         <div className="header-zone header-zone-left">
           <button
             ref={menuToggleRef}
@@ -124,42 +125,13 @@ export default function TopNavbar({
             <img
               className="brand-logo"
               src="/assets/kg-logo.webp"
-              alt="KhelGrid Platform Logo"
+              alt=""
               width="32"
               height="32"
               fetchPriority="high"
             />
             <span>KHELGRID</span>
           </a>
-
-          <span className="header-divider" aria-hidden="true" />
-
-          <div className="header-primary-links">
-            <a
-              href="/play"
-              className={`header-play-pill ${path === '/play' ? 'is-active' : ''}`}
-              aria-current={path === '/play' ? 'page' : undefined}
-              onClick={event => onNavigate(event, '/play')}
-              title={t('findGames', {
-                ns: 'navigation',
-                defaultValue: 'Play pickup games & community matches',
-              })}
-            >
-              <SiteIcon name="users" size={15} />
-              <span>{t('play', 'Play')}</span>
-            </a>
-
-            <a
-              href={hubLink.href}
-              className={`header-play-pill header-saas-pill ${hubLink.isActive ? 'is-active' : ''}`}
-              aria-current={hubLink.isActive ? 'page' : undefined}
-              onClick={event => onNavigate(event, hubLink.href)}
-              title={hubLink.title}
-            >
-              <SiteIcon name={hubLink.icon} size={15} />
-              <span>{hubLink.label}</span>
-            </a>
-          </div>
         </div>
 
         {/* Zone 2: Centered Spotlight Command Search on Large Screens */}
@@ -183,21 +155,42 @@ export default function TopNavbar({
 
         {/* Zone 3: Consolidated Submit Menu, Utilities, Account & Single Primary CTA */}
         <div className="header-zone header-zone-right">
+          {venueAction && (
+            <a
+              className="header-submit-direct header-submit-venue"
+              href={venueAction.href}
+              onClick={event => onNavigate(event, venueAction.href)}
+              title={venueAction.title}
+            >
+              <SiteIcon name={venueAction.icon} size={15} />
+              <span>{t(venueAction.translationKey, 'List your venue')}</span>
+            </a>
+          )}
+
+          {trialAction && (
+            <a
+              className="header-submit-direct header-submit-trial"
+              href={trialAction.href}
+              onClick={event => onNavigate(event, trialAction.href)}
+              title={trialAction.title}
+            >
+              <SiteIcon name={trialAction.icon} size={15} />
+              <span>{t(trialAction.translationKey, 'Submit a trial')}</span>
+            </a>
+          )}
+
           <div ref={submitWrapRef} className="header-submit-menu-wrap">
             <button
               ref={submitTriggerRef}
               type="button"
-              className={`header-submit-trigger ${submitMenuOpen ? 'is-open' : ''} ${isSubmitRouteActive ? 'is-active' : ''}`}
-              aria-haspopup="menu"
+              className={`header-submit-trigger header-submit-more-trigger ${submitMenuOpen ? 'is-open' : ''}`}
               aria-expanded={submitMenuOpen}
               aria-controls="header-submit-popover"
               onClick={() => setSubmitMenuOpen(open => !open)}
-              title="List a venue, trial, coach, academy or research paper on KhelGrid"
+              title="More ways to contribute to KhelGrid"
             >
               <SiteIcon name="plus" size={15} />
-              <span className="header-submit-trigger-label">
-                {t('listOnKhelgridShort', 'List & Submit')}
-              </span>
+              <span className="header-submit-trigger-label">More</span>
               <SiteIcon
                 name="chevron-down"
                 size={14}
@@ -208,22 +201,22 @@ export default function TopNavbar({
             <nav
               id="header-submit-popover"
               className={`header-actions header-submit-popover ${submitMenuOpen ? 'is-open' : ''}`}
-              aria-label="KhelGrid actions"
+              aria-label="More ways to contribute to KhelGrid"
               aria-hidden={!submitMenuOpen}
+              hidden={!submitMenuOpen}
             >
               <div className="header-submit-popover-head">
-                <strong>Contribute to KhelGrid</strong>
-                <span>Free evidence-backed listing &amp; research intake</span>
+                <strong>More ways to contribute</strong>
+                <span>Free listing review and research submissions</span>
               </div>
               <div className="header-submit-popover-list">
-                {TOP_NAV_SUBMIT_ACTIONS.map(action => {
+                {additionalSubmitActions.map(action => {
                   const label = t(action.translationKey, action.defaultLabel)
                   return (
                     <a
                       key={action.id}
                       className={action.className}
                       href={action.href}
-                      tabIndex={submitMenuOpen ? 0 : -1}
                       onClick={event => {
                         setSubmitMenuOpen(false)
                         onNavigate(event, action.href)
@@ -261,9 +254,6 @@ export default function TopNavbar({
               title={t('notifications', 'Notifications')}
             >
               <SiteIcon name="bell" size={18} />
-              {unreadBadge && (
-                <span className="header-notif-badge">{unreadBadge}</span>
-              )}
             </button>
 
             <NavbarSettingsMenu
@@ -275,6 +265,7 @@ export default function TopNavbar({
           {authUser ? (
             <div ref={userMenuWrapRef} className="header-user-menu-wrap">
               <button
+                ref={userMenuTriggerRef}
                 className="header-user-btn"
                 type="button"
                 onClick={onToggleUserMenu}
@@ -448,8 +439,8 @@ export default function TopNavbar({
               className="header-login-link"
               type="button"
               onClick={onOpenLogin}
-              aria-label="Your profile"
-              title="Sign in to your account or register as an Academy / Turf Partner"
+              aria-label={t('login', 'Sign in to your KhelGrid account')}
+              title="Sign in to your KhelGrid account"
             >
               <SiteIcon name="user-round" size={16} />
               <span>{t('login', 'Sign In')}</span>
@@ -459,6 +450,7 @@ export default function TopNavbar({
           <a
             className="header-go-pro"
             href="/pricing"
+            aria-label="Explore KhelGrid Pro"
             onClick={event => {
               event.preventDefault()
               onOpenGoPro()
