@@ -281,8 +281,8 @@ The current development branch introduces a focused refinement without changing 
 ### Updated responsive behavior
 
 - At compact desktop widths, primary submission actions collapse to icon controls with their title text retained for pointer users; their accessible names remain available from the anchor text and icon context.
-- At mobile widths (760 px and below), the header becomes a two-row layout: brand/menu and compact actions on the first row, full-width search on the second row.
-- At very narrow widths, primary action labels are visually suppressed while their icon controls and accessible action destinations remain available.
+- The header stays on one horizontal line at every viewport width. On desktop the five primary product areas are visible between the brand and utility actions; at compact widths those links move into the comprehensive More directory, and search becomes an icon-only action. The header never wraps into a second row.
+- At very narrow widths, primary action labels are visually suppressed while their icon controls and accessible action destinations remain available. The header remains a single row with horizontal overflow prevented.
 - Popovers are viewport-constrained and scroll internally rather than extending beyond the viewport.
 
 ### Interaction/accessibility refinements
