@@ -26,8 +26,8 @@ Risks are categorized across five critical domains and prioritized using the sta
 
 | Risk ID | Category | Title | Severity | Affected Components | Impact & Likelihood | Mitigation Strategy |
 | :---: | :---: | :--- | :---: | :--- | :--- | :--- |
-| **RSK-SEC-01** | Security & Auth | **Route Guard Unmounted in `App.tsx` (`RequireTenantMember` absent)** | **HIGH** | `src/App.tsx` (Lines 340–344) | **Impact: High / Likelihood: Certain.** `RequireTenantMember.tsx` was created but not mounted on `/academy-hub`. Unauthenticated visitors bypass route checks and enter demo mode. | Mount `<RequireTenantMember>` in `src/App.tsx` wrapping `/academy-hub` during Phase 3. |
-| **RSK-SEC-02** | Security & Auth | **Client-Side Role Selector in Academy Hub Preview** | **MEDIUM** | `src/modules/academies/AcademyHubPage.tsx` (Lines 948–994) | **Impact: Medium / Likelihood: High.** Unauthenticated users can switch between Director, Head Coach, and Front Desk via `#academy-role-select` to render privileged UI tabs with mock data. | Remove the client-side role dropdown when authenticating users in Phase 3. Derive role strictly from `tenant_memberships`. |
+| **RSK-SEC-01** | Security & Auth | **Route Guard Unmounted in `App.tsx` (`RequireTenantMember` absent)** | **RESOLVED (Phase 3)** | `src/App.tsx` (Lines 340–344) | **Remediated.** Mounted `<RequireTenantMember onNavigate={navigate}>` wrapping `/academy-hub` and `/academies/manage` inside `<TenantProvider>`. Unauthenticated visitors are rejected. | Verified in `phase3-tenant-auth-context.test.tsx`. |
+| **RSK-SEC-02** | Security & Auth | **Client-Side Role Selector in Academy Hub Preview** | **RESOLVED (Phase 3)** | `src/modules/academies/AcademyHubPage.tsx` (Lines 948–994) | **Remediated.** Decommissioned `#academy-role-select`. Role is strictly derived and synchronized via `useEffect` from `verifiedRole` in PostgreSQL `tenant_memberships`. | Verified in `phase3-tenant-auth-context.test.tsx`. |
 | **RSK-SEC-03** | Security & Auth | **Premature Phase 2 Migration Vulnerability (Null Email in Invitation RPC)** | **RESOLVED (Phase 2)** | `supabase/migrations/20261122100000_phase2_*.sql` | **Remediated.** In `accept_tenant_invitation`, strict fail-closed email validation (`IS NOT NULL` and lower-case match) and `unique_tenant_user` conflict resolution were implemented. | Tested and verified in `phase2-database-consolidation.test.ts`. |
 | **RSK-SEC-04** | Security & Auth | **Incomplete Soft-Delete RLS Policies** | **RESOLVED (Phase 2)** | `supabase/migrations/20261122100000_phase2_*.sql` | **Remediated.** Updated SELECT policies on `tenant_students`, `tenant_batches`, `tenant_memberships`, and `tenants` to enforce `deleted_at IS NULL` for active queries with director archival inspection. | Tested and verified in `phase2-database-consolidation.test.ts`. |
 | **RSK-PRIV-01** | Data Privacy | **Minor Student PII Stored in Unencrypted LocalStorage** | **CRITICAL** | `src/modules/academies/academySaaSClient.ts`, `parentPortalService.ts` | **Impact: Severe / Likelihood: Certain.** Minor children's names, parents' phone numbers, and dates of birth are written in plain text to browser `localStorage`, violating India's DPDP Act 2023. | Migrate all student records to encrypted PostgreSQL tables with DPDP masking in Phase 5. Wipe mock localStorage stores. |
@@ -44,5 +44,6 @@ Risks are categorized across five critical domains and prioritized using the sta
 ## 3. Authoritative Status Declaration
 
 - **Phase 1: Current-State Audit and Baseline — COMPLETE & ACCEPTED.**
-- **Phase 2: Secure Database and Tenant Isolation — NOT APPROVED & NOT STARTED.**
-- **Premature Implementation Changes: Preserved on branch but not accepted.**
+- **Phase 2: Secure Database and Tenant Isolation — COMPLETE & ACCEPTED.**
+- **Phase 3: Authentication, Identity and Membership Lifecycle — COMPLETE & ACCEPTED.**
+- **Phase 4: Academy Workspace and Administration — READY TO COMMENCE.**

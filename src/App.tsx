@@ -19,6 +19,7 @@ import {
   type AuthUserProfile,
 } from './integrations/supabase/auth-client'
 import { TenantProvider } from './shared/context/TenantContext'
+import { RequireTenantMember } from './shared/components/RequireTenantMember'
 import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAndShare'
 
 // Code-split route components via React.lazy()
@@ -339,7 +340,9 @@ export default function App() {
       else if (match.canonicalPath === '/partner-signup' || match.canonicalPath === '/partner/signup' || match.canonicalPath === '/partner/login') page = <PartnerOnboardingPage onNavigate={navigate} />
       else if (match.canonicalPath === '/academy-hub' || match.canonicalPath === '/academies/manage') page = (
         <TenantProvider>
-          <AcademyHubPage onNavigate={navigate} />
+          <RequireTenantMember onNavigate={navigate}>
+            <AcademyHubPage onNavigate={navigate} />
+          </RequireTenantMember>
         </TenantProvider>
       )
       else if (match.canonicalPath === '/coach-dashboard' || match.canonicalPath === '/coach/hub' || match.canonicalPath === '/coach/manage') page = <CoachDashboardPage onNavigate={navigate} />

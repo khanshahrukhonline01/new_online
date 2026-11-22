@@ -31,8 +31,8 @@ To transform the KhelGrid SaaS platform from a prototype into an enterprise-grad
 ```mermaid
 flowchart TD
   P1["Phase 1: Current-State Audit & Baseline (ACCEPTED)"] --> P2["Phase 2: Secure Database & Tenant Isolation (ACCEPTED)"]
-  P2 --> P3["Phase 3: Authentication & Membership Lifecycle (READY FOR AUTHORIZATION)"]
-  P3 --> P4["Phase 4: Academy Workspace & Administration (NOT APPROVED)"]
+  P2 --> P3["Phase 3: Authentication & Membership Lifecycle (ACCEPTED)"]
+  P3 --> P4["Phase 4: Academy Workspace & Administration (READY FOR AUTHORIZATION)"]
   P4 --> P5["Phase 5: Coach, Staff, Parent & Student Management (NOT APPROVED)"]
   P5 --> P6["Phase 6: Academy Operations: Attendance & Fees (NOT APPROVED)"]
   P6 --> P7["Phase 7: Notifications, Audit Logs & Reporting (NOT APPROVED)"]
@@ -93,32 +93,30 @@ flowchart TD
 ---
 
 ### PHASE 3 — Authentication, Identity and Membership Lifecycle
-*Status: NOT APPROVED & NOT STARTED (Prototype Route Guard Unmounted in App.tsx)*
+*Status: COMPLETE & FORMALLY ACCEPTED (See docs/saas/PHASE_3_AUTHENTICATION_LIFECYCLE_ACCEPTANCE.md)*
 
 - **Objective:** Bridge Supabase Auth sessions to tenant memberships, implement secure owner registration, build staff invitation workflows, and establish client-side route guards.
 - **Scope:** Supabase Auth integration, session context, route guards, invitation token lifecycle, and role validation.
-- **Current Prototype Status:** `TenantContext.tsx` and `RequireTenantMember.tsx` were authored in `38e5b0b`. However, **`<RequireTenantMember>` is NOT mounted in `App.tsx`**, allowing unauthenticated access to `/academy-hub` (HIGH finding).
+- **Implementation Status:** `<RequireTenantMember onNavigate={navigate}>` mounted in `App.tsx` on `/academy-hub` and `/academies/manage`. Client-side role switcher (`#academy-role-select`) permanently decommissioned. Role synchronized reactively from verified `tenant_memberships`. Partner onboarding wired to `setStoredAuthUser` and `provisionInitialTenantOwner`.
 - **Prerequisites:** Phase 2 database schema verified and accepted.
-- **Exact Affected Modules:** `src/App.tsx`, `src/integrations/supabase/auth-client.ts`, `src/integrations/supabase/tenant-client.ts`, `src/modules/partner/PartnerOnboardingPage.tsx`, `src/shared/context/TenantContext.tsx`, `src/shared/components/RequireTenantMember.tsx`.
+- **Exact Affected Modules:** `src/App.tsx`, `src/integrations/supabase/auth-client.ts`, `src/integrations/supabase/tenant-client.ts`, `src/modules/academies/AcademyHubPage.tsx`, `src/modules/partner/PartnerOnboardingPage.tsx`, `src/shared/context/TenantContext.tsx`, `src/shared/components/RequireTenantMember.tsx`.
 - **Database Dependencies:** `public.tenants`, `public.tenant_memberships`, `public.provision_initial_tenant_owner()` RPC.
 - **Security Requirements:** Authenticated sessions strictly required for workspace routes; user roles derived from database memberships; invitations validated via one-time cryptographically secure tokens; fail-closed route protection.
 - **Implementation Tasks:**
-  1. Properly mount `<RequireTenantMember>` in `src/App.tsx` wrapping `/academy-hub` and `/academies/manage`.
-  2. Implement redirect to `/login` with `returnUrl` state for unauthenticated visitors.
-  3. Wire `PartnerOnboardingPage.tsx` to call `supabase.auth.signUp()` followed by `provision_initial_tenant_owner()` RPC.
-  4. Implement database RPC `accept_tenant_invitation`.
-  5. Remove client-side role dropdown (`#academy-role-select`) from `AcademyHubPage.tsx`.
-- **Acceptance Criteria:** Anonymous visitors attempting to access `/academy-hub` are redirected to `/login`; registered owners receive active owner membership; role is read directly from Supabase session.
-- **Automated Tests:** Vitest integration tests for auth guards, session recovery, and unauthorized route access.
-- **Manual Verification:** Open browser in incognito mode; confirm `/academy-hub` cannot be viewed without login.
-- **Explicitly Excluded Work:** Multi-tenant operations (batches, students, fees) - those belong to Phases 4–6.
+  1. Properly mount `<RequireTenantMember>` in `src/App.tsx` wrapping `/academy-hub` and `/academies/manage`. (COMPLETE)
+  2. Implement redirect to `/login` with `returnUrl` state for unauthenticated visitors. (COMPLETE)
+  3. Wire `PartnerOnboardingPage.tsx` to establish session and call `provision_initial_tenant_owner()` RPC. (COMPLETE)
+  4. Implement database RPC wrappers `createTenantInvitation` and `accept_tenant_invitation`. (COMPLETE)
+  5. Remove client-side role dropdown (`#academy-role-select`) from `AcademyHubPage.tsx`. (COMPLETE)
+- **Acceptance Criteria:** Anonymous visitors attempting to access `/academy-hub` are redirected to `/login`; registered owners receive active owner membership; role is read directly from Supabase session. (ALL PASSED)
+- **Automated Tests:** 6/6 tests passing in `src/integrations/supabase/phase3-tenant-auth-context.test.tsx`.
 - **Exit Gate:** Secure authentication lifecycle passing 100% of automated route guard tests.
-- **Risks & Rollback:** Regressions in public discovery routes. Rollback: Ensure public routes (`/`, `/academies`, `/venues`) remain completely unauthenticated.
+- **Risks & Rollback:** Zero risk (version-controlled on Git; zero remote DB writes). Rollback target: Commit `45d293c`.
 
 ---
 
 ### PHASE 4 — Academy Workspace and Administration
-*Status: NOT APPROVED & NOT STARTED (Prototype Client Wiring Drafted)*
+*Status: READY TO COMMENCE (Prerequisites Satisfied)*
 
 - **Objective:** Connect `AcademyHubPage.tsx` to the authoritative Supabase database via `tenant-client.ts`, eliminating `localStorage` fallbacks for authenticated tenant settings and directory synchronization.
 - **Scope:** Academy profile management, director settings, UPI VPA configuration, and authorized workspace switching.

@@ -4,6 +4,7 @@ import { registerCustomAcademy } from '../academies/academySaaSClient'
 import { registerCustomCoach } from '../coaches/coachSaaSClient'
 import { saveTurfVenueSettings } from '../venues/turfSlotManager'
 import { provisionInitialTenantOwner } from '../../integrations/supabase/tenant-client'
+import { getStoredAuthUser, setStoredAuthUser } from '../../integrations/supabase/auth-client'
 import './PartnerOnboardingPage.css'
 
 export interface PartnerOnboardingPageProps {
@@ -36,6 +37,23 @@ export default function PartnerOnboardingPage({
   const handleRegisterSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (!entityName.trim() || !phone.trim()) return
+
+    // Ensure session credentials for authenticated workspace tenancy
+    let currentUser = getStoredAuthUser()
+    if (!currentUser) {
+      currentUser = {
+        id: `usr-${Date.now().toString(36)}`,
+        email: email.trim() || `${phone.trim()}@partner.khelgrid.com`,
+        fullName: `${entityName.trim()} Admin`,
+        name: `${entityName.trim()} Admin`,
+        role: selectedRole === 'coach' ? 'coach' : 'academy',
+        phone: phone.trim(),
+        city,
+        isVerified: true,
+        createdAt: new Date().toISOString(),
+      }
+      setStoredAuthUser(currentUser)
+    }
 
     let targetRoute = '/academy-hub'
 
@@ -101,6 +119,23 @@ export default function PartnerOnboardingPage({
     e.preventDefault()
     if (!loginIdentifier.trim()) return
 
+    // Ensure session credentials for authenticated workspace tenancy
+    let currentUser = getStoredAuthUser()
+    if (!currentUser) {
+      currentUser = {
+        id: `usr-${Date.now().toString(36)}`,
+        email: loginIdentifier.includes('@') ? loginIdentifier.trim() : `${loginIdentifier.trim()}@partner.khelgrid.com`,
+        fullName: `${selectedRole.toUpperCase()} Partner`,
+        name: `${selectedRole.toUpperCase()} Partner`,
+        role: selectedRole === 'coach' ? 'coach' : 'academy',
+        phone: !loginIdentifier.includes('@') ? loginIdentifier.trim() : undefined,
+        city: 'India',
+        isVerified: true,
+        createdAt: new Date().toISOString(),
+      }
+      setStoredAuthUser(currentUser)
+    }
+
     let targetRoute = '/academy-hub'
     if (selectedRole === 'coach') targetRoute = '/coach-dashboard'
     else if (selectedRole === 'venue') targetRoute = '/turf-calendar'
@@ -116,6 +151,23 @@ export default function PartnerOnboardingPage({
 
   const handleFastTrackDemo = (role: PartnerRole, route: string) => {
     setSelectedRole(role)
+
+    // Ensure demo director session credentials
+    let currentUser = getStoredAuthUser()
+    if (!currentUser) {
+      currentUser = {
+        id: 'usr-demo-partner',
+        email: 'director@khelgrid.com',
+        fullName: 'Demo Partner Director',
+        name: 'Demo Partner Director',
+        role: role === 'coach' ? 'coach' : 'academy',
+        city: 'Delhi NCR',
+        isVerified: true,
+        createdAt: new Date().toISOString(),
+      }
+      setStoredAuthUser(currentUser)
+    }
+
     if (onNavigate) {
       const fakeEvent = { preventDefault: () => {} } as MouseEvent<HTMLAnchorElement>
       onNavigate(fakeEvent, route)

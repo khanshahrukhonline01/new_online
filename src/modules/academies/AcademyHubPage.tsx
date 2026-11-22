@@ -158,10 +158,23 @@ export default function AcademyHubPage({
   const { currentTenant, userRole: verifiedRole } = useTenant()
   const [activeTab, setActiveTab] = useState<'leads' | 'batches' | 'fees' | 'ledger' | 'attendance' | 'staff' | 'trial_passes' | 'kits' | 'safeguarding' | 'settings' | 'audit_logs'>('leads')
   const [userRole, setUserRole] = useState<AcademyUserRole>(() => {
-    if (verifiedRole === 'head_coach') return 'head_coach'
-    if (verifiedRole === 'front_desk') return 'front_desk'
+    if (verifiedRole === 'coach' || verifiedRole === 'head_coach') return 'head_coach'
+    if (verifiedRole === 'staff' || verifiedRole === 'front_desk') return 'front_desk'
     return 'director'
   })
+
+  // Synchronize userRole strictly from verified PostgreSQL tenant membership role
+  useEffect(() => {
+    if (verifiedRole) {
+      if (verifiedRole === 'coach' || verifiedRole === 'head_coach') {
+        setUserRole('head_coach')
+      } else if (verifiedRole === 'staff' || verifiedRole === 'front_desk') {
+        setUserRole('front_desk')
+      } else {
+        setUserRole('director')
+      }
+    }
+  }, [verifiedRole])
   const [dpdpSafeMode, setDpdpSafeMode] = useState(true)
   const [showOnboardingChecklist, setShowOnboardingChecklist] = useState(true)
   const [pitchSideMode, setPitchSideMode] = useState(false)
@@ -967,45 +980,24 @@ export default function AcademyHubPage({
               </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <label htmlFor="academy-role-select" style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
-                  Staff Role:
-                </label>
-                <select
-                  id="academy-role-select"
-                  aria-label="Current Staff Role (Demo Sandbox Only)"
-                  value={userRole}
-                  onChange={e => setUserRole(e.target.value as AcademyUserRole)}
-                  title="Client-side sandbox role switcher for UI preview. Production authorization is enforced by PostgreSQL RLS."
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    background: '#f8fafc',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    color: '#1e293b',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="director">Director (Full Access)</option>
-                  <option value="head_coach">Head Coach (Batches, Attendance &amp; Kits)</option>
-                  <option value="front_desk">Front-Desk (Leads, Students &amp; Inquiries)</option>
-                </select>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+                  Role:
+                </span>
                 <span
                   style={{
-                    fontSize: '10px',
+                    fontSize: '11px',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                    padding: '2px 6px',
-                    background: '#fef3c7',
-                    color: '#92400e',
-                    border: '1px solid #fde68a',
-                    borderRadius: '4px',
-                    fontWeight: 700
+                    letterSpacing: '0.05em',
+                    padding: '3px 8px',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    fontWeight: 700,
+                    color: '#64748b',
                   }}
-                  title="Client-side sandbox role switcher for UI preview. Production authorization is enforced by PostgreSQL RLS."
+                  title="Authoritative role is determined by PostgreSQL tenant memberships."
                 >
-                  Sandbox Preview
+                  VIEWER (AUTHENTICATING)
                 </span>
               </div>
             )}
