@@ -1,0 +1,38 @@
+.kg-workspace-page { max-width: 1180px; }
+.kg-workspace-hero {
+  display:grid; grid-template-columns:minmax(0,1.4fr) minmax(220px,.6fr); gap:2rem; align-items:center;
+  padding:clamp(1.5rem,4vw,3rem); margin:1rem 0 2.5rem; border-radius:22px;
+  color:#f8fafc; background:radial-gradient(circle at 85% 15%,rgba(16,185,129,.2),transparent 34%),linear-gradient(125deg,#0b192c,#12324b);
+}
+.kg-workspace-hero .eyebrow { color:#6ee7b7; }
+.kg-workspace-hero h1 { max-width:720px; margin:.6rem 0 1rem; color:#fff; font-size:clamp(2rem,4.5vw,3.5rem); line-height:1.08; letter-spacing:-.04em; }
+.kg-workspace-hero .page-intro { max-width:650px; color:#cbd5e1; line-height:1.7; }
+.kg-workspace-actions { display:flex; flex-wrap:wrap; gap:.75rem; margin-top:1.5rem; }
+.kg-workspace-primary,.kg-workspace-secondary { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; min-height:44px; padding:.7rem 1rem; border-radius:10px; font:inherit; font-weight:750; cursor:pointer; }
+.kg-workspace-primary { border:1px solid #10b981; background:#10b981; color:#052e24; }
+.kg-workspace-secondary { border:1px solid rgba(226,232,240,.4); background:rgba(255,255,255,.07); color:#fff; }
+.kg-workspace-hero-mark { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; min-height:190px; border:1px solid rgba(167,243,208,.2); border-radius:18px; background:rgba(255,255,255,.05); color:#6ee7b7; }
+.kg-workspace-hero-mark span { color:#d1fae5; font-size:.85rem; font-weight:700; }
+.kg-workspace-account { display:flex; align-items:center; gap:1rem; max-width:620px; padding:1rem 1.2rem; border:1px solid var(--border-subtle,#e2e8f0); border-radius:14px; background:var(--surface-card,#fff); }
+.kg-workspace-avatar { display:grid; place-items:center; flex:0 0 48px; width:48px; height:48px; border-radius:50%; background:#0b192c; color:#d1fae5; font-size:1.2rem; font-weight:800; }
+.kg-workspace-account-copy { display:flex; min-width:0; flex-direction:column; gap:.2rem; }
+.kg-workspace-account-copy strong { color:var(--text-primary,#0f172a); }
+.kg-workspace-account-copy span,.kg-workspace-account-copy small { color:var(--text-secondary,#64748b); overflow-wrap:anywhere; }
+.kg-workspace-section-heading { display:flex; align-items:end; justify-content:space-between; gap:1rem; margin:2rem 0 1rem; }
+.kg-workspace-section-heading h2 { margin:.25rem 0; color:var(--text-primary,#0f172a); font-size:clamp(1.4rem,3vw,2rem); }
+.kg-workspace-section-heading > p { max-width:420px; color:var(--text-secondary,#64748b); line-height:1.6; }
+.kg-workspace-role-grid,.kg-workspace-link-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+.kg-workspace-role-grid article,.kg-workspace-link-card { position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:.55rem; min-height:150px; padding:1.25rem; border:1px solid var(--border-subtle,#e2e8f0); border-radius:14px; background:var(--surface-card,#fff); color:var(--text-primary,#0f172a); text-decoration:none; }
+.kg-workspace-role-grid article > svg,.kg-workspace-link-icon { color:#059669; }
+.kg-workspace-role-grid article strong,.kg-workspace-link-card strong { font-size:1rem; }
+.kg-workspace-role-grid article span,.kg-workspace-link-card > span:not(.kg-workspace-link-icon) { max-width:95%; color:var(--text-secondary,#64748b); font-size:.9rem; line-height:1.55; }
+.kg-workspace-link-card { transition:border-color .16s ease,transform .16s ease,box-shadow .16s ease; }
+.kg-workspace-link-card:hover,.kg-workspace-link-card:focus-visible { border-color:#10b981; box-shadow:0 8px 24px rgba(11,25,44,.08); transform:translateY(-2px); outline:none; }
+.kg-workspace-link-arrow { position:absolute; top:1.25rem; right:1.25rem; color:#059669; }
+.kg-workspace-note { margin-top:1.25rem; color:var(--text-secondary,#64748b); font-size:.85rem; line-height:1.65; }
+@media(max-width:680px) {
+ .kg-workspace-hero { grid-template-columns:1fr; }
+ .kg-workspace-hero-mark { min-height:130px; }
+ .kg-workspace-role-grid,.kg-workspace-link-grid { grid-template-columns:1fr; }
+ .kg-workspace-section-heading { align-items:flex-start; flex-direction:column; }
+}
