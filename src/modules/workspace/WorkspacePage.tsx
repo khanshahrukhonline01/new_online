@@ -61,7 +61,7 @@ export default function WorkspacePage({ authUser, onOpenAuth, onNavigate }: Work
           )}
         </div>
         <div className="kg-workspace-hero-mark" aria-hidden="true">
-          <SiteIcon name="layout-dashboard" size={48} />
+          <SiteIcon name="chart" size={48} />
           <span>Discover · Play · Progress</span>
         </div>
       </div>
