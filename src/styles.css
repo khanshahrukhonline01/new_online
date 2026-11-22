@@ -1621,3 +1621,303 @@ independent of footer height. */
 
 
 
+
+
+/* TopNavbar refinement — direct primary actions, accessible overflow and compact layouts. */
+.foundation-v1 .site-header .header-zone-left {
+  min-width: 0;
+  gap: 12px;
+}
+
+.foundation-v1 .site-header .brand {
+  gap: 8px;
+  letter-spacing: .055em;
+}
+
+.foundation-v1 .site-header .header-zone-right {
+  min-width: 0;
+  gap: 8px;
+}
+
+.foundation-v1 .site-header .header-submit-direct {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong, #cbd5e1);
+  border-radius: 10px;
+  color: var(--text, #142033);
+  background: var(--surface, #fff);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
+}
+
+.foundation-v1 .site-header .header-submit-venue {
+  border-color: var(--accent, #07964f);
+  color: #fff;
+  background: var(--accent, #07964f);
+}
+
+.foundation-v1 .site-header .header-submit-venue:hover {
+  border-color: var(--accent-hover, #067a41);
+  color: #fff;
+  background: var(--accent-hover, #067a41);
+  transform: translateY(-1px);
+}
+
+.foundation-v1 .site-header .header-submit-trial:hover {
+  border-color: var(--accent, #07964f);
+  color: var(--accent, #07964f);
+  background: var(--accent-soft, #e8f7ef);
+}
+
+.foundation-v1 .site-header .header-submit-more-trigger {
+  min-width: 76px;
+  border-color: transparent;
+  background: var(--surface-soft, #f1f5f9);
+}
+
+.foundation-v1 .site-header .header-submit-more-trigger:hover,
+.foundation-v1 .site-header .header-submit-more-trigger.is-open {
+  border-color: var(--accent-border, #a7f3d0);
+  color: var(--accent, #07964f);
+  background: var(--accent-soft, #e8f7ef);
+}
+
+.foundation-v1 .site-header .header-actions.header-submit-popover[hidden] {
+  display: none !important;
+}
+
+.foundation-v1 .site-header .header-submit-popover {
+  max-height: min(72vh, 440px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.foundation-v1 .site-header .header-submit-popover:focus-within {
+  outline: none;
+}
+
+.foundation-v1 .site-header .header-icon-button,
+.foundation-v1 .site-header .navbar-settings-wrapper,
+.foundation-v1 .site-header .menu-toggle,
+.foundation-v1 .site-header .header-user-btn {
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.foundation-v1 .site-header .header-icon-button:focus-visible,
+.foundation-v1 .site-header .header-submit-direct:focus-visible,
+.foundation-v1 .site-header .header-submit-more-trigger:focus-visible,
+.foundation-v1 .site-header .header-user-btn:focus-visible {
+  outline: 3px solid var(--accent, #07964f);
+  outline-offset: 2px;
+}
+
+.foundation-v1 .site-header .header-user-dropdown {
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 1220px) and (min-width: 1041px) {
+  .foundation-v1 .site-header-inner {
+    grid-template-columns: minmax(0, 1fr) minmax(150px, 220px) minmax(0, 1.25fr);
+    gap: 10px;
+    padding-inline: 14px;
+  }
+  .foundation-v1 .site-header .header-submit-direct {
+    gap: 5px;
+    padding-inline: 8px;
+    font-size: 11.5px;
+  }
+  .foundation-v1 .site-header .header-zone-left { gap: 6px; }
+  .foundation-v1 .site-header .header-zone-right { gap: 5px; }
+}
+
+@media (max-width: 1040px) and (min-width: 761px) {
+  .foundation-v1 .site-header-inner {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding-inline: 14px;
+  }
+  .foundation-v1 .site-header .header-zone-center {
+    flex: 0 0 auto;
+    width: auto;
+    margin-left: auto;
+  }
+  .foundation-v1 .site-header .header-zone-right {
+    gap: 5px;
+  }
+  .foundation-v1 .site-header .header-submit-direct span {
+    display: none;
+  }
+  .foundation-v1 .site-header .header-submit-direct {
+    width: 38px;
+    min-width: 38px;
+    padding: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .foundation-v1 .site-header {
+    height: auto;
+    min-height: 0;
+    flex: 0 0 auto;
+  }
+  .foundation-v1 .site-header-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    gap: 8px 10px;
+    padding: 8px 12px 10px;
+  }
+  .foundation-v1 .site-header .header-zone-left {
+    grid-column: 1;
+    grid-row: 1;
+    gap: 8px;
+  }
+  .foundation-v1 .site-header .header-zone-center {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+  .foundation-v1 .site-header .header-zone-center .header-search-trigger {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    min-height: 40px;
+    flex: 1 1 auto;
+    justify-content: flex-start;
+    padding-inline: 12px;
+  }
+  .foundation-v1 .site-header .header-search-placeholder,
+  .foundation-v1 .site-header .header-search-kbd {
+    display: inline-flex;
+  }
+  .foundation-v1 .site-header .header-zone-right {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    gap: 4px;
+  }
+  .foundation-v1 .site-header .header-divider,
+  .foundation-v1 .site-header .header-play-pill,
+  .foundation-v1 .site-header .header-login-link,
+  .foundation-v1 .site-header .header-go-pro {
+    display: none;
+  }
+  .foundation-v1 .site-header .header-submit-direct {
+    min-width: 36px;
+    min-height: 36px;
+    height: 36px;
+    padding-inline: 9px;
+    font-size: 11.5px;
+  }
+  .foundation-v1 .site-header .header-submit-trigger {
+    min-width: 36px;
+    min-height: 36px;
+    height: 36px;
+    padding-inline: 9px;
+    font-size: 11.5px;
+  }
+  .foundation-v1 .site-header .header-icon-button,
+  .foundation-v1 .site-header .navbar-settings-wrapper,
+  .foundation-v1 .site-header .header-user-btn,
+  .foundation-v1 .site-header .menu-toggle {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+    flex: 0 0 36px;
+  }
+  .foundation-v1 .site-header .header-actions.header-submit-popover {
+    right: 0;
+    width: min(320px, calc(100vw - 24px));
+  }
+  .foundation-v1 .site-header .header-user-dropdown {
+    right: 0;
+    width: min(280px, calc(100vw - 24px));
+  }
+}
+
+@media (max-width: 480px) {
+  .foundation-v1 .site-header-inner {
+    gap: 7px 8px;
+    padding-inline: 10px;
+  }
+  .foundation-v1 .site-header .brand {
+    gap: 6px;
+    font-size: 12.5px;
+  }
+  .foundation-v1 .site-header .brand .brand-logo {
+    width: 28px;
+    height: 28px;
+  }
+  .foundation-v1 .site-header .header-submit-direct {
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
+  }
+  .foundation-v1 .site-header .header-submit-direct span,
+  .foundation-v1 .site-header .header-submit-trigger-label,
+  .foundation-v1 .site-header .header-submit-chevron {
+    display: none;
+  }
+  .foundation-v1 .site-header .header-submit-more-trigger {
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
+  }
+  .foundation-v1 .site-header .header-utility-cluster {
+    gap: 0;
+  }
+  .foundation-v1 .site-header .header-icon-button,
+  .foundation-v1 .site-header .navbar-settings-wrapper,
+  .foundation-v1 .site-header .header-user-btn,
+  .foundation-v1 .site-header .menu-toggle {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+    flex-basis: 34px;
+  }
+  .foundation-v1 .site-header .header-search-kbd {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .foundation-v1 .site-header .header-zone-right { gap: 2px; }
+  .foundation-v1 .site-header .header-submit-direct,
+  .foundation-v1 .site-header .header-submit-more-trigger,
+  .foundation-v1 .site-header .header-icon-button,
+  .foundation-v1 .site-header .navbar-settings-wrapper,
+  .foundation-v1 .site-header .header-user-btn,
+  .foundation-v1 .site-header .menu-toggle {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    min-height: 32px;
+    flex-basis: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foundation-v1 .site-header .header-submit-direct,
+  .foundation-v1 .site-header .header-submit-trigger,
+  .foundation-v1 .site-header .header-actions.header-submit-popover {
+    transition: none !important;
+  }
+}
