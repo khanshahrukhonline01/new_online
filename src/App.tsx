@@ -444,6 +444,16 @@ export default function App() {
           <span>Academy Hub</span>
         </a>
       )}
+      <a
+        href="/campaigns"
+        className={`header-play-pill header-campaigns-pill ${path.startsWith('/campaigns') || path.startsWith('/creator') ? 'is-active' : ''}`}
+        aria-current={path.startsWith('/campaigns') || path.startsWith('/creator') ? 'page' : undefined}
+        onClick={event => navigate(event, '/campaigns')}
+        title="Sports Creator Campaign Marketplace & Creator Hub"
+      >
+        <SiteIcon name="award" size={15} />
+        <span>Campaigns</span>
+      </a>
       <nav className="header-actions" aria-label="KhelGrid actions">
         <a
           className="header-action-link header-action-add"
@@ -477,6 +487,16 @@ export default function App() {
         </a>
         <a className="header-action-link header-action-coach" href="/submit-listing?type=coach" onClick={event => navigate(event, '/submit-listing?type=coach')} title="Submit a free coach listing for evidence review" aria-label={t('joinAsCoach', 'Join as Coach')}><SiteIcon name="award" size={16} /><span>{t('joinAsCoach', 'Join as Coach')}</span></a>
         <a className="header-action-link header-action-chronicle" href="/khelchronicle/submit" onClick={event => navigate(event, '/khelchronicle/submit')} title="Submit research manuscript to KhelChronicle" aria-label={t('submitPaper', 'Submit Paper')}><SiteIcon name="file-text" size={16} /><span>{t('submitPaper', 'Submit Paper')}</span></a>
+        <a
+          className={`header-action-link header-action-campaigns ${path.startsWith('/campaigns') || path.startsWith('/creator') ? 'is-active' : ''}`}
+          href="/campaigns"
+          onClick={event => navigate(event, '/campaigns')}
+          title="Sports Creator Campaign Marketplace — campaigns, deliverables & rewards"
+          aria-label="Creator Campaigns"
+        >
+          <SiteIcon name="award" size={16} />
+          <span>Campaigns</span>
+        </a>
       </nav>
       <button
         className="header-icon-button header-search-trigger"
@@ -569,6 +589,18 @@ export default function App() {
               >
                 <SiteIcon name="bookmark" size={15} />
                 <span>Saved Deadlines</span>
+              </a>
+              <a
+                href="/creator"
+                className="header-user-dropdown-item"
+                role="menuitem"
+                onClick={e => {
+                  setUserMenuOpen(false)
+                  navigate(e, '/creator')
+                }}
+              >
+                <SiteIcon name="award" size={15} />
+                <span>Sports Creator Hub</span>
               </a>
               {authUser.role === 'admin' && (
                 <a

@@ -536,6 +536,21 @@ expand on hover or keyboard focus. */
   background: #eef2ff;
   color: #312e81;
 }
+.foundation-v1 .site-header .header-action-campaigns{
+  border-color: #bae6fd;
+  background: #f0f9ff;
+  color: #0369a1;
+}
+.foundation-v1 .site-header .header-action-campaigns:hover{
+  border-color: #7dd3fc;
+  background: #e0f2fe;
+  color: #0284c7;
+}
+html.dark .foundation-v1 .site-header .header-action-campaigns{
+  border-color: #0369a1;
+  background: rgba(56, 189, 248, 0.1);
+  color: #38bdf8;
+}
 @media (max-width: 1320px){
   .foundation-v1 .site-header .header-actions{ gap: 5px; }
   .foundation-v1 .site-header .header-action-link{ padding: 6px 9px; gap: 5px; font-size: 10.5px; }
@@ -615,6 +630,38 @@ html.dark .foundation-v1 .site-header .header-play-pill.is-active {
 
 @media (max-width: 440px) {
   .foundation-v1 .site-header .header-saas-pill {
+    display: none;
+  }
+}
+
+.foundation-v1 .site-header .header-campaigns-pill {
+  color: #0284c7;
+  border-color: #bae6fd;
+  background: rgba(240, 249, 255, 0.9);
+}
+
+.foundation-v1 .site-header .header-campaigns-pill:hover,
+.foundation-v1 .site-header .header-campaigns-pill.is-active {
+  color: #0369a1;
+  border-color: #7dd3fc;
+  background: #e0f2fe;
+}
+
+html.dark .foundation-v1 .site-header .header-campaigns-pill {
+  border-color: #0369a1;
+  background: rgba(15, 23, 42, 0.9);
+  color: #38bdf8;
+}
+
+html.dark .foundation-v1 .site-header .header-campaigns-pill:hover,
+html.dark .foundation-v1 .site-header .header-campaigns-pill.is-active {
+  color: #7dd3fc;
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.2);
+}
+
+@media (max-width: 680px) {
+  .foundation-v1 .site-header .header-campaigns-pill {
     display: none;
   }
 }
@@ -761,7 +808,8 @@ html.dark .foundation-v1 .site-header .header-play-pill.is-active {
 
 @media (max-width: 1024px) {
   .foundation-v1 .site-header .header-action-coach,
-  .foundation-v1 .site-header .header-action-chronicle {
+  .foundation-v1 .site-header .header-action-chronicle,
+  .foundation-v1 .site-header .header-action-campaigns {
     display: none !important;
   }
 }
