@@ -366,6 +366,18 @@ export default function TopNavbar({
                   </div>
                   <div className="header-user-dropdown-divider" />
                   <a
+                    href="/workspace"
+                    className="header-user-dropdown-item"
+                    role="menuitem"
+                    onClick={e => {
+                      onCloseUserMenu()
+                      onNavigate(e, '/workspace')
+                    }}
+                  >
+                    <SiteIcon name="chart" size={15} />
+                    <span>Workspace</span>
+                  </a>
+                  <a
                     href="/dashboard"
                     className="header-user-dropdown-item"
                     role="menuitem"
