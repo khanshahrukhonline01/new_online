@@ -158,6 +158,7 @@ export default function TopNavbar({
               href={venueAction.href}
               onClick={event => onNavigate(event, venueAction.href)}
               title={venueAction.title}
+              aria-label={t(venueAction.translationKey, "List your venue")}
             >
               <SiteIcon name={venueAction.icon} size={15} />
               <span>{t(venueAction.translationKey, 'List your venue')}</span>
@@ -170,6 +171,7 @@ export default function TopNavbar({
               href={trialAction.href}
               onClick={event => onNavigate(event, trialAction.href)}
               title={trialAction.title}
+              aria-label={t(trialAction.translationKey, "Submit a trial")}
             >
               <SiteIcon name={trialAction.icon} size={15} />
               <span>{t(trialAction.translationKey, 'Submit a trial')}</span>
@@ -181,6 +183,7 @@ export default function TopNavbar({
               ref={submitTriggerRef}
               type="button"
               className={`header-submit-trigger header-submit-more-trigger ${submitMenuOpen ? 'is-open' : ''}`}
+              aria-label="More ways to contribute to KhelGrid"
               aria-expanded={submitMenuOpen}
               aria-controls="header-submit-popover"
               onClick={() => setSubmitMenuOpen(open => !open)}
