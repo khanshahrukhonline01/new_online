@@ -52,7 +52,7 @@ export default function WorkspacePage({ authUser, onOpenAuth, onNavigate }: Work
           {!authUser && (
             <div className="kg-workspace-actions">
               <button type="button" className="kg-workspace-primary" onClick={() => onOpenAuth('login')}>
-                <SiteIcon name="log-in" size={17} /> Sign in
+                <SiteIcon name="user-round" size={17} /> Sign in
               </button>
               <button type="button" className="kg-workspace-secondary" onClick={() => onOpenAuth('signup')}>
                 Create an account <SiteIcon name="arrow-right" size={16} />
@@ -73,7 +73,7 @@ export default function WorkspacePage({ authUser, onOpenAuth, onNavigate }: Work
             <div className="kg-workspace-account-copy">
               <strong>{authUser.fullName}</strong>
               <span>{authUser.email}</span>
-              <small>Account role: {authUser.role.replaceAll('_', ' ')}</small>
+              <small>Account role: {authUser.role.replace(/_/g, ' ')}</small>
             </div>
           </section>
           <div className="kg-workspace-section-heading">
