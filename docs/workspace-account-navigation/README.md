@@ -15,7 +15,7 @@
 
 - Guests see an explanation of the Workspace and the existing sign-in and registration actions.
 - Signed-in users see their account identity and shortcuts selected from the role currently present in the existing auth profile.
-- Athlete, parent, coach, academy, host and venue-owner roles have only the corresponding existing destinations exposed in this presentation layer.
+- Athlete, parent, scout, coach, academy, host and venue-owner roles have only the corresponding existing destinations exposed in this presentation layer.
 - The page does not create a new identity system, organization membership model, role assignment flow, or private data API.
 - Role display and client-side link visibility are presentation only. Every protected destination must continue enforcing authorization on the server/database; never trust a client-supplied role.
 - No application history, listing ownership, booking records, messages, notifications, or organization data are fabricated. The page only links to existing destinations.
