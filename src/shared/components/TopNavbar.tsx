@@ -24,6 +24,7 @@ export interface TopNavbarProps {
   onToggleUserMenu: () => void
   onCloseUserMenu: () => void
   onOpenLogin: () => void
+  onOpenSignup: () => void
   onSignOut: () => void
   onOpenGoPro: () => void
 }
@@ -44,6 +45,7 @@ export default function TopNavbar({
   onToggleUserMenu,
   onCloseUserMenu,
   onOpenLogin,
+  onOpenSignup,
   onSignOut,
   onOpenGoPro,
 }: TopNavbarProps) {
@@ -138,7 +140,7 @@ export default function TopNavbar({
             { label: 'Discover', href: '/sports' },
             { label: 'Play', href: '/play' },
             { label: 'Athlete', href: '/sports-cv' },
-            { label: 'SaaS', href: '/organizations' },
+            { label: 'Organizations', href: '/organizations' },
             { label: 'Learn', href: '/learning' },
           ].map(item => {
             const active = path === item.href || path.startsWith(`${item.href}/`)
@@ -364,6 +366,18 @@ export default function TopNavbar({
                   </div>
                   <div className="header-user-dropdown-divider" />
                   <a
+                    href="/workspace"
+                    className="header-user-dropdown-item"
+                    role="menuitem"
+                    onClick={e => {
+                      onCloseUserMenu()
+                      onNavigate(e, '/workspace')
+                    }}
+                  >
+                    <SiteIcon name="chart" size={15} />
+                    <span>Workspace</span>
+                  </a>
+                  <a
                     href="/dashboard"
                     className="header-user-dropdown-item"
                     role="menuitem"
@@ -496,16 +510,19 @@ export default function TopNavbar({
               )}
             </div>
           ) : (
-            <button
-              className="header-login-link"
-              type="button"
-              onClick={onOpenLogin}
-              aria-label={t('login', 'Sign in to your KhelGrid account')}
-              title="Sign in to your KhelGrid account"
-            >
-              <SiteIcon name="user-round" size={16} />
-              <span>{t('login', 'Sign In')}</span>
-            </button>
+            <div ref={userMenuWrapRef} className="header-user-menu-wrap">
+              <button ref={userMenuTriggerRef} className="header-account-icon-btn" type="button" onClick={onToggleUserMenu} aria-expanded={userMenuOpen} aria-controls="header-account-menu" aria-label="Open KhelGrid account menu" title="Account">
+                <SiteIcon name="user-round" size={18} />
+              </button>
+              {userMenuOpen && (
+                <div id="header-account-menu" className="header-user-dropdown header-guest-dropdown" role="menu">
+                  <div className="header-user-dropdown-header"><strong>Your KhelGrid account</strong><small>Sign in to access your Workspace</small></div>
+                  <div className="header-user-dropdown-divider" />
+                  <button type="button" className="header-user-dropdown-item" role="menuitem" onClick={() => { onCloseUserMenu(); onOpenLogin() }}><SiteIcon name="user-round" size={15} /><span>Sign in</span></button>
+                  <button type="button" className="header-user-dropdown-item" role="menuitem" onClick={() => { onCloseUserMenu(); onOpenSignup() }}><SiteIcon name="plus" size={15} /><span>Create account</span></button>
+                </div>
+              )}
+            </div>
           )}
 
           <a

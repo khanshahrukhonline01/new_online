@@ -55,7 +55,8 @@ For the current implementation, route resolution is in `src/shared/routing.ts` a
 | Company | Contact | `/contact` | Footer and email links | Contact route foundation; email links may be used where shown. |
 | Support | Help | `/help` | Footer/support links | Foundation; keep support directions accurate. |
 | Support | Suggest a listing | `/submit-listing` | Intended for corrections/additions to directory | Form opens an email draft to `khelgrid@gmail.com`; it does not persist a submission in the database or publish it automatically. |
-| Account | Dashboard | `/dashboard` | Future account journey | Foundation; login is paused and no private dashboard data should be implied. |
+| Account | Workspace | `/workspace` | Sidebar Your Space; top navigation; account menu | Role-aware landing page over the existing auth session; no new identity, role, or private-data backend is introduced. |
+| Account | Dashboard | `/dashboard` | Legacy dashboard route; Workspace shortcut | Retained for compatibility; verify protected data and role access at the destination. |
 | Account | Profile | `/profile` | `/my-profile` | Profile routes are registered; authenticated profile storage/editing is not implied. |
 | Account | Saved items | `/saved` | Dashboard and catalogue actions | Foundation; persistence is not implied. |
 | Account | Settings | `/settings` | Header settings help link is email-based | Account settings workflow is not active. |

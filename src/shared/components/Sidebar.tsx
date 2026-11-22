@@ -18,6 +18,7 @@ type SidebarProps = {
 }
 
 function isActive(item: NavigationItem, activePath: string) {
+  if (item.href === '/workspace') return activePath === '/workspace' || activePath === '/dashboard'
   if (item.href === '/') return activePath === '/'
   if (item.href === '/opportunities') return ['/opportunities', '/trials', '/combines', '/scholarships', '/camps'].includes(activePath) || activePath.startsWith('/opportunities/')
   if (item.href === '/venues') return activePath === '/venues' || activePath === '/book' || activePath.startsWith('/venues/')
@@ -42,9 +43,7 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false,
   const { t } = useTranslation(['navigation', 'common'])
   const active = isActive(item, activePath)
   let itemLabel = t(item.id, item.label)
-  if (!isLoggedIn && item.id === 'dashboard') {
-    itemLabel = `${itemLabel} (Sign In)`
-  } else if (!isLoggedIn && item.id === 'for-you') {
+  if (!isLoggedIn && item.id === 'for-you') {
     itemLabel = `${itemLabel} (Sign In)`
   }
 
@@ -78,10 +77,10 @@ function SidebarLink({ item, activePath, onNavigate, onClose, collapsed = false,
       aria-label={collapsed ? tooltipTitle : undefined}
       title={collapsed ? tooltipTitle : undefined}
       onClick={event => {
-        if (!isLoggedIn && (item.id === 'dashboard' || item.id === 'for-you')) {
+        if (!isLoggedIn && item.id === 'for-you') {
           onNavigate(event, item.href)
           onClose?.()
-          onOpenAuth?.(item.id === 'dashboard' ? 'login' : 'signup')
+          onOpenAuth?.('signup')
           return
         }
         onNavigate(event, item.href)

@@ -2041,3 +2041,33 @@ independent of footer height. */
     row-gap: 3px;
   }
 }
+
+
+/* Guest account icon menu — aligned with the authenticated account control */
+.foundation-v1 .site-header .header-account-icon-btn {
+  display:inline-grid;
+  place-items:center;
+  flex:0 0 38px;
+  width:38px;
+  height:38px;
+  padding:0;
+  border:1px solid var(--line,#cbd5e1);
+  border-radius:999px;
+  background:var(--surface-soft,#f8fafc);
+  color:var(--text,#0f172a);
+  cursor:pointer;
+  transition:background .16s ease,border-color .16s ease,color .16s ease;
+}
+.foundation-v1 .site-header .header-account-icon-btn:hover,
+.foundation-v1 .site-header .header-account-icon-btn[aria-expanded="true"] {
+  border-color:#10b981;
+  background:var(--surface,#fff);
+  color:#047857;
+}
+.foundation-v1 .site-header .header-account-icon-btn:focus-visible {
+  outline:2px solid #10b981;
+  outline-offset:3px;
+}
+.foundation-v1 .site-header .header-guest-dropdown {
+  min-width:240px;
+}
