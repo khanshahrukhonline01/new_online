@@ -40,6 +40,12 @@ The development Control Centre is a restricted, UI-based operations area at `/ad
 
 Use only the current Ready Vercel development deployment URL and append `/admin/control`. Do not use the production domain for development testing. The guide documents local access, role permissions, first super-admin provisioning, environment separation, and required release tests.
 
+## Sports Creator Campaign Marketplace
+
+A sports-industry campaign marketplace is documented as a product proposal. It connects eligible sports organisations and businesses with creators for brief-based, reviewed social content campaigns. The proposal covers advertiser and creator roles, campaign lifecycle, content submissions, analytics provenance, reward ledger controls, policy safeguards, and phased implementation. It is documentation only: no routes, database migrations, live payments, or payouts are enabled by this document.
+
+- [KhelGrid Sports Creator Campaign Marketplace — Product & Architecture Proposal](docs/product/KHELGRID_SPORTS_CREATOR_CAMPAIGN_MARKETPLACE.md)
+
 ## Architecture & Development Record
 
 For a full historical record of all phases, fixes, database migrations, and repository parity syncs, see:
