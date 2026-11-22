@@ -392,7 +392,7 @@ export default function ListingSubmissionPage({ defaultTab = 'submit', initialTr
             <a className="contributor-primary-action" href="#contributor-categories" onClick={event => { event.preventDefault(); document.getElementById('contributor-categories')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>
               <SiteIcon name="plus" size={17} /> Submit a listing
             </a>
-            <button type="button" className="contributor-secondary-action" onClick={() => setActiveTab('track')}>
+            <button type="button" className="contributor-secondary-action" onClick={() => { setActiveTab('track'); window.setTimeout(() => document.getElementById('listing-tabs-nav')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
               <SiteIcon name="search" size={17} /> Track a submission
             </button>
           </div>
@@ -418,26 +418,26 @@ export default function ListingSubmissionPage({ defaultTab = 'submit', initialTr
           </div>
         </div>
         <div className="contributor-category-grid">
-          <button type="button" className={kind === 'venue' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('venue'); setActiveTab('submit'); document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>
+          <button type="button" className={kind === 'venue' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('venue'); setActiveTab('submit'); window.setTimeout(() => document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
             <span className="contributor-category-icon"><SiteIcon name="map-pin" size={22} /></span><span className="contributor-category-title">Sports Venues</span><span className="contributor-category-description">Stadiums, grounds, turfs, courts and places to play.</span><span className="contributor-category-link">List a venue <SiteIcon name="arrow-up-right" size={15} /></span>
           </button>
-          <button type="button" className={kind === 'opportunity' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('opportunity'); setActiveTab('submit'); document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>
+          <button type="button" className={kind === 'opportunity' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('opportunity'); setActiveTab('submit'); window.setTimeout(() => document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
             <span className="contributor-category-icon"><SiteIcon name="trophy" size={22} /></span><span className="contributor-category-title">Trials &amp; Opportunities</span><span className="contributor-category-description">Selection trials, scholarships, camps and athlete pathways.</span><span className="contributor-category-link">Submit an opportunity <SiteIcon name="arrow-up-right" size={15} /></span>
           </button>
-          <button type="button" className={kind === 'coach' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('coach'); setActiveTab('submit'); document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>
+          <button type="button" className={kind === 'coach' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('coach'); setActiveTab('submit'); window.setTimeout(() => document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
             <span className="contributor-category-icon"><SiteIcon name="user-round" size={22} /></span><span className="contributor-category-title">Coaches</span><span className="contributor-category-description">Coaches, trainers and verified professional profiles.</span><span className="contributor-category-link">Join as a coach <SiteIcon name="arrow-up-right" size={15} /></span>
           </button>
-          <button type="button" className={kind === 'academy' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('academy'); setActiveTab('submit'); document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>
+          <button type="button" className={kind === 'academy' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('academy'); setActiveTab('submit'); window.setTimeout(() => document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
             <span className="contributor-category-icon"><SiteIcon name="building" size={22} /></span><span className="contributor-category-title">Sports Academies</span><span className="contributor-category-description">Training centres, programmes and development pathways.</span><span className="contributor-category-link">List an academy <SiteIcon name="arrow-up-right" size={15} /></span>
           </button>
-          <button type="button" className={kind === 'event' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('event'); setActiveTab('submit'); document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>
+          <button type="button" className={kind === 'event' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('event'); setActiveTab('submit'); window.setTimeout(() => document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
             <span className="contributor-category-icon"><SiteIcon name="calendar" size={22} /></span><span className="contributor-category-title">Events &amp; Competitions</span><span className="contributor-category-description">Tournaments, meets, leagues and sports events.</span><span className="contributor-category-link">Submit an event <SiteIcon name="arrow-up-right" size={15} /></span>
           </button>
-          <button type="button" className={kind === 'pickup_game' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('pickup_game'); setActiveTab('submit'); document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>
+          <button type="button" className={kind === 'pickup_game' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('pickup_game'); setActiveTab('submit'); window.setTimeout(() => document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
             <span className="contributor-category-icon"><SiteIcon name="users" size={22} /></span><span className="contributor-category-title">Community &amp; Games</span><span className="contributor-category-description">Local pickup games and community sports activities.</span><span className="contributor-category-link">Share a community game <SiteIcon name="arrow-up-right" size={15} /></span>
           </button>
         </div>
-        <button type="button" className="contributor-sport-suggestion" onClick={() => { setKind('sport'); setActiveTab('submit'); document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>
+        <button type="button" className="contributor-sport-suggestion" onClick={() => { setKind('sport'); setActiveTab('submit'); window.setTimeout(() => document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
           <SiteIcon name="plus" size={17} /> Suggest a sport not yet covered <SiteIcon name="arrow-right" size={15} />
         </button>
       </section>
@@ -458,7 +458,7 @@ export default function ListingSubmissionPage({ defaultTab = 'submit', initialTr
       </div>
 
       {/* Navigation Tabs */}
-      <nav className="listing-tabs-nav" aria-label="Intake options">
+      <nav id="listing-tabs-nav" className="listing-tabs-nav" aria-label="Intake options">
         <button
           type="button"
           className={`listing-tab-btn ${activeTab === 'submit' ? 'active' : ''}`}
