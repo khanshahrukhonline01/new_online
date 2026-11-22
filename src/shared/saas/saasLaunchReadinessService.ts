@@ -481,3 +481,17 @@ export function generateSupportConciergeWhatsAppUrl(params: {
 
   return `https://wa.me/919876543210?text=${encodeURIComponent(message)}`
 }
+
+/**
+ * Validates Indian UPI VPA following NPCI guidelines:
+ * - username: 2-100 alphanumeric characters, dots, underscores, hyphens
+ * - @: exactly one @ symbol
+ * - handle/PSP bank suffix: 2-64 alphabetic characters (e.g. oksbi, okhdfcbank, paytm, ybl, axl, icici)
+ */
+export function isValidUpiVpa(vpa?: string | null): boolean {
+  if (!vpa || typeof vpa !== 'string') return false
+  const trimmed = vpa.trim()
+  if (trimmed.length < 5 || trimmed.length > 256) return false
+  const upiRegex = /^[a-zA-Z0-9.\-_]{2,100}@[a-zA-Z]{2,64}$/
+  return upiRegex.test(trimmed)
+}

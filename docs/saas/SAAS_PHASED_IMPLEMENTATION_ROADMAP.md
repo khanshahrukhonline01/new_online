@@ -32,8 +32,8 @@ To transform the KhelGrid SaaS platform from a prototype into an enterprise-grad
 flowchart TD
   P1["Phase 1: Current-State Audit & Baseline (ACCEPTED)"] --> P2["Phase 2: Secure Database & Tenant Isolation (ACCEPTED)"]
   P2 --> P3["Phase 3: Authentication & Membership Lifecycle (ACCEPTED)"]
-  P3 --> P4["Phase 4: Academy Workspace & Administration (READY FOR AUTHORIZATION)"]
-  P4 --> P5["Phase 5: Coach, Staff, Parent & Student Management (NOT APPROVED)"]
+  P3 --> P4["Phase 4: Academy Workspace & Administration (ACCEPTED)"]
+  P4 --> P5["Phase 5: Coach, Staff, Parent & Student Management (READY FOR AUTHORIZATION)"]
   P5 --> P6["Phase 6: Academy Operations: Attendance & Fees (NOT APPROVED)"]
   P6 --> P7["Phase 7: Notifications, Audit Logs & Reporting (NOT APPROVED)"]
   P7 --> P8["Phase 8: SaaS UX, Accessibility & Hindi Localization (NOT APPROVED)"]
@@ -116,17 +116,17 @@ flowchart TD
 ---
 
 ### PHASE 4 — Academy Workspace and Administration
-*Status: READY TO COMMENCE (Prerequisites Satisfied)*
+*Status: COMPLETE & FORMALLY ACCEPTED (Documentation: docs/saas/PHASE_4_ACADEMY_WORKSPACE_ACCEPTANCE.md)*
 
 - **Objective:** Connect `AcademyHubPage.tsx` to the authoritative Supabase database via `tenant-client.ts`, eliminating `localStorage` fallbacks for authenticated tenant settings and directory synchronization.
 - **Scope:** Academy profile management, director settings, UPI VPA configuration, and authorized workspace switching.
-- **Current Prototype Status:** `tenant-client.ts` methods were imported in `AcademyHubPage.tsx` in `38e5b0b`, but fall back to `localStorage` and mock data when unauthenticated.
+- **Current Prototype Status:** Completed and fully verified with PostgreSQL tenancy binding, authorized workspace switcher, RBAC role gating, and NPCI UPI VPA validation.
 - **Prerequisites:** Phase 3 authentication and tenant context established and verified.
-- **Exact Affected Modules:** `src/modules/academies/AcademyHubPage.tsx`, `src/modules/academies/academySaaSClient.ts`, `src/integrations/supabase/tenant-client.ts`.
+- **Exact Affected Modules:** `src/modules/academies/AcademyHubPage.tsx`, `src/shared/saas/saasLaunchReadinessService.ts`, `src/integrations/supabase/phase4-academy-workspace.test.tsx`.
 - **Database Dependencies:** `public.tenants`, `public.tenant_public_directory`, `trg_sync_tenant_public_directory`.
 - **Security Requirements:** Only users with `owner` or `director` roles may update tenant settings; UPI VPA must match valid regex and pass bank verification safeguards.
 - **Implementation Tasks:**
-  1. Refactor `AcademyHubPage.tsx` to strictly read tenant metadata from `tenant-client.ts`.
+  1. Refactor `AcademyHubPage.tsx` to strictly read tenant metadata from `useTenant()` / `tenant-client.ts`.
   2. Implement authorized tenant switcher displaying only tenants where `auth.uid()` has an active membership.
   3. Connect Settings tab form to update `public.tenants` via Supabase client.
   4. Verify that updates to public profile fields (name, city, sport) automatically synchronize to `tenant_public_directory` via database trigger.
@@ -140,7 +140,7 @@ flowchart TD
 ---
 
 ### PHASE 5 — Coach, Staff, Parent and Student Management
-*Status: NOT APPROVED & NOT STARTED (Prototype Parsing & DPDP Helpers Drafted)*
+*Status: READY FOR AUTHORIZATION (Prerequisites Satisfied)*
 
 - **Objective:** Implement authoritative database persistence for coaching batches, student trainees, and staff assignments, enforcing DPDP Act 2023 minor data protections.
 - **Scope:** Trainee roster, batch allocations, staff invitations, and guardian account linking.

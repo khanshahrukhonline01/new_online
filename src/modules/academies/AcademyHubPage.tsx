@@ -66,6 +66,7 @@ import {
   validateAndRestoreAcademyBackup,
   getAcademyPreLaunchChecklist,
   generateSupportConciergeWhatsAppUrl,
+  isValidUpiVpa,
 } from '../../shared/saas/saasLaunchReadinessService'
 import {
   parseStudentCsvRows,
@@ -101,13 +102,24 @@ import './AcademyHubPage.css'
 
 export interface AcademyHubPageProps {
   initialAcademySlug?: string
+  initialTab?: 'leads' | 'batches' | 'fees' | 'ledger' | 'attendance' | 'staff' | 'trial_passes' | 'kits' | 'safeguarding' | 'settings' | 'audit_logs'
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
 export default function AcademyHubPage({
   initialAcademySlug,
+  initialTab,
   onNavigate,
 }: AcademyHubPageProps) {
+  // Authoritative PostgreSQL Tenant Context
+  const {
+    currentTenant,
+    userRole: verifiedRole,
+    memberships,
+    switchTenant,
+    refreshTenant,
+  } = useTenant()
+
   // Academy selection state
   const [selectedSlug, setSelectedSlug] = useState<string>(() => {
     if (initialAcademySlug) return initialAcademySlug
@@ -115,33 +127,54 @@ export default function AcademyHubPage({
       const q = new URLSearchParams(window.location.search).get('academy')
       if (q) return q
     }
-    return 'bengaluru-fc-academy'
+    return currentTenant?.slug || 'bengaluru-fc-academy'
   })
+
+  // Synchronize slug when currentTenant is resolved or switched
+  useEffect(() => {
+    if (currentTenant?.slug && !initialAcademySlug) {
+      setSelectedSlug(currentTenant.slug)
+    }
+  }, [currentTenant?.slug, initialAcademySlug])
 
   // Registered academies list (curated + custom onboarded)
   const registeredAcademies = getRegisteredAcademies()
 
-  // Selected Academy details
+  // Active verified memberships in PostgreSQL
+  const activeMemberships = (memberships || []).filter(m => m.status === 'active')
+
+  // Selected Academy details: Prioritize authoritative database tenant metadata when matched or active
   const fallbackCurated = CURATED_ACADEMIES.find(a => a.slug === selectedSlug)
-  const currentAcademy: RegisteredAcademy = registeredAcademies.find(a => a.slug === selectedSlug) || (fallbackCurated ? {
-    id: fallbackCurated.slug,
-    slug: fallbackCurated.slug,
-    name: fallbackCurated.name,
-    city: fallbackCurated.city,
-    state: fallbackCurated.state || '',
-    sport: fallbackCurated.sport,
-    verificationStatus: 'verified',
-    isCustom: false,
-  } : {
-    id: 'custom-academy',
-    slug: selectedSlug,
-    name: 'National Sports Academy',
-    city: 'Bengaluru',
-    state: 'Karnataka',
-    sport: 'Football',
-    verificationStatus: 'pending_review',
-    isCustom: true,
-  })
+  const currentAcademy: RegisteredAcademy = (currentTenant && (currentTenant.slug === selectedSlug || !registeredAcademies.some(a => a.slug === selectedSlug)))
+    ? {
+        id: currentTenant.id,
+        slug: currentTenant.slug,
+        name: currentTenant.name,
+        city: currentTenant.city || 'Bengaluru',
+        state: currentTenant.state || '',
+        sport: currentTenant.sport || 'Multi-Sport',
+        verificationStatus: currentTenant.verification_status === 'verified' ? 'verified' : (currentTenant.status === 'active' ? 'verified' : 'pending_review'),
+        isCustom: true,
+      }
+    : (registeredAcademies.find(a => a.slug === selectedSlug) || (fallbackCurated ? {
+        id: fallbackCurated.slug,
+        slug: fallbackCurated.slug,
+        name: fallbackCurated.name,
+        city: fallbackCurated.city,
+        state: fallbackCurated.state || '',
+        sport: fallbackCurated.sport,
+        verificationStatus: 'verified',
+        isCustom: false,
+      } : {
+        id: 'custom-academy',
+        slug: selectedSlug,
+        name: 'National Sports Academy',
+        city: 'Bengaluru',
+        state: 'Karnataka',
+        sport: 'Football',
+        verificationStatus: 'pending_review',
+        isCustom: true,
+      }))
 
   // Derived Data
   const leads = getAcademyLeads(selectedSlug)
@@ -155,8 +188,16 @@ export default function AcademyHubPage({
   const ledgerSummary = getAcademyLedgerSummary(selectedSlug)
 
   // Active Tab & Role Permissions
-  const { currentTenant, userRole: verifiedRole } = useTenant()
-  const [activeTab, setActiveTab] = useState<'leads' | 'batches' | 'fees' | 'ledger' | 'attendance' | 'staff' | 'trial_passes' | 'kits' | 'safeguarding' | 'settings' | 'audit_logs'>('leads')
+  const [activeTab, setActiveTab] = useState<'leads' | 'batches' | 'fees' | 'ledger' | 'attendance' | 'staff' | 'trial_passes' | 'kits' | 'safeguarding' | 'settings' | 'audit_logs'>(() => {
+    if (initialTab) return initialTab
+    if (typeof window !== 'undefined') {
+      const q = new URLSearchParams(window.location.search).get('tab')
+      if (q && ['leads', 'batches', 'fees', 'ledger', 'attendance', 'staff', 'trial_passes', 'kits', 'safeguarding', 'settings', 'audit_logs'].includes(q)) {
+        return q as 'leads' | 'batches' | 'fees' | 'ledger' | 'attendance' | 'staff' | 'trial_passes' | 'kits' | 'safeguarding' | 'settings' | 'audit_logs'
+      }
+    }
+    return 'leads'
+  })
   const [userRole, setUserRole] = useState<AcademyUserRole>(() => {
     if (verifiedRole === 'coach' || verifiedRole === 'head_coach') return 'head_coach'
     if (verifiedRole === 'staff' || verifiedRole === 'front_desk') return 'front_desk'
@@ -212,7 +253,7 @@ export default function AcademyHubPage({
 
   // Pre-Launch Checklist & Mathematical Reconciliation
   const preLaunchChecklist = getAcademyPreLaunchChecklist({
-    hasUpiVpa: Boolean(settings.upiVpa && settings.upiVpa.includes('@')),
+    hasUpiVpa: Boolean((currentTenant?.upi_vpa || settings.upiVpa) && (currentTenant?.upi_vpa || settings.upiVpa)?.includes('@')),
     hasBatches: batches.length > 0,
     hasStudents: students.length > 0,
     hasTakenAttendance: students.some(s => s.feeStatus === 'paid'),
@@ -450,11 +491,52 @@ export default function AcademyHubPage({
   const [passTime, setPassTime] = useState('07:00 AM')
   const [passVenue, setPassVenue] = useState(currentAcademy.name + ' Ground')
 
-  // Director Settings Form State
-  const [directorNameInput, setDirectorNameInput] = useState(settings.directorName)
-  const [directorWhatsAppInput, setDirectorWhatsAppInput] = useState(settings.directorWhatsApp)
-  const [upiVpaInput, setUpiVpaInput] = useState(settings.upiVpa)
+  // Director & Operational Settings Form State
+  const authoritativeDirectorName = (currentTenant?.metadata?.director_name as string) || settings.directorName || ''
+  const authoritativeDirectorWhatsApp = currentTenant?.contact_phone || settings.directorWhatsApp || ''
+  const authoritativeUpiVpa = currentTenant?.upi_vpa || settings.upiVpa || ''
+  const authoritativeEmail = currentTenant?.contact_email || ''
+
+  const [academyNameInput, setAcademyNameInput] = useState(() => currentTenant?.name || currentAcademy.name)
+  const [cityInput, setCityInput] = useState(() => currentTenant?.city || currentAcademy.city || '')
+  const [stateInput, setStateInput] = useState(() => currentTenant?.state || currentAcademy.state || '')
+  const [sportInput, setSportInput] = useState(() => currentTenant?.sport || currentAcademy.sport || 'Multi-Sport')
+  const [directorNameInput, setDirectorNameInput] = useState(() => authoritativeDirectorName)
+  const [directorWhatsAppInput, setDirectorWhatsAppInput] = useState(() => authoritativeDirectorWhatsApp)
+  const [contactEmailInput, setContactEmailInput] = useState(() => authoritativeEmail)
+  const [upiVpaInput, setUpiVpaInput] = useState(() => authoritativeUpiVpa)
   const [settingsSavedNotice, setSettingsSavedNotice] = useState(false)
+  const [settingsError, setSettingsError] = useState('')
+  const [settingsSubmitting, setSettingsSubmitting] = useState(false)
+
+  // Determine if the active user role is authorized to edit tenant operational settings
+  const isAuthorizedToEdit = currentTenant
+    ? (verifiedRole === 'owner' || verifiedRole === 'director' || verifiedRole === 'admin')
+    : true
+
+  // Synchronize settings form whenever authoritative tenant or selected academy changes
+  useEffect(() => {
+    if (currentTenant && (currentTenant.slug === selectedSlug || currentTenant.id === currentAcademy.id)) {
+      setAcademyNameInput(currentTenant.name || '')
+      setCityInput(currentTenant.city || '')
+      setStateInput(currentTenant.state || '')
+      setSportInput(currentTenant.sport || 'Multi-Sport')
+      setDirectorNameInput((currentTenant.metadata?.director_name as string) || settings.directorName || '')
+      setDirectorWhatsAppInput(currentTenant.contact_phone || settings.directorWhatsApp || '')
+      setContactEmailInput(currentTenant.contact_email || '')
+      setUpiVpaInput(currentTenant.upi_vpa || settings.upiVpa || '')
+    } else {
+      setAcademyNameInput(currentAcademy.name)
+      setCityInput(currentAcademy.city || '')
+      setStateInput(currentAcademy.state || '')
+      setSportInput(currentAcademy.sport || 'Multi-Sport')
+      setDirectorNameInput(settings.directorName || '')
+      setDirectorWhatsAppInput(settings.directorWhatsApp || '')
+      setContactEmailInput('')
+      setUpiVpaInput(settings.upiVpa || '')
+    }
+    setSettingsError('')
+  }, [currentTenant, selectedSlug, currentAcademy.id, currentAcademy.name, currentAcademy.city, currentAcademy.state, currentAcademy.sport, settings.directorName, settings.directorWhatsApp, settings.upiVpa])
 
   // Filtered Leads
   const filteredLeads = leads.filter(lead => {
@@ -801,40 +883,88 @@ export default function AcademyHubPage({
     triggerRefresh()
   }
 
-  const handleSaveSettingsSubmit = (e: FormEvent) => {
+  const handleSaveSettingsSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    saveAcademySettings({
-      academySlug: selectedSlug,
-      academyName: currentAcademy.name,
-      directorName: directorNameInput.trim(),
-      directorWhatsApp: directorWhatsAppInput.trim(),
-      upiVpa: upiVpaInput.trim(),
-      autoWhatsAppRoutingEnabled: true,
-      isProUnlocked: true,
-    })
+    setSettingsError('')
 
-    if (currentTenant?.id) {
-      updateTenantSettings(currentTenant.id, {
-        name: currentAcademy.name,
-        contact_phone: directorWhatsAppInput.trim(),
-        upi_vpa: upiVpaInput.trim(),
-      }).catch(err => console.warn('[AcademyHub] Remote settings update error:', err))
-
-      recordTenantAuditLog({
-        tenantId: currentTenant.id,
-        action: 'update_tenant_settings',
-        entityType: 'tenants',
-        entityId: currentTenant.id,
-        details: {
-          directorName: directorNameInput.trim(),
-          upiVpa: upiVpaInput.trim(),
-        },
-      }).catch(err => console.warn('[AcademyHub] Audit log error:', err))
+    const trimmedVpa = upiVpaInput.trim()
+    if (trimmedVpa && !isValidUpiVpa(trimmedVpa)) {
+      setSettingsError('Invalid UPI ID (VPA) format. Must be formatted like name@bankhandle (e.g. bengaluruacademy@oksbi, team@icici).')
+      return
     }
 
-    setSettingsSavedNotice(true)
-    setTimeout(() => setSettingsSavedNotice(false), 3000)
-    triggerRefresh()
+    if (currentTenant && !isAuthorizedToEdit) {
+      setSettingsError(`Access restricted: Users with role "${verifiedRole || userRole}" are not authorized to modify tenant settings. Only Owners and Directors have permission.`)
+      return
+    }
+
+    setSettingsSubmitting(true)
+
+    try {
+      if (currentTenant?.id) {
+        const res = await updateTenantSettings(currentTenant.id, {
+          name: academyNameInput.trim() || currentAcademy.name,
+          city: cityInput.trim() || undefined,
+          state: stateInput.trim() || undefined,
+          sport: sportInput.trim() || undefined,
+          contact_phone: directorWhatsAppInput.trim() || undefined,
+          contact_email: contactEmailInput.trim() || undefined,
+          upi_vpa: trimmedVpa || undefined,
+          metadata: {
+            ...(currentTenant.metadata || {}),
+            director_name: directorNameInput.trim(),
+            updated_by_role: verifiedRole || userRole,
+            last_settings_update: new Date().toISOString(),
+          },
+        })
+
+        if (!res.success) {
+          setSettingsError(res.message || 'Failed to update tenant settings in database.')
+          setSettingsSubmitting(false)
+          return
+        }
+
+        // Record immutable audit log in public.tenant_audit_logs
+        await recordTenantAuditLog({
+          tenantId: currentTenant.id,
+          action: 'update_tenant_settings',
+          entityType: 'tenants',
+          entityId: currentTenant.id,
+          details: {
+            name: academyNameInput.trim(),
+            city: cityInput.trim(),
+            state: stateInput.trim(),
+            sport: sportInput.trim(),
+            contactPhone: directorWhatsAppInput.trim(),
+            contactEmail: contactEmailInput.trim(),
+            upiVpa: trimmedVpa,
+            directorName: directorNameInput.trim(),
+            updatedByRole: verifiedRole || userRole,
+          },
+        }).catch(err => console.warn('[AcademyHub] Remote audit log error:', err))
+
+        await refreshTenant()
+      }
+
+      // Also mirror to local memory client for offline continuity
+      saveAcademySettings({
+        academySlug: selectedSlug,
+        academyName: academyNameInput.trim() || currentAcademy.name,
+        directorName: directorNameInput.trim(),
+        directorWhatsApp: directorWhatsAppInput.trim(),
+        upiVpa: trimmedVpa,
+        autoWhatsAppRoutingEnabled: true,
+        isProUnlocked: true,
+      })
+
+      setSettingsSavedNotice(true)
+      setTimeout(() => setSettingsSavedNotice(false), 3500)
+      triggerRefresh()
+    } catch (err) {
+      setSettingsError((err as Error).message || 'An unexpected error occurred while saving operations settings.')
+    } finally {
+      setSettingsSubmitting(false)
+    }
   }
 
   // Pre-open Trial Pass generator for a specific lead
@@ -848,8 +978,8 @@ export default function AcademyHubPage({
   // Generate UPI QR SVG
   const getUpiQrSvg = (student: AcademyStudent) => {
     const link = generateUpiPayLink({
-      vpa: settings.upiVpa || 'academy@upi',
-      name: currentAcademy.name,
+      vpa: currentTenant?.upi_vpa || settings.upiVpa || 'academy@upi',
+      name: currentTenant?.name || currentAcademy.name,
       amount: student.monthlyFee,
       note: `Fee ${student.studentName}`,
     })
@@ -888,6 +1018,11 @@ export default function AcademyHubPage({
   const trialPassTimeId = useId()
   const trialPassVenueId = useId()
 
+  const settingsAcademyNameId = useId()
+  const settingsSportId = useId()
+  const settingsCityId = useId()
+  const settingsStateId = useId()
+  const settingsContactEmailId = useId()
   const settingsDirectorNameId = useId()
   const settingsDirectorWhatsAppId = useId()
   const settingsUpiVpaId = useId()
@@ -949,14 +1084,46 @@ export default function AcademyHubPage({
             <select
               id="academy-hub-select"
               className="academy-hub-select"
-              value={selectedSlug}
-              onChange={e => setSelectedSlug(e.target.value)}
+              value={currentTenant?.slug || selectedSlug}
+              onChange={async (e) => {
+                const targetVal = e.target.value
+                const membership = activeMemberships.find(
+                  m => m.tenant_id === targetVal || m.tenant?.slug === targetVal
+                )
+                if (membership) {
+                  await switchTenant(membership.tenant_id)
+                  if (membership.tenant?.slug) {
+                    setSelectedSlug(membership.tenant.slug)
+                  }
+                } else {
+                  setSelectedSlug(targetVal)
+                }
+              }}
             >
-              {registeredAcademies.map(a => (
-                <option key={a.slug} value={a.slug}>
-                  {a.name} ({a.city} · {a.sport}) {a.isCustom ? '★ Your Academy' : ''}
-                </option>
-              ))}
+              {activeMemberships.length > 0 && (
+                <optgroup label="Your Authorized Workspaces (PostgreSQL)">
+                  {activeMemberships.map(m => (
+                    <option key={m.id} value={m.tenant?.slug || m.tenant_id}>
+                      {m.tenant?.name || `Academy (${m.tenant_id.slice(0, 8)})`} ({m.tenant?.city || 'India'} · {m.tenant?.sport || 'Sports'}) — Role: {m.role}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {activeMemberships.length > 0 ? (
+                <optgroup label="Registered &amp; Demo Academies">
+                  {registeredAcademies.map(a => (
+                    <option key={a.slug} value={a.slug}>
+                      {a.name} ({a.city} · {a.sport}) {a.isCustom ? '★ Your Academy' : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : (
+                registeredAcademies.map(a => (
+                  <option key={a.slug} value={a.slug}>
+                    {a.name} ({a.city} · {a.sport}) {a.isCustom ? '★ Your Academy' : ''}
+                  </option>
+                ))
+              )}
             </select>
             {verifiedRole ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2608,12 +2775,129 @@ export default function AcademyHubPage({
             Configure your official WhatsApp mobile number so new parent enquiries are instantly transmitted to your phone.
           </p>
 
+          {!isAuthorizedToEdit && (
+            <div
+              className="state-panel state-warning"
+              role="alert"
+              style={{
+                marginBottom: '1.25rem',
+                padding: '0.85rem 1rem',
+                borderLeft: '4px solid #f59e0b',
+                background: '#fffbeb',
+                color: '#92400e',
+                borderRadius: '6px',
+              }}
+            >
+              <strong>Read-Only Workspace Access:</strong> You are currently authenticated as{' '}
+              <strong>{verifiedRole || userRole}</strong>. Only Academy Owners and Directors are authorized to
+              modify public directory metadata, contact numbers, and bank UPI settlement VPAs.
+            </div>
+          )}
+
+          {settingsError && (
+            <div
+              className="state-panel state-error"
+              role="alert"
+              style={{
+                marginBottom: '1.25rem',
+                padding: '0.85rem 1rem',
+                color: '#b91c1c',
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <SiteIcon name="alert-triangle" size={16} />
+              <span>{settingsError}</span>
+            </div>
+          )}
+
+          {settingsSavedNotice && (
+            <p
+              className="state-panel state-available"
+              role="status"
+              style={{ padding: '0.75rem 1rem', marginBottom: '1.25rem' }}
+            >
+              Settings saved successfully! Lead routing, public directory metadata, and fee UPI are now active in PostgreSQL.
+            </p>
+          )}
+
           <form onSubmit={handleSaveSettingsSubmit} className="academy-hub-form">
+            <label htmlFor={settingsAcademyNameId}>
+              Academy Legal / Operating Name
+              <input
+                id={settingsAcademyNameId}
+                required
+                disabled={!isAuthorizedToEdit}
+                value={academyNameInput}
+                onChange={e => setAcademyNameInput(e.target.value)}
+                placeholder="e.g. Bengaluru FC Residential Academy"
+              />
+              <small style={{ color: '#64748b', fontWeight: 'normal' }}>
+                Synchronized automatically to the public discovery directory.
+              </small>
+            </label>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <label htmlFor={settingsSportId}>
+                Primary Sport
+                <input
+                  id={settingsSportId}
+                  required
+                  disabled={!isAuthorizedToEdit}
+                  value={sportInput}
+                  onChange={e => setSportInput(e.target.value)}
+                  placeholder="e.g. Football"
+                />
+              </label>
+
+              <label htmlFor={settingsCityId}>
+                City / District
+                <input
+                  id={settingsCityId}
+                  required
+                  disabled={!isAuthorizedToEdit}
+                  value={cityInput}
+                  onChange={e => setCityInput(e.target.value)}
+                  placeholder="e.g. Bengaluru"
+                />
+              </label>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <label htmlFor={settingsStateId}>
+                State / UT
+                <input
+                  id={settingsStateId}
+                  disabled={!isAuthorizedToEdit}
+                  value={stateInput}
+                  onChange={e => setStateInput(e.target.value)}
+                  placeholder="e.g. Karnataka"
+                />
+              </label>
+
+              <label htmlFor={settingsContactEmailId}>
+                Official Contact Email
+                <input
+                  id={settingsContactEmailId}
+                  type="email"
+                  disabled={!isAuthorizedToEdit}
+                  value={contactEmailInput}
+                  onChange={e => setContactEmailInput(e.target.value)}
+                  placeholder="e.g. admissions@bengaluruacademy.in"
+                />
+              </label>
+            </div>
+
             <label htmlFor={settingsDirectorNameId}>
               Director / Head Coach Name
               <input
                 id={settingsDirectorNameId}
                 required
+                disabled={!isAuthorizedToEdit}
                 value={directorNameInput}
                 onChange={e => setDirectorNameInput(e.target.value)}
                 placeholder="e.g. Coach Ramesh Kumar"
@@ -2625,6 +2909,7 @@ export default function AcademyHubPage({
               <input
                 id={settingsDirectorWhatsAppId}
                 required
+                disabled={!isAuthorizedToEdit}
                 value={directorWhatsAppInput}
                 onChange={e => setDirectorWhatsAppInput(e.target.value)}
                 placeholder="e.g. 9845012345"
@@ -2636,25 +2921,50 @@ export default function AcademyHubPage({
 
             <label htmlFor={settingsUpiVpaId}>
               Academy UPI ID (VPA) for Fee Collection
-              <input
-                id={settingsUpiVpaId}
-                value={upiVpaInput}
-                onChange={e => setUpiVpaInput(e.target.value)}
-                placeholder="e.g. bengaluruacademy@oksbi"
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  id={settingsUpiVpaId}
+                  disabled={!isAuthorizedToEdit}
+                  value={upiVpaInput}
+                  onChange={e => {
+                    setUpiVpaInput(e.target.value)
+                    if (settingsError) setSettingsError('')
+                  }}
+                  placeholder="e.g. bengaluruacademy@oksbi"
+                  style={{
+                    borderColor: upiVpaInput.trim()
+                      ? (isValidUpiVpa(upiVpaInput.trim()) ? '#10b981' : '#ef4444')
+                      : undefined,
+                  }}
+                />
+                {upiVpaInput.trim() && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: isValidUpiVpa(upiVpaInput.trim()) ? '#059669' : '#dc2626',
+                    }}
+                  >
+                    {isValidUpiVpa(upiVpaInput.trim()) ? '✓ Valid UPI VPA' : '✗ Invalid VPA Format'}
+                  </span>
+                )}
+              </div>
               <small style={{ color: '#64748b', fontWeight: 'normal' }}>
                 Used to generate instant UPI payment links and QR codes. Fees go 100% directly to your bank account.
               </small>
             </label>
 
-            {settingsSavedNotice && (
-              <p className="state-panel state-available" role="status" style={{ padding: '0.75rem 1rem' }}>
-                Settings saved successfully! Lead routing and fee UPI are now active.
-              </p>
-            )}
-
-            <button type="submit" className="academy-hub-primary-btn" style={{ marginTop: '0.5rem' }}>
-              Save Operations Settings
+            <button
+              type="submit"
+              className="academy-hub-primary-btn"
+              disabled={!isAuthorizedToEdit || settingsSubmitting}
+              style={{ marginTop: '0.5rem', opacity: (!isAuthorizedToEdit || settingsSubmitting) ? 0.6 : 1 }}
+            >
+              {settingsSubmitting ? 'Saving Operations Settings...' : 'Save Operations Settings'}
             </button>
           </form>
 
