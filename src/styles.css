@@ -776,7 +776,7 @@ html.dark .foundation-v1 .header-submit-trigger.is-open {
   top: calc(100% + 10px);
   right: 0;
   z-index: 10000;
-  width: 344px;
+  width: min(420px, calc(100vw - 24px));
   padding: 8px;
   border-radius: 14px;
   border: 1px solid var(--line, #e2e8f0);
@@ -828,6 +828,39 @@ html.dark .foundation-v1 .site-header .header-actions.header-submit-popover {
   color: var(--muted, #64748b);
 }
 
+.foundation-v1 .header-submit-popover-modules {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.foundation-v1 .header-submit-popover-module {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+}
+.foundation-v1 .header-submit-popover-module:last-child {
+  border-bottom: 0;
+}
+.foundation-v1 .header-submit-popover-module-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px 4px;
+  color: var(--accent, #07964f);
+  font-size: 11px;
+}
+.foundation-v1 .header-submit-popover-module-title strong {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+}
+.foundation-v1 .site-header .header-action-link.is-disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+.foundation-v1 .site-header .header-action-link.is-disabled .header-action-desc {
+  color: var(--muted, #64748b);
+}
 .foundation-v1 .header-submit-popover-section {
   display: flex;
   flex-direction: column;
