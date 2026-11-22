@@ -54,10 +54,10 @@ export default function TopNavbar({
   const userMenuWrapRef = useRef<HTMLDivElement>(null)
 
   const userMenuTriggerRef = useRef<HTMLButtonElement>(null)
-  const venueAction = TOP_NAV_SUBMIT_ACTIONS.find(action => action.id === 'venue')
+  const listingAction = TOP_NAV_SUBMIT_ACTIONS.find(action => action.id === 'all')
   const trialAction = TOP_NAV_SUBMIT_ACTIONS.find(action => action.id === 'trial')
   const additionalSubmitActions = TOP_NAV_SUBMIT_ACTIONS.filter(
-    action => action.id !== 'venue' && action.id !== 'trial',
+    action => action.id !== 'all' && action.id !== 'venue' && action.id !== 'trial',
   )
 
   useEffect(() => {
@@ -167,16 +167,16 @@ export default function TopNavbar({
           >
             <SiteIcon name="search" size={17} />
           </button>
-          {venueAction && (
+          {listingAction && (
             <a
-              className="header-submit-direct header-submit-venue"
-              href={venueAction.href}
-              onClick={event => onNavigate(event, venueAction.href)}
-              title={venueAction.title}
-              aria-label={t(venueAction.translationKey, "List your venue")}
+              className="header-submit-direct header-submit-listing"
+              href={listingAction.href}
+              onClick={event => onNavigate(event, listingAction.href)}
+              title={listingAction.title}
+              aria-label={t(listingAction.translationKey, listingAction.defaultLabel)}
             >
-              <SiteIcon name={venueAction.icon} size={15} />
-              <span>{t(venueAction.translationKey, 'List your venue')}</span>
+              <SiteIcon name={listingAction.icon} size={15} />
+              <span>{t(listingAction.translationKey, listingAction.defaultLabel)}</span>
             </a>
           )}
 
