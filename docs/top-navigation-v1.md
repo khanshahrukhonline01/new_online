@@ -16,6 +16,7 @@ The top navigation bar is the global entry point for KhelGrid. It owns the brand
 - The KhelGrid logo/wordmark belongs in the top navigation; do not duplicate it in the desktop sidebar.
 - Global catalogue search belongs in the top navigation. Do not add a second desktop sidebar search.
 - “List your venue” and “Submit a trial” are prominent submission actions and remain in the header on layouts where space permits.
+- The header More menu groups SaaS workspace destinations first (organisations, partner onboarding, academy, coach, venue/facility, tournament, gate check-in, and parent/athlete passbook), followed by secondary contribution actions. Keep these destinations aligned with the canonical route registry.
 - Notifications, Settings help, Login status, and Go Pro are header utility actions; do not copy them into the feature sidebar.
 - The header menu button controls the desktop sidebar collapse state or opens the mobile drawer, depending on viewport.
 - Header actions must not imply services are operational if they are currently disabled, coming soon, or only linked to an enquiry email.
@@ -42,6 +43,7 @@ The header currently contains these elements in order:
 2. **KhelGrid brand** — logo and wordmark, links to the home page.
 3. **Global search form** — searches sports, trials, venues, athletes, and the catalogue.
 4. **Primary header actions** — “List your venue” and “Submit a trial.”
+5. **More** — grouped SaaS workspace destinations first, followed by secondary contribution actions.
 5. **Notifications** — currently disabled and labeled “coming soon.”
 6. **Settings help** — currently links to a KhelGrid settings-help email.
 7. **Login** — labeled “Coming Soon”; it must not be presented as working account authentication.
