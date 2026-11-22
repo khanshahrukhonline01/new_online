@@ -64,6 +64,25 @@ export const TOP_NAV_SUBMIT_ACTIONS: readonly TopNavSubmitAction[] = [
   },
 ] as const
 
+export interface TopNavWorkspaceLink {
+  id: string
+  href: string
+  label: string
+  description: string
+  icon: SiteIconName
+}
+
+export const TOP_NAV_WORKSPACE_LINKS: readonly TopNavWorkspaceLink[] = [
+  { id: 'organizations', href: '/organizations', label: 'Organizations & SaaS Hub', description: 'Set up and manage your organisation workspace', icon: 'building' },
+  { id: 'partner-onboarding', href: '/partner-signup', label: 'Partner Setup & Login', description: 'Partner onboarding and workspace access', icon: 'handshake' },
+  { id: 'academy', href: '/academy-hub', label: 'Academy Admissions & Operations', description: 'Admissions, batches, attendance and fees', icon: 'building' },
+  { id: 'coach', href: '/coach-dashboard', label: 'Coach Operations Hub', description: 'Manage coaching batches and daily operations', icon: 'award' },
+  { id: 'venue', href: '/turf-calendar', label: 'Venue & Facility Operations', description: 'Manage facilities and slot operations', icon: 'calendar-check' },
+  { id: 'tournament', href: '/tournament-ops', label: 'Tournament Operations', description: 'Manage tournament workflows and operations', icon: 'trophy' },
+  { id: 'check-in', href: '/gate-checkin', label: 'Gate QR Check-In Desk', description: 'Manage participant entry and pass scanning', icon: 'shield-check' },
+  { id: 'passbook', href: '/parent-portal', label: 'Parent & Athlete Passbook', description: 'View athlete records, passes and updates', icon: 'user-round' },
+] as const
+
 export interface RoleHubLink {
   href: string
   label: string
