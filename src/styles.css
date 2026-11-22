@@ -790,6 +790,9 @@ html.dark .foundation-v1 .header-submit-trigger.is-open {
   pointer-events: none;
   transform: translateY(-6px) scale(0.98);
   transform-origin: top right;
+  max-height: calc(100dvh - 88px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
 }
 
@@ -823,6 +826,32 @@ html.dark .foundation-v1 .site-header .header-actions.header-submit-popover {
 .foundation-v1 .header-submit-popover-head span {
   font-size: 11.5px;
   color: var(--muted, #64748b);
+}
+
+.foundation-v1 .header-submit-popover-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 10px 5px;
+  margin-top: 2px;
+  border-top: 1px solid var(--line, #e2e8f0);
+}
+.foundation-v1 .header-submit-popover-section strong {
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--text, #142033);
+}
+.foundation-v1 .header-submit-popover-section span {
+  font-size: 11px;
+  color: var(--muted, #64748b);
+}
+.foundation-v1 .site-header .header-action-link.is-active {
+  background: var(--accent-soft, #e8f7ef);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+html.dark .foundation-v1 .site-header .header-action-link.is-active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.28);
 }
 
 .foundation-v1 .header-submit-popover-list {
