@@ -113,6 +113,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0)
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [consentModalOpen, setConsentModalOpen] = useState(false)
   const [consentInitialTab, setConsentInitialTab] = useState<'sports_pass' | 'rules_privacy'>('sports_pass')
