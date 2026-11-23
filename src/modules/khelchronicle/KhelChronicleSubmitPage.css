@@ -937,6 +937,123 @@ html.dark .kc-preview-cues-box {
   color: #ffffff;
 }
 
+.kc-citation-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Testing Context & Apparatus Card (Step 3) */
+.kc-context-card {
+  background: var(--surface-raised, #f8fafc);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.kc-context-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text, #0f172a);
+  margin-bottom: 4px;
+}
+
+.kc-context-card-desc {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  color: var(--muted-strong, #475569);
+  line-height: 1.5;
+}
+
+/* Disclosure Quick-Fill Helpers (Step 5) */
+.kc-disclosure-grid .kc-field-label {
+  align-items: center;
+  gap: 8px;
+}
+
+.kc-quickfill-btn {
+  background: var(--surface-soft, #f1f5f9);
+  border: 1px solid var(--line-strong, #cbd5e1);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0284c7;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.kc-quickfill-btn:hover {
+  background: rgba(2, 132, 199, 0.1);
+  border-color: #0284c7;
+}
+
+html.dark .kc-quickfill-btn {
+  color: #38bdf8;
+}
+
+/* Preview Sport/Cohort/Preregistered Pills & Summary */
+.kc-preview-sport-pill,
+.kc-preview-cohort-pill,
+.kc-preview-prereg-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.kc-preview-sport-pill {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.kc-preview-cohort-pill {
+  background: var(--surface-soft, #f1f5f9);
+  color: var(--text-soft, #334155);
+  border: 1px solid var(--line, #e2e8f0);
+}
+
+.kc-preview-prereg-pill {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+html.dark .kc-preview-sport-pill {
+  background: rgba(37, 99, 235, 0.18);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+html.dark .kc-preview-prereg-pill {
+  background: rgba(217, 119, 6, 0.18);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.kc-preview-meta-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface-raised, #f8fafc);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-soft, #334155);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
 /* Stepper Bottom Navigation Actions */
 .kc-step-actions {
   display: flex;
