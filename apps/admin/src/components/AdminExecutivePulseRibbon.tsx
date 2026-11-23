@@ -36,8 +36,6 @@ export function AdminExecutivePulseRibbon({
     return { text: `${dbLatencyMs}ms (High Latency)`, status: 'slow' }
   }, [dbLatencyMs])
 
-  const totalActionable = pendingSubmissionsCount + pendingManuscriptsCount
-
   const categories: Array<{ id: string; label: string; icon: 'activity' | 'opportunities' | 'venues' | 'users' | 'building' | 'calendar' | 'sports' }> = [
     { id: 'all', label: 'All Categories', icon: 'activity' },
     { id: 'opportunity', label: 'Trials & Opportunities', icon: 'opportunities' },

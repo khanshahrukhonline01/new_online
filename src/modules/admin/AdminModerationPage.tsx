@@ -1144,6 +1144,8 @@ export function AdminModerationPage({
     manuscriptActionDialog,
     selectedManuscript,
     showShortcutsModal,
+    showFacetDrawer,
+    selectedSubIds.size,
     activeDesk,
     paginatedItems,
     paginatedChronicleItems,

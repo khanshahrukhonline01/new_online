@@ -8,6 +8,93 @@ export interface CoAuthor {
 
 export type ManuscriptLicenseType = 'cc-by-4.0' | 'cc-by-nc-nd-4.0'
 
+export interface SportGameOption {
+  id: string
+  name: string
+  group: string
+  aliases?: string[]
+}
+
+export const SPORTS_GAME_OPTIONS: SportGameOption[] = [
+  { id: 'cricket', name: 'Cricket', group: 'Team & Bat-Ball' },
+  { id: 'football', name: 'Football', group: 'Team & Pitch', aliases: ['soccer'] },
+  { id: 'kabaddi', name: 'Kabaddi', group: 'Traditional & Team' },
+  { id: 'pickleball', name: 'Pickleball', group: 'Racquet & Net' },
+  { id: 'athletics', name: 'Athletics & Running', group: 'Individual & Track', aliases: ['track', 'field', 'sprint', 'marathon'] },
+  { id: 'badminton', name: 'Badminton', group: 'Racquet & Net' },
+  { id: 'hockey', name: 'Field Hockey', group: 'Team & Pitch' },
+  { id: 'kho-kho', name: 'Kho-Kho', group: 'Traditional & Team' },
+  { id: 'wrestling', name: 'Wrestling / Kushti', group: 'Combat & Akhada', aliases: ['kushti', 'akhada'] },
+  { id: 'basketball', name: 'Basketball', group: 'Team & Court' },
+  { id: 'tennis', name: 'Tennis', group: 'Racquet & Net' },
+  { id: 'table-tennis', name: 'Table Tennis', group: 'Racquet & Net', aliases: ['ping pong'] },
+  { id: 'volleyball', name: 'Volleyball', group: 'Team & Court' },
+  { id: 'swimming', name: 'Swimming & Aquatics', group: 'Individual & Aquatic', aliases: ['aquatics', 'water polo'] },
+  { id: 'boxing', name: 'Boxing', group: 'Combat & Akhada' },
+  { id: 'mallakhamb', name: 'Mallakhamb', group: 'Traditional & Gymnastics' },
+  { id: 'shooting', name: 'Shooting', group: 'Precision & Target' },
+  { id: 'archery', name: 'Archery', group: 'Precision & Target' },
+  { id: 'weightlifting', name: 'Weightlifting', group: 'Strength & Power' },
+  { id: 'cycling', name: 'Cycling', group: 'Individual & Endurance' },
+  { id: 'chess', name: 'Chess & Mind Sports', group: 'Mind Sports & Esports' },
+  { id: 'futsal', name: 'Futsal', group: 'Team & Pitch' },
+  { id: 'squash', name: 'Squash', group: 'Racquet & Net' },
+  { id: 'golf', name: 'Golf', group: 'Precision & Target' },
+  { id: 'rugby', name: 'Rugby', group: 'Team & Pitch' },
+  { id: 'handball', name: 'Handball', group: 'Team & Court' },
+  { id: 'gymnastics', name: 'Gymnastics', group: 'Artistic & Movement' },
+  { id: 'rowing', name: 'Rowing & Kayaking', group: 'Individual & Aquatic' },
+  { id: 'karate', name: 'Karate', group: 'Combat & Akhada' },
+  { id: 'taekwondo', name: 'Taekwondo', group: 'Combat & Akhada' },
+  { id: 'judo', name: 'Judo', group: 'Combat & Akhada' },
+  { id: 'fencing', name: 'Fencing', group: 'Combat & Akhada' },
+  { id: 'skating', name: 'Roller Skating & Ice', group: 'Individual & Track' },
+  { id: 'yoga', name: 'Yogasana & Breathwork', group: 'Traditional & Mind-Body' },
+  { id: 'lacrosse', name: 'Lacrosse', group: 'Team & Pitch' },
+  { id: 'equestrian', name: 'Equestrian', group: 'Individual & Endurance' },
+  { id: 'esports', name: 'Esports & Cognitive Gaming', group: 'Mind Sports & Esports' },
+  { id: 'para-sports', name: 'Para-Athletics & Adapted Sports', group: 'Adapted & Inclusive' },
+  { id: 'multi-sport', name: 'Multi-Sport & Grassroots PE', group: 'Cross-Disciplinary' },
+  { id: 'other', name: 'Other / Traditional Game (Specify)', group: 'Custom / Indigenous' },
+]
+
+export const ATHLETE_COHORT_TIERS: { id: string; name: string }[] = [
+  { id: 'grassroots-youth', name: 'Grassroots / Youth Athletes (U-14 / U-16 / U-18)' },
+  { id: 'university', name: 'University & Inter-Collegiate' },
+  { id: 'state-academy', name: 'State & Regional Academy (SAI NCOE / Clubs)' },
+  { id: 'national-elite', name: 'National / Elite Senior Athletes' },
+  { id: 'para-adapted', name: 'Para-Athletes & Adapted Sports' },
+  { id: 'recreational', name: 'Recreational / Community Players' },
+  { id: 'officials-policy', name: 'Coaches, Match Officials & Policy Only' },
+]
+
+export const TESTING_ENVIRONMENTS: { id: string; name: string }[] = [
+  { id: 'field-turf', name: 'Outdoor Field / Synthetic Turf / Maidan' },
+  { id: 'indoor-court', name: 'Indoor Court / Arena / Hall' },
+  { id: 'sports-lab', name: 'Biomechanics / Exercise Physiology Lab' },
+  { id: 'akhada-clay', name: 'Clay / Akhada / Mud Pit' },
+  { id: 'high-altitude', name: 'High-Altitude Training Centre' },
+  { id: 'digital-archive', name: 'Digital Telemetry / Video / Registry Archive' },
+]
+
+export function filterSportGameOptions(query: string): SportGameOption[] {
+  const normalized = query.trim().toLowerCase()
+  if (!normalized) return SPORTS_GAME_OPTIONS
+  return SPORTS_GAME_OPTIONS.filter(opt => {
+    if (opt.name.toLowerCase().includes(normalized)) return true
+    if (opt.group.toLowerCase().includes(normalized)) return true
+    if (opt.aliases && opt.aliases.some(a => a.toLowerCase().includes(normalized))) return true
+    return false
+  })
+}
+
+export function toggleSportSelection(current: string[], sportId: string): string[] {
+  if (current.includes(sportId)) {
+    return current.filter(id => id !== sportId)
+  }
+  return [...current, sportId]
+}
+
 export interface ManuscriptDraftState {
   currentStep: number
   articleType: string
