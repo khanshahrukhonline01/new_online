@@ -193,6 +193,9 @@ function AuthenticatedAdminShell() {
         section: 'System Tools',
         icon: 'refresh',
         onSelect: () => {
+          if (!window.confirm('Clear the client catalogue cache? Fresh catalogue data will be re-fetched on next load.')) {
+            return
+          }
           clearCatalogueCache()
           setToastNotification('Client catalogue cache cleared.')
           window.setTimeout(() => setToastNotification(null), 3000)
