@@ -29,7 +29,7 @@ describe('KhelGrid discovery shell', () => {
     expect(html).toContain('Submit a trial')
     expect(html).toContain('Join as Coach')
     expect(html).toContain('Submit Paper')
-    expect(html).toContain('header-action-coach')
+    expect(html).toContain('header-partner-nav')
     expect(html).toContain('header-action-chronicle')
     expect(html).toContain('id="navbar-settings-btn"')
     expect(html).toContain('title="Settings &amp; Appearance"')
