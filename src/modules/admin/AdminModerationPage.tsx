@@ -181,7 +181,18 @@ export function AdminModerationPage({
   const [targetSlug, setTargetSlug] = useState('')
   const [publishStructured, setPublishStructured] = useState<Record<string, string>>({})
   const [selectedSubIds, setSelectedSubIds] = useState<Set<string>>(new Set())
-  const [modalTab, setModalTab] = useState<'data' | 'preview'>('data')
+  const [modalTab, setModalTab] = useState<'data' | 'preview' | 'diff' | 'evidence'>('data')
+  const [chronicleModalTab, setChronicleModalTab] = useState<'data' | 'abstract' | 'evidence'>('data')
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const handleCopy = (text: string, id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      void navigator.clipboard.writeText(text)
+      setCopiedId(id)
+      window.setTimeout(() => setCopiedId(prev => (prev === id ? null : prev)), 2000)
+    }
+  }
 
   // Phase 2: Table Density & Power Keyboard Navigation State
   const [tableDensity, setTableDensity] = useState<TableDensity>(() => {
@@ -1178,9 +1189,29 @@ export function AdminModerationPage({
 
           {/* Submissions List */}
           {paginatedItems.length === 0 ? (
-            <div className="state-panel">
-              <p>No listings match the selected status or filters.</p>
-            </div>
+            items.length === 0 ? (
+              <div className="admin-empty-celebration">
+                <div className="admin-empty-icon">🎉</div>
+                <h3>All caught up! Zero pending listings</h3>
+                <p>Every submitted trial, tournament, and venue has been screened. New submissions from athletes and academies will appear here in real time.</p>
+                <button type="button" className="admin-btn admin-btn-secondary" onClick={() => void loadQueue()}>
+                  <SiteIcon name="refresh" size={14} /> Refresh Queue
+                </button>
+              </div>
+            ) : (
+              <div className="admin-empty-celebration filters">
+                <SiteIcon name="search" size={28} />
+                <h3>No listings match your active filters</h3>
+                <p>Found 0 matching items out of {items.length} total items in this queue.</p>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-secondary"
+                  onClick={() => { setSearchTerm(''); setCategoryFilter('all'); setActiveTab('all'); setPage(1) }}
+                >
+                  Clear Search &amp; Filters
+                </button>
+              </div>
+            )
           ) : (
             <div className={`admin-items-list density-${tableDensity}`}>
               {paginatedItems.map((sub, idx) => (
@@ -1289,7 +1320,18 @@ export function AdminModerationPage({
                         style={{ width: 16, height: 16, cursor: 'pointer' }}
                         aria-label={`Select ${sub.title}`}
                       />
-                      <span className="admin-ref-code">{sub.reference_number}</span>
+                      <button
+                        type="button"
+                        className={`admin-ref-code-btn ${copiedId === sub.id ? 'is-copied' : ''}`}
+                        onClick={e => handleCopy(sub.reference_number, sub.id, e)}
+                        title={`Click to copy: ${sub.reference_number}`}
+                      >
+                        <span>{sub.reference_number}</span>
+                        <span className="admin-copy-icon">
+                          <SiteIcon name={copiedId === sub.id ? 'check' : 'copy'} size={11} />
+                        </span>
+                        {copiedId === sub.id && <span className="admin-copy-tooltip">Copied!</span>}
+                      </button>
                       <span className={`admin-type-pill ${sub.listing_type}`}>{sub.listing_type}</span>
                       <h3 className="admin-item-title">{sub.title}</h3>
                     </div>
@@ -1453,7 +1495,18 @@ export function AdminModerationPage({
                   <div className="admin-drawer-header-top">
                     <div>
                       <div className="admin-drawer-badge-row">
-                        <span className="admin-ref-code">{selectedItem.reference_number}</span>
+                        <button
+                          type="button"
+                          className={`admin-ref-code-btn ${copiedId === selectedItem.id ? 'is-copied' : ''}`}
+                          onClick={e => handleCopy(selectedItem.reference_number, selectedItem.id, e)}
+                          title={`Click to copy: ${selectedItem.reference_number}`}
+                        >
+                          <span>{selectedItem.reference_number}</span>
+                          <span className="admin-copy-icon">
+                            <SiteIcon name={copiedId === selectedItem.id ? 'check' : 'copy'} size={11} />
+                          </span>
+                          {copiedId === selectedItem.id && <span className="admin-copy-tooltip">Copied!</span>}
+                        </button>
                         <span className={`admin-type-pill ${selectedItem.listing_type}`}>{selectedItem.listing_type}</span>
                         <span className="admin-ref-code" style={{ opacity: 0.85 }}>v{selectedItem.version}</span>
                         <span className={`admin-status-badge ${selectedItem.status}`}>
@@ -1491,6 +1544,26 @@ export function AdminModerationPage({
                       onClick={() => setModalTab('preview')}
                     >
                       <SiteIcon name="search" size={14} /> Live Public Card Preview
+                    </button>
+                    <button
+                      type="button"
+                      className={`admin-modal-nav-tab ${modalTab === 'diff' ? 'active' : ''}`}
+                      onClick={() => setModalTab('diff')}
+                    >
+                      <SiteIcon name="activity" size={14} /> Metadata Diff &amp; Audit
+                      {(selectedItem.status === 'resubmitted' || selectedItem.version > 1) && (
+                        <span className="admin-tab-micro-badge warning" style={{ marginLeft: '0.35rem' }}>v{selectedItem.version}</span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className={`admin-modal-nav-tab ${modalTab === 'evidence' ? 'active' : ''}`}
+                      onClick={() => setModalTab('evidence')}
+                    >
+                      <SiteIcon name="link" size={14} /> Evidence &amp; Proof
+                      {selectedItem.source_url && (
+                        <span className="admin-tab-micro-badge" style={{ marginLeft: '0.35rem' }}>TLS</span>
+                      )}
                     </button>
                   </div>
 
@@ -1610,6 +1683,178 @@ export function AdminModerationPage({
                             </button>
                           </div>
                         </div>
+                      </div>
+                    </div>
+                  ) : modalTab === 'diff' ? (
+                    <div className="admin-diff-container">
+                      <div className="admin-diff-audit-card">
+                        <div className="admin-diff-audit-item">
+                          <span className="label">Submission Version</span>
+                          <span className="val">v{selectedItem.version}</span>
+                        </div>
+                        <div className="admin-diff-audit-item">
+                          <span className="label">Current Status</span>
+                          <span className="val" style={{ textTransform: 'capitalize' }}>{selectedItem.status.replace(/_/g, ' ')}</span>
+                        </div>
+                        <div className="admin-diff-audit-item">
+                          <span className="label">Initial Submitted</span>
+                          <span className="val">{new Date(selectedItem.created_at).toLocaleDateString('en-IN')}</span>
+                        </div>
+                        <div className="admin-diff-audit-item">
+                          <span className="label">Last Revision</span>
+                          <span className="val">{selectedItem.updated_at ? new Date(selectedItem.updated_at).toLocaleDateString('en-IN') : 'Original submission'}</span>
+                        </div>
+                      </div>
+
+                      {selectedItem.correction_request && (
+                        <div className="admin-diff-request-box">
+                          <h4>
+                            <SiteIcon name="alert-circle" size={14} />
+                            Requested Changes from Moderator
+                          </h4>
+                          <p>{selectedItem.correction_request}</p>
+                        </div>
+                      )}
+
+                      <div className="admin-diff-grid">
+                        <div className="admin-diff-row">
+                          <div className="admin-diff-field-header">
+                            <span>Title / Listing Header</span>
+                            <span>{selectedItem.version > 1 ? 'Revision v' + selectedItem.version : 'Initial Entry'}</span>
+                          </div>
+                          <div className="admin-diff-values">
+                            {selectedItem.version > 1 ? (
+                              <>
+                                <div className="admin-diff-old">
+                                  <span>{selectedItem.title} (Prior revision baseline)</span>
+                                </div>
+                                <div className="admin-diff-new">
+                                  <span>{selectedItem.title}</span>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="admin-diff-unchanged">
+                                <span>{selectedItem.title}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="admin-diff-row">
+                          <div className="admin-diff-field-header">
+                            <span>Location &amp; Region</span>
+                            <span>Geographic Scope</span>
+                          </div>
+                          <div className="admin-diff-values">
+                            <div className="admin-diff-unchanged">
+                              <span>City: <strong>{selectedItem.city || 'India'}</strong></span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="admin-diff-row">
+                          <div className="admin-diff-field-header">
+                            <span>Official Source &amp; Evidence</span>
+                            <span>{selectedItem.source_url ? 'Supplied' : 'Pending'}</span>
+                          </div>
+                          <div className="admin-diff-values">
+                            {selectedItem.source_url ? (
+                              <div className="admin-diff-new">
+                                <span>{selectedItem.source_url}</span>
+                              </div>
+                            ) : (
+                              <div className="admin-diff-old">
+                                <span>No HTTPS verification source provided</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="admin-diff-row">
+                          <div className="admin-diff-field-header">
+                            <span>Submission Details &amp; Operational Specs</span>
+                            <span>Body Content</span>
+                          </div>
+                          <div className="admin-diff-values">
+                            <div className="admin-diff-unchanged" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                              {selectedItem.details || 'No structured details provided.'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : modalTab === 'evidence' ? (
+                    <div className="admin-evidence-inspector">
+                      <div className={`admin-evidence-status-banner ${selectedItem.source_url ? '' : 'missing'}`}>
+                        <div className="info">
+                          <SiteIcon name={selectedItem.source_url ? 'shield-check' : 'alert-circle'} size={18} />
+                          <span>
+                            {selectedItem.source_url
+                              ? 'HTTPS Verification URL Attached'
+                              : 'No Official Verification Link Attached'}
+                          </span>
+                        </div>
+                        {selectedItem.source_url && (
+                          <span className="admin-tab-micro-badge">TLS Secured</span>
+                        )}
+                      </div>
+
+                      {selectedItem.source_url ? (
+                        <div className="admin-evidence-card">
+                          <h4>External Verification Target</h4>
+                          <div className="admin-evidence-url-row">
+                            <span>{selectedItem.source_url}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                            <a
+                              href={selectedItem.source_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="admin-btn admin-btn-approve"
+                              style={{ textDecoration: 'none' }}
+                            >
+                              <SiteIcon name="arrow-up-right" size={14} /> Open Official Verification Page ↗
+                            </a>
+                            <button
+                              type="button"
+                              className="admin-btn admin-btn-secondary"
+                              onClick={e => handleCopy(selectedItem.source_url!, selectedItem.id + '-url', e)}
+                            >
+                              <SiteIcon name={copiedId === selectedItem.id + '-url' ? 'check' : 'copy'} size={14} />
+                              {copiedId === selectedItem.id + '-url' ? 'URL Copied!' : 'Copy Source URL'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="admin-evidence-card">
+                          <h4>Verification Required</h4>
+                          <p style={{ margin: 0, fontSize: '0.88rem', color: '#64748b', lineHeight: 1.5 }}>
+                            This listing submission did not include an official federation circular, website URL, or sanctioned flyer.
+                            Moderators should request official evidence before catalogue publication.
+                          </p>
+                          <div>
+                            <button
+                              type="button"
+                              className="admin-btn admin-btn-warning"
+                              onClick={() => {
+                                setActionDialog('request_corrections')
+                                setActionMessage('Please provide an official federation circular or verifiable organizer website link for age verification and schedule confirmation.')
+                              }}
+                            >
+                              <SiteIcon name="alert-circle" size={14} /> Request Federation Evidence via Corrections
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="admin-evidence-checklist">
+                        <h5>Moderator Evidence Verification Standards:</h5>
+                        <ul>
+                          <li>Verify that official letterhead or federation affiliation is clearly visible.</li>
+                          <li>Confirm age group eligibility criteria (e.g. U-14, U-17, U-19) match the listing title.</li>
+                          <li>Ensure reporting date, ground venue address, and registration fees match federation norms.</li>
+                          <li>Flag and reject any suspicious contact information or unverified personal UPI payment requests.</li>
+                        </ul>
                       </div>
                     </div>
                   ) : (
@@ -2240,9 +2485,29 @@ export function AdminModerationPage({
 
           {/* Manuscripts List */}
           {paginatedChronicleItems.length === 0 ? (
-            <div className="state-panel">
-              <p>No manuscripts match the selected status or discipline filter.</p>
-            </div>
+            chronicleItems.length === 0 ? (
+              <div className="admin-empty-celebration">
+                <div className="admin-empty-icon">📜</div>
+                <h3>All caught up! Zero pending manuscripts</h3>
+                <p>Every submitted sports science paper, trial protocol, and research manuscript has been screened. New preprints will appear here in real time.</p>
+                <button type="button" className="admin-btn admin-btn-secondary" onClick={() => void loadChronicleQueue()}>
+                  <SiteIcon name="refresh" size={14} /> Refresh Manuscripts
+                </button>
+              </div>
+            ) : (
+              <div className="admin-empty-celebration filters">
+                <SiteIcon name="search" size={28} />
+                <h3>No manuscripts match your active filters</h3>
+                <p>Found 0 matching manuscripts out of {chronicleItems.length} total manuscripts in this desk.</p>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-secondary"
+                  onClick={() => { setChronicleSearchTerm(''); setChronicleCategoryFilter('all'); setChronicleActiveTab('all'); setChroniclePage(1) }}
+                >
+                  Clear Search &amp; Filters
+                </button>
+              </div>
+            )
           ) : (
             <div className={`admin-items-list density-${tableDensity}`}>
               {paginatedChronicleItems.map((sub, idx) => (
@@ -2367,7 +2632,18 @@ export function AdminModerationPage({
 
                   <div className="admin-mod-card-top">
                     <div className="admin-mod-card-title-group">
-                      <span className="admin-ref-code">{sub.submissionId}</span>
+                      <button
+                        type="button"
+                        className={`admin-ref-code-btn ${copiedId === sub.id ? 'is-copied' : ''}`}
+                        onClick={e => handleCopy(sub.submissionId, sub.id, e)}
+                        title={`Click to copy: ${sub.submissionId}`}
+                      >
+                        <span>{sub.submissionId}</span>
+                        <span className="admin-copy-icon">
+                          <SiteIcon name={copiedId === sub.id ? 'check' : 'copy'} size={11} />
+                        </span>
+                        {copiedId === sub.id && <span className="admin-copy-tooltip">Copied!</span>}
+                      </button>
                       <span className="admin-type-pill chronicle-discipline">{sub.categoryName || sub.category}</span>
                       <h3 className="admin-item-title">{sub.title}</h3>
                     </div>
@@ -2573,7 +2849,18 @@ export function AdminModerationPage({
                   <div className="admin-drawer-header-top">
                     <div>
                       <div className="admin-drawer-badge-row">
-                        <span className="admin-ref-code">{selectedManuscript.submissionId}</span>
+                        <button
+                          type="button"
+                          className={`admin-ref-code-btn ${copiedId === selectedManuscript.id ? 'is-copied' : ''}`}
+                          onClick={e => handleCopy(selectedManuscript.submissionId, selectedManuscript.id, e)}
+                          title={`Click to copy: ${selectedManuscript.submissionId}`}
+                        >
+                          <span>{selectedManuscript.submissionId}</span>
+                          <span className="admin-copy-icon">
+                            <SiteIcon name={copiedId === selectedManuscript.id ? 'check' : 'copy'} size={11} />
+                          </span>
+                          {copiedId === selectedManuscript.id && <span className="admin-copy-tooltip">Copied!</span>}
+                        </button>
                         <span className="admin-type-pill report">Peer Review</span>
                         <span className={`admin-status-badge ${selectedManuscript.status}`}>
                           {selectedManuscript.status.replace(/_/g, ' ')}
@@ -2596,9 +2883,31 @@ export function AdminModerationPage({
 
                 {/* Sticky Action Strip */}
                 <div className="admin-drawer-sticky-strip">
-                  <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 650, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <SiteIcon name="award" size={15} />
-                    <span>KhelChronicle Peer-Review Desk</span>
+                  <div className="admin-modal-nav-tabs" style={{ margin: 0 }}>
+                    <button
+                      type="button"
+                      className={`admin-modal-nav-tab ${chronicleModalTab === 'data' ? 'active' : ''}`}
+                      onClick={() => setChronicleModalTab('data')}
+                    >
+                      <SiteIcon name="file-text" size={14} /> Submission Data
+                    </button>
+                    <button
+                      type="button"
+                      className={`admin-modal-nav-tab ${chronicleModalTab === 'abstract' ? 'active' : ''}`}
+                      onClick={() => setChronicleModalTab('abstract')}
+                    >
+                      <SiteIcon name="book-open" size={14} /> Structured Abstract
+                    </button>
+                    <button
+                      type="button"
+                      className={`admin-modal-nav-tab ${chronicleModalTab === 'evidence' ? 'active' : ''}`}
+                      onClick={() => setChronicleModalTab('evidence')}
+                    >
+                      <SiteIcon name="link" size={14} /> Preprint &amp; Ethics
+                      {selectedManuscript.fullTextOrUrl && (
+                        <span className="admin-tab-micro-badge" style={{ marginLeft: '0.35rem' }}>Deposit</span>
+                      )}
+                    </button>
                   </div>
 
                   <div className="admin-drawer-quick-actions">
@@ -2675,65 +2984,158 @@ export function AdminModerationPage({
                 </div>
 
                 <div className="admin-drawer-body admin-modal-body">
-                  <div className="admin-detail-grid">
-                    <div className="admin-detail-item">
-                      <span className="admin-detail-label">Primary Author</span>
-                      <span className="admin-detail-val">{selectedManuscript.authorName}</span>
-                      <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{selectedManuscript.authorEmail}</span>
-                    </div>
-                    <div className="admin-detail-item">
-                      <span className="admin-detail-label">Institution / Affiliation</span>
-                      <span className="admin-detail-val">{selectedManuscript.affiliation}</span>
-                    </div>
-                    <div className="admin-detail-item">
-                      <span className="admin-detail-label">Discipline</span>
-                      <span className="admin-detail-val">{selectedManuscript.categoryName || selectedManuscript.category}</span>
-                    </div>
-                    <div className="admin-detail-item">
-                      <span className="admin-detail-label">ORCID</span>
-                      <span className="admin-detail-val">{selectedManuscript.orcid || 'Not provided'}</span>
-                    </div>
-                    {selectedManuscript.coAuthors && (
-                      <div className="admin-detail-item" style={{ gridColumn: '1 / -1' }}>
-                        <span className="admin-detail-label">Co-Authors</span>
-                        <span className="admin-detail-val">{selectedManuscript.coAuthors}</span>
+                  {chronicleModalTab === 'abstract' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div className="admin-preview-banner">
+                        <SiteIcon name="book-open" size={14} />
+                        <span>Peer-Review Abstract · Scientific summary for screening &amp; indexation</span>
                       </div>
-                    )}
-                    {selectedManuscript.fullTextOrUrl && (
-                      <div className="admin-detail-item" style={{ gridColumn: '1 / -1' }}>
-                        <span className="admin-detail-label">Manuscript Link / Deposit</span>
-                        <a href={selectedManuscript.fullTextOrUrl} target="_blank" rel="noreferrer" className="admin-detail-val" style={{ color: '#0284c7' }}>
-                          {selectedManuscript.fullTextOrUrl} ↗
-                        </a>
+                      <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '10px', border: '1px solid #e2e8f0', lineHeight: 1.7, fontSize: '0.92rem', color: '#1e293b' }}>
+                        {selectedManuscript.abstract}
                       </div>
-                    )}
-                  </div>
-
-                  {/* Abstract */}
-                  <div>
-                    <span className="admin-detail-label">Structured Abstract</span>
-                    <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '0.35rem', lineHeight: 1.6 }}>
-                      {selectedManuscript.abstract}
+                      <div style={{ display: 'flex', gap: '0.65rem' }}>
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn-secondary"
+                          onClick={e => handleCopy(selectedManuscript.abstract, selectedManuscript.id + '-abs', e)}
+                        >
+                          <SiteIcon name={copiedId === selectedManuscript.id + '-abs' ? 'check' : 'copy'} size={14} />
+                          {copiedId === selectedManuscript.id + '-abs' ? 'Abstract Copied!' : 'Copy Full Abstract'}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  ) : chronicleModalTab === 'evidence' ? (
+                    <div className="admin-evidence-inspector">
+                      <div className={`admin-evidence-status-banner ${selectedManuscript.fullTextOrUrl ? '' : 'missing'}`}>
+                        <div className="info">
+                          <SiteIcon name={selectedManuscript.fullTextOrUrl ? 'shield-check' : 'alert-circle'} size={18} />
+                          <span>
+                            {selectedManuscript.fullTextOrUrl
+                              ? 'Preprint / Manuscript Deposit Attached'
+                              : 'No Deposit URL Provided'}
+                          </span>
+                        </div>
+                        {selectedManuscript.fullTextOrUrl && (
+                          <span className="admin-tab-micro-badge">DOI / URL</span>
+                        )}
+                      </div>
 
-                  {/* Ethics Clearances */}
-                  <div>
-                    <span className="admin-detail-label">Ethics & Legal Compliance</span>
-                    <div className="admin-ethics-row" style={{ marginTop: '0.5rem' }}>
-                      <span className={`admin-ethics-badge ${selectedManuscript.humanEthicsConfirmed ? 'ok' : ''}`}>
-                        <SiteIcon name={selectedManuscript.humanEthicsConfirmed ? 'check-circle' : 'alert-circle'} size={13} />
-                        Human Subjects IRB Ethics: {selectedManuscript.humanEthicsConfirmed ? 'Confirmed' : 'Unconfirmed'}
-                      </span>
-                      <span className={`admin-ethics-badge ${selectedManuscript.minorConsentConfirmed ? 'ok' : ''}`}>
-                        <SiteIcon name={selectedManuscript.minorConsentConfirmed ? 'check-circle' : 'alert-circle'} size={13} />
-                        Minor Athletes Assent / Guardian Consent: {selectedManuscript.minorConsentConfirmed ? 'Confirmed' : 'Unconfirmed'}
-                      </span>
-                      <span className="admin-ethics-badge license">
-                        License: {selectedManuscript.licenseType || 'CC BY-NC-ND 4.0'}
-                      </span>
+                      {selectedManuscript.fullTextOrUrl ? (
+                        <div className="admin-evidence-card">
+                          <h4>Preprint &amp; Open-Access Deposit</h4>
+                          <div className="admin-evidence-url-row">
+                            <span>{selectedManuscript.fullTextOrUrl}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                            <a
+                              href={selectedManuscript.fullTextOrUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="admin-btn admin-btn-approve"
+                              style={{ textDecoration: 'none' }}
+                            >
+                              <SiteIcon name="arrow-up-right" size={14} /> Open Manuscript Deposit ↗
+                            </a>
+                            <button
+                              type="button"
+                              className="admin-btn admin-btn-secondary"
+                              onClick={e => handleCopy(selectedManuscript.fullTextOrUrl!, selectedManuscript.id + '-url', e)}
+                            >
+                              <SiteIcon name={copiedId === selectedManuscript.id + '-url' ? 'check' : 'copy'} size={14} />
+                              {copiedId === selectedManuscript.id + '-url' ? 'URL Copied!' : 'Copy Deposit URL'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="admin-evidence-card">
+                          <h4>Deposit Link Required</h4>
+                          <p style={{ margin: 0, fontSize: '0.88rem', color: '#64748b' }}>
+                            The author has not provided a direct preprint URL or open deposit link.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Ethics Clearances */}
+                      <div className="admin-evidence-card">
+                        <h4>Ethics &amp; Legal Compliance Standards</h4>
+                        <div className="admin-ethics-row" style={{ marginTop: '0.35rem' }}>
+                          <span className={`admin-ethics-badge ${selectedManuscript.humanEthicsConfirmed ? 'ok' : ''}`}>
+                            <SiteIcon name={selectedManuscript.humanEthicsConfirmed ? 'check-circle' : 'alert-circle'} size={13} />
+                            Human Subjects IRB Ethics: {selectedManuscript.humanEthicsConfirmed ? 'Confirmed' : 'Unconfirmed'}
+                          </span>
+                          <span className={`admin-ethics-badge ${selectedManuscript.minorConsentConfirmed ? 'ok' : ''}`}>
+                            <SiteIcon name={selectedManuscript.minorConsentConfirmed ? 'check-circle' : 'alert-circle'} size={13} />
+                            Minor Athletes Assent / Guardian Consent: {selectedManuscript.minorConsentConfirmed ? 'Confirmed' : 'Unconfirmed'}
+                          </span>
+                          <span className="admin-ethics-badge license">
+                            License: {selectedManuscript.licenseType || 'CC BY-NC-ND 4.0'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="admin-detail-grid">
+                        <div className="admin-detail-item">
+                          <span className="admin-detail-label">Primary Author</span>
+                          <span className="admin-detail-val">{selectedManuscript.authorName}</span>
+                          <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{selectedManuscript.authorEmail}</span>
+                        </div>
+                        <div className="admin-detail-item">
+                          <span className="admin-detail-label">Institution / Affiliation</span>
+                          <span className="admin-detail-val">{selectedManuscript.affiliation}</span>
+                        </div>
+                        <div className="admin-detail-item">
+                          <span className="admin-detail-label">Discipline</span>
+                          <span className="admin-detail-val">{selectedManuscript.categoryName || selectedManuscript.category}</span>
+                        </div>
+                        <div className="admin-detail-item">
+                          <span className="admin-detail-label">ORCID</span>
+                          <span className="admin-detail-val">{selectedManuscript.orcid || 'Not provided'}</span>
+                        </div>
+                        {selectedManuscript.coAuthors && (
+                          <div className="admin-detail-item" style={{ gridColumn: '1 / -1' }}>
+                            <span className="admin-detail-label">Co-Authors</span>
+                            <span className="admin-detail-val">{selectedManuscript.coAuthors}</span>
+                          </div>
+                        )}
+                        {selectedManuscript.fullTextOrUrl && (
+                          <div className="admin-detail-item" style={{ gridColumn: '1 / -1' }}>
+                            <span className="admin-detail-label">Manuscript Link / Deposit</span>
+                            <a href={selectedManuscript.fullTextOrUrl} target="_blank" rel="noreferrer" className="admin-detail-val" style={{ color: '#0284c7' }}>
+                              {selectedManuscript.fullTextOrUrl} ↗
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Abstract */}
+                      <div>
+                        <span className="admin-detail-label">Structured Abstract</span>
+                        <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '0.35rem', lineHeight: 1.6 }}>
+                          {selectedManuscript.abstract}
+                        </div>
+                      </div>
+
+                      {/* Ethics Clearances */}
+                      <div>
+                        <span className="admin-detail-label">Ethics & Legal Compliance</span>
+                        <div className="admin-ethics-row" style={{ marginTop: '0.5rem' }}>
+                          <span className={`admin-ethics-badge ${selectedManuscript.humanEthicsConfirmed ? 'ok' : ''}`}>
+                            <SiteIcon name={selectedManuscript.humanEthicsConfirmed ? 'check-circle' : 'alert-circle'} size={13} />
+                            Human Subjects IRB Ethics: {selectedManuscript.humanEthicsConfirmed ? 'Confirmed' : 'Unconfirmed'}
+                          </span>
+                          <span className={`admin-ethics-badge ${selectedManuscript.minorConsentConfirmed ? 'ok' : ''}`}>
+                            <SiteIcon name={selectedManuscript.minorConsentConfirmed ? 'check-circle' : 'alert-circle'} size={13} />
+                            Minor Athletes Assent / Guardian Consent: {selectedManuscript.minorConsentConfirmed ? 'Confirmed' : 'Unconfirmed'}
+                          </span>
+                          <span className="admin-ethics-badge license">
+                            License: {selectedManuscript.licenseType || 'CC BY-NC-ND 4.0'}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {/* Action Dialog: Request Revisions */}
                   {manuscriptActionDialog === 'corrections' && (

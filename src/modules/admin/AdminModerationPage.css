@@ -1618,3 +1618,521 @@ html[data-admin-theme="dark"] .admin-mod-card.is-keyboard-focused {
   border-color: #38bdf8;
 }
 
+/* ==========================================================================
+   Phase 3: Visual Polish, Clipboard Micro-Interactions, Metadata Diff & Evidence
+   ========================================================================== */
+
+/* 1. One-Click Clipboard Copy Pill */
+.admin-ref-code-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.76rem;
+  font-weight: 650;
+  color: #334155;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.admin-ref-code-btn:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.admin-ref-code-btn.is-copied {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #047857;
+}
+
+.admin-copy-icon {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.65;
+  transition: opacity 0.15s ease;
+}
+
+.admin-ref-code-btn:hover .admin-copy-icon {
+  opacity: 1;
+}
+
+.admin-copy-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: adminTooltipIn 0.15s ease-out;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+}
+
+.admin-copy-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 4px;
+  border-style: solid;
+  border-color: #0f172a transparent transparent transparent;
+}
+
+@keyframes adminTooltipIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 4px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* 2. Contextual Celebratory Empty State */
+.admin-empty-celebration {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3.5rem 2rem;
+  background: #ffffff;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  gap: 0.85rem;
+  margin: 1.5rem 0;
+}
+
+.admin-empty-celebration.filters {
+  border-style: solid;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.admin-empty-icon {
+  font-size: 3rem;
+  line-height: 1;
+  animation: adminPartyBounce 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes adminPartyBounce {
+  from {
+    transform: translateY(0) scale(1);
+  }
+  to {
+    transform: translateY(-6px) scale(1.08);
+  }
+}
+
+.admin-empty-celebration h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.admin-empty-celebration p {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #64748b;
+  max-width: 460px;
+  line-height: 1.55;
+}
+
+/* 3. Micro-Badges on Nav Tabs */
+.admin-tab-micro-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #0284c7;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 750;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.admin-tab-micro-badge.warning {
+  background: #d97706;
+}
+
+/* 4. Git-Style Metadata Diff View */
+.admin-diff-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.admin-diff-audit-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.85rem;
+}
+
+.admin-diff-audit-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.admin-diff-audit-item .label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.04em;
+}
+
+.admin-diff-audit-item .val {
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: #0f172a;
+}
+
+.admin-diff-request-box {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-left: 4px solid #f59e0b;
+  border-radius: 6px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.admin-diff-request-box h4 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 750;
+  color: #92400e;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.admin-diff-request-box p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #78350f;
+  line-height: 1.5;
+}
+
+.admin-diff-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.admin-diff-row {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.admin-diff-field-header {
+  background: #f1f5f9;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #334155;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-diff-values {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 640px) {
+  .admin-diff-values {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-diff-old,
+.admin-diff-new {
+  padding: 0.75rem 0.95rem;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.admin-diff-old {
+  background: #fff1f2;
+  border-right: 1px solid #fecdd3;
+  color: #9f1239;
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+
+.admin-diff-new {
+  background: #f0fdf4;
+  color: #166534;
+  font-weight: 600;
+}
+
+.admin-diff-unchanged {
+  padding: 0.75rem 0.95rem;
+  font-size: 0.86rem;
+  color: #475569;
+  grid-column: 1 / -1;
+  background: #fafafa;
+}
+
+/* 5. Integrated Evidence & Verification Viewer */
+.admin-evidence-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.admin-evidence-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.admin-evidence-status-banner.missing {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.admin-evidence-status-banner .info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 650;
+  font-size: 0.88rem;
+}
+
+.admin-evidence-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.admin-evidence-card h4 {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.admin-evidence-url-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  color: #0284c7;
+  word-break: break-all;
+}
+
+.admin-evidence-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.admin-evidence-checklist h5 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 750;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.admin-evidence-checklist ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+/* ==========================================================================
+   Phase 3 Dark Mode Overrides
+   ========================================================================== */
+html.dark .admin-ref-code-btn,
+html[data-admin-theme="dark"] .admin-ref-code-btn {
+  background: #172234;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+html.dark .admin-ref-code-btn:hover,
+html[data-admin-theme="dark"] .admin-ref-code-btn:hover {
+  background: #1e293b;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+html.dark .admin-ref-code-btn.is-copied,
+html[data-admin-theme="dark"] .admin-ref-code-btn.is-copied {
+  background: #064e3b;
+  border-color: #10b981;
+  color: #6ee7b7;
+}
+
+html.dark .admin-empty-celebration,
+html[data-admin-theme="dark"] .admin-empty-celebration {
+  background: #111a28;
+  border-color: #334155;
+}
+
+html.dark .admin-empty-celebration.filters,
+html[data-admin-theme="dark"] .admin-empty-celebration.filters {
+  background: #0d1522;
+  border-color: #1e293b;
+}
+
+html.dark .admin-empty-celebration h3,
+html[data-admin-theme="dark"] .admin-empty-celebration h3 {
+  color: #f8fafc;
+}
+
+html.dark .admin-empty-celebration p,
+html[data-admin-theme="dark"] .admin-empty-celebration p {
+  color: #94a3b8;
+}
+
+html.dark .admin-diff-audit-card,
+html[data-admin-theme="dark"] .admin-diff-audit-card {
+  background: #172234;
+  border-color: #334155;
+}
+
+html.dark .admin-diff-audit-item .val,
+html[data-admin-theme="dark"] .admin-diff-audit-item .val {
+  color: #f8fafc;
+}
+
+html.dark .admin-diff-request-box,
+html[data-admin-theme="dark"] .admin-diff-request-box {
+  background: #2a1f07;
+  border-color: #78350f;
+  border-left-color: #f59e0b;
+}
+
+html.dark .admin-diff-request-box h4,
+html[data-admin-theme="dark"] .admin-diff-request-box h4 {
+  color: #fde68a;
+}
+
+html.dark .admin-diff-request-box p,
+html[data-admin-theme="dark"] .admin-diff-request-box p {
+  color: #fef3c7;
+}
+
+html.dark .admin-diff-row,
+html[data-admin-theme="dark"] .admin-diff-row {
+  background: #111a28;
+  border-color: #334155;
+}
+
+html.dark .admin-diff-field-header,
+html[data-admin-theme="dark"] .admin-diff-field-header {
+  background: #172234;
+  border-bottom-color: #334155;
+  color: #cbd5e1;
+}
+
+html.dark .admin-diff-old,
+html[data-admin-theme="dark"] .admin-diff-old {
+  background: #3b1118;
+  border-right-color: #4c1d24;
+  color: #fda4af;
+}
+
+html.dark .admin-diff-new,
+html[data-admin-theme="dark"] .admin-diff-new {
+  background: #063c28;
+  color: #86efac;
+}
+
+html.dark .admin-diff-unchanged,
+html[data-admin-theme="dark"] .admin-diff-unchanged {
+  background: #172234;
+  color: #94a3b8;
+}
+
+html.dark .admin-evidence-card,
+html[data-admin-theme="dark"] .admin-evidence-card {
+  background: #111a28;
+  border-color: #334155;
+}
+
+html.dark .admin-evidence-card h4,
+html[data-admin-theme="dark"] .admin-evidence-card h4 {
+  color: #f8fafc;
+}
+
+html.dark .admin-evidence-url-row,
+html[data-admin-theme="dark"] .admin-evidence-url-row {
+  background: #172234;
+  border-color: #334155;
+  color: #38bdf8;
+}
+
+html.dark .admin-evidence-checklist,
+html[data-admin-theme="dark"] .admin-evidence-checklist {
+  background: #172234;
+  border-color: #334155;
+}
+
+html.dark .admin-evidence-checklist h5,
+html[data-admin-theme="dark"] .admin-evidence-checklist h5 {
+  color: #e2e8f0;
+}
+
+html.dark .admin-evidence-checklist ul,
+html[data-admin-theme="dark"] .admin-evidence-checklist ul {
+  color: #94a3b8;
+}
+
+
