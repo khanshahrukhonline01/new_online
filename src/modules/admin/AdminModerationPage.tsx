@@ -76,6 +76,31 @@ export const CHRONICLE_CORRECTION_PRESETS = [
   { label: 'Format Structured Abstract', text: 'Please format the abstract into Background, Methods, Results, and Practical Applications.' },
 ]
 
+export const SPORT_FACETS = [
+  'Football',
+  'Cricket',
+  'Badminton',
+  'Tennis',
+  'Basketball',
+  'Kabaddi',
+  'Athletics',
+  'Swimming',
+  'Hockey',
+]
+
+export const CITY_FACETS = [
+  'Delhi',
+  'Mumbai',
+  'Bengaluru',
+  'Hyderabad',
+  'Kolkata',
+  'Chennai',
+  'Pune',
+  'Chandigarh',
+  'Jaipur',
+  'Ahmedabad',
+]
+
 type TabFilter =
   | 'all'
   | 'pending_review'
@@ -196,6 +221,50 @@ export function AdminModerationPage({
     count: number
     actionLabel: string
   } | null>(null)
+
+  // Phase 6: Advanced Multi-Facet Filter & Saved Presets State
+  const [showFacetDrawer, setShowFacetDrawer] = useState(false)
+  const [selectedSports, setSelectedSports] = useState<Set<string>>(new Set())
+  const [selectedCities, setSelectedCities] = useState<Set<string>>(new Set())
+  const [tlsFilter, setTlsFilter] = useState<'all' | 'verified_only' | 'unverified_only'>('all')
+  const [slaFilter, setSlaFilter] = useState<'all' | 'breached' | 'normal'>('all')
+  const [versionFilter, setVersionFilter] = useState<'all' | 'v1_only' | 'resubmitted'>('all')
+
+  const activeFacetCount =
+    selectedSports.size +
+    selectedCities.size +
+    (tlsFilter !== 'all' ? 1 : 0) +
+    (slaFilter !== 'all' ? 1 : 0) +
+    (versionFilter !== 'all' ? 1 : 0)
+
+  const resetAllFacets = () => {
+    setSelectedSports(new Set())
+    setSelectedCities(new Set())
+    setTlsFilter('all')
+    setSlaFilter('all')
+    setVersionFilter('all')
+    setPage(1)
+  }
+
+  const toggleSportFacet = (sport: string) => {
+    setSelectedSports(prev => {
+      const next = new Set(prev)
+      if (next.has(sport)) next.delete(sport)
+      else next.add(sport)
+      return next
+    })
+    setPage(1)
+  }
+
+  const toggleCityFacet = (city: string) => {
+    setSelectedCities(prev => {
+      const next = new Set(prev)
+      if (next.has(city)) next.delete(city)
+      else next.add(city)
+      return next
+    })
+    setPage(1)
+  }
 
   const handleCopy = (text: string, id: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
@@ -809,6 +878,40 @@ export function AdminModerationPage({
       const matchRef = item.reference_number.toLowerCase().includes(term)
       if (!matchTitle && !matchCity && !matchRef) return false
     }
+
+    // Phase 6: Facet filter checks
+    if (selectedSports.size > 0) {
+      const content = `${item.title} ${item.details || ''} ${item.listing_type}`.toLowerCase()
+      const matchesSport = Array.from(selectedSports).some(s => content.includes(s.toLowerCase()))
+      if (!matchesSport) return false
+    }
+
+    if (selectedCities.size > 0) {
+      const city = (item.city || '').toLowerCase()
+      const matchesCity = Array.from(selectedCities).some(c => city.includes(c.toLowerCase()))
+      if (!matchesCity) return false
+    }
+
+    if (tlsFilter === 'verified_only') {
+      if (!item.source_url || !item.source_url.startsWith('https://')) return false
+    } else if (tlsFilter === 'unverified_only') {
+      if (item.source_url && item.source_url.startsWith('https://')) return false
+    }
+
+    if (slaFilter === 'breached') {
+      const ageHours = (Date.now() - new Date(item.created_at).getTime()) / (1000 * 60 * 60)
+      if (ageHours <= 48) return false
+    } else if (slaFilter === 'normal') {
+      const ageHours = (Date.now() - new Date(item.created_at).getTime()) / (1000 * 60 * 60)
+      if (ageHours > 48) return false
+    }
+
+    if (versionFilter === 'v1_only') {
+      if (item.version > 1) return false
+    } else if (versionFilter === 'resubmitted') {
+      if (item.version <= 1) return false
+    }
+
     return true
   })
 
@@ -850,6 +953,8 @@ export function AdminModerationPage({
       if (e.key === 'Escape') {
         if (showShortcutsModal) {
           setShowShortcutsModal(false)
+        } else if (showFacetDrawer) {
+          setShowFacetDrawer(false)
         } else if (actionDialog) {
           setActionDialog(null)
         } else if (selectedItem) {
@@ -870,6 +975,13 @@ export function AdminModerationPage({
       if (e.key === '?') {
         e.preventDefault()
         setShowShortcutsModal(prev => !prev)
+        return
+      }
+
+      // Phase 6: Toggle facet filter drawer with 'f' or 'F'
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault()
+        setShowFacetDrawer(prev => !prev)
         return
       }
 
@@ -1290,11 +1402,70 @@ export function AdminModerationPage({
                 <kbd>?</kbd>
               </button>
 
+              {/* Phase 6: Advanced Facet Filters Button */}
+              <button
+                type="button"
+                className={`admin-btn admin-btn-secondary admin-facet-toggle-btn ${activeFacetCount > 0 ? 'is-active' : ''}`}
+                onClick={() => setShowFacetDrawer(prev => !prev)}
+                title="Toggle Advanced Facet Filters (Key: F)"
+              >
+                <SiteIcon name="search" size={13} />
+                <span>Filters</span>
+                {activeFacetCount > 0 && (
+                  <span className="admin-facet-count-tag">{activeFacetCount}</span>
+                )}
+              </button>
+
               <button type="button" className="admin-btn admin-btn-secondary" onClick={() => void loadQueue()}>
                 Refresh Queue
               </button>
             </div>
           </div>
+
+          {/* Phase 6: Active Filters Chip Strip */}
+          {activeFacetCount > 0 && (
+            <div className="admin-active-facets-bar" role="region" aria-label="Active facet filters">
+              <span className="admin-active-facets-title">
+                <SiteIcon name="search" size={12} /> Active Facets:
+              </span>
+              {Array.from(selectedSports).map(sport => (
+                <span key={sport} className="admin-facet-pill">
+                  Sport: <strong>{sport}</strong>
+                  <button type="button" onClick={() => toggleSportFacet(sport)} aria-label={`Remove ${sport} filter`}>✕</button>
+                </span>
+              ))}
+              {Array.from(selectedCities).map(city => (
+                <span key={city} className="admin-facet-pill">
+                  City: <strong>{city}</strong>
+                  <button type="button" onClick={() => toggleCityFacet(city)} aria-label={`Remove ${city} filter`}>✕</button>
+                </span>
+              ))}
+              {tlsFilter !== 'all' && (
+                <span className="admin-facet-pill">
+                  Source: <strong>{tlsFilter === 'verified_only' ? 'HTTPS Verified' : 'Unverified Only'}</strong>
+                  <button type="button" onClick={() => setTlsFilter('all')} aria-label="Remove TLS filter">✕</button>
+                </span>
+              )}
+              {slaFilter !== 'all' && (
+                <span className="admin-facet-pill pill-sla">
+                  SLA: <strong>{slaFilter === 'breached' ? '> 48h (Breached)' : 'Fresh (< 48h)'}</strong>
+                  <button type="button" onClick={() => setSlaFilter('all')} aria-label="Remove SLA filter">✕</button>
+                </span>
+              )}
+              {versionFilter !== 'all' && (
+                <span className="admin-facet-pill">
+                  Version: <strong>{versionFilter === 'resubmitted' ? 'v2+ Revisions' : 'v1 Initial'}</strong>
+                  <button type="button" onClick={() => setVersionFilter('all')} aria-label="Remove version filter">✕</button>
+                </span>
+              )}
+              <button type="button" className="admin-facet-reset-btn" onClick={resetAllFacets} title="Reset all facet filters">
+                Reset All ({activeFacetCount})
+              </button>
+              <span className="admin-facet-matches-count">
+                ({filteredItems.length} matching)
+              </span>
+            </div>
+          )}
 
           {/* Phase 5: Enhanced Bulk Selection Header Bar */}
           <div className="admin-bulk-header-bar">
@@ -1379,7 +1550,7 @@ export function AdminModerationPage({
                   onClick={handleExportSelectedCsv}
                   title="Export selected records to CSV"
                 >
-                  <SiteIcon name="arrow-down-left" size={13} />
+                  <SiteIcon name="download" size={13} />
                   Export CSV
                 </button>
 
@@ -3802,7 +3973,7 @@ export function AdminModerationPage({
               onClick={handleExportSelectedCsv}
               title="Download CSV of selected items"
             >
-              <SiteIcon name="arrow-down-left" size={14} />
+              <SiteIcon name="download" size={14} />
               <span>Export CSV</span>
             </button>
 
@@ -4014,6 +4185,297 @@ export function AdminModerationPage({
         </div>
       )}
 
+      {/* Phase 6: Advanced Multi-Facet Filter & Saved Presets Drawer */}
+      {showFacetDrawer && (
+        <div className="admin-drawer-backdrop" onClick={() => setShowFacetDrawer(false)}>
+          <aside
+            className="admin-facet-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-facet-drawer-title"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="admin-facet-drawer-header">
+              <div className="admin-facet-drawer-title-wrap">
+                <SiteIcon name="search" size={18} />
+                <h3 id="admin-facet-drawer-title">Advanced Facet Filters</h3>
+                {activeFacetCount > 0 && (
+                  <span className="admin-facet-badge">{activeFacetCount} active</span>
+                )}
+              </div>
+              <button
+                type="button"
+                className="admin-drawer-close-btn"
+                onClick={() => setShowFacetDrawer(false)}
+                aria-label="Close facet filters drawer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="admin-facet-drawer-body">
+              {/* Quick Saved Presets */}
+              <div className="admin-facet-section">
+                <div className="admin-facet-section-header">
+                  <span className="admin-facet-label">⚡ 1-Click Saved Presets</span>
+                </div>
+                <div className="admin-facet-preset-grid">
+                  <button
+                    type="button"
+                    className={`admin-facet-preset-btn ${slaFilter === 'breached' ? 'is-active' : ''}`}
+                    onClick={() => {
+                      setSlaFilter(prev => prev === 'breached' ? 'all' : 'breached')
+                      setPage(1)
+                    }}
+                  >
+                    🚨 SLA Breached (&gt; 48h)
+                  </button>
+                  <button
+                    type="button"
+                    className={`admin-facet-preset-btn ${tlsFilter === 'unverified_only' ? 'is-active' : ''}`}
+                    onClick={() => {
+                      setTlsFilter(prev => prev === 'unverified_only' ? 'all' : 'unverified_only')
+                      setPage(1)
+                    }}
+                  >
+                    ⚠️ Unverified / Insecure Source
+                  </button>
+                  <button
+                    type="button"
+                    className={`admin-facet-preset-btn ${versionFilter === 'resubmitted' ? 'is-active' : ''}`}
+                    onClick={() => {
+                      setVersionFilter(prev => prev === 'resubmitted' ? 'all' : 'resubmitted')
+                      setPage(1)
+                    }}
+                  >
+                    🔄 Resubmitted Revisions (v2+)
+                  </button>
+                  <button
+                    type="button"
+                    className={`admin-facet-preset-btn ${selectedSports.has('Football') && selectedSports.has('Cricket') ? 'is-active' : ''}`}
+                    onClick={() => {
+                      if (selectedSports.has('Football') && selectedSports.has('Cricket')) {
+                        setSelectedSports(prev => {
+                          const next = new Set(prev)
+                          next.delete('Football')
+                          next.delete('Cricket')
+                          return next
+                        })
+                      } else {
+                        setSelectedSports(prev => {
+                          const next = new Set(prev)
+                          next.add('Football')
+                          next.add('Cricket')
+                          return next
+                        })
+                      }
+                      setPage(1)
+                    }}
+                  >
+                    ⚽🏏 Football &amp; Cricket
+                  </button>
+                  <button
+                    type="button"
+                    className={`admin-facet-preset-btn ${selectedCities.has('Delhi') && selectedCities.has('Mumbai') && selectedCities.has('Bengaluru') ? 'is-active' : ''}`}
+                    onClick={() => {
+                      const metros = ['Delhi', 'Mumbai', 'Bengaluru']
+                      if (metros.every(m => selectedCities.has(m))) {
+                        setSelectedCities(prev => {
+                          const next = new Set(prev)
+                          metros.forEach(m => next.delete(m))
+                          return next
+                        })
+                      } else {
+                        setSelectedCities(prev => {
+                          const next = new Set(prev)
+                          metros.forEach(m => next.add(m))
+                          return next
+                        })
+                      }
+                      setPage(1)
+                    }}
+                  >
+                    🏙️ Top Metros (DEL / BOM / BLR)
+                  </button>
+                </div>
+              </div>
+
+              {/* Sports Facet */}
+              <div className="admin-facet-section">
+                <div className="admin-facet-section-header">
+                  <span className="admin-facet-label">🏅 Sport Discipline</span>
+                  {selectedSports.size > 0 && (
+                    <button
+                      type="button"
+                      className="admin-facet-clear-link"
+                      onClick={() => { setSelectedSports(new Set()); setPage(1) }}
+                    >
+                      Clear ({selectedSports.size})
+                    </button>
+                  )}
+                </div>
+                <div className="admin-facet-chips-grid">
+                  {SPORT_FACETS.map(sport => {
+                    const active = selectedSports.has(sport)
+                    return (
+                      <button
+                        key={sport}
+                        type="button"
+                        className={`admin-facet-chip-btn ${active ? 'is-active' : ''}`}
+                        onClick={() => toggleSportFacet(sport)}
+                      >
+                        {sport}
+                        {active && <span className="admin-facet-chip-check">✓</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* City / Venue Hubs Facet */}
+              <div className="admin-facet-section">
+                <div className="admin-facet-section-header">
+                  <span className="admin-facet-label">📍 City / Venue Region</span>
+                  {selectedCities.size > 0 && (
+                    <button
+                      type="button"
+                      className="admin-facet-clear-link"
+                      onClick={() => { setSelectedCities(new Set()); setPage(1) }}
+                    >
+                      Clear ({selectedCities.size})
+                    </button>
+                  )}
+                </div>
+                <div className="admin-facet-chips-grid">
+                  {CITY_FACETS.map(city => {
+                    const active = selectedCities.has(city)
+                    return (
+                      <button
+                        key={city}
+                        type="button"
+                        className={`admin-facet-chip-btn ${active ? 'is-active' : ''}`}
+                        onClick={() => toggleCityFacet(city)}
+                      >
+                        {city}
+                        {active && <span className="admin-facet-chip-check">✓</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Source TLS Security */}
+              <div className="admin-facet-section">
+                <div className="admin-facet-section-header">
+                  <span className="admin-facet-label">🔒 Source Evidence Security</span>
+                </div>
+                <div className="admin-facet-segmented-row">
+                  <button
+                    type="button"
+                    className={`admin-facet-seg-btn ${tlsFilter === 'all' ? 'is-active' : ''}`}
+                    onClick={() => { setTlsFilter('all'); setPage(1) }}
+                  >
+                    All Evidence
+                  </button>
+                  <button
+                    type="button"
+                    className={`admin-facet-seg-btn ${tlsFilter === 'verified_only' ? 'is-active' : ''}`}
+                    onClick={() => { setTlsFilter('verified_only'); setPage(1) }}
+                  >
+                    🛡️ HTTPS Verified
+                  </button>
+                  <button
+                    type="button"
+                    className={`admin-facet-seg-btn ${tlsFilter === 'unverified_only' ? 'is-active' : ''}`}
+                    onClick={() => { setTlsFilter('unverified_only'); setPage(1) }}
+                  >
+                    ⚠️ Unverified / None
+                  </button>
+                </div>
+              </div>
+
+              {/* SLA Age Window */}
+              <div className="admin-facet-section">
+                <div className="admin-facet-section-header">
+                  <span className="admin-facet-label">⏱️ SLA Turnaround Status</span>
+                </div>
+                <div className="admin-facet-segmented-row">
+                  <button
+                    type="button"
+                    className={`admin-facet-seg-btn ${slaFilter === 'all' ? 'is-active' : ''}`}
+                    onClick={() => { setSlaFilter('all'); setPage(1) }}
+                  >
+                    All SLA
+                  </button>
+                  <button
+                    type="button"
+                    className={`admin-facet-seg-btn ${slaFilter === 'breached' ? 'is-active' : ''}`}
+                    onClick={() => { setSlaFilter('breached'); setPage(1) }}
+                  >
+                    🚨 Breached (&gt; 48h)
+                  </button>
+                  <button
+                    type="button"
+                    className={`admin-facet-seg-btn ${slaFilter === 'normal' ? 'is-active' : ''}`}
+                    onClick={() => { setSlaFilter('normal'); setPage(1) }}
+                  >
+                    ✅ Fresh (&le; 48h)
+                  </button>
+                </div>
+              </div>
+
+              {/* Revision / Version */}
+              <div className="admin-facet-section">
+                <div className="admin-facet-section-header">
+                  <span className="admin-facet-label">📦 Listing Iteration / Version</span>
+                </div>
+                <div className="admin-facet-segmented-row">
+                  <button
+                    type="button"
+                    className={`admin-facet-seg-btn ${versionFilter === 'all' ? 'is-active' : ''}`}
+                    onClick={() => { setVersionFilter('all'); setPage(1) }}
+                  >
+                    All Iterations
+                  </button>
+                  <button
+                    type="button"
+                    className={`admin-facet-seg-btn ${versionFilter === 'v1_only' ? 'is-active' : ''}`}
+                    onClick={() => { setVersionFilter('v1_only'); setPage(1) }}
+                  >
+                    ✨ Initial Submission (v1)
+                  </button>
+                  <button
+                    type="button"
+                    className={`admin-facet-seg-btn ${versionFilter === 'resubmitted' ? 'is-active' : ''}`}
+                    onClick={() => { setVersionFilter('resubmitted'); setPage(1) }}
+                  >
+                    🔄 Resubmitted Revision (v2+)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="admin-facet-drawer-footer">
+              <button
+                type="button"
+                className="admin-btn admin-btn-secondary"
+                onClick={resetAllFacets}
+                disabled={activeFacetCount === 0}
+              >
+                Reset All Facets
+              </button>
+              <button
+                type="button"
+                className="admin-btn admin-btn-primary"
+                onClick={() => setShowFacetDrawer(false)}
+              >
+                View {filteredItems.length} Matching Items
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* Phase 2: Power Keyboard Shortcuts Cheat Sheet Dialog */}
       {showShortcutsModal && (
         <div className="admin-drawer-backdrop" onClick={() => setShowShortcutsModal(false)}>
@@ -4082,6 +4544,12 @@ export function AdminModerationPage({
                 <span>Deselect all items</span>
                 <div className="admin-keys">
                   <kbd>Shift</kbd> + <kbd>D</kbd>
+                </div>
+              </div>
+              <div className="admin-shortcut-row">
+                <span>Toggle facet filters drawer</span>
+                <div className="admin-keys">
+                  <kbd>F</kbd>
                 </div>
               </div>
               <div className="admin-shortcut-row">

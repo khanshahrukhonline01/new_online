@@ -3123,5 +3123,374 @@ html.cosmic .admin-topbar-signout-btn {
   color: #ffffff;
 }
 
+/* ==========================================================================
+   Phase 6: Advanced Multi-Facet Filter & Saved Presets Drawer
+   ========================================================================== */
+
+/* Active Facets Bar (Horizontal Pill Strip) */
+.admin-active-facets-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+  animation: adminSlideDown 0.15s ease-out;
+}
+
+.admin-active-facets-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+}
+
+.admin-facet-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.55rem;
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  font-size: 0.76rem;
+}
+
+.admin-facet-pill strong {
+  color: #0c4a6e;
+}
+
+.admin-facet-pill.pill-sla {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.admin-facet-pill.pill-sla strong {
+  color: #991b1b;
+}
+
+.admin-facet-pill button {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.admin-facet-pill button:hover {
+  opacity: 1;
+}
+
+.admin-facet-reset-btn {
+  background: none;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-facet-reset-btn:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  border-color: #fca5a5;
+}
+
+.admin-facet-matches-count {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-style: italic;
+  margin-left: auto;
+}
+
+/* Facet Toggle Button in Toolbar */
+.admin-facet-toggle-btn {
+  position: relative;
+}
+
+.admin-facet-toggle-btn.is-active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
+.admin-facet-count-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: #38bdf8;
+  color: #0c4a6e;
+  border-radius: 9px;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.admin-facet-toggle-btn.is-active .admin-facet-count-tag {
+  background: #ffffff;
+  color: #0369a1;
+}
+
+/* Facet Drawer Component (Right-docked flyout or slide-over) */
+.admin-facet-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 440px;
+  max-width: 90vw;
+  background: #0f172a;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  z-index: 1001;
+  animation: adminSlideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-facet-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.15rem 1.25rem;
+  border-bottom: 1px solid #1e293b;
+  background: #1e293b;
+}
+
+.admin-facet-drawer-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.admin-facet-drawer-title-wrap h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.admin-facet-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  background: #0284c7;
+  color: #ffffff;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.admin-facet-drawer-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+
+.admin-facet-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.admin-facet-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-facet-label {
+  font-size: 0.8rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.admin-facet-clear-link {
+  background: none;
+  border: none;
+  color: #38bdf8;
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.admin-facet-clear-link:hover {
+  color: #7dd3fc;
+}
+
+/* Preset buttons */
+.admin-facet-preset-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+}
+
+.admin-facet-preset-btn {
+  display: flex;
+  align-items: center;
+  padding: 0.55rem 0.75rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 7px;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.admin-facet-preset-btn:hover {
+  background: #334155;
+  color: #f8fafc;
+  border-color: #475569;
+}
+
+.admin-facet-preset-btn.is-active {
+  background: rgba(14, 165, 233, 0.15);
+  border-color: #0284c7;
+  color: #38bdf8;
+}
+
+/* Chip buttons */
+.admin-facet-chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.admin-facet-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-facet-chip-btn:hover {
+  background: #334155;
+  color: #ffffff;
+}
+
+.admin-facet-chip-btn.is-active {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.admin-facet-chip-check {
+  font-size: 0.75rem;
+}
+
+/* Segmented row */
+.admin-facet-segmented-row {
+  display: flex;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 7px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.admin-facet-seg-btn {
+  flex: 1 1 0;
+  padding: 0.45rem 0.5rem;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.admin-facet-seg-btn:hover {
+  color: #f8fafc;
+}
+
+.admin-facet-seg-btn.is-active {
+  background: #334155;
+  color: #38bdf8;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.admin-facet-drawer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #1e293b;
+  background: #1e293b;
+  gap: 0.75rem;
+}
+
+/* Dark mode overrides for active facets bar in main page */
+html.dark .admin-active-facets-bar,
+html[data-admin-theme="dark"] .admin-active-facets-bar {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+html.dark .admin-facet-pill,
+html[data-admin-theme="dark"] .admin-facet-pill {
+  background: #1e293b;
+  color: #38bdf8;
+  border-color: #0284c7;
+}
+
+html.dark .admin-facet-pill strong,
+html[data-admin-theme="dark"] .admin-facet-pill strong {
+  color: #7dd3fc;
+}
+
+html.dark .admin-facet-pill.pill-sla,
+html[data-admin-theme="dark"] .admin-facet-pill.pill-sla {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: #ef4444;
+}
+
+html.dark .admin-facet-pill.pill-sla strong,
+html[data-admin-theme="dark"] .admin-facet-pill.pill-sla strong {
+  color: #fca5a5;
+}
+
 
 

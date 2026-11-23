@@ -7,6 +7,8 @@ import {
   MODERATION_APPROVAL_PRESETS,
   CHRONICLE_REJECTION_PRESETS,
   CHRONICLE_CORRECTION_PRESETS,
+  SPORT_FACETS,
+  CITY_FACETS,
 } from './AdminModerationPage'
 import * as client from '../../integrations/supabase/public-client'
 import type { ChronicleModerationQueueResult } from '../../integrations/supabase/chronicle-client'
@@ -207,5 +209,51 @@ describe('AdminModerationPage', () => {
     expect(html).toContain('admin-bulk-header-bar')
     expect(html).toContain('Select Page (1)')
     expect(html).toContain('Shortcuts')
+  })
+
+  it('exports SPORT_FACETS and CITY_FACETS and renders the Phase 6 facet filters button', () => {
+    expect(SPORT_FACETS).toContain('Football')
+    expect(SPORT_FACETS).toContain('Cricket')
+    expect(SPORT_FACETS.length).toBeGreaterThanOrEqual(5)
+
+    expect(CITY_FACETS).toContain('Bengaluru')
+    expect(CITY_FACETS).toContain('Delhi')
+    expect(CITY_FACETS.length).toBeGreaterThanOrEqual(5)
+
+    const mockQueue: client.AdminModerationQueue = {
+      pendingSubmissions: [
+        {
+          id: '00000000-0000-4000-8000-000000000001',
+          reference_number: 'KHL-20261110-TEST01',
+          listing_type: 'venue',
+          title: 'Bangalore Turf Park',
+          city: 'Bengaluru',
+          source_url: 'https://example.org/turf',
+          details: '8 five-a-side football pitches',
+          status: 'pending_review',
+          version: 1,
+          created_at: '2026-11-10T10:00:00Z',
+          updated_at: '2026-11-10T10:00:00Z',
+        },
+      ],
+      stats: {
+        totalAcademies: 1,
+        totalVenues: 1,
+        totalCoaches: 0,
+        totalEvents: 0,
+        pendingSubmissionsCount: 1,
+        underReviewCount: 0,
+        changesRequestedCount: 0,
+        approvedCount: 0,
+        publishedCount: 0,
+        rejectedCount: 0,
+        unpublishedCount: 0,
+      },
+    }
+
+    const html = renderToStaticMarkup(<AdminModerationPage initialQueue={mockQueue} />)
+    expect(html).toContain('admin-facet-toggle-btn')
+    expect(html).toContain('Filters')
+    expect(html).toContain('Toggle Advanced Facet Filters (Key: F)')
   })
 })
