@@ -381,14 +381,84 @@ export default function ListingSubmissionPage({ defaultTab = 'submit', initialTr
 
   return (
     <section className="content-page listing-submission-page">
-      <p className="eyebrow">KHELGRID · LISTING INTAKE & MODERATION</p>
-      <h1>Put your sports listing on the map.</h1>
-      <p className="page-intro">
-        Share a genuine sports trial, venue, coach, academy, event or community opportunity. KhelGrid reviews submissions before anything is published.
-      </p>
+      <div className="contributor-hero">
+        <div className="contributor-hero-copy">
+          <p className="eyebrow">THE KHELGRID CONTRIBUTOR CENTRE</p>
+          <h1>Build India’s sports network.</h1>
+          <p className="page-intro">
+            Help athletes discover real places to play, trusted coaches, sports academies, trials and communities. Share a listing with KhelGrid for review.
+          </p>
+          <div className="contributor-hero-actions">
+            <a className="contributor-primary-action" href="#contributor-categories" onClick={event => { event.preventDefault(); document.getElementById('contributor-categories')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>
+              <SiteIcon name="plus" size={17} /> Submit a listing
+            </a>
+            <button type="button" className="contributor-secondary-action" onClick={() => { setActiveTab('track'); window.setTimeout(() => document.getElementById('listing-tabs-nav')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
+              <SiteIcon name="search" size={17} /> Track a submission
+            </button>
+          </div>
+          <div className="contributor-trust-points" aria-label="Submission principles">
+            <span><SiteIcon name="check-circle" size={15} /> Free to submit</span>
+            <span><SiteIcon name="shield-check" size={15} /> Evidence reviewed</span>
+            <span><SiteIcon name="lock" size={15} /> Publication controlled</span>
+          </div>
+        </div>
+        <div className="contributor-hero-aside" aria-label="Contributor Centre message">
+          <span className="contributor-aside-kicker">A stronger sports ecosystem starts here</span>
+          <strong>Real information.<br />Better discovery.<br /><em>More ways to play.</em></strong>
+          <span className="contributor-aside-foot">One community contribution can help an athlete find their next opportunity.</span>
+        </div>
+      </div>
+
+      <section className="contributor-category-section" id="contributor-categories" aria-labelledby="contributor-category-title">
+        <div className="contributor-section-heading">
+          <div>
+            <p className="eyebrow">CHOOSE WHAT YOU’RE SHARING</p>
+            <h2 id="contributor-category-title">What would you like to list?</h2>
+            <p>Select a category to open the relevant submission form. Every listing is reviewed before it can appear publicly.</p>
+          </div>
+        </div>
+        <div className="contributor-category-grid">
+          <button type="button" className={kind === 'venue' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('venue'); setActiveTab('submit'); window.setTimeout(() => document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
+            <span className="contributor-category-icon"><SiteIcon name="map-pin" size={22} /></span><span className="contributor-category-title">Sports Venues</span><span className="contributor-category-description">Stadiums, grounds, turfs, courts and places to play.</span><span className="contributor-category-link">List a venue <SiteIcon name="arrow-up-right" size={15} /></span>
+          </button>
+          <button type="button" className={kind === 'opportunity' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('opportunity'); setActiveTab('submit'); window.setTimeout(() => document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
+            <span className="contributor-category-icon"><SiteIcon name="trophy" size={22} /></span><span className="contributor-category-title">Trials &amp; Opportunities</span><span className="contributor-category-description">Selection trials, scholarships, camps and athlete pathways.</span><span className="contributor-category-link">Submit an opportunity <SiteIcon name="arrow-up-right" size={15} /></span>
+          </button>
+          <button type="button" className={kind === 'coach' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('coach'); setActiveTab('submit'); window.setTimeout(() => document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
+            <span className="contributor-category-icon"><SiteIcon name="user-round" size={22} /></span><span className="contributor-category-title">Coaches</span><span className="contributor-category-description">Coaches, trainers and verified professional profiles.</span><span className="contributor-category-link">Join as a coach <SiteIcon name="arrow-up-right" size={15} /></span>
+          </button>
+          <button type="button" className={kind === 'academy' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('academy'); setActiveTab('submit'); window.setTimeout(() => document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
+            <span className="contributor-category-icon"><SiteIcon name="building" size={22} /></span><span className="contributor-category-title">Sports Academies</span><span className="contributor-category-description">Training centres, programmes and development pathways.</span><span className="contributor-category-link">List an academy <SiteIcon name="arrow-up-right" size={15} /></span>
+          </button>
+          <button type="button" className={kind === 'event' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('event'); setActiveTab('submit'); window.setTimeout(() => document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
+            <span className="contributor-category-icon"><SiteIcon name="calendar" size={22} /></span><span className="contributor-category-title">Events &amp; Competitions</span><span className="contributor-category-description">Tournaments, meets, leagues and sports events.</span><span className="contributor-category-link">Submit an event <SiteIcon name="arrow-up-right" size={15} /></span>
+          </button>
+          <button type="button" className={kind === 'pickup_game' ? 'contributor-category-card selected' : 'contributor-category-card'} onClick={() => { setKind('pickup_game'); setActiveTab('submit'); window.setTimeout(() => document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
+            <span className="contributor-category-icon"><SiteIcon name="users" size={22} /></span><span className="contributor-category-title">Community &amp; Games</span><span className="contributor-category-description">Local pickup games and community sports activities.</span><span className="contributor-category-link">Share a community game <SiteIcon name="arrow-up-right" size={15} /></span>
+          </button>
+        </div>
+        <button type="button" className="contributor-sport-suggestion" onClick={() => { setKind('sport'); setActiveTab('submit'); window.setTimeout(() => document.getElementById('listing-intake-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0) }}>
+          <SiteIcon name="plus" size={17} /> Suggest a sport not yet covered <SiteIcon name="arrow-right" size={15} />
+        </button>
+      </section>
+
+      <section className="contributor-how-section" aria-labelledby="contributor-how-title">
+        <div><p className="eyebrow">A CLEAR, REVIEWED PROCESS</p><h2 id="contributor-how-title">From your contribution to discovery.</h2></div>
+        <div className="contributor-process-grid">
+          <div><span>01</span><strong>Submit</strong><p>Share accurate details and an official source where available.</p></div>
+          <div><span>02</span><strong>Review</strong><p>Our team checks the listing information and supporting evidence.</p></div>
+          <div><span>03</span><strong>Verify</strong><p>Evidence checks are recorded separately from editorial approval.</p></div>
+          <div><span>04</span><strong>Publish</strong><p>Only an authorised publication decision can make a listing public.</p></div>
+        </div>
+      </section>
+
+      <div className="contributor-chronicle-link">
+        <div><span className="eyebrow">RESEARCH &amp; KNOWLEDGE</span><strong>Have sports research to share?</strong><p>KhelChronicle has a separate manuscript and editorial submission process.</p></div>
+        <a href="/khelchronicle/submit">Contribute to KhelChronicle <SiteIcon name="arrow-up-right" size={16} /></a>
+      </div>
 
       {/* Navigation Tabs */}
-      <nav className="listing-tabs-nav" aria-label="Intake options">
+      <nav id="listing-tabs-nav" className="listing-tabs-nav" aria-label="Intake options">
         <button
           type="button"
           className={`listing-tab-btn ${activeTab === 'submit' ? 'active' : ''}`}
@@ -469,7 +539,7 @@ export default function ListingSubmissionPage({ defaultTab = 'submit', initialTr
             </div>
           )}
 
-          <form className="sports-cv-form" onSubmit={handleSubmit}>
+          <form id="listing-intake-form" className="sports-cv-form" onSubmit={handleSubmit}>
             <fieldset disabled={submitting}>
               <legend>Listing details</legend>
               <div className="cv-field-grid">

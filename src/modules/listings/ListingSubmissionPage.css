@@ -633,3 +633,63 @@
     padding-inline: 0.85rem;
   }
 }
+
+
+/* Contributor Centre landing experience */
+.listing-submission-page > .contributor-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, .8fr);
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  align-items: center;
+  padding: clamp(1.5rem, 4vw, 3.25rem);
+  margin: 1.5rem 0 2.5rem;
+  border-radius: 24px;
+  color: #f8fafc;
+  background: radial-gradient(circle at 85% 10%, rgba(16,185,129,.2), transparent 34%), linear-gradient(125deg, #0b192c 0%, #102b43 100%);
+  overflow: hidden;
+}
+.contributor-hero .eyebrow { color: #6ee7b7; }
+.contributor-hero h1 { color: #fff; max-width: 680px; font-size: clamp(2.35rem, 5vw, 4.1rem); line-height: 1.04; letter-spacing: -.045em; margin: .65rem 0 1rem; }
+.contributor-hero .page-intro { color: #cbd5e1; max-width: 650px; font-size: 1.08rem; line-height: 1.7; }
+.contributor-hero-actions { display:flex; flex-wrap:wrap; gap:.75rem; margin:1.5rem 0 1.25rem; }
+.contributor-primary-action,.contributor-secondary-action { display:inline-flex; align-items:center; justify-content:center; gap:.55rem; min-height:46px; padding:.75rem 1.1rem; border-radius:10px; font:inherit; font-weight:750; text-decoration:none; cursor:pointer; }
+.contributor-primary-action { background:#10b981; color:#052e24; border:1px solid #10b981; }
+.contributor-primary-action:hover { background:#34d399; }
+.contributor-secondary-action { background:rgba(255,255,255,.07); color:#fff; border:1px solid rgba(226,232,240,.35); }
+.contributor-trust-points { display:flex; flex-wrap:wrap; gap:.8rem 1.25rem; color:#d1fae5; font-size:.84rem; font-weight:650; }
+.contributor-trust-points span { display:inline-flex; align-items:center; gap:.4rem; }
+.contributor-hero-aside { min-height:245px; display:flex; flex-direction:column; justify-content:space-between; padding:1.5rem; border:1px solid rgba(167,243,208,.22); border-radius:18px; background:rgba(255,255,255,.055); }
+.contributor-aside-kicker,.contributor-aside-foot { color:#cbd5e1; font-size:.82rem; line-height:1.55; }
+.contributor-hero-aside strong { display:block; color:#fff; font-size:clamp(1.6rem,3vw,2.25rem); line-height:1.25; letter-spacing:-.025em; }
+.contributor-hero-aside em { color:#6ee7b7; font-style:normal; }
+.contributor-category-section,.contributor-how-section { margin:2.75rem 0; scroll-margin-top:100px; }
+.contributor-section-heading h2,.contributor-how-section h2 { margin:.35rem 0 .5rem; color:var(--text-primary,#0f172a); font-size:clamp(1.55rem,3vw,2.15rem); letter-spacing:-.025em; }
+.contributor-section-heading p:not(.eyebrow) { color:var(--text-secondary,#64748b); max-width:720px; line-height:1.65; }
+.contributor-category-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin-top:1.35rem; }
+.contributor-category-card { display:flex; flex-direction:column; align-items:flex-start; min-height:205px; padding:1.25rem; text-align:left; border:1px solid var(--border-subtle,#e2e8f0); border-radius:16px; background:var(--surface-card,#fff); color:var(--text-primary,#0f172a); cursor:pointer; transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease; }
+.contributor-category-card:hover,.contributor-category-card:focus-visible,.contributor-category-card.selected { border-color:#10b981; box-shadow:0 10px 28px rgba(11,25,44,.08); transform:translateY(-2px); outline:none; }
+.contributor-category-icon { display:grid; place-items:center; width:43px; height:43px; margin-bottom:1rem; border-radius:12px; color:#047857; background:#d1fae5; }
+.contributor-category-title { font-weight:800; font-size:1.05rem; }
+.contributor-category-description { margin:.45rem 0 1rem; color:var(--text-secondary,#64748b); font-size:.9rem; line-height:1.55; }
+.contributor-category-link { display:inline-flex; align-items:center; gap:.4rem; margin-top:auto; color:#047857; font-size:.87rem; font-weight:800; }
+.contributor-sport-suggestion { display:inline-flex; align-items:center; gap:.55rem; margin-top:1rem; padding:.65rem .9rem; border:1px dashed #94a3b8; border-radius:9px; background:transparent; color:var(--text-primary,#0f172a); font:inherit; font-weight:700; cursor:pointer; }
+.contributor-how-section { padding:1.75rem; border-radius:18px; background:#f1f5f9; }
+.contributor-process-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; margin-top:1.35rem; }
+.contributor-process-grid > div { display:flex; flex-direction:column; gap:.45rem; padding:1rem; border-left:2px solid #10b981; background:rgba(255,255,255,.72); border-radius:0 10px 10px 0; }
+.contributor-process-grid span { color:#059669; font-size:.78rem; font-weight:850; letter-spacing:.08em; }
+.contributor-process-grid strong { color:#0b192c; font-size:1.05rem; }
+.contributor-process-grid p { margin:0; color:#475569; font-size:.86rem; line-height:1.55; }
+.contributor-chronicle-link { display:flex; align-items:center; justify-content:space-between; gap:1.25rem; margin:2.5rem 0; padding:1.25rem 1.5rem; border:1px solid var(--border-subtle,#e2e8f0); border-radius:15px; background:var(--surface-card,#fff); }
+.contributor-chronicle-link > div { display:flex; flex-direction:column; gap:.3rem; }
+.contributor-chronicle-link strong { color:var(--text-primary,#0f172a); font-size:1.08rem; }
+.contributor-chronicle-link p { margin:0; color:var(--text-secondary,#64748b); font-size:.9rem; }
+.contributor-chronicle-link > a { display:inline-flex; align-items:center; gap:.4rem; flex-shrink:0; color:#047857; font-weight:800; text-decoration:none; }
+@media(max-width:900px) { .contributor-category-grid {grid-template-columns:repeat(2,minmax(0,1fr));} .contributor-process-grid {grid-template-columns:repeat(2,minmax(0,1fr));} }
+@media(max-width:640px) {
+ .listing-submission-page > .contributor-hero {grid-template-columns:1fr; padding:1.35rem; border-radius:18px;}
+ .contributor-hero-aside {min-height:190px;}
+ .contributor-category-grid,.contributor-process-grid {grid-template-columns:1fr;}
+ .contributor-category-card {min-height:170px;}
+ .contributor-chronicle-link {align-items:flex-start; flex-direction:column;}
+ .contributor-chronicle-link > a {white-space:normal;}
+}
