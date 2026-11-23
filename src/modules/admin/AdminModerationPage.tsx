@@ -395,6 +395,25 @@ export function AdminModerationPage({
     }
   }, [initialQueue, loadQueue, loadChronicleQueue])
 
+  // Phase 1: Global keyboard navigation & Esc key handler for drawers and dialogs
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (actionDialog) {
+          setActionDialog(null)
+        } else if (selectedItem) {
+          setSelectedItem(null)
+        } else if (manuscriptActionDialog) {
+          setManuscriptActionDialog(null)
+        } else if (selectedManuscript) {
+          setSelectedManuscript(null)
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [actionDialog, selectedItem, manuscriptActionDialog, selectedManuscript])
+
   const handleRequestPasswordReset = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setSigningIn(true)
@@ -945,12 +964,100 @@ export function AdminModerationPage({
           ) : (
             <div className="admin-items-list">
               {paginatedItems.map(sub => (
-                <article key={sub.id} className="admin-mod-card">
+                <article
+                  key={sub.id}
+                  className={`admin-mod-card ${selectedItem?.id === sub.id ? 'is-active-inspected' : ''}`}
+                  onClick={() => void openDetailView(sub)}
+                  tabIndex={0}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') void openDetailView(sub)
+                  }}
+                  title="Click to inspect in Right-Side Drawer"
+                >
+                  {/* Phase 1: Floating Quick Action Hover Bar */}
+                  <div className="admin-card-hover-actions" onClick={e => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="admin-hover-action-btn"
+                      title="Inspect Submission in Right-Side Drawer"
+                      onClick={() => void openDetailView(sub)}
+                    >
+                      <SiteIcon name="search" size={13} />
+                      <span>Inspect</span>
+                    </button>
+                    {(sub.status === 'pending_review' || sub.status === 'resubmitted' || sub.status === 'unpublished') && (
+                      <button
+                        type="button"
+                        className="admin-hover-action-btn primary"
+                        title="Start Review"
+                        disabled={busyId === sub.id}
+                        onClick={() => void handleStartReview(sub)}
+                      >
+                        <SiteIcon name="activity" size={13} />
+                        <span>Review</span>
+                      </button>
+                    )}
+                    {sub.status === 'under_review' && (
+                      <button
+                        type="button"
+                        className="admin-hover-action-btn success"
+                        title="Approve Listing"
+                        onClick={() => { setSelectedItem(sub); setActionDialog('approve'); setActionNotes(''); setError('') }}
+                      >
+                        <SiteIcon name="badge-check" size={13} />
+                        <span>Approve</span>
+                      </button>
+                    )}
+                    {sub.status === 'approved' && (
+                      <button
+                        type="button"
+                        className="admin-hover-action-btn publish"
+                        title="Publish to Catalogue"
+                        onClick={() => void preparePublishDialog(sub)}
+                      >
+                        <SiteIcon name="arrow-up-right" size={13} />
+                        <span>Publish</span>
+                      </button>
+                    )}
+                    {sub.status !== 'published' && sub.status !== 'rejected' && (
+                      <button
+                        type="button"
+                        className="admin-hover-action-btn warning"
+                        title="Request Corrections"
+                        onClick={() => { setSelectedItem(sub); setActionDialog('request_corrections'); setActionMessage(''); setError('') }}
+                      >
+                        <SiteIcon name="alert-circle" size={13} />
+                      </button>
+                    )}
+                    {sub.status !== 'published' && sub.status !== 'rejected' && (
+                      <button
+                        type="button"
+                        className="admin-hover-action-btn danger"
+                        title="Reject Listing"
+                        onClick={() => { setSelectedItem(sub); setActionDialog('reject'); setActionMessage(''); setError('') }}
+                      >
+                        <SiteIcon name="close" size={13} />
+                      </button>
+                    )}
+                    {sub.source_url && (
+                      <a
+                        href={sub.source_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="admin-hover-action-btn link"
+                        title="Open official HTTPS source ↗"
+                      >
+                        <SiteIcon name="arrow-up-right" size={13} />
+                      </a>
+                    )}
+                  </div>
+
                   <div className="admin-mod-card-top">
                     <div className="admin-mod-card-title-group" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                       <input
                         type="checkbox"
                         checked={selectedSubIds.has(sub.id)}
+                        onClick={e => e.stopPropagation()}
                         onChange={() => {
                           setSelectedSubIds(prev => {
                             const next = new Set(prev)
@@ -982,7 +1089,7 @@ export function AdminModerationPage({
                     </span>
                     <span>v{sub.version}</span>
                     {sub.source_url && (
-                      <a href={sub.source_url} target="_blank" rel="noreferrer" title="Verify HTTPS source">
+                      <a href={sub.source_url} target="_blank" rel="noreferrer" title="Verify HTTPS source" onClick={e => e.stopPropagation()}>
                         Official source ↗
                       </a>
                     )}
@@ -1002,7 +1109,7 @@ export function AdminModerationPage({
                     </div>
                   )}
 
-                  <div className="admin-mod-card-actions">
+                  <div className="admin-mod-card-actions" onClick={e => e.stopPropagation()}>
                     <button
                       type="button"
                       className="admin-btn admin-btn-secondary"
@@ -1108,45 +1215,130 @@ export function AdminModerationPage({
             </div>
           )}
 
-          {/* Submission Detail & Action Modal */}
+          {/* Submission Detail & Action Drawer */}
           {selectedItem && (
-            <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-sub-title">
-              <div className="admin-modal-card">
-                <div className="admin-modal-header">
-                  <div>
-                    <span className="admin-ref-code">{selectedItem.reference_number}</span>
-                    <h2 id="modal-sub-title" style={{ margin: '0.35rem 0' }}>{selectedItem.title}</h2>
-                    <span className={`admin-status-badge ${selectedItem.status}`}>
-                      Status: {selectedItem.status.replace(/_/g, ' ')}
-                    </span>
+            <div
+              className="admin-drawer-backdrop admin-modal-backdrop"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="modal-sub-title"
+              onClick={() => { setSelectedItem(null); setActionDialog(null) }}
+            >
+              <div
+                className="admin-inspection-drawer admin-modal-card"
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Drawer Header */}
+                <div className="admin-drawer-header">
+                  <div className="admin-drawer-header-top">
+                    <div>
+                      <div className="admin-drawer-badge-row">
+                        <span className="admin-ref-code">{selectedItem.reference_number}</span>
+                        <span className={`admin-type-pill ${selectedItem.listing_type}`}>{selectedItem.listing_type}</span>
+                        <span className="admin-ref-code" style={{ opacity: 0.85 }}>v{selectedItem.version}</span>
+                        <span className={`admin-status-badge ${selectedItem.status}`}>
+                          {selectedItem.status.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <h2 id="modal-sub-title" className="admin-drawer-title">{selectedItem.title}</h2>
+                    </div>
+                    <button
+                      type="button"
+                      className="admin-drawer-close-btn"
+                      onClick={() => { setSelectedItem(null); setActionDialog(null) }}
+                      title="Close inspection drawer (Esc)"
+                    >
+                      <SiteIcon name="close" size={15} />
+                      <span>Close</span>
+                      <kbd>Esc</kbd>
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    className="admin-btn admin-btn-secondary"
-                    onClick={() => { setSelectedItem(null); setActionDialog(null) }}
-                  >
-                    Close
-                  </button>
                 </div>
 
-                <div className="admin-modal-nav-tabs">
-                  <button
-                    type="button"
-                    className={`admin-modal-nav-tab ${modalTab === 'data' ? 'active' : ''}`}
-                    onClick={() => setModalTab('data')}
-                  >
-                    <SiteIcon name="file-text" size={14} /> Submission Data
-                  </button>
-                  <button
-                    type="button"
-                    className={`admin-modal-nav-tab ${modalTab === 'preview' ? 'active' : ''}`}
-                    onClick={() => setModalTab('preview')}
-                  >
-                    <SiteIcon name="search" size={14} /> Live Public Card Preview
-                  </button>
+                {/* Sticky Action & Navigation Strip in Drawer */}
+                <div className="admin-drawer-sticky-strip">
+                  <div className="admin-modal-nav-tabs" style={{ margin: 0 }}>
+                    <button
+                      type="button"
+                      className={`admin-modal-nav-tab ${modalTab === 'data' ? 'active' : ''}`}
+                      onClick={() => setModalTab('data')}
+                    >
+                      <SiteIcon name="file-text" size={14} /> Submission Data
+                    </button>
+                    <button
+                      type="button"
+                      className={`admin-modal-nav-tab ${modalTab === 'preview' ? 'active' : ''}`}
+                      onClick={() => setModalTab('preview')}
+                    >
+                      <SiteIcon name="search" size={14} /> Live Public Card Preview
+                    </button>
+                  </div>
+
+                  <div className="admin-drawer-quick-actions">
+                    {(selectedItem.status === 'pending_review' || selectedItem.status === 'resubmitted' || selectedItem.status === 'unpublished') && (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-secondary"
+                        disabled={busyId === selectedItem.id}
+                        onClick={() => void handleStartReview(selectedItem)}
+                      >
+                        <SiteIcon name="activity" size={14} /> Start Review
+                      </button>
+                    )}
+
+                    {selectedItem.status === 'under_review' && (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-approve"
+                        onClick={() => { setActionDialog('approve'); setActionNotes(''); setError('') }}
+                      >
+                        <SiteIcon name="badge-check" size={14} /> Approve
+                      </button>
+                    )}
+
+                    {selectedItem.status === 'approved' && (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-publish"
+                        onClick={() => void preparePublishDialog(selectedItem)}
+                      >
+                        <SiteIcon name="arrow-up-right" size={14} /> Publish to Catalogue
+                      </button>
+                    )}
+
+                    {selectedItem.status !== 'published' && selectedItem.status !== 'rejected' && (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-warning"
+                        onClick={() => { setActionDialog('request_corrections'); setActionMessage(''); setError('') }}
+                      >
+                        <SiteIcon name="alert-circle" size={14} /> Request Corrections
+                      </button>
+                    )}
+
+                    {selectedItem.status !== 'published' && selectedItem.status !== 'rejected' && (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-reject"
+                        onClick={() => { setActionDialog('reject'); setActionMessage(''); setError('') }}
+                      >
+                        <SiteIcon name="close" size={14} /> Reject
+                      </button>
+                    )}
+
+                    {selectedItem.status === 'published' && (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-reject"
+                        onClick={() => { setActionDialog('unpublish'); setActionMessage(''); setError('') }}
+                      >
+                        Unpublish
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="admin-modal-body">
+                <div className="admin-drawer-body admin-modal-body">
                   {modalTab === 'preview' ? (
                     <div className="admin-live-public-preview">
                       <div className="admin-preview-banner">
@@ -1796,7 +1988,125 @@ export function AdminModerationPage({
           ) : (
             <div className="admin-items-list">
               {paginatedChronicleItems.map(sub => (
-                <article key={sub.id} className="admin-mod-card chronicle">
+                <article
+                  key={sub.id}
+                  className={`admin-mod-card chronicle ${selectedManuscript?.id === sub.id ? 'is-active-inspected' : ''}`}
+                  onClick={() => {
+                    setSelectedManuscript(sub)
+                    setManuscriptActionDialog(null)
+                    setError('')
+                  }}
+                  tabIndex={0}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      setSelectedManuscript(sub)
+                      setManuscriptActionDialog(null)
+                      setError('')
+                    }
+                  }}
+                  title="Click to inspect manuscript in Right-Side Drawer"
+                >
+                  {/* Phase 1: Floating Quick Action Hover Bar */}
+                  <div className="admin-card-hover-actions" onClick={e => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="admin-hover-action-btn"
+                      title="Inspect Manuscript (Open Drawer)"
+                      onClick={() => {
+                        setSelectedManuscript(sub)
+                        setManuscriptActionDialog(null)
+                        setError('')
+                      }}
+                    >
+                      <SiteIcon name="search" size={13} />
+                      <span>Inspect</span>
+                    </button>
+                    {(sub.status === 'pending_review' || sub.status === 'under_review') && (
+                      <button
+                        type="button"
+                        className="admin-hover-action-btn primary"
+                        title="Start Screening"
+                        disabled={busyId === sub.id}
+                        onClick={() => void handleStartChronicleReview(sub)}
+                      >
+                        <SiteIcon name="activity" size={13} />
+                        <span>Screen</span>
+                      </button>
+                    )}
+                    {sub.status !== 'approved' && sub.status !== 'published' && (
+                      <button
+                        type="button"
+                        className="admin-hover-action-btn success"
+                        title="Approve Manuscript"
+                        onClick={() => {
+                          setSelectedManuscript(sub)
+                          setManuscriptActionDialog('approve')
+                          setManuscriptActionNotes('')
+                        }}
+                      >
+                        <SiteIcon name="badge-check" size={13} />
+                        <span>Approve</span>
+                      </button>
+                    )}
+                    {sub.status === 'approved' && (
+                      <button
+                        type="button"
+                        className="admin-hover-action-btn publish"
+                        title="Publish to Archive"
+                        disabled={busyId === sub.id}
+                        onClick={() => {
+                          setSelectedManuscript(sub)
+                          setManuscriptActionDialog('publish')
+                          setManuscriptTargetSlug('')
+                          setManuscriptTargetPaperId('')
+                          setError('')
+                        }}
+                      >
+                        <SiteIcon name="arrow-up-right" size={13} />
+                        <span>Publish</span>
+                      </button>
+                    )}
+                    {sub.status !== 'published' && sub.status !== 'rejected' && (
+                      <button
+                        type="button"
+                        className="admin-hover-action-btn warning"
+                        title="Request Revisions"
+                        onClick={() => {
+                          setSelectedManuscript(sub)
+                          setManuscriptActionDialog('corrections')
+                          setManuscriptActionMessage('')
+                        }}
+                      >
+                        <SiteIcon name="alert-circle" size={13} />
+                      </button>
+                    )}
+                    {sub.status !== 'published' && sub.status !== 'rejected' && (
+                      <button
+                        type="button"
+                        className="admin-hover-action-btn danger"
+                        title="Reject Manuscript"
+                        onClick={() => {
+                          setSelectedManuscript(sub)
+                          setManuscriptActionDialog('reject')
+                          setManuscriptActionMessage('')
+                        }}
+                      >
+                        <SiteIcon name="close" size={13} />
+                      </button>
+                    )}
+                    {sub.fullTextOrUrl && (
+                      <a
+                        href={sub.fullTextOrUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="admin-hover-action-btn link"
+                        title="View Full Manuscript / Preprint ↗"
+                      >
+                        <SiteIcon name="arrow-up-right" size={13} />
+                      </a>
+                    )}
+                  </div>
+
                   <div className="admin-mod-card-top">
                     <div className="admin-mod-card-title-group">
                       <span className="admin-ref-code">{sub.submissionId}</span>
@@ -1856,7 +2166,7 @@ export function AdminModerationPage({
                     </div>
                   )}
 
-                  <div className="admin-mod-card-actions">
+                  <div className="admin-mod-card-actions" onClick={e => e.stopPropagation()}>
                     <button
                       type="button"
                       className="admin-btn admin-btn-secondary"
@@ -1987,28 +2297,126 @@ export function AdminModerationPage({
             </div>
           )}
 
-          {/* Manuscript Detail & Action Modal */}
+          {/* Manuscript Detail & Action Drawer */}
           {selectedManuscript && (
-            <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-ms-title">
-              <div className="admin-modal-card">
-                <div className="admin-modal-header">
-                  <div>
-                    <span className="admin-ref-code">{selectedManuscript.submissionId}</span>
-                    <h2 id="modal-ms-title" style={{ margin: '0.35rem 0' }}>{selectedManuscript.title}</h2>
-                    <span className={`admin-status-badge ${selectedManuscript.status}`}>
-                      Status: {selectedManuscript.status.replace(/_/g, ' ')}
-                    </span>
+            <div
+              className="admin-drawer-backdrop admin-modal-backdrop"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="modal-ms-title"
+              onClick={() => { setSelectedManuscript(null); setManuscriptActionDialog(null) }}
+            >
+              <div
+                className="admin-inspection-drawer admin-modal-card"
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Drawer Header */}
+                <div className="admin-drawer-header">
+                  <div className="admin-drawer-header-top">
+                    <div>
+                      <div className="admin-drawer-badge-row">
+                        <span className="admin-ref-code">{selectedManuscript.submissionId}</span>
+                        <span className="admin-type-pill report">Peer Review</span>
+                        <span className={`admin-status-badge ${selectedManuscript.status}`}>
+                          {selectedManuscript.status.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <h2 id="modal-ms-title" className="admin-drawer-title">{selectedManuscript.title}</h2>
+                    </div>
+                    <button
+                      type="button"
+                      className="admin-drawer-close-btn"
+                      onClick={() => { setSelectedManuscript(null); setManuscriptActionDialog(null) }}
+                      title="Close manuscript drawer (Esc)"
+                    >
+                      <SiteIcon name="close" size={15} />
+                      <span>Close</span>
+                      <kbd>Esc</kbd>
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    className="admin-btn admin-btn-secondary"
-                    onClick={() => { setSelectedManuscript(null); setManuscriptActionDialog(null) }}
-                  >
-                    ✕ Close
-                  </button>
                 </div>
 
-                <div className="admin-modal-body">
+                {/* Sticky Action Strip */}
+                <div className="admin-drawer-sticky-strip">
+                  <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 650, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <SiteIcon name="award" size={15} />
+                    <span>KhelChronicle Peer-Review Desk</span>
+                  </div>
+
+                  <div className="admin-drawer-quick-actions">
+                    {(selectedManuscript.status === 'pending_review' || selectedManuscript.status === 'under_review') && (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-secondary"
+                        disabled={busyId === selectedManuscript.id}
+                        onClick={() => void handleStartChronicleReview(selectedManuscript)}
+                      >
+                        <SiteIcon name="activity" size={14} />
+                        {selectedManuscript.status === 'under_review' ? 'Screening in Progress' : 'Start Screening'}
+                      </button>
+                    )}
+
+                    {selectedManuscript.status !== 'approved' && selectedManuscript.status !== 'published' && (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-approve"
+                        onClick={() => {
+                          setManuscriptActionDialog('approve')
+                          setManuscriptActionNotes('')
+                          setError('')
+                        }}
+                      >
+                        <SiteIcon name="badge-check" size={14} /> Approve Manuscript
+                      </button>
+                    )}
+
+                    {selectedManuscript.status === 'approved' && (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-publish"
+                        disabled={busyId === selectedManuscript.id}
+                        onClick={() => {
+                          setManuscriptActionDialog('publish')
+                          setManuscriptTargetSlug('')
+                          setManuscriptTargetPaperId('')
+                          setError('')
+                        }}
+                      >
+                        <SiteIcon name="arrow-up-right" size={14} /> Publish to Archive
+                      </button>
+                    )}
+
+                    {selectedManuscript.status !== 'published' && selectedManuscript.status !== 'rejected' && (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-warning"
+                        onClick={() => {
+                          setManuscriptActionDialog('corrections')
+                          setManuscriptActionMessage('')
+                          setError('')
+                        }}
+                      >
+                        <SiteIcon name="alert-circle" size={14} /> Request Revisions
+                      </button>
+                    )}
+
+                    {selectedManuscript.status !== 'published' && selectedManuscript.status !== 'rejected' && (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-reject"
+                        onClick={() => {
+                          setManuscriptActionDialog('reject')
+                          setManuscriptActionMessage('')
+                          setError('')
+                        }}
+                      >
+                        <SiteIcon name="close" size={14} /> Reject
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="admin-drawer-body admin-modal-body">
                   <div className="admin-detail-grid">
                     <div className="admin-detail-item">
                       <span className="admin-detail-label">Primary Author</span>
