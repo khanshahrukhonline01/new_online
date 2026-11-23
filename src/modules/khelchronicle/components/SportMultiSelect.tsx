@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { SiteIcon } from '../../../shared/components/SiteIcon'
 import {
   SPORTS_GAME_OPTIONS,
@@ -21,13 +21,20 @@ export function SportMultiSelect({
 }: SportMultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [activeIndex, setActiveIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const lastMousePosRef = useRef<{ x: number; y: number } | null>(null)
 
   const filteredOptions = filterSportGameOptions(searchQuery)
+  const safeActiveIndex =
+    filteredOptions.length > 0 ? Math.min(Math.max(activeIndex, 0), filteredOptions.length - 1) : -1
 
   useEffect(() => {
     if (!isOpen) return
+    setActiveIndex(0)
     searchInputRef.current?.focus()
 
     const handleOutside = (event: MouseEvent) => {
@@ -39,6 +46,7 @@ export function SportMultiSelect({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsOpen(false)
+        triggerRef.current?.focus()
       }
     }
 
@@ -50,12 +58,48 @@ export function SportMultiSelect({
     }
   }, [isOpen])
 
+  useEffect(() => {
+    if (!isOpen || safeActiveIndex < 0) return
+    optionRefs.current[safeActiveIndex]?.scrollIntoView({ block: 'nearest' })
+  }, [isOpen, safeActiveIndex])
+
   const resolveChipLabel = (sportId: string): string => {
     if (sportId === 'other') {
       return customSport.trim() ? `Other: ${customSport.trim()}` : 'Other / Traditional Game'
     }
     return SPORTS_GAME_OPTIONS.find(opt => opt.id === sportId)?.name || sportId
   }
+
+  const handleSearchKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      if (filteredOptions.length > 0) {
+        setActiveIndex(prev => (prev + 1) % filteredOptions.length)
+      }
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      if (filteredOptions.length > 0) {
+        setActiveIndex(prev => (prev - 1 + filteredOptions.length) % filteredOptions.length)
+      }
+    } else if (event.key === 'Enter') {
+      event.preventDefault()
+      if (safeActiveIndex >= 0 && filteredOptions[safeActiveIndex]) {
+        onChange(toggleSportSelection(selectedIds, filteredOptions[safeActiveIndex].id))
+      } else if (filteredOptions.length === 0) {
+        if (!selectedIds.includes('other')) {
+          onChange([...selectedIds, 'other'])
+        }
+        setSearchQuery('')
+        setIsOpen(false)
+        triggerRef.current?.focus()
+      }
+    }
+  }
+
+  const activeOptionId =
+    isOpen && safeActiveIndex >= 0 && filteredOptions[safeActiveIndex]
+      ? `${id}-option-${filteredOptions[safeActiveIndex].id}`
+      : undefined
 
   return (
     <div className="kc-multiselect" ref={containerRef}>
@@ -81,6 +125,7 @@ export function SportMultiSelect({
       )}
 
       <button
+        ref={triggerRef}
         id={id}
         type="button"
         className={`kc-multiselect-trigger ${isOpen ? 'is-open' : ''}`}
@@ -118,9 +163,14 @@ export function SportMultiSelect({
               type="search"
               className="kc-multiselect-search"
               aria-label="Search sports and games"
+              aria-activedescendant={activeOptionId}
               placeholder="Search Cricket, Football, Kabaddi, Pickleball..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => {
+                setSearchQuery(e.target.value)
+                setActiveIndex(0)
+              }}
+              onKeyDown={handleSearchKeyDown}
             />
           </div>
 
@@ -142,21 +192,40 @@ export function SportMultiSelect({
                     }
                     setSearchQuery('')
                     setIsOpen(false)
+                    triggerRef.current?.focus()
                   }}
                 >
                   + Select Other / Traditional Game
                 </button>
               </div>
             ) : (
-              filteredOptions.map(opt => {
+              filteredOptions.map((opt, idx) => {
                 const isSelected = selectedIds.includes(opt.id)
+                const isHighlighted = idx === safeActiveIndex
                 return (
                   <button
                     key={opt.id}
+                    id={`${id}-option-${opt.id}`}
+                    ref={el => {
+                      optionRefs.current[idx] = el
+                    }}
                     type="button"
                     role="option"
                     aria-selected={isSelected}
-                    className={`kc-multiselect-option ${isSelected ? 'is-selected' : ''}`}
+                    className={`kc-multiselect-option ${isSelected ? 'is-selected' : ''} ${isHighlighted ? 'is-highlighted' : ''}`}
+                    onMouseMove={e => {
+                      if (
+                        lastMousePosRef.current &&
+                        lastMousePosRef.current.x === e.clientX &&
+                        lastMousePosRef.current.y === e.clientY
+                      ) {
+                        return
+                      }
+                      lastMousePosRef.current = { x: e.clientX, y: e.clientY }
+                      if (activeIndex !== idx) {
+                        setActiveIndex(idx)
+                      }
+                    }}
                     onClick={() => onChange(toggleSportSelection(selectedIds, opt.id))}
                   >
                     <span className="kc-multiselect-check" aria-hidden="true">

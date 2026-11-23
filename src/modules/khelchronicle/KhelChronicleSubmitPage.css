@@ -1225,7 +1225,8 @@ html.dark .kc-multiselect-popover {
   transition: background 0.12s ease;
 }
 
-.kc-multiselect-option:hover {
+.kc-multiselect-option:hover,
+.kc-multiselect-option.is-highlighted {
   background: var(--surface-soft, #f1f5f9);
 }
 
