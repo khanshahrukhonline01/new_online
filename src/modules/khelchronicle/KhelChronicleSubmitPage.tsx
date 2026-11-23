@@ -6,27 +6,19 @@ import {
   submitChronicleManuscript,
 } from '../../integrations/supabase/chronicle-client'
 import {
-  ATHLETE_COHORT_TIERS,
-  TESTING_ENVIRONMENTS,
   buildSubmissionAbstract,
-  buildSubmissionKeywords,
   deserializeDraft,
   formatConsolidatedCoAuthors,
   formatProvisionalCitations,
   isValidHttpsUrl,
   isValidOrcid,
   normalizeOrcid,
-  resolveCohortLabel,
-  resolveEnvironmentLabel,
-  resolveSportLabel,
-  resolveSportLabels,
   serializeDraft,
   validateAllSubmissionSteps,
   validateSubmissionStep,
   type CoAuthor,
   type ManuscriptLicenseType,
 } from './submitManuscriptUtils'
-import { SportMultiSelect } from './components/SportMultiSelect'
 import './khelchronicle.css'
 import './KhelChronicleSubmitPage.css'
 
@@ -58,7 +50,7 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
   const [submissionNotice, setSubmissionNotice] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
-  const [activeCitationTab, setActiveCitationTab] = useState<'apa' | 'vancouver' | 'bibtex' | 'ris'>('apa')
+  const [activeCitationTab, setActiveCitationTab] = useState<'apa' | 'vancouver' | 'bibtex'>('apa')
   const [copiedCitation, setCopiedCitation] = useState(false)
   const [categories, setCategories] = useState<ResearchCategory[]>(RESEARCH_CATEGORIES)
 
@@ -68,9 +60,6 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
   const [articleType, setArticleType] = useState('preprint')
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('sports-biomechanics')
-  const [sports, setSports] = useState<string[]>([])
-  const [customSport, setCustomSport] = useState('')
-  const [athleteCohortTier, setAthleteCohortTier] = useState('state-academy')
   const [keywords, setKeywords] = useState('')
 
   // Authors state
@@ -81,27 +70,21 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
   const [coAuthorsText, setCoAuthorsText] = useState('')
   const [coAuthorsList, setCoAuthorsList] = useState<CoAuthor[]>([])
 
-  // Abstract, Testing Context & Coaching cues
+  // Abstract & Coaching cues
   const [abstract, setAbstract] = useState('')
-  const [testingEnvironment, setTestingEnvironment] = useState('field-turf')
-  const [testingApparatus, setTestingApparatus] = useState('')
   const [coachingCue1, setCoachingCue1] = useState('')
   const [coachingCue2, setCoachingCue2] = useState('')
   const [coachingCue3, setCoachingCue3] = useState('')
 
-  // Files, Preregistration & Data
+  // Files & Data
   const [fullTextOrUrl, setFullTextOrUrl] = useState('')
   const [supplementaryUrl, setSupplementaryUrl] = useState('')
-  const [preregistrationUrl, setPreregistrationUrl] = useState('')
   const [dataAvailability, setDataAvailability] = useState('open_access')
 
-  // Ethics, Funding, COI & Clean-Sport Declarations
+  // Ethics & Declarations
   const [ethicsClearanceNumber, setEthicsClearanceNumber] = useState('')
-  const [fundingStatement, setFundingStatement] = useState('')
-  const [conflictsDisclosure, setConflictsDisclosure] = useState('')
   const [ethicsDeclaration, setEthicsDeclaration] = useState(false)
   const [minorConsentDeclaration, setMinorConsentDeclaration] = useState(false)
-  const [cleanSportDeclaration, setCleanSportDeclaration] = useState(false)
   const [licenseDeclaration, setLicenseDeclaration] = useState(false)
   const [licenseType, setLicenseType] = useState<ManuscriptLicenseType>('cc-by-nc-nd-4.0')
 
@@ -109,8 +92,6 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
 
   const validationState = {
     title,
-    sports,
-    customSport,
     keywords,
     primaryAuthorName,
     primaryAuthorEmail,
@@ -120,13 +101,9 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     abstract,
     fullTextOrUrl,
     supplementaryUrl,
-    preregistrationUrl,
     ethicsClearanceNumber,
-    fundingStatement,
-    conflictsDisclosure,
     ethicsDeclaration,
     minorConsentDeclaration,
-    cleanSportDeclaration,
     licenseDeclaration,
   }
 
@@ -151,9 +128,6 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
 
     if (restored.title) setTitle(restored.title)
     if (restored.category) setCategory(restored.category)
-    if (Array.isArray(restored.sports) && restored.sports.length > 0) setSports(restored.sports)
-    if (restored.customSport !== undefined) setCustomSport(restored.customSport)
-    if (restored.athleteCohortTier) setAthleteCohortTier(restored.athleteCohortTier)
     if (restored.articleType) setArticleType(restored.articleType)
     if (restored.keywords !== undefined) setKeywords(restored.keywords)
     if (restored.primaryAuthorName) setPrimaryAuthorName(restored.primaryAuthorName)
@@ -163,18 +137,13 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     if (restored.coAuthorsText) setCoAuthorsText(restored.coAuthorsText)
     if (restored.coAuthorsList && restored.coAuthorsList.length > 0) setCoAuthorsList(restored.coAuthorsList)
     if (restored.abstract) setAbstract(restored.abstract)
-    if (restored.testingEnvironment) setTestingEnvironment(restored.testingEnvironment)
-    if (restored.testingApparatus !== undefined) setTestingApparatus(restored.testingApparatus)
     if (restored.coachingCue1) setCoachingCue1(restored.coachingCue1)
     if (restored.coachingCue2) setCoachingCue2(restored.coachingCue2)
     if (restored.coachingCue3) setCoachingCue3(restored.coachingCue3)
     if (restored.fullTextOrUrl) setFullTextOrUrl(restored.fullTextOrUrl)
     if (restored.supplementaryUrl) setSupplementaryUrl(restored.supplementaryUrl)
-    if (restored.preregistrationUrl !== undefined) setPreregistrationUrl(restored.preregistrationUrl)
     if (restored.dataAvailability) setDataAvailability(restored.dataAvailability)
     if (restored.ethicsClearanceNumber) setEthicsClearanceNumber(restored.ethicsClearanceNumber)
-    if (restored.fundingStatement !== undefined) setFundingStatement(restored.fundingStatement)
-    if (restored.conflictsDisclosure !== undefined) setConflictsDisclosure(restored.conflictsDisclosure)
     if (restored.licenseType) setLicenseType(restored.licenseType)
     if (restored.currentStep) setCurrentStep(restored.currentStep)
     setDraftSavedAt(
@@ -187,17 +156,11 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     if (typeof window === 'undefined') return
     const hasMeaningfulContent = Boolean(
       title ||
-        sports.length > 0 ||
-        customSport ||
         keywords ||
         primaryAuthorName ||
         primaryAuthorEmail ||
         abstract ||
-        testingApparatus ||
         fullTextOrUrl ||
-        preregistrationUrl ||
-        fundingStatement ||
-        conflictsDisclosure ||
         coAuthorsList.length > 0,
     )
     if (!hasMeaningfulContent) return
@@ -210,9 +173,6 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
           articleType,
           title,
           category,
-          sports,
-          customSport,
-          athleteCohortTier,
           keywords,
           primaryAuthorName,
           primaryAuthorEmail,
@@ -221,18 +181,13 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
           coAuthorsText,
           coAuthorsList,
           abstract,
-          testingEnvironment,
-          testingApparatus,
           coachingCue1,
           coachingCue2,
           coachingCue3,
           fullTextOrUrl,
           supplementaryUrl,
-          preregistrationUrl,
           dataAvailability,
           ethicsClearanceNumber,
-          fundingStatement,
-          conflictsDisclosure,
           licenseType,
           updatedAt,
         })
@@ -249,9 +204,6 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     articleType,
     title,
     category,
-    sports,
-    customSport,
-    athleteCohortTier,
     keywords,
     primaryAuthorName,
     primaryAuthorEmail,
@@ -260,18 +212,13 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     coAuthorsText,
     coAuthorsList,
     abstract,
-    testingEnvironment,
-    testingApparatus,
     coachingCue1,
     coachingCue2,
     coachingCue3,
     fullTextOrUrl,
     supplementaryUrl,
-    preregistrationUrl,
     dataAvailability,
     ethicsClearanceNumber,
-    fundingStatement,
-    conflictsDisclosure,
     licenseType,
   ])
 
@@ -281,9 +228,6 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     }
     setTitle('')
     setCategory('sports-biomechanics')
-    setSports([])
-    setCustomSport('')
-    setAthleteCohortTier('state-academy')
     setArticleType('preprint')
     setKeywords('')
     setPrimaryAuthorName('')
@@ -293,21 +237,15 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     setCoAuthorsText('')
     setCoAuthorsList([])
     setAbstract('')
-    setTestingEnvironment('field-turf')
-    setTestingApparatus('')
     setCoachingCue1('')
     setCoachingCue2('')
     setCoachingCue3('')
     setFullTextOrUrl('')
     setSupplementaryUrl('')
-    setPreregistrationUrl('')
     setDataAvailability('open_access')
     setEthicsClearanceNumber('')
-    setFundingStatement('')
-    setConflictsDisclosure('')
     setEthicsDeclaration(false)
     setMinorConsentDeclaration(false)
-    setCleanSportDeclaration(false)
     setLicenseDeclaration(false)
     setLicenseType('cc-by-nc-nd-4.0')
     setDraftSavedAt(null)
@@ -455,28 +393,18 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
 
   const displayTitle = title.trim() || 'Biomechanical and Physiological Analysis in Indian Athletics'
   const displayCategory = categories.find(c => c.slug === category)?.name || 'Sports Science'
-  const resolvedSportLabels = resolveSportLabels(sports, customSport)
-  const resolvedSportLabel = resolveSportLabel(sports, customSport)
-  const resolvedCohortLabel = resolveCohortLabel(athleteCohortTier)
-  const resolvedEnvironmentLabel = resolveEnvironmentLabel(testingEnvironment)
-  const mergedKeywords = buildSubmissionKeywords(keywords, resolvedSportLabels, resolvedCohortLabel)
   const normalizedPrimaryOrcid = normalizeOrcid(orcid)
   const consolidatedCoAuthorsPreview = formatConsolidatedCoAuthors(coAuthorsText, coAuthorsList)
 
-  const {
-    apa: apaCitation,
-    vancouver: vancouverCitation,
-    bibtex: bibtexCitation,
-    ris: risCitation,
-  } = formatProvisionalCitations({
-    primaryAuthorName,
-    coAuthorsText,
-    coAuthorsList,
-    title,
-    category,
-    keywords: mergedKeywords,
-    submissionId,
-  })
+  const { apa: apaCitation, vancouver: vancouverCitation, bibtex: bibtexCitation } =
+    formatProvisionalCitations({
+      primaryAuthorName,
+      coAuthorsText,
+      coAuthorsList,
+      title,
+      category,
+      submissionId,
+    })
 
   const copyCitationToClipboard = (text: string) => {
     if (navigator.clipboard) {
@@ -485,23 +413,6 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
       setTimeout(() => setCopiedCitation(false), 2000)
     }
   }
-
-  const downloadCitationFile = (content: string, filename: string, mimeType: string) => {
-    if (typeof window === 'undefined') return
-    const blob = new Blob([content], { type: mimeType })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
-  const citationFileStem = (submissionId || 'KhelChronicle-Provisional')
-    .replace(/[^a-zA-Z0-9_-]+/g, '-')
-    .replace(/^-|-$/g, '')
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -519,20 +430,11 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
     }
 
     const consolidatedCoAuthors = formatConsolidatedCoAuthors(coAuthorsText, coAuthorsList)
-    const submissionAbstract = buildSubmissionAbstract(
-      abstract,
-      [coachingCue1, coachingCue2, coachingCue3],
-      {
-        sportLabel: resolvedSportLabel,
-        cohortLabel: resolvedCohortLabel,
-        testingEnvironmentLabel: resolvedEnvironmentLabel,
-        testingApparatus,
-        preregistrationUrl: preregistrationUrl.trim(),
-        fundingStatement,
-        conflictsDisclosure,
-        cleanSportAttested: cleanSportDeclaration,
-      },
-    )
+    const submissionAbstract = buildSubmissionAbstract(abstract, [
+      coachingCue1,
+      coachingCue2,
+      coachingCue3,
+    ])
 
     setIsSubmitting(true)
 
@@ -547,7 +449,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
         co_authors: consolidatedCoAuthors || undefined,
         article_type: articleType,
         abstract_text: submissionAbstract,
-        keywords: mergedKeywords || keywords,
+        keywords,
         full_text_or_url: fullTextOrUrl,
         supplementary_url: supplementaryUrl || undefined,
         data_availability: dataAvailability,
@@ -588,8 +490,6 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
   const hasValidManuscriptUrl = isValidHttpsUrl(trimmedManuscriptUrl)
   const trimmedSupplementaryUrl = supplementaryUrl.trim()
   const hasValidSupplementaryUrl = !trimmedSupplementaryUrl || isValidHttpsUrl(trimmedSupplementaryUrl)
-  const trimmedPreregistrationUrl = preregistrationUrl.trim()
-  const hasValidPreregistrationUrl = !trimmedPreregistrationUrl || isValidHttpsUrl(trimmedPreregistrationUrl)
 
   return (
     <div className="kc-root kc-submit-container">
@@ -689,43 +589,21 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
               <span className="kc-success-citation-label">
                 Provisional Citation Format (Cite While Pending)
               </span>
-              <div className="kc-citation-actions-row">
-                <button
-                  type="button"
-                  className="kc-template-btn"
-                  onClick={() =>
-                    copyCitationToClipboard(
-                      activeCitationTab === 'apa'
-                        ? apaCitation
-                        : activeCitationTab === 'vancouver'
-                          ? vancouverCitation
-                          : activeCitationTab === 'bibtex'
-                            ? bibtexCitation
-                            : risCitation,
-                    )
-                  }
-                >
-                  {copiedCitation ? 'Copied to Clipboard!' : 'Copy Citation'}
-                </button>
-                <button
-                  type="button"
-                  className="kc-template-btn"
-                  onClick={() =>
-                    downloadCitationFile(bibtexCitation, `${citationFileStem}.bib`, 'application/x-bibtex')
-                  }
-                >
-                  Download .BIB
-                </button>
-                <button
-                  type="button"
-                  className="kc-template-btn"
-                  onClick={() =>
-                    downloadCitationFile(risCitation, `${citationFileStem}.ris`, 'application/x-research-info-systems')
-                  }
-                >
-                  Download .RIS
-                </button>
-              </div>
+              <button
+                type="button"
+                className="kc-template-btn"
+                onClick={() =>
+                  copyCitationToClipboard(
+                    activeCitationTab === 'apa'
+                      ? apaCitation
+                      : activeCitationTab === 'vancouver'
+                        ? vancouverCitation
+                        : bibtexCitation,
+                  )
+                }
+              >
+                {copiedCitation ? 'Copied to Clipboard!' : 'Copy Citation'}
+              </button>
             </div>
             <div className="kc-citation-box">
               <div className="kc-citation-tabs">
@@ -750,22 +628,9 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                 >
                   BibTeX
                 </button>
-                <button
-                  type="button"
-                  className={`kc-citation-tab-btn ${activeCitationTab === 'ris' ? 'is-active' : ''}`}
-                  onClick={() => setActiveCitationTab('ris')}
-                >
-                  RIS
-                </button>
               </div>
-              <div style={{ whiteSpace: activeCitationTab === 'bibtex' || activeCitationTab === 'ris' ? 'pre-wrap' : 'normal' }}>
-                {activeCitationTab === 'apa'
-                  ? apaCitation
-                  : activeCitationTab === 'vancouver'
-                    ? vancouverCitation
-                    : activeCitationTab === 'bibtex'
-                      ? bibtexCitation
-                      : risCitation}
+              <div style={{ whiteSpace: activeCitationTab === 'bibtex' ? 'pre-wrap' : 'normal' }}>
+                {activeCitationTab === 'apa' ? apaCitation : activeCitationTab === 'vancouver' ? vancouverCitation : bibtexCitation}
               </div>
             </div>
           </div>
@@ -876,79 +741,28 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                   />
                 </div>
 
-                <div className="kc-grid-2col kc-field-group">
-                  <div>
-                    <label htmlFor="research-category" className="kc-field-label">
-                      Primary Research Discipline *
-                    </label>
-                    <select
-                      id="research-category"
-                      className="kc-select"
-                      value={category}
-                      onChange={e => setCategory(e.target.value)}
-                    >
-                      {categories.map(c => (
-                        <option key={c.id} value={c.slug}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label htmlFor="athlete-cohort-tier" className="kc-field-label">
-                      Athlete Cohort Tier *
-                    </label>
-                    <select
-                      id="athlete-cohort-tier"
-                      className="kc-select"
-                      value={athleteCohortTier}
-                      onChange={e => setAthleteCohortTier(e.target.value)}
-                    >
-                      {ATHLETE_COHORT_TIERS.map(tier => (
-                        <option key={tier.id} value={tier.id}>
-                          {tier.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
                 <div className="kc-field-group">
-                  <label htmlFor="sport-multiselect-trigger" className="kc-field-label">
-                    <span>Sports &amp; Games Categories *</span>
-                    <span className="kc-field-hint">Search &amp; select one or more sports</span>
+                  <label htmlFor="research-category" className="kc-field-label">
+                    Primary Research Discipline *
                   </label>
-                  <SportMultiSelect
-                    id="sport-multiselect-trigger"
-                    selectedIds={sports}
-                    customSport={customSport}
-                    onChange={setSports}
-                  />
+                  <select
+                    id="research-category"
+                    className="kc-select"
+                    value={category}
+                    onChange={e => setCategory(e.target.value)}
+                  >
+                    {categories.map(c => (
+                      <option key={c.id} value={c.slug}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-
-                {sports.includes('other') && (
-                  <div className="kc-field-group">
-                    <label htmlFor="custom-sport-name" className="kc-field-label">
-                      Specify Sport or Traditional Game *
-                    </label>
-                    <input
-                      id="custom-sport-name"
-                      type="text"
-                      required
-                      maxLength={80}
-                      className="kc-input-text"
-                      placeholder="e.g. Kalaripayattu, Sepak Takraw, Silambam, Lagori"
-                      value={customSport}
-                      onChange={e => setCustomSport(e.target.value)}
-                    />
-                  </div>
-                )}
 
                 <div className="kc-field-group">
                   <label htmlFor="keywords-input" className="kc-field-label">
                     <span>Keywords (comma-separated) *</span>
-                    <span className="kc-field-hint">Sport &amp; Cohort Tier tags are indexed automatically</span>
+                    <span className="kc-field-hint">e.g. Sport, Apparatus, Biomarker, Target Population</span>
                   </label>
                   <input
                     id="keywords-input"
@@ -1177,50 +991,6 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                   />
                 </div>
 
-                {/* Testing Context & Apparatus */}
-                <div className="kc-context-card">
-                  <div className="kc-context-card-title">
-                    <SiteIcon name="chart" size={16} />
-                    <span>Testing Context &amp; Apparatus</span>
-                  </div>
-                  <p className="kc-context-card-desc">
-                    Document the sports testing surface, sensors, or match-analysis setting so peers can evaluate ecological validity.
-                  </p>
-                  <div className="kc-grid-2col">
-                    <div>
-                      <label htmlFor="testing-environment" className="kc-field-label">
-                        Testing Environment *
-                      </label>
-                      <select
-                        id="testing-environment"
-                        className="kc-select"
-                        value={testingEnvironment}
-                        onChange={e => setTestingEnvironment(e.target.value)}
-                      >
-                        {TESTING_ENVIRONMENTS.map(env => (
-                          <option key={env.id} value={env.id}>
-                            {env.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="testing-apparatus" className="kc-field-label">
-                        Apparatus, Sensors &amp; Sample Specs (Optional)
-                      </label>
-                      <input
-                        id="testing-apparatus"
-                        type="text"
-                        maxLength={180}
-                        className="kc-input-text"
-                        placeholder="e.g. n=42 bowlers, 240 Hz Vicon + dual Kistler force plates"
-                        value={testingApparatus}
-                        onChange={e => setTestingApparatus(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
                 {/* Field Implications for Coaches */}
                 <div className="kc-coaching-cues-card">
                   <div className="kc-coaching-cues-title">
@@ -1357,25 +1127,6 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     </select>
                   </div>
                 </div>
-
-                <div className="kc-field-group" style={{ marginTop: '18px' }}>
-                  <label htmlFor="preregistration-url" className="kc-field-label">
-                    <span>Study Preregistration URL (OSF / CTRI / ClinicalTrials) (Optional)</span>
-                    {trimmedPreregistrationUrl && (
-                      <span className={`kc-url-status ${hasValidPreregistrationUrl ? 'is-valid' : 'is-invalid'}`}>
-                        {hasValidPreregistrationUrl ? 'Valid HTTPS' : 'HTTPS required'}
-                      </span>
-                    )}
-                  </label>
-                  <input
-                    id="preregistration-url"
-                    type="url"
-                    className="kc-input-text"
-                    placeholder="https://osf.io/registries/... or https://ctri.nic.in/..."
-                    value={preregistrationUrl}
-                    onChange={e => setPreregistrationUrl(e.target.value)}
-                  />
-                </div>
               </div>
 
               {/* STEP 5: Ethics, Declarations & Live Preview */}
@@ -1403,55 +1154,6 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                   />
                 </div>
 
-                {/* Funding & Conflicts of Interest Disclosures */}
-                <div className="kc-disclosure-grid kc-grid-2col kc-field-group">
-                  <div>
-                    <div className="kc-field-label">
-                      <label htmlFor="funding-statement">Funding Statement *</label>
-                      <button
-                        type="button"
-                        className="kc-quickfill-btn"
-                        onClick={() => setFundingStatement('No external funding received.')}
-                      >
-                        No external funding
-                      </button>
-                    </div>
-                    <input
-                      id="funding-statement"
-                      type="text"
-                      required
-                      maxLength={220}
-                      className="kc-input-text"
-                      placeholder="e.g. SAI Target Olympic Podium Scheme Grant #2026 or No external funding received"
-                      value={fundingStatement}
-                      onChange={e => setFundingStatement(e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <div className="kc-field-label">
-                      <label htmlFor="conflicts-disclosure">Conflicts of Interest *</label>
-                      <button
-                        type="button"
-                        className="kc-quickfill-btn"
-                        onClick={() => setConflictsDisclosure('None declared.')}
-                      >
-                        None declared
-                      </button>
-                    </div>
-                    <input
-                      id="conflicts-disclosure"
-                      type="text"
-                      required
-                      maxLength={220}
-                      className="kc-input-text"
-                      placeholder="e.g. Consultant to Assam Athletics Federation or None declared"
-                      value={conflictsDisclosure}
-                      onChange={e => setConflictsDisclosure(e.target.value)}
-                    />
-                  </div>
-                </div>
-
                 {/* Mandatory Checkboxes */}
                 <div style={{ marginBottom: '20px' }}>
                   <label className="kc-checkbox-card">
@@ -1477,19 +1179,6 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     />
                     <div>
                       <strong>Youth &amp; Minor Athletes Protection *</strong>: I confirm either that no participants under 18 are included, or that informed written parental/guardian consent is documented for every minor participant, in accordance with applicable Indian law.
-                    </div>
-                  </label>
-
-                  <label className="kc-checkbox-card">
-                    <input
-                      type="checkbox"
-                      required
-                      checked={cleanSportDeclaration}
-                      onChange={e => setCleanSportDeclaration(e.target.checked)}
-                      className="kc-checkbox-input"
-                    />
-                    <div>
-                      <strong>NADA / WADA Clean-Sport &amp; Non-Clinical Attestation *</strong>: I confirm that reported protocols comply with WADA / NADA prohibited-substance rules, make no unverified medical claims, and de-identify individual biological passport or testing records.
                     </div>
                   </label>
 
@@ -1555,22 +1244,9 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     <span className="kc-badge-archive" style={{ padding: '2px 8px', fontSize: '11px' }}>
                       {displayCategory}
                     </span>
-                    {resolvedSportLabels.length > 0 ? (
-                      resolvedSportLabels.map(sportLabel => (
-                        <span key={sportLabel} className="kc-preview-sport-pill">
-                          {sportLabel}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="kc-preview-sport-pill">Multi-Sport / Pending Selection</span>
-                    )}
-                    <span className="kc-preview-cohort-pill">{resolvedCohortLabel}</span>
                     <span className="kc-badge-open-access" style={{ padding: '2px 8px', fontSize: '11px' }}>
                       {ARTICLE_TYPES.find(t => t.id === articleType)?.name || 'Preprint'}
                     </span>
-                    {trimmedPreregistrationUrl && hasValidPreregistrationUrl && (
-                      <span className="kc-preview-prereg-pill">PREREGISTERED</span>
-                    )}
                     <span className="kc-preview-license-tag">{licenseType.toUpperCase()}</span>
                   </div>
 
@@ -1592,23 +1268,6 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     )}
                   </div>
 
-                  <div className="kc-preview-meta-summary">
-                    <div>
-                      <strong>Testing Context: </strong>
-                      <span>
-                        {resolvedEnvironmentLabel}
-                        {testingApparatus.trim() ? ` · ${testingApparatus.trim()}` : ''}
-                      </span>
-                    </div>
-                    <div>
-                      <strong>Disclosures: </strong>
-                      <span>
-                        Funding: {fundingStatement.trim() || 'Pending'} · COI: {conflictsDisclosure.trim() || 'Pending'}
-                        {cleanSportDeclaration ? ' · NADA/WADA Clean-Sport Attested' : ''}
-                      </span>
-                    </div>
-                  </div>
-
                   {(coachingCue1 || coachingCue2 || coachingCue3) && (
                     <div className="kc-preview-cues-box">
                       <strong>Key Field Implications: </strong>
@@ -1620,29 +1279,9 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     </div>
                   )}
 
-                  <div className="kc-preview-citation-label">PROVISIONAL APA CITATION &amp; EXPORT:</div>
+                  <div className="kc-preview-citation-label">PROVISIONAL APA CITATION:</div>
                   <div className="kc-citation-box" style={{ fontSize: '11.5px' }}>
                     {apaCitation}
-                  </div>
-                  <div className="kc-citation-actions-row">
-                    <button
-                      type="button"
-                      className="kc-template-btn"
-                      onClick={() =>
-                        downloadCitationFile(bibtexCitation, `${citationFileStem}.bib`, 'application/x-bibtex')
-                      }
-                    >
-                      Download .BIB
-                    </button>
-                    <button
-                      type="button"
-                      className="kc-template-btn"
-                      onClick={() =>
-                        downloadCitationFile(risCitation, `${citationFileStem}.ris`, 'application/x-research-info-systems')
-                      }
-                    >
-                      Download .RIS
-                    </button>
                   </div>
                 </div>
               </div>

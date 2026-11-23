@@ -1,125 +1,66 @@
-# KhelGrid Global Footer — V2 Product and Engineering Specification
+# KhelGrid Footer — V1.1 Product and Engineering Specification
 
-**Document version:** V2 (Authoritative)  
-**Applies to:** KhelGrid Platform frontend foundation  
-**Implementation references:** [src/App.tsx](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/src/App.tsx) (`site-footer`), [src/styles.css](file:///c:/Users/7khan/OneDrive/Desktop/Live%20score/src/styles.css)  
-**Purpose:** Define the single authoritative layout, content structure, navigation columns, interactive pre-footer widgets, verified social community channels, IPR notices, and legal compliance rows for the global footer across all screen sizes.
+**Implementation:** `src/App.tsx`, `src/styles.css`  
+**Reference:** User-provided screenshot of the live KhelGrid homepage, captured 25 October 2026.  
+**Scope:** Global site footer on desktop, tablet, mobile, and narrow phones.
 
----
+## Design direction
 
-## 1. Design Intent & Foundation
+Follow the live site's richer footer hierarchy rather than a minimal footer: brand and Go Pro area, multiple navigation columns, quick-access catalogue chips, careful-use guidance, and a separate legal/status row. Preserve KhelGrid's light background, navy text, green accents, rounded controls, and restrained borders.
 
-The KhelGrid footer is a comprehensive sports discovery and trust foundation. Rather than a bare copyright bar, it serves as a persistent platform anchor that connects grassroots athletes, parents, venue managers, coaches, and sports organizations to verified pathways.
+## Content and structure
 
-### Visual Identity
-- **Surface:** Cool near-white `#F6F8FB` to `#FFFFFF` background with crisp `#E2E8F0` top separation.
-- **Typography:** Deep navy headings (`#10233F`), charcoal link text (`#334155`), and muted captions (`#64748B`).
-- **Accents:** Emerald green (`#059669` / `#10B981`) badges and proactive intake callouts.
-- **Responsiveness:** Fluid grid scaling from 5 columns on wide desktop (`> 1100 px`), 3 columns on tablet, 2 columns on mobile, down to stacked single-column on narrow devices (`<= 380 px`).
+1. **Brand column:** KhelGrid logo, positioning statement, current-grid region line, and Go Pro action (₹499/month).
+2. **Explore:** All sports, Trials & opportunities, Sports venues, Search catalogue, Sports calendar.
+3. **Play & train:** Find a game, Book venues, Coaches, Academies, Sports CV Wizard labelled Coming soon.
+4. **Learn:** Sports guides, Sports & learning hub, KhelChronicle, Live scores.
+5. **Grow with KhelGrid:** List your venue, Submit a trial, Contact KhelGrid, About KhelGrid, and careful-use guidance.
+6. **Product showcase and IPR:** Six compact product tiles (Sports CV, Talent Scanner, Find Trials, AI Sports Guide, Book Venues, Play & Match), followed by an IPR/AI/copyright notice and the published IPR contact address. Do not claim exclusive ownership of autonomous AI output or provide legal guarantees.
+7. **Sports network index:** A compact set of working route links for sports, opportunities, venues, calendar, games and search.
+8. **Quick access chips:** Sports trials, Sports venues, Find a game, Sports calendar, Live scores, Search KhelGrid.
+9. **Careful-use note:** Listings and availability depend on source-published information; users should confirm with organisers.
+10. **Legal/status row:** Preserve the existing development/live-feed/account-services disclaimer, plus IPR, AI use, copyright notice, and © KhelGrid labels.
 
----
+## Route and truthfulness rules
 
-## 2. Structural Anatomy & Zones
+- The product showcase follows the live homepage hierarchy, but items without confirmed working routes are informational, non-clickable tiles. This avoids dead links while preserving the product names shown on the live reference.
+- The IPR/AI text is a general site notice, not legal advice. Do not state that all AI output is protected or that scraping is prohibited in all circumstances; refer legal enquiries to `ipr@khelgrid.com`.
 
-The complete footer renders in 7 sequential vertical tiers:
+- Before merge, confirm each internal destination remains a real route. If a route is unavailable, render it as non-clickable “Coming soon” text rather than introducing a dead link.
+- Organizer submission/contact links use `khelgrid@gmail.com` with descriptive subjects.
+- Go Pro pricing is displayed as ₹499/month based on current KhelGrid product copy; verify the destination and offer before release.
+- Do not invent social URLs, app-store URLs, inventory totals, ratings, venue counts, or legal-page URLs.
+- IPR, AI-use, and copyright labels remain plain text until their dedicated reviewed pages/routes exist.
+- Preserve the existing disclaimer until live feeds and account services are implemented and tested. Do not imply all listings are independently verified.
 
-```
-+---------------------------------------------------------------------------------------------------+
-| TIER 1: PRE-FOOTER INTERACTIVE DISCOVERY                                                          |
-|   • Frequently Asked Questions (FAQ Accordion)                                                    |
-|   • GameSportPlayAcrossIndia (Regional sports guide matrix)                                       |
-|   • TopSportsComplexes (National multi-sport venue index)                                         |
-+---------------------------------------------------------------------------------------------------+
-| TIER 2: PRIMARY COLUMNS & DIRECTORY (5 Columns)                                                   |
-|   [Brand Column]     | [Explore]        | [Play & Train]   | [Learn]        | [Grow with KhelGrid] |
-|   • Logo & Tagline   | • All sports     | • Find a game    | • Sports guides| • Fast Partner Setup |
-|   • 50+ Cities Note  | • Trials & Opps  | • Book venues    | • Learning hub | • Partner Platform   |
-|   • Go Pro ₹499/mo   | • Venues         | • Turf Calendar  | • Chronicle    | • Host Tournament    |
-|                      | • Sports cities  | • Parent Passbook| • Live scores  | • List your venue    |
-|                      | • Search catalog | • Coaches & Acad |                | • Submit a trial     |
-|                      | • Calendar       | • Hubs & Ops     |                | • Join as Coach      |
-|                      |                  |                  |                | • Submit Paper       |
-|                      |                  |                  |                | • Contact & About    |
-+---------------------------------------------------------------------------------------------------+
-| TIER 3: QUICK-ACCESS CHIPS                                                                        |
-|   • Sports trials • Sports venues • Find a game • Sports calendar • Live scores • Search KhelGrid |
-+---------------------------------------------------------------------------------------------------+
-| TIER 4: PRODUCTS SHOWCASE GRID                                                                    |
-|   • Sports CV • Talent Scanner • Find Trials • AI Sports Guide • Book Venues • Play & Match       |
-+---------------------------------------------------------------------------------------------------+
-| TIER 5: IPR, AI DISCLOSURE & INTELLECTUAL PROPERTY NOTICE                                         |
-|   • Content copyright notice • AI informational use disclosure • Direct IPR inbox (ipr@khelgrid)  |
-+---------------------------------------------------------------------------------------------------+
-| TIER 6: SPORTS NETWORK INDEX & CARE NOTE                                                          |
-|   • Internal navigation index • Independent source verification caveat                            |
-+---------------------------------------------------------------------------------------------------+
-| TIER 7: VERIFIED SOCIAL COMMUNITY & LEGAL/REGULATORY ROW                                          |
-|   • Social Links: Reddit (r/Khelgridonline), LinkedIn, YouTube (@Khelgrid), WhatsApp, X (@Khelgrid)|
-|   • Legal Pages: Privacy, Terms, Cancellation, POSH, Editorial, Verification, Cookie Settings     |
-+---------------------------------------------------------------------------------------------------+
-```
+## Responsive layout
 
----
+| Viewport | Behavior |
+|---|---|
+| Wide desktop | Five columns: brand plus four link/support columns. Quick chips in one row of six. |
+| Tablet (≤1100 px) | Three-column link grid; brand spans the row; quick chips form two rows of three. |
+| Mobile (≤700 px) | Two-column link grid; brand spans full width; quick chips in two columns; legal row stacks. |
+| Narrow phone (≤380 px) | Single-column footer and quick chips. |
+| Mobile with bottom navigation | Bottom padding respects the fixed bottom navigation and safe-area inset. |
 
-## 3. Directory Columns Detail
+## Accessibility and behavior
 
-### 3.1 Brand Column (`.footer-about`)
-- **Brand Logo:** High-efficiency WebP logo (`/assets/kg-logo.webp`, 118x38 px) linking to `/`.
-- **Tagline:** *"India’s grid for sports trials, venues, coaching and athlete profiles."*
-- **Grid Footprint:** *"India · 50+ sports cities in the grid (16 metro hubs)"*.
-- **Monetization CTA:** `★ Go Pro · ₹499/month` leading to `/pricing`.
+- Semantic `footer`, labelled `nav` groups, descriptive headings, and standard anchors.
+- Visible keyboard focus; no hover-only functionality.
+- Decorative chip symbols are hidden from assistive technology; text provides accessible names.
+- Footer stays in normal document flow and must not overlap sidebar, top navigation, sports strip, or mobile bottom navigation.
+- Internal navigation must preserve browser modifier-click behavior via the shared handler.
 
-### 3.2 Explore Column (`aria-label="Explore KhelGrid"`)
-- All sports (`/sports`), Trials & opportunities (`/opportunities`), Sports venues (`/venues`), Sports cities (`/cities`), Search catalogue (`/search`), Sports calendar (`/calendar`).
+## Verification checklist
 
-### 3.3 Play & Train Column (`aria-label="Play and train"`)
-- Find a game (`/play`), Book venues (`/venues`), Turf Calendar (`/turf-calendar`, Free), Parent Passbook (`/parent-portal`, Free), Coaches (`/coaches`), Academies (`/academies`), Academy Hub (`/academy-hub`, Free), Coach Hub (`/coach-dashboard`, Free), Tournament Ops (`/tournament-ops`, Free), Sports CV Wizard (Coming soon indicator).
+- [ ] Previously existing footer content and disclaimer remain present.
+- [ ] Brand, four link groups, six quick-access chips, careful-use note, and legal/status row render.
+- [ ] All internal routes confirmed; unavailable routes are not linked.
+- [ ] Contact links use the correct email and subject.
+- [ ] Go Pro destination and price are current.
+- [ ] Desktop, 1100 px, 700 px, 380 px, and 320 px checked.
+- [ ] Footer does not overlap sidebar or fixed mobile navigation.
+- [ ] Keyboard focus and contrast checked.
+- [ ] Typecheck, lint, tests, build, and Vercel preview pass before merge.
 
-### 3.4 Learn Column (`aria-label="Learn and discover"`)
-- Sports guides (`/guides`), Sports & learning hub (`/learning`), KhelChronicle Open Research (`/khelchronicle`), Live scores status (`/live`).
-
-### 3.5 Grow with KhelGrid Column (`aria-label="About and support"`)
-- **⚡ Fast Partner Setup (30s):** Direct onboarding route `/partner-signup`.
-- **Partner with KhelGrid:** Enterprise partner hub `/partner`.
-- **Host a Tournament:** Self-service operations `/tournament-ops`.
-- **Intake Actions:**
-  - `List your venue`: Direct intake modal `/submit-listing?type=venue`.
-  - `Submit a trial`: Direct opportunity intake modal `/submit-listing?type=opportunity`.
-  - `Join as Coach`: Coach registration `/submit-listing?type=coach`.
-  - `Submit Paper`: Research paper submission `/khelchronicle/submit`.
-- **Contact & Corporate:** Official email (`mailto:khelgrid@gmail.com`), About KhelGrid (`/about`).
-- **Trust Guidance:** *"Check each organiser’s source, dates, eligibility, fees and venue before applying or travelling."*
-
----
-
-## 4. Verified Social Channels & Regulatory Governance
-
-### 4.1 Official Social Community Profiles
-Only officially confirmed KhelGrid brand channels are linked (with `rel="noopener noreferrer"` and `target="_blank"`):
-1. **Reddit:** `https://www.reddit.com/r/Khelgridonline/` (`r/`)
-2. **LinkedIn:** `https://in.linkedin.com/in/khelgrid-dotcom-647b74418` (`in`)
-3. **YouTube:** `https://www.youtube.com/@Khelgrid` (`▶`)
-4. **WhatsApp Channel:** `https://whatsapp.com/channel/0029VbDHTXY4dTnFvo8rKF1A` (`WA`)
-5. **X (Twitter):** `https://x.com/Khelgrid` (`𝕏`)
-
-### 4.2 Legal, Ethics & Regulatory Compliance Row
-- Standard development/live-feed disclaimers.
-- Comprehensive compliance links:
-  - Privacy Policy (`/privacy`)
-  - Terms of Service (`/terms`)
-  - Cancellation & Refund Policy (`/cancellation-policy`)
-  - Prevention of Sexual Harassment (POSH) Policy (`/posh-policy`)
-  - Editorial Standards & Fact Checking (`/editorial-policy`)
-  - Athlete Verification Standards (`/verification-policy`)
-  - Dynamic Cookie & Consent Preferences modal toggle.
-
----
-
-## 5. Verification Checklist
-
-- [ ] All 5 main directory columns render correctly on desktop (`1200 px`).
-- [ ] Responsive folding verified at `1100 px` (3-column), `700 px` (2-column), and `<= 380 px` (1-column).
-- [ ] All intake CTAs (`/submit-listing?type=...` and `/khelchronicle/submit`) open working interactive flows.
-- [ ] Social profile links open the verified official channels in secure tabs.
-- [ ] Safe-area padding is preserved on mobile devices with bottom navigation docks.
-- [ ] Keyboard focus and screen reader labels verified across all links and buttons.
+**Maintenance rule:** Update this document and the footer together when routes, pricing, legal pages, or the live-site hierarchy changes.

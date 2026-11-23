@@ -15,6 +15,7 @@ import {
   type KhelNotification,
   type NotificationCategory,
 } from './notificationsData'
+import { readPersistedIdSet, writePersistedIdSet } from './sidebarUtils'
 import './NotificationCenterDrawer.css'
 
 export interface NotificationCenterDrawerProps {
@@ -23,6 +24,9 @@ export interface NotificationCenterDrawerProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
   onUnreadCountChange?: (count: number) => void
 }
+
+const READ_STORAGE_KEY = 'khelgrid_read_notifs'
+const DISMISSED_STORAGE_KEY = 'khelgrid_dismissed_notifs'
 
 export default function NotificationCenterDrawer({
   isOpen,
@@ -33,32 +37,18 @@ export default function NotificationCenterDrawer({
   const [activeTab, setActiveTab] = useState<NotificationCategory>('all')
   const [notifications, setNotifications] = useState<KhelNotification[]>(BASELINE_NOTIFICATIONS)
   const [readIds, setReadIds] = useState<Set<string>>(() => {
-    const set = new Set<string>()
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = window.sessionStorage.getItem('khelgrid_read_notifs')
-        if (stored) JSON.parse(stored).forEach((id: string) => set.add(id))
-      } catch {
-        // Fallback
-      }
-    }
-    return set
+    if (typeof window === 'undefined') return new Set<string>()
+    return readPersistedIdSet(READ_STORAGE_KEY, window.localStorage, window.sessionStorage)
   })
 
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => {
-    const set = new Set<string>()
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = window.sessionStorage.getItem('khelgrid_dismissed_notifs')
-        if (stored) JSON.parse(stored).forEach((id: string) => set.add(id))
-      } catch {
-        // Fallback
-      }
-    }
-    return set
+    if (typeof window === 'undefined') return new Set<string>()
+    return readPersistedIdSet(DISMISSED_STORAGE_KEY, window.localStorage, window.sessionStorage)
   })
 
+  const panelRef = useRef<HTMLElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
 
   // Dynamically assemble notifications from connected Supabase catalogues and live sports
   useEffect(() => {
@@ -207,15 +197,51 @@ export default function NotificationCenterDrawer({
     }
   }, [])
 
-  // Auto-focus on open and listen to Esc
+  // Lock body scroll, capture/restore focus, trap Tab key, and listen for Escape while open
   useEffect(() => {
-    if (isOpen) {
-      closeButtonRef.current?.focus()
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') onClose()
+    if (!isOpen || typeof document === 'undefined') return
+
+    previousFocusRef.current = document.activeElement as HTMLElement | null
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    closeButtonRef.current?.focus()
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+        return
       }
-      window.addEventListener('keydown', handleKeyDown)
-      return () => window.removeEventListener('keydown', handleKeyDown)
+
+      if (e.key !== 'Tab') return
+      const panel = panelRef.current
+      if (!panel) return
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'a[href]:not([aria-disabled="true"]), button:not(:disabled), [tabindex="0"]',
+        ),
+      ).filter(el => el.offsetParent !== null)
+      if (!focusable.length) {
+        e.preventDefault()
+        return
+      }
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && (document.activeElement === last || !panel.contains(document.activeElement))) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = prevOverflow
+      previousFocusRef.current?.focus?.()
     }
   }, [isOpen, onClose])
 
@@ -256,11 +282,7 @@ export default function NotificationCenterDrawer({
       const next = new Set(prev)
       visibleNotifications.forEach(n => next.add(n.id))
       if (typeof window !== 'undefined') {
-        try {
-          window.sessionStorage.setItem('khelgrid_read_notifs', JSON.stringify(Array.from(next)))
-        } catch {
-          // Ignore
-        }
+        writePersistedIdSet(READ_STORAGE_KEY, next, window.localStorage)
       }
       return next
     })
@@ -273,11 +295,7 @@ export default function NotificationCenterDrawer({
       const next = new Set(prev)
       next.add(id)
       if (typeof window !== 'undefined') {
-        try {
-          window.sessionStorage.setItem('khelgrid_dismissed_notifs', JSON.stringify(Array.from(next)))
-        } catch {
-          // Ignore
-        }
+        writePersistedIdSet(DISMISSED_STORAGE_KEY, next, window.localStorage)
       }
       return next
     })
@@ -287,16 +305,11 @@ export default function NotificationCenterDrawer({
     if (notif.id.startsWith('un-')) {
       void markNotificationAsRead(notif.id.replace('un-', '')).catch(() => undefined)
     }
-    // Mark as read
     setReadIds(prev => {
       const next = new Set(prev)
       next.add(notif.id)
       if (typeof window !== 'undefined') {
-        try {
-          window.sessionStorage.setItem('khelgrid_read_notifs', JSON.stringify(Array.from(next)))
-        } catch {
-          // Ignore
-        }
+        writePersistedIdSet(READ_STORAGE_KEY, next, window.localStorage)
       }
       return next
     })
@@ -313,6 +326,7 @@ export default function NotificationCenterDrawer({
     <div className="notif-drawer-overlay" role="presentation">
       <div className="notif-drawer-backdrop" onClick={onClose} aria-hidden="true" />
       <aside
+        ref={panelRef}
         className="notif-drawer-panel"
         role="dialog"
         aria-modal="true"
@@ -322,7 +336,7 @@ export default function NotificationCenterDrawer({
         <header className="notif-drawer-header">
           <div className="notif-header-title-row">
             <div className="notif-header-title-wrap">
-              <SiteIcon name="bell" size={20} style={{ color: 'var(--color-primary, #059669)' }} />
+              <SiteIcon name="bell" size={20} className="notif-header-icon" />
               <h2 className="notif-drawer-title">Notifications</h2>
               {unreadCount > 0 && (
                 <span className="notif-unread-badge" aria-label={`${unreadCount} unread notifications`}>
@@ -457,7 +471,7 @@ export default function NotificationCenterDrawer({
                       type="button"
                       className="notif-item-dismiss"
                       onClick={e => handleDismiss(e, notif.id)}
-                      aria-label="Dismiss notification"
+                      aria-label={`Dismiss ${notif.title}`}
                       title="Dismiss notification"
                     >
                       <SiteIcon name="close" size={14} />

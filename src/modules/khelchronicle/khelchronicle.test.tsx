@@ -206,11 +206,8 @@ describe('KhelChronicle Open Sports Research Repository', () => {
     expect(ris).toContain('JO  - KhelChronicle Open Sports Research Archive')
     expect(ris).toContain('ER  - ')
 
-    // 2. Paper reader page contains print-only academic header, explicit preprint banner, and direct .BIB/.RIS buttons
+    // 2. Paper reader page contains print-only academic header & table-chart view switcher
     const pageHtml = renderToStaticMarkup(<KhelChroniclePaperPage slug="KG-2026-001" initialPaper={paper} />)
-    expect(pageHtml).toContain('Preprint — Not Yet Peer-Reviewed')
-    expect(pageHtml).toContain('Download .BIB')
-    expect(pageHtml).toContain('Download .RIS')
     expect(pageHtml).toContain('kc-print-only-header')
     expect(pageHtml).toContain('KHELCHRONICLE OPEN SPORTS RESEARCH ARCHIVE')
     expect(pageHtml).toContain('Preprint Accession:')

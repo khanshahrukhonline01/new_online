@@ -1460,119 +1460,19 @@ lazy-loaded KhelGrid sports hero carousel */
 }/* Shared placeholder page for platform features awaiting real data or services */
 .foundation-v1 .coming-soon-page{max-width:820px;min-height:48vh;padding:clamp(36px,7vw,84px) 0}.foundation-v1 .coming-soon-mark{display:grid;place-items:center;width:58px;height:58px;margin:0 0 24px;border:1px solid rgba(7,150,79,.25);border-radius:16px;background:rgba(7,150,79,.08);color:var(--accent)}.foundation-v1 .coming-soon-status{display:inline-flex;align-items:center;gap:9px;margin:4px 0 18px;padding:9px 13px;border:1px solid var(--line);border-radius:999px;color:var(--text-soft);font-size:12px;font-weight:750}.foundation-v1 .coming-soon-note{max-width:620px;padding:15px 17px;border-left:3px solid var(--accent);background:var(--surface-soft);color:var(--muted-strong);font-size:13px;line-height:1.7}.foundation-v1 .coming-soon-path{margin-top:28px;color:var(--muted);font-size:11px}.foundation-v1 .coming-soon-path code{padding:3px 6px;border-radius:5px;background:var(--surface-raised)}/* Route-specific information pages: usable layout for real content and honest placeholders */
 .foundation-v1 .feature-info-page{ max-width: 900px; }.foundation-v1 .feature-info-page > h1{ max-width: 760px; }.foundation-v1 .feature-info-sections{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:22px 0; }.foundation-v1 .feature-info-section{ min-width:0; padding:20px; border:1px solid var(--line); border-radius:14px; background:var(--surface, #fff); }.foundation-v1 .feature-info-section h2{ margin:0 0 9px; font-size:15px; line-height:1.35; color:var(--text); }.foundation-v1 .feature-info-section p{ margin:0; color:var(--text-soft); font-size:13px; line-height:1.75; }.foundation-v1 .feature-info-page .coming-soon-status{ margin-top:12px; }.foundation-v1 .feature-info-page .hero-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:22px; }.foundation-v1 .feature-info-page .secondary-link{ display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:9px 14px; border:1px solid var(--line); border-radius:999px; color:var(--text); text-decoration:none; font-size:12px; font-weight:700; }.foundation-v1 .feature-info-page .secondary-link:hover{ border-color:var(--accent); color:var(--accent); }.foundation-v1 .feature-info-page a:focus-visible{ outline:3px solid var(--accent); outline-offset:3px; }@media(max-width:650px){.foundation-v1 .feature-info-sections{grid-template-columns:1fr}.foundation-v1 .feature-info-section{padding:16px}
-}/* Universal desktop shell: sidebar participates in layout; no fixed offsets or hover overlays. */
-@media (min-width: 701px){.foundation-v1.app-shell{
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-  }.foundation-v1 .site-header{
-    position: sticky;
-    top: 0;
-    z-index: 50;
-    flex: 0 0 68px;
-    min-height: 68px;
-  }.foundation-v1 .app-workspace{
-    display: flex;
-    flex: 1 0 auto;
-    flex-direction: row;
-    align-items: stretch;
-    min-width: 0;
-    min-height: calc(100vh - 68px);
-    margin: 0 !important;
-  }.foundation-v1 .app-workspace > .page-shell{
-    flex: 1 1 0%;
-    width: 0;
-    min-width: 0;
-    max-width: none;
-    margin: 0;
-  }.foundation-v1 .site-footer{
-    width: 100%;
-    margin: 0 !important;
-  }
-}/* No hover/focus expansion: the menu button alone controls collapsed state. */
-@media (min-width: 701px){
-}@media (max-width: 700px){.foundation-v1 .app-workspace{ margin: 0 !important; }.foundation-v1 .site-footer{ margin: 0 !important; }
-
-}/* Desktop sidebar v2: reference-style light icon rail with an explicit scroll region. */
-@media (min-width: 701px){
-}/* Reference-matched universal feature rail: circular icon buttons for every feature. */
-@media (min-width: 701px){
-}/* Desktop sidebar rendering fix:
-   keep the collapsed icon rail in the document flow (never overlay the page on hover),
-and reserve the full-height navigation area for the feature links. */
-@media (min-width: 1001px){
-}/* KhelGrid ChatGPT-style navigation shell.
-   Expanded = quiet,
-full navigation panel; collapsed = slim persistent rail.
-   The rail never expands on hover and never overlays the page. */
-@media (min-width: 1001px){.foundation-v1 .app-shell{
-    display: flex;
-    align-items: stretch;
-    min-height: 100vh;
-  }
-}/* ChatGPT-style persistent desktop rail: fixed to the viewport,
-independent of footer height. */
-@media (min-width: 701px){.foundation-v1.app-shell{
-    --kg-sidebar-width: 68px;
-  }.foundation-v1 .app-workspace{
-    display: block !important;
-    min-height: calc(100vh - 68px);
-    margin: 0 0 0 var(--kg-sidebar-width) !important;
-    transition: margin-left .18s ease;
-  }.foundation-v1 .app-workspace > .page-shell{
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-    margin: 0 !important;
-  }.foundation-v1 .site-footer{
-    width: calc(100% - var(--kg-sidebar-width));
-    margin: 0 0 0 var(--kg-sidebar-width) !important;
-    transition: width .18s ease, margin-left .18s ease;
-  }
-}/* Sidebar v2 — desktop compact navigation rail.
-   The header is sticky at the top; the sidebar rail is 64px fixed on the left.
-   Content and footer offset cleanly by 64px without duplicate padding gaps. */
+}/* Shell header sizing; Sidebar.css owns desktop/tablet/mobile workspace & footer offsets. */
 @media (min-width: 701px) {
   .foundation-v1.app-shell {
-    --kg-header-height: 68px;
-    --kg-sidebar-rail-width: 64px;
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
   }
   .foundation-v1 .site-header {
     position: sticky;
     top: 0;
     z-index: 50;
-  }
-  .foundation-v1 .app-workspace {
-    display: block !important;
-    width: auto !important;
-    min-width: 0 !important;
-    margin: 0 0 0 var(--kg-sidebar-rail-width) !important;
-    padding-left: 0 !important;
-  }
-  .foundation-v1 .app-workspace > .page-shell {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 20px !important;
-    box-sizing: border-box !important;
-  }
-  .foundation-v1 .site-footer {
-    width: auto !important;
-    margin: 0 0 0 var(--kg-sidebar-rail-width) !important;
-  }
-}
-
-@media (max-width: 700px) {
-  .foundation-v1 .app-workspace {
-    width: 100% !important;
-    margin: 0 !important;
-    padding-left: 0 !important;
-  }
-  .foundation-v1 .site-footer {
-    width: 100% !important;
-    margin: 0 !important;
+    flex: 0 0 68px;
+    min-height: 68px;
   }
 }
 

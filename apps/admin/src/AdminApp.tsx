@@ -9,7 +9,6 @@ import { AdminHeader, type AdminThemeMode } from './components/AdminHeader'
 import { AdminCommandPalette, type CommandPaletteAction } from './components/AdminCommandPalette'
 import { AdminGroundOversightView } from './components/AdminGroundOversightView'
 import { AdminCampaignMarketplaceDesk } from './components/AdminCampaignMarketplaceDesk'
-import { AdminExecutivePulseRibbon } from './components/AdminExecutivePulseRibbon'
 import {
   AdminAuthGate,
   useAdminAuth,
@@ -41,7 +40,6 @@ function AuthenticatedAdminShell() {
   const [pendingManuscriptsCount, setPendingManuscriptsCount] = useState(0)
   const [toastNotification, setToastNotification] = useState<string | null>(null)
   const [dbLatencyMs, setDbLatencyMs] = useState<number | null>(null)
-  const [activeCategoryFilter, setActiveCategoryFilter] = useState('all')
 
   const [adminTheme, setAdminTheme] = useState<AdminThemeMode>(() => {
     if (typeof window !== 'undefined') {
@@ -290,25 +288,6 @@ function AuthenticatedAdminShell() {
           )}
 
           <div className="admin-shell-content">
-            <AdminExecutivePulseRibbon
-              pendingSubmissionsCount={pendingListingsCount}
-              pendingManuscriptsCount={pendingManuscriptsCount}
-              databaseId={databaseProjectRef}
-              dbLatencyMs={dbLatencyMs}
-              operatorRole={identity.role}
-              operatorEmail={identity.email}
-              activeCategoryFilter={activeCategoryFilter}
-              onSelectCategoryFilter={cat => {
-                setActiveCategoryFilter(cat)
-                if (activeWorkspace !== 'moderation_desk') {
-                  setActiveWorkspace('moderation_desk')
-                }
-                window.dispatchEvent(new CustomEvent('khelgrid-admin-filter-category', { detail: { category: cat } }))
-              }}
-              onRefresh={() => void loadCounts()}
-              onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-            />
-
             {activeWorkspace === 'command' ? (
               <AdminControlPanelPage />
             ) : activeWorkspace === 'moderation_desk' ? (

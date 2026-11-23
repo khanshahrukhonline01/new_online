@@ -515,11 +515,7 @@ export function KhelChroniclePaperPage({ slug, initialPaper, onNavigate }: KhelC
           <SiteIcon name="alert-triangle" size={18} className="kc-alert-icon" />
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-              <strong>
-                {paper.peerReviewStatus?.status === 'published_vor'
-                  ? `Preprint Archive Copy (${paper.version}) · Version of Record Published`
-                  : `Preprint — Not Yet Peer-Reviewed (${paper.version}) · KhelChronicle Open Sports Archive`}
-              </strong>
+              <strong>KhelChronicle Open Research Preprint ({paper.version}) · SportRxiv Pre-Moderated</strong>
               {paper.peerReviewStatus && (
                 <span className="kc-status-track-badge">
                   {paper.peerReviewStatus.statusLabel}
@@ -527,9 +523,7 @@ export function KhelChroniclePaperPage({ slug, initialPaper, onNavigate }: KhelC
               )}
             </div>
             <p style={{ margin: '4px 0 0' }}>
-              Notice: This manuscript is a preliminary preprint that has not yet been certified by formal peer review and
-              should not be used to guide clinical or medical practice. It has undergone initial moderation screening for
-              sports science scope, participant ethics, and author legitimacy.
+              Notice: This manuscript has not yet been certified by formal peer review and should not be used as clinical or medical guidance. It has undergone preliminary pre-moderation screening for sports science scope, participant ethics, and author legitimacy.
             </p>
           </div>
         </div>
@@ -695,26 +689,6 @@ export function KhelChroniclePaperPage({ slug, initialPaper, onNavigate }: KhelC
             >
               <SiteIcon name="bookmark" size={14} />
               <span>Cite This Preprint</span>
-            </button>
-
-            <button
-              type="button"
-              className="kc-btn-secondary"
-              onClick={handleDownloadBibtex}
-              aria-label="Download BibTeX (.bib) citation file"
-            >
-              <SiteIcon name="download" size={14} />
-              <span>Download .BIB</span>
-            </button>
-
-            <button
-              type="button"
-              className="kc-btn-secondary"
-              onClick={handleDownloadRis}
-              aria-label="Download RIS (.ris) citation file"
-            >
-              <SiteIcon name="download" size={14} />
-              <span>Download .RIS</span>
             </button>
 
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12.5px', color: '#64748b', flexWrap: 'wrap' }}>
@@ -1349,27 +1323,6 @@ export function KhelChroniclePaperPage({ slug, initialPaper, onNavigate }: KhelC
                 <SiteIcon name="bookmark" size={14} />
                 <span>Cite This Preprint</span>
               </button>
-
-              <div className="kc-rail-citation-row">
-                <button
-                  type="button"
-                  className="kc-btn-secondary"
-                  onClick={handleDownloadBibtex}
-                  aria-label="Download BibTeX citation file"
-                >
-                  <SiteIcon name="download" size={13} />
-                  <span>Download .BIB</span>
-                </button>
-                <button
-                  type="button"
-                  className="kc-btn-secondary"
-                  onClick={handleDownloadRis}
-                  aria-label="Download RIS citation file"
-                >
-                  <SiteIcon name="download" size={13} />
-                  <span>Download .RIS</span>
-                </button>
-              </div>
             </div>
 
             {/* Table of Contents Box */}

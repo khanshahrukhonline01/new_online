@@ -24,7 +24,7 @@ npm install
 npm run dev
 npm run typecheck   # 0 compile errors (tsc -b)
 npm run lint        # 0 lint errors
-npm run test        # 159 test files, 1,150+ tests passed (100% unit & integration)
+npm run test        # 71 test suites, 453 tests passed (100%)
 npm run build       # 106 URLs indexed in sitemap.xml
 ```
 
