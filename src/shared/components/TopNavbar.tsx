@@ -57,9 +57,9 @@ export default function TopNavbar({
 
   const userMenuTriggerRef = useRef<HTMLButtonElement>(null)
   const listingAction = TOP_NAV_SUBMIT_ACTIONS.find(action => action.id === 'all')
-  const trialAction = TOP_NAV_SUBMIT_ACTIONS.find(action => action.id === 'trial')
+  const paperAction = TOP_NAV_SUBMIT_ACTIONS.find(action => action.id === 'chronicle')
   const additionalSubmitActions = TOP_NAV_SUBMIT_ACTIONS.filter(
-    action => action.id !== 'all' && action.id !== 'venue' && action.id !== 'trial',
+    action => action.id !== 'all' && action.id !== 'venue' && action.id !== 'chronicle',
   )
 
   useEffect(() => {
@@ -183,16 +183,16 @@ export default function TopNavbar({
             </a>
           )}
 
-          {trialAction && (
+          {paperAction && (
             <a
-              className="header-submit-direct header-submit-trial"
-              href={trialAction.href}
-              onClick={event => onNavigate(event, trialAction.href)}
-              title={trialAction.title}
-              aria-label={t(trialAction.translationKey, "Submit a trial")}
+              className="header-submit-direct header-submit-paper header-action-chronicle"
+              href={paperAction.href}
+              onClick={event => onNavigate(event, paperAction.href)}
+              title={paperAction.title}
+              aria-label={t(paperAction.translationKey, paperAction.defaultLabel)}
             >
-              <SiteIcon name={trialAction.icon} size={15} />
-              <span>{t(trialAction.translationKey, 'Submit a trial')}</span>
+              <SiteIcon name={paperAction.icon} size={15} />
+              <span>{t(paperAction.translationKey, paperAction.defaultLabel)}</span>
             </a>
           )}
 

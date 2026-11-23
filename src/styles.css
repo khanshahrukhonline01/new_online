@@ -1834,7 +1834,8 @@ independent of footer height. */
   transform: translateY(-1px);
 }
 
-.foundation-v1 .site-header .header-submit-trial:hover {
+.foundation-v1 .site-header .header-submit-trial:hover,
+.foundation-v1 .site-header .header-submit-paper:hover {
   border-color: var(--accent, #07964f);
   color: var(--accent, #07964f);
   background: var(--accent-soft, #e8f7ef);
