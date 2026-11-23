@@ -216,8 +216,9 @@ body:has(.khelgrid-admin-app) { min-width: 320px; min-height: 100vh; background:
 .admin-lte-main-wrapper {
   display: flex;
   flex: 1;
-  min-height: calc(100vh - 60px);
+  min-height: 100vh;
   position: relative;
+  align-items: stretch;
 }
 
 .admin-lte-sidebar {
@@ -230,6 +231,11 @@ body:has(.khelgrid-admin-app) { min-width: 320px; min-height: 100vh; background:
   transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
   z-index: 50;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 .admin-lte-sidebar.is-collapsed {
@@ -242,6 +248,7 @@ body:has(.khelgrid-admin-app) { min-width: 320px; min-height: 100vh; background:
   justify-content: space-between;
   padding: 1rem 1.1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
 }
 
 .admin-sidebar-logo-badge {
@@ -306,6 +313,7 @@ body:has(.khelgrid-admin-app) { min-width: 320px; min-height: 100vh; background:
   padding: 0.85rem 1.1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
 }
 
 .admin-sidebar-user-avatar {
@@ -366,6 +374,7 @@ body:has(.khelgrid-admin-app) { min-width: 320px; min-height: 100vh; background:
 /* Sidebar Search */
 .admin-sidebar-search {
   padding: 0.75rem 1.1rem 0.25rem;
+  flex-shrink: 0;
 }
 
 .admin-sidebar-search-inner {
@@ -410,9 +419,39 @@ body:has(.khelgrid-admin-app) { min-width: 320px; min-height: 100vh; background:
 
 /* Sidebar Nav Tree */
 .admin-sidebar-nav-tree {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 0.5rem 0.65rem;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+.admin-sidebar-nav-tree::-webkit-scrollbar {
+  width: 5px;
+}
+
+.admin-sidebar-nav-tree::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-sidebar-nav-tree::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+}
+
+.admin-sidebar-nav-tree::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+.admin-lte-sidebar.is-collapsed .admin-sidebar-nav-tree {
+  scrollbar-width: none;
+}
+
+.admin-lte-sidebar.is-collapsed .admin-sidebar-nav-tree::-webkit-scrollbar {
+  display: none;
 }
 
 .admin-sidebar-section-header {
@@ -512,6 +551,7 @@ body:has(.khelgrid-admin-app) { min-width: 320px; min-height: 100vh; background:
   padding: 0.75rem 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
 }
 
 .admin-sidebar-db-telemetry {
@@ -536,6 +576,7 @@ body:has(.khelgrid-admin-app) { min-width: 320px; min-height: 100vh; background:
 
 .admin-lte-content-canvas {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
@@ -2142,10 +2183,12 @@ html.cosmic .admin-topbar-signout-btn {
     display: none;
   }
   .admin-lte-sidebar {
-    position: absolute;
+    position: fixed;
     top: 0;
     bottom: 0;
     left: 0;
+    height: 100vh;
+    max-height: 100vh;
     box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
   }
   .admin-lte-sidebar.is-collapsed {

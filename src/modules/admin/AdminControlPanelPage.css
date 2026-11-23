@@ -24,7 +24,7 @@
 .admin-control-live{display:inline-flex;align-items:center;gap:.4rem;color:#047857;font-size:.76rem;font-weight:750}
 .admin-control-live i,.admin-control-secure-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.13)}
 .admin-control-shell{display:grid;grid-template-columns:220px minmax(0,1fr);gap:1.5rem;align-items:start}
-.admin-control-sidebar{position:sticky;top:1rem;min-height:calc(100vh - 130px);padding:1rem .75rem;border:1px solid var(--border-subtle,#dbe3ec);border-radius:16px;background:var(--surface,#fff);display:flex;flex-direction:column;gap:.35rem}
+.admin-control-sidebar{position:sticky;top:1rem;max-height:calc(100vh - 2rem);overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.3) transparent;min-height:calc(100vh - 130px);padding:1rem .75rem;border:1px solid var(--border-subtle,#dbe3ec);border-radius:16px;background:var(--surface,#fff);display:flex;flex-direction:column;gap:.35rem}
 .admin-control-nav-label{padding:.8rem .65rem .35rem;color:var(--text-secondary,#64748b);font-size:.65rem;font-weight:850;letter-spacing:.13em}
 .admin-control-sidebar>a{display:flex;align-items:center;gap:.7rem;padding:.7rem .75rem;border-radius:9px;text-decoration:none;color:var(--text-secondary,#475569);font-size:.84rem;font-weight:650}
 .admin-control-sidebar>a:hover,.admin-control-sidebar>a.active{background:rgba(16,185,129,.1);color:#047857}
