@@ -5,7 +5,7 @@
 - **Repository:** `khelgrid-platform`
 - **Last reviewed:** 2026-11-02
 - **Scope:** Public website, catalogues, athlete tools, editorial/research pages, interface states and KhelGrid-owned marketing assets
-- **Related documents:** [Frontend Architecture](architecture/FRONTEND_ARCHITECTURE.md), [SEO and Content Quality](growth/SEO_CONTENT_AND_METADATA.md), [Documentation Guide](README.md)
+- **Related documents:** [Frontend Architecture](../architecture/FRONTEND_ARCHITECTURE.md), [SEO and Content Quality](../growth/SEO_CONTENT_AND_METADATA.md), [Documentation Guide](../README.md)
 - **Change control:** Update this document when page coverage, supported sports, asset formats, licensing rules or visual direction changes.
 
 ## 1. Purpose and governing principles

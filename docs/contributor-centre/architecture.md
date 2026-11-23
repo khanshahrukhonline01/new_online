@@ -58,8 +58,8 @@ This diagram is a target integration view. It does not assert that every target 
 
 ### Navbar
 
-- `src/shared/components/TopNavbar.tsx` contains the **+ List on KhelGrid** header action.
-- PR #245 is merged into `main`; the action targets `/submit-listing`.
+- `src/shared/components/TopNavbar.tsx` contains the primary **+ List on KhelGrid** (`/submit-listing`) and **Submit Paper** (`/khelchronicle/submit`) header actions, placed beside the B2B cluster (`/organizations` and `/campaigns`).
+- Introduced by PR #245 and refined under Top Navigation V2 architecture.
 - A category dropdown and a dedicated Contributor Centre landing experience remain proposed work.
 - Preserve existing navigation registry destinations and availability semantics in `src/shared/navigation/navigationRegistry.ts`.
 

@@ -102,6 +102,19 @@ The project owner should approve sequencing and scope before expanding implement
 - [ ] Feature-specific specifications are completed before implementation begins.
 - [ ] Re-audit after scope approval and again before production release.
 
-## 9. Limitations
+## 9. App Shell & Navigation Reconciliation Audit (2026-11-23)
+
+In November 2026, an exhaustive documentation audit and codebase reconciliation was conducted across the app shell specifications to eliminate architectural drift:
+
+| Document | Pre-Audit Finding | Reconciled Status | Verification Link |
+| :--- | :--- | :--- | :--- |
+| `docs/top-navigation-v1.md` | Outdated V1 specification described wide inline search form, removed center links (`Discover`, `Learn`), legacy `+ More` popover, and email trial submissions. | **Reconciled to V2 Authoritative**: Documents 3-zone architecture, spotlight search (`Ctrl+K`), streamlined player rail, B2B workspaces (`Organizations`, `Campaigns`), and dual intake CTAs (`+ List on KhelGrid`, `Submit Paper`). | [top-navigation-v1.md](top-navigation-v1.md) |
+| `docs/sidebar-v1.md` | Omitted the canonical `Discover` module; outdated route list; lacked reconciliation with TopNavbar V2. | **Reconciled to V2 Authoritative**: Full 6-module architecture aligned with `src/shared/navigation/navigationRegistry.ts`, explicit desktop (`258px`), collapsed rail (`68px`), and mobile drawer (`min(330px, 100vw-42px)`) rules. | [sidebar-v1.md](sidebar-v1.md) |
+| `docs/footer-v1.md` | Omitted interactive pre-footer widgets (FAQ accordion, regional matrix, sports complexes), referenced email trial mailto, and prohibited social links. | **Reconciled to V2 Authoritative**: Complete 7-tier footer specification including interactive pre-footer widgets, 5 directory columns, verified official social channels (Reddit, LinkedIn, YouTube, WhatsApp, X), and compliance rows. | [footer-v1.md](footer-v1.md) |
+| `docs/contributor-centre/*` | References to single navbar button without adjacent research intake. | **Reconciled**: Updated to document dual header intake actions (`+ List on KhelGrid` and `Submit Paper`). | [contributor-centre/README.md](contributor-centre/README.md) |
+| Relative Link Integrity | Multiple broken relative links in `docs/product/` missing parent directory prefixes (`../`). | **Repaired**: All broken markdown links in `PAGE_DIRECTORY_AND_LINK_MAP.md`, `IMAGE_ASSET_REQUIREMENTS_AND_PLAN.md`, and `KHELGRID_YOUTUBE_CHANNEL_STRATEGY_V1.md` corrected. | [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) |
+| `docs/DOCUMENTATION_INDEX.md` | Omitted 8 admin control center docs, independent platform audit, workspace navigation, and app shell specs. | **Upgraded to Master Index**: Comprehensive coverage of all 274 documentation files organized into 7 distinct domains. | [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) |
+
+## 10. Limitations
 
 The public URLs supplied for the existing website were not reliably retrievable during the earlier review, so this audit treats the user's navigation list as intended scope rather than evidence of live-site behaviour. This audit verifies documentation paths and planning consistency only; it does not establish that code, production behaviour, legal compliance, accessibility, security or external provider permissions have been verified. No production changes were made.

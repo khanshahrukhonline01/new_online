@@ -54,7 +54,7 @@ For the current implementation, route resolution is in `src/shared/routing.ts` a
 | Company | About | `/about` | Footer company links | Informational page foundation. |
 | Company | Contact | `/contact` | Footer and email links | Contact route foundation; email links may be used where shown. |
 | Support | Help | `/help` | Footer/support links | Foundation; keep support directions accurate. |
-| Support | Suggest a listing | `/submit-listing` | Intended for corrections/additions to directory | Form opens an email draft to `khelgrid@gmail.com`; it does not persist a submission in the database or publish it automatically. |
+| Support | List on KhelGrid | `/submit-listing` | Direct intake for opportunities, venues, coaches, academies, events, pickup games | Database-backed intake via `submit_listing_intake()` RPC with automated rate limiting and tracking reference number. |
 | Account | Workspace | `/workspace` | Sidebar Your Space; top navigation; account menu | Role-aware landing page over the existing auth session; no new identity, role, or private-data backend is introduced. |
 | Account | Dashboard | `/dashboard` | Legacy dashboard route; Workspace shortcut | Retained for compatibility; verify protected data and role access at the destination. |
 | Account | Profile | `/profile` | `/my-profile` | Profile routes are registered; authenticated profile storage/editing is not implied. |
@@ -190,8 +190,8 @@ When adding, renaming or removing a page:
 This document covers routes registered in the current app plus policy aliases documented in the repository. It does not claim that every planned subroute in the broader catalogue is implemented. Planned future subroutes such as booking checkout/status, admin moderation, coach/academy/event detail routes, scout workspaces, content admin, and richer account flows must remain marked planned until route code, authorization, data contracts, tests and operating processes exist.
 
 **Related documents**
-- [Navigation and Route Catalogue](product/NAVIGATION_AND_ROUTE_CATALOGUE.md)
-- [Website Page Inventory](WEBSITE_PAGE_INVENTORY.md)
-- [Frontend Architecture](architecture/FRONTEND_ARCHITECTURE.md)
-- [Domain Model and Data Dictionary](DOMAIN_MODEL_AND_DATA_DICTIONARY.md)
-- [Documentation Audit and Gap Register](DOCUMENTATION_AUDIT_AND_GAP_REGISTER.md)
+- [Navigation and Route Catalogue](NAVIGATION_AND_ROUTE_CATALOGUE.md)
+- [Website Page Inventory](../WEBSITE_PAGE_INVENTORY.md)
+- [Frontend Architecture](../architecture/FRONTEND_ARCHITECTURE.md)
+- [Domain Model and Data Dictionary](../DOMAIN_MODEL_AND_DATA_DICTIONARY.md)
+- [Documentation Audit and Gap Register](../DOCUMENTATION_AUDIT_AND_GAP_REGISTER.md)
