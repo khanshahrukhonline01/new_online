@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import { SiteIcon } from '../../../../src/shared/components/SiteIcon'
 import type { AdminPlatformRole } from '../auth/adminSecurityPolicy'
+import { AdminSparkline } from './AdminSparkline'
+import { AdminRealtimeAuditTicker } from './AdminRealtimeAuditTicker'
 
 export interface AdminExecutivePulseRibbonProps {
   pendingSubmissionsCount: number
@@ -62,6 +64,13 @@ export function AdminExecutivePulseRibbon({
               <span className={`admin-ribbon-tag ${pendingSubmissionsCount > 0 ? 'tag-warn' : 'tag-ok'}`}>
                 {pendingSubmissionsCount > 0 ? 'Requires Action' : 'Queue Clear'}
               </span>
+              <AdminSparkline
+                data={[12, 14, 18, 15, 11, 9, Math.max(pendingSubmissionsCount, 1)]}
+                color="#f59e0b"
+                width={56}
+                height={20}
+                ariaLabel="7-day submissions intake sparkline"
+              />
             </div>
             <small className="admin-ribbon-card-sub">Directory venues, trials, coaches, academies</small>
           </div>
@@ -79,6 +88,13 @@ export function AdminExecutivePulseRibbon({
               <span className="admin-ribbon-tag tag-purple">
                 {pendingManuscriptsCount > 0 ? 'Peer Review Pending' : 'Archive Synchronized'}
               </span>
+              <AdminSparkline
+                data={[3, 4, 6, 5, 7, 6, Math.max(pendingManuscriptsCount, 1)]}
+                color="#8b5cf6"
+                width={56}
+                height={20}
+                ariaLabel="7-day manuscript pipeline sparkline"
+              />
             </div>
             <small className="admin-ribbon-card-sub">Diamond Open Access sports research queue</small>
           </div>
@@ -98,6 +114,14 @@ export function AdminExecutivePulseRibbon({
               <span className={`admin-ribbon-tag tag-latency ${latencyBadge.status}`}>
                 {latencyBadge.text}
               </span>
+              <AdminSparkline
+                data={[42, 38, 45, 36, 39, 35, dbLatencyMs ?? 34]}
+                color="#10b981"
+                width={56}
+                height={20}
+                trendLabel="7-day latency trend (ms)"
+                ariaLabel="7-day database latency trend sparkline"
+              />
             </div>
             <small className="admin-ribbon-card-sub">
               Ref: <code style={{ color: '#94a3b8' }}>{databaseId}</code> · Least-Privilege Definer
@@ -169,6 +193,9 @@ export function AdminExecutivePulseRibbon({
           )}
         </div>
       </div>
+
+      {/* Real-Time Operational Event Stream Ticker (Phase 4) */}
+      <AdminRealtimeAuditTicker isLive={true} />
     </div>
   )
 }

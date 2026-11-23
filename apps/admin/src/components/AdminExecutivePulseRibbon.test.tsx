@@ -23,6 +23,11 @@ describe('AdminExecutivePulseRibbon', () => {
     expect(html).toContain('hznsbxvovjxvmnchzzqt')
     expect(html).toContain('Super Administrator')
     expect(html).toContain('admin@khelgrid.com')
+    // Phase 4 Analytics & Intelligence assertions
+    expect(html).toContain('admin-sparkline-svg')
+    expect(html).toContain('7-day submissions intake sparkline')
+    expect(html).toContain('admin-realtime-ticker')
+    expect(html).toContain('REALTIME STREAM')
   })
 
   it('renders clean queue when pending submissions count is 0', () => {
