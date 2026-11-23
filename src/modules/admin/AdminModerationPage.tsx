@@ -95,6 +95,8 @@ type ActionDialogType =
   | 'unpublish'
   | null
 
+export type TableDensity = 'compact' | 'cozy' | 'expanded'
+
 const categoryFields: Record<string, Array<{ key: string; label: string; placeholder: string; required?: boolean }>> = {
   pickup_game: [
     { key: 'sport', label: 'Sport', placeholder: 'e.g. Cricket, Football, Badminton', required: true },
@@ -180,6 +182,34 @@ export function AdminModerationPage({
   const [publishStructured, setPublishStructured] = useState<Record<string, string>>({})
   const [selectedSubIds, setSelectedSubIds] = useState<Set<string>>(new Set())
   const [modalTab, setModalTab] = useState<'data' | 'preview'>('data')
+
+  // Phase 2: Table Density & Power Keyboard Navigation State
+  const [tableDensity, setTableDensity] = useState<TableDensity>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('khelgrid_admin_table_density') as TableDensity | null
+        if (saved === 'compact' || saved === 'cozy' || saved === 'expanded') return saved
+      } catch {
+        // ignore
+      }
+    }
+    return 'cozy'
+  })
+
+  const [focusedListingIndex, setFocusedListingIndex] = useState<number>(-1)
+  const [focusedChronicleIndex, setFocusedChronicleIndex] = useState<number>(-1)
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false)
+
+  const handleDensityChange = (newDensity: TableDensity) => {
+    setTableDensity(newDensity)
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('khelgrid_admin_table_density', newDensity)
+      } catch {
+        // ignore
+      }
+    }
+  }
 
   useEffect(() => {
     const handleCategoryFilterEvent = (e: Event) => {
@@ -394,25 +424,6 @@ export function AdminModerationPage({
       subscription.unsubscribe()
     }
   }, [initialQueue, loadQueue, loadChronicleQueue])
-
-  // Phase 1: Global keyboard navigation & Esc key handler for drawers and dialogs
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (actionDialog) {
-          setActionDialog(null)
-        } else if (selectedItem) {
-          setSelectedItem(null)
-        } else if (manuscriptActionDialog) {
-          setManuscriptActionDialog(null)
-        } else if (selectedManuscript) {
-          setSelectedManuscript(null)
-        }
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [actionDialog, selectedItem, manuscriptActionDialog, selectedManuscript])
 
   const handleRequestPasswordReset = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -701,6 +712,177 @@ export function AdminModerationPage({
     chroniclePage * chroniclePageSize
   )
 
+  // Phase 1 & 2: Power keyboard navigation (J/K/A/R/C/1/2/3/?) and Esc handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const isTyping =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        Boolean(target?.isContentEditable)
+
+      if (e.key === 'Escape') {
+        if (showShortcutsModal) {
+          setShowShortcutsModal(false)
+        } else if (actionDialog) {
+          setActionDialog(null)
+        } else if (selectedItem) {
+          setSelectedItem(null)
+        } else if (manuscriptActionDialog) {
+          setManuscriptActionDialog(null)
+        } else if (selectedManuscript) {
+          setSelectedManuscript(null)
+        }
+        return
+      }
+
+      if (isTyping) return
+
+      // Toggle shortcuts help with '?'
+      if (e.key === '?') {
+        e.preventDefault()
+        setShowShortcutsModal(prev => !prev)
+        return
+      }
+
+      const isListings = activeDesk === 'listings'
+      const currentItems = isListings ? paginatedItems : paginatedChronicleItems
+      const currentIndex = isListings ? focusedListingIndex : focusedChronicleIndex
+      const setIndex = isListings ? setFocusedListingIndex : setFocusedChronicleIndex
+
+      // Move down: 'j' or 'ArrowDown'
+      if (e.key === 'j' || e.key === 'J' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        if (currentItems.length === 0) return
+        const nextIndex = currentIndex < currentItems.length - 1 ? currentIndex + 1 : 0
+        setIndex(nextIndex)
+        return
+      }
+
+      // Move up: 'k' or 'ArrowUp'
+      if (e.key === 'k' || e.key === 'K' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        if (currentItems.length === 0) return
+        const prevIndex = currentIndex > 0 ? currentIndex - 1 : currentItems.length - 1
+        setIndex(prevIndex)
+        return
+      }
+
+      // Open / Inspect: 'Enter' or 'o' or 'O' or ' ' (Space)
+      if (e.key === 'Enter' || e.key === 'o' || e.key === 'O' || e.key === ' ') {
+        if (currentIndex >= 0 && currentIndex < currentItems.length) {
+          e.preventDefault()
+          if (isListings) {
+            void openDetailView(paginatedItems[currentIndex])
+          } else {
+            setSelectedManuscript(paginatedChronicleItems[currentIndex])
+            setManuscriptActionDialog(null)
+            setError('')
+          }
+        }
+        return
+      }
+
+      // Quick Approve: 'a' or 'A'
+      if (e.key === 'a' || e.key === 'A') {
+        const item = isListings
+          ? (selectedItem || (currentIndex >= 0 ? paginatedItems[currentIndex] : null))
+          : (selectedManuscript || (currentIndex >= 0 ? paginatedChronicleItems[currentIndex] : null))
+
+        if (item) {
+          e.preventDefault()
+          if (isListings) {
+            const sub = item as ModeratorQueueItem
+            setSelectedItem(sub)
+            setActionDialog('approve')
+            setActionNotes('')
+            setError('')
+          } else {
+            const ms = item as ChronicleModerationSubmission
+            setSelectedManuscript(ms)
+            setManuscriptActionDialog('approve')
+            setManuscriptActionNotes('')
+            setError('')
+          }
+        }
+        return
+      }
+
+      // Quick Reject: 'r' or 'R'
+      if (e.key === 'r' || e.key === 'R') {
+        const item = isListings
+          ? (selectedItem || (currentIndex >= 0 ? paginatedItems[currentIndex] : null))
+          : (selectedManuscript || (currentIndex >= 0 ? paginatedChronicleItems[currentIndex] : null))
+
+        if (item) {
+          e.preventDefault()
+          if (isListings) {
+            const sub = item as ModeratorQueueItem
+            setSelectedItem(sub)
+            setActionDialog('reject')
+            setActionMessage('')
+            setError('')
+          } else {
+            const ms = item as ChronicleModerationSubmission
+            setSelectedManuscript(ms)
+            setManuscriptActionDialog('reject')
+            setManuscriptActionMessage('')
+            setError('')
+          }
+        }
+        return
+      }
+
+      // Request Corrections / Revisions: 'c' or 'C'
+      if (e.key === 'c' || e.key === 'C') {
+        const item = isListings
+          ? (selectedItem || (currentIndex >= 0 ? paginatedItems[currentIndex] : null))
+          : (selectedManuscript || (currentIndex >= 0 ? paginatedChronicleItems[currentIndex] : null))
+
+        if (item) {
+          e.preventDefault()
+          if (isListings) {
+            const sub = item as ModeratorQueueItem
+            setSelectedItem(sub)
+            setActionDialog('request_corrections')
+            setActionMessage('')
+            setError('')
+          } else {
+            const ms = item as ChronicleModerationSubmission
+            setSelectedManuscript(ms)
+            setManuscriptActionDialog('corrections')
+            setManuscriptActionMessage('')
+            setError('')
+          }
+        }
+        return
+      }
+
+      // Density shortcuts: '1' for compact, '2' for cozy, '3' for expanded
+      if (e.key === '1') {
+        handleDensityChange('compact')
+      } else if (e.key === '2') {
+        handleDensityChange('cozy')
+      } else if (e.key === '3') {
+        handleDensityChange('expanded')
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [
+    actionDialog,
+    selectedItem,
+    manuscriptActionDialog,
+    selectedManuscript,
+    showShortcutsModal,
+    activeDesk,
+    paginatedItems,
+    paginatedChronicleItems,
+    focusedListingIndex,
+    focusedChronicleIndex,
+  ])
+
   return (
     <section className="admin-page-root content-page">
       <header className="admin-header">
@@ -914,6 +1096,44 @@ export function AdminModerationPage({
                 </select>
               </label>
 
+              {/* Phase 2: Table Density Switcher & Shortcuts Modal Trigger */}
+              <div className="admin-density-switcher" role="group" aria-label="Table density">
+                <button
+                  type="button"
+                  className={`admin-density-btn ${tableDensity === 'compact' ? 'active' : ''}`}
+                  onClick={() => handleDensityChange('compact')}
+                  title="Compact density (Key: 1)"
+                >
+                  Compact
+                </button>
+                <button
+                  type="button"
+                  className={`admin-density-btn ${tableDensity === 'cozy' ? 'active' : ''}`}
+                  onClick={() => handleDensityChange('cozy')}
+                  title="Cozy density (Key: 2)"
+                >
+                  Cozy
+                </button>
+                <button
+                  type="button"
+                  className={`admin-density-btn ${tableDensity === 'expanded' ? 'active' : ''}`}
+                  onClick={() => handleDensityChange('expanded')}
+                  title="Expanded density (Key: 3)"
+                >
+                  Expanded
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className="admin-btn admin-btn-secondary admin-shortcuts-trigger"
+                onClick={() => setShowShortcutsModal(true)}
+                title="View Keyboard Shortcuts (?)"
+              >
+                <span>Shortcuts</span>
+                <kbd>?</kbd>
+              </button>
+
               <button type="button" className="admin-btn admin-btn-secondary" onClick={() => void loadQueue()}>
                 Refresh Queue
               </button>
@@ -962,17 +1182,17 @@ export function AdminModerationPage({
               <p>No listings match the selected status or filters.</p>
             </div>
           ) : (
-            <div className="admin-items-list">
-              {paginatedItems.map(sub => (
+            <div className={`admin-items-list density-${tableDensity}`}>
+              {paginatedItems.map((sub, idx) => (
                 <article
                   key={sub.id}
-                  className={`admin-mod-card ${selectedItem?.id === sub.id ? 'is-active-inspected' : ''}`}
+                  className={`admin-mod-card ${selectedItem?.id === sub.id ? 'is-active-inspected' : ''} ${focusedListingIndex === idx ? 'is-keyboard-focused' : ''}`}
                   onClick={() => void openDetailView(sub)}
                   tabIndex={0}
                   onKeyDown={e => {
                     if (e.key === 'Enter') void openDetailView(sub)
                   }}
-                  title="Click to inspect in Right-Side Drawer"
+                  title="Click to inspect in Right-Side Drawer (or press Enter / O)"
                 >
                   {/* Phase 1: Floating Quick Action Hover Bar */}
                   <div className="admin-card-hover-actions" onClick={e => e.stopPropagation()}>
@@ -1974,6 +2194,44 @@ export function AdminModerationPage({
                 </select>
               </label>
 
+              {/* Phase 2: Manuscripts Density Switcher & Shortcuts Modal Trigger */}
+              <div className="admin-density-switcher" role="group" aria-label="Manuscripts view density">
+                <button
+                  type="button"
+                  className={`admin-density-btn ${tableDensity === 'compact' ? 'active' : ''}`}
+                  onClick={() => handleDensityChange('compact')}
+                  title="Compact density (Key: 1)"
+                >
+                  Compact
+                </button>
+                <button
+                  type="button"
+                  className={`admin-density-btn ${tableDensity === 'cozy' ? 'active' : ''}`}
+                  onClick={() => handleDensityChange('cozy')}
+                  title="Cozy density (Key: 2)"
+                >
+                  Cozy
+                </button>
+                <button
+                  type="button"
+                  className={`admin-density-btn ${tableDensity === 'expanded' ? 'active' : ''}`}
+                  onClick={() => handleDensityChange('expanded')}
+                  title="Expanded density (Key: 3)"
+                >
+                  Expanded
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className="admin-btn admin-btn-secondary admin-shortcuts-trigger"
+                onClick={() => setShowShortcutsModal(true)}
+                title="View Keyboard Shortcuts (?)"
+              >
+                <span>Shortcuts</span>
+                <kbd>?</kbd>
+              </button>
+
               <button type="button" className="admin-btn admin-btn-secondary" onClick={() => void loadChronicleQueue()}>
                 Refresh Manuscripts
               </button>
@@ -1986,11 +2244,11 @@ export function AdminModerationPage({
               <p>No manuscripts match the selected status or discipline filter.</p>
             </div>
           ) : (
-            <div className="admin-items-list">
-              {paginatedChronicleItems.map(sub => (
+            <div className={`admin-items-list density-${tableDensity}`}>
+              {paginatedChronicleItems.map((sub, idx) => (
                 <article
                   key={sub.id}
-                  className={`admin-mod-card chronicle ${selectedManuscript?.id === sub.id ? 'is-active-inspected' : ''}`}
+                  className={`admin-mod-card chronicle ${selectedManuscript?.id === sub.id ? 'is-active-inspected' : ''} ${focusedChronicleIndex === idx ? 'is-keyboard-focused' : ''}`}
                   onClick={() => {
                     setSelectedManuscript(sub)
                     setManuscriptActionDialog(null)
@@ -2004,7 +2262,7 @@ export function AdminModerationPage({
                       setError('')
                     }
                   }}
-                  title="Click to inspect manuscript in Right-Side Drawer"
+                  title="Click to inspect manuscript in Right-Side Drawer (or press Enter / O)"
                 >
                   {/* Phase 1: Floating Quick Action Hover Bar */}
                   <div className="admin-card-hover-actions" onClick={e => e.stopPropagation()}>
@@ -2864,6 +3122,84 @@ export function AdminModerationPage({
           </div>
         </form>
       )
+      )}
+
+      {/* Phase 2: Power Keyboard Shortcuts Cheat Sheet Dialog */}
+      {showShortcutsModal && (
+        <div className="admin-drawer-backdrop" onClick={() => setShowShortcutsModal(false)}>
+          <div
+            className="admin-shortcuts-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-shortcuts-title"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="admin-shortcuts-header">
+              <h3 id="admin-shortcuts-title">⚡ Power Keyboard Navigation</h3>
+              <button
+                type="button"
+                className="admin-drawer-close-btn"
+                onClick={() => setShowShortcutsModal(false)}
+                aria-label="Close shortcuts modal"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="admin-shortcuts-grid">
+              <div className="admin-shortcut-row">
+                <span>Navigate items in queue</span>
+                <div className="admin-keys">
+                  <kbd>J</kbd> / <kbd>K</kbd> or <kbd>↓</kbd> / <kbd>↑</kbd>
+                </div>
+              </div>
+              <div className="admin-shortcut-row">
+                <span>Open / Inspect active item in drawer</span>
+                <div className="admin-keys">
+                  <kbd>Enter</kbd> or <kbd>O</kbd> or <kbd>Space</kbd>
+                </div>
+              </div>
+              <div className="admin-shortcut-row">
+                <span>Quick Approve active item</span>
+                <div className="admin-keys">
+                  <kbd>A</kbd>
+                </div>
+              </div>
+              <div className="admin-shortcut-row">
+                <span>Quick Reject with preset templates</span>
+                <div className="admin-keys">
+                  <kbd>R</kbd>
+                </div>
+              </div>
+              <div className="admin-shortcut-row">
+                <span>Request Corrections / Revisions</span>
+                <div className="admin-keys">
+                  <kbd>C</kbd>
+                </div>
+              </div>
+              <div className="admin-shortcut-row">
+                <span>Switch table density</span>
+                <div className="admin-keys">
+                  <kbd>1</kbd> Compact &middot; <kbd>2</kbd> Cozy &middot; <kbd>3</kbd> Expanded
+                </div>
+              </div>
+              <div className="admin-shortcut-row">
+                <span>Close drawer / Dismiss dialog</span>
+                <div className="admin-keys">
+                  <kbd>Esc</kbd>
+                </div>
+              </div>
+              <div className="admin-shortcut-row">
+                <span>Toggle this shortcuts cheat sheet</span>
+                <div className="admin-keys">
+                  <kbd>?</kbd>
+                </div>
+              </div>
+            </div>
+            <p className="admin-keyboard-nav-hint" style={{ marginTop: '0.25rem', justifyContent: 'center' }}>
+              Shortcuts are safely paused while typing in search, inputs, or textareas.
+            </p>
+          </div>
+        </div>
       )}
     </section>
   )
