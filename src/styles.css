@@ -1869,6 +1869,7 @@ lazy-loaded KhelGrid sports hero carousel */
   }
 }
 
+/* Compact tablet band (701px - 760px): bottom thumb bar is NOT shown yet, so keep Submit actions visible in top bar */
 @media (max-width: 760px) {
   .foundation-v1 .site-header {
     height: 56px;
@@ -1879,13 +1880,13 @@ lazy-loaded KhelGrid sports hero carousel */
     display: flex;
     flex-wrap: nowrap;
     justify-content: space-between;
-    gap: 5px;
-    padding: 0 8px;
+    gap: 8px;
+    padding: 0 12px;
     min-width: 0;
   }
   .foundation-v1 .site-header .header-zone-left {
     flex: 0 0 auto;
-    gap: 5px;
+    gap: 6px;
   }
   .foundation-v1 .site-header .header-zone-center {
     display: none;
@@ -1893,7 +1894,8 @@ lazy-loaded KhelGrid sports hero carousel */
   .foundation-v1 .site-header .header-zone-right {
     flex: 0 1 auto;
     min-width: 0;
-    gap: 3px;
+    gap: 5px;
+    flex-wrap: nowrap;
   }
   .foundation-v1 .site-header .header-partner-nav,
   .foundation-v1 .site-header .header-divider,
@@ -1903,28 +1905,28 @@ lazy-loaded KhelGrid sports hero carousel */
     display: none;
   }
   .foundation-v1 .site-header .header-submit-direct {
-    min-width: 36px;
-    min-height: 36px;
-    height: 36px;
-    padding-inline: 9px;
+    min-width: 38px;
+    min-height: 38px;
+    height: 38px;
+    padding-inline: 10px;
     font-size: 11.5px;
   }
   .foundation-v1 .site-header .header-submit-trigger {
-    min-width: 36px;
-    min-height: 36px;
-    height: 36px;
-    padding-inline: 9px;
+    min-width: 38px;
+    min-height: 38px;
+    height: 38px;
+    padding-inline: 10px;
     font-size: 11.5px;
   }
   .foundation-v1 .site-header .header-icon-button,
   .foundation-v1 .site-header .navbar-settings-wrapper,
   .foundation-v1 .site-header .header-user-btn,
   .foundation-v1 .site-header .menu-toggle {
-    width: 36px;
-    min-width: 36px;
-    height: 36px;
-    min-height: 36px;
-    flex: 0 0 36px;
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+    flex: 0 0 38px;
   }
   .foundation-v1 .site-header .header-actions.header-submit-popover {
     right: 0;
@@ -1936,10 +1938,51 @@ lazy-loaded KhelGrid sports hero carousel */
   }
 }
 
-@media (max-width: 480px) {
+@media (prefers-reduced-motion: reduce) {
+  .foundation-v1 .site-header .header-submit-direct,
+  .foundation-v1 .site-header .header-submit-trigger,
+  .foundation-v1 .site-header .header-actions.header-submit-popover {
+    transition: none !important;
+  }
+}
+
+/* Guest account icon menu — aligned with the authenticated account control */
+.foundation-v1 .site-header .header-account-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--line, #cbd5e1);
+  border-radius: 999px;
+  background: var(--surface-soft, #f8fafc);
+  color: var(--text, #0f172a);
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+.foundation-v1 .site-header .header-account-icon-btn:hover,
+.foundation-v1 .site-header .header-account-icon-btn[aria-expanded="true"] {
+  border-color: var(--accent, #10b981);
+  background: var(--accent-soft, rgba(16, 185, 129, 0.1));
+  color: var(--accent, #047857);
+}
+.foundation-v1 .site-header .header-account-icon-btn:focus-visible {
+  outline: 2px solid var(--accent, #10b981);
+  outline-offset: 3px;
+}
+.foundation-v1 .site-header .header-guest-dropdown {
+  min-width: 240px;
+}
+
+/* Mobile (<= 700px) — aligned with bottom thumb bar breakpoint:
+ * Both List on KhelGrid and Submit Paper move to the center [+] Submit action sheet.
+ * Top bar right stays decluttered with 4 crisp buttons: Search · Notifications · Settings · Account.
+ */
+@media (max-width: 700px) {
   .foundation-v1 .site-header-inner {
-    gap: 7px 8px;
-    padding-inline: 10px;
+    gap: 8px;
+    padding: 0 10px;
   }
   .foundation-v1 .site-header .brand {
     gap: 6px;
@@ -1950,97 +1993,51 @@ lazy-loaded KhelGrid sports hero carousel */
     height: 28px;
   }
   .foundation-v1 .site-header .header-submit-direct {
-    width: 36px;
-    min-width: 36px;
-    padding: 0;
-  }
-  .foundation-v1 .site-header .header-submit-direct span,
-  .foundation-v1 .site-header .header-submit-trigger-label,
-  .foundation-v1 .site-header .header-submit-chevron {
     display: none;
   }
-  .foundation-v1 .site-header .header-submit-more-trigger {
-    width: 36px;
-    min-width: 36px;
-    padding: 0;
+  .foundation-v1 .site-header .header-zone-right {
+    gap: 5px;
+    flex-wrap: nowrap;
   }
   .foundation-v1 .site-header .header-utility-cluster {
-    gap: 0;
+    gap: 5px;
   }
   .foundation-v1 .site-header .header-icon-button,
   .foundation-v1 .site-header .navbar-settings-wrapper,
+  .foundation-v1 .site-header .navbar-settings-wrapper > button,
   .foundation-v1 .site-header .header-user-btn,
+  .foundation-v1 .site-header .header-account-icon-btn,
   .foundation-v1 .site-header .menu-toggle {
-    width: 34px;
-    min-width: 34px;
-    height: 34px;
-    min-height: 34px;
-    flex-basis: 34px;
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    min-height: 42px;
+    flex: 0 0 42px;
   }
   .foundation-v1 .site-header .header-search-kbd {
     display: none;
   }
 }
 
-@media (max-width: 360px) {
-  .foundation-v1 .site-header .header-zone-right { gap: 2px; }
-  .foundation-v1 .site-header .header-submit-direct,
-  .foundation-v1 .site-header .header-submit-more-trigger,
+@media (max-width: 399px) {
+  .foundation-v1 .site-header-inner {
+    gap: 6px;
+    padding: 0 8px;
+  }
+  .foundation-v1 .site-header .header-zone-right,
+  .foundation-v1 .site-header .header-utility-cluster {
+    gap: 4px;
+  }
   .foundation-v1 .site-header .header-icon-button,
   .foundation-v1 .site-header .navbar-settings-wrapper,
+  .foundation-v1 .site-header .navbar-settings-wrapper > button,
   .foundation-v1 .site-header .header-user-btn,
+  .foundation-v1 .site-header .header-account-icon-btn,
   .foundation-v1 .site-header .menu-toggle {
-    width: 32px;
-    min-width: 32px;
-    height: 32px;
-    min-height: 32px;
-    flex-basis: 32px;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    flex: 0 0 40px;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .foundation-v1 .site-header .header-submit-direct,
-  .foundation-v1 .site-header .header-submit-trigger,
-  .foundation-v1 .site-header .header-actions.header-submit-popover {
-    transition: none !important;
-  }
-}
-
-@media (max-width: 360px) {
-  .foundation-v1 .site-header .header-zone-right {
-    max-width: 164px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    row-gap: 3px;
-  }
-}
-
-
-/* Guest account icon menu — aligned with the authenticated account control */
-.foundation-v1 .site-header .header-account-icon-btn {
-  display:inline-grid;
-  place-items:center;
-  flex:0 0 38px;
-  width:38px;
-  height:38px;
-  padding:0;
-  border:1px solid var(--line,#cbd5e1);
-  border-radius:999px;
-  background:var(--surface-soft,#f8fafc);
-  color:var(--text,#0f172a);
-  cursor:pointer;
-  transition:background .16s ease,border-color .16s ease,color .16s ease;
-}
-.foundation-v1 .site-header .header-account-icon-btn:hover,
-.foundation-v1 .site-header .header-account-icon-btn[aria-expanded="true"] {
-  border-color:#10b981;
-  background:var(--surface,#fff);
-  color:#047857;
-}
-.foundation-v1 .site-header .header-account-icon-btn:focus-visible {
-  outline:2px solid #10b981;
-  outline-offset:3px;
-}
-.foundation-v1 .site-header .header-guest-dropdown {
-  min-width:240px;
 }

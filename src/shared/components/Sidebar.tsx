@@ -2,11 +2,14 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent, type RefObject }
 import { useTranslation } from 'react-i18next'
 import { navigationModules, type NavigationItem } from '../navigation/navigationRegistry'
 import { useSavedItems } from '../services/savedService'
-import { SiteIcon, type SiteIconName } from './SiteIcon'
+import { SiteIcon } from './SiteIcon'
+import MobileSubmitSheet from './MobileSubmitSheet'
 import {
   getCollapsedRailGroups,
   getModulesForMode,
   isSidebarItemActive,
+  isSubmitRouteActive,
+  MOBILE_BOTTOM_NAV_SLOTS,
   resolveSidebarModeForPath,
   shouldShowSportsCvPromo,
   stripLeadingPlus,
@@ -136,7 +139,9 @@ export default function Sidebar({
   const { count: savedCount } = useSavedItems()
   const closeRef = useRef<HTMLButtonElement>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
+  const submitTriggerRef = useRef<HTMLButtonElement>(null)
 
+  const [submitSheetOpen, setSubmitSheetOpen] = useState(false)
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>(() => resolveSidebarModeForPath(activePath))
   const [promoDismissed, setPromoDismissed] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
@@ -175,8 +180,9 @@ export default function Sidebar({
     }
   }, [expandedSections])
 
-  // Sync sidebar audience mode and active accordion section on route change
+  // Sync sidebar audience mode, active accordion section, and close submit sheet on route change
   useEffect(() => {
+    setSubmitSheetOpen(false)
     const targetMode = resolveSidebarModeForPath(activePath)
     if (targetMode === 'partner') {
       setSidebarMode('partner')
@@ -190,6 +196,22 @@ export default function Sidebar({
       )
     }
   }, [activePath])
+
+  // Prevent overlapping mobile overlays if main navigation drawer opens
+  useEffect(() => {
+    if (open) setSubmitSheetOpen(false)
+  }, [open])
+
+  // Close mobile submit sheet automatically if viewport widens past mobile breakpoint
+  useEffect(() => {
+    if (!submitSheetOpen || typeof window === 'undefined') return
+    const media = window.matchMedia('(max-width: 700px)')
+    const handleChange = (event: MediaQueryListEvent) => {
+      if (!event.matches) setSubmitSheetOpen(false)
+    }
+    media.addEventListener?.('change', handleChange)
+    return () => media.removeEventListener?.('change', handleChange)
+  }, [submitSheetOpen])
 
   // Lock body scroll while mobile drawer is open
   useEffect(() => {
@@ -282,13 +304,7 @@ export default function Sidebar({
     }
   }
 
-  const mobileItems: { label: string; href: string; icon: SiteIconName }[] = [
-    { label: 'Home', href: '/', icon: 'home' },
-    { label: 'Sports', href: '/sports', icon: 'sports' },
-    { label: 'Trials', href: '/opportunities', icon: 'opportunities' },
-    { label: 'Venues', href: '/venues', icon: 'venues' },
-    { label: 'Search', href: '/search', icon: 'search' },
-  ]
+  const submitRouteActive = isSubmitRouteActive(activePath)
 
   function renderModeSwitcher(prefix: string) {
     return (
@@ -627,22 +643,57 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* Mobile bottom quick navigation */}
+      {/* Mobile Submit Action Sheet (<= 700px) */}
+      <MobileSubmitSheet
+        open={submitSheetOpen}
+        activePath={activePath}
+        onClose={() => setSubmitSheetOpen(false)}
+        onNavigate={onNavigate}
+        triggerRef={submitTriggerRef}
+      />
+
+      {/* Mobile bottom quick navigation (5 balanced slots: Home · Trials · [+] Submit · Venues · Sports) */}
       <nav className="mobile-bottom-nav" aria-label="Quick navigation">
-        {mobileItems.map(item => {
-          const itemKey = item.href === '/' ? 'home' : item.href.replace('/', '')
-          const itemLabel = t(`mobileNav.${itemKey}`, { defaultValue: item.label })
-          const active = isSidebarItemActive(item.href, activePath)
+        {MOBILE_BOTTOM_NAV_SLOTS.map(slot => {
+          if (slot.kind === 'submit') {
+            const submitLabel = t('mobileNav.submit', { defaultValue: slot.label })
+            const isHighlighted = submitSheetOpen || submitRouteActive
+            return (
+              <button
+                key={slot.id}
+                ref={submitTriggerRef}
+                type="button"
+                className={
+                  isHighlighted
+                    ? 'mobile-bottom-submit-btn is-active'
+                    : 'mobile-bottom-submit-btn'
+                }
+                aria-label={t('submitToKhelgrid', { ns: 'common', defaultValue: 'Submit to KhelGrid' })}
+                aria-haspopup="dialog"
+                aria-expanded={submitSheetOpen}
+                aria-controls="mobile-submit-sheet"
+                onClick={() => setSubmitSheetOpen(prev => !prev)}
+              >
+                <span className="mobile-bottom-submit-pill" aria-hidden="true">
+                  <SiteIcon name="plus" size={18} />
+                </span>
+                <small>{submitLabel}</small>
+              </button>
+            )
+          }
+
+          const itemLabel = t(`mobileNav.${slot.id}`, { defaultValue: slot.label })
+          const active = isSidebarItemActive(slot.href, activePath)
           return (
             <a
-              key={item.href}
-              href={item.href}
+              key={slot.href}
+              href={slot.href}
               className={active ? 'mobile-bottom-link is-active' : 'mobile-bottom-link'}
               aria-current={active ? 'page' : undefined}
               aria-label={itemLabel}
-              onClick={event => onNavigate(event, item.href)}
+              onClick={event => onNavigate(event, slot.href)}
             >
-              <SiteIcon name={item.icon} size={20} />
+              <SiteIcon name={slot.icon} size={20} />
               <small>{itemLabel}</small>
             </a>
           )

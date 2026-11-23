@@ -219,3 +219,99 @@ export function writePersistedIdSet(
     // Ignore storage quota or privacy-mode errors
   }
 }
+
+export type MobileBottomNavSlot =
+  | {
+      kind: 'link'
+      id: string
+      label: string
+      href: string
+      icon: NavigationItem['icon']
+    }
+  | {
+      kind: 'submit'
+      id: 'submit'
+      label: string
+      icon: 'plus'
+    }
+
+/**
+ * 5-slot mobile thumb bar (<= 700px):
+ * Home · Trials · [ + ] Submit (center action sheet) · Venues · Sports
+ * Search lives once in the top bar (global command search) to eliminate duplication.
+ */
+export const MOBILE_BOTTOM_NAV_SLOTS: readonly MobileBottomNavSlot[] = [
+  { kind: 'link', id: 'home', label: 'Home', href: '/', icon: 'home' },
+  { kind: 'link', id: 'opportunities', label: 'Trials', href: '/opportunities', icon: 'opportunities' },
+  { kind: 'submit', id: 'submit', label: 'Submit', icon: 'plus' },
+  { kind: 'link', id: 'venues', label: 'Venues', href: '/venues', icon: 'venues' },
+  { kind: 'link', id: 'sports', label: 'Sports', href: '/sports', icon: 'sports' },
+] as const
+
+export interface MobileSubmitSheetOption {
+  id: 'venue' | 'trial' | 'coach' | 'all' | 'chronicle'
+  href: string
+  icon: NavigationItem['icon']
+  label: string
+  description: string
+  group: 'listing' | 'research'
+}
+
+export const MOBILE_SUBMIT_SHEET_OPTIONS: readonly MobileSubmitSheetOption[] = [
+  {
+    id: 'venue',
+    href: '/submit-listing?type=venue',
+    icon: 'building',
+    label: 'List a Venue / Turf',
+    description: 'Turfs, stadiums & indoor sports arenas',
+    group: 'listing',
+  },
+  {
+    id: 'trial',
+    href: '/submit-listing?type=opportunity',
+    icon: 'calendar-check',
+    label: 'Submit a Trial / Tournament',
+    description: 'SAI, state, club & federation trials',
+    group: 'listing',
+  },
+  {
+    id: 'coach',
+    href: '/submit-listing?type=coach',
+    icon: 'award',
+    label: 'Join as Coach',
+    description: 'Verified coaching profile & batches',
+    group: 'listing',
+  },
+  {
+    id: 'all',
+    href: '/submit-listing',
+    icon: 'plus',
+    label: 'All Listing Types',
+    description: 'Venues, trials, academies or games',
+    group: 'listing',
+  },
+  {
+    id: 'chronicle',
+    href: '/khelchronicle/submit',
+    icon: 'file-text',
+    label: 'Submit Research Paper',
+    description: 'Publish sports science in KhelChronicle',
+    group: 'research',
+  },
+] as const
+
+/**
+ * Checks whether the current path belongs to a KhelGrid submission workflow.
+ */
+export function isSubmitRouteActive(activePath: string): boolean {
+  const normalized = activePath.replace(/\/$/, '') || '/'
+  return (
+    normalized === '/submit-listing' ||
+    normalized.startsWith('/submit-listing/') ||
+    normalized === '/list' ||
+    normalized.startsWith('/list/') ||
+    normalized === '/khelchronicle/submit' ||
+    normalized === '/chronicle/submit'
+  )
+}
+
