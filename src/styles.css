@@ -659,6 +659,44 @@ html.dark .foundation-v1 .site-header {
   gap: 4px;
 }
 
+/* Institutional / Partner Navigation — Organizations & Campaigns */
+.foundation-v1 .site-header .header-partner-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(2px, .35vw, 6px);
+}
+
+.foundation-v1 .site-header .header-partner-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 clamp(6px, .65vw, 11px);
+  border-radius: 9px;
+  color: var(--text-soft, #334155);
+  text-decoration: none;
+  font-size: clamp(11.5px, .85vw, 13px);
+  font-weight: 650;
+  white-space: nowrap;
+  transition: color .16s ease, background .16s ease;
+}
+
+.foundation-v1 .site-header .header-partner-link:hover,
+.foundation-v1 .site-header .header-partner-link.is-active {
+  color: var(--accent, #07964f);
+  background: var(--accent-soft, #e8f7ef);
+}
+
+html.dark .foundation-v1 .site-header .header-partner-link {
+  color: #94a3b8;
+}
+
+html.dark .foundation-v1 .site-header .header-partner-link:hover,
+html.dark .foundation-v1 .site-header .header-partner-link.is-active {
+  color: var(--accent, #10b981);
+  background: var(--accent-soft, rgba(16, 185, 129, 0.15));
+}
+
 .foundation-v1 .site-header .header-play-pill {
   position: relative;
   display: inline-flex;
@@ -1234,6 +1272,7 @@ html.dark .foundation-v1 .site-header .header-action-chronicle .header-action-ic
     border-radius: 10px;
     flex: 0 0 38px;
   }
+  .foundation-v1 .site-header .header-partner-nav,
   .foundation-v1 .site-header .header-search-placeholder,
   .foundation-v1 .site-header .header-search-kbd,
   .foundation-v1 .header-divider {
@@ -1956,6 +1995,7 @@ independent of footer height. */
     min-width: 0;
     gap: 3px;
   }
+  .foundation-v1 .site-header .header-partner-nav,
   .foundation-v1 .site-header .header-divider,
   .foundation-v1 .site-header .header-play-pill,
   .foundation-v1 .site-header .header-login-link,
