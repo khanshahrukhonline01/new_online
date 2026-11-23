@@ -4,6 +4,7 @@ import {
   buildSubmissionAbstract,
   buildSubmissionKeywords,
   deserializeDraft,
+  filterSportGameOptions,
   formatConsolidatedCoAuthors,
   formatProvisionalCitations,
   isValidHttpsUrl,
@@ -12,7 +13,9 @@ import {
   resolveCohortLabel,
   resolveEnvironmentLabel,
   resolveSportLabel,
+  resolveSportLabels,
   serializeDraft,
+  toggleSportSelection,
   validateAllSubmissionSteps,
   validateSubmissionStep,
   type ManuscriptDraftState,
@@ -22,7 +25,7 @@ import {
 function makeValidState(): SubmissionValidationState {
   return {
     title: 'Kinematic Analysis of Junior Fast Bowlers',
-    sport: 'cricket',
+    sports: ['cricket', 'pickleball'],
     customSport: '',
     keywords: 'Cricket, Biomechanics, Lumbar Spine',
     primaryAuthorName: 'Dr. Rajeshwari Nair',
@@ -72,10 +75,11 @@ test('validateSubmissionStep catches errors across all 5 steps including Phase A
   const base = makeValidState()
   assert.equal(validateAllSubmissionSteps(base).valid, true)
 
-  // Step 1: min title length 5, custom sport when sport==='other', non-empty keywords
+  // Step 1: min title length 5, >=1 sport selected, custom sport when sports includes 'other', non-empty keywords
   assert.equal(validateSubmissionStep(1, { ...base, title: 'Test' }).valid, false)
-  assert.equal(validateSubmissionStep(1, { ...base, sport: 'other', customSport: '   ' }).valid, false)
-  assert.equal(validateSubmissionStep(1, { ...base, sport: 'other', customSport: 'Mallakhamb' }).valid, true)
+  assert.equal(validateSubmissionStep(1, { ...base, sports: [] }).valid, false)
+  assert.equal(validateSubmissionStep(1, { ...base, sports: ['pickleball', 'other'], customSport: '   ' }).valid, false)
+  assert.equal(validateSubmissionStep(1, { ...base, sports: ['pickleball', 'other'], customSport: 'Mallakhamb' }).valid, true)
   assert.equal(validateSubmissionStep(1, { ...base, keywords: '   ' }).valid, false)
 
   // Step 2: primary author + co-author email/ORCID validation
@@ -122,9 +126,39 @@ test('formatConsolidatedCoAuthors preserves affiliation, ORCID, and email withou
   assert.ok(result.includes('Priya Narang (Delhi University · ORCID: 0000-0001-2222-3334 · priya@du.ac.in)'))
 })
 
-test('buildSubmissionKeywords appends sport and cohort tier without case-insensitive duplicates', () => {
-  const keywords = buildSubmissionKeywords('cricket, Force Plate, Lumbar Spine', 'Cricket', 'National / Elite Senior Athletes')
-  assert.equal(keywords, 'cricket, Force Plate, Lumbar Spine, National / Elite Senior Athletes')
+test('filterSportGameOptions, toggleSportSelection, and resolveSportLabels support searchable multiselect categorization', () => {
+  const pickleMatches = filterSportGameOptions('pickle')
+  assert.equal(pickleMatches.length, 1)
+  assert.equal(pickleMatches[0].id, 'pickleball')
+  assert.equal(pickleMatches[0].name, 'Pickleball')
+
+  const aliasMatches = filterSportGameOptions('soccer')
+  assert.ok(aliasMatches.some(opt => opt.id === 'football'))
+
+  assert.equal(filterSportGameOptions('nomatchxyz').length, 0)
+
+  const added = toggleSportSelection(['cricket'], 'pickleball')
+  assert.deepEqual(added, ['cricket', 'pickleball'])
+  const removed = toggleSportSelection(added, 'cricket')
+  assert.deepEqual(removed, ['pickleball'])
+
+  assert.deepEqual(resolveSportLabels(['cricket', 'kabaddi', 'other'], 'Mallakhamb'), [
+    'Cricket',
+    'Kabaddi',
+    'Mallakhamb',
+  ])
+})
+
+test('buildSubmissionKeywords appends multi-sport labels and cohort tier without case-insensitive duplicates', () => {
+  const keywords = buildSubmissionKeywords(
+    'cricket, Force Plate, Lumbar Spine',
+    ['Cricket', 'Pickleball'],
+    'National / Elite Senior Athletes',
+  )
+  assert.equal(
+    keywords,
+    'cricket, Force Plate, Lumbar Spine, Pickleball, National / Elite Senior Athletes',
+  )
 })
 
 test('buildSubmissionAbstract appends coaching cues and Phase A sports context/disclosures cleanly', () => {
@@ -179,13 +213,13 @@ test('formatProvisionalCitations generates APA, Vancouver, BibTeX, and RIS UNPB 
   assert.ok(citations.ris.endsWith('ER  - '))
 })
 
-test('serializeDraft and deserializeDraft preserve Phase A fields along with coAuthorsList and currentStep', () => {
+test('serializeDraft and deserializeDraft preserve Phase A fields along with multi-sport array and legacy draft migration', () => {
   const draft: ManuscriptDraftState = {
     currentStep: 4,
     articleType: 'dataset',
     title: 'Benchmark Telemetry Dataset',
     category: 'sports-analytics',
-    sport: 'other',
+    sports: ['cricket', 'pickleball', 'other'],
     customSport: 'Kalaripayattu',
     athleteCohortTier: 'state-academy',
     keywords: 'Telemetry, GPS',
@@ -217,7 +251,7 @@ test('serializeDraft and deserializeDraft preserve Phase A fields along with coA
   const restored = deserializeDraft(serializeDraft(draft))
   assert.ok(restored)
   assert.equal(restored.currentStep, 4)
-  assert.equal(restored.sport, 'other')
+  assert.deepEqual(restored.sports, ['cricket', 'pickleball', 'other'])
   assert.equal(restored.customSport, 'Kalaripayattu')
   assert.equal(restored.athleteCohortTier, 'state-academy')
   assert.equal(restored.testingEnvironment, 'akhada-clay')
@@ -229,4 +263,10 @@ test('serializeDraft and deserializeDraft preserve Phase A fields along with coA
   assert.equal(restored.licenseType, 'cc-by-4.0')
   assert.equal(restored.coAuthorsList?.length, 1)
   assert.equal(restored.coAuthorsList?.[0].name, 'Co Author')
+
+  // Legacy single-sport saved draft automatically migrates to sports[]
+  const legacyRestored = deserializeDraft(JSON.stringify({ currentStep: 2, sport: 'kabaddi' }))
+  assert.ok(legacyRestored)
+  assert.equal(legacyRestored.currentStep, 2)
+  assert.deepEqual(legacyRestored.sports, ['kabaddi'])
 })

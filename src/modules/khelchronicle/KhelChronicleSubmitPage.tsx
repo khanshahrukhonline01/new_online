@@ -7,7 +7,6 @@ import {
 } from '../../integrations/supabase/chronicle-client'
 import {
   ATHLETE_COHORT_TIERS,
-  SPORTS_GAME_OPTIONS,
   TESTING_ENVIRONMENTS,
   buildSubmissionAbstract,
   buildSubmissionKeywords,
@@ -20,12 +19,14 @@ import {
   resolveCohortLabel,
   resolveEnvironmentLabel,
   resolveSportLabel,
+  resolveSportLabels,
   serializeDraft,
   validateAllSubmissionSteps,
   validateSubmissionStep,
   type CoAuthor,
   type ManuscriptLicenseType,
 } from './submitManuscriptUtils'
+import { SportMultiSelect } from './components/SportMultiSelect'
 import './khelchronicle.css'
 import './KhelChronicleSubmitPage.css'
 
@@ -67,7 +68,7 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
   const [articleType, setArticleType] = useState('preprint')
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('sports-biomechanics')
-  const [sport, setSport] = useState('cricket')
+  const [sports, setSports] = useState<string[]>([])
   const [customSport, setCustomSport] = useState('')
   const [athleteCohortTier, setAthleteCohortTier] = useState('state-academy')
   const [keywords, setKeywords] = useState('')
@@ -108,7 +109,7 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
 
   const validationState = {
     title,
-    sport,
+    sports,
     customSport,
     keywords,
     primaryAuthorName,
@@ -150,7 +151,7 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
 
     if (restored.title) setTitle(restored.title)
     if (restored.category) setCategory(restored.category)
-    if (restored.sport) setSport(restored.sport)
+    if (Array.isArray(restored.sports) && restored.sports.length > 0) setSports(restored.sports)
     if (restored.customSport !== undefined) setCustomSport(restored.customSport)
     if (restored.athleteCohortTier) setAthleteCohortTier(restored.athleteCohortTier)
     if (restored.articleType) setArticleType(restored.articleType)
@@ -186,6 +187,7 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     if (typeof window === 'undefined') return
     const hasMeaningfulContent = Boolean(
       title ||
+        sports.length > 0 ||
         customSport ||
         keywords ||
         primaryAuthorName ||
@@ -208,7 +210,7 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
           articleType,
           title,
           category,
-          sport,
+          sports,
           customSport,
           athleteCohortTier,
           keywords,
@@ -247,7 +249,7 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     articleType,
     title,
     category,
-    sport,
+    sports,
     customSport,
     athleteCohortTier,
     keywords,
@@ -279,7 +281,7 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     }
     setTitle('')
     setCategory('sports-biomechanics')
-    setSport('cricket')
+    setSports([])
     setCustomSport('')
     setAthleteCohortTier('state-academy')
     setArticleType('preprint')
@@ -453,10 +455,11 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
 
   const displayTitle = title.trim() || 'Biomechanical and Physiological Analysis in Indian Athletics'
   const displayCategory = categories.find(c => c.slug === category)?.name || 'Sports Science'
-  const resolvedSportLabel = resolveSportLabel(sport, customSport)
+  const resolvedSportLabels = resolveSportLabels(sports, customSport)
+  const resolvedSportLabel = resolveSportLabel(sports, customSport)
   const resolvedCohortLabel = resolveCohortLabel(athleteCohortTier)
   const resolvedEnvironmentLabel = resolveEnvironmentLabel(testingEnvironment)
-  const mergedKeywords = buildSubmissionKeywords(keywords, resolvedSportLabel, resolvedCohortLabel)
+  const mergedKeywords = buildSubmissionKeywords(keywords, resolvedSportLabels, resolvedCohortLabel)
   const normalizedPrimaryOrcid = normalizeOrcid(orcid)
   const consolidatedCoAuthorsPreview = formatConsolidatedCoAuthors(coAuthorsText, coAuthorsList)
 
@@ -873,38 +876,20 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                   />
                 </div>
 
-                <div className="kc-field-group">
-                  <label htmlFor="research-category" className="kc-field-label">
-                    Primary Research Discipline *
-                  </label>
-                  <select
-                    id="research-category"
-                    className="kc-select"
-                    value={category}
-                    onChange={e => setCategory(e.target.value)}
-                  >
-                    {categories.map(c => (
-                      <option key={c.id} value={c.slug}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
                 <div className="kc-grid-2col kc-field-group">
                   <div>
-                    <label htmlFor="sport-discipline" className="kc-field-label">
-                      Sport / Game *
+                    <label htmlFor="research-category" className="kc-field-label">
+                      Primary Research Discipline *
                     </label>
                     <select
-                      id="sport-discipline"
+                      id="research-category"
                       className="kc-select"
-                      value={sport}
-                      onChange={e => setSport(e.target.value)}
+                      value={category}
+                      onChange={e => setCategory(e.target.value)}
                     >
-                      {SPORTS_GAME_OPTIONS.map(opt => (
-                        <option key={opt.id} value={opt.id}>
-                          {opt.name}
+                      {categories.map(c => (
+                        <option key={c.id} value={c.slug}>
+                          {c.name}
                         </option>
                       ))}
                     </select>
@@ -929,7 +914,20 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                   </div>
                 </div>
 
-                {sport === 'other' && (
+                <div className="kc-field-group">
+                  <label htmlFor="sport-multiselect-trigger" className="kc-field-label">
+                    <span>Sports &amp; Games Categories *</span>
+                    <span className="kc-field-hint">Search &amp; select one or more sports</span>
+                  </label>
+                  <SportMultiSelect
+                    id="sport-multiselect-trigger"
+                    selectedIds={sports}
+                    customSport={customSport}
+                    onChange={setSports}
+                  />
+                </div>
+
+                {sports.includes('other') && (
                   <div className="kc-field-group">
                     <label htmlFor="custom-sport-name" className="kc-field-label">
                       Specify Sport or Traditional Game *
@@ -1557,7 +1555,15 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     <span className="kc-badge-archive" style={{ padding: '2px 8px', fontSize: '11px' }}>
                       {displayCategory}
                     </span>
-                    <span className="kc-preview-sport-pill">{resolvedSportLabel}</span>
+                    {resolvedSportLabels.length > 0 ? (
+                      resolvedSportLabels.map(sportLabel => (
+                        <span key={sportLabel} className="kc-preview-sport-pill">
+                          {sportLabel}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="kc-preview-sport-pill">Multi-Sport / Pending Selection</span>
+                    )}
                     <span className="kc-preview-cohort-pill">{resolvedCohortLabel}</span>
                     <span className="kc-badge-open-access" style={{ padding: '2px 8px', fontSize: '11px' }}>
                       {ARTICLE_TYPES.find(t => t.id === articleType)?.name || 'Preprint'}
