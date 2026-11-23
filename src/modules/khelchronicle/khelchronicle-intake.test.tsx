@@ -162,8 +162,11 @@ describe('End-to-End Manuscript Intake Verification (KhelChronicle / Supabase)',
     expect(sentPayload.status).toBe('pending_review')
   })
 
-  it('renders 5-step interactive wizard structure with coaching cues, file dropzone, template download, and live preview', () => {
+  it('renders 5-step interactive wizard structure with coaching cues, repository link guide, template download, and live preview', () => {
     const html = renderToStaticMarkup(<KhelChronicleSubmitPage />)
+
+    // No synthetic test mode badge
+    expect(html).not.toContain('Test Mode Intake')
 
     // Stepper navigation tabs
     expect(html).toContain('1. Article &amp; Category')
@@ -185,13 +188,19 @@ describe('End-to-End Manuscript Intake Verification (KhelChronicle / Supabase)',
     expect(html).toContain('Takeaway 2:')
     expect(html).toContain('Takeaway 3:')
 
-    // Drag and drop zone
-    expect(html).toContain('Preprint File Upload (PDF or DOCX, max 25MB)')
-    expect(html).toContain('Drag &amp; Drop Manuscript File Here')
+    // Repository link guide (replacing disabled upload dropzone)
+    expect(html).toContain('Recommended Open Repository Hosting (HTTPS Required)')
+    expect(html).toContain('Zenodo (CERN)')
+    expect(html).toContain('OSF Preprints')
+    expect(html).toContain('SportRxiv')
+
+    // Accessible license radio group
+    expect(html).toContain('role="radiogroup"')
+    expect(html).toContain('role="radio"')
 
     // Template download and participating institutes
     expect(html).toContain('Official KhelChronicle Preprint Template')
-    expect(html).toContain('Download Template (.md / .docx)')
+    expect(html).toContain('Download Template (.md)')
     expect(html).toContain('SAI NSNIS Patiala')
     expect(html).toContain('LNIPE Gwalior')
     expect(html).toContain('Inspire Institute of Sport (IIS)')

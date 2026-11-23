@@ -1,20 +1,29 @@
-import { useState, useEffect, useRef, type FormEvent, type MouseEvent, type DragEvent } from 'react'
+import { useState, useEffect, useRef, type FormEvent, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { RESEARCH_CATEGORIES } from './data/khelchronicleData'
-import { submitChronicleManuscript } from '../../integrations/supabase/chronicle-client'
+import { RESEARCH_CATEGORIES, type ResearchCategory } from './data/khelchronicleData'
+import {
+  getChronicleCategories,
+  submitChronicleManuscript,
+} from '../../integrations/supabase/chronicle-client'
+import {
+  buildSubmissionAbstract,
+  deserializeDraft,
+  formatConsolidatedCoAuthors,
+  formatProvisionalCitations,
+  isValidHttpsUrl,
+  isValidOrcid,
+  normalizeOrcid,
+  serializeDraft,
+  validateAllSubmissionSteps,
+  validateSubmissionStep,
+  type CoAuthor,
+  type ManuscriptLicenseType,
+} from './submitManuscriptUtils'
 import './khelchronicle.css'
 import './KhelChronicleSubmitPage.css'
 
 interface KhelChronicleSubmitPageProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
-}
-
-interface CoAuthor {
-  id: string
-  name: string
-  email: string
-  affiliation: string
-  orcid: string
 }
 
 const STORAGE_DRAFT_KEY = 'khelchronicle_manuscript_draft_v1'
@@ -27,6 +36,13 @@ const ARTICLE_TYPES = [
   { id: 'casestudy', name: 'Elite Athlete Case Study', desc: 'Unique rehabilitation, biomechanical remodeling, or high-performance intervention' },
 ]
 
+const REPOSITORY_HOSTS = [
+  { name: 'Zenodo (CERN)', url: 'https://zenodo.org', note: 'Free persistent DOI & PDF hosting' },
+  { name: 'OSF Preprints', url: 'https://osf.io/preprints', note: 'Open Science Framework archive' },
+  { name: 'SportRxiv', url: 'https://sportrxiv.org', note: 'Sports & exercise science preprints' },
+  { name: 'Institutional Repo', url: '', note: 'University / SAI / LNIPE HTTPS PDF link' },
+]
+
 export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageProps) {
   const [currentStep, setCurrentStep] = useState<number>(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -34,18 +50,17 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
   const [submissionNotice, setSubmissionNotice] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const [uploadedFile, setUploadedFile] = useState<{ name: string; size: string } | null>(null)
   const [activeCitationTab, setActiveCitationTab] = useState<'apa' | 'vancouver' | 'bibtex'>('apa')
   const [copiedCitation, setCopiedCitation] = useState(false)
+  const [categories, setCategories] = useState<ResearchCategory[]>(RESEARCH_CATEGORIES)
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const errorBannerRef = useRef<HTMLDivElement>(null)
 
   // Primary form data state
   const [articleType, setArticleType] = useState('preprint')
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('sports-biomechanics')
-  const [keywords, setKeywords] = useState('Sports Biomechanics, Ground Reaction Force, Movement Screening')
+  const [keywords, setKeywords] = useState('')
 
   // Authors state
   const [primaryAuthorName, setPrimaryAuthorName] = useState('')
@@ -71,95 +86,143 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
   const [ethicsDeclaration, setEthicsDeclaration] = useState(false)
   const [minorConsentDeclaration, setMinorConsentDeclaration] = useState(false)
   const [licenseDeclaration, setLicenseDeclaration] = useState(false)
-  const [licenseType, setLicenseType] = useState<'cc-by-4.0' | 'cc-by-nc-nd-4.0'>('cc-by-nc-nd-4.0')
+  const [licenseType, setLicenseType] = useState<ManuscriptLicenseType>('cc-by-nc-nd-4.0')
 
-  // Calculate abstract word count
   const abstractWords = abstract.trim() ? abstract.trim().split(/\s+/).length : 0
+
+  const validationState = {
+    title,
+    keywords,
+    primaryAuthorName,
+    primaryAuthorEmail,
+    primaryAuthorAffiliation,
+    orcid,
+    coAuthorsList,
+    abstract,
+    fullTextOrUrl,
+    supplementaryUrl,
+    ethicsClearanceNumber,
+    ethicsDeclaration,
+    minorConsentDeclaration,
+    licenseDeclaration,
+  }
+
+  // Hydrate live research disciplines from Supabase (falling back to local taxonomy)
+  useEffect(() => {
+    let active = true
+    void getChronicleCategories().then(res => {
+      if (active && Array.isArray(res.data) && res.data.length > 0) {
+        setCategories(res.data)
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   // Load draft from localStorage on mount
   useEffect(() => {
     if (typeof window === 'undefined') return
-    try {
-      const saved = localStorage.getItem(STORAGE_DRAFT_KEY)
-      if (saved) {
-        const d = JSON.parse(saved)
-        if (d.title) setTitle(d.title)
-        if (d.category) setCategory(d.category)
-        if (d.articleType) setArticleType(d.articleType)
-        if (d.keywords) setKeywords(d.keywords)
-        if (d.primaryAuthorName) setPrimaryAuthorName(d.primaryAuthorName)
-        if (d.primaryAuthorEmail) setPrimaryAuthorEmail(d.primaryAuthorEmail)
-        if (d.primaryAuthorAffiliation) setPrimaryAuthorAffiliation(d.primaryAuthorAffiliation)
-        if (d.orcid) setOrcid(d.orcid)
-        if (d.coAuthorsText) setCoAuthorsText(d.coAuthorsText)
-        if (d.abstract) setAbstract(d.abstract)
-        if (d.coachingCue1) setCoachingCue1(d.coachingCue1)
-        if (d.coachingCue2) setCoachingCue2(d.coachingCue2)
-        if (d.coachingCue3) setCoachingCue3(d.coachingCue3)
-        if (d.fullTextOrUrl) setFullTextOrUrl(d.fullTextOrUrl)
-        if (d.supplementaryUrl) setSupplementaryUrl(d.supplementaryUrl)
-        if (d.ethicsClearanceNumber) setEthicsClearanceNumber(d.ethicsClearanceNumber)
-        setDraftSavedAt('Restored previous draft')
-      }
-    } catch {
-      // ignore draft parse error
-    }
+    const restored = deserializeDraft(localStorage.getItem(STORAGE_DRAFT_KEY))
+    if (!restored) return
+
+    if (restored.title) setTitle(restored.title)
+    if (restored.category) setCategory(restored.category)
+    if (restored.articleType) setArticleType(restored.articleType)
+    if (restored.keywords !== undefined) setKeywords(restored.keywords)
+    if (restored.primaryAuthorName) setPrimaryAuthorName(restored.primaryAuthorName)
+    if (restored.primaryAuthorEmail) setPrimaryAuthorEmail(restored.primaryAuthorEmail)
+    if (restored.primaryAuthorAffiliation) setPrimaryAuthorAffiliation(restored.primaryAuthorAffiliation)
+    if (restored.orcid) setOrcid(restored.orcid)
+    if (restored.coAuthorsText) setCoAuthorsText(restored.coAuthorsText)
+    if (restored.coAuthorsList && restored.coAuthorsList.length > 0) setCoAuthorsList(restored.coAuthorsList)
+    if (restored.abstract) setAbstract(restored.abstract)
+    if (restored.coachingCue1) setCoachingCue1(restored.coachingCue1)
+    if (restored.coachingCue2) setCoachingCue2(restored.coachingCue2)
+    if (restored.coachingCue3) setCoachingCue3(restored.coachingCue3)
+    if (restored.fullTextOrUrl) setFullTextOrUrl(restored.fullTextOrUrl)
+    if (restored.supplementaryUrl) setSupplementaryUrl(restored.supplementaryUrl)
+    if (restored.dataAvailability) setDataAvailability(restored.dataAvailability)
+    if (restored.ethicsClearanceNumber) setEthicsClearanceNumber(restored.ethicsClearanceNumber)
+    if (restored.licenseType) setLicenseType(restored.licenseType)
+    if (restored.currentStep) setCurrentStep(restored.currentStep)
+    setDraftSavedAt(
+      restored.updatedAt ? `Restored draft from ${restored.updatedAt}` : 'Restored previous draft',
+    )
   }, [])
 
-  // Auto-save draft on changes
+  // Auto-save full wizard state to localStorage on changes
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (!title && !primaryAuthorName && !abstract) return
+    const hasMeaningfulContent = Boolean(
+      title ||
+        keywords ||
+        primaryAuthorName ||
+        primaryAuthorEmail ||
+        abstract ||
+        fullTextOrUrl ||
+        coAuthorsList.length > 0,
+    )
+    if (!hasMeaningfulContent) return
 
     const timer = setTimeout(() => {
       try {
-        const payload = {
+        const updatedAt = new Date().toLocaleTimeString()
+        const serialized = serializeDraft({
+          currentStep,
+          articleType,
           title,
           category,
-          articleType,
           keywords,
           primaryAuthorName,
           primaryAuthorEmail,
           primaryAuthorAffiliation,
           orcid,
           coAuthorsText,
+          coAuthorsList,
           abstract,
           coachingCue1,
           coachingCue2,
           coachingCue3,
           fullTextOrUrl,
           supplementaryUrl,
+          dataAvailability,
           ethicsClearanceNumber,
-          updatedAt: new Date().toLocaleTimeString(),
-        }
-        localStorage.setItem(STORAGE_DRAFT_KEY, JSON.stringify(payload))
-        setDraftSavedAt(`Auto-saved at ${payload.updatedAt}`)
+          licenseType,
+          updatedAt,
+        })
+        localStorage.setItem(STORAGE_DRAFT_KEY, serialized)
+        setDraftSavedAt(`Auto-saved at ${updatedAt}`)
       } catch {
         // storage quota full
       }
-    }, 1200)
+    }, 800)
 
     return () => clearTimeout(timer)
   }, [
+    currentStep,
+    articleType,
     title,
     category,
-    articleType,
     keywords,
     primaryAuthorName,
     primaryAuthorEmail,
     primaryAuthorAffiliation,
     orcid,
     coAuthorsText,
+    coAuthorsList,
     abstract,
     coachingCue1,
     coachingCue2,
     coachingCue3,
     fullTextOrUrl,
     supplementaryUrl,
+    dataAvailability,
     ethicsClearanceNumber,
+    licenseType,
   ])
 
-  const clearDraft = () => {
+  const resetAllFields = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_DRAFT_KEY)
     }
@@ -179,13 +242,25 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     setCoachingCue3('')
     setFullTextOrUrl('')
     setSupplementaryUrl('')
+    setDataAvailability('open_access')
     setEthicsClearanceNumber('')
     setEthicsDeclaration(false)
     setMinorConsentDeclaration(false)
     setLicenseDeclaration(false)
-    setUploadedFile(null)
+    setLicenseType('cc-by-nc-nd-4.0')
     setDraftSavedAt(null)
+    setErrorMessage(null)
+    setSubmissionNotice(null)
     setCurrentStep(1)
+  }
+
+  const handleClearDraft = () => {
+    if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+      if (!window.confirm('Discard your saved manuscript draft and reset all fields?')) {
+        return
+      }
+    }
+    resetAllFields()
   }
 
   const handleLink = (e: MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -194,16 +269,14 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     }
   }
 
-  // Insert structured abstract template
   const insertAbstractTemplate = () => {
     const template = `Background: \nMethods: \nResults: \nConclusion: `
     setAbstract(prev => (prev ? `${prev}\n\n${template}` : template))
   }
 
-  // Handle Co-authors
   const addCoAuthor = () => {
     const newAuthor: CoAuthor = {
-      id: `author-${Date.now()}`,
+      id: `author-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       name: '',
       email: '',
       affiliation: '',
@@ -213,55 +286,21 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
   }
 
   const updateCoAuthor = (id: string, field: keyof CoAuthor, value: string) => {
-    setCoAuthorsList(prev =>
-      prev.map(a => (a.id === id ? { ...a, [field]: value } : a))
-    )
+    setCoAuthorsList(prev => prev.map(a => (a.id === id ? { ...a, [field]: value } : a)))
   }
 
   const removeCoAuthor = (id: string) => {
     setCoAuthorsList(prev => prev.filter(a => a.id !== id))
   }
 
-  // Drag and drop handlers for manuscript file
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
-
-  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }
-
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(false)
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processSelectedFile(e.dataTransfer.files[0])
-    }
-  }
-
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      processSelectedFile(e.target.files[0])
-    }
-  }
-
-  const processSelectedFile = (file: File) => {
-    void file
-    setUploadedFile(null)
-    setErrorMessage('Direct file upload is not available yet. Please provide a secure HTTPS link to the complete manuscript.')
-  }
-
-  // Download official manuscript template
   const handleDownloadTemplate = () => {
     const content = `# KhelChronicle Official Manuscript & Preprint Template (v2026.1)
 Author Guidelines & Formatting Standard for Indian Sports Science Research
 
 1. MANUSCRIPT METADATA
-- Title: [Concise, informative title, max 120 characters]
+- Title: [Concise, informative title, max 160 characters]
 - Running Head: [Abbreviated title, max 50 characters]
-- Article Type: [Preprint / Field Protocol / Systematic Review / Benchmark Dataset]
+- Article Type: [Preprint / Field Protocol / Systematic Review / Benchmark Dataset / Case Study]
 - Subject Discipline: [Sports Biomechanics / Exercise Physiology / Sports Nutrition / Sports Analytics]
 
 2. AUTHOR INFORMATION
@@ -287,9 +326,10 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
 - Discussion & Limitations
 - Practical Applications
 - Ethics Statement & Informed Consent (Document parental consent for minors under 18)
-- Data Availability Statement (Link to Zenodo or GitHub repository)
+- Data Availability Statement (Link to Zenodo, OSF, or GitHub repository)
 - References (APA 7th Edition)
 `
+
     const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -301,40 +341,41 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
     URL.revokeObjectURL(url)
   }
 
-  // Step Validation logic
+  const focusErrorBanner = () => {
+    window.setTimeout(() => {
+      errorBannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      errorBannerRef.current?.focus()
+    }, 20)
+  }
+
   const validateStep = (step: number): boolean => {
     setErrorMessage(null)
-    if (step === 1) {
-      if (!title.trim()) {
-        setErrorMessage('Please enter the Manuscript Title before proceeding.')
-        return false
-      }
-      return true
-    }
-    if (step === 2) {
-      if (!primaryAuthorName.trim()) {
-        setErrorMessage('Primary / Corresponding Author name is required.')
-        return false
-      }
-      const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
-      if (!primaryAuthorEmail.trim() || !emailRegex.test(primaryAuthorEmail.trim())) {
-        setErrorMessage('Please enter a valid corresponding author email address.')
-        return false
-      }
-      if (!primaryAuthorAffiliation.trim()) {
-        setErrorMessage('Author Institution or University Affiliation is required.')
-        return false
-      }
-      return true
-    }
-    if (step === 3) {
-      if (!abstract.trim() || abstract.trim().length < 50) {
-        setErrorMessage('Please provide a structured abstract of at least 50 characters.')
-        return false
-      }
-      return true
+    const result = validateSubmissionStep(step, validationState)
+    if (!result.valid) {
+      setErrorMessage(result.error || 'Please complete the required fields in this step.')
+      focusErrorBanner()
+      return false
     }
     return true
+  }
+
+  const navigateToStepTab = (targetStep: number) => {
+    if (targetStep <= currentStep) {
+      setErrorMessage(null)
+      setCurrentStep(targetStep)
+      return
+    }
+    for (let s = 1; s < targetStep; s += 1) {
+      const check = validateSubmissionStep(s, validationState)
+      if (!check.valid) {
+        setCurrentStep(s)
+        setErrorMessage(check.error || 'Please complete the required fields in this step.')
+        focusErrorBanner()
+        return
+      }
+    }
+    setErrorMessage(null)
+    setCurrentStep(targetStep)
   }
 
   const handleNextStep = () => {
@@ -350,44 +391,50 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
     window.scrollTo({ top: 120, behavior: 'smooth' })
   }
 
-  // Generate dynamic citation for Live Preview & Success screen
-  const primaryLastName = primaryAuthorName.trim().split(' ').pop() || 'Author'
-  const primaryInitials = primaryAuthorName.trim().split(' ')[0]?.[0] || 'A'
-  const currentYear = new Date().getFullYear()
   const displayTitle = title.trim() || 'Biomechanical and Physiological Analysis in Indian Athletics'
-  const displayCategory = RESEARCH_CATEGORIES.find(c => c.slug === category)?.name || 'Sports Science'
+  const displayCategory = categories.find(c => c.slug === category)?.name || 'Sports Science'
+  const normalizedPrimaryOrcid = normalizeOrcid(orcid)
+  const consolidatedCoAuthorsPreview = formatConsolidatedCoAuthors(coAuthorsText, coAuthorsList)
 
-  const apaCitation = `${primaryLastName}, ${primaryInitials}. (${currentYear}). ${displayTitle}. KhelChronicle Open Sports Research Archive, 1(1). https://doi.org/10.5281/khelchronicle.${submissionId || 'draft'}`
-  const vancouverCitation = `${primaryLastName} ${primaryInitials}. ${displayTitle}. KhelChronicle. ${currentYear};1(1):KG-${submissionId || '2026-SUB'}.`
-  const bibtexCitation = `@article{${primaryLastName.toLowerCase()}${currentYear}${category.replace('-', '')},
-  author = {${primaryAuthorName || 'Author, A.'}},
-  title = {${displayTitle}},
-  journal = {KhelChronicle Open Sports Research Archive},
-  year = {${currentYear}},
-  publisher = {KhelGrid Foundation},
-  doi = {10.5281/khelchronicle.${submissionId || 'draft'}}
-}`
+  const { apa: apaCitation, vancouver: vancouverCitation, bibtex: bibtexCitation } =
+    formatProvisionalCitations({
+      primaryAuthorName,
+      coAuthorsText,
+      coAuthorsList,
+      title,
+      category,
+      submissionId,
+    })
 
   const copyCitationToClipboard = (text: string) => {
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(text)
+      void navigator.clipboard.writeText(text)
       setCopiedCitation(true)
       setTimeout(() => setCopiedCitation(false), 2000)
     }
   }
 
-  // Handle final form submit
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setErrorMessage(null)
+    setSubmissionNotice(null)
 
-    // Build consolidated co-authors string
-    const listCoAuthors = coAuthorsList
-      .filter(a => a.name.trim())
-      .map(a => `${a.name} (${a.affiliation || 'Affiliation Pending'})`)
-      .join(', ')
+    const fullValidation = validateAllSubmissionSteps(validationState)
+    if (!fullValidation.valid) {
+      if (fullValidation.firstInvalidStep) {
+        setCurrentStep(fullValidation.firstInvalidStep)
+      }
+      setErrorMessage(fullValidation.error || 'Please resolve validation errors before submitting.')
+      focusErrorBanner()
+      return
+    }
 
-    const consolidatedCoAuthors = [coAuthorsText.trim(), listCoAuthors].filter(Boolean).join(', ')
+    const consolidatedCoAuthors = formatConsolidatedCoAuthors(coAuthorsText, coAuthorsList)
+    const submissionAbstract = buildSubmissionAbstract(abstract, [
+      coachingCue1,
+      coachingCue2,
+      coachingCue3,
+    ])
 
     setIsSubmitting(true)
 
@@ -398,10 +445,10 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
         primary_author_name: primaryAuthorName,
         primary_author_email: primaryAuthorEmail,
         primary_author_affiliation: primaryAuthorAffiliation,
-        orcid: orcid.trim() || undefined,
+        orcid: normalizedPrimaryOrcid || undefined,
         co_authors: consolidatedCoAuthors || undefined,
         article_type: articleType,
-        abstract_text: abstract,
+        abstract_text: submissionAbstract,
         keywords,
         full_text_or_url: fullTextOrUrl,
         supplementary_url: supplementaryUrl || undefined,
@@ -414,15 +461,21 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
       })
 
       if (res.status === 'submitted') {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(STORAGE_DRAFT_KEY)
+        }
+        setDraftSavedAt(null)
         setSubmissionId(res.submissionId)
         setSubmissionNotice('Manuscript successfully entered into the KhelChronicle peer-screening database queue.')
       } else if (res.status === 'unconfigured') {
         setSubmissionNotice(res.message)
       } else {
         setErrorMessage(res.message)
+        focusErrorBanner()
       }
     } catch {
       setErrorMessage('Unexpected transmission error. Please check your network and try again.')
+      focusErrorBanner()
     } finally {
       setIsSubmitting(false)
     }
@@ -430,10 +483,13 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
 
   const resetForm = () => {
     setSubmissionId(null)
-    setSubmissionNotice(null)
-    setErrorMessage(null)
-    clearDraft()
+    resetAllFields()
   }
+
+  const trimmedManuscriptUrl = fullTextOrUrl.trim()
+  const hasValidManuscriptUrl = isValidHttpsUrl(trimmedManuscriptUrl)
+  const trimmedSupplementaryUrl = supplementaryUrl.trim()
+  const hasValidSupplementaryUrl = !trimmedSupplementaryUrl || isValidHttpsUrl(trimmedSupplementaryUrl)
 
   return (
     <div className="kc-root kc-submit-container">
@@ -456,9 +512,6 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
           <span className="kc-badge-open-access">Diamond Open Access</span>
           <span className="kc-badge-open-access">Zero Article Processing Charges (APC)</span>
           <span className="kc-badge-open-access">Rapid 48-Hour Moderation Desk</span>
-          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-            Test Mode Intake
-          </span>
         </div>
 
         <h1 className="kc-hero-title">Submit Research Manuscript</h1>
@@ -474,7 +527,12 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
               <span>{draftSavedAt}</span>
             </div>
             <div className="kc-draft-actions">
-              <button type="button" className="kc-draft-btn-clear" onClick={clearDraft} title="Discard saved draft">
+              <button
+                type="button"
+                className="kc-draft-btn-clear"
+                onClick={handleClearDraft}
+                title="Discard saved draft"
+              >
                 Clear Draft
               </button>
             </div>
@@ -485,8 +543,8 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
       {/* Success State */}
       {submissionId ? (
         <div className="kc-success-card">
-          <SiteIcon name="check-circle" size={48} style={{ color: '#16a34a', margin: '0 auto 12px' }} />
-          <h2 style={{ margin: '0 0 8px', fontSize: '24px', fontWeight: 800, color: '#14532d' }}>
+          <SiteIcon name="check-circle" size={48} className="kc-success-icon" />
+          <h2 className="kc-success-heading">
             Manuscript Received for Editorial Screening
           </h2>
           <div className="kc-success-badge-id">
@@ -494,14 +552,14 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
             <span>Accession Queue Reference: {submissionId}</span>
           </div>
 
-          <p style={{ margin: '0 auto 16px', fontSize: '15px', color: '#166534', maxWidth: '680px', lineHeight: 1.6 }}>
+          <p className="kc-success-lead">
             Thank you! Your manuscript &ldquo;{title || 'Sports Science Research'}&rdquo; has been registered in the
             KhelChronicle database screening table. Our moderation desk will audit formatting, data availability, and
             ethical clearances within 2 business days.
           </p>
 
           {submissionNotice && (
-            <p style={{ margin: '0 auto 20px', fontSize: '13px', color: '#15803d', fontStyle: 'italic', maxWidth: '640px' }}>
+            <p className="kc-success-notice">
               {submissionNotice}
             </p>
           )}
@@ -514,27 +572,35 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
               <div className="kc-timeline-step-sub">Logged in Supabase chronicle_submissions table with instant timestamp.</div>
             </div>
             <div className="kc-timeline-item">
-              <div className="kc-timeline-step-num" style={{ color: '#0284c7' }}>Step 2 · In Progress</div>
+              <div className="kc-timeline-step-num is-progress">Step 2 · In Progress</div>
               <div className="kc-timeline-step-title">Editorial &amp; Ethics Check</div>
               <div className="kc-timeline-step-sub">Scope alignment, IEC clearance number, and POCSO youth protection audit (48h).</div>
             </div>
             <div className="kc-timeline-item">
-              <div className="kc-timeline-step-num" style={{ color: '#64748b' }}>Step 3 · Pending</div>
+              <div className="kc-timeline-step-num is-pending">Step 3 · Pending</div>
               <div className="kc-timeline-step-title">Public Repository Indexing</div>
-              <div className="kc-timeline-step-sub">Publication on KhelChronicle with live DOI and Schema.org ScholarlyArticle metadata.</div>
+              <div className="kc-timeline-step-sub">Publication on KhelChronicle with assigned DOI and Schema.org ScholarlyArticle metadata.</div>
             </div>
           </div>
 
           {/* Provisional Citation Box */}
-          <div style={{ maxWidth: '680px', margin: '0 auto 24px', textAlign: 'left' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#166534', textTransform: 'uppercase' }}>
+          <div className="kc-success-citation-wrap">
+            <div className="kc-success-citation-header">
+              <span className="kc-success-citation-label">
                 Provisional Citation Format (Cite While Pending)
               </span>
               <button
                 type="button"
                 className="kc-template-btn"
-                onClick={() => copyCitationToClipboard(activeCitationTab === 'apa' ? apaCitation : activeCitationTab === 'vancouver' ? vancouverCitation : bibtexCitation)}
+                onClick={() =>
+                  copyCitationToClipboard(
+                    activeCitationTab === 'apa'
+                      ? apaCitation
+                      : activeCitationTab === 'vancouver'
+                        ? vancouverCitation
+                        : bibtexCitation,
+                  )
+                }
               >
                 {copiedCitation ? 'Copied to Clipboard!' : 'Copy Citation'}
               </button>
@@ -569,7 +635,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <div className="kc-success-actions">
             <a href="/khelchronicle" className="kc-btn-primary" onClick={e => handleLink(e, '/khelchronicle')}>
               Return to Research Repository
             </a>
@@ -591,55 +657,45 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                 />
               </div>
               <div className="kc-stepper-tabs">
-                <button
-                  type="button"
-                  className={`kc-step-tab ${currentStep === 1 ? 'is-active' : ''} ${currentStep > 1 ? 'is-completed' : ''}`}
-                  onClick={() => setCurrentStep(1)}
-                >
-                  <span className="kc-step-badge">{currentStep > 1 ? '✓' : '1'}</span>
-                  <span>1. Article &amp; Category</span>
-                </button>
-                <button
-                  type="button"
-                  className={`kc-step-tab ${currentStep === 2 ? 'is-active' : ''} ${currentStep > 2 ? 'is-completed' : ''}`}
-                  onClick={() => validateStep(1) && setCurrentStep(2)}
-                >
-                  <span className="kc-step-badge">{currentStep > 2 ? '✓' : '2'}</span>
-                  <span>2. Authors &amp; Affiliations</span>
-                </button>
-                <button
-                  type="button"
-                  className={`kc-step-tab ${currentStep === 3 ? 'is-active' : ''} ${currentStep > 3 ? 'is-completed' : ''}`}
-                  onClick={() => validateStep(1) && validateStep(2) && setCurrentStep(3)}
-                >
-                  <span className="kc-step-badge">{currentStep > 3 ? '✓' : '3'}</span>
-                  <span>3. Abstract &amp; Takeaways</span>
-                </button>
-                <button
-                  type="button"
-                  className={`kc-step-tab ${currentStep === 4 ? 'is-active' : ''} ${currentStep > 4 ? 'is-completed' : ''}`}
-                  onClick={() => validateStep(1) && validateStep(2) && validateStep(3) && setCurrentStep(4)}
-                >
-                  <span className="kc-step-badge">{currentStep > 4 ? '✓' : '4'}</span>
-                  <span>4. Files &amp; Data</span>
-                </button>
-                <button
-                  type="button"
-                  className={`kc-step-tab ${currentStep === 5 ? 'is-active' : ''}`}
-                  onClick={() => validateStep(1) && validateStep(2) && validateStep(3) && setCurrentStep(5)}
-                >
-                  <span className="kc-step-badge">5</span>
-                  <span>5. Ethics &amp; Preview</span>
-                </button>
+                {[
+                  { step: 1, label: '1. Article & Category' },
+                  { step: 2, label: '2. Authors & Affiliations' },
+                  { step: 3, label: '3. Abstract & Takeaways' },
+                  { step: 4, label: '4. Files & Data' },
+                  { step: 5, label: '5. Ethics & Preview' },
+                ].map(item => (
+                  <button
+                    key={item.step}
+                    type="button"
+                    aria-current={currentStep === item.step ? 'step' : undefined}
+                    className={`kc-step-tab ${currentStep === item.step ? 'is-active' : ''} ${currentStep > item.step ? 'is-completed' : ''}`}
+                    onClick={() => navigateToStepTab(item.step)}
+                  >
+                    <span className="kc-step-badge">{currentStep > item.step ? '✓' : item.step}</span>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* Main Form Body */}
-            <form onSubmit={handleSubmit} className="kc-submit-form-card">
+            <form onSubmit={handleSubmit} noValidate className="kc-submit-form-card">
               {errorMessage && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '14px 16px', color: '#b91c1c', fontSize: '13.5px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  ref={errorBannerRef}
+                  tabIndex={-1}
+                  role="alert"
+                  className="kc-form-alert kc-form-alert-error"
+                >
                   <SiteIcon name="alert-circle" size={16} />
                   <span>{errorMessage}</span>
+                </div>
+              )}
+
+              {submissionNotice && !submissionId && (
+                <div role="status" className="kc-form-alert kc-form-alert-warning">
+                  <SiteIcon name="info" size={16} />
+                  <span>{submissionNotice}</span>
                 </div>
               )}
 
@@ -657,6 +713,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       <button
                         type="button"
                         key={t.id}
+                        aria-pressed={articleType === t.id}
                         className={`kc-type-card ${articleType === t.id ? 'is-selected' : ''}`}
                         onClick={() => setArticleType(t.id)}
                       >
@@ -670,11 +727,12 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                 <div className="kc-field-group">
                   <label htmlFor="manuscript-title" className="kc-field-label">
                     <span>Manuscript Title *</span>
-                    <span className="kc-field-hint">{title.length} / 160 characters</span>
+                    <span className="kc-field-hint">{title.length} / 160 characters (min 5)</span>
                   </label>
                   <input
                     id="manuscript-title"
                     type="text"
+                    maxLength={160}
                     required
                     className="kc-input-text"
                     placeholder="e.g. Kinematic Analysis of Lumbar Spine Stress in Junior Fast Bowlers"
@@ -693,7 +751,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     value={category}
                     onChange={e => setCategory(e.target.value)}
                   >
-                    {RESEARCH_CATEGORIES.map(c => (
+                    {categories.map(c => (
                       <option key={c.id} value={c.slug}>
                         {c.name}
                       </option>
@@ -711,7 +769,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     type="text"
                     required
                     className="kc-input-text"
-                    placeholder="Fast Bowling, Ground Reaction Force, Lumbar Spine, Biomechanics"
+                    placeholder="e.g. Fast Bowling, Ground Reaction Force, Lumbar Spine, Biomechanics"
                     value={keywords}
                     onChange={e => setKeywords(e.target.value)}
                   />
@@ -786,7 +844,9 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     <div>
                       <label htmlFor="author-orcid" className="kc-field-label">
                         <span>ORCID Identifier (Optional)</span>
-                        <span className="kc-field-hint">16-digit format</span>
+                        <span className="kc-field-hint">
+                          {orcid.trim() && !isValidOrcid(orcid) ? 'Invalid 16-digit format' : '16-digit format'}
+                        </span>
                       </label>
                       <input
                         id="author-orcid"
@@ -802,7 +862,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
 
                 {/* Co-Authors Dynamic Builder */}
                 <div className="kc-authors-section">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div className="kc-authors-header-row">
                     <label htmlFor="co-authors-list" className="kc-field-label" style={{ margin: 0 }}>
                       Co-Authors &amp; Affiliations (Optional)
                     </label>
@@ -826,9 +886,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                   {coAuthorsList.map((author, index) => (
                     <div key={author.id} className="kc-author-card">
                       <div className="kc-author-card-header">
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
-                          Co-Author #{index + 1}
-                        </span>
+                        <span className="kc-author-row-title">Co-Author #{index + 1}</span>
                         <button
                           type="button"
                           className="kc-author-btn-remove"
@@ -841,8 +899,9 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
 
                       <div className="kc-grid-2col" style={{ marginBottom: '12px' }}>
                         <div>
-                          <label className="kc-field-label">Full Name</label>
+                          <label htmlFor={`coauthor-name-${author.id}`} className="kc-field-label">Full Name *</label>
                           <input
+                            id={`coauthor-name-${author.id}`}
                             type="text"
                             className="kc-input-text"
                             placeholder="e.g. Prof. R. K. Sharma"
@@ -851,8 +910,9 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                           />
                         </div>
                         <div>
-                          <label className="kc-field-label">Institutional Affiliation</label>
+                          <label htmlFor={`coauthor-aff-${author.id}`} className="kc-field-label">Institutional Affiliation</label>
                           <input
+                            id={`coauthor-aff-${author.id}`}
                             type="text"
                             className="kc-input-text"
                             placeholder="e.g. Inspire Institute of Sport (IIS), Bellary"
@@ -864,8 +924,9 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
 
                       <div className="kc-grid-2col">
                         <div>
-                          <label className="kc-field-label">Author Email</label>
+                          <label htmlFor={`coauthor-email-${author.id}`} className="kc-field-label">Author Email</label>
                           <input
+                            id={`coauthor-email-${author.id}`}
                             type="email"
                             className="kc-input-text"
                             placeholder="coauthor@institution.edu.in"
@@ -874,8 +935,9 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                           />
                         </div>
                         <div>
-                          <label className="kc-field-label">ORCID iD</label>
+                          <label htmlFor={`coauthor-orcid-${author.id}`} className="kc-field-label">ORCID iD</label>
                           <input
+                            id={`coauthor-orcid-${author.id}`}
                             type="text"
                             className="kc-input-text"
                             placeholder="0000-0003-1234-5678"
@@ -902,7 +964,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     <label htmlFor="abstract-text" className="kc-field-label" style={{ margin: 0 }}>
                       Structured Abstract (Background, Methods, Results, Conclusion) *
                     </label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="kc-abstract-tool-actions">
                       <span
                         className={`kc-word-counter ${abstractWords < 100 ? 'is-short' : abstractWords <= 380 ? 'is-optimal' : 'is-long'}`}
                       >
@@ -929,19 +991,20 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                   />
                 </div>
 
-                {/* Exclusive Section: Field Implications for Coaches */}
+                {/* Field Implications for Coaches */}
                 <div className="kc-coaching-cues-card">
                   <div className="kc-coaching-cues-title">
                     <SiteIcon name="award" size={16} />
                     <span>Field Implications for Grassroots Coaches &amp; Scouts</span>
                   </div>
-                  <p style={{ margin: '0 0 12px', fontSize: '12.5px', color: '#166534', lineHeight: 1.5 }}>
-                    Translate complex biomechanics or physiological data into 3 direct, actionable coaching cues that
-                    academy coaches across India can implement in training:
+                  <p className="kc-coaching-cues-desc">
+                    Translate complex biomechanics or physiological data into up to 3 actionable coaching cues (included in
+                    your submitted editorial summary):
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <input
                       type="text"
+                      aria-label="Coaching Takeaway 1"
                       className="kc-input-text"
                       placeholder="Takeaway 1: e.g. Limit junior fast bowlers to maximum 30 match-intensity deliveries per spell to avoid lumbar bone stress"
                       value={coachingCue1}
@@ -949,6 +1012,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     />
                     <input
                       type="text"
+                      aria-label="Coaching Takeaway 2"
                       className="kc-input-text"
                       placeholder="Takeaway 2: e.g. Implement frontal plane knee valgus screening during single-leg landing combine drills"
                       value={coachingCue2}
@@ -956,6 +1020,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     />
                     <input
                       type="text"
+                      aria-label="Coaching Takeaway 3"
                       className="kc-input-text"
                       placeholder="Takeaway 3: e.g. Incorporate eccentric hamstring periodization during pre-monsoon conditioning camps"
                       value={coachingCue3}
@@ -965,70 +1030,61 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                 </div>
               </div>
 
-              {/* STEP 4: Manuscript Files & Supplementary Datasets */}
+              {/* STEP 4: Manuscript Link & Supplementary Datasets */}
               <div className={`kc-step-panel ${currentStep === 4 ? 'is-active' : ''}`}>
                 <h2 className="kc-step-heading">Step 4: Manuscript Link &amp; Supplementary Data</h2>
                 <p className="kc-step-desc">
-                  Direct file storage is not enabled yet. Provide a secure HTTPS link to the complete manuscript and, if applicable, a separate HTTPS link to supplementary data.
+                  Provide a secure HTTPS link to your complete manuscript PDF or institutional preprint record, plus an
+                  optional link to open datasets or analysis scripts.
                 </p>
 
-                {/* Drag and drop zone */}
-                <div className="kc-field-group">
-                  <label className="kc-field-label">Preprint File Upload (PDF or DOCX, max 25MB)</label>
-                  <div
-                    className={`kc-dropzone ${isDragging ? 'is-dragover' : ''}`}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    onClick={() => setErrorMessage('Direct file upload is not available yet. Please paste a secure HTTPS manuscript link below.')}
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".pdf,.docx"
-                      disabled
-                      style={{ display: 'none' }}
-                      onChange={handleFileInputChange}
-                    />
-                    {uploadedFile ? (
-                      <div className="kc-file-pill" onClick={e => e.stopPropagation()}>
-                        <SiteIcon name="file-text" size={24} style={{ color: '#0284c7' }} />
-                        <div className="kc-file-info">
-                          <div className="kc-file-name">{uploadedFile.name}</div>
-                          <div className="kc-file-meta">{uploadedFile.size} · File selection is not connected to secure storage</div>
-                        </div>
-                        <button
-                          type="button"
-                          className="kc-author-btn-remove"
-                          onClick={() => {
-                            setUploadedFile(null)
-                            setFullTextOrUrl('')
-                          }}
+                <div className="kc-repo-guide-card">
+                  <div className="kc-repo-guide-header">
+                    <SiteIcon name="external-link" size={16} />
+                    <span>Recommended Open Repository Hosting (HTTPS Required)</span>
+                  </div>
+                  <p className="kc-repo-guide-desc">
+                    Direct file uploads are not hosted on KhelChronicle yet. Host your PDF on any open science or
+                    institutional repository below and paste its public HTTPS link:
+                  </p>
+                  <div className="kc-repo-chip-grid">
+                    {REPOSITORY_HOSTS.map(host =>
+                      host.url ? (
+                        <a
+                          key={host.name}
+                          href={host.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="kc-repo-chip"
                         >
-                          <SiteIcon name="trash" size={13} />
-                          <span>Remove</span>
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <SiteIcon name="upload" size={32} className="kc-dropzone-icon" />
-                        <div className="kc-dropzone-title">Drag &amp; Drop Manuscript File Here</div>
-                        <div className="kc-dropzone-subtitle">or click to browse files · Direct file upload is not enabled</div>
-                      </>
+                          <strong>{host.name}</strong>
+                          <span>{host.note}</span>
+                        </a>
+                      ) : (
+                        <div key={host.name} className="kc-repo-chip is-static">
+                          <strong>{host.name}</strong>
+                          <span>{host.note}</span>
+                        </div>
+                      ),
                     )}
                   </div>
                 </div>
 
                 <div className="kc-field-group">
                   <label htmlFor="manuscript-url" className="kc-field-label">
-                    Manuscript Full-Text Link (PDF URL or Institutional Repository Link)
+                    <span>Manuscript Full-Text Link (PDF URL or Institutional Repository Link) *</span>
+                    {trimmedManuscriptUrl && (
+                      <span className={`kc-url-status ${hasValidManuscriptUrl ? 'is-valid' : 'is-invalid'}`}>
+                        {hasValidManuscriptUrl ? 'Valid HTTPS link' : 'Must start with https://'}
+                      </span>
+                    )}
                   </label>
                   <input
                     id="manuscript-url"
                     type="url"
                     required
                     className="kc-input-text"
-                    placeholder="https://... (required complete manuscript link)"
+                    placeholder="https://zenodo.org/records/... or https://institution.edu.in/paper.pdf"
                     value={fullTextOrUrl}
                     onChange={e => setFullTextOrUrl(e.target.value)}
                   />
@@ -1037,11 +1093,16 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                 <div className="kc-grid-2col">
                   <div>
                     <label htmlFor="supplementary-url" className="kc-field-label">
-                      Supplementary Data or Code Link (Optional)
+                      <span>Supplementary Data or Code Link (Optional)</span>
+                      {trimmedSupplementaryUrl && (
+                        <span className={`kc-url-status ${hasValidSupplementaryUrl ? 'is-valid' : 'is-invalid'}`}>
+                          {hasValidSupplementaryUrl ? 'Valid HTTPS' : 'HTTPS required'}
+                        </span>
+                      )}
                     </label>
                     <input
                       id="supplementary-url"
-                      type="text"
+                      type="url"
                       className="kc-input-text"
                       placeholder="https://github.com/... or https://doi.org/10.5281/..."
                       value={supplementaryUrl}
@@ -1136,32 +1197,36 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                   </label>
                 </div>
 
-                {/* License Picker */}
+                {/* Accessible License Picker */}
                 <div className="kc-field-group">
-                  <label className="kc-field-label">Creative Commons License Selection</label>
-                  <div className="kc-license-grid">
-                    <div
+                  <span id="cc-license-group-label" className="kc-field-label">
+                    Creative Commons License Selection
+                  </span>
+                  <div className="kc-license-grid" role="radiogroup" aria-labelledby="cc-license-group-label">
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={licenseType === 'cc-by-nc-nd-4.0'}
                       className={`kc-license-card ${licenseType === 'cc-by-nc-nd-4.0' ? 'is-selected' : ''}`}
                       onClick={() => setLicenseType('cc-by-nc-nd-4.0')}
                     >
-                      <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0f172a', marginBottom: '4px' }}>
-                        CC BY-NC-ND 4.0
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+                      <div className="kc-license-card-title">CC BY-NC-ND 4.0</div>
+                      <div className="kc-license-card-desc">
                         Allows download and sharing with attribution; prohibits commercial reuse and derivative alterations.
                       </div>
-                    </div>
-                    <div
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={licenseType === 'cc-by-4.0'}
                       className={`kc-license-card ${licenseType === 'cc-by-4.0' ? 'is-selected' : ''}`}
                       onClick={() => setLicenseType('cc-by-4.0')}
                     >
-                      <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0f172a', marginBottom: '4px' }}>
-                        CC BY 4.0 (Attribution)
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+                      <div className="kc-license-card-title">CC BY 4.0 (Attribution)</div>
+                      <div className="kc-license-card-desc">
                         Allows full reuse, distribution, and remixing as long as original authors receive proper attribution.
                       </div>
-                    </div>
+                    </button>
                   </div>
                 </div>
 
@@ -1172,9 +1237,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       <SiteIcon name="eye" size={14} />
                       <span>Live Preprint Archive Preview</span>
                     </span>
-                    <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#e0f2fe', color: '#0369a1' }}>
-                      PROVISIONAL ACCESSION
-                    </span>
+                    <span className="kc-preview-status-pill">PROVISIONAL ACCESSION</span>
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
@@ -1184,9 +1247,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     <span className="kc-badge-open-access" style={{ padding: '2px 8px', fontSize: '11px' }}>
                       {ARTICLE_TYPES.find(t => t.id === articleType)?.name || 'Preprint'}
                     </span>
-                    <span style={{ fontSize: '11px', color: '#64748b', alignSelf: 'center' }}>
-                      {licenseType.toUpperCase()}
-                    </span>
+                    <span className="kc-preview-license-tag">{licenseType.toUpperCase()}</span>
                   </div>
 
                   <h3 className="kc-preview-paper-title">{displayTitle}</h3>
@@ -1194,8 +1255,8 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                   <div className="kc-preview-authors-row">
                     <strong>{primaryAuthorName || 'Corresponding Author'}</strong>
                     {primaryAuthorAffiliation && <span> · {primaryAuthorAffiliation}</span>}
-                    {orcid && <span> (ORCID: {orcid})</span>}
-                    {coAuthorsText && <span>, {coAuthorsText}</span>}
+                    {normalizedPrimaryOrcid && <span> (ORCID: {normalizedPrimaryOrcid})</span>}
+                    {consolidatedCoAuthorsPreview && <span>, {consolidatedCoAuthorsPreview}</span>}
                   </div>
 
                   <div className="kc-preview-abstract-box">
@@ -1207,9 +1268,8 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     )}
                   </div>
 
-                  {/* Coaching takeaways preview */}
                   {(coachingCue1 || coachingCue2 || coachingCue3) && (
-                    <div style={{ background: '#f0fdf4', padding: '10px 14px', borderRadius: '6px', fontSize: '12.5px', color: '#166534', marginBottom: '14px' }}>
+                    <div className="kc-preview-cues-box">
                       <strong>Key Field Implications: </strong>
                       <ul style={{ margin: '4px 0 0', paddingLeft: '18px' }}>
                         {coachingCue1 && <li>{coachingCue1}</li>}
@@ -1219,10 +1279,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     </div>
                   )}
 
-                  {/* Provisional Citation Box */}
-                  <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '6px', fontWeight: 700 }}>
-                    PROVISIONAL APA CITATION:
-                  </div>
+                  <div className="kc-preview-citation-label">PROVISIONAL APA CITATION:</div>
                   <div className="kc-citation-box" style={{ fontSize: '11.5px' }}>
                     {apaCitation}
                   </div>
@@ -1250,8 +1307,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="kc-btn-primary"
-                    style={{ background: '#16a34a' }}
+                    className="kc-btn-primary kc-btn-submit-final"
                   >
                     <SiteIcon name={isSubmitting ? 'loader' : 'upload'} size={16} />
                     <span>{isSubmitting ? 'Submitting to Database Queue...' : 'Submit Manuscript for Screening'}</span>
@@ -1263,13 +1319,12 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
 
           {/* Right-Hand Sidebar Resources & Screening Rubric */}
           <aside className="kc-submit-sidebar">
-            {/* Screening Criteria Card */}
             <div className="kc-sidebar-card">
               <h3 className="kc-sidebar-title">
-                <SiteIcon name="award" size={16} style={{ color: '#0284c7' }} />
+                <SiteIcon name="award" size={16} className="kc-sidebar-icon" />
                 <span>Editorial Screening &amp; Moderation Criteria</span>
               </h3>
-              <p style={{ margin: '0 0 12px', fontSize: '13px', lineHeight: 1.6, color: '#475569' }}>
+              <p className="kc-sidebar-lead">
                 Following the bioRxiv and SportRxiv model, every submitted manuscript undergoes rapid screening prior
                 to public repository indexing:
               </p>
@@ -1300,12 +1355,10 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
 
             {/* Template Download Card */}
             <div className="kc-sidebar-card kc-template-download-card">
-              <SiteIcon name="file-text" size={28} style={{ color: '#0284c7', margin: '0 auto 8px' }} />
-              <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>
-                Official KhelChronicle Preprint Template
-              </div>
-              <p style={{ margin: '6px 0 10px', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
-                Download our standard Word / LaTeX formatting guide with predefined sections and metadata headers.
+              <SiteIcon name="file-text" size={28} className="kc-template-icon" />
+              <div className="kc-template-title">Official KhelChronicle Preprint Template</div>
+              <p className="kc-template-desc">
+                Download our structured Markdown formatting guide with predefined sections and metadata headers.
               </p>
               <button
                 type="button"
@@ -1313,16 +1366,14 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                 onClick={handleDownloadTemplate}
               >
                 <SiteIcon name="download" size={13} />
-                <span>Download Template (.md / .docx)</span>
+                <span>Download Template (.md)</span>
               </button>
             </div>
 
             {/* Contributing Institutions Social Proof */}
             <div className="kc-sidebar-card">
-              <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
-                Participating Sports Science Institutes
-              </div>
-              <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+              <div className="kc-institutions-title">Participating Sports Science Institutes</div>
+              <p className="kc-institutions-desc">
                 Preprints in KhelChronicle are authored by researchers and sports scientists from leading Indian bodies:
               </p>
               <div className="kc-institutions-badge-grid">

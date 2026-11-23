@@ -472,8 +472,15 @@ export async function submitChronicleManuscript(
   }
 
   const trimmedFullText = (input.full_text_or_url || '').trim()
-  if (trimmedFullText.startsWith('http://')) {
-    return { status: 'unavailable', message: 'Full text manuscript link must use secure HTTPS.' }
+  if (trimmedFullText) {
+    try {
+      const parsedFullTextUrl = new URL(trimmedFullText)
+      if (parsedFullTextUrl.protocol !== 'https:') {
+        return { status: 'unavailable', message: 'Full text manuscript link must use secure HTTPS.' }
+      }
+    } catch {
+      return { status: 'unavailable', message: 'Full text manuscript link must be a valid secure HTTPS URL.' }
+    }
   }
 
   if (input.supplementary_url?.trim()) {
