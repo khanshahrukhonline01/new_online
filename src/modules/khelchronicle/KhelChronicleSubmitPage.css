@@ -373,9 +373,9 @@ html.dark .kc-url-status.is-invalid {
   color: #f87171;
 }
 
-.kc-input-text,
-.kc-select,
-.kc-textarea {
+.kc-submit-container .kc-input-text,
+.kc-submit-container .kc-select,
+.kc-submit-container .kc-textarea {
   width: 100%;
   box-sizing: border-box;
   padding: 10px 14px;
@@ -388,9 +388,15 @@ html.dark .kc-url-status.is-invalid {
   font-family: inherit;
 }
 
-.kc-input-text:focus,
-.kc-select:focus,
-.kc-textarea:focus {
+.kc-submit-container .kc-input-text::placeholder,
+.kc-submit-container .kc-textarea::placeholder {
+  color: var(--muted, #64748b);
+  opacity: 1;
+}
+
+.kc-submit-container .kc-input-text:focus,
+.kc-submit-container .kc-select:focus,
+.kc-submit-container .kc-textarea:focus {
   outline: none;
   border-color: #0284c7;
   box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
@@ -1052,6 +1058,255 @@ html.dark .kc-preview-prereg-pill {
   color: var(--text-soft, #334155);
   line-height: 1.5;
   margin-bottom: 14px;
+}
+
+/* Searchable Multi-Select Sport & Game Selector */
+.kc-multiselect {
+  position: relative;
+}
+
+.kc-multiselect-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.kc-multiselect-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+html.dark .kc-multiselect-chip {
+  background: rgba(37, 99, 235, 0.2);
+  border-color: rgba(96, 165, 250, 0.4);
+  color: #93c5fd;
+}
+
+.kc-multiselect-chip-remove {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  font-size: 15px;
+  line-height: 1;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.kc-multiselect-chip-remove:hover {
+  opacity: 1;
+}
+
+.kc-multiselect-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong, #cbd5e1);
+  background: var(--surface, #ffffff);
+  color: var(--text, #0f172a);
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kc-multiselect-trigger:hover {
+  border-color: #0284c7;
+}
+
+.kc-multiselect-trigger.is-open,
+.kc-multiselect-trigger:focus-visible {
+  outline: none;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
+}
+
+.kc-multiselect-trigger-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kc-multiselect-trigger-text.is-placeholder {
+  color: var(--muted, #64748b);
+}
+
+.kc-multiselect-chevron {
+  flex-shrink: 0;
+  color: var(--muted, #64748b);
+  transition: transform 0.15s ease;
+}
+
+.kc-multiselect-chevron.is-rotated {
+  transform: rotate(180deg);
+}
+
+.kc-multiselect-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line-strong, #cbd5e1);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+  overflow: hidden;
+}
+
+html.dark .kc-multiselect-popover {
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.45);
+}
+
+.kc-multiselect-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  background: var(--surface-raised, #f8fafc);
+}
+
+.kc-multiselect-search-icon {
+  color: var(--muted, #64748b);
+  flex-shrink: 0;
+}
+
+.kc-submit-container .kc-multiselect-search {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text, #0f172a);
+  font-size: 13px;
+  outline: none;
+  box-shadow: none;
+}
+
+.kc-submit-container .kc-multiselect-search::placeholder {
+  color: var(--muted, #64748b);
+  opacity: 1;
+}
+
+.kc-multiselect-listbox {
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kc-multiselect-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text, #0f172a);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.kc-multiselect-option:hover {
+  background: var(--surface-soft, #f1f5f9);
+}
+
+.kc-multiselect-option.is-selected {
+  background: rgba(2, 132, 199, 0.1);
+}
+
+.kc-multiselect-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1.5px solid var(--line-strong, #cbd5e1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.kc-multiselect-option.is-selected .kc-multiselect-check {
+  background: #0284c7;
+  border-color: #0284c7;
+}
+
+.kc-multiselect-opt-name {
+  font-weight: 600;
+  flex: 1;
+}
+
+.kc-multiselect-opt-group {
+  font-size: 11px;
+  color: var(--muted, #64748b);
+}
+
+.kc-multiselect-empty {
+  padding: 18px 12px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--muted, #64748b);
+}
+
+.kc-multiselect-empty p {
+  margin: 0 0 8px;
+}
+
+.kc-multiselect-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line, #e2e8f0);
+  background: var(--surface-raised, #f8fafc);
+}
+
+.kc-multiselect-count {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+}
+
+.kc-multiselect-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kc-multiselect-done-btn {
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kc-multiselect-done-btn:hover {
+  background: #0369a1;
 }
 
 /* Stepper Bottom Navigation Actions */

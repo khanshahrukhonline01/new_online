@@ -207,7 +207,9 @@ describe('End-to-End Manuscript Intake Verification (KhelChronicle / Supabase)',
 
     // Live preview card, sports context, & provisional citation/export
     expect(html).toContain('Live Preprint Archive Preview')
-    expect(html).toContain('Sport / Game *')
+    expect(html).toContain('Sports &amp; Games Categories *')
+    expect(html).toContain('aria-haspopup="listbox"')
+    expect(html).toContain('Search &amp; select sports or games')
     expect(html).toContain('Athlete Cohort Tier *')
     expect(html).toContain('Testing Context &amp; Apparatus')
     expect(html).toContain('Study Preregistration URL (OSF / CTRI / ClinicalTrials) (Optional)')
