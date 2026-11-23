@@ -109,3 +109,25 @@ Anonymous and authenticated submission are allowed only to the extent enforced b
 - `docs/KHELCHRONICLE_EDITORIAL_REVIEW_AND_PUBLICATION_GATE.md`
 
 See the companion architecture, workflow, security, and roadmap documents in this directory.
+
+## 8. Contributor Centre page implementation
+
+The Contributor Centre landing-page presentation is implemented on the feature branch `feature/contributor-centre-page` as a UI layer over the existing `ListingSubmissionPage` workflow.
+
+Implemented in this branch:
+- Contributor-focused hero and primary actions for starting a listing or tracking a submission.
+- Six category cards mapped to existing intake values: `venue`, `opportunity`, `coach`, `academy`, `event`, and `pickup_game`.
+- Separate new-sport suggestion action mapped to the existing `sport` intake value.
+- Four-step explanation of submit, review, verify, and publish, with wording that keeps those decisions distinct.
+- Free-submission and evidence-review trust messaging.
+- Separate link to the KhelChronicle manuscript workflow.
+- Responsive page styling for desktop, tablet, and mobile.
+- Existing submission, tracking, correction/resubmission, and email fallback code paths are retained; the category cards select the existing form type rather than introducing a new intake API.
+
+Not included or implied:
+- No new database tables, migrations, RPCs, RLS policies, storage buckets, upload flow, or moderation permissions.
+- No automatic verification, approval, or publication.
+- No new listing types or payment flows.
+- The top navigation category dropdown is separate work; this page implementation does not claim it has been completed.
+
+Validation status: source changes were committed to the feature branch. Build, typecheck, lint, automated tests, and browser/mobile acceptance checks have not been run by this change.
