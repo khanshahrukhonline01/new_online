@@ -205,20 +205,9 @@ describe('End-to-End Manuscript Intake Verification (KhelChronicle / Supabase)',
     expect(html).toContain('LNIPE Gwalior')
     expect(html).toContain('Inspire Institute of Sport (IIS)')
 
-    // Live preview card, sports context, & provisional citation/export
+    // Live preview card & provisional citation
     expect(html).toContain('Live Preprint Archive Preview')
-    expect(html).toContain('Sports &amp; Games Categories *')
-    expect(html).toContain('aria-haspopup="listbox"')
-    expect(html).toContain('Search &amp; select sports or games')
-    expect(html).toContain('Athlete Cohort Tier *')
-    expect(html).toContain('Testing Context &amp; Apparatus')
-    expect(html).toContain('Study Preregistration URL (OSF / CTRI / ClinicalTrials) (Optional)')
-    expect(html).toContain('Funding Statement *')
-    expect(html).toContain('Conflicts of Interest *')
-    expect(html).toContain('NADA / WADA Clean-Sport &amp; Non-Clinical Attestation *')
-    expect(html).toContain('PROVISIONAL APA CITATION')
-    expect(html).toContain('Download .BIB')
-    expect(html).toContain('Download .RIS')
+    expect(html).toContain('PROVISIONAL APA CITATION:')
     expect(html).toContain('KhelChronicle Open Sports Research Archive')
   })
 })

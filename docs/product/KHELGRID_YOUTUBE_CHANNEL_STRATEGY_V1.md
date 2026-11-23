@@ -4,7 +4,7 @@
 **Version:** 1.0  
 **Owner:** KhelGrid editorial and brand operations  
 **Applies to:** Official KhelGrid YouTube channel and supporting Shorts  
-**Related standards:** [Master AI Video Generation and Production Framework](MASTER_AI_VIDEO_GENERATION_AND_SCRIPTING.md), [Video Generation Prompt Library](video-generation-prompts/README.md), [Editorial, Verification, Corrections and IPR](../policies/EDITORIAL_VERIFICATION_AND_IPR.md)
+**Related standards:** [Master AI Video Generation and Production Framework](../MASTER_AI_VIDEO_GENERATION_AND_SCRIPTING.md), [Video Generation Prompt Library](../video-generation-prompts/README.md), [Editorial, Verification, Corrections and IPR](../../policies/EDITORIAL_VERIFICATION_AND_IPR.md)
 
 ## 1. Executive direction
 

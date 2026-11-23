@@ -41,41 +41,6 @@ import {
 import { RESEARCH_CATEGORIES } from '../khelchronicle/data/khelchronicleData'
 import './AdminModerationPage.css'
 
-export const MODERATION_REJECTION_PRESETS = [
-  { label: 'Missing Official HTTPS Link', text: 'Missing official HTTPS registration link or circular from the organizing body.' },
-  { label: 'Event Date Concluded', text: 'The stated event or trial date has already concluded. Please submit upcoming events.' },
-  { label: 'Duplicate Listing', text: 'This listing is already published in the active KhelGrid catalogue.' },
-  { label: 'Incomplete Venue Address', text: 'Incomplete ground address. Street locality, sports supported, and city are required.' },
-  { label: 'Unaccredited Credentials', text: 'Unverified coaching or academy accreditation. Recognized certification required.' },
-  { label: 'Commercial Spam', text: 'Submission flagged as commercial advertisement, product promo, or non-sports content.' },
-]
-
-export const MODERATION_CORRECTION_PRESETS = [
-  { label: 'Provide Official Link', text: 'Please provide an official HTTPS registration link or federation circular to verify this trial.' },
-  { label: 'Specify Age & Reporting Dates', text: 'Please specify the exact age cut-off criteria, reporting dates, and schedule for participants.' },
-  { label: 'Clarify Entry Fees', text: 'Please clarify whether there is any entry fee, kit deposit, or participation charge for this event.' },
-  { label: 'Provide Full Street Address', text: 'Please provide the complete street address and nearest landmark for this sports venue.' },
-]
-
-export const MODERATION_APPROVAL_PRESETS = [
-  { label: 'Federation Circular Verified', text: 'Verified against official sports federation announcement and calendar.' },
-  { label: 'Venue & Facilities Confirmed', text: 'Venue location, ground dimensions, and contact number verified.' },
-  { label: 'Coaching Credentials Verified', text: 'Coaching certification and institute affiliation verified.' },
-]
-
-export const CHRONICLE_REJECTION_PRESETS = [
-  { label: 'Ethics / Consent Missing', text: 'Inadequate participant ethics clearance or minor athlete guardian consent documentation.' },
-  { label: 'Out of Scope', text: 'Methodology and subject matter fall outside sports science, kinesiology, or athletic performance scope.' },
-  { label: 'Unverified Author Identity', text: 'Author institutional affiliation or ORCID credentials could not be independently authenticated.' },
-  { label: 'Commercial Promotion', text: 'Submission flagged as commercial product endorsement rather than independent scientific research.' },
-]
-
-export const CHRONICLE_CORRECTION_PRESETS = [
-  { label: 'Add Ethics Statement', text: 'Please upload institutional review board (IRB/IEC) approval number and ethics protocol details.' },
-  { label: 'Provide Data Repository Link', text: 'Please provide a permanent DOI or OSF/Zenodo repository link for supplementary raw datasets.' },
-  { label: 'Format Structured Abstract', text: 'Please format the abstract into Background, Methods, Results, and Practical Applications.' },
-]
-
 type TabFilter =
   | 'all'
   | 'pending_review'
@@ -93,12 +58,7 @@ type ActionDialogType =
   | 'request_corrections'
   | 'publish'
   | 'unpublish'
-  | 'bulk_approve'
-  | 'bulk_reject'
-  | 'bulk_corrections'
   | null
-
-export type TableDensity = 'compact' | 'cozy' | 'expanded'
 
 const categoryFields: Record<string, Array<{ key: string; label: string; placeholder: string; required?: boolean }>> = {
   pickup_game: [
@@ -184,67 +144,6 @@ export function AdminModerationPage({
   const [targetSlug, setTargetSlug] = useState('')
   const [publishStructured, setPublishStructured] = useState<Record<string, string>>({})
   const [selectedSubIds, setSelectedSubIds] = useState<Set<string>>(new Set())
-  const [modalTab, setModalTab] = useState<'data' | 'preview' | 'diff' | 'evidence'>('data')
-  const [chronicleModalTab, setChronicleModalTab] = useState<'data' | 'abstract' | 'evidence'>('data')
-  const [copiedId, setCopiedId] = useState<string | null>(null)
-
-  // Phase 5: Batch Moderation & Bulk Actions State
-  const [bulkBusy, setBulkBusy] = useState(false)
-  const [bulkNotes, setBulkNotes] = useState('')
-  const [bulkMessage, setBulkMessage] = useState('')
-  const [undoBuffer, setUndoBuffer] = useState<{
-    count: number
-    actionLabel: string
-  } | null>(null)
-
-  const handleCopy = (text: string, id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation()
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      void navigator.clipboard.writeText(text)
-      setCopiedId(id)
-      window.setTimeout(() => setCopiedId(prev => (prev === id ? null : prev)), 2000)
-    }
-  }
-
-  // Phase 2: Table Density & Power Keyboard Navigation State
-  const [tableDensity, setTableDensity] = useState<TableDensity>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('khelgrid_admin_table_density') as TableDensity | null
-        if (saved === 'compact' || saved === 'cozy' || saved === 'expanded') return saved
-      } catch {
-        // ignore
-      }
-    }
-    return 'cozy'
-  })
-
-  const [focusedListingIndex, setFocusedListingIndex] = useState<number>(-1)
-  const [focusedChronicleIndex, setFocusedChronicleIndex] = useState<number>(-1)
-  const [showShortcutsModal, setShowShortcutsModal] = useState(false)
-
-  const handleDensityChange = (newDensity: TableDensity) => {
-    setTableDensity(newDensity)
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('khelgrid_admin_table_density', newDensity)
-      } catch {
-        // ignore
-      }
-    }
-  }
-
-  useEffect(() => {
-    const handleCategoryFilterEvent = (e: Event) => {
-      const detail = (e as CustomEvent<{ category?: string }>).detail
-      if (detail?.category) {
-        setCategoryFilter(detail.category)
-        setPage(1)
-      }
-    }
-    window.addEventListener('khelgrid-admin-filter-category', handleCategoryFilterEvent)
-    return () => window.removeEventListener('khelgrid-admin-filter-category', handleCategoryFilterEvent)
-  }, [])
 
   const preparePublishDialog = async (item: ModeratorQueueItem) => {
     setSelectedItem(item)
@@ -627,108 +526,6 @@ export function AdminModerationPage({
     }
   }
 
-  const handleExportSelectedCsv = () => {
-    const selectedList = items.filter(i => selectedSubIds.has(i.id))
-    if (selectedList.length === 0) return
-
-    const escapeCsv = (val: string | number | null | undefined) => {
-      if (val === null || val === undefined) return '""'
-      const str = String(val).replace(/"/g, '""')
-      return `"${str}"`
-    }
-
-    const headers = ['Reference Number', 'Listing Type', 'Title', 'City', 'Status', 'Version', 'Created At', 'Source URL']
-    const rows = selectedList.map(item => [
-      escapeCsv(item.reference_number),
-      escapeCsv(item.listing_type),
-      escapeCsv(item.title),
-      escapeCsv(item.city),
-      escapeCsv(item.status),
-      escapeCsv(item.version),
-      escapeCsv(new Date(item.created_at).toISOString()),
-      escapeCsv(item.source_url),
-    ])
-
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n')
-    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `khelgrid_moderation_batch_${new Date().toISOString().slice(0, 10)}.csv`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-    }
-    setNotice(`Exported ${selectedList.length} selected listings to CSV.`)
-  }
-
-  const handleExecuteBulkAction = async () => {
-    if (!actionDialog?.startsWith('bulk_')) return
-    const selectedList = items.filter(i => selectedSubIds.has(i.id))
-    if (selectedList.length === 0) return
-
-    const action = actionDialog.replace('bulk_', '') as 'approve' | 'reject' | 'corrections'
-    setBulkBusy(true)
-    setError('')
-    setNotice('')
-
-    try {
-      let succeeded = 0
-      let failed = 0
-
-      for (const item of selectedList) {
-        try {
-          if (action === 'approve') {
-            await approveListingSubmission(item.id, bulkNotes.trim() || undefined, item.version)
-            succeeded++
-          } else if (action === 'reject') {
-            if (!bulkMessage.trim()) {
-              setError('A rejection reason message is required for bulk rejection.')
-              setBulkBusy(false)
-              return
-            }
-            await rejectListingSubmission(item.id, bulkMessage.trim(), bulkNotes.trim() || undefined, item.version)
-            succeeded++
-          } else if (action === 'corrections') {
-            if (!bulkMessage.trim() || bulkMessage.trim().length < 10) {
-              setError('A correction request message of at least 10 characters is required for bulk corrections.')
-              setBulkBusy(false)
-              return
-            }
-            await requestListingCorrections(item.id, bulkMessage.trim(), bulkNotes.trim() || undefined, item.version)
-            succeeded++
-          }
-        } catch {
-          failed++
-        }
-      }
-
-      const actionName = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'sent for corrections'
-      const feedback = `Successfully ${actionName} ${succeeded} submissions in batch.${failed > 0 ? ` (${failed} failed due to concurrent modification)` : ''}`
-      setNotice(feedback)
-      setSelectedSubIds(new Set())
-      setActionDialog(null)
-      setBulkMessage('')
-      setBulkNotes('')
-
-      setUndoBuffer({
-        count: succeeded,
-        actionLabel: actionName,
-      })
-      window.setTimeout(() => {
-        setUndoBuffer(null)
-      }, 5000)
-
-      await loadQueue()
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Bulk action failed.')
-    } finally {
-      setBulkBusy(false)
-    }
-  }
-
   const handleStartChronicleReview = async (item: ChronicleModerationSubmission) => {
     setBusyId(item.id)
     setError('')
@@ -836,208 +633,6 @@ export function AdminModerationPage({
     (chroniclePage - 1) * chroniclePageSize,
     chroniclePage * chroniclePageSize
   )
-
-  // Phase 1 & 2: Power keyboard navigation (J/K/A/R/C/1/2/3/?) and Esc handler
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null
-      const isTyping =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement ||
-        Boolean(target?.isContentEditable)
-
-      if (e.key === 'Escape') {
-        if (showShortcutsModal) {
-          setShowShortcutsModal(false)
-        } else if (actionDialog) {
-          setActionDialog(null)
-        } else if (selectedItem) {
-          setSelectedItem(null)
-        } else if (manuscriptActionDialog) {
-          setManuscriptActionDialog(null)
-        } else if (selectedManuscript) {
-          setSelectedManuscript(null)
-        } else if (selectedSubIds.size > 0) {
-          setSelectedSubIds(new Set())
-        }
-        return
-      }
-
-      if (isTyping) return
-
-      // Toggle shortcuts help with '?'
-      if (e.key === '?') {
-        e.preventDefault()
-        setShowShortcutsModal(prev => !prev)
-        return
-      }
-
-      const isListings = activeDesk === 'listings'
-      const currentItems = isListings ? paginatedItems : paginatedChronicleItems
-      const currentIndex = isListings ? focusedListingIndex : focusedChronicleIndex
-      const setIndex = isListings ? setFocusedListingIndex : setFocusedChronicleIndex
-
-      // Move down: 'j' or 'ArrowDown'
-      if (e.key === 'j' || e.key === 'J' || e.key === 'ArrowDown') {
-        e.preventDefault()
-        if (currentItems.length === 0) return
-        const nextIndex = currentIndex < currentItems.length - 1 ? currentIndex + 1 : 0
-        setIndex(nextIndex)
-        return
-      }
-
-      // Move up: 'k' or 'ArrowUp'
-      if (e.key === 'k' || e.key === 'K' || e.key === 'ArrowUp') {
-        e.preventDefault()
-        if (currentItems.length === 0) return
-        const prevIndex = currentIndex > 0 ? currentIndex - 1 : currentItems.length - 1
-        setIndex(prevIndex)
-        return
-      }
-
-      // Open / Inspect: 'Enter' or 'o' or 'O' or ' ' (Space)
-      if (e.key === 'Enter' || e.key === 'o' || e.key === 'O' || e.key === ' ') {
-        if (currentIndex >= 0 && currentIndex < currentItems.length) {
-          e.preventDefault()
-          if (isListings) {
-            void openDetailView(paginatedItems[currentIndex])
-          } else {
-            setSelectedManuscript(paginatedChronicleItems[currentIndex])
-            setManuscriptActionDialog(null)
-            setError('')
-          }
-        }
-        return
-      }
-
-      // Quick Approve: 'a' or 'A'
-      if (e.key === 'a' || e.key === 'A') {
-        const item = isListings
-          ? (selectedItem || (currentIndex >= 0 ? paginatedItems[currentIndex] : null))
-          : (selectedManuscript || (currentIndex >= 0 ? paginatedChronicleItems[currentIndex] : null))
-
-        if (item) {
-          e.preventDefault()
-          if (isListings) {
-            const sub = item as ModeratorQueueItem
-            setSelectedItem(sub)
-            setActionDialog('approve')
-            setActionNotes('')
-            setError('')
-          } else {
-            const ms = item as ChronicleModerationSubmission
-            setSelectedManuscript(ms)
-            setManuscriptActionDialog('approve')
-            setManuscriptActionNotes('')
-            setError('')
-          }
-        }
-        return
-      }
-
-      // Quick Reject: 'r' or 'R'
-      if (e.key === 'r' || e.key === 'R') {
-        const item = isListings
-          ? (selectedItem || (currentIndex >= 0 ? paginatedItems[currentIndex] : null))
-          : (selectedManuscript || (currentIndex >= 0 ? paginatedChronicleItems[currentIndex] : null))
-
-        if (item) {
-          e.preventDefault()
-          if (isListings) {
-            const sub = item as ModeratorQueueItem
-            setSelectedItem(sub)
-            setActionDialog('reject')
-            setActionMessage('')
-            setError('')
-          } else {
-            const ms = item as ChronicleModerationSubmission
-            setSelectedManuscript(ms)
-            setManuscriptActionDialog('reject')
-            setManuscriptActionMessage('')
-            setError('')
-          }
-        }
-        return
-      }
-
-      // Request Corrections / Revisions: 'c' or 'C'
-      if (e.key === 'c' || e.key === 'C') {
-        const item = isListings
-          ? (selectedItem || (currentIndex >= 0 ? paginatedItems[currentIndex] : null))
-          : (selectedManuscript || (currentIndex >= 0 ? paginatedChronicleItems[currentIndex] : null))
-
-        if (item) {
-          e.preventDefault()
-          if (isListings) {
-            const sub = item as ModeratorQueueItem
-            setSelectedItem(sub)
-            setActionDialog('request_corrections')
-            setActionMessage('')
-            setError('')
-          } else {
-            const ms = item as ChronicleModerationSubmission
-            setSelectedManuscript(ms)
-            setManuscriptActionDialog('corrections')
-            setManuscriptActionMessage('')
-            setError('')
-          }
-        }
-        return
-      }
-
-      // Phase 5: Toggle card selection with 'x' or 'X'
-      if (e.key === 'x' || e.key === 'X') {
-        if (currentIndex >= 0 && currentIndex < currentItems.length) {
-          e.preventDefault()
-          const targetId = currentItems[currentIndex].id
-          setSelectedSubIds(prev => {
-            const next = new Set(prev)
-            if (next.has(targetId)) next.delete(targetId)
-            else next.add(targetId)
-            return next
-          })
-        }
-        return
-      }
-
-      // Phase 5: Select all currently filtered items: 'Shift + A'
-      if (e.shiftKey && (e.key === 'A' || e.key === 'a')) {
-        e.preventDefault()
-        setSelectedSubIds(new Set(currentItems.map(i => i.id)))
-        return
-      }
-
-      // Phase 5: Deselect all: 'Shift + D'
-      if (e.shiftKey && (e.key === 'D' || e.key === 'd')) {
-        e.preventDefault()
-        setSelectedSubIds(new Set())
-        return
-      }
-
-      // Density shortcuts: '1' for compact, '2' for cozy, '3' for expanded
-      if (e.key === '1') {
-        handleDensityChange('compact')
-      } else if (e.key === '2') {
-        handleDensityChange('cozy')
-      } else if (e.key === '3') {
-        handleDensityChange('expanded')
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [
-    actionDialog,
-    selectedItem,
-    manuscriptActionDialog,
-    selectedManuscript,
-    showShortcutsModal,
-    activeDesk,
-    paginatedItems,
-    paginatedChronicleItems,
-    focusedListingIndex,
-    focusedChronicleIndex,
-  ])
 
   return (
     <section className="admin-page-root content-page">
@@ -1252,264 +847,57 @@ export function AdminModerationPage({
                 </select>
               </label>
 
-              {/* Phase 2: Table Density Switcher & Shortcuts Modal Trigger */}
-              <div className="admin-density-switcher" role="group" aria-label="Table density">
-                <button
-                  type="button"
-                  className={`admin-density-btn ${tableDensity === 'compact' ? 'active' : ''}`}
-                  onClick={() => handleDensityChange('compact')}
-                  title="Compact density (Key: 1)"
-                >
-                  Compact
-                </button>
-                <button
-                  type="button"
-                  className={`admin-density-btn ${tableDensity === 'cozy' ? 'active' : ''}`}
-                  onClick={() => handleDensityChange('cozy')}
-                  title="Cozy density (Key: 2)"
-                >
-                  Cozy
-                </button>
-                <button
-                  type="button"
-                  className={`admin-density-btn ${tableDensity === 'expanded' ? 'active' : ''}`}
-                  onClick={() => handleDensityChange('expanded')}
-                  title="Expanded density (Key: 3)"
-                >
-                  Expanded
-                </button>
-              </div>
-
-              <button
-                type="button"
-                className="admin-btn admin-btn-secondary admin-shortcuts-trigger"
-                onClick={() => setShowShortcutsModal(true)}
-                title="View Keyboard Shortcuts (?)"
-              >
-                <span>Shortcuts</span>
-                <kbd>?</kbd>
-              </button>
-
               <button type="button" className="admin-btn admin-btn-secondary" onClick={() => void loadQueue()}>
                 Refresh Queue
               </button>
             </div>
           </div>
 
-          {/* Phase 5: Enhanced Bulk Selection Header Bar */}
-          <div className="admin-bulk-header-bar">
-            <div className="admin-bulk-select-controls">
-              <label className="admin-bulk-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={selectedSubIds.size === paginatedItems.length && paginatedItems.length > 0}
-                  onChange={() => {
-                    if (selectedSubIds.size === paginatedItems.length) setSelectedSubIds(new Set())
-                    else setSelectedSubIds(new Set(paginatedItems.map(p => p.id)))
-                  }}
-                />
-                <span>Select Page ({paginatedItems.length})</span>
-              </label>
-
-              {items.length > paginatedItems.length && selectedSubIds.size < items.length && (
-                <button
-                  type="button"
-                  className="admin-bulk-link-btn"
-                  onClick={() => setSelectedSubIds(new Set(items.map(p => p.id)))}
-                >
-                  Select all {items.length} filtered
-                </button>
-              )}
-            </div>
+          {/* Bulk Selection Bar */}
+          <div style={{ margin: '0.75rem 0 1rem', padding: '0.6rem 1rem', background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', fontWeight: 650, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={selectedSubIds.size === paginatedItems.length && paginatedItems.length > 0}
+                onChange={() => {
+                  if (selectedSubIds.size === paginatedItems.length) setSelectedSubIds(new Set())
+                  else setSelectedSubIds(new Set(paginatedItems.map(p => p.id)))
+                }}
+              />
+              Select Page ({paginatedItems.length})
+            </label>
 
             {selectedSubIds.size > 0 && (
-              <div className="admin-bulk-quick-actions">
-                <span className="admin-bulk-pill-badge">
-                  <SiteIcon name="check-circle" size={13} />
-                  <strong>{selectedSubIds.size}</strong> selected
-                </span>
-
-                <button
-                  type="button"
-                  className="admin-btn admin-btn-approve admin-btn-sm"
-                  onClick={() => {
-                    setActionDialog('bulk_approve')
-                    setBulkNotes('Approved via batch review session.')
-                    setError('')
-                  }}
-                  title="Bulk approve selected submissions"
-                >
-                  <SiteIcon name="check" size={13} />
-                  Approve ({selectedSubIds.size})
-                </button>
-
-                <button
-                  type="button"
-                  className="admin-btn admin-btn-warn admin-btn-sm"
-                  onClick={() => {
-                    setActionDialog('bulk_corrections')
-                    setBulkMessage('')
-                    setBulkNotes('')
-                    setError('')
-                  }}
-                  title="Bulk request corrections"
-                >
-                  <SiteIcon name="alert-circle" size={13} />
-                  Corrections
-                </button>
-
-                <button
-                  type="button"
-                  className="admin-btn admin-btn-reject admin-btn-sm"
-                  onClick={() => {
-                    setActionDialog('bulk_reject')
-                    setBulkMessage('')
-                    setBulkNotes('')
-                    setError('')
-                  }}
-                  title="Bulk reject selected"
-                >
-                  <SiteIcon name="close" size={13} />
-                  Reject
-                </button>
-
-                <button
-                  type="button"
-                  className="admin-btn admin-btn-secondary admin-btn-sm"
-                  onClick={handleExportSelectedCsv}
-                  title="Export selected records to CSV"
-                >
-                  <SiteIcon name="arrow-down-left" size={13} />
-                  Export CSV
-                </button>
-
-                <button
-                  type="button"
-                  className="admin-btn admin-btn-ghost admin-btn-sm"
-                  onClick={() => setSelectedSubIds(new Set())}
-                  title="Clear selection (Shift + D)"
-                >
-                  Clear
-                </button>
-              </div>
+              <span style={{ fontSize: '0.82rem', color: '#0284c7', fontWeight: 700 }}>
+                {selectedSubIds.size} selected
+              </span>
             )}
+
+            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="admin-btn admin-btn-secondary"
+                disabled={selectedSubIds.size === 0}
+                style={{ fontSize: '0.78rem', padding: '0.3rem 0.6rem' }}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('khelgrid-admin-switch-workspace', { detail: { workspace: 'analytics' } }))
+                }}
+              >
+                <SiteIcon name="chart" size={13} />
+                Open Operations &amp; Bulk Actions ({selectedSubIds.size}) →
+              </button>
+            </div>
           </div>
 
           {/* Submissions List */}
           {paginatedItems.length === 0 ? (
-            items.length === 0 ? (
-              <div className="admin-empty-celebration">
-                <div className="admin-empty-icon">🎉</div>
-                <h3>All caught up! Zero pending listings</h3>
-                <p>Every submitted trial, tournament, and venue has been screened. New submissions from athletes and academies will appear here in real time.</p>
-                <button type="button" className="admin-btn admin-btn-secondary" onClick={() => void loadQueue()}>
-                  <SiteIcon name="refresh" size={14} /> Refresh Queue
-                </button>
-              </div>
-            ) : (
-              <div className="admin-empty-celebration filters">
-                <SiteIcon name="search" size={28} />
-                <h3>No listings match your active filters</h3>
-                <p>Found 0 matching items out of {items.length} total items in this queue.</p>
-                <button
-                  type="button"
-                  className="admin-btn admin-btn-secondary"
-                  onClick={() => { setSearchTerm(''); setCategoryFilter('all'); setActiveTab('all'); setPage(1) }}
-                >
-                  Clear Search &amp; Filters
-                </button>
-              </div>
-            )
+            <div className="state-panel">
+              <p>No listings match the selected status or filters.</p>
+            </div>
           ) : (
-            <div className={`admin-items-list density-${tableDensity}`}>
-              {paginatedItems.map((sub, idx) => (
-                <article
-                  key={sub.id}
-                  className={`admin-mod-card ${selectedItem?.id === sub.id ? 'is-active-inspected' : ''} ${focusedListingIndex === idx ? 'is-keyboard-focused' : ''}`}
-                  onClick={() => void openDetailView(sub)}
-                  tabIndex={0}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') void openDetailView(sub)
-                  }}
-                  title="Click to inspect in Right-Side Drawer (or press Enter / O)"
-                >
-                  {/* Phase 1: Floating Quick Action Hover Bar */}
-                  <div className="admin-card-hover-actions" onClick={e => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      className="admin-hover-action-btn"
-                      title="Inspect Submission in Right-Side Drawer"
-                      onClick={() => void openDetailView(sub)}
-                    >
-                      <SiteIcon name="search" size={13} />
-                      <span>Inspect</span>
-                    </button>
-                    {(sub.status === 'pending_review' || sub.status === 'resubmitted' || sub.status === 'unpublished') && (
-                      <button
-                        type="button"
-                        className="admin-hover-action-btn primary"
-                        title="Start Review"
-                        disabled={busyId === sub.id}
-                        onClick={() => void handleStartReview(sub)}
-                      >
-                        <SiteIcon name="activity" size={13} />
-                        <span>Review</span>
-                      </button>
-                    )}
-                    {sub.status === 'under_review' && (
-                      <button
-                        type="button"
-                        className="admin-hover-action-btn success"
-                        title="Approve Listing"
-                        onClick={() => { setSelectedItem(sub); setActionDialog('approve'); setActionNotes(''); setError('') }}
-                      >
-                        <SiteIcon name="badge-check" size={13} />
-                        <span>Approve</span>
-                      </button>
-                    )}
-                    {sub.status === 'approved' && (
-                      <button
-                        type="button"
-                        className="admin-hover-action-btn publish"
-                        title="Publish to Catalogue"
-                        onClick={() => void preparePublishDialog(sub)}
-                      >
-                        <SiteIcon name="arrow-up-right" size={13} />
-                        <span>Publish</span>
-                      </button>
-                    )}
-                    {sub.status !== 'published' && sub.status !== 'rejected' && (
-                      <button
-                        type="button"
-                        className="admin-hover-action-btn warning"
-                        title="Request Corrections"
-                        onClick={() => { setSelectedItem(sub); setActionDialog('request_corrections'); setActionMessage(''); setError('') }}
-                      >
-                        <SiteIcon name="alert-circle" size={13} />
-                      </button>
-                    )}
-                    {sub.status !== 'published' && sub.status !== 'rejected' && (
-                      <button
-                        type="button"
-                        className="admin-hover-action-btn danger"
-                        title="Reject Listing"
-                        onClick={() => { setSelectedItem(sub); setActionDialog('reject'); setActionMessage(''); setError('') }}
-                      >
-                        <SiteIcon name="close" size={13} />
-                      </button>
-                    )}
-                    {sub.source_url && (
-                      <a
-                        href={sub.source_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="admin-hover-action-btn link"
-                        title="Open official HTTPS source ↗"
-                      >
-                        <SiteIcon name="arrow-up-right" size={13} />
-                      </a>
-                    )}
-                  </div>
+            <div className="admin-items-list">
+              {paginatedItems.map(sub => (
+                <article key={sub.id} className="admin-mod-card">
                   <div className="admin-mod-card-top">
                     <div className="admin-mod-card-title-group" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                       <input
@@ -1526,18 +914,7 @@ export function AdminModerationPage({
                         style={{ width: 16, height: 16, cursor: 'pointer' }}
                         aria-label={`Select ${sub.title}`}
                       />
-                      <button
-                        type="button"
-                        className={`admin-ref-code-btn ${copiedId === sub.id ? 'is-copied' : ''}`}
-                        onClick={e => handleCopy(sub.reference_number, sub.id, e)}
-                        title={`Click to copy: ${sub.reference_number}`}
-                      >
-                        <span>{sub.reference_number}</span>
-                        <span className="admin-copy-icon">
-                          <SiteIcon name={copiedId === sub.id ? 'check' : 'copy'} size={11} />
-                        </span>
-                        {copiedId === sub.id && <span className="admin-copy-tooltip">Copied!</span>}
-                      </button>
+                      <span className="admin-ref-code">{sub.reference_number}</span>
                       <span className={`admin-type-pill ${sub.listing_type}`}>{sub.listing_type}</span>
                       <h3 className="admin-item-title">{sub.title}</h3>
                     </div>
@@ -1683,433 +1060,71 @@ export function AdminModerationPage({
             </div>
           )}
 
-          {/* Submission Detail & Action Drawer */}
+          {/* Submission Detail & Action Modal */}
           {selectedItem && (
-            <div
-              className="admin-drawer-backdrop admin-modal-backdrop"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="modal-sub-title"
-              onClick={() => { setSelectedItem(null); setActionDialog(null) }}
-            >
-              <div
-                className="admin-inspection-drawer admin-modal-card"
-                onClick={e => e.stopPropagation()}
-              >
-                {/* Drawer Header */}
-                <div className="admin-drawer-header">
-                  <div className="admin-drawer-header-top">
-                    <div>
-                      <div className="admin-drawer-badge-row">
-                        <button
-                          type="button"
-                          className={`admin-ref-code-btn ${copiedId === selectedItem.id ? 'is-copied' : ''}`}
-                          onClick={e => handleCopy(selectedItem.reference_number, selectedItem.id, e)}
-                          title={`Click to copy: ${selectedItem.reference_number}`}
-                        >
-                          <span>{selectedItem.reference_number}</span>
-                          <span className="admin-copy-icon">
-                            <SiteIcon name={copiedId === selectedItem.id ? 'check' : 'copy'} size={11} />
-                          </span>
-                          {copiedId === selectedItem.id && <span className="admin-copy-tooltip">Copied!</span>}
-                        </button>
-                        <span className={`admin-type-pill ${selectedItem.listing_type}`}>{selectedItem.listing_type}</span>
-                        <span className="admin-ref-code" style={{ opacity: 0.85 }}>v{selectedItem.version}</span>
-                        <span className={`admin-status-badge ${selectedItem.status}`}>
-                          {selectedItem.status.replace(/_/g, ' ')}
-                        </span>
-                      </div>
-                      <h2 id="modal-sub-title" className="admin-drawer-title">{selectedItem.title}</h2>
-                    </div>
-                    <button
-                      type="button"
-                      className="admin-drawer-close-btn"
-                      onClick={() => { setSelectedItem(null); setActionDialog(null) }}
-                      title="Close inspection drawer (Esc)"
-                    >
-                      <SiteIcon name="close" size={15} />
-                      <span>Close</span>
-                      <kbd>Esc</kbd>
-                    </button>
+            <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-sub-title">
+              <div className="admin-modal-card">
+                <div className="admin-modal-header">
+                  <div>
+                    <span className="admin-ref-code">{selectedItem.reference_number}</span>
+                    <h2 id="modal-sub-title" style={{ margin: '0.35rem 0' }}>{selectedItem.title}</h2>
+                    <span className={`admin-status-badge ${selectedItem.status}`}>
+                      Status: {selectedItem.status.replace(/_/g, ' ')}
+                    </span>
                   </div>
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn-secondary"
+                    onClick={() => { setSelectedItem(null); setActionDialog(null) }}
+                  >
+                    Close
+                  </button>
                 </div>
 
-                {/* Sticky Action & Navigation Strip in Drawer */}
-                <div className="admin-drawer-sticky-strip">
-                  <div className="admin-modal-nav-tabs" style={{ margin: 0 }}>
-                    <button
-                      type="button"
-                      className={`admin-modal-nav-tab ${modalTab === 'data' ? 'active' : ''}`}
-                      onClick={() => setModalTab('data')}
-                    >
-                      <SiteIcon name="file-text" size={14} /> Submission Data
-                    </button>
-                    <button
-                      type="button"
-                      className={`admin-modal-nav-tab ${modalTab === 'preview' ? 'active' : ''}`}
-                      onClick={() => setModalTab('preview')}
-                    >
-                      <SiteIcon name="search" size={14} /> Live Public Card Preview
-                    </button>
-                    <button
-                      type="button"
-                      className={`admin-modal-nav-tab ${modalTab === 'diff' ? 'active' : ''}`}
-                      onClick={() => setModalTab('diff')}
-                    >
-                      <SiteIcon name="activity" size={14} /> Metadata Diff &amp; Audit
-                      {(selectedItem.status === 'resubmitted' || selectedItem.version > 1) && (
-                        <span className="admin-tab-micro-badge warning" style={{ marginLeft: '0.35rem' }}>v{selectedItem.version}</span>
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      className={`admin-modal-nav-tab ${modalTab === 'evidence' ? 'active' : ''}`}
-                      onClick={() => setModalTab('evidence')}
-                    >
-                      <SiteIcon name="link" size={14} /> Evidence &amp; Proof
-                      {selectedItem.source_url && (
-                        <span className="admin-tab-micro-badge" style={{ marginLeft: '0.35rem' }}>TLS</span>
-                      )}
-                    </button>
+                <div className="admin-modal-body">
+                  <div className="admin-detail-grid">
+                    <div className="admin-detail-item">
+                      <span className="admin-detail-label">Listing Category</span>
+                      <span className="admin-detail-val">{selectedItem.listing_type}</span>
+                    </div>
+                    <div className="admin-detail-item">
+                      <span className="admin-detail-label">City / Location</span>
+                      <span className="admin-detail-val">{selectedItem.city || 'India'}</span>
+                    </div>
+                    <div className="admin-detail-item">
+                      <span className="admin-detail-label">Version</span>
+                      <span className="admin-detail-val">v{selectedItem.version}</span>
+                    </div>
+                    <div className="admin-detail-item">
+                      <span className="admin-detail-label">Submitted On</span>
+                      <span className="admin-detail-val">
+                        {new Date(selectedItem.created_at).toLocaleString('en-IN')}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="admin-drawer-quick-actions">
-                    {(selectedItem.status === 'pending_review' || selectedItem.status === 'resubmitted' || selectedItem.status === 'unpublished') && (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-secondary"
-                        disabled={busyId === selectedItem.id}
-                        onClick={() => void handleStartReview(selectedItem)}
-                      >
-                        <SiteIcon name="activity" size={14} /> Start Review
-                      </button>
-                    )}
-
-                    {selectedItem.status === 'under_review' && (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-approve"
-                        onClick={() => { setActionDialog('approve'); setActionNotes(''); setError('') }}
-                      >
-                        <SiteIcon name="badge-check" size={14} /> Approve
-                      </button>
-                    )}
-
-                    {selectedItem.status === 'approved' && (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-publish"
-                        onClick={() => void preparePublishDialog(selectedItem)}
-                      >
-                        <SiteIcon name="arrow-up-right" size={14} /> Publish to Catalogue
-                      </button>
-                    )}
-
-                    {selectedItem.status !== 'published' && selectedItem.status !== 'rejected' && (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-warning"
-                        onClick={() => { setActionDialog('request_corrections'); setActionMessage(''); setError('') }}
-                      >
-                        <SiteIcon name="alert-circle" size={14} /> Request Corrections
-                      </button>
-                    )}
-
-                    {selectedItem.status !== 'published' && selectedItem.status !== 'rejected' && (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-reject"
-                        onClick={() => { setActionDialog('reject'); setActionMessage(''); setError('') }}
-                      >
-                        <SiteIcon name="close" size={14} /> Reject
-                      </button>
-                    )}
-
-                    {selectedItem.status === 'published' && (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-reject"
-                        onClick={() => { setActionDialog('unpublish'); setActionMessage(''); setError('') }}
-                      >
-                        Unpublish
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="admin-drawer-body admin-modal-body">
-                  {modalTab === 'preview' ? (
-                    <div className="admin-live-public-preview">
-                      <div className="admin-preview-banner">
-                        <SiteIcon name="search" size={14} />
-                        <span>Live Public Preview Mode · Rendering card as seen by athletes on KhelGrid</span>
-                      </div>
-
-                      <div className="admin-preview-canvas">
-                        <div className={`admin-preview-card type-${selectedItem.listing_type}`}>
-                          <div className="admin-preview-card-header">
-                            <span className="admin-preview-type-pill">
-                              {selectedItem.listing_type === 'opportunity' ? 'TRIAL / OPPORTUNITY' :
-                               selectedItem.listing_type === 'venue' ? 'SPORTS VENUE' :
-                               selectedItem.listing_type === 'coach' ? 'CERTIFIED COACH' :
-                               selectedItem.listing_type === 'academy' ? 'SPORTS ACADEMY' :
-                               selectedItem.listing_type === 'event' ? 'TOURNAMENT' : 'PICKUP GAME'}
-                            </span>
-                            <span className="admin-preview-city-pill">
-                              <SiteIcon name="map-pin" size={12} /> {selectedItem.city || 'India'}
-                            </span>
-                          </div>
-
-                          <h3 className="admin-preview-card-title">{selectedItem.title}</h3>
-
-                          <p className="admin-preview-card-desc">
-                            {selectedItem.details ? (
-                              selectedItem.details.length > 180 ? `${selectedItem.details.slice(0, 180)}…` : selectedItem.details
-                            ) : 'Verified sports listing on KhelGrid Platform.'}
-                          </p>
-
-                          {selectedItem.source_url && (
-                            <div className="admin-preview-source-line">
-                              <SiteIcon name="external-link" size={12} />
-                              <span>Official Source: {selectedItem.source_url}</span>
-                            </div>
-                          )}
-
-                          <div className="admin-preview-card-bottom">
-                            <div className="admin-preview-trust-tag">
-                              <SiteIcon name="shield-check" size={14} />
-                              <span>KhelGrid Verified</span>
-                            </div>
-                            <button type="button" className="admin-preview-action-btn" tabIndex={-1}>
-                              {selectedItem.listing_type === 'venue' ? 'View Venue & Slots ↗' :
-                               selectedItem.listing_type === 'coach' ? 'View Coach Profile ↗' :
-                               selectedItem.listing_type === 'academy' ? 'Explore Academy ↗' :
-                               selectedItem.listing_type === 'event' ? 'Tournament Details ↗' :
-                               selectedItem.listing_type === 'pickup_game' ? 'Join Pickup Game ↗' : 'Apply on Official Site ↗'}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : modalTab === 'diff' ? (
-                    <div className="admin-diff-container">
-                      <div className="admin-diff-audit-card">
-                        <div className="admin-diff-audit-item">
-                          <span className="label">Submission Version</span>
-                          <span className="val">v{selectedItem.version}</span>
-                        </div>
-                        <div className="admin-diff-audit-item">
-                          <span className="label">Current Status</span>
-                          <span className="val" style={{ textTransform: 'capitalize' }}>{selectedItem.status.replace(/_/g, ' ')}</span>
-                        </div>
-                        <div className="admin-diff-audit-item">
-                          <span className="label">Initial Submitted</span>
-                          <span className="val">{new Date(selectedItem.created_at).toLocaleDateString('en-IN')}</span>
-                        </div>
-                        <div className="admin-diff-audit-item">
-                          <span className="label">Last Revision</span>
-                          <span className="val">{selectedItem.updated_at ? new Date(selectedItem.updated_at).toLocaleDateString('en-IN') : 'Original submission'}</span>
-                        </div>
-                      </div>
-
-                      {selectedItem.correction_request && (
-                        <div className="admin-diff-request-box">
-                          <h4>
-                            <SiteIcon name="alert-circle" size={14} />
-                            Requested Changes from Moderator
-                          </h4>
-                          <p>{selectedItem.correction_request}</p>
-                        </div>
-                      )}
-
-                      <div className="admin-diff-grid">
-                        <div className="admin-diff-row">
-                          <div className="admin-diff-field-header">
-                            <span>Title / Listing Header</span>
-                            <span>{selectedItem.version > 1 ? 'Revision v' + selectedItem.version : 'Initial Entry'}</span>
-                          </div>
-                          <div className="admin-diff-values">
-                            {selectedItem.version > 1 ? (
-                              <>
-                                <div className="admin-diff-old">
-                                  <span>{selectedItem.title} (Prior revision baseline)</span>
-                                </div>
-                                <div className="admin-diff-new">
-                                  <span>{selectedItem.title}</span>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="admin-diff-unchanged">
-                                <span>{selectedItem.title}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="admin-diff-row">
-                          <div className="admin-diff-field-header">
-                            <span>Location &amp; Region</span>
-                            <span>Geographic Scope</span>
-                          </div>
-                          <div className="admin-diff-values">
-                            <div className="admin-diff-unchanged">
-                              <span>City: <strong>{selectedItem.city || 'India'}</strong></span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="admin-diff-row">
-                          <div className="admin-diff-field-header">
-                            <span>Official Source &amp; Evidence</span>
-                            <span>{selectedItem.source_url ? 'Supplied' : 'Pending'}</span>
-                          </div>
-                          <div className="admin-diff-values">
-                            {selectedItem.source_url ? (
-                              <div className="admin-diff-new">
-                                <span>{selectedItem.source_url}</span>
-                              </div>
-                            ) : (
-                              <div className="admin-diff-old">
-                                <span>No HTTPS verification source provided</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="admin-diff-row">
-                          <div className="admin-diff-field-header">
-                            <span>Submission Details &amp; Operational Specs</span>
-                            <span>Body Content</span>
-                          </div>
-                          <div className="admin-diff-values">
-                            <div className="admin-diff-unchanged" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                              {selectedItem.details || 'No structured details provided.'}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : modalTab === 'evidence' ? (
-                    <div className="admin-evidence-inspector">
-                      <div className={`admin-evidence-status-banner ${selectedItem.source_url ? '' : 'missing'}`}>
-                        <div className="info">
-                          <SiteIcon name={selectedItem.source_url ? 'shield-check' : 'alert-circle'} size={18} />
-                          <span>
-                            {selectedItem.source_url
-                              ? 'HTTPS Verification URL Attached'
-                              : 'No Official Verification Link Attached'}
-                          </span>
-                        </div>
-                        {selectedItem.source_url && (
-                          <span className="admin-tab-micro-badge">TLS Secured</span>
-                        )}
-                      </div>
-
+                  <div>
+                    <span className="admin-detail-label">Official HTTPS Source</span>
+                    <p style={{ margin: '0.25rem 0' }}>
                       {selectedItem.source_url ? (
-                        <div className="admin-evidence-card">
-                          <h4>External Verification Target</h4>
-                          <div className="admin-evidence-url-row">
-                            <span>{selectedItem.source_url}</span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-                            <a
-                              href={selectedItem.source_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="admin-btn admin-btn-approve"
-                              style={{ textDecoration: 'none' }}
-                            >
-                              <SiteIcon name="arrow-up-right" size={14} /> Open Official Verification Page ↗
-                            </a>
-                            <button
-                              type="button"
-                              className="admin-btn admin-btn-secondary"
-                              onClick={e => handleCopy(selectedItem.source_url!, selectedItem.id + '-url', e)}
-                            >
-                              <SiteIcon name={copiedId === selectedItem.id + '-url' ? 'check' : 'copy'} size={14} />
-                              {copiedId === selectedItem.id + '-url' ? 'URL Copied!' : 'Copy Source URL'}
-                            </button>
-                          </div>
-                        </div>
+                        <a href={selectedItem.source_url} target="_blank" rel="noreferrer">
+                          {selectedItem.source_url} ↗
+                        </a>
                       ) : (
-                        <div className="admin-evidence-card">
-                          <h4>Verification Required</h4>
-                          <p style={{ margin: 0, fontSize: '0.88rem', color: '#64748b', lineHeight: 1.5 }}>
-                            This listing submission did not include an official federation circular, website URL, or sanctioned flyer.
-                            Moderators should request official evidence before catalogue publication.
-                          </p>
-                          <div>
-                            <button
-                              type="button"
-                              className="admin-btn admin-btn-warning"
-                              onClick={() => {
-                                setActionDialog('request_corrections')
-                                setActionMessage('Please provide an official federation circular or verifiable organizer website link for age verification and schedule confirmation.')
-                              }}
-                            >
-                              <SiteIcon name="alert-circle" size={14} /> Request Federation Evidence via Corrections
-                            </button>
-                          </div>
-                        </div>
+                        <em>No official source URL provided by submitter</em>
                       )}
+                    </p>
+                  </div>
 
-                      <div className="admin-evidence-checklist">
-                        <h5>Moderator Evidence Verification Standards:</h5>
-                        <ul>
-                          <li>Verify that official letterhead or federation affiliation is clearly visible.</li>
-                          <li>Confirm age group eligibility criteria (e.g. U-14, U-17, U-19) match the listing title.</li>
-                          <li>Ensure reporting date, ground venue address, and registration fees match federation norms.</li>
-                          <li>Flag and reject any suspicious contact information or unverified personal UPI payment requests.</li>
-                        </ul>
-                      </div>
+                  <div>
+                    <span className="admin-detail-label">Submitter Information & Context</span>
+                    <div className="admin-mod-card-desc">
+                      {selectedItem.details || <em>No additional details submitted.</em>}
                     </div>
-                  ) : (
-                    <>
-                      <div className="admin-detail-grid">
-                        <div className="admin-detail-item">
-                          <span className="admin-detail-label">Listing Category</span>
-                          <span className="admin-detail-val">{selectedItem.listing_type}</span>
-                        </div>
-                        <div className="admin-detail-item">
-                          <span className="admin-detail-label">City / Location</span>
-                          <span className="admin-detail-val">{selectedItem.city || 'India'}</span>
-                        </div>
-                        <div className="admin-detail-item">
-                          <span className="admin-detail-label">Version</span>
-                          <span className="admin-detail-val">v{selectedItem.version}</span>
-                        </div>
-                        <div className="admin-detail-item">
-                          <span className="admin-detail-label">Submitted On</span>
-                          <span className="admin-detail-val">
-                            {new Date(selectedItem.created_at).toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <span className="admin-detail-label">Official HTTPS Source</span>
-                        <p style={{ margin: '0.25rem 0' }}>
-                          {selectedItem.source_url ? (
-                            <a href={selectedItem.source_url} target="_blank" rel="noreferrer">
-                              {selectedItem.source_url} ↗
-                            </a>
-                          ) : (
-                            <em>No official source URL provided by submitter</em>
-                          )}
-                        </p>
-                      </div>
-
-                      <div>
-                        <span className="admin-detail-label">Submitter Information & Context</span>
-                        <div className="admin-mod-card-desc">
-                          {selectedItem.details || <em>No additional details submitted.</em>}
-                        </div>
-                        <small style={{ color: '#64748b', display: 'block', marginTop: '0.35rem' }}>
-                          Note: Submitter-provided data is unverified community input until checked by KhelGrid staff.
-                        </small>
-                      </div>
-                    </>
-                  )}
+                    <small style={{ color: '#64748b', display: 'block', marginTop: '0.35rem' }}>
+                      Note: Submitter-provided data is unverified community input until checked by KhelGrid staff.
+                    </small>
+                  </div>
 
                   {/* Quick Action Buttons within Inspect Modal */}
                   {!actionDialog && (
@@ -2179,21 +1194,6 @@ export function AdminModerationPage({
                       <p>
                         Approval is an editorial decision only. Evidence verification is a separate step in the protected control panel, and publication is a third explicit action.
                       </p>
-                      <div className="admin-preset-chips-wrap">
-                        <span className="admin-preset-label">Quick Verification Note Presets:</span>
-                        <div className="admin-preset-chips">
-                          {MODERATION_APPROVAL_PRESETS.map((preset, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              className="admin-preset-chip"
-                              onClick={() => setActionNotes(preset.text)}
-                            >
-                              {preset.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
                       <label>
                         Internal moderator notes (optional, private to staff):
                         <textarea
@@ -2229,21 +1229,6 @@ export function AdminModerationPage({
                       <p>
                         Provide a polite, transparent explanation. This reason will be visible to the submitter on their tracking view.
                       </p>
-                      <div className="admin-preset-chips-wrap">
-                        <span className="admin-preset-label">Quick Rejection Reason Presets:</span>
-                        <div className="admin-preset-chips">
-                          {MODERATION_REJECTION_PRESETS.map((preset, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              className="admin-preset-chip"
-                              onClick={() => setActionMessage(preset.text)}
-                            >
-                              {preset.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
                       <label>
                         Rejection reason for submitter *:
                         <textarea
@@ -2289,21 +1274,6 @@ export function AdminModerationPage({
                       <p>
                         The submitter will see this message on their tracking portal and can edit and resubmit their submission.
                       </p>
-                      <div className="admin-preset-chips-wrap">
-                        <span className="admin-preset-label">Quick Revision Request Presets:</span>
-                        <div className="admin-preset-chips">
-                          {MODERATION_CORRECTION_PRESETS.map((preset, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              className="admin-preset-chip"
-                              onClick={() => setActionMessage(preset.text)}
-                            >
-                              {preset.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
                       <label>
                         Correction message *:
                         <textarea
@@ -2645,44 +1615,6 @@ export function AdminModerationPage({
                 </select>
               </label>
 
-              {/* Phase 2: Manuscripts Density Switcher & Shortcuts Modal Trigger */}
-              <div className="admin-density-switcher" role="group" aria-label="Manuscripts view density">
-                <button
-                  type="button"
-                  className={`admin-density-btn ${tableDensity === 'compact' ? 'active' : ''}`}
-                  onClick={() => handleDensityChange('compact')}
-                  title="Compact density (Key: 1)"
-                >
-                  Compact
-                </button>
-                <button
-                  type="button"
-                  className={`admin-density-btn ${tableDensity === 'cozy' ? 'active' : ''}`}
-                  onClick={() => handleDensityChange('cozy')}
-                  title="Cozy density (Key: 2)"
-                >
-                  Cozy
-                </button>
-                <button
-                  type="button"
-                  className={`admin-density-btn ${tableDensity === 'expanded' ? 'active' : ''}`}
-                  onClick={() => handleDensityChange('expanded')}
-                  title="Expanded density (Key: 3)"
-                >
-                  Expanded
-                </button>
-              </div>
-
-              <button
-                type="button"
-                className="admin-btn admin-btn-secondary admin-shortcuts-trigger"
-                onClick={() => setShowShortcutsModal(true)}
-                title="View Keyboard Shortcuts (?)"
-              >
-                <span>Shortcuts</span>
-                <kbd>?</kbd>
-              </button>
-
               <button type="button" className="admin-btn admin-btn-secondary" onClick={() => void loadChronicleQueue()}>
                 Refresh Manuscripts
               </button>
@@ -2691,164 +1623,16 @@ export function AdminModerationPage({
 
           {/* Manuscripts List */}
           {paginatedChronicleItems.length === 0 ? (
-            chronicleItems.length === 0 ? (
-              <div className="admin-empty-celebration">
-                <div className="admin-empty-icon">📜</div>
-                <h3>All caught up! Zero pending manuscripts</h3>
-                <p>Every submitted sports science paper, trial protocol, and research manuscript has been screened. New preprints will appear here in real time.</p>
-                <button type="button" className="admin-btn admin-btn-secondary" onClick={() => void loadChronicleQueue()}>
-                  <SiteIcon name="refresh" size={14} /> Refresh Manuscripts
-                </button>
-              </div>
-            ) : (
-              <div className="admin-empty-celebration filters">
-                <SiteIcon name="search" size={28} />
-                <h3>No manuscripts match your active filters</h3>
-                <p>Found 0 matching manuscripts out of {chronicleItems.length} total manuscripts in this desk.</p>
-                <button
-                  type="button"
-                  className="admin-btn admin-btn-secondary"
-                  onClick={() => { setChronicleSearchTerm(''); setChronicleCategoryFilter('all'); setChronicleActiveTab('all'); setChroniclePage(1) }}
-                >
-                  Clear Search &amp; Filters
-                </button>
-              </div>
-            )
+            <div className="state-panel">
+              <p>No manuscripts match the selected status or discipline filter.</p>
+            </div>
           ) : (
-            <div className={`admin-items-list density-${tableDensity}`}>
-              {paginatedChronicleItems.map((sub, idx) => (
-                <article
-                  key={sub.id}
-                  className={`admin-mod-card chronicle ${selectedManuscript?.id === sub.id ? 'is-active-inspected' : ''} ${focusedChronicleIndex === idx ? 'is-keyboard-focused' : ''}`}
-                  onClick={() => {
-                    setSelectedManuscript(sub)
-                    setManuscriptActionDialog(null)
-                    setError('')
-                  }}
-                  tabIndex={0}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      setSelectedManuscript(sub)
-                      setManuscriptActionDialog(null)
-                      setError('')
-                    }
-                  }}
-                  title="Click to inspect manuscript in Right-Side Drawer (or press Enter / O)"
-                >
-                  {/* Phase 1: Floating Quick Action Hover Bar */}
-                  <div className="admin-card-hover-actions" onClick={e => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      className="admin-hover-action-btn"
-                      title="Inspect Manuscript (Open Drawer)"
-                      onClick={() => {
-                        setSelectedManuscript(sub)
-                        setManuscriptActionDialog(null)
-                        setError('')
-                      }}
-                    >
-                      <SiteIcon name="search" size={13} />
-                      <span>Inspect</span>
-                    </button>
-                    {(sub.status === 'pending_review' || sub.status === 'under_review') && (
-                      <button
-                        type="button"
-                        className="admin-hover-action-btn primary"
-                        title="Start Screening"
-                        disabled={busyId === sub.id}
-                        onClick={() => void handleStartChronicleReview(sub)}
-                      >
-                        <SiteIcon name="activity" size={13} />
-                        <span>Screen</span>
-                      </button>
-                    )}
-                    {sub.status !== 'approved' && sub.status !== 'published' && (
-                      <button
-                        type="button"
-                        className="admin-hover-action-btn success"
-                        title="Approve Manuscript"
-                        onClick={() => {
-                          setSelectedManuscript(sub)
-                          setManuscriptActionDialog('approve')
-                          setManuscriptActionNotes('')
-                        }}
-                      >
-                        <SiteIcon name="badge-check" size={13} />
-                        <span>Approve</span>
-                      </button>
-                    )}
-                    {sub.status === 'approved' && (
-                      <button
-                        type="button"
-                        className="admin-hover-action-btn publish"
-                        title="Publish to Archive"
-                        disabled={busyId === sub.id}
-                        onClick={() => {
-                          setSelectedManuscript(sub)
-                          setManuscriptActionDialog('publish')
-                          setManuscriptTargetSlug('')
-                          setManuscriptTargetPaperId('')
-                          setError('')
-                        }}
-                      >
-                        <SiteIcon name="arrow-up-right" size={13} />
-                        <span>Publish</span>
-                      </button>
-                    )}
-                    {sub.status !== 'published' && sub.status !== 'rejected' && (
-                      <button
-                        type="button"
-                        className="admin-hover-action-btn warning"
-                        title="Request Revisions"
-                        onClick={() => {
-                          setSelectedManuscript(sub)
-                          setManuscriptActionDialog('corrections')
-                          setManuscriptActionMessage('')
-                        }}
-                      >
-                        <SiteIcon name="alert-circle" size={13} />
-                      </button>
-                    )}
-                    {sub.status !== 'published' && sub.status !== 'rejected' && (
-                      <button
-                        type="button"
-                        className="admin-hover-action-btn danger"
-                        title="Reject Manuscript"
-                        onClick={() => {
-                          setSelectedManuscript(sub)
-                          setManuscriptActionDialog('reject')
-                          setManuscriptActionMessage('')
-                        }}
-                      >
-                        <SiteIcon name="close" size={13} />
-                      </button>
-                    )}
-                    {sub.fullTextOrUrl && (
-                      <a
-                        href={sub.fullTextOrUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="admin-hover-action-btn link"
-                        title="View Full Manuscript / Preprint ↗"
-                      >
-                        <SiteIcon name="arrow-up-right" size={13} />
-                      </a>
-                    )}
-                  </div>
+            <div className="admin-items-list">
+              {paginatedChronicleItems.map(sub => (
+                <article key={sub.id} className="admin-mod-card chronicle">
                   <div className="admin-mod-card-top">
                     <div className="admin-mod-card-title-group">
-                      <button
-                        type="button"
-                        className={`admin-ref-code-btn ${copiedId === sub.id ? 'is-copied' : ''}`}
-                        onClick={e => handleCopy(sub.submissionId, sub.id, e)}
-                        title={`Click to copy: ${sub.submissionId}`}
-                      >
-                        <span>{sub.submissionId}</span>
-                        <span className="admin-copy-icon">
-                          <SiteIcon name={copiedId === sub.id ? 'check' : 'copy'} size={11} />
-                        </span>
-                        {copiedId === sub.id && <span className="admin-copy-tooltip">Copied!</span>}
-                      </button>
+                      <span className="admin-ref-code">{sub.submissionId}</span>
                       <span className="admin-type-pill chronicle-discipline">{sub.categoryName || sub.category}</span>
                       <h3 className="admin-item-title">{sub.title}</h3>
                     </div>
@@ -3038,330 +1822,91 @@ export function AdminModerationPage({
 
           {/* Manuscript Detail & Action Modal */}
           {selectedManuscript && (
-            <div
-              className="admin-drawer-backdrop admin-modal-backdrop"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="modal-ms-title"
-              onClick={() => { setSelectedManuscript(null); setManuscriptActionDialog(null) }}
-            >
-              <div
-                className="admin-inspection-drawer admin-modal-card"
-                onClick={e => e.stopPropagation()}
-              >
-                {/* Drawer Header */}
-                <div className="admin-drawer-header">
-                  <div className="admin-drawer-header-top">
-                    <div>
-                      <div className="admin-drawer-badge-row">
-                        <button
-                          type="button"
-                          className={`admin-ref-code-btn ${copiedId === selectedManuscript.id ? 'is-copied' : ''}`}
-                          onClick={e => handleCopy(selectedManuscript.submissionId, selectedManuscript.id, e)}
-                          title={`Click to copy: ${selectedManuscript.submissionId}`}
-                        >
-                          <span>{selectedManuscript.submissionId}</span>
-                          <span className="admin-copy-icon">
-                            <SiteIcon name={copiedId === selectedManuscript.id ? 'check' : 'copy'} size={11} />
-                          </span>
-                          {copiedId === selectedManuscript.id && <span className="admin-copy-tooltip">Copied!</span>}
-                        </button>
-                        <span className="admin-type-pill report">Peer Review</span>
-                        <span className={`admin-status-badge ${selectedManuscript.status}`}>
-                          {selectedManuscript.status.replace(/_/g, ' ')}
-                        </span>
-                      </div>
-                      <h2 id="modal-ms-title" className="admin-drawer-title">{selectedManuscript.title}</h2>
-                    </div>
-                    <button
-                      type="button"
-                      className="admin-drawer-close-btn"
-                      onClick={() => { setSelectedManuscript(null); setManuscriptActionDialog(null) }}
-                      title="Close manuscript drawer (Esc)"
-                    >
-                      <SiteIcon name="close" size={15} />
-                      <span>Close</span>
-                      <kbd>Esc</kbd>
-                    </button>
+            <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-ms-title">
+              <div className="admin-modal-card">
+                <div className="admin-modal-header">
+                  <div>
+                    <span className="admin-ref-code">{selectedManuscript.submissionId}</span>
+                    <h2 id="modal-ms-title" style={{ margin: '0.35rem 0' }}>{selectedManuscript.title}</h2>
+                    <span className={`admin-status-badge ${selectedManuscript.status}`}>
+                      Status: {selectedManuscript.status.replace(/_/g, ' ')}
+                    </span>
                   </div>
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn-secondary"
+                    onClick={() => { setSelectedManuscript(null); setManuscriptActionDialog(null) }}
+                  >
+                    ✕ Close
+                  </button>
                 </div>
 
-                {/* Sticky Action Strip */}
-                <div className="admin-drawer-sticky-strip">
-                  <div className="admin-modal-nav-tabs" style={{ margin: 0 }}>
-                    <button
-                      type="button"
-                      className={`admin-modal-nav-tab ${chronicleModalTab === 'data' ? 'active' : ''}`}
-                      onClick={() => setChronicleModalTab('data')}
-                    >
-                      <SiteIcon name="file-text" size={14} /> Submission Data
-                    </button>
-                    <button
-                      type="button"
-                      className={`admin-modal-nav-tab ${chronicleModalTab === 'abstract' ? 'active' : ''}`}
-                      onClick={() => setChronicleModalTab('abstract')}
-                    >
-                      <SiteIcon name="book-open" size={14} /> Structured Abstract
-                    </button>
-                    <button
-                      type="button"
-                      className={`admin-modal-nav-tab ${chronicleModalTab === 'evidence' ? 'active' : ''}`}
-                      onClick={() => setChronicleModalTab('evidence')}
-                    >
-                      <SiteIcon name="link" size={14} /> Preprint &amp; Ethics
-                      {selectedManuscript.fullTextOrUrl && (
-                        <span className="admin-tab-micro-badge" style={{ marginLeft: '0.35rem' }}>Deposit</span>
-                      )}
-                    </button>
+                <div className="admin-modal-body">
+                  <div className="admin-detail-grid">
+                    <div className="admin-detail-item">
+                      <span className="admin-detail-label">Primary Author</span>
+                      <span className="admin-detail-val">{selectedManuscript.authorName}</span>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{selectedManuscript.authorEmail}</span>
+                    </div>
+                    <div className="admin-detail-item">
+                      <span className="admin-detail-label">Institution / Affiliation</span>
+                      <span className="admin-detail-val">{selectedManuscript.affiliation}</span>
+                    </div>
+                    <div className="admin-detail-item">
+                      <span className="admin-detail-label">Discipline</span>
+                      <span className="admin-detail-val">{selectedManuscript.categoryName || selectedManuscript.category}</span>
+                    </div>
+                    <div className="admin-detail-item">
+                      <span className="admin-detail-label">ORCID</span>
+                      <span className="admin-detail-val">{selectedManuscript.orcid || 'Not provided'}</span>
+                    </div>
+                    {selectedManuscript.coAuthors && (
+                      <div className="admin-detail-item" style={{ gridColumn: '1 / -1' }}>
+                        <span className="admin-detail-label">Co-Authors</span>
+                        <span className="admin-detail-val">{selectedManuscript.coAuthors}</span>
+                      </div>
+                    )}
+                    {selectedManuscript.fullTextOrUrl && (
+                      <div className="admin-detail-item" style={{ gridColumn: '1 / -1' }}>
+                        <span className="admin-detail-label">Manuscript Link / Deposit</span>
+                        <a href={selectedManuscript.fullTextOrUrl} target="_blank" rel="noreferrer" className="admin-detail-val" style={{ color: '#0284c7' }}>
+                          {selectedManuscript.fullTextOrUrl} ↗
+                        </a>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="admin-drawer-quick-actions">
-                    {(selectedManuscript.status === 'pending_review' || selectedManuscript.status === 'under_review') && (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-secondary"
-                        disabled={busyId === selectedManuscript.id}
-                        onClick={() => void handleStartChronicleReview(selectedManuscript)}
-                      >
-                        <SiteIcon name="activity" size={14} />
-                        {selectedManuscript.status === 'under_review' ? 'Screening in Progress' : 'Start Screening'}
-                      </button>
-                    )}
-
-                    {selectedManuscript.status !== 'approved' && selectedManuscript.status !== 'published' && (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-approve"
-                        onClick={() => {
-                          setManuscriptActionDialog('approve')
-                          setManuscriptActionNotes('')
-                          setError('')
-                        }}
-                      >
-                        <SiteIcon name="badge-check" size={14} /> Approve Manuscript
-                      </button>
-                    )}
-
-                    {selectedManuscript.status === 'approved' && (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-publish"
-                        disabled={busyId === selectedManuscript.id}
-                        onClick={() => {
-                          setManuscriptActionDialog('publish')
-                          setManuscriptTargetSlug('')
-                          setManuscriptTargetPaperId('')
-                          setError('')
-                        }}
-                      >
-                        <SiteIcon name="arrow-up-right" size={14} /> Publish to Archive
-                      </button>
-                    )}
-
-                    {selectedManuscript.status !== 'published' && selectedManuscript.status !== 'rejected' && (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-warning"
-                        onClick={() => {
-                          setManuscriptActionDialog('corrections')
-                          setManuscriptActionMessage('')
-                          setError('')
-                        }}
-                      >
-                        <SiteIcon name="alert-circle" size={14} /> Request Revisions
-                      </button>
-                    )}
-
-                    {selectedManuscript.status !== 'published' && selectedManuscript.status !== 'rejected' && (
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn-reject"
-                        onClick={() => {
-                          setManuscriptActionDialog('reject')
-                          setManuscriptActionMessage('')
-                          setError('')
-                        }}
-                      >
-                        <SiteIcon name="close" size={14} /> Reject
-                      </button>
-                    )}
+                  {/* Abstract */}
+                  <div>
+                    <span className="admin-detail-label">Structured Abstract</span>
+                    <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '0.35rem', lineHeight: 1.6 }}>
+                      {selectedManuscript.abstract}
+                    </div>
                   </div>
-                </div>
 
-                <div className="admin-drawer-body admin-modal-body">
-                  {chronicleModalTab === 'abstract' ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      <div className="admin-preview-banner">
-                        <SiteIcon name="book-open" size={14} />
-                        <span>Peer-Review Abstract · Scientific summary for screening &amp; indexation</span>
-                      </div>
-                      <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '10px', border: '1px solid #e2e8f0', lineHeight: 1.7, fontSize: '0.92rem', color: '#1e293b' }}>
-                        {selectedManuscript.abstract}
-                      </div>
-                      <div style={{ display: 'flex', gap: '0.65rem' }}>
-                        <button
-                          type="button"
-                          className="admin-btn admin-btn-secondary"
-                          onClick={e => handleCopy(selectedManuscript.abstract, selectedManuscript.id + '-abs', e)}
-                        >
-                          <SiteIcon name={copiedId === selectedManuscript.id + '-abs' ? 'check' : 'copy'} size={14} />
-                          {copiedId === selectedManuscript.id + '-abs' ? 'Abstract Copied!' : 'Copy Full Abstract'}
-                        </button>
-                      </div>
+                  {/* Ethics Clearances */}
+                  <div>
+                    <span className="admin-detail-label">Ethics & Legal Compliance</span>
+                    <div className="admin-ethics-row" style={{ marginTop: '0.5rem' }}>
+                      <span className={`admin-ethics-badge ${selectedManuscript.humanEthicsConfirmed ? 'ok' : ''}`}>
+                        <SiteIcon name={selectedManuscript.humanEthicsConfirmed ? 'check-circle' : 'alert-circle'} size={13} />
+                        Human Subjects IRB Ethics: {selectedManuscript.humanEthicsConfirmed ? 'Confirmed' : 'Unconfirmed'}
+                      </span>
+                      <span className={`admin-ethics-badge ${selectedManuscript.minorConsentConfirmed ? 'ok' : ''}`}>
+                        <SiteIcon name={selectedManuscript.minorConsentConfirmed ? 'check-circle' : 'alert-circle'} size={13} />
+                        Minor Athletes Assent / Guardian Consent: {selectedManuscript.minorConsentConfirmed ? 'Confirmed' : 'Unconfirmed'}
+                      </span>
+                      <span className="admin-ethics-badge license">
+                        License: {selectedManuscript.licenseType || 'CC BY-NC-ND 4.0'}
+                      </span>
                     </div>
-                  ) : chronicleModalTab === 'evidence' ? (
-                    <div className="admin-evidence-inspector">
-                      <div className={`admin-evidence-status-banner ${selectedManuscript.fullTextOrUrl ? '' : 'missing'}`}>
-                        <div className="info">
-                          <SiteIcon name={selectedManuscript.fullTextOrUrl ? 'shield-check' : 'alert-circle'} size={18} />
-                          <span>
-                            {selectedManuscript.fullTextOrUrl
-                              ? 'Preprint / Manuscript Deposit Attached'
-                              : 'No Deposit URL Provided'}
-                          </span>
-                        </div>
-                        {selectedManuscript.fullTextOrUrl && (
-                          <span className="admin-tab-micro-badge">DOI / URL</span>
-                        )}
-                      </div>
-
-                      {selectedManuscript.fullTextOrUrl ? (
-                        <div className="admin-evidence-card">
-                          <h4>Preprint &amp; Open-Access Deposit</h4>
-                          <div className="admin-evidence-url-row">
-                            <span>{selectedManuscript.fullTextOrUrl}</span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-                            <a
-                              href={selectedManuscript.fullTextOrUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="admin-btn admin-btn-approve"
-                              style={{ textDecoration: 'none' }}
-                            >
-                              <SiteIcon name="arrow-up-right" size={14} /> Open Manuscript Deposit ↗
-                            </a>
-                            <button
-                              type="button"
-                              className="admin-btn admin-btn-secondary"
-                              onClick={e => handleCopy(selectedManuscript.fullTextOrUrl!, selectedManuscript.id + '-url', e)}
-                            >
-                              <SiteIcon name={copiedId === selectedManuscript.id + '-url' ? 'check' : 'copy'} size={14} />
-                              {copiedId === selectedManuscript.id + '-url' ? 'URL Copied!' : 'Copy Deposit URL'}
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="admin-evidence-card">
-                          <h4>Deposit Link Required</h4>
-                          <p style={{ margin: 0, fontSize: '0.88rem', color: '#64748b' }}>
-                            The author has not provided a direct preprint URL or open deposit link.
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Ethics Clearances */}
-                      <div className="admin-evidence-card">
-                        <h4>Ethics &amp; Legal Compliance Standards</h4>
-                        <div className="admin-ethics-row" style={{ marginTop: '0.35rem' }}>
-                          <span className={`admin-ethics-badge ${selectedManuscript.humanEthicsConfirmed ? 'ok' : ''}`}>
-                            <SiteIcon name={selectedManuscript.humanEthicsConfirmed ? 'check-circle' : 'alert-circle'} size={13} />
-                            Human Subjects IRB Ethics: {selectedManuscript.humanEthicsConfirmed ? 'Confirmed' : 'Unconfirmed'}
-                          </span>
-                          <span className={`admin-ethics-badge ${selectedManuscript.minorConsentConfirmed ? 'ok' : ''}`}>
-                            <SiteIcon name={selectedManuscript.minorConsentConfirmed ? 'check-circle' : 'alert-circle'} size={13} />
-                            Minor Athletes Assent / Guardian Consent: {selectedManuscript.minorConsentConfirmed ? 'Confirmed' : 'Unconfirmed'}
-                          </span>
-                          <span className="admin-ethics-badge license">
-                            License: {selectedManuscript.licenseType || 'CC BY-NC-ND 4.0'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="admin-detail-grid">
-                        <div className="admin-detail-item">
-                          <span className="admin-detail-label">Primary Author</span>
-                          <span className="admin-detail-val">{selectedManuscript.authorName}</span>
-                          <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{selectedManuscript.authorEmail}</span>
-                        </div>
-                        <div className="admin-detail-item">
-                          <span className="admin-detail-label">Institution / Affiliation</span>
-                          <span className="admin-detail-val">{selectedManuscript.affiliation}</span>
-                        </div>
-                        <div className="admin-detail-item">
-                          <span className="admin-detail-label">Discipline</span>
-                          <span className="admin-detail-val">{selectedManuscript.categoryName || selectedManuscript.category}</span>
-                        </div>
-                        <div className="admin-detail-item">
-                          <span className="admin-detail-label">ORCID</span>
-                          <span className="admin-detail-val">{selectedManuscript.orcid || 'Not provided'}</span>
-                        </div>
-                        {selectedManuscript.coAuthors && (
-                          <div className="admin-detail-item" style={{ gridColumn: '1 / -1' }}>
-                            <span className="admin-detail-label">Co-Authors</span>
-                            <span className="admin-detail-val">{selectedManuscript.coAuthors}</span>
-                          </div>
-                        )}
-                        {selectedManuscript.fullTextOrUrl && (
-                          <div className="admin-detail-item" style={{ gridColumn: '1 / -1' }}>
-                            <span className="admin-detail-label">Manuscript Link / Deposit</span>
-                            <a href={selectedManuscript.fullTextOrUrl} target="_blank" rel="noreferrer" className="admin-detail-val" style={{ color: '#0284c7' }}>
-                              {selectedManuscript.fullTextOrUrl} ↗
-                            </a>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Abstract */}
-                      <div>
-                        <span className="admin-detail-label">Structured Abstract</span>
-                        <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '0.35rem', lineHeight: 1.6 }}>
-                          {selectedManuscript.abstract}
-                        </div>
-                      </div>
-
-                      {/* Ethics Clearances */}
-                      <div>
-                        <span className="admin-detail-label">Ethics & Legal Compliance</span>
-                        <div className="admin-ethics-row" style={{ marginTop: '0.5rem' }}>
-                          <span className={`admin-ethics-badge ${selectedManuscript.humanEthicsConfirmed ? 'ok' : ''}`}>
-                            <SiteIcon name={selectedManuscript.humanEthicsConfirmed ? 'check-circle' : 'alert-circle'} size={13} />
-                            Human Subjects IRB Ethics: {selectedManuscript.humanEthicsConfirmed ? 'Confirmed' : 'Unconfirmed'}
-                          </span>
-                          <span className={`admin-ethics-badge ${selectedManuscript.minorConsentConfirmed ? 'ok' : ''}`}>
-                            <SiteIcon name={selectedManuscript.minorConsentConfirmed ? 'check-circle' : 'alert-circle'} size={13} />
-                            Minor Athletes Assent / Guardian Consent: {selectedManuscript.minorConsentConfirmed ? 'Confirmed' : 'Unconfirmed'}
-                          </span>
-                          <span className="admin-ethics-badge license">
-                            License: {selectedManuscript.licenseType || 'CC BY-NC-ND 4.0'}
-                          </span>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  </div>
 
                   {/* Action Dialog: Request Revisions */}
                   {manuscriptActionDialog === 'corrections' && (
                     <div className="admin-dialog-box">
                       <h3>Request Manuscript Revisions</h3>
                       <p>Send constructive peer-screening feedback to {selectedManuscript.authorName} ({selectedManuscript.authorEmail}).</p>
-                      <div className="admin-preset-chips-wrap">
-                        <span className="admin-preset-label">Quick Revision Presets:</span>
-                        <div className="admin-preset-chips">
-                          {CHRONICLE_CORRECTION_PRESETS.map((preset, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              className="admin-preset-chip"
-                              onClick={() => setManuscriptActionMessage(preset.text)}
-                            >
-                              {preset.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
                       <label>
                         Editorial Revision Feedback * (minimum 10 characters):
                         <textarea
@@ -3495,21 +2040,6 @@ export function AdminModerationPage({
                     <div className="admin-dialog-box">
                       <h3>Reject Manuscript</h3>
                       <p>Provide a clear scientific reason for rejecting this manuscript.</p>
-                      <div className="admin-preset-chips-wrap">
-                        <span className="admin-preset-label">Quick Rejection Presets:</span>
-                        <div className="admin-preset-chips">
-                          {CHRONICLE_REJECTION_PRESETS.map((preset, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              className="admin-preset-chip"
-                              onClick={() => setManuscriptActionMessage(preset.text)}
-                            >
-                              {preset.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
                       <label>
                         Rejection Reason * (sent to author):
                         <textarea
@@ -3729,385 +2259,6 @@ export function AdminModerationPage({
           </div>
         </form>
       )
-      )}
-
-      {/* Phase 5: Floating Bottom Bulk Actions Toolbar */}
-      {selectedSubIds.size > 0 && (
-        <div className="admin-bulk-floating-toolbar" role="toolbar" aria-label="Bulk actions toolbar">
-          <div className="admin-bulk-info">
-            <span className="admin-bulk-count-badge">
-              <SiteIcon name="check-circle" size={14} />
-              <strong>{selectedSubIds.size}</strong> Selected
-            </span>
-            {selectedSubIds.size < items.length && (
-              <button
-                type="button"
-                className="admin-bulk-link-btn"
-                onClick={() => setSelectedSubIds(new Set(items.map(i => i.id)))}
-                title={`Select all ${items.length} listings in current filter`}
-              >
-                Select all {items.length}
-              </button>
-            )}
-          </div>
-
-          <div className="admin-bulk-actions-group">
-            <button
-              type="button"
-              className="admin-bulk-btn admin-bulk-btn-approve"
-              onClick={() => {
-                setActionDialog('bulk_approve')
-                setBulkNotes('Approved via bulk intake inspection.')
-                setError('')
-              }}
-              title="Approve all selected listings"
-            >
-              <SiteIcon name="check" size={14} />
-              <span>Approve All ({selectedSubIds.size})</span>
-            </button>
-
-            <button
-              type="button"
-              className="admin-bulk-btn admin-bulk-btn-corrections"
-              onClick={() => {
-                setActionDialog('bulk_corrections')
-                setBulkMessage('')
-                setBulkNotes('')
-                setError('')
-              }}
-              title="Request revisions for all selected listings"
-            >
-              <SiteIcon name="alert-circle" size={14} />
-              <span>Request Corrections</span>
-            </button>
-
-            <button
-              type="button"
-              className="admin-bulk-btn admin-bulk-btn-reject"
-              onClick={() => {
-                setActionDialog('bulk_reject')
-                setBulkMessage('')
-                setBulkNotes('')
-                setError('')
-              }}
-              title="Reject all selected listings"
-            >
-              <SiteIcon name="close" size={14} />
-              <span>Reject All</span>
-            </button>
-
-            <button
-              type="button"
-              className="admin-bulk-btn admin-bulk-btn-export"
-              onClick={handleExportSelectedCsv}
-              title="Download CSV of selected items"
-            >
-              <SiteIcon name="arrow-down-left" size={14} />
-              <span>Export CSV</span>
-            </button>
-
-            <button
-              type="button"
-              className="admin-bulk-btn admin-bulk-btn-clear"
-              onClick={() => setSelectedSubIds(new Set())}
-              title="Deselect all (Shift + D)"
-              aria-label="Clear selection"
-            >
-              <SiteIcon name="close" size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Phase 5: Batch Confirmation Modal */}
-      {actionDialog?.startsWith('bulk_') && (
-        <div className="admin-drawer-backdrop" onClick={() => !bulkBusy && setActionDialog(null)}>
-          <div
-            className="admin-bulk-confirm-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="admin-bulk-modal-title"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="admin-bulk-modal-header">
-              <h3 id="admin-bulk-modal-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-                {actionDialog === 'bulk_approve' ? (
-                  <>
-                    <span className="admin-bulk-dialog-icon is-approve"><SiteIcon name="check-circle" size={18} /></span>
-                    Batch Approve {selectedSubIds.size} Listings
-                  </>
-                ) : actionDialog === 'bulk_reject' ? (
-                  <>
-                    <span className="admin-bulk-dialog-icon is-reject"><SiteIcon name="close" size={18} /></span>
-                    Batch Reject {selectedSubIds.size} Listings
-                  </>
-                ) : (
-                  <>
-                    <span className="admin-bulk-dialog-icon is-warn"><SiteIcon name="alert-circle" size={18} /></span>
-                    Batch Request Corrections ({selectedSubIds.size} Listings)
-                  </>
-                )}
-              </h3>
-              <button
-                type="button"
-                className="admin-drawer-close-btn"
-                onClick={() => !bulkBusy && setActionDialog(null)}
-                disabled={bulkBusy}
-                aria-label="Close batch confirmation dialog"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="admin-bulk-modal-body">
-              <p className="admin-bulk-modal-desc">
-                {actionDialog === 'bulk_approve'
-                  ? `You are about to approve ${selectedSubIds.size} listings in batch. Submissions will transition to approved state for publication.`
-                  : actionDialog === 'bulk_reject'
-                    ? `You are about to reject ${selectedSubIds.size} listings in batch. A clear rejection reason must be provided to submitters.`
-                    : `You are requesting revisions on ${selectedSubIds.size} listings in batch. Explain what needs correction.`}
-              </p>
-
-              {/* Selected Listings Chip Preview */}
-              <div className="admin-bulk-preview-chips">
-                {items.filter(i => selectedSubIds.has(i.id)).map(item => (
-                  <span key={item.id} className="admin-bulk-chip">
-                    <code>{item.reference_number}</code>
-                    <span>{item.title}</span>
-                  </span>
-                ))}
-              </div>
-
-              {/* Preset Templates */}
-              {actionDialog === 'bulk_reject' && (
-                <div className="admin-bulk-presets-block">
-                  <label className="admin-detail-label">Preset Rejection Reason</label>
-                  <div className="admin-presets-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.3rem' }}>
-                    {MODERATION_REJECTION_PRESETS.map((p, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        className="admin-preset-tag"
-                        onClick={() => setBulkMessage(p.text)}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {actionDialog === 'bulk_corrections' && (
-                <div className="admin-bulk-presets-block">
-                  <label className="admin-detail-label">Preset Correction Reason</label>
-                  <div className="admin-presets-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.3rem' }}>
-                    {MODERATION_CORRECTION_PRESETS.map((p, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        className="admin-preset-tag"
-                        onClick={() => setBulkMessage(p.text)}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {actionDialog === 'bulk_approve' && (
-                <div className="admin-bulk-presets-block">
-                  <label className="admin-detail-label">Preset Verification Standard</label>
-                  <div className="admin-presets-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.3rem' }}>
-                    {MODERATION_APPROVAL_PRESETS.map((p, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        className="admin-preset-tag"
-                        onClick={() => setBulkNotes(p.text)}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Text Input */}
-              {(actionDialog === 'bulk_reject' || actionDialog === 'bulk_corrections') && (
-                <div style={{ marginTop: '0.75rem' }}>
-                  <label className="admin-detail-label">
-                    Feedback Message to Submitters <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <textarea
-                    className="admin-input-textarea"
-                    style={{ width: '100%', minHeight: 70, marginTop: '0.3rem', padding: '0.5rem', borderRadius: 6, border: '1px solid #cbd5e1' }}
-                    value={bulkMessage}
-                    onChange={e => setBulkMessage(e.target.value)}
-                    placeholder="Enter feedback explanation for submitters…"
-                    disabled={bulkBusy}
-                  />
-                </div>
-              )}
-
-              <div style={{ marginTop: '0.75rem' }}>
-                <label className="admin-detail-label">Internal Audit Notes (Optional)</label>
-                <input
-                  type="text"
-                  className="admin-input-text"
-                  style={{ width: '100%', padding: '0.45rem 0.6rem', marginTop: '0.3rem', borderRadius: 6, border: '1px solid #cbd5e1' }}
-                  value={bulkNotes}
-                  onChange={e => setBulkNotes(e.target.value)}
-                  placeholder="Audit trail note for platform records…"
-                  disabled={bulkBusy}
-                />
-              </div>
-
-              {error && (
-                <div className="admin-dialog-error" style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: '0.6rem' }}>
-                  {error}
-                </div>
-              )}
-            </div>
-
-            <div className="admin-bulk-modal-footer">
-              <button
-                type="button"
-                className="admin-btn admin-btn-secondary"
-                onClick={() => { setActionDialog(null); setError('') }}
-                disabled={bulkBusy}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className={`admin-btn ${
-                  actionDialog === 'bulk_approve'
-                    ? 'admin-btn-approve'
-                    : actionDialog === 'bulk_reject'
-                      ? 'admin-btn-reject'
-                      : 'admin-btn-warn'
-                }`}
-                onClick={handleExecuteBulkAction}
-                disabled={bulkBusy}
-              >
-                {bulkBusy ? 'Executing Batch…' : `Confirm Batch Action (${selectedSubIds.size})`}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Phase 5: Undo Buffer Toast */}
-      {undoBuffer && (
-        <div className="admin-undo-toast" role="status" aria-live="polite">
-          <SiteIcon name="check-circle" size={16} />
-          <span>Batch {undoBuffer.actionLabel} completed for {undoBuffer.count} items.</span>
-          <button
-            type="button"
-            className="admin-undo-dismiss-btn"
-            onClick={() => setUndoBuffer(null)}
-            aria-label="Dismiss notification"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* Phase 2: Power Keyboard Shortcuts Cheat Sheet Dialog */}
-      {showShortcutsModal && (
-        <div className="admin-drawer-backdrop" onClick={() => setShowShortcutsModal(false)}>
-          <div
-            className="admin-shortcuts-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="admin-shortcuts-title"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="admin-shortcuts-header">
-              <h3 id="admin-shortcuts-title">⚡ Power Keyboard Navigation</h3>
-              <button
-                type="button"
-                className="admin-drawer-close-btn"
-                onClick={() => setShowShortcutsModal(false)}
-                aria-label="Close shortcuts modal"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="admin-shortcuts-grid">
-              <div className="admin-shortcut-row">
-                <span>Navigate items in queue</span>
-                <div className="admin-keys">
-                  <kbd>J</kbd> / <kbd>K</kbd> or <kbd>↓</kbd> / <kbd>↑</kbd>
-                </div>
-              </div>
-              <div className="admin-shortcut-row">
-                <span>Open / Inspect active item in drawer</span>
-                <div className="admin-keys">
-                  <kbd>Enter</kbd> or <kbd>O</kbd> or <kbd>Space</kbd>
-                </div>
-              </div>
-              <div className="admin-shortcut-row">
-                <span>Quick Approve active item</span>
-                <div className="admin-keys">
-                  <kbd>A</kbd>
-                </div>
-              </div>
-              <div className="admin-shortcut-row">
-                <span>Quick Reject with preset templates</span>
-                <div className="admin-keys">
-                  <kbd>R</kbd>
-                </div>
-              </div>
-              <div className="admin-shortcut-row">
-                <span>Request Corrections / Revisions</span>
-                <div className="admin-keys">
-                  <kbd>C</kbd>
-                </div>
-              </div>
-              <div className="admin-shortcut-row">
-                <span>Toggle item selection (Bulk Mode)</span>
-                <div className="admin-keys">
-                  <kbd>X</kbd>
-                </div>
-              </div>
-              <div className="admin-shortcut-row">
-                <span>Select all filtered items</span>
-                <div className="admin-keys">
-                  <kbd>Shift</kbd> + <kbd>A</kbd>
-                </div>
-              </div>
-              <div className="admin-shortcut-row">
-                <span>Deselect all items</span>
-                <div className="admin-keys">
-                  <kbd>Shift</kbd> + <kbd>D</kbd>
-                </div>
-              </div>
-              <div className="admin-shortcut-row">
-                <span>Switch table density</span>
-                <div className="admin-keys">
-                  <kbd>1</kbd> Compact &middot; <kbd>2</kbd> Cozy &middot; <kbd>3</kbd> Expanded
-                </div>
-              </div>
-              <div className="admin-shortcut-row">
-                <span>Close drawer / Dismiss dialog</span>
-                <div className="admin-keys">
-                  <kbd>Esc</kbd>
-                </div>
-              </div>
-              <div className="admin-shortcut-row">
-                <span>Toggle this shortcuts cheat sheet</span>
-                <div className="admin-keys">
-                  <kbd>?</kbd>
-                </div>
-              </div>
-            </div>
-            <p className="admin-keyboard-nav-hint" style={{ marginTop: '0.25rem', justifyContent: 'center' }}>
-              Shortcuts are safely paused while typing in search, inputs, or textareas.
-            </p>
-          </div>
-        </div>
       )}
     </section>
   )

@@ -261,8 +261,11 @@ export default function App() {
     }
     setPath(nextPath)
     if (nextPath === '/search') { const nextQuery = new URLSearchParams(target.split('?')[1] ?? '').get('q') ?? ''; setSearchQuery(nextQuery); setHeaderQuery(nextQuery) }
+    const wasMenuOpen = menuOpen
     setMenuOpen(false)
-    menuToggleRef.current?.focus()
+    if (wasMenuOpen) {
+      menuToggleRef.current?.focus()
+    }
   }
 
   const match = resolveRoute(path)
@@ -445,6 +448,7 @@ export default function App() {
         onClose={() => setMenuOpen(false)}
         toggleRef={menuToggleRef}
         collapsed={sidebarCollapsed}
+        onToggleCollapsed={() => setSidebarCollapsed(c => !c)}
         onOpenIntake={() => openListingSubmission('pickup_game')}
         onOpenAuth={tab => {
           setAuthModalTab(tab || 'login')

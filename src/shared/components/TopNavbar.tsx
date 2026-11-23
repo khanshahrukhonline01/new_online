@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { AuthUserProfile } from '../../integrations/supabase/auth-client'
 import NavbarSettingsMenu from './NavbarSettingsMenu'
 import { SiteIcon } from './SiteIcon'
+import { stripLeadingPlus } from './sidebarUtils'
 import {
   TOP_NAV_SUBMIT_ACTIONS,
 } from './topNavActions'
@@ -169,18 +170,23 @@ export default function TopNavbar({
 
           <span className="header-divider header-divider-partner" aria-hidden="true" />
 
-          {listingAction && (
-            <a
-              className="header-submit-direct header-submit-listing"
-              href={listingAction.href}
-              onClick={event => onNavigate(event, listingAction.href)}
-              title={listingAction.title}
-              aria-label={t(listingAction.translationKey, listingAction.defaultLabel)}
-            >
-              <SiteIcon name={listingAction.icon} size={15} />
-              <span>{t(listingAction.translationKey, listingAction.defaultLabel)}</span>
-            </a>
-          )}
+          {listingAction && (() => {
+            const cleanListingLabel = stripLeadingPlus(
+              t(listingAction.translationKey, listingAction.defaultLabel),
+            )
+            return (
+              <a
+                className="header-submit-direct header-submit-listing"
+                href={listingAction.href}
+                onClick={event => onNavigate(event, listingAction.href)}
+                title={listingAction.title}
+                aria-label={cleanListingLabel}
+              >
+                <SiteIcon name={listingAction.icon} size={15} />
+                <span>{cleanListingLabel}</span>
+              </a>
+            )
+          })()}
 
           {paperAction && (
             <a

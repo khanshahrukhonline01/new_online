@@ -40,7 +40,7 @@ The following facts were found in the repository at the baseline commit:
 | Full Contributor Centre landing page | Proposed architecture | Not established by this source audit as a dedicated category landing page |
 | Contributor dashboard | Future work / not verified | Existing tracking flow is not a full account-based contributor workspace |
 
-The unified navbar action was introduced by PR #245 and refined in V2 navigation: the primary header action points to `/submit-listing` (`+ List on KhelGrid`), accompanied by the direct research submission action `/khelchronicle/submit` (`Submit Paper`) and adjacent B2B discovery (`Organizations` & `Campaigns`). The full category dropdown and Contributor Centre landing page are separate proposed work and must not be represented as already implemented.
+The unified navbar action was introduced by PR #245, which is merged into `main`. The header action points to `/submit-listing`. The full category dropdown and Contributor Centre landing page are separate proposed work and must not be represented as already implemented.
 
 ## 3. Product scope
 

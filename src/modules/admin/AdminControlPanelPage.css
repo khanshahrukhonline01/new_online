@@ -24,7 +24,7 @@
 .admin-control-live{display:inline-flex;align-items:center;gap:.4rem;color:#047857;font-size:.76rem;font-weight:750}
 .admin-control-live i,.admin-control-secure-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.13)}
 .admin-control-shell{display:grid;grid-template-columns:220px minmax(0,1fr);gap:1.5rem;align-items:start}
-.admin-control-sidebar{position:sticky;top:1rem;max-height:calc(100vh - 2rem);overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.3) transparent;min-height:calc(100vh - 130px);padding:1rem .75rem;border:1px solid var(--border-subtle,#dbe3ec);border-radius:16px;background:var(--surface,#fff);display:flex;flex-direction:column;gap:.35rem}
+.admin-control-sidebar{position:sticky;top:1rem;min-height:calc(100vh - 130px);padding:1rem .75rem;border:1px solid var(--border-subtle,#dbe3ec);border-radius:16px;background:var(--surface,#fff);display:flex;flex-direction:column;gap:.35rem}
 .admin-control-nav-label{padding:.8rem .65rem .35rem;color:var(--text-secondary,#64748b);font-size:.65rem;font-weight:850;letter-spacing:.13em}
 .admin-control-sidebar>a{display:flex;align-items:center;gap:.7rem;padding:.7rem .75rem;border-radius:9px;text-decoration:none;color:var(--text-secondary,#475569);font-size:.84rem;font-weight:650}
 .admin-control-sidebar>a:hover,.admin-control-sidebar>a.active{background:rgba(16,185,129,.1);color:#047857}
@@ -246,82 +246,3 @@
 .admin-text-link:hover{text-decoration:underline}
 .admin-secondary-btn{background:#475569!important;border:1px solid #334155!important;color:#fff!important}
 .admin-secondary-btn:hover{background:#334155!important}
-
-/* Preset Reason Chips & Live Preview in Control Panel */
-.admin-preset-chips-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  margin: 0.5rem 0 0.75rem;
-}
-
-.admin-preset-label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary, #94a3b8);
-}
-
-.admin-preset-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-.admin-preset-chip {
-  display: inline-block;
-  padding: 0.25rem 0.55rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #cbd5e1;
-  border-radius: 9999px;
-  cursor: pointer;
-  transition: all 0.12s ease;
-}
-
-.admin-preset-chip:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  border-color: #38bdf8;
-}
-
-/* Modal Nav Tabs */
-.admin-modal-nav-tabs {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.75rem 0 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 0.5rem;
-}
-
-.admin-modal-nav-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.85rem;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: #94a3b8;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.admin-modal-nav-tab:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.admin-modal-nav-tab.active {
-  background: #10b981;
-  color: #042f2e;
-  border-color: #10b981;
-  font-weight: 750;
-}
-
