@@ -141,13 +141,14 @@ export default function TopNavbar({
             { label: 'Play', href: '/play' },
             { label: 'Athlete', href: '/sports-cv' },
             { label: 'Organizations', href: '/organizations' },
+            { label: 'Campaigns', href: '/campaigns' },
             { label: 'Learn', href: '/learning' },
           ].map(item => {
             const active = path === item.href || path.startsWith(`${item.href}/`)
             return (
               <a
                 key={item.href}
-                className={`header-primary-link${active ? ' is-active' : ''}`}
+                className={`header-primary-link${item.href === '/play' ? ' header-play-pill' : ''}${active ? ' is-active' : ''}`}
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
                 onClick={event => onNavigate(event, item.href)}
@@ -413,6 +414,33 @@ export default function TopNavbar({
                     <SiteIcon name="bookmark" size={15} />
                     <span>Saved Deadlines</span>
                   </a>
+                  <div className="header-user-dropdown-divider" />
+                  <div className="header-user-dropdown-section-title" style={{ padding: '4px 12px', fontSize: '10px', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.05em' }}>CREATOR ECONOMY</div>
+                  <a
+                    href="/creator"
+                    className="header-user-dropdown-item"
+                    role="menuitem"
+                    onClick={e => {
+                      onCloseUserMenu()
+                      onNavigate(e, '/creator')
+                    }}
+                  >
+                    <SiteIcon name="award" size={15} />
+                    <span>Creator Delivery Hub</span>
+                  </a>
+                  <a
+                    href="/campaigns"
+                    className="header-user-dropdown-item"
+                    role="menuitem"
+                    onClick={e => {
+                      onCloseUserMenu()
+                      onNavigate(e, '/campaigns')
+                    }}
+                  >
+                    <SiteIcon name="target" size={15} />
+                    <span>Campaign Marketplace</span>
+                  </a>
+                  <div className="header-user-dropdown-divider" />
                   {authUser.role === 'coach' && (
                     <a
                       href="/coach-dashboard"
@@ -511,7 +539,7 @@ export default function TopNavbar({
             </div>
           ) : (
             <div ref={userMenuWrapRef} className="header-user-menu-wrap">
-              <button ref={userMenuTriggerRef} className="header-account-icon-btn" type="button" onClick={onToggleUserMenu} aria-expanded={userMenuOpen} aria-controls="header-account-menu" aria-label="Open KhelGrid account menu" title="Account">
+              <button ref={userMenuTriggerRef} className="header-account-icon-btn" type="button" onClick={onToggleUserMenu} aria-expanded={userMenuOpen} aria-controls="header-account-menu" aria-label="Your profile" title="Sign in to your account or register as an Academy / Turf Partner">
                 <SiteIcon name="user-round" size={18} />
               </button>
               {userMenuOpen && (

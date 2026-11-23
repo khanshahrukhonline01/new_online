@@ -85,6 +85,8 @@ export const navigationModules: NavigationModule[] = [
       { id: 'coach-dashboard', label: 'Coach Operations Hub', href: '/coach-dashboard', icon: 'award', module: 'partner-saas', available: true },
       { id: 'tournament-ops', label: 'Tournament Operations', href: '/tournament-ops', icon: 'trophy', module: 'partner-saas', available: true },
       { id: 'host-dashboard', label: 'Turf & Host Dashboard', href: '/host', icon: 'calendar-check', module: 'partner-saas', available: true },
+      { id: 'creator-campaigns', label: 'Creator Campaign Marketplace', href: '/campaigns', icon: 'award', module: 'partner-saas', available: true },
+      { id: 'creator-hub', label: 'Sports Creator Hub', href: '/creator', icon: 'user-round', module: 'partner-saas', available: true },
       { id: 'gate-checkin', label: 'Gate QR Check-In Desk', href: '/gate-checkin', icon: 'shield-check', module: 'partner-saas', available: true },
     ],
   },

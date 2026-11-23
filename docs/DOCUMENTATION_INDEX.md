@@ -11,6 +11,7 @@
 - [Full Website Development Plan](FULL_WEBSITE_DEVELOPMENT_PLAN.md) — complete phased roadmap, MVP scope, dependencies, acceptance gates, risk register and owner decisions.
 - [Production Repository Parity Audit](PRODUCTION_REPOSITORY_PARITY_AUDIT.md) — source-based gap tracker; reconcile findings against tests and runtime evidence.
 - [Requirements and Acceptance Criteria](REQUIREMENTS_AND_ACCEPTANCE_CRITERIA.md) — feature-level definition of done, priorities and open product decisions.
+- [Sports Creator Campaign Marketplace (Proposal)](product/KHELGRID_SPORTS_CREATOR_CAMPAIGN_MARKETPLACE.md) — product and architecture proposal for a two-sided creator-marketing marketplace for Indian sports organisations and creators (documentation only).
 
 ## Security and quality
 - [Security and Authorization Matrix](SECURITY_AND_AUTHORIZATION_MATRIX.md) — target roles, resource permissions, required negative tests and release blockers.

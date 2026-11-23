@@ -63,6 +63,11 @@ const featurePages: Record<string, string> = {
   '/profile': 'Athlete Profile', '/my-profile': 'My Profile', '/saved': 'Saved Items',
   '/referrals': 'Referrals', '/help': 'Help & Support', '/support': 'Help & Support', '/help-feedback': 'Help & Feedback', '/submit-listing': 'Suggest a Listing', '/submit-listing/email': 'Direct Email Listing Request', '/list/email': 'Direct Email Listing Request', '/track-submission': 'Track Submission', '/track': 'Track Submission',
   '/start-from-zero': 'Start From Zero — Sports CV',
+  '/campaigns': 'Sports Creator Campaign Marketplace',
+  '/campaigns/create': 'Create Creator Campaign',
+  '/campaigns/manage': 'Advertiser Campaign Dashboard',
+  '/creator': 'Sports Creator Hub',
+  '/creator-hub': 'Sports Creator Hub',
 }
 
 function normalizePath(pathname: string): string {

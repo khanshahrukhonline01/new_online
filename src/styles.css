@@ -689,6 +689,38 @@ html.dark .foundation-v1 .site-header {
   font-weight: 700;
 }
 
+.foundation-v1 .site-header .header-campaigns-pill {
+  color: #0284c7;
+  border-color: #bae6fd;
+  background: rgba(240, 249, 255, 0.9);
+}
+
+.foundation-v1 .site-header .header-campaigns-pill:hover,
+.foundation-v1 .site-header .header-campaigns-pill.is-active {
+  color: #0369a1;
+  border-color: #7dd3fc;
+  background: #e0f2fe;
+}
+
+html.dark .foundation-v1 .site-header .header-campaigns-pill {
+  border-color: #0369a1;
+  background: rgba(15, 23, 42, 0.9);
+  color: #38bdf8;
+}
+
+html.dark .foundation-v1 .site-header .header-campaigns-pill:hover,
+html.dark .foundation-v1 .site-header .header-campaigns-pill.is-active {
+  color: #7dd3fc;
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.2);
+}
+
+@media (max-width: 680px) {
+  .foundation-v1 .site-header .header-campaigns-pill {
+    display: none;
+  }
+}
+
 /* Centered Command Search Bar */
 .foundation-v1 .site-header .header-search-trigger {
   position: relative;

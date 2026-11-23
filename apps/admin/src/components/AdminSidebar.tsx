@@ -8,6 +8,7 @@ export type AdminWorkspaceTab =
   | 'analytics'
   | 'chronicle_desk'
   | 'fraud_disputes'
+  | 'creator_campaigns'
   | 'gate_desk'
   | 'turf_oversight'
   | 'academy_oversight'
@@ -76,6 +77,14 @@ export function AdminSidebar({
         section: 'EDITORIAL GOVERNANCE',
         icon: 'award',
         badge: pendingManuscriptsCount > 0 ? `${pendingManuscriptsCount} MSS` : undefined,
+        badgeVariant: 'purple',
+      },
+      {
+        id: 'creator_campaigns',
+        label: 'Sports Creator Campaigns',
+        section: 'CREATOR MARKETPLACE',
+        icon: 'award',
+        badge: 'Moderation',
         badgeVariant: 'purple',
       },
       {

@@ -8,6 +8,7 @@ import { AdminSidebar, type AdminWorkspaceTab } from './components/AdminSidebar'
 import { AdminHeader, type AdminThemeMode } from './components/AdminHeader'
 import { AdminCommandPalette, type CommandPaletteAction } from './components/AdminCommandPalette'
 import { AdminGroundOversightView } from './components/AdminGroundOversightView'
+import { AdminCampaignMarketplaceDesk } from './components/AdminCampaignMarketplaceDesk'
 import {
   AdminAuthGate,
   useAdminAuth,
@@ -170,6 +171,14 @@ function AuthenticatedAdminShell() {
         onSelect: () => setActiveWorkspace('chronicle_desk'),
       },
       {
+        id: 'cmd-creator-campaigns',
+        title: 'Sports Creator Campaigns & Deliverable Desk',
+        section: 'Creator Economy',
+        icon: 'award',
+        badge: 'Moderation',
+        onSelect: () => setActiveWorkspace('creator_campaigns'),
+      },
+      {
         id: 'cmd-revalidate',
         title: 'Re-verify Admin Permissions',
         section: 'Account Security',
@@ -228,6 +237,7 @@ function AuthenticatedAdminShell() {
     moderation_desk: { title: 'Listing & Evidence Desk', section: 'Content Moderation' },
     analytics: { title: 'Operations & KPI Analytics', section: 'Intelligence' },
     chronicle_desk: { title: 'Chronicle Peer-Review Desk', section: 'Editorial Governance' },
+    creator_campaigns: { title: 'Sports Creator Campaign Desk', section: 'Creator Economy' },
     fraud_disputes: { title: 'Trust & Dispute Claims', section: 'Unavailable (Phase 5+)' },
     gate_desk: { title: 'Gate Check-In Oversight', section: 'Unavailable (Phase 5+)' },
     turf_oversight: { title: 'Turf & Venue Oversight', section: 'Unavailable (Phase 5+)' },
@@ -283,6 +293,8 @@ function AuthenticatedAdminShell() {
               <AdminModerationPage initialDesk="chronicle" />
             ) : activeWorkspace === 'analytics' ? (
               <AdminAnalyticsDashboard />
+            ) : activeWorkspace === 'creator_campaigns' ? (
+              <AdminCampaignMarketplaceDesk />
             ) : UNAVAILABLE_LOCALSTORAGE_WORKSPACES.has(activeWorkspace) ? (
               <AdminGroundOversightView
                 initialDesk={
