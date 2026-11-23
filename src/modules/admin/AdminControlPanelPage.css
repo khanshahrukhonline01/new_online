@@ -246,3 +246,82 @@
 .admin-text-link:hover{text-decoration:underline}
 .admin-secondary-btn{background:#475569!important;border:1px solid #334155!important;color:#fff!important}
 .admin-secondary-btn:hover{background:#334155!important}
+
+/* Preset Reason Chips & Live Preview in Control Panel */
+.admin-preset-chips-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.admin-preset-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.admin-preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.admin-preset-chip {
+  display: inline-block;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.admin-preset-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: #38bdf8;
+}
+
+/* Modal Nav Tabs */
+.admin-modal-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.5rem;
+}
+
+.admin-modal-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-modal-nav-tab:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.admin-modal-nav-tab.active {
+  background: #10b981;
+  color: #042f2e;
+  border-color: #10b981;
+  font-weight: 750;
+}
+

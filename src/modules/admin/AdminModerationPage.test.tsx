@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { AdminModerationPage } from './AdminModerationPage'
+import {
+  AdminModerationPage,
+  MODERATION_REJECTION_PRESETS,
+  MODERATION_CORRECTION_PRESETS,
+  MODERATION_APPROVAL_PRESETS,
+  CHRONICLE_REJECTION_PRESETS,
+  CHRONICLE_CORRECTION_PRESETS,
+} from './AdminModerationPage'
 import * as client from '../../integrations/supabase/public-client'
 import type { ChronicleModerationQueueResult } from '../../integrations/supabase/chronicle-client'
 
@@ -148,4 +155,19 @@ describe('AdminModerationPage', () => {
     expect(html).not.toContain('Dr. Tenzing Norbu')
     expect(html).not.toContain('High-Altitude Hypoxic Training Adaptation')
     expect(html).not.toContain('Directory Listings Queue')
-  })})
+  })
+
+  it('provides structured preset reason templates for fast-action moderation', () => {
+    expect(MODERATION_REJECTION_PRESETS.length).toBeGreaterThan(0)
+    expect(MODERATION_REJECTION_PRESETS.some(p => p.label.includes('Official'))).toBe(true)
+
+    expect(MODERATION_CORRECTION_PRESETS.length).toBeGreaterThan(0)
+    expect(MODERATION_CORRECTION_PRESETS.some(p => p.label.includes('Age'))).toBe(true)
+
+    expect(MODERATION_APPROVAL_PRESETS.length).toBeGreaterThan(0)
+    expect(MODERATION_APPROVAL_PRESETS.some(p => p.label.includes('Verified'))).toBe(true)
+
+    expect(CHRONICLE_REJECTION_PRESETS.length).toBeGreaterThan(0)
+    expect(CHRONICLE_CORRECTION_PRESETS.length).toBeGreaterThan(0)
+  })
+})

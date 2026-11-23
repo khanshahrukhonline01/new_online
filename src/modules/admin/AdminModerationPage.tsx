@@ -41,6 +41,41 @@ import {
 import { RESEARCH_CATEGORIES } from '../khelchronicle/data/khelchronicleData'
 import './AdminModerationPage.css'
 
+export const MODERATION_REJECTION_PRESETS = [
+  { label: 'Missing Official HTTPS Link', text: 'Missing official HTTPS registration link or circular from the organizing body.' },
+  { label: 'Event Date Concluded', text: 'The stated event or trial date has already concluded. Please submit upcoming events.' },
+  { label: 'Duplicate Listing', text: 'This listing is already published in the active KhelGrid catalogue.' },
+  { label: 'Incomplete Venue Address', text: 'Incomplete ground address. Street locality, sports supported, and city are required.' },
+  { label: 'Unaccredited Credentials', text: 'Unverified coaching or academy accreditation. Recognized certification required.' },
+  { label: 'Commercial Spam', text: 'Submission flagged as commercial advertisement, product promo, or non-sports content.' },
+]
+
+export const MODERATION_CORRECTION_PRESETS = [
+  { label: 'Provide Official Link', text: 'Please provide an official HTTPS registration link or federation circular to verify this trial.' },
+  { label: 'Specify Age & Reporting Dates', text: 'Please specify the exact age cut-off criteria, reporting dates, and schedule for participants.' },
+  { label: 'Clarify Entry Fees', text: 'Please clarify whether there is any entry fee, kit deposit, or participation charge for this event.' },
+  { label: 'Provide Full Street Address', text: 'Please provide the complete street address and nearest landmark for this sports venue.' },
+]
+
+export const MODERATION_APPROVAL_PRESETS = [
+  { label: 'Federation Circular Verified', text: 'Verified against official sports federation announcement and calendar.' },
+  { label: 'Venue & Facilities Confirmed', text: 'Venue location, ground dimensions, and contact number verified.' },
+  { label: 'Coaching Credentials Verified', text: 'Coaching certification and institute affiliation verified.' },
+]
+
+export const CHRONICLE_REJECTION_PRESETS = [
+  { label: 'Ethics / Consent Missing', text: 'Inadequate participant ethics clearance or minor athlete guardian consent documentation.' },
+  { label: 'Out of Scope', text: 'Methodology and subject matter fall outside sports science, kinesiology, or athletic performance scope.' },
+  { label: 'Unverified Author Identity', text: 'Author institutional affiliation or ORCID credentials could not be independently authenticated.' },
+  { label: 'Commercial Promotion', text: 'Submission flagged as commercial product endorsement rather than independent scientific research.' },
+]
+
+export const CHRONICLE_CORRECTION_PRESETS = [
+  { label: 'Add Ethics Statement', text: 'Please upload institutional review board (IRB/IEC) approval number and ethics protocol details.' },
+  { label: 'Provide Data Repository Link', text: 'Please provide a permanent DOI or OSF/Zenodo repository link for supplementary raw datasets.' },
+  { label: 'Format Structured Abstract', text: 'Please format the abstract into Background, Methods, Results, and Practical Applications.' },
+]
+
 type TabFilter =
   | 'all'
   | 'pending_review'
@@ -144,6 +179,19 @@ export function AdminModerationPage({
   const [targetSlug, setTargetSlug] = useState('')
   const [publishStructured, setPublishStructured] = useState<Record<string, string>>({})
   const [selectedSubIds, setSelectedSubIds] = useState<Set<string>>(new Set())
+  const [modalTab, setModalTab] = useState<'data' | 'preview'>('data')
+
+  useEffect(() => {
+    const handleCategoryFilterEvent = (e: Event) => {
+      const detail = (e as CustomEvent<{ category?: string }>).detail
+      if (detail?.category) {
+        setCategoryFilter(detail.category)
+        setPage(1)
+      }
+    }
+    window.addEventListener('khelgrid-admin-filter-category', handleCategoryFilterEvent)
+    return () => window.removeEventListener('khelgrid-admin-filter-category', handleCategoryFilterEvent)
+  }, [])
 
   const preparePublishDialog = async (item: ModeratorQueueItem) => {
     setSelectedItem(item)
@@ -1081,50 +1129,124 @@ export function AdminModerationPage({
                   </button>
                 </div>
 
+                <div className="admin-modal-nav-tabs">
+                  <button
+                    type="button"
+                    className={`admin-modal-nav-tab ${modalTab === 'data' ? 'active' : ''}`}
+                    onClick={() => setModalTab('data')}
+                  >
+                    <SiteIcon name="file-text" size={14} /> Submission Data
+                  </button>
+                  <button
+                    type="button"
+                    className={`admin-modal-nav-tab ${modalTab === 'preview' ? 'active' : ''}`}
+                    onClick={() => setModalTab('preview')}
+                  >
+                    <SiteIcon name="search" size={14} /> Live Public Card Preview
+                  </button>
+                </div>
+
                 <div className="admin-modal-body">
-                  <div className="admin-detail-grid">
-                    <div className="admin-detail-item">
-                      <span className="admin-detail-label">Listing Category</span>
-                      <span className="admin-detail-val">{selectedItem.listing_type}</span>
-                    </div>
-                    <div className="admin-detail-item">
-                      <span className="admin-detail-label">City / Location</span>
-                      <span className="admin-detail-val">{selectedItem.city || 'India'}</span>
-                    </div>
-                    <div className="admin-detail-item">
-                      <span className="admin-detail-label">Version</span>
-                      <span className="admin-detail-val">v{selectedItem.version}</span>
-                    </div>
-                    <div className="admin-detail-item">
-                      <span className="admin-detail-label">Submitted On</span>
-                      <span className="admin-detail-val">
-                        {new Date(selectedItem.created_at).toLocaleString('en-IN')}
-                      </span>
-                    </div>
-                  </div>
+                  {modalTab === 'preview' ? (
+                    <div className="admin-live-public-preview">
+                      <div className="admin-preview-banner">
+                        <SiteIcon name="search" size={14} />
+                        <span>Live Public Preview Mode · Rendering card as seen by athletes on KhelGrid</span>
+                      </div>
 
-                  <div>
-                    <span className="admin-detail-label">Official HTTPS Source</span>
-                    <p style={{ margin: '0.25rem 0' }}>
-                      {selectedItem.source_url ? (
-                        <a href={selectedItem.source_url} target="_blank" rel="noreferrer">
-                          {selectedItem.source_url} ↗
-                        </a>
-                      ) : (
-                        <em>No official source URL provided by submitter</em>
-                      )}
-                    </p>
-                  </div>
+                      <div className="admin-preview-canvas">
+                        <div className={`admin-preview-card type-${selectedItem.listing_type}`}>
+                          <div className="admin-preview-card-header">
+                            <span className="admin-preview-type-pill">
+                              {selectedItem.listing_type === 'opportunity' ? 'TRIAL / OPPORTUNITY' :
+                               selectedItem.listing_type === 'venue' ? 'SPORTS VENUE' :
+                               selectedItem.listing_type === 'coach' ? 'CERTIFIED COACH' :
+                               selectedItem.listing_type === 'academy' ? 'SPORTS ACADEMY' :
+                               selectedItem.listing_type === 'event' ? 'TOURNAMENT' : 'PICKUP GAME'}
+                            </span>
+                            <span className="admin-preview-city-pill">
+                              <SiteIcon name="map-pin" size={12} /> {selectedItem.city || 'India'}
+                            </span>
+                          </div>
 
-                  <div>
-                    <span className="admin-detail-label">Submitter Information & Context</span>
-                    <div className="admin-mod-card-desc">
-                      {selectedItem.details || <em>No additional details submitted.</em>}
+                          <h3 className="admin-preview-card-title">{selectedItem.title}</h3>
+
+                          <p className="admin-preview-card-desc">
+                            {selectedItem.details ? (
+                              selectedItem.details.length > 180 ? `${selectedItem.details.slice(0, 180)}…` : selectedItem.details
+                            ) : 'Verified sports listing on KhelGrid Platform.'}
+                          </p>
+
+                          {selectedItem.source_url && (
+                            <div className="admin-preview-source-line">
+                              <SiteIcon name="external-link" size={12} />
+                              <span>Official Source: {selectedItem.source_url}</span>
+                            </div>
+                          )}
+
+                          <div className="admin-preview-card-bottom">
+                            <div className="admin-preview-trust-tag">
+                              <SiteIcon name="shield-check" size={14} />
+                              <span>KhelGrid Verified</span>
+                            </div>
+                            <button type="button" className="admin-preview-action-btn" tabIndex={-1}>
+                              {selectedItem.listing_type === 'venue' ? 'View Venue & Slots ↗' :
+                               selectedItem.listing_type === 'coach' ? 'View Coach Profile ↗' :
+                               selectedItem.listing_type === 'academy' ? 'Explore Academy ↗' :
+                               selectedItem.listing_type === 'event' ? 'Tournament Details ↗' :
+                               selectedItem.listing_type === 'pickup_game' ? 'Join Pickup Game ↗' : 'Apply on Official Site ↗'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <small style={{ color: '#64748b', display: 'block', marginTop: '0.35rem' }}>
-                      Note: Submitter-provided data is unverified community input until checked by KhelGrid staff.
-                    </small>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="admin-detail-grid">
+                        <div className="admin-detail-item">
+                          <span className="admin-detail-label">Listing Category</span>
+                          <span className="admin-detail-val">{selectedItem.listing_type}</span>
+                        </div>
+                        <div className="admin-detail-item">
+                          <span className="admin-detail-label">City / Location</span>
+                          <span className="admin-detail-val">{selectedItem.city || 'India'}</span>
+                        </div>
+                        <div className="admin-detail-item">
+                          <span className="admin-detail-label">Version</span>
+                          <span className="admin-detail-val">v{selectedItem.version}</span>
+                        </div>
+                        <div className="admin-detail-item">
+                          <span className="admin-detail-label">Submitted On</span>
+                          <span className="admin-detail-val">
+                            {new Date(selectedItem.created_at).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="admin-detail-label">Official HTTPS Source</span>
+                        <p style={{ margin: '0.25rem 0' }}>
+                          {selectedItem.source_url ? (
+                            <a href={selectedItem.source_url} target="_blank" rel="noreferrer">
+                              {selectedItem.source_url} ↗
+                            </a>
+                          ) : (
+                            <em>No official source URL provided by submitter</em>
+                          )}
+                        </p>
+                      </div>
+
+                      <div>
+                        <span className="admin-detail-label">Submitter Information & Context</span>
+                        <div className="admin-mod-card-desc">
+                          {selectedItem.details || <em>No additional details submitted.</em>}
+                        </div>
+                        <small style={{ color: '#64748b', display: 'block', marginTop: '0.35rem' }}>
+                          Note: Submitter-provided data is unverified community input until checked by KhelGrid staff.
+                        </small>
+                      </div>
+                    </>
+                  )}
 
                   {/* Quick Action Buttons within Inspect Modal */}
                   {!actionDialog && (
@@ -1194,6 +1316,21 @@ export function AdminModerationPage({
                       <p>
                         Approval is an editorial decision only. Evidence verification is a separate step in the protected control panel, and publication is a third explicit action.
                       </p>
+                      <div className="admin-preset-chips-wrap">
+                        <span className="admin-preset-label">Quick Verification Note Presets:</span>
+                        <div className="admin-preset-chips">
+                          {MODERATION_APPROVAL_PRESETS.map((preset, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              className="admin-preset-chip"
+                              onClick={() => setActionNotes(preset.text)}
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <label>
                         Internal moderator notes (optional, private to staff):
                         <textarea
@@ -1229,6 +1366,21 @@ export function AdminModerationPage({
                       <p>
                         Provide a polite, transparent explanation. This reason will be visible to the submitter on their tracking view.
                       </p>
+                      <div className="admin-preset-chips-wrap">
+                        <span className="admin-preset-label">Quick Rejection Reason Presets:</span>
+                        <div className="admin-preset-chips">
+                          {MODERATION_REJECTION_PRESETS.map((preset, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              className="admin-preset-chip"
+                              onClick={() => setActionMessage(preset.text)}
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <label>
                         Rejection reason for submitter *:
                         <textarea
@@ -1274,6 +1426,21 @@ export function AdminModerationPage({
                       <p>
                         The submitter will see this message on their tracking portal and can edit and resubmit their submission.
                       </p>
+                      <div className="admin-preset-chips-wrap">
+                        <span className="admin-preset-label">Quick Revision Request Presets:</span>
+                        <div className="admin-preset-chips">
+                          {MODERATION_CORRECTION_PRESETS.map((preset, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              className="admin-preset-chip"
+                              onClick={() => setActionMessage(preset.text)}
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <label>
                         Correction message *:
                         <textarea
@@ -1907,6 +2074,21 @@ export function AdminModerationPage({
                     <div className="admin-dialog-box">
                       <h3>Request Manuscript Revisions</h3>
                       <p>Send constructive peer-screening feedback to {selectedManuscript.authorName} ({selectedManuscript.authorEmail}).</p>
+                      <div className="admin-preset-chips-wrap">
+                        <span className="admin-preset-label">Quick Revision Presets:</span>
+                        <div className="admin-preset-chips">
+                          {CHRONICLE_CORRECTION_PRESETS.map((preset, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              className="admin-preset-chip"
+                              onClick={() => setManuscriptActionMessage(preset.text)}
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <label>
                         Editorial Revision Feedback * (minimum 10 characters):
                         <textarea
@@ -2040,6 +2222,21 @@ export function AdminModerationPage({
                     <div className="admin-dialog-box">
                       <h3>Reject Manuscript</h3>
                       <p>Provide a clear scientific reason for rejecting this manuscript.</p>
+                      <div className="admin-preset-chips-wrap">
+                        <span className="admin-preset-label">Quick Rejection Presets:</span>
+                        <div className="admin-preset-chips">
+                          {CHRONICLE_REJECTION_PRESETS.map((preset, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              className="admin-preset-chip"
+                              onClick={() => setManuscriptActionMessage(preset.text)}
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <label>
                         Rejection Reason * (sent to author):
                         <textarea

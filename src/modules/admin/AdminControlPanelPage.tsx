@@ -35,6 +35,7 @@ import {
 } from '../../integrations/supabase/public-client'
 import './AdminControlPanelPage.css'
 import { getEvidenceChecklist } from './moderationEvidenceChecklist'
+import { MODERATION_REJECTION_PRESETS } from './AdminModerationPage'
 
 const evidenceTypes = [
   ['official_source', 'Official source'],
@@ -802,7 +803,34 @@ export function AdminControlPanelPage() {
               <p>Editorial approval, evidence verification and public publication are three separate recorded decisions.</p>
               {(selected.status === 'pending_review' || selected.status === 'resubmitted' || selected.status === 'unpublished') && <button disabled={busy} onClick={() => void handleStartReview()}>Start review &amp; assign to me</button>}
               {(selected.status === 'under_review') && <div className="admin-control-actions"><button disabled={busy} onClick={() => void handleApproval('approve')}>Approve listing</button><button disabled={busy} onClick={() => void handleApproval('reject')}>Reject listing</button></div>}
-              {selected.status !== 'rejected' && selected.status !== 'published' && <label className="admin-control-full">Rejection reason (required only to reject)<textarea value={decisionReason} onChange={e => setDecisionReason(e.target.value)} maxLength={2000} /></label>}
+              {selected.status !== 'rejected' && selected.status !== 'published' && (
+                <div className="admin-control-rejection-box" style={{ margin: '0.75rem 0' }}>
+                  <div className="admin-preset-chips-wrap">
+                    <span className="admin-preset-label">Quick Rejection Reason Presets:</span>
+                    <div className="admin-preset-chips">
+                      {MODERATION_REJECTION_PRESETS.map((preset, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          className="admin-preset-chip"
+                          onClick={() => setDecisionReason(preset.text)}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <label className="admin-control-full">
+                    Rejection reason (required only to reject)
+                    <textarea
+                      value={decisionReason}
+                      onChange={e => setDecisionReason(e.target.value)}
+                      maxLength={2000}
+                      placeholder="Select a quick preset above or type custom reason"
+                    />
+                  </label>
+                </div>
+              )}
               {selected.status === 'approved' && <div className="admin-control-form"><label>Publication slug (optional)<input value={publishSlug} onChange={e => setPublishSlug(e.target.value)} placeholder="Auto-generated if blank" /></label><button disabled={busy || verificationStates[selected.id] !== 'verified'} onClick={() => void handlePublish()}>Publish verified listing</button>
                 {verificationStates[selected.id] !== 'verified' && <small>Complete the evidence review and mark this submission verified before publication is enabled.</small>}</div>}
               {selected.status === 'published' && <form onSubmit={handleUnpublish} className="admin-control-form">

@@ -2159,3 +2159,272 @@ html.cosmic .admin-topbar-signout-btn {
     display: none;
   }
 }
+
+/* ==========================================================================
+   Executive Pulse & System Health Ribbon
+   ========================================================================== */
+
+.admin-executive-ribbon {
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-ribbon-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
+}
+
+@media (max-width: 1200px) {
+  .admin-ribbon-metrics-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .admin-ribbon-metrics-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-ribbon-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  background: #111a28;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.admin-ribbon-card:hover {
+  border-color: #334155;
+  transform: translateY(-1px);
+}
+
+.admin-ribbon-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: rgba(148, 163, 184, 0.1);
+  color: #94a3b8;
+}
+
+.admin-ribbon-card.is-warning .admin-ribbon-card-icon {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.admin-ribbon-card.is-success .admin-ribbon-card-icon {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.admin-ribbon-card.is-purple .admin-ribbon-card-icon {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+}
+
+.admin-ribbon-card.is-health .admin-ribbon-card-icon {
+  background: rgba(14, 165, 233, 0.15);
+  color: #38bdf8;
+}
+
+.admin-ribbon-card.is-operator .admin-ribbon-card-icon {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.admin-ribbon-card-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-ribbon-card-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-bottom: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-ribbon-card-val-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-ribbon-card-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1.1;
+}
+
+.admin-ribbon-card-sub {
+  font-size: 0.68rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-ribbon-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  line-height: 1;
+}
+
+.admin-ribbon-tag.tag-warn {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.admin-ribbon-tag.tag-ok {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.admin-ribbon-tag.tag-purple {
+  background: rgba(168, 85, 247, 0.2);
+  color: #d8b4fe;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+.admin-ribbon-tag.tag-latency.optimal {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.admin-ribbon-tag.tag-latency.good {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+}
+
+.admin-ribbon-tag.tag-latency.slow {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+/* Category Filter Strip */
+.admin-ribbon-category-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: #111a28;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+}
+
+.admin-ribbon-chips-scroll {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.admin-ribbon-chips-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-ribbon-chips-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.73rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-right: 0.25rem;
+  flex-shrink: 0;
+}
+
+.admin-ribbon-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.admin-ribbon-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.admin-ribbon-chip.is-active {
+  background: #10b981;
+  color: #042f2e;
+  border-color: #10b981;
+  font-weight: 750;
+}
+
+.admin-ribbon-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.admin-ribbon-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-ribbon-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.admin-ribbon-action-btn.action-cmd kbd {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+}
+
