@@ -134,14 +134,12 @@ export default function TopNavbar({
           </a>
         </div>
 
-        {/* Zone 2: Primary product areas — one horizontal navigation line */}
+        {/* Zone 2: Primary athlete/consumer areas — one horizontal navigation line */}
         <nav className="header-zone header-zone-center header-primary-links" aria-label="Primary KhelGrid sections">
           {[
             { label: 'Discover', href: '/sports' },
             { label: 'Play', href: '/play' },
             { label: 'Athlete', href: '/sports-cv' },
-            { label: 'Organizations', href: '/organizations' },
-            { label: 'Campaigns', href: '/campaigns' },
             { label: 'Learn', href: '/learning' },
           ].map(item => {
             const active = path === item.href || path.startsWith(`${item.href}/`)
@@ -170,6 +168,28 @@ export default function TopNavbar({
           >
             <SiteIcon name="search" size={17} />
           </button>
+
+          <div className="header-partner-nav" aria-label="Partner and Institutional workspaces">
+            <a
+              className={`header-partner-link${path === '/organizations' || path.startsWith('/organizations/') ? ' is-active' : ''}`}
+              href="/organizations"
+              onClick={event => onNavigate(event, '/organizations')}
+              title="Organizations & Academy SaaS Workspace"
+            >
+              Organizations
+            </a>
+            <a
+              className={`header-partner-link${path === '/campaigns' || path.startsWith('/campaigns/') ? ' is-active' : ''}`}
+              href="/campaigns"
+              onClick={event => onNavigate(event, '/campaigns')}
+              title="Sports Creator Campaign Marketplace"
+            >
+              Campaigns
+            </a>
+          </div>
+
+          <span className="header-divider header-divider-partner" aria-hidden="true" />
+
           {listingAction && (
             <a
               className="header-submit-direct header-submit-listing"
