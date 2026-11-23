@@ -1302,13 +1302,11 @@ export function AdminModerationPage({
                       </a>
                     )}
                   </div>
-
                   <div className="admin-mod-card-top">
                     <div className="admin-mod-card-title-group" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                       <input
                         type="checkbox"
                         checked={selectedSubIds.has(sub.id)}
-                        onClick={e => e.stopPropagation()}
                         onChange={() => {
                           setSelectedSubIds(prev => {
                             const next = new Set(prev)
@@ -1351,7 +1349,7 @@ export function AdminModerationPage({
                     </span>
                     <span>v{sub.version}</span>
                     {sub.source_url && (
-                      <a href={sub.source_url} target="_blank" rel="noreferrer" title="Verify HTTPS source" onClick={e => e.stopPropagation()}>
+                      <a href={sub.source_url} target="_blank" rel="noreferrer" title="Verify HTTPS source">
                         Official source ↗
                       </a>
                     )}
@@ -1371,7 +1369,7 @@ export function AdminModerationPage({
                     </div>
                   )}
 
-                  <div className="admin-mod-card-actions" onClick={e => e.stopPropagation()}>
+                  <div className="admin-mod-card-actions">
                     <button
                       type="button"
                       className="admin-btn admin-btn-secondary"
@@ -2629,7 +2627,6 @@ export function AdminModerationPage({
                       </a>
                     )}
                   </div>
-
                   <div className="admin-mod-card-top">
                     <div className="admin-mod-card-title-group">
                       <button
@@ -2700,7 +2697,7 @@ export function AdminModerationPage({
                     </div>
                   )}
 
-                  <div className="admin-mod-card-actions" onClick={e => e.stopPropagation()}>
+                  <div className="admin-mod-card-actions">
                     <button
                       type="button"
                       className="admin-btn admin-btn-secondary"
@@ -2831,7 +2828,7 @@ export function AdminModerationPage({
             </div>
           )}
 
-          {/* Manuscript Detail & Action Drawer */}
+          {/* Manuscript Detail & Action Modal */}
           {selectedManuscript && (
             <div
               className="admin-drawer-backdrop admin-modal-backdrop"
