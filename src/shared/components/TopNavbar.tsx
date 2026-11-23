@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react'
+import { useEffect, useRef, type MouseEvent, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AuthUserProfile } from '../../integrations/supabase/auth-client'
 import NavbarSettingsMenu from './NavbarSettingsMenu'
-import { navigationModules } from '../navigation/navigationRegistry'
 import { SiteIcon } from './SiteIcon'
 import {
   TOP_NAV_SUBMIT_ACTIONS,
@@ -50,30 +49,16 @@ export default function TopNavbar({
   onOpenGoPro,
 }: TopNavbarProps) {
   const { t } = useTranslation(['common', 'navigation'])
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
-  const submitWrapRef = useRef<HTMLDivElement>(null)
-  const submitTriggerRef = useRef<HTMLButtonElement>(null)
   const userMenuWrapRef = useRef<HTMLDivElement>(null)
-
   const userMenuTriggerRef = useRef<HTMLButtonElement>(null)
   const listingAction = TOP_NAV_SUBMIT_ACTIONS.find(action => action.id === 'all')
   const paperAction = TOP_NAV_SUBMIT_ACTIONS.find(action => action.id === 'chronicle')
-  const additionalSubmitActions = TOP_NAV_SUBMIT_ACTIONS.filter(
-    action => action.id !== 'all' && action.id !== 'venue' && action.id !== 'chronicle',
-  )
 
   useEffect(() => {
-    setMoreMenuOpen(false)
-  }, [path])
-
-  useEffect(() => {
-    if (!moreMenuOpen && !userMenuOpen) return
+    if (!userMenuOpen) return
 
     function handleOutsideClick(event: globalThis.MouseEvent) {
       const target = event.target as Node
-      if (moreMenuOpen && submitWrapRef.current && !submitWrapRef.current.contains(target)) {
-        setMoreMenuOpen(false)
-      }
       if (userMenuOpen && userMenuWrapRef.current && !userMenuWrapRef.current.contains(target)) {
         onCloseUserMenu()
       }
@@ -81,10 +66,6 @@ export default function TopNavbar({
 
     function handleKeyDown(event: globalThis.KeyboardEvent) {
       if (event.key !== 'Escape') return
-      if (moreMenuOpen) {
-        setMoreMenuOpen(false)
-        submitTriggerRef.current?.focus()
-      }
       if (userMenuOpen) {
         onCloseUserMenu()
         userMenuTriggerRef.current?.focus()
@@ -97,7 +78,7 @@ export default function TopNavbar({
       document.removeEventListener('pointerdown', handleOutsideClick)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [moreMenuOpen, userMenuOpen, onCloseUserMenu])
+  }, [userMenuOpen, onCloseUserMenu])
 
   return (
     <header className="site-header">
@@ -213,117 +194,6 @@ export default function TopNavbar({
               <span>{t(paperAction.translationKey, paperAction.defaultLabel)}</span>
             </a>
           )}
-
-          <div ref={submitWrapRef} className="header-submit-menu-wrap">
-            <button
-              ref={submitTriggerRef}
-              type="button"
-              className={`header-submit-trigger header-submit-more-trigger ${moreMenuOpen ? 'is-open' : ''}`}
-              aria-label="More KhelGrid features and workspaces"
-              aria-expanded={moreMenuOpen}
-              aria-controls="header-submit-popover"
-              onClick={() => setMoreMenuOpen(open => !open)}
-              title="More KhelGrid features and workspaces"
-            >
-              <SiteIcon name="plus" size={15} />
-              <span className="header-submit-trigger-label">More</span>
-              <SiteIcon
-                name="chevron-down"
-                size={14}
-                className={`header-submit-chevron ${moreMenuOpen ? 'is-rotated' : ''}`}
-              />
-            </button>
-
-            <nav
-              id="header-submit-popover"
-              className={`header-actions header-submit-popover ${moreMenuOpen ? 'is-open' : ''}`}
-              aria-label="More KhelGrid features and workspaces"
-              aria-hidden={!moreMenuOpen}
-              hidden={!moreMenuOpen}
-            >
-              <div className="header-submit-popover-head">
-                <strong>All KhelGrid actions</strong>
-                <span>Explore, manage, create and access every platform area</span>
-              </div>
-              <div className="header-submit-popover-modules">
-                {navigationModules.map(section => (
-                  <section className="header-submit-popover-module" key={section.id} aria-label={section.label}>
-                    <div className="header-submit-popover-module-title">
-                      <SiteIcon name={section.icon} size={14} />
-                      <strong>{section.label}</strong>
-                    </div>
-                    <div className="header-submit-popover-list">
-                      {section.items.map(item => {
-                        const active = path === item.href || (item.href !== '/' && path.startsWith(`${item.href}/`))
-                        const label = t(item.id, item.label)
-                        if (!item.available) {
-                          return (
-                            <span key={item.id} className="header-action-link is-disabled" aria-disabled="true" title={`${label} — Coming soon`}>
-                              <span className="header-action-icon-box" aria-hidden="true"><SiteIcon name={item.icon} size={16} /></span>
-                              <span className="header-action-copy">
-                                <span className="header-action-title">{label}</span>
-                                <small className="header-action-desc">Coming soon</small>
-                              </span>
-                            </span>
-                          )
-                        }
-                        return (
-                          <a
-                            key={item.id}
-                            className={`header-action-link${active ? ' is-active' : ''}`}
-                            href={item.href}
-                            aria-current={active ? 'page' : undefined}
-                            onClick={event => {
-                              setMoreMenuOpen(false)
-                              onNavigate(event, item.href)
-                            }}
-                            title={label}
-                          >
-                            <span className="header-action-icon-box" aria-hidden="true"><SiteIcon name={item.icon} size={16} /></span>
-                            <span className="header-action-copy">
-                              <span className="header-action-title">{label}</span>
-                            </span>
-                            <SiteIcon name="arrow-up-right" size={14} className="header-action-arrow" />
-                          </a>
-                        )
-                      })}
-                    </div>
-                  </section>
-                ))}
-              </div>
-              <div className="header-submit-popover-section">
-                <strong>Contribute to KhelGrid</strong>
-                <span>Submit listings, coaching profiles and research</span>
-              </div>
-              <div className="header-submit-popover-list">
-                {additionalSubmitActions.map(action => {
-                  const label = t(action.translationKey, action.defaultLabel)
-                  return (
-                    <a
-                      key={action.id}
-                      className={action.className}
-                      href={action.href}
-                      onClick={event => {
-                        setMoreMenuOpen(false)
-                        onNavigate(event, action.href)
-                      }}
-                      title={action.title}
-                      aria-label={label}
-                    >
-                      <span className="header-action-icon-box" aria-hidden="true">
-                        <SiteIcon name={action.icon} size={16} />
-                      </span>
-                      <span className="header-action-copy">
-                        <span className="header-action-title">{label}</span>
-                        <small className="header-action-desc">{action.description}</small>
-                      </span>
-                      <SiteIcon name="arrow-up-right" size={14} className="header-action-arrow" />
-                    </a>
-                  )
-                })}
-              </div>
-            </nav>
-          </div>
 
           <span className="header-divider header-divider-utilities" aria-hidden="true" />
 
