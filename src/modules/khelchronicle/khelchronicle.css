@@ -4218,3 +4218,21 @@
   border-color: #fdba74;
   color: #9a3412;
 }
+
+.kc-rail-citation-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.kc-rail-citation-row .kc-btn-secondary {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+html.dark .kc-preprint-alert {
+  background: rgba(217, 119, 6, 0.14);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fde68a;
+}
+

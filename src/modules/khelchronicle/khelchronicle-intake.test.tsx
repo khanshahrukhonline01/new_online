@@ -162,8 +162,11 @@ describe('End-to-End Manuscript Intake Verification (KhelChronicle / Supabase)',
     expect(sentPayload.status).toBe('pending_review')
   })
 
-  it('renders 5-step interactive wizard structure with coaching cues, file dropzone, template download, and live preview', () => {
+  it('renders 5-step interactive wizard structure with coaching cues, repository link guide, template download, and live preview', () => {
     const html = renderToStaticMarkup(<KhelChronicleSubmitPage />)
+
+    // No synthetic test mode badge
+    expect(html).not.toContain('Test Mode Intake')
 
     // Stepper navigation tabs
     expect(html).toContain('1. Article &amp; Category')
@@ -185,20 +188,35 @@ describe('End-to-End Manuscript Intake Verification (KhelChronicle / Supabase)',
     expect(html).toContain('Takeaway 2:')
     expect(html).toContain('Takeaway 3:')
 
-    // Drag and drop zone
-    expect(html).toContain('Preprint File Upload (PDF or DOCX, max 25MB)')
-    expect(html).toContain('Drag &amp; Drop Manuscript File Here')
+    // Repository link guide (replacing disabled upload dropzone)
+    expect(html).toContain('Recommended Open Repository Hosting (HTTPS Required)')
+    expect(html).toContain('Zenodo (CERN)')
+    expect(html).toContain('OSF Preprints')
+    expect(html).toContain('SportRxiv')
+
+    // Accessible license radio group
+    expect(html).toContain('role="radiogroup"')
+    expect(html).toContain('role="radio"')
 
     // Template download and participating institutes
     expect(html).toContain('Official KhelChronicle Preprint Template')
-    expect(html).toContain('Download Template (.md / .docx)')
+    expect(html).toContain('Download Template (.md)')
     expect(html).toContain('SAI NSNIS Patiala')
     expect(html).toContain('LNIPE Gwalior')
     expect(html).toContain('Inspire Institute of Sport (IIS)')
 
-    // Live preview card & provisional citation
+    // Live preview card, sports context, & provisional citation/export
     expect(html).toContain('Live Preprint Archive Preview')
-    expect(html).toContain('PROVISIONAL APA CITATION:')
+    expect(html).toContain('Sport / Game *')
+    expect(html).toContain('Athlete Cohort Tier *')
+    expect(html).toContain('Testing Context &amp; Apparatus')
+    expect(html).toContain('Study Preregistration URL (OSF / CTRI / ClinicalTrials) (Optional)')
+    expect(html).toContain('Funding Statement *')
+    expect(html).toContain('Conflicts of Interest *')
+    expect(html).toContain('NADA / WADA Clean-Sport &amp; Non-Clinical Attestation *')
+    expect(html).toContain('PROVISIONAL APA CITATION')
+    expect(html).toContain('Download .BIB')
+    expect(html).toContain('Download .RIS')
     expect(html).toContain('KhelChronicle Open Sports Research Archive')
   })
 })
