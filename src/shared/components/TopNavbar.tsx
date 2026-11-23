@@ -137,10 +137,8 @@ export default function TopNavbar({
         {/* Zone 2: Primary athlete/consumer areas — one horizontal navigation line */}
         <nav className="header-zone header-zone-center header-primary-links" aria-label="Primary KhelGrid sections">
           {[
-            { label: 'Discover', href: '/sports' },
             { label: 'Play', href: '/play' },
             { label: 'Athlete', href: '/sports-cv' },
-            { label: 'Learn', href: '/learning' },
           ].map(item => {
             const active = path === item.href || path.startsWith(`${item.href}/`)
             return (
