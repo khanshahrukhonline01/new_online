@@ -170,4 +170,42 @@ describe('AdminModerationPage', () => {
     expect(CHRONICLE_REJECTION_PRESETS.length).toBeGreaterThan(0)
     expect(CHRONICLE_CORRECTION_PRESETS.length).toBeGreaterThan(0)
   })
+
+  it('renders Phase 5 batch selection header and shortcuts for bulk operations', () => {
+    const mockQueue: client.AdminModerationQueue = {
+      pendingSubmissions: [
+        {
+          id: '00000000-0000-4000-8000-000000000001',
+          reference_number: 'KHL-20261110-TEST01',
+          listing_type: 'venue',
+          title: 'Bangalore Turf Park',
+          city: 'Bengaluru',
+          source_url: 'https://example.org/turf',
+          details: '8 five-a-side football pitches',
+          status: 'pending_review',
+          version: 1,
+          created_at: '2026-11-10T10:00:00Z',
+          updated_at: '2026-11-10T10:00:00Z',
+        },
+      ],
+      stats: {
+        totalAcademies: 1,
+        totalVenues: 1,
+        totalCoaches: 0,
+        totalEvents: 0,
+        pendingSubmissionsCount: 1,
+        underReviewCount: 0,
+        changesRequestedCount: 0,
+        approvedCount: 0,
+        publishedCount: 0,
+        rejectedCount: 0,
+        unpublishedCount: 0,
+      },
+    }
+
+    const html = renderToStaticMarkup(<AdminModerationPage initialQueue={mockQueue} />)
+    expect(html).toContain('admin-bulk-header-bar')
+    expect(html).toContain('Select Page (1)')
+    expect(html).toContain('Shortcuts')
+  })
 })

@@ -93,6 +93,9 @@ type ActionDialogType =
   | 'request_corrections'
   | 'publish'
   | 'unpublish'
+  | 'bulk_approve'
+  | 'bulk_reject'
+  | 'bulk_corrections'
   | null
 
 export type TableDensity = 'compact' | 'cozy' | 'expanded'
@@ -184,6 +187,15 @@ export function AdminModerationPage({
   const [modalTab, setModalTab] = useState<'data' | 'preview' | 'diff' | 'evidence'>('data')
   const [chronicleModalTab, setChronicleModalTab] = useState<'data' | 'abstract' | 'evidence'>('data')
   const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  // Phase 5: Batch Moderation & Bulk Actions State
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [bulkNotes, setBulkNotes] = useState('')
+  const [bulkMessage, setBulkMessage] = useState('')
+  const [undoBuffer, setUndoBuffer] = useState<{
+    count: number
+    actionLabel: string
+  } | null>(null)
 
   const handleCopy = (text: string, id: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
@@ -615,6 +627,108 @@ export function AdminModerationPage({
     }
   }
 
+  const handleExportSelectedCsv = () => {
+    const selectedList = items.filter(i => selectedSubIds.has(i.id))
+    if (selectedList.length === 0) return
+
+    const escapeCsv = (val: string | number | null | undefined) => {
+      if (val === null || val === undefined) return '""'
+      const str = String(val).replace(/"/g, '""')
+      return `"${str}"`
+    }
+
+    const headers = ['Reference Number', 'Listing Type', 'Title', 'City', 'Status', 'Version', 'Created At', 'Source URL']
+    const rows = selectedList.map(item => [
+      escapeCsv(item.reference_number),
+      escapeCsv(item.listing_type),
+      escapeCsv(item.title),
+      escapeCsv(item.city),
+      escapeCsv(item.status),
+      escapeCsv(item.version),
+      escapeCsv(new Date(item.created_at).toISOString()),
+      escapeCsv(item.source_url),
+    ])
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n')
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `khelgrid_moderation_batch_${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    }
+    setNotice(`Exported ${selectedList.length} selected listings to CSV.`)
+  }
+
+  const handleExecuteBulkAction = async () => {
+    if (!actionDialog?.startsWith('bulk_')) return
+    const selectedList = items.filter(i => selectedSubIds.has(i.id))
+    if (selectedList.length === 0) return
+
+    const action = actionDialog.replace('bulk_', '') as 'approve' | 'reject' | 'corrections'
+    setBulkBusy(true)
+    setError('')
+    setNotice('')
+
+    try {
+      let succeeded = 0
+      let failed = 0
+
+      for (const item of selectedList) {
+        try {
+          if (action === 'approve') {
+            await approveListingSubmission(item.id, bulkNotes.trim() || undefined, item.version)
+            succeeded++
+          } else if (action === 'reject') {
+            if (!bulkMessage.trim()) {
+              setError('A rejection reason message is required for bulk rejection.')
+              setBulkBusy(false)
+              return
+            }
+            await rejectListingSubmission(item.id, bulkMessage.trim(), bulkNotes.trim() || undefined, item.version)
+            succeeded++
+          } else if (action === 'corrections') {
+            if (!bulkMessage.trim() || bulkMessage.trim().length < 10) {
+              setError('A correction request message of at least 10 characters is required for bulk corrections.')
+              setBulkBusy(false)
+              return
+            }
+            await requestListingCorrections(item.id, bulkMessage.trim(), bulkNotes.trim() || undefined, item.version)
+            succeeded++
+          }
+        } catch {
+          failed++
+        }
+      }
+
+      const actionName = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'sent for corrections'
+      const feedback = `Successfully ${actionName} ${succeeded} submissions in batch.${failed > 0 ? ` (${failed} failed due to concurrent modification)` : ''}`
+      setNotice(feedback)
+      setSelectedSubIds(new Set())
+      setActionDialog(null)
+      setBulkMessage('')
+      setBulkNotes('')
+
+      setUndoBuffer({
+        count: succeeded,
+        actionLabel: actionName,
+      })
+      window.setTimeout(() => {
+        setUndoBuffer(null)
+      }, 5000)
+
+      await loadQueue()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Bulk action failed.')
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
   const handleStartChronicleReview = async (item: ChronicleModerationSubmission) => {
     setBusyId(item.id)
     setError('')
@@ -744,6 +858,8 @@ export function AdminModerationPage({
           setManuscriptActionDialog(null)
         } else if (selectedManuscript) {
           setSelectedManuscript(null)
+        } else if (selectedSubIds.size > 0) {
+          setSelectedSubIds(new Set())
         }
         return
       }
@@ -867,6 +983,35 @@ export function AdminModerationPage({
             setError('')
           }
         }
+        return
+      }
+
+      // Phase 5: Toggle card selection with 'x' or 'X'
+      if (e.key === 'x' || e.key === 'X') {
+        if (currentIndex >= 0 && currentIndex < currentItems.length) {
+          e.preventDefault()
+          const targetId = currentItems[currentIndex].id
+          setSelectedSubIds(prev => {
+            const next = new Set(prev)
+            if (next.has(targetId)) next.delete(targetId)
+            else next.add(targetId)
+            return next
+          })
+        }
+        return
+      }
+
+      // Phase 5: Select all currently filtered items: 'Shift + A'
+      if (e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        e.preventDefault()
+        setSelectedSubIds(new Set(currentItems.map(i => i.id)))
+        return
+      }
+
+      // Phase 5: Deselect all: 'Shift + D'
+      if (e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+        e.preventDefault()
+        setSelectedSubIds(new Set())
         return
       }
 
@@ -1151,40 +1296,103 @@ export function AdminModerationPage({
             </div>
           </div>
 
-          {/* Bulk Selection Bar */}
-          <div style={{ margin: '0.75rem 0 1rem', padding: '0.6rem 1rem', background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', fontWeight: 650, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={selectedSubIds.size === paginatedItems.length && paginatedItems.length > 0}
-                onChange={() => {
-                  if (selectedSubIds.size === paginatedItems.length) setSelectedSubIds(new Set())
-                  else setSelectedSubIds(new Set(paginatedItems.map(p => p.id)))
-                }}
-              />
-              Select Page ({paginatedItems.length})
-            </label>
+          {/* Phase 5: Enhanced Bulk Selection Header Bar */}
+          <div className="admin-bulk-header-bar">
+            <div className="admin-bulk-select-controls">
+              <label className="admin-bulk-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={selectedSubIds.size === paginatedItems.length && paginatedItems.length > 0}
+                  onChange={() => {
+                    if (selectedSubIds.size === paginatedItems.length) setSelectedSubIds(new Set())
+                    else setSelectedSubIds(new Set(paginatedItems.map(p => p.id)))
+                  }}
+                />
+                <span>Select Page ({paginatedItems.length})</span>
+              </label>
+
+              {items.length > paginatedItems.length && selectedSubIds.size < items.length && (
+                <button
+                  type="button"
+                  className="admin-bulk-link-btn"
+                  onClick={() => setSelectedSubIds(new Set(items.map(p => p.id)))}
+                >
+                  Select all {items.length} filtered
+                </button>
+              )}
+            </div>
 
             {selectedSubIds.size > 0 && (
-              <span style={{ fontSize: '0.82rem', color: '#0284c7', fontWeight: 700 }}>
-                {selectedSubIds.size} selected
-              </span>
-            )}
+              <div className="admin-bulk-quick-actions">
+                <span className="admin-bulk-pill-badge">
+                  <SiteIcon name="check-circle" size={13} />
+                  <strong>{selectedSubIds.size}</strong> selected
+                </span>
 
-            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="admin-btn admin-btn-secondary"
-                disabled={selectedSubIds.size === 0}
-                style={{ fontSize: '0.78rem', padding: '0.3rem 0.6rem' }}
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('khelgrid-admin-switch-workspace', { detail: { workspace: 'analytics' } }))
-                }}
-              >
-                <SiteIcon name="chart" size={13} />
-                Open Operations &amp; Bulk Actions ({selectedSubIds.size}) →
-              </button>
-            </div>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-approve admin-btn-sm"
+                  onClick={() => {
+                    setActionDialog('bulk_approve')
+                    setBulkNotes('Approved via batch review session.')
+                    setError('')
+                  }}
+                  title="Bulk approve selected submissions"
+                >
+                  <SiteIcon name="check" size={13} />
+                  Approve ({selectedSubIds.size})
+                </button>
+
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-warn admin-btn-sm"
+                  onClick={() => {
+                    setActionDialog('bulk_corrections')
+                    setBulkMessage('')
+                    setBulkNotes('')
+                    setError('')
+                  }}
+                  title="Bulk request corrections"
+                >
+                  <SiteIcon name="alert-circle" size={13} />
+                  Corrections
+                </button>
+
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-reject admin-btn-sm"
+                  onClick={() => {
+                    setActionDialog('bulk_reject')
+                    setBulkMessage('')
+                    setBulkNotes('')
+                    setError('')
+                  }}
+                  title="Bulk reject selected"
+                >
+                  <SiteIcon name="close" size={13} />
+                  Reject
+                </button>
+
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-secondary admin-btn-sm"
+                  onClick={handleExportSelectedCsv}
+                  title="Export selected records to CSV"
+                >
+                  <SiteIcon name="arrow-down-left" size={13} />
+                  Export CSV
+                </button>
+
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-ghost admin-btn-sm"
+                  onClick={() => setSelectedSubIds(new Set())}
+                  title="Clear selection (Shift + D)"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Submissions List */}
@@ -3523,6 +3731,289 @@ export function AdminModerationPage({
       )
       )}
 
+      {/* Phase 5: Floating Bottom Bulk Actions Toolbar */}
+      {selectedSubIds.size > 0 && (
+        <div className="admin-bulk-floating-toolbar" role="toolbar" aria-label="Bulk actions toolbar">
+          <div className="admin-bulk-info">
+            <span className="admin-bulk-count-badge">
+              <SiteIcon name="check-circle" size={14} />
+              <strong>{selectedSubIds.size}</strong> Selected
+            </span>
+            {selectedSubIds.size < items.length && (
+              <button
+                type="button"
+                className="admin-bulk-link-btn"
+                onClick={() => setSelectedSubIds(new Set(items.map(i => i.id)))}
+                title={`Select all ${items.length} listings in current filter`}
+              >
+                Select all {items.length}
+              </button>
+            )}
+          </div>
+
+          <div className="admin-bulk-actions-group">
+            <button
+              type="button"
+              className="admin-bulk-btn admin-bulk-btn-approve"
+              onClick={() => {
+                setActionDialog('bulk_approve')
+                setBulkNotes('Approved via bulk intake inspection.')
+                setError('')
+              }}
+              title="Approve all selected listings"
+            >
+              <SiteIcon name="check" size={14} />
+              <span>Approve All ({selectedSubIds.size})</span>
+            </button>
+
+            <button
+              type="button"
+              className="admin-bulk-btn admin-bulk-btn-corrections"
+              onClick={() => {
+                setActionDialog('bulk_corrections')
+                setBulkMessage('')
+                setBulkNotes('')
+                setError('')
+              }}
+              title="Request revisions for all selected listings"
+            >
+              <SiteIcon name="alert-circle" size={14} />
+              <span>Request Corrections</span>
+            </button>
+
+            <button
+              type="button"
+              className="admin-bulk-btn admin-bulk-btn-reject"
+              onClick={() => {
+                setActionDialog('bulk_reject')
+                setBulkMessage('')
+                setBulkNotes('')
+                setError('')
+              }}
+              title="Reject all selected listings"
+            >
+              <SiteIcon name="close" size={14} />
+              <span>Reject All</span>
+            </button>
+
+            <button
+              type="button"
+              className="admin-bulk-btn admin-bulk-btn-export"
+              onClick={handleExportSelectedCsv}
+              title="Download CSV of selected items"
+            >
+              <SiteIcon name="arrow-down-left" size={14} />
+              <span>Export CSV</span>
+            </button>
+
+            <button
+              type="button"
+              className="admin-bulk-btn admin-bulk-btn-clear"
+              onClick={() => setSelectedSubIds(new Set())}
+              title="Deselect all (Shift + D)"
+              aria-label="Clear selection"
+            >
+              <SiteIcon name="close" size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Phase 5: Batch Confirmation Modal */}
+      {actionDialog?.startsWith('bulk_') && (
+        <div className="admin-drawer-backdrop" onClick={() => !bulkBusy && setActionDialog(null)}>
+          <div
+            className="admin-bulk-confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-bulk-modal-title"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="admin-bulk-modal-header">
+              <h3 id="admin-bulk-modal-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                {actionDialog === 'bulk_approve' ? (
+                  <>
+                    <span className="admin-bulk-dialog-icon is-approve"><SiteIcon name="check-circle" size={18} /></span>
+                    Batch Approve {selectedSubIds.size} Listings
+                  </>
+                ) : actionDialog === 'bulk_reject' ? (
+                  <>
+                    <span className="admin-bulk-dialog-icon is-reject"><SiteIcon name="close" size={18} /></span>
+                    Batch Reject {selectedSubIds.size} Listings
+                  </>
+                ) : (
+                  <>
+                    <span className="admin-bulk-dialog-icon is-warn"><SiteIcon name="alert-circle" size={18} /></span>
+                    Batch Request Corrections ({selectedSubIds.size} Listings)
+                  </>
+                )}
+              </h3>
+              <button
+                type="button"
+                className="admin-drawer-close-btn"
+                onClick={() => !bulkBusy && setActionDialog(null)}
+                disabled={bulkBusy}
+                aria-label="Close batch confirmation dialog"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="admin-bulk-modal-body">
+              <p className="admin-bulk-modal-desc">
+                {actionDialog === 'bulk_approve'
+                  ? `You are about to approve ${selectedSubIds.size} listings in batch. Submissions will transition to approved state for publication.`
+                  : actionDialog === 'bulk_reject'
+                    ? `You are about to reject ${selectedSubIds.size} listings in batch. A clear rejection reason must be provided to submitters.`
+                    : `You are requesting revisions on ${selectedSubIds.size} listings in batch. Explain what needs correction.`}
+              </p>
+
+              {/* Selected Listings Chip Preview */}
+              <div className="admin-bulk-preview-chips">
+                {items.filter(i => selectedSubIds.has(i.id)).map(item => (
+                  <span key={item.id} className="admin-bulk-chip">
+                    <code>{item.reference_number}</code>
+                    <span>{item.title}</span>
+                  </span>
+                ))}
+              </div>
+
+              {/* Preset Templates */}
+              {actionDialog === 'bulk_reject' && (
+                <div className="admin-bulk-presets-block">
+                  <label className="admin-detail-label">Preset Rejection Reason</label>
+                  <div className="admin-presets-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.3rem' }}>
+                    {MODERATION_REJECTION_PRESETS.map((p, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className="admin-preset-tag"
+                        onClick={() => setBulkMessage(p.text)}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {actionDialog === 'bulk_corrections' && (
+                <div className="admin-bulk-presets-block">
+                  <label className="admin-detail-label">Preset Correction Reason</label>
+                  <div className="admin-presets-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.3rem' }}>
+                    {MODERATION_CORRECTION_PRESETS.map((p, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className="admin-preset-tag"
+                        onClick={() => setBulkMessage(p.text)}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {actionDialog === 'bulk_approve' && (
+                <div className="admin-bulk-presets-block">
+                  <label className="admin-detail-label">Preset Verification Standard</label>
+                  <div className="admin-presets-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.3rem' }}>
+                    {MODERATION_APPROVAL_PRESETS.map((p, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className="admin-preset-tag"
+                        onClick={() => setBulkNotes(p.text)}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Text Input */}
+              {(actionDialog === 'bulk_reject' || actionDialog === 'bulk_corrections') && (
+                <div style={{ marginTop: '0.75rem' }}>
+                  <label className="admin-detail-label">
+                    Feedback Message to Submitters <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <textarea
+                    className="admin-input-textarea"
+                    style={{ width: '100%', minHeight: 70, marginTop: '0.3rem', padding: '0.5rem', borderRadius: 6, border: '1px solid #cbd5e1' }}
+                    value={bulkMessage}
+                    onChange={e => setBulkMessage(e.target.value)}
+                    placeholder="Enter feedback explanation for submitters…"
+                    disabled={bulkBusy}
+                  />
+                </div>
+              )}
+
+              <div style={{ marginTop: '0.75rem' }}>
+                <label className="admin-detail-label">Internal Audit Notes (Optional)</label>
+                <input
+                  type="text"
+                  className="admin-input-text"
+                  style={{ width: '100%', padding: '0.45rem 0.6rem', marginTop: '0.3rem', borderRadius: 6, border: '1px solid #cbd5e1' }}
+                  value={bulkNotes}
+                  onChange={e => setBulkNotes(e.target.value)}
+                  placeholder="Audit trail note for platform records…"
+                  disabled={bulkBusy}
+                />
+              </div>
+
+              {error && (
+                <div className="admin-dialog-error" style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: '0.6rem' }}>
+                  {error}
+                </div>
+              )}
+            </div>
+
+            <div className="admin-bulk-modal-footer">
+              <button
+                type="button"
+                className="admin-btn admin-btn-secondary"
+                onClick={() => { setActionDialog(null); setError('') }}
+                disabled={bulkBusy}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`admin-btn ${
+                  actionDialog === 'bulk_approve'
+                    ? 'admin-btn-approve'
+                    : actionDialog === 'bulk_reject'
+                      ? 'admin-btn-reject'
+                      : 'admin-btn-warn'
+                }`}
+                onClick={handleExecuteBulkAction}
+                disabled={bulkBusy}
+              >
+                {bulkBusy ? 'Executing Batch…' : `Confirm Batch Action (${selectedSubIds.size})`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Phase 5: Undo Buffer Toast */}
+      {undoBuffer && (
+        <div className="admin-undo-toast" role="status" aria-live="polite">
+          <SiteIcon name="check-circle" size={16} />
+          <span>Batch {undoBuffer.actionLabel} completed for {undoBuffer.count} items.</span>
+          <button
+            type="button"
+            className="admin-undo-dismiss-btn"
+            onClick={() => setUndoBuffer(null)}
+            aria-label="Dismiss notification"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Phase 2: Power Keyboard Shortcuts Cheat Sheet Dialog */}
       {showShortcutsModal && (
         <div className="admin-drawer-backdrop" onClick={() => setShowShortcutsModal(false)}>
@@ -3573,6 +4064,24 @@ export function AdminModerationPage({
                 <span>Request Corrections / Revisions</span>
                 <div className="admin-keys">
                   <kbd>C</kbd>
+                </div>
+              </div>
+              <div className="admin-shortcut-row">
+                <span>Toggle item selection (Bulk Mode)</span>
+                <div className="admin-keys">
+                  <kbd>X</kbd>
+                </div>
+              </div>
+              <div className="admin-shortcut-row">
+                <span>Select all filtered items</span>
+                <div className="admin-keys">
+                  <kbd>Shift</kbd> + <kbd>A</kbd>
+                </div>
+              </div>
+              <div className="admin-shortcut-row">
+                <span>Deselect all items</span>
+                <div className="admin-keys">
+                  <kbd>Shift</kbd> + <kbd>D</kbd>
                 </div>
               </div>
               <div className="admin-shortcut-row">
