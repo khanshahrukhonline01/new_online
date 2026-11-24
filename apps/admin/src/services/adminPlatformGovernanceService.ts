@@ -27,6 +27,7 @@ import { getAdminModerationListings } from './adminModerationService'
 import { getAdminChronicleManuscripts } from './adminChronicleService'
 import { getAdminTrustSafetyCases } from './adminTrustSafetyService'
 import { getAdminCreatorCampaignDashboard } from './adminCreatorCampaignService'
+import { getAllGroundOperationsAuditEvents } from './adminGroundOperationsService'
 
 export interface GovernanceOperatorActor {
   name: string
@@ -136,6 +137,9 @@ export type AuditSourceModule =
   | 'fraud_disputes'
   | 'creator_campaigns'
   | 'rbac_access'
+  | 'gate_desk'
+  | 'turf_oversight'
+  | 'academy_oversight'
 
 export type AuditSeverity = 'info' | 'warning' | 'critical'
 
@@ -723,6 +727,22 @@ export async function getPlatformGovernanceSnapshot(): Promise<PlatformGovernanc
       summary: evt.reason || evt.action,
       severity: evt.action.includes('excluded') || evt.action.includes('rejected') ? 'warning' : 'info',
       immutableChecksum: computeSimpleChecksum(`cr-${evt.id}`),
+    })
+  }
+
+  // 8. Graduated Ground Operations (Gate Check-In, Turf Utilization, Academy Batches)
+  for (const grd of getAllGroundOperationsAuditEvents()) {
+    crossModuleEvents.push({
+      id: grd.id,
+      sequenceCode: grd.desk.toUpperCase().replace(/_/g, '-'),
+      timestamp: grd.timestamp,
+      sourceModule: grd.desk,
+      action: grd.action,
+      actor: grd.operatorEmail,
+      targetEntity: grd.targetEntity,
+      summary: grd.summary,
+      severity: grd.severity,
+      immutableChecksum: computeSimpleChecksum(grd.id),
     })
   }
 

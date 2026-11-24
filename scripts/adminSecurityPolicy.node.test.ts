@@ -63,5 +63,6 @@ test('synthetic verification URLs and cross-origin redirects are rejected', () =
     validateSafeAdminRedirectUrl('https://evil.example/phish', 'https://admin.khelgrid.com'),
     'https://admin.khelgrid.com/',
   )
-  assert.equal(isWorkspaceAuthorized('academy_oversight', 'super_admin'), false)
+  assert.equal(isWorkspaceAuthorized('academy_oversight', 'super_admin'), true)
+  assert.equal(isWorkspaceAuthorized('academy_oversight', null), false)
 })

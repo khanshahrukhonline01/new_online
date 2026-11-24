@@ -173,7 +173,7 @@ describe('Phase 1 Admin Security Policy', () => {
   })
 
   describe('workspace authorization boundaries', () => {
-    it('quarantines localStorage oversight tabs and allows server-backed desks only for active roles', () => {
+    it('allows all graduated operational workspaces for active roles while blocking unauthenticated callers', () => {
       expect(isWorkspaceAuthorized('command', null)).toBe(false)
       expect(isWorkspaceAuthorized('command', 'moderator')).toBe(true)
       expect(isWorkspaceAuthorized('moderation_desk', 'moderator')).toBe(true)
@@ -182,9 +182,11 @@ describe('Phase 1 Admin Security Policy', () => {
       expect(isWorkspaceAuthorized('platform_governance', 'moderator')).toBe(true)
       expect(isWorkspaceAuthorized('platform_governance', 'super_admin')).toBe(true)
       expect(isWorkspaceAuthorized('platform_governance', null)).toBe(false)
-      expect(isWorkspaceAuthorized('gate_desk', 'super_admin')).toBe(false)
-      expect(isWorkspaceAuthorized('turf_oversight', 'super_admin')).toBe(false)
-      expect(isWorkspaceAuthorized('academy_oversight', 'super_admin')).toBe(false)
+      expect(isWorkspaceAuthorized('gate_desk', 'moderator')).toBe(true)
+      expect(isWorkspaceAuthorized('gate_desk', 'super_admin')).toBe(true)
+      expect(isWorkspaceAuthorized('gate_desk', null)).toBe(false)
+      expect(isWorkspaceAuthorized('turf_oversight', 'super_admin')).toBe(true)
+      expect(isWorkspaceAuthorized('academy_oversight', 'super_admin')).toBe(true)
 
       const modCaps = getGovernanceCapabilities('moderator')
       expect(modCaps.canViewAuditExplorer).toBe(true)

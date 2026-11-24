@@ -64,7 +64,11 @@ describe('AdminApp Root Authentication Gate & Fail-Closed Shell (Phase 1)', () =
       expect(html).toContain('reviewer.ops')
       expect(html).toContain('Moderator')
       expect(html).toContain('Sign Out')
-      expect(html).toContain('Unavailable')
+      expect(html).toContain('Gate Check-In Telemetry')
+      expect(html).toContain('Turf Utilization &amp; Maintenance')
+      expect(html).toContain('Academy Batch &amp; Attendance')
+      expect(html).toContain('Platform Settings &amp; RBAC')
+      expect(html).not.toContain('Unavailable')
       expect(html).not.toContain('admin@khelgrid.com')
       expect(html).not.toContain('Super Admin')
     } finally {

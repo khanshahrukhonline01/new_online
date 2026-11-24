@@ -19,7 +19,7 @@ import {
   useAdminAuth,
   type AdminAuthGateProps,
 } from './auth/AdminAuthProvider'
-import { UNAVAILABLE_LOCALSTORAGE_WORKSPACES } from './auth/adminSecurityPolicy'
+import { isWorkspaceAuthorized } from './auth/adminSecurityPolicy'
 import {
   getAdminModerationQueue,
   clearCatalogueCache,
@@ -218,6 +218,30 @@ function AuthenticatedAdminShell() {
         onSelect: () => setActiveWorkspace('platform_governance'),
       },
       {
+        id: 'cmd-gate-desk',
+        title: 'Open QR Gate Check-In Telemetry Desk',
+        section: 'Ground Operations',
+        icon: 'shield-check',
+        shortcut: 'G G',
+        onSelect: () => setActiveWorkspace('gate_desk'),
+      },
+      {
+        id: 'cmd-turf-oversight',
+        title: 'Open Turf Utilization & Maintenance Desk',
+        section: 'Ground Operations',
+        icon: 'calendar',
+        shortcut: 'G U',
+        onSelect: () => setActiveWorkspace('turf_oversight'),
+      },
+      {
+        id: 'cmd-academy-oversight',
+        title: 'Open Academy Batch & Attendance Oversight Desk',
+        section: 'Ground Operations',
+        icon: 'building',
+        shortcut: 'G B',
+        onSelect: () => setActiveWorkspace('academy_oversight'),
+      },
+      {
         id: 'cmd-revalidate',
         title: 'Re-verify Admin Permissions',
         section: 'Account Security',
@@ -284,9 +308,9 @@ function AuthenticatedAdminShell() {
     creator_campaigns: { title: 'Creator Campaigns & Attribution Desk', section: 'Creator Economy Operations' },
     fraud_disputes: { title: 'Trust & Safety, Complaints & Sanctions Desk', section: 'SaaS Platform Governance' },
     platform_governance: { title: 'Platform Settings, Audit Trails & RBAC', section: 'System Governance' },
-    gate_desk: { title: 'Gate Check-In Oversight', section: 'Unavailable (Phase 5+)' },
-    turf_oversight: { title: 'Turf & Venue Oversight', section: 'Unavailable (Phase 5+)' },
-    academy_oversight: { title: 'Academy & Coach Oversight', section: 'Unavailable (Phase 5+)' },
+    gate_desk: { title: 'Gate Check-In Telemetry', section: 'Ground & Facility Operations' },
+    turf_oversight: { title: 'Turf Utilization & Maintenance', section: 'Ground & Facility Operations' },
+    academy_oversight: { title: 'Academy Batch & Attendance', section: 'Ground & Facility Operations' },
   }
 
   return (
@@ -357,7 +381,10 @@ function AuthenticatedAdminShell() {
                 operatorRole={identity.role}
                 operatorUserId={identity.userId}
               />
-            ) : UNAVAILABLE_LOCALSTORAGE_WORKSPACES.has(activeWorkspace) ? (
+            ) : (activeWorkspace === 'gate_desk' ||
+                activeWorkspace === 'turf_oversight' ||
+                activeWorkspace === 'academy_oversight') &&
+              isWorkspaceAuthorized(activeWorkspace, identity.role) ? (
               <AdminGroundOversightView
                 initialDesk={
                   activeWorkspace === 'gate_desk'
@@ -366,6 +393,7 @@ function AuthenticatedAdminShell() {
                       ? 'turf'
                       : 'academy'
                 }
+                operatorEmail={identity.email}
               />
             ) : (
               <AdminControlPanelPage />

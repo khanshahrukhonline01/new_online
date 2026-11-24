@@ -1045,6 +1045,9 @@ export const AdminPlatformGovernanceDesk: FC<AdminPlatformGovernanceDeskProps> =
               <option value="chronicle_desk">Chronicle Editorial Desk</option>
               <option value="fraud_disputes">Trust &amp; Safety / Sanctions</option>
               <option value="creator_campaigns">Creator Campaigns &amp; Attribution</option>
+              <option value="gate_desk">QR Gate Check-In Telemetry</option>
+              <option value="turf_oversight">Turf Slot Utilization &amp; Maintenance</option>
+              <option value="academy_oversight">Academy Batch &amp; Attendance</option>
             </select>
             <select
               className="gov-select"

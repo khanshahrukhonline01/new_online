@@ -292,21 +292,30 @@ export function evaluateAdminAccessGate(input: AdminGateInput): AdminGateDecisio
 }
 
 /**
- * Returns the workspaces that have real server-backed implementations vs.
- * workspaces quarantined as unavailable pending Phase 5 server-side tables/RPCs.
+ * All workspaces in KhelGrid Admin Control Center now have dedicated operations desks.
+ * Kept empty for backwards policy-interface compatibility should any future module need quarantining.
  */
-export const UNAVAILABLE_LOCALSTORAGE_WORKSPACES: ReadonlySet<AdminWorkspaceTab> = new Set([
-  'gate_desk',
-  'turf_oversight',
-  'academy_oversight',
-])
+export const UNAVAILABLE_LOCALSTORAGE_WORKSPACES: ReadonlySet<AdminWorkspaceTab> = new Set([])
 
 export function getAllowedWorkspacesForRole(role: AdminPlatformRole | null): AdminWorkspaceTab[] {
   if (!role) return []
-  // Both active moderators and super_admins can view the platform workspaces including the
-  // Platform Settings & Audit Explorer desk; mutating platform feature flags, bilingual CMS
-  // banners, taxonomies, and operator RBAC grants remains strictly gated to super_admin.
-  return ['command', 'moderation_desk', 'analytics', 'chronicle_desk', 'tenant_governance', 'verification_vault', 'creator_campaigns', 'fraud_disputes', 'platform_governance']
+  // Active moderators and super_admins can access all operational workspaces including graduated
+  // Gate Telemetry, Turf Utilization & Maintenance, and Academy Batch Oversight desks.
+  // System governance mutations inside platform_governance remain strictly gated to super_admin.
+  return [
+    'command',
+    'moderation_desk',
+    'analytics',
+    'chronicle_desk',
+    'tenant_governance',
+    'verification_vault',
+    'creator_campaigns',
+    'fraud_disputes',
+    'platform_governance',
+    'gate_desk',
+    'turf_oversight',
+    'academy_oversight',
+  ]
 }
 
 export interface GovernanceCapabilityMatrix {
