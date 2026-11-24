@@ -5,6 +5,10 @@ import react from '@vitejs/plugin-react'
 
 const adminRoot = fileURLToPath(new URL('.', import.meta.url))
 
+const APPROVED_DEVELOPMENT_SUPABASE_URL = 'https://hznsbxvovjxvmnchzzqt.supabase.co'
+const APPROVED_DEVELOPMENT_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bnNieHZvdmp4dm1uY2h6enF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MDU2NzIsImV4cCI6MjEwODQ4MTY3Mn0.CGMlJ8sM5yDPE1gd9Eydhmwf-bBCoxDJIaSTh133OpQ'
+
 function resolveAdminSupabaseUrl(): string {
   const explicit = process.env.VITE_ADMIN_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
   if (explicit && !explicit.includes('example.invalid')) return explicit
@@ -12,7 +16,7 @@ function resolveAdminSupabaseUrl(): string {
   const standard = process.env.VITE_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
   if (standard && !standard.includes('example.invalid')) return standard
 
-  return ''
+  return APPROVED_DEVELOPMENT_SUPABASE_URL
 }
 
 function resolveAdminAnonKey(): string {
@@ -22,7 +26,7 @@ function resolveAdminAnonKey(): string {
   const standard = process.env.VITE_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '')
   if (standard && standard !== 'example' && standard.length >= 40) return standard
 
-  return ''
+  return APPROVED_DEVELOPMENT_ANON_KEY
 }
 
 export default defineConfig({
