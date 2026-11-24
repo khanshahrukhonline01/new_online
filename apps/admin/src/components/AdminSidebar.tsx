@@ -98,6 +98,14 @@ export function AdminSidebar({
         badgeVariant: 'primary',
       },
       {
+        id: 'fraud_disputes',
+        label: 'Trust & Safety / Sanctions',
+        section: 'SAAS PLATFORM GOVERNANCE',
+        icon: 'flag',
+        badge: 'Safety Desk',
+        badgeVariant: 'danger',
+      },
+      {
         id: 'creator_campaigns',
         label: 'Sports Creator Campaigns',
         section: 'CREATOR MARKETPLACE',
@@ -105,13 +113,7 @@ export function AdminSidebar({
         badge: 'Moderation',
         badgeVariant: 'purple',
       },
-      {
-        id: 'fraud_disputes',
-        label: 'Trust & Dispute Claims',
-        section: 'PLANNED MODULES (UNAVAILABLE)',
-        icon: 'flag',
-        badge: 'Unavailable',
-      },
+
       {
         id: 'gate_desk',
         label: 'Gate Check-In Oversight',

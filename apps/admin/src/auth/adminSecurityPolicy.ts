@@ -296,7 +296,6 @@ export function evaluateAdminAccessGate(input: AdminGateInput): AdminGateDecisio
  * workspaces quarantined as unavailable pending Phase 5 server-side tables/RPCs.
  */
 export const UNAVAILABLE_LOCALSTORAGE_WORKSPACES: ReadonlySet<AdminWorkspaceTab> = new Set([
-  'fraud_disputes',
   'gate_desk',
   'turf_oversight',
   'academy_oversight',
@@ -305,9 +304,9 @@ export const UNAVAILABLE_LOCALSTORAGE_WORKSPACES: ReadonlySet<AdminWorkspaceTab>
 export function getAllowedWorkspacesForRole(role: AdminPlatformRole | null): AdminWorkspaceTab[] {
   if (!role) return []
   // Both active moderators and super_admins can access the core server-backed
-  // moderation, analytics, chronicle, tenant governance, and verification vault desks; super_admin-only panels inside
+  // moderation, analytics, chronicle, tenant governance, verification vault, creator campaigns, and trust & safety fraud disputes desks; super_admin-only panels inside
   // Command Centre remain additionally gated by server RPC checks.
-  return ['command', 'moderation_desk', 'analytics', 'chronicle_desk', 'tenant_governance', 'verification_vault', 'creator_campaigns']
+  return ['command', 'moderation_desk', 'analytics', 'chronicle_desk', 'tenant_governance', 'verification_vault', 'creator_campaigns', 'fraud_disputes']
 }
 
 export function isWorkspaceAuthorized(

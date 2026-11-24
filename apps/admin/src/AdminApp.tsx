@@ -12,6 +12,7 @@ import { AdminTenantManagementDesk } from './components/AdminTenantManagementDes
 import { AdminVerificationVaultDesk } from './components/AdminVerificationVaultDesk'
 import { AdminListingModerationDesk } from './components/AdminListingModerationDesk'
 import { AdminChronicleEditorialDesk } from './components/AdminChronicleEditorialDesk'
+import { AdminTrustSafetyDesk } from './components/AdminTrustSafetyDesk'
 import {
   AdminAuthGate,
   useAdminAuth,
@@ -198,6 +199,14 @@ function AuthenticatedAdminShell() {
         onSelect: () => setActiveWorkspace('creator_campaigns'),
       },
       {
+        id: 'cmd-trust-safety',
+        title: 'Open Trust & Safety, Complaints & Sanctions Desk',
+        section: 'Governance',
+        icon: 'flag',
+        shortcut: 'G S',
+        onSelect: () => setActiveWorkspace('fraud_disputes'),
+      },
+      {
         id: 'cmd-revalidate',
         title: 'Re-verify Admin Permissions',
         section: 'Account Security',
@@ -262,7 +271,7 @@ function AuthenticatedAdminShell() {
     tenant_governance: { title: 'Tenant & Organisation Governance', section: 'SaaS Platform Governance' },
     verification_vault: { title: 'Verification Centre & Evidence Vault', section: 'SaaS Platform Governance' },
     creator_campaigns: { title: 'Sports Creator Campaign Desk', section: 'Creator Economy' },
-    fraud_disputes: { title: 'Trust & Dispute Claims', section: 'Unavailable (Phase 5+)' },
+    fraud_disputes: { title: 'Trust & Safety, Complaints & Sanctions Desk', section: 'SaaS Platform Governance' },
     gate_desk: { title: 'Gate Check-In Oversight', section: 'Unavailable (Phase 5+)' },
     turf_oversight: { title: 'Turf & Venue Oversight', section: 'Unavailable (Phase 5+)' },
     academy_oversight: { title: 'Academy & Coach Oversight', section: 'Unavailable (Phase 5+)' },
@@ -328,6 +337,8 @@ function AuthenticatedAdminShell() {
               <AdminAnalyticsDashboard />
             ) : activeWorkspace === 'creator_campaigns' ? (
               <AdminCampaignMarketplaceDesk />
+            ) : activeWorkspace === 'fraud_disputes' ? (
+              <AdminTrustSafetyDesk operatorEmail={identity.email} />
             ) : UNAVAILABLE_LOCALSTORAGE_WORKSPACES.has(activeWorkspace) ? (
               <AdminGroundOversightView
                 initialDesk={
@@ -335,9 +346,7 @@ function AuthenticatedAdminShell() {
                     ? 'gate'
                     : activeWorkspace === 'turf_oversight'
                       ? 'turf'
-                      : activeWorkspace === 'fraud_disputes'
-                        ? 'fraud'
-                        : 'academy'
+                      : 'academy'
                 }
               />
             ) : (
