@@ -303,10 +303,32 @@ export const UNAVAILABLE_LOCALSTORAGE_WORKSPACES: ReadonlySet<AdminWorkspaceTab>
 
 export function getAllowedWorkspacesForRole(role: AdminPlatformRole | null): AdminWorkspaceTab[] {
   if (!role) return []
-  // Both active moderators and super_admins can access the core server-backed
-  // moderation, analytics, chronicle, tenant governance, verification vault, creator campaigns, and trust & safety fraud disputes desks; super_admin-only panels inside
-  // Command Centre remain additionally gated by server RPC checks.
-  return ['command', 'moderation_desk', 'analytics', 'chronicle_desk', 'tenant_governance', 'verification_vault', 'creator_campaigns', 'fraud_disputes']
+  // Both active moderators and super_admins can view the platform workspaces including the
+  // Platform Settings & Audit Explorer desk; mutating platform feature flags, bilingual CMS
+  // banners, taxonomies, and operator RBAC grants remains strictly gated to super_admin.
+  return ['command', 'moderation_desk', 'analytics', 'chronicle_desk', 'tenant_governance', 'verification_vault', 'creator_campaigns', 'fraud_disputes', 'platform_governance']
+}
+
+export interface GovernanceCapabilityMatrix {
+  canViewAuditExplorer: boolean
+  canExportAuditCsv: boolean
+  canMutateFeatureFlags: boolean
+  canPublishBanners: boolean
+  canEditTaxonomies: boolean
+  canManageOperatorRbac: boolean
+}
+
+export function getGovernanceCapabilities(role: AdminPlatformRole | null): GovernanceCapabilityMatrix {
+  const isAuthenticatedOperator = role === 'moderator' || role === 'super_admin'
+  const isSuperAdmin = role === 'super_admin'
+  return {
+    canViewAuditExplorer: isAuthenticatedOperator,
+    canExportAuditCsv: isAuthenticatedOperator,
+    canMutateFeatureFlags: isSuperAdmin,
+    canPublishBanners: isSuperAdmin,
+    canEditTaxonomies: isSuperAdmin,
+    canManageOperatorRbac: isSuperAdmin,
+  }
 }
 
 export function isWorkspaceAuthorized(

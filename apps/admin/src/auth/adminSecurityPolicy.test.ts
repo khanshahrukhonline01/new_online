@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   APPROVED_DEVELOPMENT_SUPABASE_ORIGIN,
   evaluateAdminAccessGate,
+  getGovernanceCapabilities,
   isSyntheticOrUnsafeEvidenceUrl,
   isValidAdminAnonKey,
   isWorkspaceAuthorized,
@@ -178,9 +179,23 @@ describe('Phase 1 Admin Security Policy', () => {
       expect(isWorkspaceAuthorized('moderation_desk', 'moderator')).toBe(true)
       expect(isWorkspaceAuthorized('fraud_disputes', 'moderator')).toBe(true)
       expect(isWorkspaceAuthorized('fraud_disputes', 'super_admin')).toBe(true)
+      expect(isWorkspaceAuthorized('platform_governance', 'moderator')).toBe(true)
+      expect(isWorkspaceAuthorized('platform_governance', 'super_admin')).toBe(true)
+      expect(isWorkspaceAuthorized('platform_governance', null)).toBe(false)
       expect(isWorkspaceAuthorized('gate_desk', 'super_admin')).toBe(false)
       expect(isWorkspaceAuthorized('turf_oversight', 'super_admin')).toBe(false)
       expect(isWorkspaceAuthorized('academy_oversight', 'super_admin')).toBe(false)
+
+      const modCaps = getGovernanceCapabilities('moderator')
+      expect(modCaps.canViewAuditExplorer).toBe(true)
+      expect(modCaps.canMutateFeatureFlags).toBe(false)
+      expect(modCaps.canManageOperatorRbac).toBe(false)
+
+      const saCaps = getGovernanceCapabilities('super_admin')
+      expect(saCaps.canMutateFeatureFlags).toBe(true)
+      expect(saCaps.canPublishBanners).toBe(true)
+      expect(saCaps.canEditTaxonomies).toBe(true)
+      expect(saCaps.canManageOperatorRbac).toBe(true)
     })
   })
 })

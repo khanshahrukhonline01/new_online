@@ -11,6 +11,7 @@ export type AdminWorkspaceTab =
   | 'verification_vault'
   | 'creator_campaigns'
   | 'fraud_disputes'
+  | 'platform_governance'
   | 'gate_desk'
   | 'turf_oversight'
   | 'academy_oversight'
@@ -112,6 +113,14 @@ export function AdminSidebar({
         icon: 'award',
         badge: 'Attribution',
         badgeVariant: 'purple',
+      },
+      {
+        id: 'platform_governance',
+        label: 'Platform Settings & RBAC',
+        section: 'SYSTEM GOVERNANCE',
+        icon: 'settings',
+        badge: 'Gov & Audit',
+        badgeVariant: 'primary',
       },
 
       {

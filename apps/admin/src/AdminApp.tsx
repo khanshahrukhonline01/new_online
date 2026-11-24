@@ -13,6 +13,7 @@ import { AdminVerificationVaultDesk } from './components/AdminVerificationVaultD
 import { AdminListingModerationDesk } from './components/AdminListingModerationDesk'
 import { AdminChronicleEditorialDesk } from './components/AdminChronicleEditorialDesk'
 import { AdminTrustSafetyDesk } from './components/AdminTrustSafetyDesk'
+import { AdminPlatformGovernanceDesk } from './components/AdminPlatformGovernanceDesk'
 import {
   AdminAuthGate,
   useAdminAuth,
@@ -208,6 +209,15 @@ function AuthenticatedAdminShell() {
         onSelect: () => setActiveWorkspace('fraud_disputes'),
       },
       {
+        id: 'cmd-platform-governance',
+        title: 'Open Platform Settings, Audit Trails & RBAC Desk',
+        section: 'Governance',
+        icon: 'settings',
+        badge: 'Gov & Audit',
+        shortcut: 'G P',
+        onSelect: () => setActiveWorkspace('platform_governance'),
+      },
+      {
         id: 'cmd-revalidate',
         title: 'Re-verify Admin Permissions',
         section: 'Account Security',
@@ -273,6 +283,7 @@ function AuthenticatedAdminShell() {
     verification_vault: { title: 'Verification Centre & Evidence Vault', section: 'SaaS Platform Governance' },
     creator_campaigns: { title: 'Creator Campaigns & Attribution Desk', section: 'Creator Economy Operations' },
     fraud_disputes: { title: 'Trust & Safety, Complaints & Sanctions Desk', section: 'SaaS Platform Governance' },
+    platform_governance: { title: 'Platform Settings, Audit Trails & RBAC', section: 'System Governance' },
     gate_desk: { title: 'Gate Check-In Oversight', section: 'Unavailable (Phase 5+)' },
     turf_oversight: { title: 'Turf & Venue Oversight', section: 'Unavailable (Phase 5+)' },
     academy_oversight: { title: 'Academy & Coach Oversight', section: 'Unavailable (Phase 5+)' },
@@ -340,6 +351,12 @@ function AuthenticatedAdminShell() {
               <AdminCampaignMarketplaceDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'fraud_disputes' ? (
               <AdminTrustSafetyDesk operatorEmail={identity.email} />
+            ) : activeWorkspace === 'platform_governance' ? (
+              <AdminPlatformGovernanceDesk
+                operatorEmail={identity.email}
+                operatorRole={identity.role}
+                operatorUserId={identity.userId}
+              />
             ) : UNAVAILABLE_LOCALSTORAGE_WORKSPACES.has(activeWorkspace) ? (
               <AdminGroundOversightView
                 initialDesk={
