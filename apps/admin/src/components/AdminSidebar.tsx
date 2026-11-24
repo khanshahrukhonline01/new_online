@@ -7,8 +7,9 @@ export type AdminWorkspaceTab =
   | 'moderation_desk'
   | 'analytics'
   | 'chronicle_desk'
-  | 'fraud_disputes'
+  | 'tenant_governance'
   | 'creator_campaigns'
+  | 'fraud_disputes'
   | 'gate_desk'
   | 'turf_oversight'
   | 'academy_oversight'
@@ -78,6 +79,14 @@ export function AdminSidebar({
         icon: 'award',
         badge: pendingManuscriptsCount > 0 ? `${pendingManuscriptsCount} MSS` : undefined,
         badgeVariant: 'purple',
+      },
+      {
+        id: 'tenant_governance',
+        label: 'Tenant & Org Governance',
+        section: 'SAAS PLATFORM GOVERNANCE',
+        icon: 'building',
+        badge: 'SaaS Active',
+        badgeVariant: 'success',
       },
       {
         id: 'creator_campaigns',

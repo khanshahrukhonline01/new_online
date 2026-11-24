@@ -9,6 +9,7 @@ import { AdminHeader, type AdminThemeMode } from './components/AdminHeader'
 import { AdminCommandPalette, type CommandPaletteAction } from './components/AdminCommandPalette'
 import { AdminGroundOversightView } from './components/AdminGroundOversightView'
 import { AdminCampaignMarketplaceDesk } from './components/AdminCampaignMarketplaceDesk'
+import { AdminTenantManagementDesk } from './components/AdminTenantManagementDesk'
 import {
   AdminAuthGate,
   useAdminAuth,
@@ -171,6 +172,14 @@ function AuthenticatedAdminShell() {
         onSelect: () => setActiveWorkspace('chronicle_desk'),
       },
       {
+        id: 'cmd-tenant-governance',
+        title: 'Open Tenant & Organisation Governance Desk',
+        section: 'Workspaces',
+        icon: 'building',
+        shortcut: 'G T',
+        onSelect: () => setActiveWorkspace('tenant_governance'),
+      },
+      {
         id: 'cmd-creator-campaigns',
         title: 'Sports Creator Campaigns & Deliverable Desk',
         section: 'Creator Economy',
@@ -240,6 +249,7 @@ function AuthenticatedAdminShell() {
     moderation_desk: { title: 'Listing & Evidence Desk', section: 'Content Moderation' },
     analytics: { title: 'Operations & KPI Analytics', section: 'Intelligence' },
     chronicle_desk: { title: 'Chronicle Peer-Review Desk', section: 'Editorial Governance' },
+    tenant_governance: { title: 'Tenant & Organisation Governance', section: 'SaaS Platform Governance' },
     creator_campaigns: { title: 'Sports Creator Campaign Desk', section: 'Creator Economy' },
     fraud_disputes: { title: 'Trust & Dispute Claims', section: 'Unavailable (Phase 5+)' },
     gate_desk: { title: 'Gate Check-In Oversight', section: 'Unavailable (Phase 5+)' },
@@ -294,6 +304,8 @@ function AuthenticatedAdminShell() {
               <AdminModerationPage initialDesk="listings" />
             ) : activeWorkspace === 'chronicle_desk' ? (
               <AdminModerationPage initialDesk="chronicle" />
+            ) : activeWorkspace === 'tenant_governance' ? (
+              <AdminTenantManagementDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'analytics' ? (
               <AdminAnalyticsDashboard />
             ) : activeWorkspace === 'creator_campaigns' ? (
