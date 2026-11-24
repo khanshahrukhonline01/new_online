@@ -305,9 +305,9 @@ export const UNAVAILABLE_LOCALSTORAGE_WORKSPACES: ReadonlySet<AdminWorkspaceTab>
 export function getAllowedWorkspacesForRole(role: AdminPlatformRole | null): AdminWorkspaceTab[] {
   if (!role) return []
   // Both active moderators and super_admins can access the core server-backed
-  // moderation, analytics, chronicle, and tenant governance desks; super_admin-only panels inside
+  // moderation, analytics, chronicle, tenant governance, and verification vault desks; super_admin-only panels inside
   // Command Centre remain additionally gated by server RPC checks.
-  return ['command', 'moderation_desk', 'analytics', 'chronicle_desk', 'tenant_governance', 'creator_campaigns']
+  return ['command', 'moderation_desk', 'analytics', 'chronicle_desk', 'tenant_governance', 'verification_vault', 'creator_campaigns']
 }
 
 export function isWorkspaceAuthorized(

@@ -10,6 +10,7 @@ import { AdminCommandPalette, type CommandPaletteAction } from './components/Adm
 import { AdminGroundOversightView } from './components/AdminGroundOversightView'
 import { AdminCampaignMarketplaceDesk } from './components/AdminCampaignMarketplaceDesk'
 import { AdminTenantManagementDesk } from './components/AdminTenantManagementDesk'
+import { AdminVerificationVaultDesk } from './components/AdminVerificationVaultDesk'
 import {
   AdminAuthGate,
   useAdminAuth,
@@ -180,6 +181,14 @@ function AuthenticatedAdminShell() {
         onSelect: () => setActiveWorkspace('tenant_governance'),
       },
       {
+        id: 'cmd-verification-vault',
+        title: 'Open Verification Centre & Evidence Vault',
+        section: 'Workspaces',
+        icon: 'shield-check',
+        shortcut: 'G V',
+        onSelect: () => setActiveWorkspace('verification_vault'),
+      },
+      {
         id: 'cmd-creator-campaigns',
         title: 'Sports Creator Campaigns & Deliverable Desk',
         section: 'Creator Economy',
@@ -250,6 +259,7 @@ function AuthenticatedAdminShell() {
     analytics: { title: 'Operations & KPI Analytics', section: 'Intelligence' },
     chronicle_desk: { title: 'Chronicle Peer-Review Desk', section: 'Editorial Governance' },
     tenant_governance: { title: 'Tenant & Organisation Governance', section: 'SaaS Platform Governance' },
+    verification_vault: { title: 'Verification Centre & Evidence Vault', section: 'SaaS Platform Governance' },
     creator_campaigns: { title: 'Sports Creator Campaign Desk', section: 'Creator Economy' },
     fraud_disputes: { title: 'Trust & Dispute Claims', section: 'Unavailable (Phase 5+)' },
     gate_desk: { title: 'Gate Check-In Oversight', section: 'Unavailable (Phase 5+)' },
@@ -306,6 +316,8 @@ function AuthenticatedAdminShell() {
               <AdminModerationPage initialDesk="chronicle" />
             ) : activeWorkspace === 'tenant_governance' ? (
               <AdminTenantManagementDesk operatorEmail={identity.email} />
+            ) : activeWorkspace === 'verification_vault' ? (
+              <AdminVerificationVaultDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'analytics' ? (
               <AdminAnalyticsDashboard />
             ) : activeWorkspace === 'creator_campaigns' ? (

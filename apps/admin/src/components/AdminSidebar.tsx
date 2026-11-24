@@ -8,6 +8,7 @@ export type AdminWorkspaceTab =
   | 'analytics'
   | 'chronicle_desk'
   | 'tenant_governance'
+  | 'verification_vault'
   | 'creator_campaigns'
   | 'fraud_disputes'
   | 'gate_desk'
@@ -87,6 +88,14 @@ export function AdminSidebar({
         icon: 'building',
         badge: 'SaaS Active',
         badgeVariant: 'success',
+      },
+      {
+        id: 'verification_vault',
+        label: 'Verification & Evidence',
+        section: 'SAAS PLATFORM GOVERNANCE',
+        icon: 'shield-check',
+        badge: 'Vault Active',
+        badgeVariant: 'primary',
       },
       {
         id: 'creator_campaigns',
