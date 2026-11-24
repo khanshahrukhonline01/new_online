@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { AdminControlPanelPage } from '../../../src/modules/admin/AdminControlPanelPage'
-import { AdminModerationPage } from '../../../src/modules/admin/AdminModerationPage'
 import { AdminAnalyticsDashboard } from '../../../src/modules/admin/AdminAnalyticsDashboard'
 import { SiteIcon } from '../../../src/shared/components/SiteIcon'
 import { usePreferences } from '../../../src/shared/usePreferences'
@@ -12,6 +11,7 @@ import { AdminCampaignMarketplaceDesk } from './components/AdminCampaignMarketpl
 import { AdminTenantManagementDesk } from './components/AdminTenantManagementDesk'
 import { AdminVerificationVaultDesk } from './components/AdminVerificationVaultDesk'
 import { AdminListingModerationDesk } from './components/AdminListingModerationDesk'
+import { AdminChronicleEditorialDesk } from './components/AdminChronicleEditorialDesk'
 import {
   AdminAuthGate,
   useAdminAuth,
@@ -314,7 +314,12 @@ function AuthenticatedAdminShell() {
             ) : activeWorkspace === 'moderation_desk' ? (
               <AdminListingModerationDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'chronicle_desk' ? (
-              <AdminModerationPage initialDesk="chronicle" />
+              <AdminChronicleEditorialDesk
+                currentUser={{
+                  name: identity.email.split('@')[0] || 'Editorial Board Operator',
+                  email: identity.email,
+                }}
+              />
             ) : activeWorkspace === 'tenant_governance' ? (
               <AdminTenantManagementDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'verification_vault' ? (
