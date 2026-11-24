@@ -61,7 +61,7 @@ export function AdminSidebar({
       },
       {
         id: 'moderation_desk',
-        label: 'Listing & Chronicle Desk',
+        label: 'Listing Moderation Queue',
         section: 'CORE WORKSPACES',
         icon: 'check-circle',
         badge: pendingSubmissionsCount > 0 ? `${pendingSubmissionsCount} Pending` : 'Queue',

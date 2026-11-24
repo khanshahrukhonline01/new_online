@@ -1,0 +1,865 @@
+/* ==========================================================================
+   KhelGrid Admin — Cross-Workspace Listing Moderation Queue Styles
+   ========================================================================== */
+
+.admin-mod-desk-root {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  max-width: 1440px;
+  margin: 0 auto;
+  color: #f8fafc;
+}
+
+/* Header & Eyebrow */
+.admin-mod-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-mod-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #38bdf8;
+  margin-bottom: 0.35rem;
+}
+
+.admin-mod-title {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.admin-mod-subtitle {
+  margin: 0.35rem 0 0 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  max-width: 820px;
+  line-height: 1.5;
+}
+
+.admin-mod-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+/* Action Buttons */
+.admin-mod-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.admin-mod-btn-secondary {
+  background: #1e293b;
+  color: #cbd5e1;
+  border-color: #334155;
+}
+
+.admin-mod-btn-secondary:hover {
+  background: #27354a;
+  color: #ffffff;
+  border-color: #475569;
+}
+
+.admin-mod-btn-primary {
+  background: #10b981;
+  color: #042f2e;
+  font-weight: 700;
+}
+
+.admin-mod-btn-primary:hover {
+  background: #34d399;
+}
+
+.admin-mod-btn-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.admin-mod-btn-danger:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.admin-mod-btn-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.admin-mod-btn-warning:hover {
+  background: #f59e0b;
+  color: #000000;
+}
+
+/* Micro-KPI Ribbon */
+.admin-mod-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 1200px) {
+  .admin-mod-metrics-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .admin-mod-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.admin-mod-metric-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: #111a28;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.admin-mod-metric-card:hover {
+  transform: translateY(-1px);
+  border-color: #334155;
+}
+
+.admin-mod-metric-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.admin-mod-metric-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-mod-metric-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1.2;
+}
+
+.admin-mod-metric-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Controls Card & Pills */
+.admin-mod-controls-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  background: #111a28;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+}
+
+.admin-mod-pill-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-mod-filter-group-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 0.25rem;
+}
+
+.admin-mod-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #1e293b;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-mod-pill-btn:hover {
+  background: #27354a;
+  color: #f8fafc;
+  border-color: #475569;
+}
+
+.admin-mod-pill-btn.active {
+  background: #38bdf8;
+  color: #0c4a6e;
+  border-color: #38bdf8;
+  font-weight: 700;
+}
+
+.admin-mod-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.65rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.admin-mod-pill-btn.active .admin-mod-pill-badge {
+  background: rgba(12, 74, 110, 0.25);
+  color: #0c4a6e;
+}
+
+/* Secondary Inputs Row */
+.admin-mod-inputs-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.admin-mod-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+
+.admin-mod-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+}
+
+.admin-mod-search-input {
+  width: 100%;
+  padding: 0.55rem 0.75rem 0.55rem 2.2rem;
+  background: #0b111e;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.admin-mod-search-input:focus {
+  border-color: #38bdf8;
+}
+
+.admin-mod-select {
+  padding: 0.55rem 0.85rem;
+  background: #0b111e;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  outline: none;
+  cursor: pointer;
+  min-width: 130px;
+}
+
+.admin-mod-select:focus {
+  border-color: #38bdf8;
+}
+
+/* Batch Action Bar */
+.admin-mod-batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  background: #1e293b;
+  border: 1px solid #38bdf8;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #f8fafc;
+  animation: fadeIn 0.15s ease;
+}
+
+.admin-mod-batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Directory Table */
+.admin-mod-table-card {
+  background: #111a28;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.admin-mod-table-wrapper {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.admin-mod-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.82rem;
+}
+
+.admin-mod-table th {
+  background: #0d1522;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #1e293b;
+  white-space: nowrap;
+}
+
+.admin-mod-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #192434;
+  vertical-align: middle;
+}
+
+.admin-mod-row:hover td {
+  background: rgba(56, 189, 248, 0.03);
+}
+
+/* Category Badges */
+.admin-mod-cat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.admin-mod-cat-badge.venue {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.admin-mod-cat-badge.academy {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.admin-mod-cat-badge.coach {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.admin-mod-cat-badge.trial {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.admin-mod-cat-badge.camp {
+  background: rgba(236, 72, 153, 0.15);
+  color: #f472b6;
+  border: 1px solid rgba(236, 72, 153, 0.3);
+}
+
+.admin-mod-cat-badge.scholarship {
+  background: rgba(45, 212, 191, 0.15);
+  color: #2dd4bf;
+  border: 1px solid rgba(45, 212, 191, 0.3);
+}
+
+.admin-mod-cat-badge.pickup_game {
+  background: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.admin-mod-cat-badge.other {
+  background: rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+/* Status Badges */
+.admin-mod-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.admin-mod-status-badge.published {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.admin-mod-status-badge.pending_review {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.admin-mod-status-badge.under_review {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.admin-mod-status-badge.changes_requested {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.admin-mod-status-badge.rejected {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.admin-mod-status-badge.unpublished {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+/* Actions Cell */
+.admin-mod-actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Slide-Over Inspection Drawer
+   ========================================================================== */
+
+.admin-mod-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease;
+}
+
+.admin-mod-drawer {
+  width: 100%;
+  max-width: 720px;
+  height: 100%;
+  background: #0d1522;
+  border-left: 1px solid #1e293b;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  animation: slideLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideLeft {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.admin-mod-drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  background: #111a28;
+  border-bottom: 1px solid #1e293b;
+}
+
+.admin-mod-drawer-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+}
+
+.admin-mod-drawer-close:hover {
+  background: #1e293b;
+  color: #ffffff;
+}
+
+.admin-mod-drawer-tabs {
+  display: flex;
+  background: #090e18;
+  border-bottom: 1px solid #1e293b;
+  padding: 0 1rem;
+  gap: 0.5rem;
+  overflow-x: auto;
+}
+
+.admin-mod-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 0.85rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.admin-mod-tab-btn:hover {
+  color: #cbd5e1;
+}
+
+.admin-mod-tab-btn.active {
+  color: #38bdf8;
+  border-bottom-color: #38bdf8;
+  font-weight: 700;
+}
+
+.admin-mod-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Box Styling inside Drawer */
+.admin-mod-detail-box {
+  background: #111a28;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.admin-mod-detail-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #38bdf8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.admin-mod-grid-2col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.85rem;
+}
+
+@media (max-width: 500px) {
+  .admin-mod-grid-2col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-mod-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.admin-mod-field-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-mod-field-val {
+  font-size: 0.82rem;
+  color: #f1f5f9;
+  font-weight: 500;
+}
+
+/* Card Mock Preview */
+.admin-mod-card-preview {
+  background: #0b111e;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.admin-mod-preview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  width: fit-content;
+}
+
+/* Timeline & Audit */
+.admin-mod-audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.admin-mod-audit-list::before {
+  content: '';
+  position: absolute;
+  left: 0.45rem;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 2px;
+  background: #1e293b;
+}
+
+.admin-mod-audit-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.admin-mod-audit-bullet {
+  position: absolute;
+  left: -1.35rem;
+  top: 0.2rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #38bdf8;
+  border: 2px solid #0d1522;
+}
+
+.admin-mod-drawer-footer {
+  padding: 1rem 1.5rem;
+  background: #111a28;
+  border-top: 1px solid #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+/* Modals */
+.admin-mod-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.admin-mod-modal {
+  width: 100%;
+  max-width: 520px;
+  background: #0d1522;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.admin-mod-modal-header {
+  padding: 1.25rem;
+  background: #111a28;
+  border-bottom: 1px solid #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-mod-modal-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.admin-mod-modal-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-mod-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.admin-mod-modal-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-mod-modal-input,
+.admin-mod-modal-textarea,
+.admin-mod-modal-select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: #090e18;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 0.82rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.admin-mod-modal-input:focus,
+.admin-mod-modal-textarea:focus,
+.admin-mod-modal-select:focus {
+  border-color: #38bdf8;
+}
+
+.admin-mod-preset-pills {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
+
+.admin-mod-preset-btn {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.72rem;
+  background: #1e293b;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-mod-preset-btn:hover {
+  background: #334155;
+  color: #ffffff;
+}
+
+.admin-mod-modal-footer {
+  padding: 1rem 1.25rem;
+  background: #111a28;
+  border-top: 1px solid #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+/* Toast Notification */
+.admin-mod-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  background: #0f172a;
+  border: 1px solid #10b981;
+  color: #34d399;
+  padding: 0.75rem 1.15rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 1200;
+  animation: slideUpToast 0.25s ease;
+}
+
+@keyframes slideUpToast {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

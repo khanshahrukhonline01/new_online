@@ -11,6 +11,7 @@ import { AdminGroundOversightView } from './components/AdminGroundOversightView'
 import { AdminCampaignMarketplaceDesk } from './components/AdminCampaignMarketplaceDesk'
 import { AdminTenantManagementDesk } from './components/AdminTenantManagementDesk'
 import { AdminVerificationVaultDesk } from './components/AdminVerificationVaultDesk'
+import { AdminListingModerationDesk } from './components/AdminListingModerationDesk'
 import {
   AdminAuthGate,
   useAdminAuth,
@@ -148,7 +149,7 @@ function AuthenticatedAdminShell() {
       },
       {
         id: 'cmd-moderation',
-        title: 'Open Listing & Evidence Desk',
+        title: 'Open Listing Moderation Queue',
         section: 'Workspaces',
         icon: 'check-circle',
         badge: `${pendingListingsCount} Pending`,
@@ -255,7 +256,7 @@ function AuthenticatedAdminShell() {
 
   const workspaceDetails: Record<AdminWorkspaceTab, { title: string; section: string }> = {
     command: { title: 'Command Centre', section: 'Core Operations' },
-    moderation_desk: { title: 'Listing & Evidence Desk', section: 'Content Moderation' },
+    moderation_desk: { title: 'Listing Moderation Queue', section: 'Content Moderation' },
     analytics: { title: 'Operations & KPI Analytics', section: 'Intelligence' },
     chronicle_desk: { title: 'Chronicle Peer-Review Desk', section: 'Editorial Governance' },
     tenant_governance: { title: 'Tenant & Organisation Governance', section: 'SaaS Platform Governance' },
@@ -311,7 +312,7 @@ function AuthenticatedAdminShell() {
             {activeWorkspace === 'command' ? (
               <AdminControlPanelPage />
             ) : activeWorkspace === 'moderation_desk' ? (
-              <AdminModerationPage initialDesk="listings" />
+              <AdminListingModerationDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'chronicle_desk' ? (
               <AdminModerationPage initialDesk="chronicle" />
             ) : activeWorkspace === 'tenant_governance' ? (
