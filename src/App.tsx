@@ -130,15 +130,20 @@ export default function App() {
   const [authModalError, setAuthModalError] = useState<string | undefined>(undefined)
   const [authUser, setAuthUser] = useState<AuthUserProfile | null>(() => getStoredAuthUser())
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [locationSearch, setLocationSearch] = useState(() =>
+    typeof window !== 'undefined' ? window.location.search : '',
+  )
   const menuToggleRef = useRef<HTMLButtonElement>(null)
 
   function openListingSubmission(category?: string) {
-    const target = category ? `/submit-listing?type=${encodeURIComponent(category)}` : '/submit-listing'
+    const nextSearch = category ? `?type=${encodeURIComponent(category)}` : ''
+    const target = `/submit-listing${nextSearch}`
     if (typeof window !== 'undefined') {
       window.history.pushState({}, '', target)
       window.scrollTo({ top: 0, behavior: 'auto' })
     }
     setPath('/submit-listing')
+    setLocationSearch(nextSearch)
     setMenuOpen(false)
   }
 
@@ -207,7 +212,13 @@ export default function App() {
     }
     setHeaderQuery(new URLSearchParams(window.location.search).get('q') ?? '')
     setSearchQuery(new URLSearchParams(window.location.search).get('q') ?? '')
-    const handlePopState = () => { setPath(currentPath()); setHeaderQuery(new URLSearchParams(window.location.search).get('q') ?? ''); setSearchQuery(new URLSearchParams(window.location.search).get('q') ?? ''); setMenuOpen(false) }
+    const handlePopState = () => {
+      setPath(currentPath())
+      setLocationSearch(window.location.search)
+      setHeaderQuery(new URLSearchParams(window.location.search).get('q') ?? '')
+      setSearchQuery(new URLSearchParams(window.location.search).get('q') ?? '')
+      setMenuOpen(false)
+    }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
@@ -238,7 +249,9 @@ export default function App() {
       if (target !== path) window.history.pushState({}, '', target)
       window.scrollTo({ top: 0, behavior: 'auto' })
     }
-    const nextPath = target.split('?')[0].replace(/\/$/, '') || '/'
+    const [rawPath, rawQuery = ''] = target.split('?')
+    const nextPath = rawPath.replace(/\/$/, '') || '/'
+    const nextSearch = rawQuery ? `?${rawQuery}` : ''
     if (nextPath === '/login') {
       setAuthModalTab('login')
       setAuthModalOpen(true)
@@ -260,7 +273,8 @@ export default function App() {
       return
     }
     setPath(nextPath)
-    if (nextPath === '/search') { const nextQuery = new URLSearchParams(target.split('?')[1] ?? '').get('q') ?? ''; setSearchQuery(nextQuery); setHeaderQuery(nextQuery) }
+    setLocationSearch(nextSearch)
+    if (nextPath === '/search') { const nextQuery = new URLSearchParams(rawQuery).get('q') ?? ''; setSearchQuery(nextQuery); setHeaderQuery(nextQuery) }
     const wasMenuOpen = menuOpen
     setMenuOpen(false)
     if (wasMenuOpen) {
@@ -346,9 +360,9 @@ export default function App() {
       else if (match.canonicalPath === '/calendar') page = <SportsCalendarPage onNavigate={navigate} />
       else if (match.canonicalPath === '/tools' || match.canonicalPath === '/sports-tools' || match.canonicalPath === '/stats' || match.canonicalPath.startsWith('/tools/')) page = <SportsToolsPage onNavigate={navigate} initialToolSlug={match.canonicalPath === '/stats' ? 'athlete-benchmarks' : match.canonicalPath.startsWith('/tools/') ? match.canonicalPath.slice('/tools/'.length) : undefined} />
       else if (match.canonicalPath === '/live' || match.canonicalPath === '/live-scores') page = <LiveScoresPage onNavigate={navigate} />
-      else if (match.canonicalPath === '/submit-listing' || match.canonicalPath === '/list') page = <ListingSubmissionPage />
-      else if (match.canonicalPath === '/submit-listing/email' || match.canonicalPath === '/list/email') page = <ListingSubmissionPage defaultTab="email" />
-      else if (match.canonicalPath === '/track-submission' || match.canonicalPath === '/track') page = <ListingSubmissionPage defaultTab="track" />
+      else if (match.canonicalPath === '/submit-listing' || match.canonicalPath === '/list') page = <ListingSubmissionPage key={`submit:${locationSearch}`} />
+      else if (match.canonicalPath === '/submit-listing/email' || match.canonicalPath === '/list/email') page = <ListingSubmissionPage key={`email:${locationSearch}`} defaultTab="email" />
+      else if (match.canonicalPath === '/track-submission' || match.canonicalPath === '/track') page = <ListingSubmissionPage key={`track:${locationSearch}`} defaultTab="track" />
       else if (match.canonicalPath === '/learning' || match.canonicalPath === '/learning-hub' || match.canonicalPath === '/guides' || match.canonicalPath === '/ai-guide') page = <LearningHubPage onNavigate={navigate} />
       else if (match.canonicalPath === '/mobile-app') page = <MobileAppPage onNavigate={navigate} />
       else if (match.canonicalPath === '/careers') page = <CareersPage onNavigate={navigate} />

@@ -49,7 +49,9 @@ html.dark {
 .sidebar-tablet-backdrop,
 .mobile-drawer,
 .sidebar-backdrop,
-.mobile-bottom-nav {
+.mobile-bottom-nav,
+.mobile-submit-backdrop,
+.mobile-submit-sheet {
   display: none;
 }
 
@@ -708,7 +710,10 @@ html.dark .sidebar-mode-btn.is-active {
 .sidebar-promo-dismiss:focus-visible,
 .sidebar-mobile-close:focus-visible,
 .mobile-quick-chip:focus-visible,
-.mobile-bottom-link:focus-visible {
+.mobile-bottom-link:focus-visible,
+.mobile-bottom-submit-btn:focus-visible,
+.mobile-submit-sheet-close:focus-visible,
+.mobile-submit-option:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -971,6 +976,288 @@ html.dark .sidebar-mode-btn.is-active {
     background: var(--accent-soft);
     font-weight: 700;
   }
+
+  /* Center Accent Submit Action Button (Slot 3 of 5) */
+  .mobile-bottom-submit-btn {
+    display: flex;
+    min-width: 0;
+    min-height: 46px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 2px 4px;
+    border: 0;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 150ms ease, transform 110ms ease, color 150ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-bottom-submit-btn:active {
+    transform: scale(0.95);
+  }
+
+  .mobile-bottom-submit-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 26px;
+    border-radius: 10px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 32%, transparent);
+    transition: background 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+  }
+
+  .mobile-bottom-submit-btn:hover .mobile-bottom-submit-pill {
+    background: var(--accent-hover);
+  }
+
+  .mobile-bottom-submit-btn.is-active {
+    background: var(--accent-soft);
+  }
+
+  .mobile-bottom-submit-btn.is-active .mobile-bottom-submit-pill {
+    box-shadow: 0 0 0 2px var(--accent-border), 0 3px 10px color-mix(in srgb, var(--accent) 36%, transparent);
+  }
+
+  .mobile-bottom-submit-btn small {
+    max-width: 100%;
+    padding: 0 2px;
+    font-size: 10px;
+    line-height: 1.1;
+    color: var(--accent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Mobile Submit Bottom Action Sheet */
+  .mobile-submit-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 94;
+    display: block;
+    border: 0;
+    padding: 0;
+    background: rgba(2, 8, 17, 0.56);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+  }
+
+  .mobile-submit-backdrop.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .mobile-submit-sheet {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 95;
+    display: flex;
+    flex-direction: column;
+    max-height: min(82vh, 540px);
+    padding: 0 16px max(18px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--kg-sb-border);
+    border-radius: 22px 22px 0 0;
+    background: var(--kg-sb-drawer-bg);
+    color: var(--kg-sb-text);
+    box-shadow: 0 -14px 40px rgba(15, 23, 42, 0.22);
+    transform: translateY(105%);
+    visibility: hidden;
+    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 220ms;
+  }
+
+  html.dark .mobile-submit-sheet {
+    box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.62);
+  }
+
+  .mobile-submit-sheet.is-open {
+    transform: translateY(0);
+    visibility: visible;
+    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 0s;
+  }
+
+  .mobile-submit-sheet-handle-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0 6px;
+    flex: 0 0 auto;
+  }
+
+  .mobile-submit-sheet-handle {
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--kg-sb-scrollbar);
+  }
+
+  .mobile-submit-sheet-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 2px 12px;
+    border-bottom: 1px solid var(--kg-sb-divider);
+    flex: 0 0 auto;
+  }
+
+  .mobile-submit-sheet-heading {
+    min-width: 0;
+  }
+
+  .mobile-submit-sheet-heading h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--kg-sb-text);
+  }
+
+  .mobile-submit-sheet-heading p {
+    margin: 3px 0 0;
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: var(--kg-sb-muted);
+  }
+
+  .mobile-submit-sheet-close {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 10px;
+    background: var(--kg-sb-surface);
+    color: var(--kg-sb-text-secondary);
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease;
+  }
+
+  .mobile-submit-sheet-close:hover {
+    background: var(--kg-sb-surface-hover);
+    color: var(--kg-sb-text);
+  }
+
+  .mobile-submit-sheet-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 10px 0 4px;
+  }
+
+  .mobile-submit-sheet-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .mobile-submit-sheet-divider {
+    height: 1px;
+    margin: 8px 4px;
+    background: var(--kg-sb-divider);
+  }
+
+  .mobile-submit-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 56px;
+    padding: 10px 10px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--kg-sb-text);
+    text-decoration: none;
+    transition: background 140ms ease, border-color 140ms ease, transform 100ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-submit-option:hover {
+    background: var(--kg-sb-surface);
+  }
+
+  .mobile-submit-option:active {
+    transform: scale(0.99);
+  }
+
+  .mobile-submit-option.is-active {
+    background: var(--accent-soft);
+    border-color: var(--accent-border);
+  }
+
+  .mobile-submit-option-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .mobile-submit-option.is-research .mobile-submit-option-icon {
+    background: var(--kg-sb-surface);
+    color: var(--kg-sb-text);
+  }
+
+  .mobile-submit-option.is-research.is-active .mobile-submit-option-icon {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .mobile-submit-option-copy {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobile-submit-option-copy strong {
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.25;
+    color: var(--kg-sb-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-submit-option.is-active .mobile-submit-option-copy strong {
+    color: var(--accent);
+  }
+
+  .mobile-submit-option-copy span {
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--kg-sb-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobile-submit-option-arrow {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--kg-sb-muted);
+  }
 }
 
 /* ==========================================================================
@@ -983,6 +1270,8 @@ html.dark .sidebar-mode-btn.is-active {
   .mobile-drawer,
   .sidebar-backdrop,
   .sidebar-tablet-backdrop,
+  .mobile-submit-backdrop,
+  .mobile-submit-sheet,
   .app-sidebar.is-collapsed [data-tooltip]::after {
     transition: none !important;
   }
@@ -994,6 +1283,8 @@ html[data-reduced-motion="true"] .foundation-v1 .app-workspace > .app-sidebar,
 html[data-reduced-motion="true"] .mobile-drawer,
 html[data-reduced-motion="true"] .sidebar-backdrop,
 html[data-reduced-motion="true"] .sidebar-tablet-backdrop,
+html[data-reduced-motion="true"] .mobile-submit-backdrop,
+html[data-reduced-motion="true"] .mobile-submit-sheet,
 html[data-reduced-motion="true"] .app-sidebar.is-collapsed [data-tooltip]::after {
   transition: none !important;
 }
