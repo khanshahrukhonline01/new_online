@@ -107,10 +107,10 @@ export function AdminSidebar({
       },
       {
         id: 'creator_campaigns',
-        label: 'Sports Creator Campaigns',
-        section: 'CREATOR MARKETPLACE',
+        label: 'Creator & Attribution Desk',
+        section: 'CREATOR ECONOMY OPS',
         icon: 'award',
-        badge: 'Moderation',
+        badge: 'Attribution',
         badgeVariant: 'purple',
       },
 

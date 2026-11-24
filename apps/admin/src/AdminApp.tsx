@@ -192,10 +192,11 @@ function AuthenticatedAdminShell() {
       },
       {
         id: 'cmd-creator-campaigns',
-        title: 'Sports Creator Campaigns & Deliverable Desk',
+        title: 'Open Sports Creator Campaigns & Attribution Desk',
         section: 'Creator Economy',
         icon: 'award',
-        badge: 'Moderation',
+        badge: 'Attribution',
+        shortcut: 'G C',
         onSelect: () => setActiveWorkspace('creator_campaigns'),
       },
       {
@@ -270,7 +271,7 @@ function AuthenticatedAdminShell() {
     chronicle_desk: { title: 'Chronicle Peer-Review Desk', section: 'Editorial Governance' },
     tenant_governance: { title: 'Tenant & Organisation Governance', section: 'SaaS Platform Governance' },
     verification_vault: { title: 'Verification Centre & Evidence Vault', section: 'SaaS Platform Governance' },
-    creator_campaigns: { title: 'Sports Creator Campaign Desk', section: 'Creator Economy' },
+    creator_campaigns: { title: 'Creator Campaigns & Attribution Desk', section: 'Creator Economy Operations' },
     fraud_disputes: { title: 'Trust & Safety, Complaints & Sanctions Desk', section: 'SaaS Platform Governance' },
     gate_desk: { title: 'Gate Check-In Oversight', section: 'Unavailable (Phase 5+)' },
     turf_oversight: { title: 'Turf & Venue Oversight', section: 'Unavailable (Phase 5+)' },
@@ -336,7 +337,7 @@ function AuthenticatedAdminShell() {
             ) : activeWorkspace === 'analytics' ? (
               <AdminAnalyticsDashboard />
             ) : activeWorkspace === 'creator_campaigns' ? (
-              <AdminCampaignMarketplaceDesk />
+              <AdminCampaignMarketplaceDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'fraud_disputes' ? (
               <AdminTrustSafetyDesk operatorEmail={identity.email} />
             ) : UNAVAILABLE_LOCALSTORAGE_WORKSPACES.has(activeWorkspace) ? (
