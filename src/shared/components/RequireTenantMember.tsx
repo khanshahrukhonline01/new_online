@@ -16,6 +16,7 @@ export function RequireTenantMember({
   children,
   allowedRoles,
   requiredTenantTypes,
+  requireTenantMembership = true,
   fallback,
   personaLabel = 'Workspace',
   onboardingRole = 'academy',
