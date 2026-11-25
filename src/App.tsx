@@ -8,7 +8,8 @@ import TopSportsComplexes from './shared/components/TopSportsComplexes'
 import GameSportPlayAcrossIndia from './shared/components/GameSportPlayAcrossIndia'
 import FrequentlyAskedQuestions from './shared/components/FrequentlyAskedQuestions'
 import SiteAnnouncementBanner from './shared/components/SiteAnnouncementBanner'
-import TopNavbar from './shared/components/TopNavbar'
+import WorkspaceHeader from './shared/components/WorkspaceHeader'
+import type { CanonicalWorkspaceId } from './shared/components/workspaceHeaderEngine'
 import { AuthProvider } from './shared/auth/AuthContext'
 import { useAuth } from './shared/auth/useAuth'
 import { TenantProvider } from './shared/context/TenantContext'
@@ -138,6 +139,7 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
   const [consentInitialTab, setConsentInitialTab] = useState<'sports_pass' | 'rules_privacy'>('sports_pass')
   const [goProModalOpen, setGoProModalOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [activeHeaderPersona, setActiveHeaderPersona] = useState<CanonicalWorkspaceId | null>(null)
   const [locationSearch, setLocationSearch] = useState(() =>
     typeof window !== 'undefined' ? window.location.search : '',
   )
@@ -425,10 +427,11 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
 
   const isOperational = isOperationalRoutePath(path)
 
-  return <div className={`app-shell foundation-v1 ${sidebarCollapsed ? 'sidebar-is-collapsed' : 'sidebar-is-expanded'}${isOperational ? ' is-operational-route' : ''}`}>
+  return <TenantProvider>
+    <div className={`app-shell foundation-v1 ${sidebarCollapsed ? 'sidebar-is-collapsed' : 'sidebar-is-expanded'}${isOperational ? ' is-operational-route' : ''}`}>
     {!isOperational && <CustomCursor />}
     <a className="skip-link" href="#main-content">Skip to content</a>
-    <TopNavbar
+    <WorkspaceHeader
       path={path}
       isMobile={isMobile}
       menuOpen={menuOpen}
@@ -456,9 +459,13 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
         })
       }
       onSignOut={() => {
+        setActiveHeaderPersona(null)
         void signOut()
       }}
       onOpenGoPro={() => setGoProModalOpen(true)}
+      activePersona={activeHeaderPersona}
+      onPersonaChange={setActiveHeaderPersona}
+      unreadNotifCount={unreadNotifCount}
     />
     <div className="app-workspace">
       <Sidebar
@@ -715,5 +722,6 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
         />
       )}
     </Suspense>
-  </div>
+    </div>
+  </TenantProvider>
 }
