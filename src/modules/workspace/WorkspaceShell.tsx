@@ -271,7 +271,7 @@ function WorkspaceShellInner({
             <SiteIcon name={p.icon} size={15} />
             <span>{p.label}</span>
           </button>
-        ))}
+        )})}
       </nav>
 
       {/* ── Shell header ── */}
