@@ -306,11 +306,13 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
         )
       } else if (match.canonicalPath === '/dashboard') {
         page = (
-          <UserDashboardPage
-            onNavigate={navigate}
-            onOpenIntake={openListingSubmission}
-            onOpenAuth={openAuth}
-          />
+          <RequireTenantMember personaLabel="Athlete" requireTenantMembership={false} onNavigate={navigate}>
+            <UserDashboardPage
+              onNavigate={navigate}
+              onOpenIntake={openListingSubmission}
+              onOpenAuth={openAuth}
+            />
+          </RequireTenantMember>
         )
       } else if (match.canonicalPath === '/profile' || match.canonicalPath === '/my-profile') {
         if (authUser) {
@@ -326,7 +328,11 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
           )
         }
       } else if (match.canonicalPath === '/host' || match.canonicalPath === '/partner-dashboard') {
-        page = <HostDashboardPage onNavigate={navigate} onOpenIntake={openListingSubmission} />
+        page = (
+          <RequireTenantMember personaLabel="Venue / Host" onboardingRole="venue" requiredTenantTypes={['venue']} allowedRoles={['owner', 'director', 'admin', 'front_desk', 'staff']} onNavigate={navigate}>
+            <HostDashboardPage onNavigate={navigate} onOpenIntake={openListingSubmission} />
+          </RequireTenantMember>
+        )
       }
       else if (match.canonicalPath === '/about') page = <AboutPage onNavigate={navigate} />
       else if (match.canonicalPath === '/trust') page = <TrustPage onNavigate={navigate} />
@@ -351,7 +357,13 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       else if (match.canonicalPath === '/referrals') page = <ReferralsPage onNavigate={navigate} />
       else if (match.canonicalPath === '/book') page = <VenuesPage onOpenIntake={() => openListingSubmission('venue')} onNavigate={navigate} />
       else if (match.canonicalPath === '/train') page = <AcademiesPage onOpenIntake={() => openListingSubmission('academy')} onNavigate={navigate} />
-      else if (match.canonicalPath === '/organizations' || match.canonicalPath === '/workspaces') page = <OrganizationsWorkspacePage onNavigate={navigate} />
+      else if (match.canonicalPath === '/organizations' || match.canonicalPath === '/workspaces') page = (
+        <section className="content-page">
+          <p className="eyebrow">WORKSPACE ACCESS</p>
+          <h1>Organisation workspace setup is pending.</h1>
+          <p className="page-intro">The current development database does not yet define an organisation tenant type or its membership permissions. This management area stays unavailable until that access model is implemented and tested.</p>
+        </section>
+      )
       else if (match.canonicalPath === '/partner-signup' || match.canonicalPath === '/partner/signup' || match.canonicalPath === '/partner/login') {
         const searchParams = new URLSearchParams(locationSearch)
         const modeParam = searchParams.get('mode') === 'login' || path === '/partner-login' || path === '/partner/login' ? 'login' : 'signup'
@@ -375,18 +387,36 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
         )
       }
       else if (match.canonicalPath === '/academy-hub' || match.canonicalPath === '/academies/manage') page = (
-        <TenantProvider>
-          <RequireTenantMember onNavigate={navigate}>
-            <AcademyHubPage onNavigate={navigate} />
-          </RequireTenantMember>
-        </TenantProvider>
+        <RequireTenantMember personaLabel="Academy" onboardingRole="academy" requiredTenantTypes={['academy']} allowedRoles={['owner', 'director', 'admin', 'head_coach', 'coach', 'staff']} onNavigate={navigate}>
+          <AcademyHubPage onNavigate={navigate} />
+        </RequireTenantMember>
       )
-      else if (match.canonicalPath === '/coach-dashboard' || match.canonicalPath === '/coach/hub' || match.canonicalPath === '/coach/manage') page = <CoachDashboardPage onNavigate={navigate} />
-      else if (match.canonicalPath === '/turf-calendar' || match.canonicalPath === '/venues/manage' || match.canonicalPath === '/turf') page = <TurfSlotCalendarPage onNavigate={navigate} />
-      else if (match.canonicalPath === '/tournament-ops' || match.canonicalPath === '/tournaments/manage' || match.canonicalPath === '/tournament-management') page = <TournamentOpsPage onNavigate={navigate} />
-      else if (match.canonicalPath === '/parent-portal' || match.canonicalPath === '/parent' || match.canonicalPath === '/passbook') page = <ParentPortalPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/coach-dashboard' || match.canonicalPath === '/coach/hub' || match.canonicalPath === '/coach/manage') page = (
+        <RequireTenantMember personaLabel="Coach" onboardingRole="coach" requiredTenantTypes={['coach', 'academy']} allowedRoles={['owner', 'director', 'admin', 'head_coach', 'coach']} onNavigate={navigate}>
+          <CoachDashboardPage onNavigate={navigate} />
+        </RequireTenantMember>
+      )
+      else if (match.canonicalPath === '/turf-calendar' || match.canonicalPath === '/venues/manage' || match.canonicalPath === '/turf') page = (
+        <RequireTenantMember personaLabel="Venue / Turf" onboardingRole="venue" requiredTenantTypes={['venue']} allowedRoles={['owner', 'director', 'admin', 'front_desk', 'staff']} onNavigate={navigate}>
+          <TurfSlotCalendarPage onNavigate={navigate} />
+        </RequireTenantMember>
+      )
+      else if (match.canonicalPath === '/tournament-ops' || match.canonicalPath === '/tournaments/manage' || match.canonicalPath === '/tournament-management') page = (
+        <RequireTenantMember personaLabel="Tournament" onboardingRole="tournament" requiredTenantTypes={['tournament']} allowedRoles={['owner', 'director', 'admin', 'staff']} onNavigate={navigate}>
+          <TournamentOpsPage onNavigate={navigate} />
+        </RequireTenantMember>
+      )
+      else if (match.canonicalPath === '/parent-portal' || match.canonicalPath === '/parent' || match.canonicalPath === '/passbook') page = (
+        <RequireTenantMember personaLabel="Parent" requireTenantMembership={false} onNavigate={navigate}>
+          <ParentPortalPage onNavigate={navigate} />
+        </RequireTenantMember>
+      )
       else if (match.canonicalPath === '/verify-pass' || match.canonicalPath === '/gate-checkin') page = <GateCheckInPage onNavigate={navigate} />
-      else if (match.canonicalPath === '/my-passes' || match.canonicalPath === '/passes') page = <MyPassesVaultPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/my-passes' || match.canonicalPath === '/passes') page = (
+        <RequireTenantMember personaLabel="Passbook" requireTenantMembership={false} onNavigate={navigate}>
+          <MyPassesVaultPage onNavigate={navigate} />
+        </RequireTenantMember>
+      )
       else if (match.canonicalPath === '/notifications') page = (
         <section className="content-page">
           <p className="eyebrow">YOUR UPDATES &amp; ALERTS</p>
@@ -415,7 +445,13 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       else if (match.canonicalPath === '/campaigns') page = <CampaignMarketplacePage onNavigate={navigate} />
       else if (match.canonicalPath === '/campaigns/create') page = <CampaignCreationPage onNavigate={navigate} />
       else if (match.canonicalPath === '/campaigns/manage') page = <AdvertiserCampaignManagePage onNavigate={navigate} />
-      else if (match.canonicalPath === '/creator' || match.canonicalPath === '/creator-hub') page = <CreatorHubPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/creator' || match.canonicalPath === '/creator-hub') page = (
+        <section className="content-page">
+          <p className="eyebrow">WORKSPACE ACCESS</p>
+          <h1>Creator workspace is not enabled yet.</h1>
+          <p className="page-intro">Creator membership, campaign ownership and analytics permissions are not yet backed by an authoritative development database contract. This workspace will remain unavailable until those controls are ready.</p>
+        </section>
+      )
       else if (match.canonicalPath === '/for-you') page = <ForYouPage onNavigate={navigate} onOpenAuth={openAuth} />
       else if (match.canonicalPath === '/partner' || match.canonicalPath === '/partners') page = <PartnerPage onNavigate={navigate} onOpenIntake={openListingSubmission} />
       else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy','/open-science-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
