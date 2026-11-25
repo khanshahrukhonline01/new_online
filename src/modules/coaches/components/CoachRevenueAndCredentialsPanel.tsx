@@ -1,5 +1,7 @@
 import { SiteIcon } from '../../../shared/components/SiteIcon'
+import { getStoredAuthUser } from '../../../integrations/supabase/auth-client'
 import { generateQrSvgString } from '../../../shared/utils/qrCodeGenerator'
+import { PartnerVerificationStatusTracker } from '../../partner/components/PartnerVerificationStatusTracker'
 import {
   confirmAndVerifyCoach,
   generateUpiPayLink,
@@ -184,32 +186,44 @@ export function CoachRevenueAndCredentialsPanel({
           </div>
         </div>
 
-        <div style={{ marginTop: '1.5rem', display: 'flex', gap: '10px' }}>
-          {currentCoach.verificationStatus !== 'verified' ? (
-            <button
-              type="button"
-              className="coach-primary-btn"
-              onClick={() => {
-                confirmAndVerifyCoach(currentCoach.slug)
-                onRefresh()
-              }}
-            >
-              <SiteIcon name="shield-check" size={15} />
-              <span>Confirm &amp; Grant Verified Tag (Admin)</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="coach-hub-btn-outline"
-              onClick={() => {
-                revokeCoachVerification(currentCoach.slug)
-                onRefresh()
-              }}
-            >
-              Revoke Verified Tag (Admin)
-            </button>
-          )}
+        <div style={{ marginTop: '1.5rem' }}>
+          <PartnerVerificationStatusTracker
+            persona="coach"
+            authUser={getStoredAuthUser()}
+            entitySlug={currentCoach.slug}
+            entityName={currentCoach.name}
+            localVerificationStatus={currentCoach.verificationStatus}
+          />
         </div>
+
+        {(getStoredAuthUser()?.role === 'admin' || getStoredAuthUser()?.role === 'moderator') && (
+          <div style={{ marginTop: '1rem', display: 'flex', gap: '10px' }}>
+            {currentCoach.verificationStatus !== 'verified' ? (
+              <button
+                type="button"
+                className="coach-primary-btn"
+                onClick={() => {
+                  confirmAndVerifyCoach(currentCoach.slug)
+                  onRefresh()
+                }}
+              >
+                <SiteIcon name="shield-check" size={15} />
+                <span>Confirm &amp; Grant Verified Tag (Admin)</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="coach-hub-btn-outline"
+                onClick={() => {
+                  revokeCoachVerification(currentCoach.slug)
+                  onRefresh()
+                }}
+              >
+                Revoke Verified Tag (Admin)
+              </button>
+            )}
+          </div>
+        )}
       </div>
     )
   }

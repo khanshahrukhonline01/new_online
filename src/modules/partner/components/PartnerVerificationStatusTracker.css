@@ -1,0 +1,295 @@
+/* Partner Verification & Moderation Status Tracker (design-token compliant) */
+.kg-verif-tracker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-md, 12px);
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-card);
+  color: var(--text);
+}
+
+.kg-verif-tracker.is-warning {
+  border-left-color: var(--warning);
+}
+
+.kg-verif-tracker.is-danger {
+  border-left-color: var(--danger);
+}
+
+.kg-verif-tracker.is-info {
+  border-left-color: var(--info);
+}
+
+.kg-verif-tracker-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.kg-verif-heading-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 240px;
+}
+
+.kg-verif-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.kg-verif-tracker.is-warning .kg-verif-icon-badge {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.kg-verif-tracker.is-danger .kg-verif-icon-badge {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.kg-verif-tracker.is-info .kg-verif-icon-badge {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.kg-verif-pill-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.2rem;
+}
+
+.kg-verif-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 750;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.kg-verif-tracker.is-warning .kg-verif-status-pill {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.kg-verif-tracker.is-danger .kg-verif-status-pill {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.kg-verif-tracker.is-info .kg-verif-status-pill {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.kg-verif-progress-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.kg-verif-headline {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: var(--text);
+}
+
+.kg-verif-summary {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.kg-verif-inline-feedback {
+  margin: 0.45rem 0 0;
+  padding: 0.45rem 0.65rem;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.kg-verif-tracker.is-warning .kg-verif-inline-feedback {
+  background: var(--warning-soft);
+  border-color: var(--warning);
+}
+
+.kg-verif-steps-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.kg-verif-step-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+}
+
+.kg-verif-step-chip.is-done {
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.kg-verif-step-chip.is-active {
+  color: var(--info);
+  border-color: var(--info);
+  background: var(--info-soft);
+}
+
+.kg-verif-step-chip.is-blocked {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* Drawer Sections */
+.kg-verif-drawer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+}
+
+.kg-verif-drawer-section h4 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 750;
+  color: var(--text);
+}
+
+.kg-verif-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kg-verif-timeline-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--line-strong);
+}
+
+.kg-verif-timeline-item.is-done {
+  border-left-color: var(--accent);
+}
+
+.kg-verif-timeline-item.is-active {
+  border-left-color: var(--info);
+}
+
+.kg-verif-timeline-item.is-blocked {
+  border-left-color: var(--danger);
+}
+
+.kg-verif-checklist {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.82rem;
+  color: var(--text-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.kg-verif-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.kg-verif-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.kg-verif-field label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
+.kg-verif-field input,
+.kg-verif-field select,
+.kg-verif-field textarea {
+  min-height: var(--touch-min, 44px);
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm, 8px);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.86rem;
+  font-family: inherit;
+}
+
+.kg-verif-field textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+
+.kg-verif-claims-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.kg-verif-claim-item {
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 700px) {
+  .kg-verif-tracker-top {
+    align-items: stretch;
+  }
+
+  .kg-verif-steps-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+}

@@ -1,5 +1,7 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { getStoredAuthUser } from '../../integrations/supabase/auth-client'
+import { PartnerVerificationStatusTracker } from '../partner/components/PartnerVerificationStatusTracker'
 import { CURATED_ACADEMIES } from '../../shared/data/curatedEntitiesData'
 import { useTenant } from '../../shared/context/useTenant'
 import {
@@ -489,58 +491,80 @@ export default function AcademyHubPage({
         </div>
       </div>
 
-      {currentAcademy.verificationStatus !== 'verified' ? (
-        <div className="academy-verification-status-banner pending">
-          <div className="academy-verification-status-text">
-            <SiteIcon name="alert-triangle" size={20} className="status-banner-icon pending" />
-            <div>
-              <strong>Verification Tag Pending · Admin Confirmation Required</strong>
-              <p>
-                Your academy is registered and your internal batch management, students CRM, and UPI fees are fully operational.
-                The official public <strong>&quot;KhelGrid Verified&quot;</strong> badge will appear on your public listing once verified by the KhelGrid Editorial Moderation Desk.
-              </p>
+      {(() => {
+        const authUser = getStoredAuthUser()
+        const isPlatformModerator = authUser?.role === 'admin' || authUser?.role === 'moderator'
+
+        if (currentAcademy.verificationStatus !== 'verified') {
+          return (
+            <>
+              {!workspaceSection && (
+                <PartnerVerificationStatusTracker
+                  persona="academy"
+                  tenant={currentTenant}
+                  authUser={authUser}
+                  entitySlug={currentAcademy.slug}
+                  entityName={currentAcademy.name}
+                  localVerificationStatus={currentAcademy.verificationStatus}
+                />
+              )}
+              {isPlatformModerator && (
+                <div className="academy-verification-status-banner pending">
+                  <div className="academy-verification-status-text">
+                    <SiteIcon name="alert-triangle" size={20} className="status-banner-icon pending" />
+                    <div>
+                      <strong>Verification Tag Pending · Moderator Override Available</strong>
+                      <p>
+                        Internal SaaS operations are active. Grant the official public <strong>&quot;KhelGrid Verified&quot;</strong> badge once registry evidence is confirmed.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="academy-hub-verify-now-btn"
+                    onClick={() => {
+                      confirmAndVerifyAcademy(currentAcademy.slug)
+                      triggerRefresh()
+                    }}
+                    title="Moderator / Admin Action: Confirm credentials and grant verified badge"
+                  >
+                    <SiteIcon name="shield-check" size={14} />
+                    <span>Confirm &amp; Grant Verified Tag (Admin)</span>
+                  </button>
+                </div>
+              )}
+            </>
+          )
+        }
+
+        return (
+          <div className="academy-verification-status-banner verified">
+            <div className="academy-verification-status-text">
+              <SiteIcon name="shield-check" size={20} className="status-banner-icon verified" />
+              <div>
+                <strong style={{ color: '#065f46' }}>Official KhelGrid Verified Partner</strong>
+                <p style={{ color: '#047857', margin: 0, fontSize: '0.84rem' }}>
+                  Credentials and facility verified by KhelGrid Admin Desk. Your public listing displays the official verified badge across search and player trial discovery.
+                </p>
+              </div>
             </div>
+            {currentAcademy.isCustom && isPlatformModerator && (
+              <button
+                type="button"
+                className="academy-hub-btn-outline"
+                style={{ fontSize: '0.75rem', padding: '4px 8px' }}
+                onClick={() => {
+                  revokeAcademyVerification(currentAcademy.slug)
+                  triggerRefresh()
+                }}
+                title="Admin Action: Revert to pending review"
+              >
+                Revoke Tag (Admin)
+              </button>
+            )}
           </div>
-          <button
-            type="button"
-            className="academy-hub-verify-now-btn"
-            onClick={() => {
-              confirmAndVerifyAcademy(currentAcademy.slug)
-              triggerRefresh()
-            }}
-            title="Moderator / Admin Action: Confirm credentials and grant verified badge"
-          >
-            <SiteIcon name="shield-check" size={14} />
-            <span>Confirm &amp; Grant Verified Tag (Admin)</span>
-          </button>
-        </div>
-      ) : (
-        <div className="academy-verification-status-banner verified">
-          <div className="academy-verification-status-text">
-            <SiteIcon name="shield-check" size={20} className="status-banner-icon verified" />
-            <div>
-              <strong style={{ color: '#065f46' }}>Official KhelGrid Verified Partner</strong>
-              <p style={{ color: '#047857', margin: 0, fontSize: '0.84rem' }}>
-                Credentials and facility verified by KhelGrid Admin Desk. Your public listing displays the official verified badge across search and player trial discovery.
-              </p>
-            </div>
-          </div>
-          {currentAcademy.isCustom && (
-            <button
-              type="button"
-              className="academy-hub-btn-outline"
-              style={{ fontSize: '0.75rem', padding: '4px 8px' }}
-              onClick={() => {
-                revokeAcademyVerification(currentAcademy.slug)
-                triggerRefresh()
-              }}
-              title="Admin Action: Revert to pending review"
-            >
-              Revoke Tag (Admin)
-            </button>
-          )}
-        </div>
-      )}
+        )
+      })()}
 
       {showOnboardingChecklist && (
         <div

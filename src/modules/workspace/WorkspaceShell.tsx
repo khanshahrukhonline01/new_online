@@ -20,6 +20,8 @@ import { useTenant } from '../../shared/context/useTenant'
 import { RequireTenantMember } from '../../shared/components/RequireTenantMember'
 import { KpiStrip, type KpiItem } from '../../shared/components/ui/KpiStrip'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { PartnerVerificationStatusTracker } from '../partner/components/PartnerVerificationStatusTracker'
+import { isPartnerVerificationPersona } from '../partner/partnerVerificationService'
 import './WorkspaceShell.css'
 
 interface PersonaMeta {
@@ -295,6 +297,15 @@ function WorkspaceShellInner({
           </button>
         ))}
       </div>
+
+      {/* ── Partner Verification & Moderation Tracker ── */}
+      {isPartnerVerificationPersona(persona) && (
+        <PartnerVerificationStatusTracker
+          persona={persona}
+          tenant={currentTenant}
+          authUser={authUser}
+        />
+      )}
 
       {/* ── Domain Content ── */}
       <div className="kg-shell-content" role="tabpanel">

@@ -1,5 +1,7 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { getStoredAuthUser } from '../../integrations/supabase/auth-client'
+import { PartnerVerificationStatusTracker } from '../partner/components/PartnerVerificationStatusTracker'
 import {
   generateWhatsAppShareProfileUrl,
   type DigitalFeeReceipt,
@@ -203,57 +205,79 @@ export default function CoachDashboardPage({
         </div>
       </div>
 
-      {currentCoach.verificationStatus !== 'verified' ? (
-        <div className="coach-verification-status-banner pending">
-          <div className="coach-verification-status-text">
-            <SiteIcon name="alert-triangle" size={20} className="status-banner-icon pending" />
-            <div>
-              <strong>Credentials Verification Pending · Admin Review Required</strong>
-              <p>
-                Your coach dashboard, trainee roster, and direct UPI payments are active. The official public <strong>&quot;KhelGrid Verified Coach&quot;</strong> badge will appear on your public listing once verified by the KhelGrid Editorial Moderation Desk.
-              </p>
+      {(() => {
+        const authUser = getStoredAuthUser()
+        const isPlatformModerator = authUser?.role === 'admin' || authUser?.role === 'moderator'
+
+        if (currentCoach.verificationStatus !== 'verified') {
+          return (
+            <>
+              {!workspaceSection && (
+                <PartnerVerificationStatusTracker
+                  persona="coach"
+                  authUser={authUser}
+                  entitySlug={currentCoach.slug}
+                  entityName={currentCoach.name}
+                  localVerificationStatus={currentCoach.verificationStatus}
+                />
+              )}
+              {isPlatformModerator && (
+                <div className="coach-verification-status-banner pending">
+                  <div className="coach-verification-status-text">
+                    <SiteIcon name="alert-triangle" size={20} className="status-banner-icon pending" />
+                    <div>
+                      <strong>Credentials Verification Pending · Moderator Override Available</strong>
+                      <p>
+                        Internal trainee roster and UPI payments are active. Grant the official <strong>&quot;KhelGrid Verified Coach&quot;</strong> tag once credentials are confirmed.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="coach-hub-verify-now-btn"
+                    onClick={() => {
+                      confirmAndVerifyCoach(currentCoach.slug)
+                      triggerRefresh()
+                    }}
+                    title="Admin Action: Confirm NIS/Federation credentials and grant verified badge"
+                  >
+                    <SiteIcon name="shield-check" size={14} />
+                    <span>Confirm &amp; Grant Verified Tag (Admin)</span>
+                  </button>
+                </div>
+              )}
+            </>
+          )
+        }
+
+        return (
+          <div className="coach-verification-status-banner verified">
+            <div className="coach-verification-status-text">
+              <SiteIcon name="shield-check" size={20} className="status-banner-icon verified" />
+              <div>
+                <strong style={{ color: '#065f46' }}>Official KhelGrid Verified Coach</strong>
+                <p style={{ color: '#047857', margin: 0, fontSize: '0.84rem' }}>
+                  Credentials verified by KhelGrid Admin Desk. Your profile displays the official verified badge across student search and parent trial inquiries.
+                </p>
+              </div>
             </div>
+            {currentCoach.isCustom && isPlatformModerator && (
+              <button
+                type="button"
+                className="coach-hub-btn-outline"
+                style={{ fontSize: '0.75rem', padding: '4px 8px' }}
+                onClick={() => {
+                  revokeCoachVerification(currentCoach.slug)
+                  triggerRefresh()
+                }}
+                title="Admin Action: Revert to pending review"
+              >
+                Revoke Tag (Admin)
+              </button>
+            )}
           </div>
-          <button
-            type="button"
-            className="coach-hub-verify-now-btn"
-            onClick={() => {
-              confirmAndVerifyCoach(currentCoach.slug)
-              triggerRefresh()
-            }}
-            title="Admin Action: Confirm NIS/Federation credentials and grant verified badge"
-          >
-            <SiteIcon name="shield-check" size={14} />
-            <span>Confirm &amp; Grant Verified Tag (Admin)</span>
-          </button>
-        </div>
-      ) : (
-        <div className="coach-verification-status-banner verified">
-          <div className="coach-verification-status-text">
-            <SiteIcon name="shield-check" size={20} className="status-banner-icon verified" />
-            <div>
-              <strong style={{ color: '#065f46' }}>Official KhelGrid Verified Coach</strong>
-              <p style={{ color: '#047857', margin: 0, fontSize: '0.84rem' }}>
-                Credentials verified by KhelGrid Admin Desk. Your profile displays the official verified badge across student search and parent trial inquiries.
-              </p>
-            </div>
-          </div>
-          {currentCoach.isCustom && (
-            <button
-              type="button"
-              className="coach-hub-btn-outline"
-              style={{ fontSize: '0.75rem', padding: '4px 8px' }}
-              onClick={() => {
-                revokeCoachVerification(currentCoach.slug)
-                triggerRefresh()
-              }}
-              title="Admin Action: Revert to pending review"
-            >
-              Revoke Tag (Admin)
-            </button>
-          )}
-        </div>
-      )}
+        )
+      })()}
 
       <div className="coach-metrics-grid">
         <div className="coach-stat-card">
