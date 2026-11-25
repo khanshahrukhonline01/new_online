@@ -144,12 +144,11 @@ export function AuthStepIdentityPanel({
         {isLogin &&
           errorMsg &&
           (errorMsg.toLowerCase().includes('confirm') || errorMsg.toLowerCase().includes('expired')) && (
-            <div style={{ margin: '4px 0 6px', textAlign: 'center' }}>
+            <div className="kg-auth-inline-action">
               <button
                 type="button"
-                className="kg-text-link"
+                className="kg-text-link kg-text-link--bold"
                 onClick={onGoToExpiredLink}
-                style={{ fontWeight: 700 }}
               >
                 ✉️ Need a fresh link or enter 6-digit code? →
               </button>

@@ -3,6 +3,11 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import AuthModal from './AuthModal'
 import { AuthStepProfilePanel } from './auth/AuthStepProfilePanel'
 import { AuthRecoveryAndOtpPanel } from './auth/AuthRecoveryAndOtpPanel'
+import authModalTsx from './AuthModal.tsx?raw'
+// @ts-expect-error - node built-in (Vitest stubs .css?raw to empty string)
+import fs from 'node:fs'
+// @ts-expect-error - node built-in
+import path from 'node:path'
 
 describe('AuthModal Progressive Intent-First Redesign', () => {
   it('1. renders null when closed', () => {
@@ -187,5 +192,31 @@ describe('AuthModal Progressive Intent-First Redesign', () => {
     )
     expect(setPassHtml).toContain('Create a New Password')
     expect(setPassHtml).toContain('Save New Password &amp; Sign In')
+  })
+
+  it('7. enforces dark-mode CSS tokens, 44px touch targets, unique DOM IDs, and modular controller architecture', () => {
+    const authModalCss = fs.readFileSync(path.resolve('src/shared/components/AuthModal.css'), 'utf8')
+    expect(authModalCss).toContain('var(--surface')
+    expect(authModalCss).toContain('var(--surface-raised')
+    expect(authModalCss).toContain('var(--text')
+    expect(authModalCss).toContain('var(--muted')
+    expect(authModalCss).toContain('var(--line')
+    expect(authModalCss).toContain('var(--accent-soft')
+    expect(authModalCss).toContain('var(--danger-soft')
+    expect(authModalCss).toContain('var(--touch-min, 44px)')
+    expect(authModalCss).not.toMatch(/color:\s*#047857\b/i)
+    expect(authModalCss).not.toMatch(/color:\s*#92400e\b/i)
+    expect(authModalCss).not.toMatch(/color:\s*#78350f\b/i)
+    expect(authModalCss).not.toMatch(/background:\s*#fef2f2\b/i)
+
+    expect(authModalTsx.split('\n').length).toBeLessThan(300)
+    expect(authModalTsx).toContain('useAuthModalController')
+    expect(authModalTsx).toContain('FOCUSABLE_SELECTORS')
+    expect(authModalTsx).not.toMatch(/\buseState\s*\(/)
+
+    // Rendered DOM IDs must remain strictly unique
+    const html = renderToStaticMarkup(<AuthModal isOpen={true} initialTab="login" onClose={vi.fn()} />)
+    const ids = Array.from(html.matchAll(/\sid="([^"]+)"/g)).map(m => m[1])
+    expect(new Set(ids).size).toBe(ids.length)
   })
 })

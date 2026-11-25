@@ -1,27 +1,12 @@
-import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
+import { useEffect, useRef, type MouseEvent } from 'react'
 import { SiteIcon } from './SiteIcon'
-import {
-  resendVerificationEmail,
-  sendPasswordReset,
-  signInWithEmail,
-  signInWithGoogleOAuth,
-  signUpWithEmail,
-  updatePassword,
-  verifyEmailOtpCode,
-  type AuthAgeBand,
-  type AuthUserProfile,
-  type UserRole,
-} from '../../integrations/supabase/auth-client'
-import { useFormState } from '../hooks/useFormState'
+import type { AuthUserProfile } from '../../integrations/supabase/auth-client'
 import { AuthPartnerHandoffPanel } from './auth/AuthPartnerHandoffPanel'
 import { AuthRecoveryAndOtpPanel } from './auth/AuthRecoveryAndOtpPanel'
 import { AuthStepIdentityPanel } from './auth/AuthStepIdentityPanel'
 import { AuthStepProfilePanel } from './auth/AuthStepProfilePanel'
-import {
-  resolvePostAuthTarget,
-  type AuthModalTab,
-  type OnboardingStep,
-} from './auth/authModalTypes'
+import { type AuthModalTab } from './auth/authModalTypes'
+import { useAuthModalController } from './auth/useAuthModalController'
 import './AuthModal.css'
 
 export type { AuthModalTab } from './auth/authModalTypes'
@@ -38,21 +23,6 @@ export interface AuthModalProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
-interface AuthModalFields extends Record<string, unknown> {
-  email: string
-  password: string
-  newPassword: string
-  confirmPassword: string
-  otpCode: string
-  fullName: string
-  role: Extract<UserRole, 'athlete' | 'parent' | 'scout'>
-  city: string
-  phone: string
-  ageBand: AuthAgeBand
-  guardianEmail: string
-  guardianConsentAccepted: boolean
-}
-
 const FOCUSABLE_SELECTORS = [
   'a[href]',
   'button:not([disabled])',
@@ -62,6 +32,10 @@ const FOCUSABLE_SELECTORS = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ')
 
+/**
+ * Accessible, progressive Intent-First authentication dialog featuring focus trapping,
+ * Escape closing, trigger focus restoration, and dark-mode CSS custom property theming.
+ */
 export default function AuthModal({
   isOpen,
   initialTab = 'login',
@@ -73,44 +47,20 @@ export default function AuthModal({
   onSuccess,
   onNavigate,
 }: AuthModalProps) {
-  const [tab, setTab] = useState<AuthModalTab>(initialTab)
-  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>('identity')
-  const [showPassword, setShowPassword] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [errorMsg, setErrorMsg] = useState(initialError || '')
-  const [successMsg, setSuccessMsg] = useState('')
-  const [emailVerificationPending, setEmailVerificationPending] = useState(false)
-
-  const form = useFormState<AuthModalFields>({
-    email: initialEmail || '',
-    password: '',
-    newPassword: '',
-    confirmPassword: '',
-    otpCode: '',
-    fullName: '',
-    role: 'athlete',
-    city: 'Delhi NCR',
-    phone: '',
-    ageBand: 'adult',
-    guardianEmail: '',
-    guardianConsentAccepted: false,
+  const controller = useAuthModalController({
+    isOpen,
+    initialTab,
+    initialError,
+    initialEmail,
+    redirectTo,
+    onClose,
+    onSuccess,
+    onNavigate,
   })
 
   const cardRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<Element | null>(null)
   const closeBtnRef = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => {
-    setTab(initialTab)
-    setOnboardingStep('identity')
-    setErrorMsg(initialError || '')
-    if (initialEmail) {
-      form.setField('email', initialEmail)
-    }
-    setSuccessMsg('')
-    setEmailVerificationPending(false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialTab, initialError, initialEmail, isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -129,6 +79,7 @@ export default function AuthModal({
         cardRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS)
       ).filter(el => !el.closest('[hidden]') && el.offsetParent !== null)
       if (focusable.length === 0) return
+
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
       if (e.shiftKey && document.activeElement === first) {
@@ -151,250 +102,11 @@ export default function AuthModal({
 
   if (!isOpen) return null
 
-  const finishAuthNavigation = (user: AuthUserProfile) => {
-    const target = resolvePostAuthTarget(user, redirectTo)
-    onSuccess?.(user, { skipRedirect: Boolean(target) })
-    setTimeout(() => {
-      onClose()
-      if (target) {
-        onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, target)
-      }
-    }, 500)
-  }
-
-  const handleLoginSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setErrorMsg('')
-    setSuccessMsg('')
-    setSubmitting(true)
-    try {
-      const res = await signInWithEmail({
-        email: form.fields.email,
-        password: form.fields.password,
-        redirectTo,
-      })
-      if (res.success && res.user) {
-        setSuccessMsg(`Welcome back, ${res.user.fullName}!`)
-        finishAuthNavigation(res.user)
-      } else if (res.requiresEmailVerification) {
-        setEmailVerificationPending(true)
-        setSuccessMsg(`Magic login link and 6-digit code sent to ${form.fields.email}.`)
-      } else {
-        setErrorMsg(res.message || 'Login failed. Please check your credentials.')
-      }
-    } catch {
-      setErrorMsg('An unexpected connection error occurred. Please try again.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleMagicLinkSubmit = async () => {
-    if (!form.fields.email.trim() || !form.fields.email.includes('@')) {
-      setErrorMsg('Please enter a valid email address first to receive a magic link.')
-      return
-    }
-    setErrorMsg('')
-    setSuccessMsg('')
-    setSubmitting(true)
-    try {
-      const res = await signInWithEmail({
-        email: form.fields.email,
-        useMagicLink: true,
-        redirectTo,
-      })
-      if (res.success) {
-        setEmailVerificationPending(true)
-        setSuccessMsg(`Magic sign-in link and code sent to ${form.fields.email.trim()}.`)
-      } else {
-        setErrorMsg(res.message || 'Could not send magic link.')
-      }
-    } catch {
-      setErrorMsg('Failed to send magic link.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleGoogleSignIn = async () => {
-    setErrorMsg('')
-    setSuccessMsg('')
-    setSubmitting(true)
-    try {
-      const res = await signInWithGoogleOAuth(redirectTo)
-      if (!res.success) {
-        setErrorMsg(res.message || 'Google Sign-In could not be started.')
-      }
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleAdvanceSignupStep = (e: FormEvent) => {
-    e.preventDefault()
-    setErrorMsg('')
-    if (!form.fields.email.trim() || !form.fields.email.includes('@')) {
-      setErrorMsg('Please enter a valid email address.')
-      return
-    }
-    if (!form.fields.password || form.fields.password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters long.')
-      return
-    }
-    setOnboardingStep('profile')
-  }
-
-  const handleSignUpSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setErrorMsg('')
-    setSuccessMsg('')
-
-    const isMinorAthlete =
-      form.fields.role === 'athlete' &&
-      (form.fields.ageBand === 'u14' || form.fields.ageBand === 'u16' || form.fields.ageBand === 'u18')
-
-    if (isMinorAthlete && (!form.fields.guardianEmail.trim() || !form.fields.guardianConsentAccepted)) {
-      setErrorMsg('Under-18 athlete accounts require a parent/guardian email and DPDP consent confirmation.')
-      return
-    }
-
-    setSubmitting(true)
-    try {
-      const derivedName = form.fields.fullName.trim() || form.fields.email.split('@')[0] || 'KhelGrid Athlete'
-      const res = await signUpWithEmail({
-        email: form.fields.email,
-        password: form.fields.password,
-        fullName: derivedName,
-        role: form.fields.role,
-        city: form.fields.city || 'Delhi NCR',
-        phone: form.fields.phone,
-        ageBand: form.fields.role === 'athlete' ? form.fields.ageBand : undefined,
-        guardianEmail: isMinorAthlete ? form.fields.guardianEmail : undefined,
-        redirectTo,
-      })
-      if (res.success) {
-        if (res.requiresEmailVerification) {
-          setEmailVerificationPending(true)
-          setSuccessMsg(`Verification link & 6-digit code sent to ${form.fields.email}.`)
-        } else if (res.user) {
-          setSuccessMsg(`Account created! Welcome, ${res.user.fullName}.`)
-          finishAuthNavigation(res.user)
-        }
-      } else {
-        setErrorMsg(res.message || 'Registration could not be completed.')
-      }
-    } catch {
-      setErrorMsg('Could not register account. Please try again.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleVerifyOtpSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setErrorMsg('')
-    setSuccessMsg('')
-    setSubmitting(true)
-    try {
-      const res = await verifyEmailOtpCode({
-        email: form.fields.email,
-        token: form.fields.otpCode,
-        type: 'email',
-      })
-      if (res.success && res.user) {
-        setEmailVerificationPending(false)
-        setSuccessMsg(`Verified! Welcome, ${res.user.fullName}.`)
-        finishAuthNavigation(res.user)
-      } else {
-        setErrorMsg(res.message || 'Could not verify code.')
-      }
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleForgotPasswordSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setErrorMsg('')
-    setSuccessMsg('')
-    setSubmitting(true)
-    try {
-      const res = await sendPasswordReset(form.fields.email, redirectTo)
-      if (res.success) {
-        setSuccessMsg(res.message)
-      } else {
-        setErrorMsg(res.message)
-      }
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleSetNewPasswordSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    if (form.fields.newPassword.length < 6) {
-      setErrorMsg('Password must be at least 6 characters long.')
-      return
-    }
-    if (form.fields.newPassword !== form.fields.confirmPassword) {
-      setErrorMsg('Passwords do not match. Please verify and try again.')
-      return
-    }
-    setErrorMsg('')
-    setSuccessMsg('')
-    setSubmitting(true)
-    try {
-      const res = await updatePassword(form.fields.newPassword)
-      if (res.success) {
-        setSuccessMsg(res.message || 'Password updated successfully! You can now sign in.')
-        setTimeout(() => {
-          setTab('login')
-          form.setField('password', '')
-          form.setField('newPassword', '')
-          form.setField('confirmPassword', '')
-        }, 1200)
-      } else {
-        setErrorMsg(res.message || 'Could not update password.')
-      }
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleResendVerification = async (e?: FormEvent) => {
-    if (e) e.preventDefault()
-    if (!form.fields.email.trim() || !form.fields.email.includes('@')) {
-      setErrorMsg('Please enter your email address to receive a fresh verification link.')
-      return
-    }
-    setErrorMsg('')
-    setSuccessMsg('')
-    setSubmitting(true)
-    try {
-      const res = await resendVerificationEmail(form.fields.email.trim())
-      if (res.success) {
-        setSuccessMsg(res.message)
-        setEmailVerificationPending(true)
-      } else {
-        setErrorMsg(res.message)
-      }
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handlePartnerRoute = (
-    partnerRole: 'academy' | 'coach' | 'venue' | 'tournament',
-    e: MouseEvent<HTMLAnchorElement>
-  ) => {
-    onClose()
-    onNavigate?.(e, `/partner-signup?role=${partnerRole}&mode=signup`)
-  }
-
-  const recoveryView = emailVerificationPending
+  const { ui, form } = controller
+  const recoveryView = ui.emailVerificationPending
     ? 'otp_pending'
-    : tab === 'forgot_password' || tab === 'expired_link' || tab === 'set_new_password'
-      ? tab
+    : ui.tab === 'forgot_password' || ui.tab === 'expired_link' || ui.tab === 'set_new_password'
+      ? ui.tab
       : null
 
   return (
@@ -442,15 +154,9 @@ export default function AuthModal({
           <button
             type="button"
             role="tab"
-            aria-selected={tab === 'login' && !emailVerificationPending}
-            className={`kg-auth-tab ${tab === 'login' && !emailVerificationPending ? 'is-active' : ''}`}
-            onClick={() => {
-              setTab('login')
-              setOnboardingStep('identity')
-              setEmailVerificationPending(false)
-              setErrorMsg('')
-              setSuccessMsg('')
-            }}
+            aria-selected={ui.tab === 'login' && !ui.emailVerificationPending}
+            className={`kg-auth-tab ${ui.tab === 'login' && !ui.emailVerificationPending ? 'is-active' : ''}`}
+            onClick={() => controller.switchTab('login')}
           >
             <SiteIcon name="user-round" size={14} />
             <span>Sign In</span>
@@ -458,32 +164,26 @@ export default function AuthModal({
           <button
             type="button"
             role="tab"
-            aria-selected={tab === 'signup' && !emailVerificationPending}
-            className={`kg-auth-tab ${tab === 'signup' && !emailVerificationPending ? 'is-active' : ''}`}
-            onClick={() => {
-              setTab('signup')
-              setOnboardingStep('identity')
-              setEmailVerificationPending(false)
-              setErrorMsg('')
-              setSuccessMsg('')
-            }}
+            aria-selected={ui.tab === 'signup' && !ui.emailVerificationPending}
+            className={`kg-auth-tab ${ui.tab === 'signup' && !ui.emailVerificationPending ? 'is-active' : ''}`}
+            onClick={() => controller.switchTab('signup')}
           >
             <SiteIcon name="plus" size={14} />
             <span>Create Account</span>
           </button>
         </div>
 
-        {errorMsg && (
+        {ui.errorMsg && (
           <div className="kg-auth-alert kg-auth-alert-error" role="alert">
             <SiteIcon name="alert-circle" size={16} />
-            <span>{errorMsg}</span>
+            <span>{ui.errorMsg}</span>
           </div>
         )}
 
-        {successMsg && (
-          <div className="kg-auth-alert kg-auth-alert-success" role="status">
+        {ui.successMsg && (
+          <div className="kg-auth-alert kg-auth-alert-success" role="status" aria-live="polite">
             <SiteIcon name="check-circle" size={16} />
-            <span>{successMsg}</span>
+            <span>{ui.successMsg}</span>
           </div>
         )}
 
@@ -494,73 +194,52 @@ export default function AuthModal({
             otpCode={form.fields.otpCode}
             newPassword={form.fields.newPassword}
             confirmPassword={form.fields.confirmPassword}
-            showPassword={showPassword}
-            submitting={submitting}
+            showPassword={ui.showPassword}
+            submitting={ui.submitting}
             onEmailChange={v => form.setField('email', v)}
             onOtpCodeChange={v => form.setField('otpCode', v)}
             onNewPasswordChange={v => form.setField('newPassword', v)}
             onConfirmPasswordChange={v => form.setField('confirmPassword', v)}
-            onTogglePassword={() => setShowPassword(s => !s)}
-            onVerifyOtpSubmit={handleVerifyOtpSubmit}
-            onForgotSubmit={handleForgotPasswordSubmit}
-            onResendSubmit={handleResendVerification}
-            onSetNewPasswordSubmit={handleSetNewPasswordSubmit}
-            onBackToLogin={() => {
-              setEmailVerificationPending(false)
-              setTab('login')
-              setErrorMsg('')
-            }}
-            onSwitchToSignup={() => {
-              setEmailVerificationPending(false)
-              setTab('signup')
-              setOnboardingStep('identity')
-              setErrorMsg('')
-            }}
-            onSwitchToOtpEntry={() => {
-              setEmailVerificationPending(true)
-              setErrorMsg('')
-            }}
+            onTogglePassword={controller.toggleShowPassword}
+            onVerifyOtpSubmit={controller.handleVerifyOtpSubmit}
+            onForgotSubmit={controller.handleForgotPasswordSubmit}
+            onResendSubmit={controller.handleResendVerification}
+            onSetNewPasswordSubmit={controller.handleSetNewPasswordSubmit}
+            onBackToLogin={() => controller.switchTab('login')}
+            onSwitchToSignup={() => controller.switchTab('signup')}
+            onSwitchToOtpEntry={() => controller.setPendingVerification(true)}
           />
         )}
 
-        {!recoveryView && tab === 'partner' && (
+        {!recoveryView && ui.tab === 'partner' && (
           <AuthPartnerHandoffPanel
-            onSelectPartnerRole={handlePartnerRoute}
-            onSwitchToLogin={() => {
-              setTab('login')
-              setErrorMsg('')
-            }}
+            onSelectPartnerRole={controller.handlePartnerRoute}
+            onSwitchToLogin={() => controller.switchTab('login')}
           />
         )}
 
-        {!recoveryView && (tab === 'login' || (tab === 'signup' && onboardingStep === 'identity')) && (
+        {!recoveryView && (ui.tab === 'login' || (ui.tab === 'signup' && ui.onboardingStep === 'identity')) && (
           <AuthStepIdentityPanel
-            mode={tab === 'signup' ? 'signup' : 'login'}
+            mode={ui.tab === 'signup' ? 'signup' : 'login'}
             email={form.fields.email}
             password={form.fields.password}
-            showPassword={showPassword}
-            submitting={submitting}
-            errorMsg={errorMsg}
+            showPassword={ui.showPassword}
+            submitting={ui.submitting}
+            errorMsg={ui.errorMsg}
             onEmailChange={v => form.setField('email', v)}
             onPasswordChange={v => form.setField('password', v)}
-            onTogglePassword={() => setShowPassword(s => !s)}
-            onLoginSubmit={handleLoginSubmit}
-            onMagicLinkSubmit={handleMagicLinkSubmit}
-            onGoogleSignIn={() => void handleGoogleSignIn()}
-            onAdvanceSignupStep={handleAdvanceSignupStep}
-            onGoToForgotPassword={() => {
-              setTab('forgot_password')
-              setErrorMsg('')
-            }}
-            onGoToExpiredLink={() => {
-              setTab('expired_link')
-              setErrorMsg('')
-            }}
-            onNavigatePartner={handlePartnerRoute}
+            onTogglePassword={controller.toggleShowPassword}
+            onLoginSubmit={controller.handleLoginSubmit}
+            onMagicLinkSubmit={controller.handleMagicLinkSubmit}
+            onGoogleSignIn={() => void controller.handleGoogleSignIn()}
+            onAdvanceSignupStep={controller.handleAdvanceSignupStep}
+            onGoToForgotPassword={() => controller.switchTab('forgot_password')}
+            onGoToExpiredLink={() => controller.switchTab('expired_link')}
+            onNavigatePartner={controller.handlePartnerRoute}
           />
         )}
 
-        {!recoveryView && tab === 'signup' && onboardingStep === 'profile' && (
+        {!recoveryView && ui.tab === 'signup' && ui.onboardingStep === 'profile' && (
           <AuthStepProfilePanel
             email={form.fields.email}
             role={form.fields.role}
@@ -570,7 +249,7 @@ export default function AuthModal({
             ageBand={form.fields.ageBand}
             guardianEmail={form.fields.guardianEmail}
             guardianConsentAccepted={form.fields.guardianConsentAccepted}
-            submitting={submitting}
+            submitting={ui.submitting}
             onRoleChange={r => form.setField('role', r)}
             onFullNameChange={v => form.setField('fullName', v)}
             onCityChange={v => form.setField('city', v)}
@@ -578,9 +257,9 @@ export default function AuthModal({
             onAgeBandChange={b => form.setField('ageBand', b)}
             onGuardianEmailChange={v => form.setField('guardianEmail', v)}
             onGuardianConsentChange={checked => form.setField('guardianConsentAccepted', checked)}
-            onBackStep={() => setOnboardingStep('identity')}
-            onSubmitSignUp={handleSignUpSubmit}
-            onNavigatePartner={handlePartnerRoute}
+            onBackStep={() => controller.setOnboardingStep('identity')}
+            onSubmitSignUp={controller.handleSignUpSubmit}
+            onNavigatePartner={controller.handlePartnerRoute}
           />
         )}
       </div>

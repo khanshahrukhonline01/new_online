@@ -90,7 +90,7 @@ export function AuthRecoveryAndOtpPanel({
           {submitting ? 'Verifying Code…' : 'Verify 6-Digit Code & Continue'}
         </button>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, gap: 8, flexWrap: 'wrap' }}>
+        <div className="kg-auth-otp-footer">
           <button
             type="button"
             className="kg-text-link"
@@ -138,7 +138,7 @@ export function AuthRecoveryAndOtpPanel({
           {submitting ? 'Sending Instructions…' : 'Send Reset Instructions'}
         </button>
 
-        <div style={{ textAlign: 'center', marginTop: 12 }}>
+        <div className="kg-auth-center-footer">
           <button type="button" className="kg-text-link" onClick={onBackToLogin}>
             ← Back to Sign In
           </button>
@@ -209,7 +209,7 @@ export function AuthRecoveryAndOtpPanel({
           {submitting ? 'Updating Password…' : 'Save New Password & Sign In'}
         </button>
 
-        <div style={{ textAlign: 'center', marginTop: 12 }}>
+        <div className="kg-auth-center-footer">
           <button type="button" className="kg-text-link" onClick={onBackToLogin}>
             ← Back to Sign In
           </button>
@@ -220,15 +220,15 @@ export function AuthRecoveryAndOtpPanel({
 
   return (
     <form className="kg-auth-form" onSubmit={onResendSubmit}>
-      <div style={{ textAlign: 'center', marginBottom: 12 }}>
+      <div className="kg-auth-expired-header">
         <span className="kg-auth-expired-badge" aria-hidden="true">
           <SiteIcon name="alert-circle" size={28} />
         </span>
       </div>
-      <h2 id="kg-auth-title" className="kg-auth-title" style={{ textAlign: 'center' }}>
+      <h2 id="kg-auth-title" className="kg-auth-title is-centered">
         Verification Link Expired
       </h2>
-      <p className="kg-auth-subtitle" style={{ textAlign: 'center' }}>
+      <p className="kg-auth-subtitle is-centered">
         Email links expire after 1 hour or when pre-scanned by email security filters. Request a fresh link or enter your 6-digit email code.
       </p>
 
@@ -252,7 +252,7 @@ export function AuthRecoveryAndOtpPanel({
         {submitting ? 'Sending Fresh Link…' : 'Resend Verification Email'}
       </button>
 
-      <div style={{ textAlign: 'center', marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="kg-auth-expired-links">
         <button type="button" className="kg-text-link" onClick={onSwitchToOtpEntry}>
           Have a 6-digit email code? Verify directly →
         </button>
