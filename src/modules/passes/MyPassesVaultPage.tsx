@@ -1,6 +1,7 @@
 import { useState, useMemo, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { generateQrSvgString } from '../../shared/utils/qrCodeGenerator'
+import { EmptyState } from '../../shared/components/ui/EmptyState'
+import { QrPassCardPanel } from '../../shared/components/workflows/QrPassCardPanel'
 import { getAllAcademyTrialPasses, type AcademyTrialPass } from '../academies/academySaaSClient'
 import { getAllTurfBookings, type TurfBookingRecord } from '../venues/turfSlotManager'
 import { getTournamentRegistrations, type TournamentTeamRegistration } from '../events/tournamentRegistrationManager'
@@ -142,28 +143,6 @@ export function MyPassesVaultPage({ onNavigate }: MyPassesVaultPageProps) {
       })
     })
 
-    // Preseed sample pass if user has none yet so page is illustrative
-    if (list.length === 0) {
-      list.push({
-        id: 'sample-trial-1',
-        token: 'PASS-CRI-DEMO',
-        category: 'trials',
-        categoryLabel: 'Academy Selection Trial',
-        title: 'Dhruv Jaiswal · Fast Bowling Trial',
-        subtitle: 'Karnataka Institute of Cricket (KIOC)',
-        holder: 'Dhruv Jaiswal (Age: 15)',
-        contactPhone: '9845012345',
-        sport: 'Cricket',
-        date: '2026-11-22',
-        time: '06:30 AM',
-        venue: 'KIOC Grounds, Shivaji Nagar, Bengaluru',
-        status: 'valid',
-        statusLabel: 'Valid for Entry',
-        qrPayload: 'https://khelgrid.com/verify-pass?id=PASS-CRI-DEMO&sport=Cricket',
-        instructions: 'Wear complete white cricket kit and report 15 mins before session start.',
-      })
-    }
-
     return list
   }, [rawTrialPasses, rawTurfBookings, rawTournaments, rawVenueBookings])
 
@@ -284,72 +263,23 @@ export function MyPassesVaultPage({ onNavigate }: MyPassesVaultPageProps) {
       {filteredItems.length > 0 ? (
         <div className="passes-grid">
           {filteredItems.map(item => (
-            <article key={item.id} className="ticket-card">
-              {/* Header Gradient */}
-              <div className={`ticket-header type-${item.category}`}>
-                <div>
-                  <span className="ticket-type-label">{item.categoryLabel}</span>
-                  <h2 className="ticket-title">{item.title}</h2>
-                  <div style={{ fontSize: '0.825rem', opacity: 0.9, marginTop: '0.2rem' }}>{item.subtitle}</div>
-                </div>
-                <span className="ticket-token-badge">#{item.token}</span>
-              </div>
-
-              {/* Body */}
-              <div className="ticket-body">
-                {/* QR Code and Info */}
-                <div className="ticket-qr-row">
-                  <div
-                    className="ticket-qr-svg"
-                    dangerouslySetInnerHTML={{
-                      __html: generateQrSvgString(item.qrPayload, {
-                        size: 82,
-                        color: item.category === 'trials' ? '#059669' : item.category === 'turf' ? '#2563eb' : '#701a75',
-                        bgColor: '#ffffff',
-                      }),
-                    }}
-                  />
-                  <div>
-                    <div style={{ fontSize: '0.725rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b' }}>
-                      Status
-                    </div>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: item.status === 'used' ? '#d97706' : '#059669' }}>
-                      {item.statusLabel}
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '0.2rem' }}>
-                      Show this vector QR pass at reception for instant check-in.
-                    </div>
-                  </div>
-                </div>
-
-                {/* Details Grid */}
-                <div className="ticket-meta-grid">
-                  <div className="ticket-meta-col">
-                    <span className="ticket-meta-label">Candidate / Team</span>
-                    <span className="ticket-meta-val">{item.holder}</span>
-                  </div>
-                  <div className="ticket-meta-col">
-                    <span className="ticket-meta-label">Sport</span>
-                    <span className="ticket-meta-val">{item.sport}</span>
-                  </div>
-                  <div className="ticket-meta-col">
-                    <span className="ticket-meta-label">Date &amp; Time</span>
-                    <span className="ticket-meta-val">{item.date} · {item.time}</span>
-                  </div>
-                  <div className="ticket-meta-col">
-                    <span className="ticket-meta-label">Venue</span>
-                    <span className="ticket-meta-val" style={{ fontSize: '0.85rem' }}>{item.venue}</span>
-                  </div>
-                </div>
-
-                {item.instructions && (
-                  <div style={{ fontSize: '0.8rem', background: '#f8fafc', padding: '0.65rem 0.85rem', borderRadius: '8px', color: '#475569' }}>
-                    <strong>Note:</strong> {item.instructions}
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="ticket-actions-bar">
+            <QrPassCardPanel
+              key={item.id}
+              pass={{
+                token: item.token,
+                title: item.title,
+                subtitle: `${item.categoryLabel} · ${item.subtitle}`,
+                holder: item.holder,
+                sport: item.sport,
+                venue: item.venue,
+                scheduleLabel: `${item.date} · ${item.time}`,
+                status: item.status === 'used' ? 'used' : 'valid',
+                statusLabel: item.statusLabel,
+                qrPayload: item.qrPayload,
+              }}
+              note={item.instructions}
+              actionsSlot={
+                <>
                   <a
                     href={`/verify-pass?id=${encodeURIComponent(item.token)}`}
                     onClick={e => onNavigate?.(e, `/verify-pass?id=${encodeURIComponent(item.token)}`)}
@@ -379,27 +309,27 @@ export function MyPassesVaultPage({ onNavigate }: MyPassesVaultPageProps) {
                     <SiteIcon name="file-text" size={15} />
                     <span>Print PDF</span>
                   </button>
-                </div>
-              </div>
-            </article>
+                </>
+              }
+            />
           ))}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: '3.5rem 1.5rem', background: '#ffffff', borderRadius: '16px', border: '2px dashed #cbd5e1' }}>
-          <SiteIcon name="shield-check" size={40} />
-          <h3 style={{ margin: '1rem 0 0.5rem', color: '#0f172a' }}>No passes match your search</h3>
-          <p style={{ color: '#64748b', margin: '0 auto 1.5rem', maxWidth: '420px', fontSize: '0.9rem' }}>
-            Book a turf court, apply for an academy trial, or clear your search query to see passes here.
-          </p>
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/academies" onClick={e => onNavigate?.(e, '/academies')} className="ticket-action-btn btn-primary">
-              Explore Academies
-            </a>
-            <a href="/venues" onClick={e => onNavigate?.(e, '/venues')} className="ticket-action-btn btn-outline">
-              Book a Turf Court
-            </a>
-          </div>
-        </div>
+        <EmptyState
+          icon={<SiteIcon name="shield-check" size={32} />}
+          title={allVaultItems.length === 0 ? 'No digital passes in your vault yet' : 'No passes match your search'}
+          description="Book a turf court or apply for an academy trial to store verifiable QR gate passes here."
+          action={
+            <>
+              <a href="/academies" onClick={e => onNavigate?.(e, '/academies')} className="kg-btn kg-btn-primary kg-touch-target">
+                Explore Academies
+              </a>
+              <a href="/venues" onClick={e => onNavigate?.(e, '/venues')} className="kg-btn kg-touch-target">
+                Book a Turf Court
+              </a>
+            </>
+          }
+        />
       )}
     </div>
   )

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type KeyboardEvent } from 'react'
 import { SiteIcon } from './SiteIcon'
 import {
-  getAcademies,
-  getCities,
-  getOpportunities,
-  getPickupGames,
-  getSports,
-  getVenues,
-} from '../../integrations/supabase/public-client'
+  getCachedAcademies,
+  getCachedCities,
+  getCachedOpportunities,
+  getCachedPickupGames,
+  getCachedSports,
+  getCachedVenues,
+} from '../cache/catalogueQueryCache'
 import type { Academy, Opportunity, Sport, Venue } from '../../shared/domain'
 import type { DatabaseCity, DatabasePickupGame } from '../../integrations/supabase/public-client'
 import { RESEARCH_PAPERS } from '../../modules/khelchronicle/data/khelchronicleData'
@@ -86,12 +86,12 @@ export default function SpotlightSearchModal({
     let active = true
 
     Promise.all([
-      getSports(),
-      getOpportunities(),
-      getVenues(),
-      getPickupGames(),
-      getAcademies(),
-      getCities(),
+      getCachedSports(),
+      getCachedOpportunities(),
+      getCachedVenues(),
+      getCachedPickupGames(),
+      getCachedAcademies(),
+      getCachedCities(),
     ]).then(([sRes, oRes, vRes, pRes, aRes, cRes]) => {
       if (!active) return
 

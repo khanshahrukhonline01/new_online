@@ -1,5 +1,9 @@
 import { useState, useId, useEffect, type MouseEvent, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { WorkspaceDetailDrawer } from '../../shared/components/ui/WorkspaceDetailDrawer'
+import { AttendanceRosterPanel } from '../../shared/components/workflows/AttendanceRosterPanel'
+import { CsvTransferControls } from '../../shared/components/workflows/CsvTransferControls'
+import { FeeReceiptDrawerContent } from '../../shared/components/workflows/FeeReceiptDrawerContent'
 import { generateQrSvgString } from '../../shared/utils/qrCodeGenerator'
 import { CURATED_ACADEMIES } from '../../shared/data/curatedEntitiesData'
 import {
@@ -2419,112 +2423,50 @@ export default function AcademyHubPage({
             })()}
           </div>
 
-          <div className="academy-hub-table-wrapper">
-            <table className="academy-hub-table">
-              <thead>
-                <tr>
-                  <th>Student Name</th>
-                  <th>Parent Contact</th>
-                  <th>Status (1-Tap Mark)</th>
-                  <th>WhatsApp Parent Notice</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  const batchStudents = students.filter(s => s.batchId === attendanceBatchId || batches.length === 1)
-                  const currentBatch = batches.find(b => b.id === attendanceBatchId) || batches[0]
-
-                  if (batchStudents.length === 0) {
-                    return (
-                      <tr>
-                        <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
-                          No students enrolled in this batch yet.
-                        </td>
-                      </tr>
-                    )
-                  }
-
-                  return batchStudents.map(s => {
-                    const status = attendanceStatuses[s.id] || 'present'
-                    const waAlertUrl = generateWhatsAppAttendanceAlertUrl({
-                      studentName: s.studentName,
-                      parentPhone: s.parentPhone,
-                      status,
-                      batchName: currentBatch?.batchName || 'Academy Squad',
-                      entityName: currentAcademy.name,
-                      date: attendanceDate,
-                      checkInTime: currentBatch?.timings.split('–')[0]?.trim() || '06:00 AM',
-                    })
-
-                    return (
-                      <tr key={s.id}>
-                        <td>
-                          <strong>{s.studentName}</strong>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>{s.batchName}</div>
-                        </td>
-                        <td>
-                          <span>{s.parentName}</span>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>
-                            {dpdpSafeMode ? maskPhone(s.parentPhone) : `+91 ${s.parentPhone}`}
-                          </div>
-                        </td>
-                        <td>
-                          <div className="coach-att-pills">
-                            <button
-                              type="button"
-                              style={pitchSideMode ? { minHeight: '48px', minWidth: '48px', fontSize: '14px', fontWeight: 700 } : undefined}
-                              className={`coach-att-btn ${status === 'present' ? 'active present' : ''}`}
-                              onClick={() => setAttendanceStatuses(prev => ({ ...prev, [s.id]: 'present' }))}
-                            >
-                              Present
-                            </button>
-                            <button
-                              type="button"
-                              style={pitchSideMode ? { minHeight: '48px', minWidth: '48px', fontSize: '14px', fontWeight: 700 } : undefined}
-                              className={`coach-att-btn ${status === 'absent' ? 'active absent' : ''}`}
-                              onClick={() => setAttendanceStatuses(prev => ({ ...prev, [s.id]: 'absent' }))}
-                            >
-                              Absent
-                            </button>
-                            <button
-                              type="button"
-                              style={pitchSideMode ? { minHeight: '48px', minWidth: '48px', fontSize: '14px', fontWeight: 700 } : undefined}
-                              className={`coach-att-btn ${status === 'excused' ? 'active excused' : ''}`}
-                              onClick={() => setAttendanceStatuses(prev => ({ ...prev, [s.id]: 'excused' }))}
-                            >
-                              Excused
-                            </button>
-                          </div>
-                        </td>
-                        <td>
-                          <a
-                            href={waAlertUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`crm-action-btn ${status === 'present' ? 'whatsapp' : ''}`}
-                            style={{
-                              padding: '6px 10px',
-                              borderRadius: '6px',
-                              textDecoration: 'none',
-                              fontSize: '12px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              color: status === 'absent' ? '#dc2626' : undefined,
-                            }}
-                            title={`Send ${status} WhatsApp notice to ${s.parentName}`}
-                          >
-                            <SiteIcon name="phone" size={13} />
-                            <span>Notify Parent ({status})</span>
-                          </a>
-                        </td>
-                      </tr>
-                    )
-                  })
-                })()}
-              </tbody>
-            </table>
-          </div>
+          <AttendanceRosterPanel
+            dateLabel={attendanceDate}
+            allowedStatuses={['present', 'absent', 'excused']}
+            members={students
+              .filter(s => s.batchId === attendanceBatchId || batches.length === 1)
+              .map(s => ({
+                id: s.id,
+                name: s.studentName,
+                batchName: s.batchName,
+                phone: dpdpSafeMode ? maskPhone(s.parentPhone) : `+91 ${s.parentPhone}`,
+                status: attendanceStatuses[s.id] || 'present',
+              }))}
+            onToggleStatus={(memberId, nextStatus) => {
+              if (nextStatus === 'present' || nextStatus === 'absent' || nextStatus === 'excused') {
+                setAttendanceStatuses(prev => ({ ...prev, [memberId]: nextStatus }))
+              }
+            }}
+            renderMemberAction={member => {
+              const s = students.find(st => st.id === member.id)
+              if (!s) return null
+              const currentBatch = batches.find(b => b.id === attendanceBatchId) || batches[0]
+              const waAlertUrl = generateWhatsAppAttendanceAlertUrl({
+                studentName: s.studentName,
+                parentPhone: s.parentPhone,
+                status: member.status === 'late' ? 'present' : member.status,
+                batchName: currentBatch?.batchName || 'Academy Squad',
+                entityName: currentAcademy.name,
+                date: attendanceDate,
+                checkInTime: currentBatch?.timings.split('–')[0]?.trim() || '06:00 AM',
+              })
+              return (
+                <a
+                  href={waAlertUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="kg-btn kg-btn-sm"
+                  title={`Send ${member.status} WhatsApp notice to ${s.parentName}`}
+                >
+                  <SiteIcon name="phone" size={13} />
+                  <span>Notify Parent ({member.status})</span>
+                </a>
+              )
+            }}
+          />
         </section>
       )}
 
@@ -3770,193 +3712,146 @@ export default function AcademyHubPage({
         </div>
       )}
 
-      {/* MODAL: Fee Receipt Voucher */}
-      {activeReceiptStudent && (
-        <div className="academy-hub-modal-overlay" onClick={() => setActiveReceiptStudent(null)}>
-          <div className="academy-hub-modal-content" onClick={e => e.stopPropagation()}>
-            <div className="academy-hub-modal-header">
-              <h3>Official Student Fee Receipt</h3>
-              <button
-                type="button"
-                className="academy-hub-modal-close"
-                onClick={() => setActiveReceiptStudent(null)}
-                aria-label="Close modal"
-              >
-                &times;
-              </button>
-            </div>
+      {/* DRAWER: Fee Receipt Voucher */}
+      <WorkspaceDetailDrawer
+        open={Boolean(activeReceiptStudent)}
+        onClose={() => setActiveReceiptStudent(null)}
+        title={activeReceiptStudent ? `Official Student Fee Receipt · ${currentAcademy.name}` : 'Fee Receipt'}
+        statusMessage={activeReceiptStudent ? 'PAID · 0% PLATFORM FEE' : undefined}
+        width={540}
+      >
+        {activeReceiptStudent && (
+          <>
+            <FeeReceiptDrawerContent
+              receipt={{
+                receiptNumber: `REC-${activeReceiptStudent.id.toUpperCase()}`,
+                payerName: `${activeReceiptStudent.studentName} (${activeReceiptStudent.parentName}, +91 ${activeReceiptStudent.parentPhone})`,
+                recipientOrg: currentAcademy.name,
+                amountInr: activeReceiptStudent.monthlyFee,
+                paymentMethod: 'Direct Academy UPI / Settled',
+                paidAt: activeReceiptStudent.lastPaymentDate || 'Today',
+                billingCycle: `${activeReceiptStudent.batchName} (${activeReceiptStudent.sport}) · Next due: ${activeReceiptStudent.nextDueDate}`,
+              }}
+              onPrint={() => window.print?.()}
+            />
 
-            <div className="receipt-voucher-card">
-              <div className="receipt-header">
-                <span className="receipt-ref-badge">PAID · 0% PLATFORM FEE</span>
-                <h4 style={{ margin: '0.4rem 0 0.2rem', color: '#065f46', fontSize: '1.1rem' }}>{currentAcademy.name}</h4>
-                <div style={{ fontSize: '0.82rem', color: '#64748b' }}>Receipt Ref: REC-{activeReceiptStudent.id.toUpperCase()}</div>
-              </div>
+            <div className="kg-qr-holder" style={{ alignSelf: 'center' }}
+              dangerouslySetInnerHTML={{
+                __html: generateQrSvgString(
+                  JSON.stringify({
+                    ref: `REC-${activeReceiptStudent.id}`,
+                    student: activeReceiptStudent.studentName,
+                    academy: currentAcademy.name,
+                    amount: activeReceiptStudent.monthlyFee,
+                    status: 'paid',
+                  }),
+                  { size: 140, color: '#047857' },
+                ),
+              }}
+            />
 
-              <div style={{ textAlign: 'left', background: '#f8fafc', padding: '0.85rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                <div><strong>Student Name:</strong> {activeReceiptStudent.studentName}</div>
-                <div><strong>Parent Name:</strong> {activeReceiptStudent.parentName} (+91 {activeReceiptStudent.parentPhone})</div>
-                <div><strong>Batch:</strong> {activeReceiptStudent.batchName} ({activeReceiptStudent.sport})</div>
-                <div><strong>Amount Paid:</strong> ₹{activeReceiptStudent.monthlyFee.toLocaleString('en-IN')}</div>
-                <div><strong>Payment Date:</strong> {activeReceiptStudent.lastPaymentDate || 'Today'}</div>
-                <div><strong>Next Fee Due Date:</strong> {activeReceiptStudent.nextDueDate}</div>
-              </div>
+            <a
+              href={`https://wa.me/${activeReceiptStudent.parentPhone.startsWith('91') ? activeReceiptStudent.parentPhone : `91${activeReceiptStudent.parentPhone}`}?text=${encodeURIComponent(
+                `🧾 *Coaching Fee Receipt — ${currentAcademy.name}*\n\nDear ${activeReceiptStudent.parentName},\nFee receipt for *${activeReceiptStudent.studentName}* (${activeReceiptStudent.batchName}):\nAmount Paid: *₹${activeReceiptStudent.monthlyFee.toLocaleString('en-IN')}*\nNext Due Date: *${activeReceiptStudent.nextDueDate}*\n\n📱 *View Live Passbook & Pay via UPI:* https://khelgrid.com/parent-portal?student=${activeReceiptStudent.id}&tab=fees\n\nThank you!`,
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="kg-btn kg-btn-primary kg-touch-target"
+            >
+              <SiteIcon name="phone" size={15} />
+              <span>Share on WhatsApp</span>
+            </a>
+          </>
+        )}
+      </WorkspaceDetailDrawer>
 
-              <div
-                style={{ display: 'inline-block', padding: '0.75rem', background: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '0.75rem' }}
-                dangerouslySetInnerHTML={{
-                  __html: generateQrSvgString(
-                    JSON.stringify({
-                      ref: `REC-${activeReceiptStudent.id}`,
-                      student: activeReceiptStudent.studentName,
-                      academy: currentAcademy.name,
-                      amount: activeReceiptStudent.monthlyFee,
-                      status: 'paid',
-                    }),
-                    { size: 140, color: '#047857' }
-                  ),
-                }}
-              />
+      {/* DRAWER: BULK IMPORT STUDENTS FROM CSV / EXCEL */}
+      <WorkspaceDetailDrawer
+        open={isImportCsvModalOpen}
+        onClose={() => setIsImportCsvModalOpen(false)}
+        title="Bulk Import Students from CSV / Excel"
+        width={620}
+      >
+        <CsvTransferControls
+          title="Import Student Roster CSV"
+          description="Columns: Student Name, Parent Name, Parent WhatsApp, Batch Name, Monthly Fee, Sport"
+          onDownloadSample={() => handleStudentCsvInputChange(getSampleStudentCsv())}
+          onImportCsvText={text => handleStudentCsvInputChange(text)}
+        />
 
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                <a
-                  href={`https://wa.me/${activeReceiptStudent.parentPhone.startsWith('91') ? activeReceiptStudent.parentPhone : `91${activeReceiptStudent.parentPhone}`}?text=${encodeURIComponent(
-                    `🧾 *Coaching Fee Receipt — ${currentAcademy.name}*\n\nDear ${activeReceiptStudent.parentName},\nFee receipt for *${activeReceiptStudent.studentName}* (${activeReceiptStudent.batchName}):\nAmount Paid: *₹${activeReceiptStudent.monthlyFee.toLocaleString('en-IN')}*\nNext Due Date: *${activeReceiptStudent.nextDueDate}*\n\n📱 *View Live Passbook & Pay via UPI:* https://khelgrid.com/parent-portal?student=${activeReceiptStudent.id}&tab=fees\n\nThank you!`
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="academy-hub-primary-btn"
-                  style={{ flex: 1, textDecoration: 'none', justifyContent: 'center' }}
-                >
-                  <SiteIcon name="phone" size={15} />
-                  <span>Share on WhatsApp</span>
-                </a>
-                <button
-                  type="button"
-                  className="academy-hub-public-page-btn"
-                  onClick={() => window.print?.()}
-                >
-                  <SiteIcon name="download" size={15} />
-                  <span>Print</span>
-                </button>
-              </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-soft)', marginBottom: '4px' }}>
+            Paste CSV / Spreadsheet Data
+          </label>
+          <textarea
+            className="coach-csv-textarea"
+            placeholder="Paste rows copied from Excel or CSV here..."
+            value={importCsvText}
+            onChange={e => handleStudentCsvInputChange(e.target.value)}
+          />
+        </div>
+
+        {importCsvErrors.length > 0 && (
+          <div className="kg-status-alert is-error">
+            <div>
+              <strong>Validation Notices:</strong>
+              <ul style={{ margin: '4px 0 0', paddingLeft: '20px' }}>
+                {importCsvErrors.slice(0, 3).map((err, idx) => (
+                  <li key={idx}>{err}</li>
+                ))}
+              </ul>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* MODAL: BULK IMPORT STUDENTS FROM CSV / EXCEL */}
-      {isImportCsvModalOpen && (
-        <div className="academy-hub-modal-overlay" onClick={() => setIsImportCsvModalOpen(false)}>
-          <div className="academy-hub-modal-content" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
-            <div className="academy-hub-modal-header">
-              <h3>Bulk Import Students from CSV / Excel</h3>
-              <button
-                type="button"
-                className="academy-hub-modal-close"
-                onClick={() => setIsImportCsvModalOpen(false)}
-                aria-label="Close modal"
-              >
-                &times;
-              </button>
-            </div>
-
-            <div style={{ padding: '0.5rem 0' }}>
-              <div className="coach-csv-template-box">
-                <div>
-                  <strong style={{ fontSize: '13px' }}>Need the format template?</strong>
-                  <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>
-                    Columns: Student Name, Parent Name, Parent WhatsApp, Batch Name, Monthly Fee, Sport
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="academy-hub-btn-outline"
-                  onClick={() => {
-                    const sample = getSampleStudentCsv()
-                    handleStudentCsvInputChange(sample)
-                  }}
-                  style={{ fontSize: '12px', padding: '6px 10px', whiteSpace: 'nowrap' }}
-                >
-                  Load Sample Data
-                </button>
-              </div>
-
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
-                  Paste CSV / Spreadsheet Data
-                </label>
-                <textarea
-                  className="coach-csv-textarea"
-                  placeholder="Paste rows copied from Excel or CSV here..."
-                  value={importCsvText}
-                  onChange={e => handleStudentCsvInputChange(e.target.value)}
-                />
-              </div>
-
-              {importCsvErrors.length > 0 && (
-                <div style={{ marginTop: '8px', padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px', color: '#dc2626', fontSize: '12px' }}>
-                  <strong>Validation Notices:</strong>
-                  <ul style={{ margin: '4px 0 0', paddingLeft: '20px' }}>
-                    {importCsvErrors.slice(0, 3).map((err, idx) => (
-                      <li key={idx}>{err}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {importPreviewRows.length > 0 && (
-                <div style={{ marginTop: '12px' }}>
-                  <strong style={{ fontSize: '12.5px', color: '#059669' }}>
-                    ✓ {importPreviewRows.length} Students Ready to Import
-                  </strong>
-                  <div style={{ maxHeight: '160px', overflowY: 'auto', marginTop: '6px' }}>
-                    <table className="coach-csv-preview-table">
-                      <thead>
-                        <tr>
-                          <th>Student</th>
-                          <th>Parent Contact</th>
-                          <th>Batch</th>
-                          <th>Monthly Fee</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {importPreviewRows.map((r, i) => (
-                          <tr key={i}>
-                            <td>{r.studentName}</td>
-                            <td>{r.parentName} (+91 {r.parentPhone})</td>
-                            <td>{r.batchName || batches[0]?.batchName}</td>
-                            <td>₹{r.monthlyFee}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '1.25rem', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  className="academy-hub-btn-outline"
-                  onClick={() => setIsImportCsvModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="academy-hub-primary-btn"
-                  disabled={importPreviewRows.length === 0}
-                  onClick={handleConfirmStudentImportCsv}
-                  style={{ opacity: importPreviewRows.length === 0 ? 0.5 : 1 }}
-                >
-                  Import {importPreviewRows.length} Students Now
-                </button>
-              </div>
+        {importPreviewRows.length > 0 && (
+          <div>
+            <strong style={{ fontSize: '12.5px', color: 'var(--kg-emerald)' }}>
+              ✓ {importPreviewRows.length} Students Ready to Import
+            </strong>
+            <div style={{ maxHeight: '160px', overflowY: 'auto', marginTop: '6px' }}>
+              <table className="coach-csv-preview-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Parent Contact</th>
+                    <th>Batch</th>
+                    <th>Monthly Fee</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importPreviewRows.map((r, i) => (
+                    <tr key={i}>
+                      <td>{r.studentName}</td>
+                      <td>{r.parentName} (+91 {r.parentPhone})</td>
+                      <td>{r.batchName || batches[0]?.batchName}</td>
+                      <td>₹{r.monthlyFee}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
+        )}
+
+        <div className="host-action-row" style={{ justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            className="kg-btn kg-btn-ghost kg-touch-target"
+            onClick={() => setIsImportCsvModalOpen(false)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="kg-btn kg-btn-primary kg-touch-target"
+            disabled={importPreviewRows.length === 0}
+            onClick={handleConfirmStudentImportCsv}
+          >
+            Import {importPreviewRows.length} Students Now
+          </button>
         </div>
-      )}
+      </WorkspaceDetailDrawer>
 
       {/* MODAL: 3-Step Academy Director Onboarding Flow */}
       {isOnboardingModalOpen && (

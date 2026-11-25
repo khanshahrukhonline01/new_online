@@ -678,3 +678,18 @@ html.dark .org-saas-btn--danger {
     font-size: 0.8rem;
   }
 }
+
+/* Mobile <700px zero-overflow & 44px+ touch targets */
+@media (max-width: 700px) {
+  .org-saas-tab,
+  .org-saas-btn,
+  .org-saas-input,
+  .org-saas-select {
+    min-height: var(--touch-min, 44px);
+  }
+  .org-saas-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

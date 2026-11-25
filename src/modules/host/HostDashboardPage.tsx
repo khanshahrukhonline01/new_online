@@ -1,18 +1,17 @@
 import type { MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { getRegisteredAcademies } from '../academies/academySaaSClient'
-import { DEFAULT_TURF_COURTS } from '../venues/turfSlotManager'
 import './HostDashboardPage.css'
 
 export interface HostDashboardPageProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
   onOpenIntake?: () => void
+  authUser?: { id: string; fullName?: string; role: string } | null
 }
 
 export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps) {
   const registeredAcademies = getRegisteredAcademies()
   const customAcademiesCount = registeredAcademies.filter(a => a.isCustom).length
-  const totalTurfCourts = DEFAULT_TURF_COURTS.length
 
   return (
     <section className="host-dashboard-root content-page">
@@ -26,21 +25,21 @@ export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps
       </header>
 
       {/* Live Facility Operations Quick Bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', margin: '1.5rem 0' }}>
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
-          <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Active Sports Academies</div>
-          <strong style={{ fontSize: '1.5rem', color: '#059669' }}>{registeredAcademies.length}</strong>
-          <small style={{ display: 'block', color: '#64748b', fontSize: '0.78rem' }}>{customAcademiesCount} custom registered</small>
+      <div className="host-kpi-grid">
+        <div className="host-kpi-card">
+          <div className="host-kpi-label">Active Sports Academies</div>
+          <strong className="host-kpi-value is-emerald">{registeredAcademies.length}</strong>
+          <small className="host-kpi-sub">{customAcademiesCount} custom registered</small>
         </div>
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
-          <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Managed Pitches &amp; Courts</div>
-          <strong style={{ fontSize: '1.5rem', color: '#2563eb' }}>{totalTurfCourts}</strong>
-          <small style={{ display: 'block', color: '#64748b', fontSize: '0.78rem' }}>Hourly slot tracking live</small>
+        <div className="host-kpi-card">
+          <div className="host-kpi-label">Managed Pitches &amp; Courts</div>
+          <strong className="host-kpi-value is-info">—</strong>
+          <small className="host-kpi-sub">Connect your venue to view</small>
         </div>
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
-          <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Zero-Commission Payouts</div>
-          <strong style={{ fontSize: '1.5rem', color: '#0f172a' }}>0%</strong>
-          <small style={{ display: 'block', color: '#059669', fontSize: '0.78rem' }}>Direct UPI bank settlement</small>
+        <div className="host-kpi-card">
+          <div className="host-kpi-label">Zero-Commission Payouts</div>
+          <strong className="host-kpi-value">0%</strong>
+          <small className="host-kpi-sub is-emerald">Direct UPI bank settlement</small>
         </div>
       </div>
 
@@ -64,13 +63,13 @@ export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps
         </p>
       </div>
 
-      <div className="host-dashboard-empty-state" style={{ borderColor: 'rgba(16, 185, 129, 0.4)', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.05), transparent)' }}>
+      <div className="host-dashboard-empty-state host-card-accent-emerald">
         <SiteIcon name="shield-check" size={34} />
         <h2>Academy Admissions &amp; Batch Management SaaS</h2>
         <p>
           Managing a sports academy? Track inbound parent leads, publish morning &amp; evening batch schedules, issue verifiable trial entry passes, and automate monthly student fee collection via UPI — <strong>100% free during grassroots launch</strong> (₹3,499/mo value unlocked).
         </p>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '1rem' }}>
+        <div className="host-action-row">
           <a className="host-action-btn primary" href="/partner-signup" onClick={event => onNavigate?.(event, '/partner-signup')}>
             Setup Academy (2-Min Wizard) <SiteIcon name="sparkles" size={16} />
           </a>
@@ -80,7 +79,7 @@ export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps
         </div>
       </div>
 
-      <div className="host-dashboard-empty-state" style={{ borderColor: 'rgba(59, 130, 246, 0.4)', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), transparent)' }}>
+      <div className="host-dashboard-empty-state host-card-accent-info">
         <SiteIcon name="calendar" size={34} />
         <h2>Turf &amp; Facility Slot Booking Calendar</h2>
         <p>
@@ -91,7 +90,7 @@ export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps
         </a>
       </div>
 
-      <div className="host-dashboard-empty-state" style={{ borderColor: 'rgba(245, 158, 11, 0.4)', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.05), transparent)' }}>
+      <div className="host-dashboard-empty-state host-card-accent-warning">
         <SiteIcon name="shield-check" size={34} />
         <h2>Universal Gate Check-In &amp; Pass Verifier Desk</h2>
         <p>
@@ -102,7 +101,7 @@ export default function HostDashboardPage({ onNavigate }: HostDashboardPageProps
         </a>
       </div>
 
-      <div className="host-dashboard-empty-state" style={{ borderColor: 'rgba(147, 51, 234, 0.4)', background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.05), transparent)' }}>
+      <div className="host-dashboard-empty-state host-card-accent-purple">
         <SiteIcon name="sparkles" size={34} />
         <h2>Tournament &amp; Sports Organisation Suite</h2>
         <p>

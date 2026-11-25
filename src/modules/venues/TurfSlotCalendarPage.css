@@ -462,3 +462,28 @@
   margin: 0 auto 0.75rem;
   display: block;
 }
+
+/* Mobile <700px zero-overflow, dark-mode tokens & 44px+ touch targets */
+@media (max-width: 700px) {
+  .turf-calendar-page,
+  .turf-grid-wrap {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  .turf-slot-btn,
+  .turf-form-input,
+  .turf-action-btn {
+    min-height: var(--touch-min, 44px);
+  }
+}
+
+html.dark .turf-form-group label {
+  color: var(--text-soft, #cbd5e1);
+}
+
+html.dark .turf-form-input,
+html.dark .turf-qr-box {
+  background: var(--surface, #111a28);
+  border-color: var(--line-strong, #334155);
+  color: var(--text, #f1f5f9);
+}

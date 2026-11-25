@@ -1,10 +1,10 @@
 import { useState, useEffect, type MouseEvent } from 'react'
 import { SiteIcon } from './SiteIcon'
 import {
-  getAnnouncements,
   BASELINE_ANNOUNCEMENTS,
   type DatabaseAnnouncement,
 } from '../../integrations/supabase/public-client'
+import { getCachedAnnouncements } from '../cache/catalogueQueryCache'
 import './SiteAnnouncementBanner.css'
 
 export interface SiteAnnouncementBannerProps {
@@ -35,7 +35,7 @@ export default function SiteAnnouncementBanner({
 
   useEffect(() => {
     let active = true
-    getAnnouncements().then(res => {
+    getCachedAnnouncements().then(res => {
       if (active && res.status === 'ready' && res.data.length > 0) {
         setAnnouncements(res.data)
       }

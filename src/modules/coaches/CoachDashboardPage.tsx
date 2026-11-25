@@ -1,5 +1,10 @@
 import { useState, type MouseEvent, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { useFormState } from '../../shared/hooks/useFormState'
+import { WorkspaceDetailDrawer } from '../../shared/components/ui/WorkspaceDetailDrawer'
+import { CsvTransferControls } from '../../shared/components/workflows/CsvTransferControls'
+import { FeeReceiptDrawerContent } from '../../shared/components/workflows/FeeReceiptDrawerContent'
+import { AttendanceRosterPanel } from '../../shared/components/workflows/AttendanceRosterPanel'
 import { generateQrSvgString } from '../../shared/utils/qrCodeGenerator'
 import {
   getRegisteredCoaches,
@@ -52,6 +57,38 @@ import {
 } from '../../shared/saas/saasSharedOperations'
 import './CoachDashboardPage.css'
 
+interface KheloIndiaFormFields extends Record<string, unknown> {
+  athleteName: string
+  age: number
+  gender: 'male' | 'female'
+  heightCm: number
+  weightKg: number
+  dash50m: number
+  run600m: number
+  sitReach: number
+  curlUps: number
+  pushUps: number
+  flamingoFalls: number
+  plateTapping: number
+  message: string
+}
+
+const INITIAL_KI_FORM: KheloIndiaFormFields = {
+  athleteName: '',
+  age: 14,
+  gender: 'male',
+  heightCm: 165,
+  weightKg: 54,
+  dash50m: 7.4,
+  run600m: 135,
+  sitReach: 24,
+  curlUps: 22,
+  pushUps: 20,
+  flamingoFalls: 2,
+  plateTapping: 12.5,
+  message: '',
+}
+
 export interface CoachDashboardPageProps {
   initialCoachSlug?: string
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
@@ -90,26 +127,29 @@ export default function CoachDashboardPage({
   const endorsements = getCoachEndorsements(selectedSlug)
   const kheloIndiaReports = getKheloIndiaAssessments(selectedSlug)
 
-  // Khelo India Modal State
+  // Khelo India Drawer + Structured Form State
   const [isKheloIndiaModalOpen, setIsKheloIndiaModalOpen] = useState(false)
-  const [kiAthleteName, setKiAthleteName] = useState('')
-  const [kiAge, setKiAge] = useState(14)
-  const [kiGender, setKiGender] = useState<'male' | 'female'>('male')
-  const [kiHeightCm, setKiHeightCm] = useState(165)
-  const [kiWeightKg, setKiWeightKg] = useState(54)
-  const [ki50mDash, setKi50mDash] = useState(7.4)
-  const [ki600mRun, setKi600mRun] = useState(135)
-  const [kiSitReach, setKiSitReach] = useState(24)
-  const [kiCurlUps, setKiCurlUps] = useState(22)
-  const [kiPushUps, setKiPushUps] = useState(20)
-  const [kiFlamingoFalls, setKiFlamingoFalls] = useState(2)
-  const [kiPlateTapping, setKiPlateTapping] = useState(12.5)
-  const [kiMsg, setKiMsg] = useState('')
+  const kiForm = useFormState<KheloIndiaFormFields>(INITIAL_KI_FORM)
+  const {
+    athleteName: kiAthleteName,
+    age: kiAge,
+    gender: kiGender,
+    heightCm: kiHeightCm,
+    weightKg: kiWeightKg,
+    dash50m: ki50mDash,
+    run600m: ki600mRun,
+    sitReach: kiSitReach,
+    curlUps: kiCurlUps,
+    pushUps: kiPushUps,
+    flamingoFalls: kiFlamingoFalls,
+    plateTapping: kiPlateTapping,
+    message: kiMsg,
+  } = kiForm.fields
 
   function handleSaveKheloIndia(e: FormEvent) {
     e.preventDefault()
     if (!kiAthleteName.trim()) {
-      setKiMsg('Please enter athlete name.')
+      kiForm.setField('message', 'Please enter athlete name.')
       return
     }
 
@@ -142,13 +182,8 @@ export default function CoachDashboardPage({
       testDate: new Date().toISOString().slice(0, 10),
     })
 
-    setKiMsg(`Assessment saved! Official SAI Report Code: ${saved.saiReportCode}`)
+    kiForm.setField('message', `Assessment saved! Official SAI Report Code: ${saved.saiReportCode}`)
     triggerRefresh()
-    setTimeout(() => {
-      setIsKheloIndiaModalOpen(false)
-      setKiAthleteName('')
-      setKiMsg('')
-    }, 1500)
   }
 
   // Filters
@@ -1270,106 +1305,74 @@ export default function CoachDashboardPage({
             </div>
           </div>
 
-          <div className="coach-table-container">
-            <table className="coach-datatable">
-              <thead>
-                <tr>
-                  <th>Trainee</th>
-                  <th>Parent Contact</th>
-                  <th>Status (1-Tap Mark)</th>
-                  <th>WhatsApp Alert to Parent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  const batchTrainees = trainees.filter(t => t.batchId === attendanceBatchId || batches.length === 1)
-                  const currentBatch = batches.find(b => b.id === attendanceBatchId) || batches[0]
-
-                  if (batchTrainees.length === 0) {
-                    return (
-                      <tr>
-                        <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
-                          No trainees registered in this batch yet.
-                        </td>
-                      </tr>
-                    )
-                  }
-
-                  return batchTrainees.map(t => {
-                    const status = attendanceStatuses[t.id] || 'present'
-                    const waAlertUrl = generateWhatsAppAttendanceAlertUrl({
-                      studentName: t.traineeName,
-                      parentPhone: t.parentPhone,
-                      status,
-                      batchName: currentBatch?.batchName || 'Coaching Clinic',
-                      entityName: currentCoach.name,
-                      date: attendanceDate,
-                      checkInTime: currentBatch?.timings.split('–')[0]?.trim() || '06:30 AM',
-                    })
-
-                    return (
-                      <tr key={t.id}>
-                        <td>
-                          <strong>{t.traineeName}</strong>
-                          <span style={{ display: 'block', fontSize: '11px', color: '#64748b' }}>
-                            {t.ageCategory} · {currentCoach.sport}
-                          </span>
-                        </td>
-                        <td>
-                          <span>{t.parentName}</span>
-                          <span style={{ display: 'block', fontSize: '11px', color: '#64748b' }}>
-                            +91 {t.parentPhone}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="coach-att-pills">
-                            <button
-                              type="button"
-                              className={`coach-att-btn ${status === 'present' ? 'active present' : ''}`}
-                              onClick={() => setAttendanceStatuses(prev => ({ ...prev, [t.id]: 'present' }))}
-                            >
-                              Present
-                            </button>
-                            <button
-                              type="button"
-                              className={`coach-att-btn ${status === 'absent' ? 'active absent' : ''}`}
-                              onClick={() => setAttendanceStatuses(prev => ({ ...prev, [t.id]: 'absent' }))}
-                            >
-                              Absent
-                            </button>
-                            <button
-                              type="button"
-                              className={`coach-att-btn ${status === 'excused' ? 'active excused' : ''}`}
-                              onClick={() => setAttendanceStatuses(prev => ({ ...prev, [t.id]: 'excused' }))}
-                            >
-                              Excused
-                            </button>
-                          </div>
-                        </td>
-                        <td>
-                          <a
-                            href={waAlertUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`coach-action-btn ${status === 'present' ? 'whatsapp' : ''}`}
-                            style={{
-                              background: status === 'absent' ? 'rgba(239, 68, 68, 0.1)' : undefined,
-                              color: status === 'absent' ? '#dc2626' : undefined,
-                              borderColor: status === 'absent' ? 'rgba(239, 68, 68, 0.3)' : undefined,
-                            }}
-                            title={`Send ${status} WhatsApp notice to ${t.parentName}`}
-                          >
-                            <SiteIcon name="phone" size={12} />
-                            <span>Notify Parent ({status})</span>
-                          </a>
-                        </td>
-                      </tr>
-                    )
-                  })
-                })()}
-              </tbody>
-            </table>
-          </div>
+          <AttendanceRosterPanel
+            dateLabel={attendanceDate}
+            allowedStatuses={['present', 'absent', 'excused']}
+            members={trainees
+              .filter(t => t.batchId === attendanceBatchId || batches.length === 1)
+              .map(t => ({
+                id: t.id,
+                name: t.traineeName,
+                batchName: (batches.find(b => b.id === t.batchId) || batches[0])?.batchName || currentCoach.sport,
+                phone: t.parentPhone,
+                status: attendanceStatuses[t.id] || 'present',
+              }))}
+            onToggleStatus={(memberId, nextStatus) => {
+              if (nextStatus === 'present' || nextStatus === 'absent' || nextStatus === 'excused') {
+                setAttendanceStatuses(prev => ({ ...prev, [memberId]: nextStatus }))
+              }
+            }}
+            savedLabel={attendanceSavedNotice ? '✓ Roll Call Saved' : 'Save Attendance'}
+            onSave={() => {
+              const batch = batches.find(b => b.id === attendanceBatchId) || batches[0]
+              const batchTrainees = trainees.filter(t => t.batchId === attendanceBatchId || batches.length === 1)
+              const record: DailyAttendanceRecord = {
+                id: `att-${Date.now()}`,
+                entityType: 'coach',
+                entitySlug: selectedSlug,
+                batchId: attendanceBatchId,
+                batchName: batch?.batchName || 'Coaching Clinic',
+                date: attendanceDate,
+                markedAt: new Date().toISOString(),
+                attendees: batchTrainees.map(t => ({
+                  studentId: t.id,
+                  studentName: t.traineeName,
+                  parentPhone: t.parentPhone,
+                  status: attendanceStatuses[t.id] || 'present',
+                  checkInTime: batch?.timings.split('–')[0]?.trim() || '06:30 AM',
+                })),
+              }
+              saveDailyAttendance(record)
+              setAttendanceSavedNotice(true)
+              setTimeout(() => setAttendanceSavedNotice(false), 3000)
+            }}
+            renderMemberAction={member => {
+              const rawTrainee = trainees.find(t => t.id === member.id)
+              if (!rawTrainee) return null
+              const batch = batches.find(b => b.id === attendanceBatchId) || batches[0]
+              const waAlertUrl = generateWhatsAppAttendanceAlertUrl({
+                studentName: rawTrainee.traineeName,
+                parentPhone: rawTrainee.parentPhone,
+                status: member.status === 'late' ? 'present' : member.status,
+                batchName: batch?.batchName || 'Coaching Clinic',
+                entityName: currentCoach.name,
+                date: attendanceDate,
+                checkInTime: batch?.timings.split('–')[0]?.trim() || '06:30 AM',
+              })
+              return (
+                <a
+                  href={waAlertUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="kg-btn kg-btn-sm"
+                  title={`Send ${member.status} WhatsApp notice to ${rawTrainee.parentName}`}
+                >
+                  <SiteIcon name="phone" size={12} />
+                  <span>Notify Parent ({member.status})</span>
+                </a>
+              )
+            }}
+          />
         </div>
       )}
 
@@ -1822,7 +1825,7 @@ export default function CoachDashboardPage({
               type="button"
               className="coach-primary-action-btn"
               onClick={() => {
-                setKiMsg('')
+                kiForm.setField('message', '')
                 setIsKheloIndiaModalOpen(true)
               }}
             >
@@ -1903,180 +1906,167 @@ export default function CoachDashboardPage({
         </div>
       )}
 
-      {/* MODAL: CONDUCT KHELO INDIA & SAI FITNESS TEST */}
-      {isKheloIndiaModalOpen && (
-        <div className="coach-modal-backdrop" onClick={() => setIsKheloIndiaModalOpen(false)}>
-          <div className="coach-modal-card" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
-            <div className="coach-modal-header">
-              <h3>Conduct Official SAI / Khelo India Fitness Test</h3>
-              <button
-                type="button"
-                className="coach-modal-close-btn"
-                onClick={() => setIsKheloIndiaModalOpen(false)}
-              >
-                <SiteIcon name="close" size={16} />
-              </button>
+      {/* DRAWER: CONDUCT KHELO INDIA & SAI FITNESS TEST */}
+      <WorkspaceDetailDrawer
+        open={isKheloIndiaModalOpen}
+        onClose={() => setIsKheloIndiaModalOpen(false)}
+        title="Conduct Official SAI / Khelo India Fitness Test"
+        statusMessage={kiMsg || undefined}
+        width={620}
+      >
+        <form onSubmit={handleSaveKheloIndia} className="coach-modal-form">
+          <div className="kg-form-grid">
+            <div className="coach-modal-field">
+              <label htmlFor="ki-name">Athlete Name</label>
+              <input
+                id="ki-name"
+                type="text"
+                value={kiAthleteName}
+                onChange={e => kiForm.setField('athleteName', e.target.value)}
+                placeholder="e.g. Tanmay Saxena"
+                required
+              />
             </div>
-            <form onSubmit={handleSaveKheloIndia} className="coach-modal-form">
-              {kiMsg && (
-                <div style={{ padding: '0.75rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', color: '#166534', fontSize: '0.88rem', marginBottom: '1rem' }}>
-                  {kiMsg}
-                </div>
-              )}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div className="coach-modal-field">
-                  <label htmlFor="ki-name">Athlete Name</label>
-                  <input
-                    id="ki-name"
-                    type="text"
-                    value={kiAthleteName}
-                    onChange={e => setKiAthleteName(e.target.value)}
-                    placeholder="e.g. Tanmay Saxena"
-                    required
-                  />
-                </div>
-                <div className="coach-modal-field">
-                  <label htmlFor="ki-age">Age (Years)</label>
-                  <input
-                    id="ki-age"
-                    type="number"
-                    min="5"
-                    max="22"
-                    value={kiAge}
-                    onChange={e => setKiAge(parseInt(e.target.value))}
-                    required
-                  />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
-                <div className="coach-modal-field">
-                  <label htmlFor="ki-gender">Gender</label>
-                  <select
-                    id="ki-gender"
-                    value={kiGender}
-                    onChange={e => setKiGender(e.target.value as 'male' | 'female')}
-                  >
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                  </select>
-                </div>
-                <div className="coach-modal-field">
-                  <label htmlFor="ki-height">Height (cm)</label>
-                  <input
-                    id="ki-height"
-                    type="number"
-                    value={kiHeightCm}
-                    onChange={e => setKiHeightCm(parseFloat(e.target.value))}
-                    required
-                  />
-                </div>
-                <div className="coach-modal-field">
-                  <label htmlFor="ki-weight">Weight (kg)</label>
-                  <input
-                    id="ki-weight"
-                    type="number"
-                    value={kiWeightKg}
-                    onChange={e => setKiWeightKg(parseFloat(e.target.value))}
-                    required
-                  />
-                </div>
-              </div>
-
-              {kiAge <= 8 ? (
-                <div style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '1rem' }}>
-                  <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', color: '#0f172a' }}>Sub-Junior Tests (Ages 5–8)</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                    <div className="coach-modal-field">
-                      <label htmlFor="ki-flamingo">Flamingo Balance (Falls / 60s)</label>
-                      <input
-                        id="ki-flamingo"
-                        type="number"
-                        value={kiFlamingoFalls}
-                        onChange={e => setKiFlamingoFalls(parseInt(e.target.value))}
-                      />
-                    </div>
-                    <div className="coach-modal-field">
-                      <label htmlFor="ki-tapping">Plate Tapping (Seconds / 25 taps)</label>
-                      <input
-                        id="ki-tapping"
-                        type="number"
-                        step="0.1"
-                        value={kiPlateTapping}
-                        onChange={e => setKiPlateTapping(parseFloat(e.target.value))}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '1rem' }}>
-                  <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem', color: '#0f172a' }}>Junior &amp; Senior SAI National Battery (Ages 9–18+)</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                    <div className="coach-modal-field">
-                      <label htmlFor="ki-dash">50m Dash (Seconds)</label>
-                      <input
-                        id="ki-dash"
-                        type="number"
-                        step="0.01"
-                        value={ki50mDash}
-                        onChange={e => setKi50mDash(parseFloat(e.target.value))}
-                      />
-                    </div>
-                    <div className="coach-modal-field">
-                      <label htmlFor="ki-run">600m Run (Seconds)</label>
-                      <input
-                        id="ki-run"
-                        type="number"
-                        value={ki600mRun}
-                        onChange={e => setKi600mRun(parseInt(e.target.value))}
-                      />
-                    </div>
-                    <div className="coach-modal-field">
-                      <label htmlFor="ki-reach">Sit &amp; Reach (cm)</label>
-                      <input
-                        id="ki-reach"
-                        type="number"
-                        value={kiSitReach}
-                        onChange={e => setKiSitReach(parseFloat(e.target.value))}
-                      />
-                    </div>
-                    <div className="coach-modal-field">
-                      <label htmlFor="ki-curls">Partial Curl-Ups (Reps / 30s)</label>
-                      <input
-                        id="ki-curls"
-                        type="number"
-                        value={kiCurlUps}
-                        onChange={e => setKiCurlUps(parseInt(e.target.value))}
-                      />
-                    </div>
-                    <div className="coach-modal-field">
-                      <label htmlFor="ki-push">Push-Ups (Reps)</label>
-                      <input
-                        id="ki-push"
-                        type="number"
-                        value={kiPushUps}
-                        onChange={e => setKiPushUps(parseInt(e.target.value))}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="coach-modal-actions" style={{ marginTop: '1.25rem' }}>
-                <button
-                  type="button"
-                  className="coach-secondary-action-btn"
-                  onClick={() => setIsKheloIndiaModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="coach-primary-action-btn">
-                  Evaluate &amp; Save SAI Report Card
-                </button>
-              </div>
-            </form>
+            <div className="coach-modal-field">
+              <label htmlFor="ki-age">Age (Years)</label>
+              <input
+                id="ki-age"
+                type="number"
+                min="5"
+                max="22"
+                value={kiAge}
+                onChange={e => kiForm.setField('age', parseInt(e.target.value, 10) || 14)}
+                required
+              />
+            </div>
           </div>
-        </div>
-      )}
+          <div className="kg-form-grid">
+            <div className="coach-modal-field">
+              <label htmlFor="ki-gender">Gender</label>
+              <select
+                id="ki-gender"
+                value={kiGender}
+                onChange={e => kiForm.setField('gender', e.target.value as 'male' | 'female')}
+              >
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+            <div className="coach-modal-field">
+              <label htmlFor="ki-height">Height (cm)</label>
+              <input
+                id="ki-height"
+                type="number"
+                value={kiHeightCm}
+                onChange={e => kiForm.setField('heightCm', parseFloat(e.target.value) || 0)}
+                required
+              />
+            </div>
+            <div className="coach-modal-field">
+              <label htmlFor="ki-weight">Weight (kg)</label>
+              <input
+                id="ki-weight"
+                type="number"
+                value={kiWeightKg}
+                onChange={e => kiForm.setField('weightKg', parseFloat(e.target.value) || 0)}
+                required
+              />
+            </div>
+          </div>
+
+          {kiAge <= 8 ? (
+            <div style={{ borderTop: '1px dashed var(--line)', paddingTop: '1rem' }}>
+              <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem' }}>Sub-Junior Tests (Ages 5–8)</h4>
+              <div className="kg-form-grid">
+                <div className="coach-modal-field">
+                  <label htmlFor="ki-flamingo">Flamingo Balance (Falls / 60s)</label>
+                  <input
+                    id="ki-flamingo"
+                    type="number"
+                    value={kiFlamingoFalls}
+                    onChange={e => kiForm.setField('flamingoFalls', parseInt(e.target.value, 10) || 0)}
+                  />
+                </div>
+                <div className="coach-modal-field">
+                  <label htmlFor="ki-tapping">Plate Tapping (Seconds / 25 taps)</label>
+                  <input
+                    id="ki-tapping"
+                    type="number"
+                    step="0.1"
+                    value={kiPlateTapping}
+                    onChange={e => kiForm.setField('plateTapping', parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ borderTop: '1px dashed var(--line)', paddingTop: '1rem' }}>
+              <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.9rem' }}>Junior &amp; Senior SAI National Battery (Ages 9–18+)</h4>
+              <div className="kg-form-grid">
+                <div className="coach-modal-field">
+                  <label htmlFor="ki-dash">50m Dash (Seconds)</label>
+                  <input
+                    id="ki-dash"
+                    type="number"
+                    step="0.01"
+                    value={ki50mDash}
+                    onChange={e => kiForm.setField('dash50m', parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="coach-modal-field">
+                  <label htmlFor="ki-run">600m Run (Seconds)</label>
+                  <input
+                    id="ki-run"
+                    type="number"
+                    value={ki600mRun}
+                    onChange={e => kiForm.setField('run600m', parseInt(e.target.value, 10) || 0)}
+                  />
+                </div>
+                <div className="coach-modal-field">
+                  <label htmlFor="ki-reach">Sit &amp; Reach (cm)</label>
+                  <input
+                    id="ki-reach"
+                    type="number"
+                    value={kiSitReach}
+                    onChange={e => kiForm.setField('sitReach', parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="coach-modal-field">
+                  <label htmlFor="ki-curls">Partial Curl-Ups (Reps / 30s)</label>
+                  <input
+                    id="ki-curls"
+                    type="number"
+                    value={kiCurlUps}
+                    onChange={e => kiForm.setField('curlUps', parseInt(e.target.value, 10) || 0)}
+                  />
+                </div>
+                <div className="coach-modal-field">
+                  <label htmlFor="ki-push">Push-Ups (Reps)</label>
+                  <input
+                    id="ki-push"
+                    type="number"
+                    value={kiPushUps}
+                    onChange={e => kiForm.setField('pushUps', parseInt(e.target.value, 10) || 0)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="coach-modal-actions" style={{ marginTop: '1.25rem' }}>
+            <button
+              type="button"
+              className="kg-btn kg-btn-ghost kg-touch-target"
+              onClick={() => setIsKheloIndiaModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="kg-btn kg-btn-primary kg-touch-target">
+              Evaluate &amp; Save SAI Report Card
+            </button>
+          </div>
+        </form>
+      </WorkspaceDetailDrawer>
 
       {/* MODAL: ADD TRAINEE */}
       {isAddTraineeModalOpen && (
@@ -2393,226 +2383,129 @@ export default function CoachDashboardPage({
         </div>
       )}
 
-      {/* MODAL: BULK IMPORT TRAINEES FROM CSV / EXCEL */}
-      {isImportCsvModalOpen && (
-        <div className="coach-modal-backdrop" onClick={() => setIsImportCsvModalOpen(false)}>
-          <div className="coach-modal-card" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
-            <div className="coach-modal-header">
-              <h3>Bulk Import Trainees from CSV / Excel</h3>
-              <button
-                type="button"
-                className="coach-modal-close-btn"
-                onClick={() => setIsImportCsvModalOpen(false)}
-              >
-                <SiteIcon name="close" size={16} />
-              </button>
-            </div>
+      {/* DRAWER: BULK IMPORT TRAINEES FROM CSV / EXCEL */}
+      <WorkspaceDetailDrawer
+        open={isImportCsvModalOpen}
+        onClose={() => setIsImportCsvModalOpen(false)}
+        title="Bulk Import Trainees from CSV / Excel"
+        width={620}
+      >
+        <CsvTransferControls
+          title="Import Trainees CSV"
+          description="Columns: Trainee Name, Parent Name, Parent WhatsApp, Batch Name, Monthly Fee, Age"
+          onDownloadSample={() => handleCsvInputChange(getSampleCoachTraineeCsv())}
+          onImportCsvText={text => handleCsvInputChange(text)}
+        />
 
-            <div style={{ padding: '1.25rem' }}>
-              <div className="coach-csv-template-box">
-                <div>
-                  <strong style={{ fontSize: '13px' }}>Need the format template?</strong>
-                  <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>
-                    Columns: Trainee Name, Parent Name, Parent WhatsApp, Batch Name, Monthly Fee, Age
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="coach-hub-btn-outline"
-                  onClick={() => {
-                    const sample = getSampleCoachTraineeCsv()
-                    handleCsvInputChange(sample)
-                  }}
-                  style={{ fontSize: '12px', padding: '6px 10px', whiteSpace: 'nowrap' }}
-                >
-                  Load Sample Data
-                </button>
-              </div>
+        <div className="coach-modal-field">
+          <label>Paste CSV / Spreadsheet Text</label>
+          <textarea
+            className="coach-csv-textarea"
+            placeholder="Paste rows copied from Excel or CSV here..."
+            value={importCsvText}
+            onChange={e => handleCsvInputChange(e.target.value)}
+          />
+        </div>
 
-              <div className="coach-modal-field">
-                <label>Paste CSV / Spreadsheet Text</label>
-                <textarea
-                  className="coach-csv-textarea"
-                  placeholder="Paste rows copied from Excel or CSV here..."
-                  value={importCsvText}
-                  onChange={e => handleCsvInputChange(e.target.value)}
-                />
-              </div>
-
-              {importCsvErrors.length > 0 && (
-                <div style={{ marginTop: '8px', padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px', color: '#dc2626', fontSize: '12px' }}>
-                  <strong>Validation Notices:</strong>
-                  <ul style={{ margin: '4px 0 0', paddingLeft: '20px' }}>
-                    {importCsvErrors.slice(0, 3).map((err, idx) => (
-                      <li key={idx}>{err}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {importPreviewRows.length > 0 && (
-                <div style={{ marginTop: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <strong style={{ fontSize: '12.5px', color: '#059669' }}>
-                      ✓ {importPreviewRows.length} Trainees Ready to Import
-                    </strong>
-                  </div>
-                  <div style={{ maxHeight: '160px', overflowY: 'auto', marginTop: '6px' }}>
-                    <table className="coach-csv-preview-table">
-                      <thead>
-                        <tr>
-                          <th>Trainee</th>
-                          <th>Parent Contact</th>
-                          <th>Batch</th>
-                          <th>Fee</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {importPreviewRows.map((r, i) => (
-                          <tr key={i}>
-                            <td>{r.traineeName} ({r.ageGroup})</td>
-                            <td>{r.parentName} (+91 {r.parentPhone})</td>
-                            <td>{r.batchName || batches[0]?.batchName}</td>
-                            <td>₹{r.monthlyFee}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '1.25rem', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  className="coach-hub-btn-outline"
-                  onClick={() => setIsImportCsvModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="coach-primary-btn"
-                  disabled={importPreviewRows.length === 0}
-                  onClick={handleConfirmImportCsv}
-                  style={{ opacity: importPreviewRows.length === 0 ? 0.5 : 1 }}
-                >
-                  Import {importPreviewRows.length} Trainees Now
-                </button>
-              </div>
+        {importCsvErrors.length > 0 && (
+          <div className="kg-status-alert is-error">
+            <div>
+              <strong>Validation Notices:</strong>
+              <ul style={{ margin: '4px 0 0', paddingLeft: '20px' }}>
+                {importCsvErrors.slice(0, 3).map((err, idx) => (
+                  <li key={idx}>{err}</li>
+                ))}
+              </ul>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* MODAL: OFFICIAL DIGITAL FEE RECEIPT VOUCHER */}
-      {activeReceipt && (
-        <div className="coach-modal-backdrop" onClick={() => setActiveReceipt(null)}>
-          <div className="coach-receipt-card" onClick={e => e.stopPropagation()}>
-            <div className="coach-receipt-header">
-              <div>
-                <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.9 }}>
-                  Official Payment Receipt
-                </span>
-                <h3 style={{ margin: '2px 0 0', fontSize: '1.2rem', color: '#ffffff' }}>
-                  {activeReceipt.entityName}
-                </h3>
-                {activeReceipt.isVerified && (
-                  <span style={{ fontSize: '11px', color: '#a7f3d0', fontWeight: 600 }}>
-                    🛡️ Official KhelGrid Verified Coach
-                  </span>
-                )}
-              </div>
-              <button
-                type="button"
-                className="coach-modal-close-btn"
-                style={{ color: '#ffffff' }}
-                onClick={() => setActiveReceipt(null)}
-              >
-                <SiteIcon name="close" size={16} />
-              </button>
-            </div>
-
-            <div className="coach-receipt-body">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Receipt Voucher</span>
-                  <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{activeReceipt.receiptNumber}</strong>
-                </div>
-                <div className="coach-receipt-stamp">PAID IN FULL</div>
-              </div>
-
-              <table className="coach-receipt-table">
+        {importPreviewRows.length > 0 && (
+          <div>
+            <strong style={{ fontSize: '12.5px', color: 'var(--kg-emerald)' }}>
+              ✓ {importPreviewRows.length} Trainees Ready to Import
+            </strong>
+            <div style={{ maxHeight: '160px', overflowY: 'auto', marginTop: '6px' }}>
+              <table className="coach-csv-preview-table">
+                <thead>
+                  <tr>
+                    <th>Trainee</th>
+                    <th>Parent Contact</th>
+                    <th>Batch</th>
+                    <th>Fee</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  <tr>
-                    <td>Athlete / Trainee:</td>
-                    <td>{activeReceipt.studentName}</td>
-                  </tr>
-                  <tr>
-                    <td>Parent / Guardian:</td>
-                    <td>{activeReceipt.parentName} (+91 {activeReceipt.parentPhone})</td>
-                  </tr>
-                  <tr>
-                    <td>Batch &amp; Timings:</td>
-                    <td>{activeReceipt.batchName}</td>
-                  </tr>
-                  <tr>
-                    <td>Sport:</td>
-                    <td>{activeReceipt.sport}</td>
-                  </tr>
-                  <tr>
-                    <td>Billing Period:</td>
-                    <td>{activeReceipt.paymentMonth}</td>
-                  </tr>
-                  <tr>
-                    <td>Payment Date:</td>
-                    <td>{activeReceipt.paymentDate}</td>
-                  </tr>
-                  <tr>
-                    <td>Payment Mode:</td>
-                    <td>{activeReceipt.paymentMethod}</td>
-                  </tr>
-                  <tr>
-                    <td>Settlement UPI ID:</td>
-                    <td>{activeReceipt.upiVpa}</td>
-                  </tr>
-                  <tr style={{ borderTop: '2px solid #e2e8f0' }}>
-                    <td style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>Total Amount Paid:</td>
-                    <td style={{ fontSize: '1.25rem', fontWeight: 800, color: '#059669' }}>
-                      ₹{activeReceipt.amount.toLocaleString('en-IN')}
-                    </td>
-                  </tr>
+                  {importPreviewRows.map((r, i) => (
+                    <tr key={i}>
+                      <td>{r.traineeName} ({r.ageGroup})</td>
+                      <td>{r.parentName} (+91 {r.parentPhone})</td>
+                      <td>{r.batchName || batches[0]?.batchName}</td>
+                      <td>₹{r.monthlyFee}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '1.25rem' }}>
-                <a
-                  href={generateWhatsAppReceiptMessageUrl(activeReceipt)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="coach-action-btn whatsapp"
-                  style={{ flex: 1, padding: '10px', justifyContent: 'center', fontSize: '13px' }}
-                >
-                  <SiteIcon name="phone" size={14} />
-                  <span>Send Receipt on WhatsApp</span>
-                </a>
-                <button
-                  type="button"
-                  className="coach-hub-btn-outline"
-                  onClick={() => {
-                    if (typeof window !== 'undefined') window.print()
-                  }}
-                  style={{ padding: '10px 14px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                  title="Print or save as PDF"
-                >
-                  <SiteIcon name="download" size={14} />
-                  <span>Print PDF</span>
-                </button>
-              </div>
             </div>
           </div>
+        )}
+
+        <div className="host-action-row" style={{ justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            className="kg-btn kg-btn-ghost kg-touch-target"
+            onClick={() => setIsImportCsvModalOpen(false)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="kg-btn kg-btn-primary kg-touch-target"
+            disabled={importPreviewRows.length === 0}
+            onClick={handleConfirmImportCsv}
+          >
+            Import {importPreviewRows.length} Trainees Now
+          </button>
         </div>
-      )}
+      </WorkspaceDetailDrawer>
+
+      {/* DRAWER: OFFICIAL DIGITAL FEE RECEIPT VOUCHER */}
+      <WorkspaceDetailDrawer
+        open={Boolean(activeReceipt)}
+        onClose={() => setActiveReceipt(null)}
+        title={activeReceipt ? `Official Payment Receipt · ${activeReceipt.entityName}` : 'Fee Receipt'}
+        statusMessage={activeReceipt?.isVerified ? '🛡️ Official KhelGrid Verified Coach' : undefined}
+        width={540}
+      >
+        {activeReceipt && (
+          <>
+            <FeeReceiptDrawerContent
+              receipt={{
+                receiptNumber: activeReceipt.receiptNumber,
+                payerName: `${activeReceipt.studentName} (Parent: ${activeReceipt.parentName}, +91 ${activeReceipt.parentPhone})`,
+                recipientOrg: activeReceipt.entityName,
+                amountInr: activeReceipt.amount,
+                paymentMethod: `${activeReceipt.paymentMethod} (${activeReceipt.upiVpa})`,
+                paidAt: activeReceipt.paymentDate,
+                billingCycle: `${activeReceipt.paymentMonth} · ${activeReceipt.batchName}`,
+                notes: `${activeReceipt.sport} · Status: PAID IN FULL`,
+              }}
+              onPrint={() => {
+                if (typeof window !== 'undefined') window.print()
+              }}
+            />
+            <a
+              href={generateWhatsAppReceiptMessageUrl(activeReceipt)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="kg-btn kg-btn-primary kg-touch-target"
+            >
+              <SiteIcon name="phone" size={14} />
+              <span>Send Receipt on WhatsApp</span>
+            </a>
+          </>
+        )}
+      </WorkspaceDetailDrawer>
 
       {/* MODAL: LOG COMBINE TEST */}
       {isAddCombineModalOpen && (

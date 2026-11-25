@@ -11,7 +11,7 @@ describe('UserDashboardPage', () => {
     }
   })
 
-  it('renders guest onboarding hero with demo personas and sign-in triggers when logged out', () => {
+  it('renders guest onboarding hero with sign-in triggers and no fake demo personas when logged out', () => {
     vi.spyOn(authClient, 'getStoredAuthUser').mockReturnValue(null)
 
     const html = renderToStaticMarkup(<UserDashboardPage />)
@@ -19,9 +19,10 @@ describe('UserDashboardPage', () => {
     expect(html).toContain('Your Personal Sports Dashboard')
     expect(html).toContain('Sign In to KhelGrid')
     expect(html).toContain('Create Free Athlete Account')
-    expect(html).toContain('Athlete (Aarav Sharma)')
-    expect(html).toContain('Turf Partner (FSV Sports)')
-    expect(html).toContain('Platform Admin')
+    // No fake demo personas should appear
+    expect(html).not.toContain('Athlete (Aarav Sharma)')
+    expect(html).not.toContain('Turf Partner (FSV Sports)')
+    expect(html).not.toContain('Platform Admin')
     expect(html).toContain('Digital Sports CV')
     expect(html).toContain('Essential Quick Actions')
   })

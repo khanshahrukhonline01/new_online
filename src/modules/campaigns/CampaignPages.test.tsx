@@ -1,5 +1,6 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
+import * as authClient from '../../integrations/supabase/auth-client'
 import { CampaignMarketplacePage } from './CampaignMarketplacePage'
 import { CampaignCreationPage } from './CampaignCreationPage'
 import { AdvertiserCampaignManagePage } from './AdvertiserCampaignManagePage'
@@ -13,6 +14,7 @@ import {
 
 describe('KhelGrid Sports Creator Campaign Marketplace — User Frontend UI Pages', () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
     resetCampaignStorageForTesting()
   })
 
@@ -144,23 +146,52 @@ describe('KhelGrid Sports Creator Campaign Marketplace — User Frontend UI Page
   })
 
   describe('CreatorHubPage', () => {
-    it('renders the sports creator workspace with profile, tabs, and reward ledger notice', () => {
+    it('shows honest creator sign-in gate when unauthenticated without inventing a demo creator profile', () => {
+      vi.spyOn(authClient, 'getStoredAuthUser').mockReturnValue(null)
+      const html = renderToStaticMarkup(<CreatorHubPage />)
+      expect(html).toContain('Sign in to open your Sports Creator Hub')
+      expect(html).not.toContain('@rohan_cricket_insider')
+      expect(html).not.toContain('Rohan Sharma Sports')
+    })
+
+    it('renders the sports creator workspace with profile, tabs, and reward ledger notice for signed-in creators', async () => {
+      const { saveCreatorProfile } = await import('./campaignClient')
+      vi.spyOn(authClient, 'getStoredAuthUser').mockReturnValue({
+        id: 'usr-creator-1',
+        name: 'Vikram Creator',
+        fullName: 'Vikram Creator',
+        email: 'vikram@khelgrid.test',
+        role: 'athlete',
+        isVerified: true,
+        createdAt: '2026-11-01T00:00:00Z',
+      })
+      saveCreatorProfile({
+        id: 'creator-usr-creator-1',
+        userId: 'usr-creator-1',
+        displayName: 'Vikram Pitch Lab',
+        handle: '@vikram_pitch_lab',
+        bio: 'Cricket biomechanics & trial coverage.',
+        primarySport: 'Cricket',
+        platforms: [],
+        locationCity: 'Mumbai',
+        languages: ['English', 'Hindi'],
+        isVerifiedCreator: true,
+        totalEarningsPaise: 0,
+        completedDeliverablesCount: 0,
+        joinedAt: '2026-11-01T00:00:00Z',
+      })
+
       const html = renderToStaticMarkup(<CreatorHubPage />)
 
-      // Profile details
-      expect(html).toContain('Rohan Sharma')
-      expect(html).toContain('@rohan_cricket_insider')
+      expect(html).toContain('Vikram Pitch Lab')
+      expect(html).toContain('@vikram_pitch_lab')
       expect(html).toContain('Verified Creator')
       expect(html).toContain('Ledger Earnings')
-
-      // Hub tabs
       expect(html).toContain('Opportunities')
       expect(html).toContain('My Applications')
       expect(html).toContain('Submit Deliverable')
       expect(html).toContain('Channels')
       expect(html).toContain('Reward Ledger')
-
-      // Opportunities content
       expect(html).toContain('Verified Sports Campaigns Open for Pitch')
       expect(html).toContain('Delhi Cricket Academy — High Performance Summer Trials 2026')
     })

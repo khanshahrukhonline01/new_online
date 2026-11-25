@@ -68,7 +68,7 @@ export const navigationModules: NavigationModule[] = [
     icon: 'target',
     items: [
       { id: 'sports-cv', label: 'Sports CV Builder', href: '/sports-cv', icon: 'sports-cv', module: 'athlete-tools', available: true },
-      { id: 'my-stats', label: 'Athlete Statistics', href: '/stats', icon: 'chart', module: 'athlete-tools' },
+      { id: 'my-stats', label: 'Athlete Statistics', href: '/stats', icon: 'chart', module: 'athlete-tools', available: true },
       { id: 'talent-scanner', label: 'Talent Scanner', href: '/talent-scanner', icon: 'target', module: 'athlete-tools', available: true },
       { id: 'scout-portal', label: 'Scout Portal', href: '/scout-portal', icon: 'users', module: 'athlete-tools', available: true },
       { id: 'verification', label: 'Athlete Verification', href: '/verification', icon: 'badge-check', module: 'athlete-tools', available: true },

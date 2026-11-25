@@ -1,15 +1,21 @@
 import { useEffect, useMemo, useRef, useState, memo } from 'react'
 import {
-  getAcademies,
-  getAnnouncements,
-  getCities,
-  getOpportunities,
-  getPickupGames,
-  getSports,
-  getVenues,
   updatePickupGameSpots,
+  type CatalogueResult,
+  type DatabaseAnnouncement,
+  type DatabaseCity,
+  type DatabasePickupGame,
 } from '../../integrations/supabase/public-client'
-import type { CatalogueResult, DatabaseAnnouncement, DatabaseCity, DatabasePickupGame } from '../../integrations/supabase/public-client'
+import {
+  getCachedAcademies,
+  getCachedAnnouncements,
+  getCachedCities,
+  getCachedOpportunities,
+  getCachedPickupGames,
+  getCachedSports,
+  getCachedVenues,
+  invalidateSharedCatalogue,
+} from '../../shared/cache/catalogueQueryCache'
 import { subscribeToRealtimeCatalogue } from '../../integrations/supabase/realtime-client'
 import type { Academy, Opportunity, Sport, Venue } from '../../shared/domain'
 import { liveSportsEngine } from '../live/services/liveSportsEngine'
@@ -636,15 +642,16 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
   // Load database catalogues
   useEffect(() => {
     let active = true
-    const loadCatalogues = () => {
+    const loadCatalogues = (forceRefresh = false) => {
+      if (forceRefresh) invalidateSharedCatalogue()
       Promise.all([
-        getSports(),
-        getOpportunities(),
-        getVenues(),
-        getAcademies(),
-        getCities(),
-        getPickupGames(),
-        getAnnouncements(),
+        getCachedSports(),
+        getCachedOpportunities(),
+        getCachedVenues(),
+        getCachedAcademies(),
+        getCachedCities(),
+        getCachedPickupGames(),
+        getCachedAnnouncements(),
       ]).then(
         ([sports, opportunities, venues, academies, cities, pickupGames, announcements]) => {
           if (active) {
@@ -663,10 +670,11 @@ export default function HomePage({ onNavigate }: HomePageProps = {}) {
       )
     }
     loadCatalogues()
-    window.addEventListener('khelgrid:listing-added', loadCatalogues)
+    const handleListingAdded = () => loadCatalogues(true)
+    window.addEventListener('khelgrid:listing-added', handleListingAdded)
     return () => {
       active = false
-      window.removeEventListener('khelgrid:listing-added', loadCatalogues)
+      window.removeEventListener('khelgrid:listing-added', handleListingAdded)
     }
   }, [])
 

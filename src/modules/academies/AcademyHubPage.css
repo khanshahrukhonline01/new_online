@@ -1189,3 +1189,33 @@ html.dark .academy-verification-status-banner.verified {
 
 
 
+
+/* Mobile <700px zero-overflow, dark-mode ledger tokens & 44px+ touch targets */
+@media (max-width: 700px) {
+  .academy-hub-root,
+  .academy-hub-container {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  .academy-tab-btn,
+  .academy-btn,
+  .academy-input,
+  .academy-select {
+    min-height: var(--touch-min, 44px);
+  }
+}
+
+html.dark .academy-ledger-card.cash-alert {
+  background: var(--warning-soft, rgba(245, 158, 11, 0.16));
+  border-color: var(--warning, #fbbf24);
+}
+
+html.dark .ledger-status-pill.settled {
+  background: var(--accent-soft, rgba(16, 185, 129, 0.16));
+  color: var(--accent, #10b981);
+}
+
+html.dark .ledger-status-pill.cash_in_hand {
+  background: var(--warning-soft, rgba(245, 158, 11, 0.16));
+  color: var(--warning, #fbbf24);
+}

@@ -1,4 +1,25 @@
+// ---------------------------------------------------------------------------
+// Workspace shell persona types
+// ---------------------------------------------------------------------------
+export type WorkspacePersona =
+  | 'athlete'
+  | 'organization'
+  | 'academy'
+  | 'coach'
+  | 'turf'
+  | 'host'
+  | 'tournament'
+  | 'creator'
+
+const WORKSPACE_PERSONAS = new Set<string>([
+  'athlete', 'organization', 'academy', 'coach', 'turf', 'host', 'tournament', 'creator',
+])
+
+// ---------------------------------------------------------------------------
+// Route match union
+// ---------------------------------------------------------------------------
 export type RouteMatch =
+  | { name: 'workspace-shell'; canonicalPath: '/workspace/:persona/:section'; persona: WorkspacePersona; section: string }
   | { name: 'home'; canonicalPath: '/' }
   | { name: 'sports-index'; canonicalPath: '/sports' }
   | { name: 'sport-detail'; canonicalPath: '/sports/:slug'; slug: string }
@@ -237,6 +258,24 @@ export function resolveRoute(pathname: string): RouteMatch {
   }
 
   if (featurePages[path]) return { name: 'feature', canonicalPath: path, slug: featurePages[path] }
+
+  // /workspace/:persona and /workspace/:persona/:section — unified workspace shell
+  if (path === '/workspace') return { name: 'feature', canonicalPath: '/workspace', slug: 'KhelGrid Workspace' }
+  if (path.startsWith('/workspace/')) {
+    const rest = path.slice('/workspace/'.length)
+    const parts = rest.split('/')
+    const persona = parts[0]
+    if (persona && WORKSPACE_PERSONAS.has(persona)) {
+      const section = parts[1] || 'overview'
+      return {
+        name: 'workspace-shell',
+        canonicalPath: '/workspace/:persona/:section',
+        persona: persona as WorkspacePersona,
+        section,
+      }
+    }
+  }
+
   return { name: 'not-found', canonicalPath: '/404' }
 }
 function decodeURIComponentSafe(value: string): string {
@@ -269,3 +308,52 @@ export function getPublishedListingUrl(listingType: string, titleOrSlug: string)
   }
 }
 
+
+// ---------------------------------------------------------------------------
+// Operational route helpers
+// ---------------------------------------------------------------------------
+
+/** Operational routes where marketing chrome (SportsBar, FAQ, footer sections)
+ *  should be suppressed and CustomCursor disabled. */
+const OPERATIONAL_PREFIXES = [
+  '/workspace',
+  '/dashboard',
+  '/academy-hub',
+  '/coach-dashboard',
+  '/turf-calendar',
+  '/host',
+  '/tournament-ops',
+  '/organizations',
+  '/creator',
+  '/parent-portal',
+  '/gate-checkin',
+  '/gate-check-in',
+  '/admin',
+]
+
+export function isOperationalRoutePath(pathname: string): boolean {
+  const p = normalizePath(pathname)
+  return OPERATIONAL_PREFIXES.some(prefix => p === prefix || p.startsWith(prefix + '/'))
+}
+
+/** Map legacy deep-link paths to unified WorkspaceShell targets. */
+export type WorkspaceTarget = { persona: WorkspacePersona; section: string }
+
+const LEGACY_PATH_MAP: Record<string, WorkspaceTarget> = {
+  '/dashboard':       { persona: 'athlete',      section: 'overview' },
+  '/academy-hub':     { persona: 'academy',      section: 'overview' },
+  '/coach-dashboard': { persona: 'coach',        section: 'overview' },
+  '/turf-calendar':   { persona: 'turf',         section: 'calendar' },
+  '/host':            { persona: 'host',          section: 'overview' },
+  '/tournament-ops':  { persona: 'tournament',   section: 'overview' },
+  '/organizations':   { persona: 'organization', section: 'overview' },
+  '/creator':         { persona: 'creator',      section: 'overview' },
+  '/creator-hub':     { persona: 'creator',      section: 'overview' },
+  '/workspaces':      { persona: 'organization', section: 'overview' },
+}
+
+/** Returns a WorkspaceTarget for a legacy path, or null if not a legacy operational path. */
+export function mapLegacyPathToWorkspaceTarget(pathname: string): WorkspaceTarget | null {
+  const p = normalizePath(pathname)
+  return LEGACY_PATH_MAP[p] ?? null
+}

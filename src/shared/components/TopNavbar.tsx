@@ -53,7 +53,6 @@ export default function TopNavbar({
   const userMenuWrapRef = useRef<HTMLDivElement>(null)
   const userMenuTriggerRef = useRef<HTMLButtonElement>(null)
   const listingAction = TOP_NAV_SUBMIT_ACTIONS.find(action => action.id === 'all')
-  const paperAction = TOP_NAV_SUBMIT_ACTIONS.find(action => action.id === 'chronicle')
 
   useEffect(() => {
     if (!userMenuOpen) return
@@ -149,24 +148,15 @@ export default function TopNavbar({
             <SiteIcon name="search" size={17} />
           </button>
 
-          <div className="header-partner-nav" aria-label="Partner and Institutional workspaces">
-            <a
-              className={`header-partner-link${path === '/organizations' || path.startsWith('/organizations/') ? ' is-active' : ''}`}
-              href="/organizations"
-              onClick={event => onNavigate(event, '/organizations')}
-              title="Organizations & Academy SaaS Workspace"
-            >
-              Organizations
-            </a>
-            <a
-              className={`header-partner-link${path === '/campaigns' || path.startsWith('/campaigns/') ? ' is-active' : ''}`}
-              href="/campaigns"
-              onClick={event => onNavigate(event, '/campaigns')}
-              title="Sports Creator Campaign Marketplace"
-            >
-              Campaigns
-            </a>
-          </div>
+          <a
+            className={`header-workspace-pill${path === '/workspace' || path.startsWith('/workspace/') ? ' is-active' : ''}`}
+            href="/workspace"
+            onClick={event => onNavigate(event, '/workspace')}
+            title="Unified Athlete & Partner Workspace"
+          >
+            <SiteIcon name="chart" size={14} />
+            <span>Workspace</span>
+          </a>
 
           <span className="header-divider header-divider-partner" aria-hidden="true" />
 
@@ -187,19 +177,6 @@ export default function TopNavbar({
               </a>
             )
           })()}
-
-          {paperAction && (
-            <a
-              className="header-submit-direct header-submit-paper header-action-chronicle"
-              href={paperAction.href}
-              onClick={event => onNavigate(event, paperAction.href)}
-              title={paperAction.title}
-              aria-label={t(paperAction.translationKey, paperAction.defaultLabel)}
-            >
-              <SiteIcon name={paperAction.icon} size={15} />
-              <span>{t(paperAction.translationKey, paperAction.defaultLabel)}</span>
-            </a>
-          )}
 
           <span className="header-divider header-divider-utilities" aria-hidden="true" />
 

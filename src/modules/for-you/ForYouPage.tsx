@@ -2,16 +2,15 @@ import { useEffect, useState, type MouseEvent } from 'react'
 import {
   getStoredAuthUser,
   onAuthChange,
-  signInWithEmail,
   type AuthUserProfile,
 } from '../../integrations/supabase/auth-client'
+import type { DatabasePickupGame } from '../../integrations/supabase/public-client'
 import {
-  getOpportunities,
-  getVenues,
-  getCoaches,
-  getPickupGames,
-  type DatabasePickupGame,
-} from '../../integrations/supabase/public-client'
+  getCachedCoaches,
+  getCachedOpportunities,
+  getCachedPickupGames,
+  getCachedVenues,
+} from '../../shared/cache/catalogueQueryCache'
 import type { Opportunity, Venue, Coach } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import './ForYouPage.css'
@@ -21,25 +20,6 @@ export interface ForYouPageProps {
   onOpenAuth?: (tab?: 'login' | 'signup') => void
 }
 
-const DEMO_PERSONAS = [
-  {
-    label: 'Youth Athlete',
-    role: 'athlete' as const,
-    name: 'Aarav Sharma',
-    email: 'aarav.athlete@khelgrid.com',
-    city: 'New Delhi',
-    sport: 'Football',
-  },
-  {
-    label: 'Turf Host',
-    role: 'host' as const,
-    name: 'FSV Arena Sports',
-    email: 'host@fsvsports.in',
-    city: 'Bengaluru',
-    sport: 'Cricket',
-  },
-]
-
 export default function ForYouPage({ onNavigate, onOpenAuth }: ForYouPageProps) {
   const [authUser, setAuthUser] = useState<AuthUserProfile | null>(() => getStoredAuthUser())
   const [trials, setTrials] = useState<Opportunity[]>([])
@@ -47,7 +27,6 @@ export default function ForYouPage({ onNavigate, onOpenAuth }: ForYouPageProps) 
   const [coaches, setCoaches] = useState<Coach[]>([])
   const [pickupGames, setPickupGames] = useState<DatabasePickupGame[]>([])
   const [selectedSport, setSelectedSport] = useState<string>('all')
-  const [demoNotice, setDemoNotice] = useState<string | null>(null)
 
   // Listen to live auth changes
   useEffect(() => {
@@ -67,28 +46,28 @@ export default function ForYouPage({ onNavigate, onOpenAuth }: ForYouPageProps) 
   useEffect(() => {
     let active = true
 
-    void getOpportunities().then(res => {
+    void getCachedOpportunities().then(res => {
       if (!active) return
       if (res.status === 'ready' && res.data) {
         setTrials(res.data.slice(0, 6))
       }
     })
 
-    void getVenues().then(res => {
+    void getCachedVenues().then(res => {
       if (!active) return
       if (res.status === 'ready' && res.data) {
         setVenues(res.data.slice(0, 4))
       }
     })
 
-    void getCoaches().then(res => {
+    void getCachedCoaches().then(res => {
       if (!active) return
       if (res.status === 'ready' && res.data) {
         setCoaches(res.data.slice(0, 4))
       }
     })
 
-    void getPickupGames().then(res => {
+    void getCachedPickupGames().then(res => {
       if (!active) return
       if (res.status === 'ready' && res.data) {
         setPickupGames(res.data.slice(0, 4))
@@ -103,17 +82,6 @@ export default function ForYouPage({ onNavigate, onOpenAuth }: ForYouPageProps) 
   const handleLink = (e: MouseEvent<HTMLAnchorElement>, path: string) => {
     if (onNavigate) {
       onNavigate(e, path)
-    }
-  }
-
-  const handleDemoLogin = async (persona: typeof DEMO_PERSONAS[0]) => {
-    const res = await signInWithEmail({
-      email: persona.email,
-      password: 'password123',
-    })
-    if (res.success && res.user) {
-      setDemoNotice(`Switched session to ${res.user.fullName} (${persona.label}). Personalized feed activated!`)
-      setTimeout(() => setDemoNotice(null), 4000)
     }
   }
 
@@ -159,23 +127,6 @@ export default function ForYouPage({ onNavigate, onOpenAuth }: ForYouPageProps) 
             </button>
           </div>
 
-          <div className="for-you-demo-box">
-            <span className="demo-box-label">Or test drive instantly with 1-tap persona:</span>
-            <div className="demo-persona-chips">
-              {DEMO_PERSONAS.map(p => (
-                <button
-                  key={p.email}
-                  type="button"
-                  className="demo-persona-btn"
-                  onClick={() => void handleDemoLogin(p)}
-                >
-                  <SiteIcon name="check-circle" size={13} />
-                  <span>{p.label}: {p.name} ({p.sport})</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="for-you-preview-grid">
             <div className="for-you-preview-card">
               <div className="preview-icon green">
@@ -207,13 +158,6 @@ export default function ForYouPage({ onNavigate, onOpenAuth }: ForYouPageProps) 
   // If user is authenticated: Render the full personalized feed!
   return (
     <div className="for-you-container">
-      {demoNotice && (
-        <div className="for-you-toast" role="status" aria-live="polite">
-          <SiteIcon name="check-circle" size={16} />
-          <span>{demoNotice}</span>
-        </div>
-      )}
-
       {/* Hero Ribbon */}
       <div className="for-you-hero">
         <div className="for-you-hero-left">

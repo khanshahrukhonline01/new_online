@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveRoute } from './routing'
+import { resolveRoute, isOperationalRoutePath, mapLegacyPathToWorkspaceTarget } from './routing'
 
 describe('platform route coverage', () => {
   it('routes the core discover pages to their implemented screens', () => {
@@ -236,6 +236,29 @@ describe('platform route coverage', () => {
       name: 'feature',
       canonicalPath: '/parent-portal',
       slug: 'Parent & Athlete Passbook',
+    })
+  })
+
+  it('resolves unified /workspace/:persona/:section routes and identifies operational chrome paths', () => {
+    expect(resolveRoute('/workspace/athlete/overview')).toEqual({
+      name: 'workspace-shell',
+      canonicalPath: '/workspace/:persona/:section',
+      persona: 'athlete',
+      section: 'overview',
+    })
+    expect(resolveRoute('/workspace/academy')).toEqual({
+      name: 'workspace-shell',
+      canonicalPath: '/workspace/:persona/:section',
+      persona: 'academy',
+      section: 'overview',
+    })
+    expect(isOperationalRoutePath('/workspace/coach/athletes')).toBe(true)
+    expect(isOperationalRoutePath('/academy-hub')).toBe(true)
+    expect(isOperationalRoutePath('/')).toBe(false)
+    expect(isOperationalRoutePath('/opportunities')).toBe(false)
+    expect(mapLegacyPathToWorkspaceTarget('/turf-calendar')).toEqual({
+      persona: 'turf',
+      section: 'calendar',
     })
   })
 })

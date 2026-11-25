@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { ThemeProvider } from './shared/context/ThemeContext'
+import { RouterProvider } from './shared/routing/RouterContext'
 import './i18n'
 import './styles.css'
 
@@ -33,7 +34,9 @@ if (!root) throw new Error('Root element #root was not found')
 createRoot(root).render(
   <StrictMode>
     <ThemeProvider>
-      <App />
+      <RouterProvider>
+        <App />
+      </RouterProvider>
     </ThemeProvider>
   </StrictMode>,
 )

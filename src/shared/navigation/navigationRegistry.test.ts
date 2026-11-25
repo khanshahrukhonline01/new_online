@@ -30,10 +30,8 @@ describe('shared navigation registry', () => {
     expect(headerNavigation.map(item => item.href)).toEqual(['/', '/workspace', '/saved'])
   })
 
-  it('does not mark unfinished personal and scouting tools as available', () => {
-    for (const href of ['/stats']) {
-      expect(primaryNavigation.find(item => item.href === href)?.available).not.toBe(true)
-    }
+  it('marks /stats as available now that the route is live', () => {
+    expect(primaryNavigation.find(item => item.href === '/stats')?.available).toBe(true)
     expect(primaryNavigation.find(item => item.href === '/for-you')?.available).toBe(true)
     expect(primaryNavigation.find(item => item.href === '/workspace')?.available).toBe(true)
     expect(primaryNavigation.find(item => item.href === '/saved')?.available).toBe(true)

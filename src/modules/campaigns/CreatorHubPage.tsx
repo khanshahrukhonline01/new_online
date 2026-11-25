@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import {
-  getCreatorProfile,
+  getCreatorProfileForUser,
   saveCreatorProfile,
   getCampaigns,
   getCampaignApplications,
@@ -15,7 +15,11 @@ import {
   type SocialPlatform,
   type DeliverableType,
 } from './campaignClient'
+import { getStoredAuthUser } from '../../integrations/supabase/auth-client'
+import { EmptyState } from '../../shared/components/ui/EmptyState'
+import { useFormState } from '../../shared/hooks/useFormState'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { useRouter } from '../../shared/routing/useRouter'
 import './CreatorHubPage.css'
 
 interface CreatorHubPageProps {
@@ -25,11 +29,25 @@ interface CreatorHubPageProps {
 type CreatorHubTab = 'opportunities' | 'kanban_pipeline' | 'applications' | 'submit_deliverable' | 'channels' | 'ledger'
 
 export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
+  const { navigate } = useRouter()
+  const authUser = getStoredAuthUser()
   const [activeTab, setActiveTab] = useState<CreatorHubTab>('opportunities')
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
-  // Creator profile state
-  const [profile, setProfile] = useState<CreatorProfile>(() => getCreatorProfile())
+  // Creator profile state (requires authenticated user or explicit registration — no fabricated demo profile)
+  const [profile, setProfile] = useState<CreatorProfile | null>(() =>
+    getCreatorProfileForUser(authUser?.id),
+  )
+
+  const onboardForm = useFormState({
+    displayName: authUser?.fullName || '',
+    handle: authUser?.fullName
+      ? `@${authUser.fullName.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`
+      : '',
+    primarySport: authUser?.preferredSports?.[0] || 'Cricket',
+    locationCity: authUser?.city || 'Delhi NCR',
+    bio: 'Grassroots Indian sports creator covering verified trials and coaching stories.',
+  })
 
   // Deliverable submission state
   const [subCampaignId, setSubCampaignId] = useState<string>('')
@@ -49,9 +67,8 @@ export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
     if (e) e.preventDefault()
     if (onNavigate) {
       onNavigate(e, targetPath)
-    } else if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', targetPath)
-      window.dispatchEvent(new PopStateEvent('popstate'))
+    } else {
+      navigate(targetPath, { event: e })
     }
   }
 
@@ -65,29 +82,43 @@ export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger])
 
+  const profileId = profile?.id ?? ''
+
   const myApplications = useMemo(() => {
-    return getCampaignApplications({ creatorId: profile.id })
+    if (!profileId) return []
+    return getCampaignApplications({ creatorId: profileId })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshTrigger, profile.id])
+  }, [refreshTrigger, profileId])
 
   const mySubmissions = useMemo(() => {
-    return getDeliverableSubmissions({ creatorId: profile.id })
+    if (!profileId) return []
+    return getDeliverableSubmissions({ creatorId: profileId })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshTrigger, profile.id])
+  }, [refreshTrigger, profileId])
 
   const myLedger = useMemo(() => {
-    return getRewardLedger(profile.id)
+    if (!profileId) return []
+    return getRewardLedger(profileId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshTrigger, profile.id])
+  }, [refreshTrigger, profileId])
 
   const totalEarningsPaise = useMemo(() => {
     return myLedger.reduce((sum, entry) => sum + entry.amountPaise, 0)
   }, [myLedger])
 
   const earningsSummary = useMemo(() => {
-    return getCreatorEarningsSummary(profile.id)
+    if (!profileId) {
+      return {
+        clearedPaise: 0,
+        pendingReviewPaise: 0,
+        disputedPaise: 0,
+        lifetimeEarnedPaise: 0,
+        completedDeliverablesCount: 0,
+      }
+    }
+    return getCreatorEarningsSummary(profileId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile.id, refreshTrigger])
+  }, [profileId, refreshTrigger])
 
   // Selected campaigns eligible for deliverable submission
   const eligibleSelectedCampaigns = useMemo(() => {
@@ -109,7 +140,7 @@ export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
   }, [subCanonicalUrl, subPlatform])
 
   const handleDownloadStatement = () => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined' || !profile) return
     const rows = [
       ['Transaction ID', 'Date', 'Description', 'Amount Paise', 'Amount INR', 'Status'],
       ...myLedger.map(l => [
@@ -133,6 +164,7 @@ export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
 
   const handleSubmitDeliverable = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!profile) return
     setSubmissionFeedback(null)
 
     if (!subCampaignId) {
@@ -182,7 +214,7 @@ export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
 
   const handleAddChannel = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newHandle.trim() || !newChannelUrl.trim()) return
+    if (!profile || !newHandle.trim() || !newChannelUrl.trim()) return
 
     const updatedProfile: CreatorProfile = {
       ...profile,
@@ -240,6 +272,107 @@ export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
         </div>
       </div>
 
+      {/* Creator Profile Guard & Honest Onboarding */}
+      {!profile ? (
+        <section className="kg-workflow-card" aria-label="Creator onboarding">
+          {!authUser ? (
+            <EmptyState
+              icon={<SiteIcon name="award" size={26} />}
+              title="Sign in to open your Sports Creator Hub"
+              description="Pitch to verified academies and tournaments, track campaign deliverables, and manage reward ledgers under your own account."
+              action={
+                <>
+                  <a href="/login" onClick={e => handleNav('/login', e)} className="kg-btn kg-btn-primary kg-touch-target">
+                    Sign In
+                  </a>
+                  <a href="/campaigns" onClick={e => handleNav('/campaigns', e)} className="kg-btn kg-touch-target">
+                    Browse Public Campaigns
+                  </a>
+                </>
+              }
+            />
+          ) : (
+            <form
+              onSubmit={e => {
+                e.preventDefault()
+                if (!onboardForm.fields.displayName.trim() || !onboardForm.fields.handle.trim()) {
+                  onboardForm.setError('displayName', 'Display name and creator handle are required.')
+                  return
+                }
+                const newProfile: CreatorProfile = {
+                  id: `creator-${authUser.id}`,
+                  userId: authUser.id,
+                  displayName: onboardForm.fields.displayName.trim(),
+                  handle: onboardForm.fields.handle.trim().startsWith('@')
+                    ? onboardForm.fields.handle.trim()
+                    : `@${onboardForm.fields.handle.trim()}`,
+                  bio: onboardForm.fields.bio.trim(),
+                  primarySport: onboardForm.fields.primarySport.trim() || 'Multi-Sport',
+                  platforms: [],
+                  locationCity: onboardForm.fields.locationCity.trim() || 'India',
+                  languages: ['English', 'Hindi'],
+                  isVerifiedCreator: Boolean(authUser.isVerified),
+                  totalEarningsPaise: 0,
+                  completedDeliverablesCount: 0,
+                  joinedAt: new Date().toISOString(),
+                }
+                saveCreatorProfile(newProfile)
+                setProfile(newProfile)
+              }}
+            >
+              <h2 style={{ margin: '0 0 0.5rem' }}>Complete Your Sports Creator Profile</h2>
+              <p style={{ margin: '0 0 1rem', color: 'var(--muted)', fontSize: '0.88rem' }}>
+                Set up your creator identity for {authUser.email} to apply for brand briefs and submit deliverables.
+              </p>
+              <div className="kg-form-grid">
+                <label className="kg-form-field">
+                  <span>Creator Display Name *</span>
+                  <input
+                    className="kg-form-input"
+                    value={onboardForm.fields.displayName}
+                    onChange={e => onboardForm.setField('displayName', e.target.value)}
+                    placeholder="e.g. Mumbai Pitch Diary"
+                  />
+                </label>
+                <label className="kg-form-field">
+                  <span>Primary Handle *</span>
+                  <input
+                    className="kg-form-input"
+                    value={onboardForm.fields.handle}
+                    onChange={e => onboardForm.setField('handle', e.target.value)}
+                    placeholder="@your_handle"
+                  />
+                </label>
+                <label className="kg-form-field">
+                  <span>Primary Sport</span>
+                  <input
+                    className="kg-form-input"
+                    value={onboardForm.fields.primarySport}
+                    onChange={e => onboardForm.setField('primarySport', e.target.value)}
+                  />
+                </label>
+                <label className="kg-form-field">
+                  <span>City</span>
+                  <input
+                    className="kg-form-input"
+                    value={onboardForm.fields.locationCity}
+                    onChange={e => onboardForm.setField('locationCity', e.target.value)}
+                  />
+                </label>
+              </div>
+              {onboardForm.errors.displayName && (
+                <p className="kg-field-error">{onboardForm.errors.displayName}</p>
+              )}
+              <div className="host-action-row">
+                <button type="submit" className="kg-btn kg-btn-primary kg-touch-target">
+                  Activate Creator Workspace
+                </button>
+              </div>
+            </form>
+          )}
+        </section>
+      ) : (
+        <>
       {/* Creator Profile Hero Card */}
       <header className="creator-profile-card">
         <div className="creator-card-left">
@@ -992,6 +1125,8 @@ export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
             </table>
           </div>
         </section>
+      )}
+        </>
       )}
     </div>
   )

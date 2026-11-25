@@ -97,7 +97,7 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
     <div className="gate-desk-container">
       {/* Header Banner */}
       <header className="gate-desk-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="gate-header-top">
           <div className="gate-desk-badge">
             <SiteIcon name="shield-check" size={14} />
             <span>Official On-Ground Verification Desk</span>
@@ -106,7 +106,7 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
             <a
               href="/"
               onClick={e => onNavigate(e, '/')}
-              style={{ fontSize: '0.85rem', color: '#64748b', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              className="gate-back-link"
             >
               <span>Back Home</span>
               <SiteIcon name="arrow-up-right" size={14} />
@@ -123,18 +123,8 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
       {toastMessage && (
         <div
           role="alert"
-          style={{
-            marginBottom: '1.5rem',
-            padding: '1rem 1.25rem',
-            borderRadius: '10px',
-            backgroundColor: toastMessage.type === 'success' ? '#ecfdf5' : '#fef2f2',
-            color: toastMessage.type === 'success' ? '#065f46' : '#991b1b',
-            border: `1px solid ${toastMessage.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            fontWeight: 600,
-          }}
+          aria-live="polite"
+          className={`gate-toast-alert ${toastMessage.type === 'success' ? 'is-success' : 'is-error'}`}
         >
           <SiteIcon name={toastMessage.type === 'success' ? 'check' : 'alert-circle'} size={18} />
           <span>{toastMessage.text}</span>
@@ -163,8 +153,7 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
           </button>
           <button
             type="button"
-            className="gate-submit-btn"
-            style={{ backgroundColor: isCameraActive ? '#dc2626' : '#3b82f6' }}
+            className={`gate-submit-btn gate-camera-btn${isCameraActive ? ' is-active' : ''}`}
             onClick={() => setIsCameraActive(!isCameraActive)}
             title="Toggle Camera QR Scanner"
           >
@@ -175,34 +164,12 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
 
         {/* Live Camera Scanner Simulation */}
         {isCameraActive && (
-          <div
-            style={{
-              marginTop: '1.25rem',
-              padding: '1.5rem',
-              background: '#0f172a',
-              borderRadius: '12px',
-              color: '#ffffff',
-              textAlign: 'center',
-            }}
-          >
-            <div
-              style={{
-                width: '180px',
-                height: '180px',
-                margin: '0 auto 1rem',
-                border: '3px dashed #10b981',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'column',
-                gap: '0.5rem',
-              }}
-            >
+          <div className="gate-camera-preview">
+            <div className="gate-camera-reticle">
               <SiteIcon name="camera" size={32} />
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Point camera at pass QR</span>
+              <span className="gate-camera-hint">Point camera at pass QR</span>
             </div>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#cbd5e1' }}>
+            <p className="gate-camera-caption">
               Position player&apos;s digital entry QR code inside the frame to scan.
             </p>
           </div>
@@ -300,12 +267,12 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
 
               {/* Ground Admission Action */}
               <div className="gate-admission-action-box">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
+                <div className="gate-admission-header">
+                  <h3 className="gate-admission-heading">
                     On-Ground Admission Action
                   </h3>
                   {activePass.checkedInAt && (
-                    <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>
+                    <span className="gate-checkedin-badge">
                       ✓ Checked in at {new Date(activePass.checkedInAt).toLocaleTimeString()}
                     </span>
                   )}
@@ -347,13 +314,13 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
 
         {/* Gate Admission Audit Log */}
         <aside className="gate-audit-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px', marginBottom: '0.5rem' }}>
+          <div className="gate-audit-top-row">
             <div>
-              <h2 className="gate-audit-title" style={{ margin: 0 }}>Today&apos;s Gate Admission Log</h2>
+              <h2 className="gate-audit-title">Today&apos;s Gate Admission Log</h2>
               <p className="gate-audit-sub">Chronological audit trail of ground admissions for this facility session.</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ fontSize: '0.78rem', color: isOfflineMode ? '#d97706' : '#64748b', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+            <div className="gate-audit-controls">
+              <label className={`gate-offline-toggle${isOfflineMode ? ' is-offline' : ''}`}>
                 <input
                   type="checkbox"
                   checked={isOfflineMode}
@@ -365,16 +332,7 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
                 <button
                   type="button"
                   onClick={handleSyncOffline}
-                  style={{
-                    fontSize: '0.75rem',
-                    background: '#ecfdf5',
-                    color: '#047857',
-                    border: '1px solid #6ee7b7',
-                    borderRadius: '6px',
-                    padding: '2px 8px',
-                    cursor: 'pointer',
-                    fontWeight: 700,
-                  }}
+                  className="gate-sync-btn"
                   title="Upload offline gate admissions to cloud"
                 >
                   Sync ({auditStats.pendingSyncCount})
@@ -393,9 +351,9 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
                   <div className="gate-log-content">
                     <div className="gate-log-top">
                       <span className="gate-log-name">{log.holderName}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div className="gate-audit-controls">
                         {log.isOfflineRecord && (
-                          <span style={{ fontSize: '0.68rem', background: '#fef3c7', color: '#92400e', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                          <span className="gate-offline-pill">
                             Offline Cached
                           </span>
                         )}
@@ -408,7 +366,7 @@ export function GateCheckInPage({ onNavigate, initialToken }: GateCheckInPagePro
                 </div>
               ))
             ) : (
-              <p style={{ fontSize: '0.85rem', color: '#94a3b8', textAlign: 'center', margin: '2rem 0' }}>
+              <p className="gate-empty-note">
                 No ground admissions recorded yet today.
               </p>
             )}

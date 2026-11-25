@@ -16,11 +16,11 @@ describe('ForYouPage Component', () => {
     expect(html).toContain('Sign In')
   })
 
-  it('renders preview benefits and test persona buttons', () => {
+  it('renders preview benefits without fake demo persona buttons', () => {
     const html = renderToString(<ForYouPage />)
     expect(html).toContain('Targeted Trials &amp; Cutoffs')
     expect(html).toContain('Nearby Turfs &amp; Grounds')
     expect(html).toContain('Certified Tacticians')
-    expect(html).toContain('Aarav Sharma')
+    expect(html).not.toContain('Aarav Sharma')
   })
 })

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, lazy, Suspense, type MouseEvent } from 're
 import HomePage from './modules/home/HomePage'
 import Sidebar from './shared/components/Sidebar'
 import SportsBar from './shared/components/SportsBar'
-import { resolveRoute } from './shared/routing'
+import { resolveRoute, isOperationalRoutePath } from './shared/routing'
 import { SiteIcon } from './shared/components/SiteIcon'
 import TopSportsComplexes from './shared/components/TopSportsComplexes'
 import GameSportPlayAcrossIndia from './shared/components/GameSportPlayAcrossIndia'
@@ -77,6 +77,7 @@ const GateCheckInPage = lazy(() => import('./modules/verification/GateCheckInPag
 const MyPassesVaultPage = lazy(() => import('./modules/passes/MyPassesVaultPage').then(m => ({ default: m.MyPassesVaultPage })))
 const OrganizationsWorkspacePage = lazy(() => import('./modules/organizations/OrganizationsWorkspacePage'))
 const WorkspacePage = lazy(() => import('./modules/workspace/WorkspacePage'))
+const WorkspaceShell = lazy(() => import('./modules/workspace/WorkspaceShell'))
 const CampaignMarketplacePage = lazy(() => import('./modules/campaigns/CampaignMarketplacePage').then(m => ({ default: m.CampaignMarketplacePage })))
 const CampaignCreationPage = lazy(() => import('./modules/campaigns/CampaignCreationPage').then(m => ({ default: m.CampaignCreationPage })))
 const AdvertiserCampaignManagePage = lazy(() => import('./modules/campaigns/AdvertiserCampaignManagePage').then(m => ({ default: m.AdvertiserCampaignManagePage })))
@@ -111,8 +112,8 @@ function currentPath() {
   return window.location.pathname.replace(/\/$/, '') || '/'
 }
 
-export default function App() {
-  const [path, setPath] = useState('/')
+export default function App({ initialPath = '/' }: { initialPath?: string } = {}) {
+  const [path, setPath] = useState(initialPath)
   const [menuOpen, setMenuOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
@@ -239,19 +240,34 @@ export default function App() {
     }
   }
 
-  function navigate(event?: MouseEvent<HTMLAnchorElement>, target?: string) {
+  function navigate(event?: MouseEvent<HTMLAnchorElement>, target?: string, opts?: { preserveScroll?: boolean; replace?: boolean }) {
     if (!target) return
     if (event) {
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || (typeof event.button === 'number' && event.button !== 0)) return
       event.preventDefault()
     }
-    if (typeof window !== 'undefined') {
-      if (target !== path) window.history.pushState({}, '', target)
-      window.scrollTo({ top: 0, behavior: 'auto' })
-    }
     const [rawPath, rawQuery = ''] = target.split('?')
     const nextPath = rawPath.replace(/\/$/, '') || '/'
     const nextSearch = rawQuery ? `?${rawQuery}` : ''
+    const isSameBaseRoute = nextPath === path
+    const isWorkspaceSectionSwitch =
+      path.startsWith('/workspace/') &&
+      nextPath.startsWith('/workspace/') &&
+      path.split('/')[2] === nextPath.split('/')[2]
+
+    if (typeof window !== 'undefined') {
+      const currentFull = window.location.pathname + window.location.search
+      if (target !== currentFull) {
+        if (opts?.replace) {
+          window.history.replaceState({}, '', target)
+        } else {
+          window.history.pushState({}, '', target)
+        }
+      }
+      if (!opts?.preserveScroll && !isSameBaseRoute && !isWorkspaceSectionSwitch) {
+        window.scrollTo({ top: 0, behavior: 'auto' })
+      }
+    }
     if (nextPath === '/login') {
       setAuthModalTab('login')
       setAuthModalOpen(true)
@@ -299,6 +315,20 @@ export default function App() {
     case 'venue-detail': page = <VenueDetailPage slug={match.slug} onNavigate={navigate} onOpenIntake={openListingSubmission} initialBookingOpen={match.isBooking} />; break
     case 'search': page = <SearchPage initialQuery={searchQuery} />; break
     case 'tools-index': page = <SportsToolsPage onNavigate={navigate} initialToolSlug={match.toolSlug} />; break
+    case 'workspace-shell':
+      page = (
+        <WorkspaceShell
+          persona={match.persona}
+          section={match.section}
+          authUser={authUser}
+          onOpenAuth={(tab: 'login' | 'signup' = 'login') => {
+            setAuthModalTab(tab)
+            setAuthModalOpen(true)
+          }}
+          onNavigate={navigate}
+        />
+      )
+      break
     case 'khelchronicle-index': page = <KhelChronicleHome onNavigate={navigate} />; break
     case 'khelchronicle-submit': page = <KhelChronicleSubmitPage onNavigate={navigate} />; break
     case 'khelchronicle-category': page = <KhelChronicleCategoryPage categorySlug={match.category} onNavigate={navigate} />; break
@@ -391,12 +421,11 @@ export default function App() {
           <p className="page-intro">
             Track upcoming selection trial deadlines, newly verified sports complexes, live match scores, and community games.
           </p>
-          <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <div className="app-notif-actions">
             <button
               type="button"
-              className="primary-link"
+              className="primary-link app-notif-trigger-btn"
               onClick={() => setNotificationsOpen(true)}
-              style={{ border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
             >
               <SiteIcon name="bell" size={16} />
               <span>Open Notifications Flyout ({unreadNotifCount} unread)</span>
@@ -423,8 +452,10 @@ export default function App() {
       page = <section className="content-page"><p className="eyebrow">PAGE NOT AVAILABLE</p><h1>This page isn’t here yet.</h1><p className="page-intro">This route has not been implemented. Return to a published section to continue exploring.</p><a className="primary-link" href="/" onClick={event => navigate(event, '/')}>Back home <SiteIcon name="arrow-up-right" size={16} /></a></section>
   }
 
-  return <div className={`app-shell foundation-v1 ${sidebarCollapsed ? 'sidebar-is-collapsed' : 'sidebar-is-expanded'}`}>
-    <CustomCursor />
+  const isOperational = isOperationalRoutePath(path)
+
+  return <div className={`app-shell foundation-v1 ${sidebarCollapsed ? 'sidebar-is-collapsed' : 'sidebar-is-expanded'}${isOperational ? ' is-operational-route' : ''}`}>
+    {!isOperational && <CustomCursor />}
     <a className="skip-link" href="#main-content">Skip to content</a>
     <TopNavbar
       path={path}
@@ -471,8 +502,8 @@ export default function App() {
         isLoggedIn={Boolean(authUser)}
       />
       <main id="main-content" className="page-shell">
-        <SiteAnnouncementBanner onNavigate={navigate} />
-        <SportsBar activePath={path} onNavigate={navigate} />
+        {!isOperational && <SiteAnnouncementBanner onNavigate={navigate} />}
+        {!isOperational && <SportsBar activePath={path} onNavigate={navigate} />}
         <div className="page-content">
           <Suspense fallback={<PageFallbackLoader />}>
             {page}
@@ -481,11 +512,24 @@ export default function App() {
       </main>
     </div>
 
-    <footer className="site-footer">
-      <FrequentlyAskedQuestions activePath={path} onNavigate={navigate} />
-      <GameSportPlayAcrossIndia onNavigate={navigate} />
-      <TopSportsComplexes onNavigate={navigate} />
-      <div className="footer-main">
+    <footer className={`site-footer${isOperational ? ' is-compact-operational' : ''}`}>
+      {isOperational ? (
+        <div className="compact-operational-footer-inner">
+          <span>© KhelGrid Operational Workspace · Zero-Commission Grassroots Platform</span>
+          <div className="compact-operational-footer-links">
+            <a href="/" onClick={event => navigate(event, '/')}>Discovery Home</a>
+            <a href="/workspace" onClick={event => navigate(event, '/workspace')}>All Workspaces</a>
+            <a href="/help-feedback" onClick={event => navigate(event, '/help-feedback')}>Support</a>
+            <a href="/privacy" onClick={event => navigate(event, '/privacy')}>Privacy</a>
+            <a href="/terms" onClick={event => navigate(event, '/terms')}>Terms</a>
+          </div>
+        </div>
+      ) : (
+        <>
+          <FrequentlyAskedQuestions activePath={path} onNavigate={navigate} />
+          <GameSportPlayAcrossIndia onNavigate={navigate} />
+          <TopSportsComplexes onNavigate={navigate} />
+          <div className="footer-main">
         <div className="footer-about">
           <a className="footer-brand" href="/" onClick={event => navigate(event, '/')} aria-label="KhelGrid home"><img className="footer-brand-logo" src="/assets/kg-logo.webp" alt="KhelGrid Platform Logo" width="118" height="38" loading="lazy" decoding="async" /></a>
           <p className="footer-tagline">India’s grid for sports trials, venues, coaching and athlete profiles.</p>
@@ -505,14 +549,14 @@ export default function App() {
           <h2>Play & train</h2>
           <a href="/play" onClick={event => navigate(event, '/play')}>Find a game</a>
           <a href="/venues" onClick={event => navigate(event, '/venues')}>Book venues</a>
-          <a href="/turf-calendar" onClick={event => navigate(event, '/turf-calendar')}>Turf Calendar <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
-          <a href="/parent-portal" onClick={event => navigate(event, '/parent-portal')}>Parent Passbook <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
+          <a href="/turf-calendar" onClick={event => navigate(event, '/turf-calendar')}>Turf Calendar <small className="footer-free-badge">Free</small></a>
+          <a href="/parent-portal" onClick={event => navigate(event, '/parent-portal')}>Parent Passbook <small className="footer-free-badge">Free</small></a>
           <a href="/coaches" onClick={event => navigate(event, '/coaches')}>Coaches</a>
           <a href="/academies" onClick={event => navigate(event, '/academies')}>Academies</a>
-          <a href="/academy-hub" onClick={event => navigate(event, '/academy-hub')}>Academy Hub <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
-          <a href="/coach-dashboard" onClick={event => navigate(event, '/coach-dashboard')}>Coach Hub <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
-          <a href="/tournament-ops" onClick={event => navigate(event, '/tournament-ops')}>Tournament Ops <small style={{ color: '#10b981', fontWeight: 700 }}>Free</small></a>
-          <span className="footer-coming-soon">Sports CV Wizard <small>Coming soon</small></span>
+          <a href="/academy-hub" onClick={event => navigate(event, '/academy-hub')}>Academy Hub <small className="footer-free-badge">Free</small></a>
+          <a href="/coach-dashboard" onClick={event => navigate(event, '/coach-dashboard')}>Coach Hub <small className="footer-free-badge">Free</small></a>
+          <a href="/tournament-ops" onClick={event => navigate(event, '/tournament-ops')}>Tournament Ops <small className="footer-free-badge">Free</small></a>
+          <a href="/sports-cv" onClick={event => navigate(event, '/sports-cv')}>Sports CV Wizard <small className="footer-free-badge">Free</small></a>
         </nav>
         <nav className="footer-column" aria-label="Learn and discover">
           <h2>Learn</h2>
@@ -523,7 +567,7 @@ export default function App() {
         </nav>
         <nav className="footer-column" aria-label="About and support">
           <h2>Grow with KhelGrid</h2>
-          <a href="/partner-signup" onClick={event => navigate(event, '/partner-signup')} style={{ color: '#059669', fontWeight: 700 }}>⚡ Fast Partner Setup (30s)</a>
+          <a href="/partner-signup" onClick={event => navigate(event, '/partner-signup')} className="footer-partner-fast-link">⚡ Fast Partner Setup (30s)</a>
           <a href="/partner" onClick={event => navigate(event, '/partner')}><strong>Partner with KhelGrid</strong></a>
           <a href="/tournament-ops" onClick={event => navigate(event, '/tournament-ops')}>Host a Tournament</a>
           <a href="/submit-listing?type=venue" onClick={e => { e.preventDefault(); openListingSubmission('venue') }}>List your venue</a>
@@ -552,10 +596,10 @@ export default function App() {
       <section className="footer-products" aria-labelledby="footer-products-title">
         <div className="footer-quick-heading"><div><h2 id="footer-products-title">Explore KhelGrid Products</h2><p>Tools to help athletes build, train, discover and get noticed.</p></div></div>
         <div className="footer-product-grid">
-          <div className="footer-product"><strong>Sports CV</strong><span>Show your journey</span></div>
-          <div className="footer-product"><strong>Talent Scanner</strong><span>Track performance</span></div>
+          <a className="footer-product" href="/sports-cv" onClick={event => navigate(event, '/sports-cv')}><strong>Sports CV</strong><span>Show your journey</span></a>
+          <a className="footer-product" href="/talent-scanner" onClick={event => navigate(event, '/talent-scanner')}><strong>Talent Scanner</strong><span>Track performance</span></a>
           <a className="footer-product" href="/opportunities" onClick={event => navigate(event, '/opportunities')}><strong>Find Trials</strong><span>Discover opportunities</span></a>
-          <div className="footer-product"><strong>AI Sports Guide</strong><span>Plan your next step</span></div>
+          <a className="footer-product" href="/ai-guide" onClick={event => navigate(event, '/ai-guide')}><strong>AI Sports Guide</strong><span>Plan your next step</span></a>
           <a className="footer-product" href="/venues" onClick={event => navigate(event, '/venues')}><strong>Book Venues</strong><span>Find places to play</span></a>
           <a className="footer-product" href="/play" onClick={event => navigate(event, '/play')}><strong>Play &amp; Match</strong><span>Find pickup games</span></a>
         </div>
@@ -640,6 +684,8 @@ export default function App() {
         <p>Independent grassroots sports network · live feeds and account services are not connected yet · Not a booking or live-score service</p>
         <p><span>{IPR_NOTICE_HEADING}</span><span>AI use</span><span>Copyright notice</span><span>© KhelGrid</span></p>
       </div>
+        </>
+      )}
     </footer>
     <Suspense fallback={null}>
       {notificationsOpen && (

@@ -11,6 +11,7 @@ import {
   fileCampaignDispute,
 } from './campaignClient'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { useRouter } from '../../shared/routing/useRouter'
 import './AdvertiserCampaignManagePage.css'
 
 interface AdvertiserCampaignManagePageProps {
@@ -18,6 +19,7 @@ interface AdvertiserCampaignManagePageProps {
 }
 
 export function AdvertiserCampaignManagePage({ onNavigate }: AdvertiserCampaignManagePageProps) {
+  const { navigate } = useRouter()
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -29,9 +31,8 @@ export function AdvertiserCampaignManagePage({ onNavigate }: AdvertiserCampaignM
     if (e) e.preventDefault()
     if (onNavigate) {
       onNavigate(e, targetPath)
-    } else if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', targetPath)
-      window.dispatchEvent(new PopStateEvent('popstate'))
+    } else {
+      navigate(targetPath, { event: e })
     }
   }
 

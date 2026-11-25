@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import { SiteIcon } from './SiteIcon'
 import {
-  getAnnouncements,
-  getOpportunities,
-  getPickupGames,
-  getVenues,
   getUserNotifications,
   markNotificationAsRead,
 } from '../../integrations/supabase/public-client'
+import {
+  getCachedAnnouncements,
+  getCachedOpportunities,
+  getCachedPickupGames,
+  getCachedVenues,
+} from '../cache/catalogueQueryCache'
 import { getStoredUser } from '../../integrations/supabase/auth-client'
 import { liveSportsEngine } from '../../modules/live/services/liveSportsEngine'
 import {
@@ -56,10 +58,10 @@ export default function NotificationCenterDrawer({
     const user = getStoredUser()
 
     Promise.all([
-      getOpportunities(),
-      getVenues(),
-      getPickupGames(),
-      getAnnouncements(),
+      getCachedOpportunities(),
+      getCachedVenues(),
+      getCachedPickupGames(),
+      getCachedAnnouncements(),
       liveSportsEngine.getScores().catch(() => ({ matches: [] })),
       user ? getUserNotifications(user.id).catch(() => []) : Promise.resolve([]),
     ]).then(([oppRes, venueRes, gameRes, annRes, scoreRes, userNotifs]) => {

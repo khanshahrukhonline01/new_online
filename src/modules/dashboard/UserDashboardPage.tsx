@@ -3,8 +3,6 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 import {
   getStoredAuthUser,
   onAuthChange,
-  signInWithEmail,
-  signUpWithEmail,
   type AuthUserProfile,
 } from '../../integrations/supabase/auth-client'
 import {
@@ -38,33 +36,6 @@ export interface UserDashboardPageProps {
 
 type DashboardTab = 'overview' | 'profile' | 'matches' | 'saved'
 
-const DEMO_PERSONAS = [
-  {
-    label: 'Athlete (Aarav Sharma)',
-    role: 'athlete' as const,
-    name: 'Aarav Sharma',
-    email: 'aarav.sharma@khelgrid.com',
-    city: 'Delhi NCR',
-    sport: 'Cricket',
-  },
-  {
-    label: 'Turf Partner (FSV Sports)',
-    role: 'host' as const,
-    name: 'FSV Sports Ground',
-    email: 'partner.bangalore@khelgrid.com',
-    city: 'Bengaluru',
-    sport: 'Football & Box Cricket',
-  },
-  {
-    label: 'Platform Admin',
-    role: 'admin' as const,
-    name: 'Chief Platform Moderator',
-    email: 'admin@khelgrid.com',
-    city: 'New Delhi',
-    sport: 'Multi-Sport',
-  },
-]
-
 export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth }: UserDashboardPageProps) {
   const [authUser, setAuthUser] = useState<AuthUserProfile | null>(() => getStoredAuthUser())
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview')
@@ -72,7 +43,6 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
   const [confirmedGames, setConfirmedGames] = useState<DatabasePickupGame[]>([])
   const [savedOpportunities, setSavedOpportunities] = useState<Opportunity[]>([])
   const [savedCount, setSavedCount] = useState<number>(0)
-  const [demoNotice, setDemoNotice] = useState<string | null>(null)
 
   // Listen to live authentication changes across tabs and modals
   useEffect(() => {
@@ -199,31 +169,6 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
     }
   }
 
-  const handleQuickDemoLogin = async (persona: (typeof DEMO_PERSONAS)[0]) => {
-    setDemoNotice(`Switching to ${persona.name}…`)
-    try {
-      const res = await signInWithEmail({ email: persona.email, password: 'demo-password' })
-      if (res.success && res.user) {
-        setAuthUser(res.user)
-        setDemoNotice(`Signed in as demo ${persona.role}: ${res.user.fullName}`)
-      } else {
-        const signRes = await signUpWithEmail({
-          email: persona.email,
-          fullName: persona.name,
-          role: persona.role,
-          city: persona.city,
-          preferredSports: [persona.sport],
-        })
-        if (signRes.success && signRes.user) {
-          setAuthUser(signRes.user)
-          setDemoNotice(`Demo persona activated: ${signRes.user.fullName}`)
-        }
-      }
-    } finally {
-      setTimeout(() => setDemoNotice(null), 3000)
-    }
-  }
-
   // Profile completion calculation
   const profileCompletion = useMemo(() => {
     if (!authUser) return 0
@@ -246,14 +191,6 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
         <span className="separator">/</span>
         <span className="current">My Dashboard</span>
       </nav>
-
-      {/* Demo Notification Toast */}
-      {demoNotice && (
-        <div className="settings-global-toast" role="status">
-          <SiteIcon name="check-circle" size={16} />
-          <span>{demoNotice}</span>
-        </div>
-      )}
 
       {/* Hero Identity Banner: Logged-In User vs. Guest Visitor */}
       {authUser ? (
@@ -352,19 +289,6 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
             </button>
           </div>
 
-          <div className="user-demo-strip">
-            <span className="user-demo-label">1-Tap Instant Persona Preview:</span>
-            {DEMO_PERSONAS.map(p => (
-              <button
-                key={p.role}
-                type="button"
-                className="user-demo-btn"
-                onClick={() => handleQuickDemoLogin(p)}
-              >
-                <span>{p.label}</span>
-              </button>
-            ))}
-          </div>
         </div>
       )}
 

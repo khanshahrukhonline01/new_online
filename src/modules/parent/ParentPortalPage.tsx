@@ -1,5 +1,7 @@
 import { useState, useId, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { WorkspaceDetailDrawer } from '../../shared/components/ui/WorkspaceDetailDrawer'
+import { FeeReceiptDrawerContent } from '../../shared/components/workflows/FeeReceiptDrawerContent'
 import {
   getParentStudentProfiles,
   getStudentAttendanceHistory,
@@ -477,102 +479,77 @@ export default function ParentPortalPage({
         </div>
       )}
 
-      {/* Tax Receipt Modal */}
-      {viewingReceiptInvoice && (
-        <div className="parent-portal-modal-overlay" onClick={() => setViewingReceiptInvoice(null)}>
-          <div className="parent-portal-receipt-modal" onClick={e => e.stopPropagation()}>
-            <div className="receipt-header">
-              <div>
-                <h2>{student.academyName}</h2>
-                <p>Official Academy Fee Receipt &amp; Tax Invoice</p>
-              </div>
-              <button type="button" onClick={() => setViewingReceiptInvoice(null)} className="close-btn">×</button>
-            </div>
-            <div className="receipt-body">
-              <div className="receipt-meta-grid">
-                <div>
-                  <strong>Invoice Ref:</strong> #{viewingReceiptInvoice.invoiceId}
-                </div>
-                <div>
-                  <strong>Receipt Date:</strong> {viewingReceiptInvoice.paidDate || '2026-11-20'}
-                </div>
-                <div>
-                  <strong>Student Name:</strong> {student.studentName}
-                </div>
-                <div>
-                  <strong>Roll Number:</strong> {student.rollNumber}
-                </div>
-                <div>
-                  <strong>Billing Month:</strong> {viewingReceiptInvoice.monthYear}
-                </div>
-                <div>
-                  <strong>Payment Mode:</strong> Direct UPI ({viewingReceiptInvoice.transactionRef})
-                </div>
-              </div>
+      {/* Tax Receipt Slide-Over Drawer */}
+      <WorkspaceDetailDrawer
+        open={Boolean(viewingReceiptInvoice)}
+        onClose={() => setViewingReceiptInvoice(null)}
+        title={viewingReceiptInvoice ? `Official Academy Fee Receipt · ${student.academyName}` : 'Fee Receipt'}
+        statusMessage={viewingReceiptInvoice ? '✅ VERIFIED BY KHELGRID · 0% Commission Fee Clearance' : undefined}
+        width={560}
+      >
+        {viewingReceiptInvoice && (
+          <>
+            <FeeReceiptDrawerContent
+              receipt={{
+                receiptNumber: viewingReceiptInvoice.invoiceId,
+                payerName: `${student.studentName} (Roll: ${student.rollNumber})`,
+                recipientOrg: student.academyName,
+                amountInr: viewingReceiptInvoice.netAmount,
+                paymentMethod: `Direct UPI (${viewingReceiptInvoice.transactionRef})`,
+                paidAt: viewingReceiptInvoice.paidDate || '2026-11-20',
+                billingCycle: viewingReceiptInvoice.monthYear,
+              }}
+              onPrint={() => {
+                if (typeof window !== 'undefined') window.print()
+              }}
+            />
 
-              <table className="receipt-table">
-                <thead>
+            <table className="receipt-table">
+              <thead>
+                <tr>
+                  <th>Item Description</th>
+                  <th>Fee Type</th>
+                  <th style={{ textAlign: 'right' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Monthly Training &amp; Coaching Tuition</td>
+                  <td>Coaching</td>
+                  <td style={{ textAlign: 'right' }}>₹{viewingReceiptInvoice.tuitionFee.toLocaleString('en-IN')}</td>
+                </tr>
+                {viewingReceiptInvoice.kitUniformFee > 0 && (
                   <tr>
-                    <th>Item Description</th>
-                    <th>Fee Type</th>
-                    <th style={{ textAlign: 'right' }}>Amount</th>
+                    <td>Academy Training Kit &amp; Match Jersey</td>
+                    <td>Kit</td>
+                    <td style={{ textAlign: 'right' }}>₹{viewingReceiptInvoice.kitUniformFee.toLocaleString('en-IN')}</td>
                   </tr>
-                </thead>
-                <tbody>
+                )}
+                {viewingReceiptInvoice.tournamentEntryFee > 0 && (
                   <tr>
-                    <td>Monthly Training &amp; Coaching Tuition</td>
-                    <td>Coaching</td>
-                    <td style={{ textAlign: 'right' }}>₹{viewingReceiptInvoice.tuitionFee.toLocaleString('en-IN')}</td>
+                    <td>All-India Tournament Entry Fee</td>
+                    <td>Tournament</td>
+                    <td style={{ textAlign: 'right' }}>₹{viewingReceiptInvoice.tournamentEntryFee.toLocaleString('en-IN')}</td>
                   </tr>
-                  {viewingReceiptInvoice.kitUniformFee > 0 && (
-                    <tr>
-                      <td>Academy Training Kit &amp; Match Jersey</td>
-                      <td>Kit</td>
-                      <td style={{ textAlign: 'right' }}>₹{viewingReceiptInvoice.kitUniformFee.toLocaleString('en-IN')}</td>
-                    </tr>
-                  )}
-                  {viewingReceiptInvoice.tournamentEntryFee > 0 && (
-                    <tr>
-                      <td>All-India Tournament Entry Fee</td>
-                      <td>Tournament</td>
-                      <td style={{ textAlign: 'right' }}>₹{viewingReceiptInvoice.tournamentEntryFee.toLocaleString('en-IN')}</td>
-                    </tr>
-                  )}
-                  {viewingReceiptInvoice.discountAmount > 0 && (
-                    <tr>
-                      <td>Merit Scholarship / Sibling Discount</td>
-                      <td>Discount</td>
-                      <td style={{ textAlign: 'right' }}>-₹{viewingReceiptInvoice.discountAmount.toLocaleString('en-IN')}</td>
-                    </tr>
-                  )}
-                </tbody>
-                <tfoot>
+                )}
+                {viewingReceiptInvoice.discountAmount > 0 && (
                   <tr>
-                    <td colSpan={2}><strong>Total Paid via UPI (INR)</strong></td>
-                    <td style={{ textAlign: 'right' }}><strong>₹{viewingReceiptInvoice.netAmount.toLocaleString('en-IN')}</strong></td>
+                    <td>Merit Scholarship / Sibling Discount</td>
+                    <td>Discount</td>
+                    <td style={{ textAlign: 'right' }}>-₹{viewingReceiptInvoice.discountAmount.toLocaleString('en-IN')}</td>
                   </tr>
-                </tfoot>
-              </table>
-
-              <div className="receipt-stamp-row">
-                <div className="receipt-stamp">
-                  <span>✅ VERIFIED BY KHELGRID</span>
-                  <small>0% Commission Fee Clearance</small>
-                </div>
-                <button
-                  type="button"
-                  className="btn-print-receipt"
-                  onClick={() => {
-                    if (typeof window !== 'undefined') window.print()
-                  }}
-                >
-                  <SiteIcon name="download" size={15} /> Print / Save as PDF
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+                )}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={2}><strong>Total Paid via UPI (INR)</strong></td>
+                  <td style={{ textAlign: 'right' }}><strong>₹{viewingReceiptInvoice.netAmount.toLocaleString('en-IN')}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </>
+        )}
+      </WorkspaceDetailDrawer>
     </div>
   )
 }

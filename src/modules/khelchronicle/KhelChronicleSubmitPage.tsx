@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, type FormEvent, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { useFormState } from '../../shared/hooks/useFormState'
 import { RESEARCH_CATEGORIES, type ResearchCategory } from './data/khelchronicleData'
 import {
   getChronicleCategories,
@@ -43,6 +44,56 @@ const REPOSITORY_HOSTS = [
   { name: 'Institutional Repo', url: '', note: 'University / SAI / LNIPE HTTPS PDF link' },
 ]
 
+interface ManuscriptFormFields extends Record<string, unknown> {
+  articleType: string
+  title: string
+  category: string
+  keywords: string
+  primaryAuthorName: string
+  primaryAuthorEmail: string
+  primaryAuthorAffiliation: string
+  orcid: string
+  coAuthorsText: string
+  coAuthorsList: CoAuthor[]
+  abstract: string
+  coachingCue1: string
+  coachingCue2: string
+  coachingCue3: string
+  fullTextOrUrl: string
+  supplementaryUrl: string
+  dataAvailability: string
+  ethicsClearanceNumber: string
+  ethicsDeclaration: boolean
+  minorConsentDeclaration: boolean
+  licenseDeclaration: boolean
+  licenseType: ManuscriptLicenseType
+}
+
+const INITIAL_MANUSCRIPT_FORM: ManuscriptFormFields = {
+  articleType: 'preprint',
+  title: '',
+  category: 'sports-biomechanics',
+  keywords: '',
+  primaryAuthorName: '',
+  primaryAuthorEmail: '',
+  primaryAuthorAffiliation: '',
+  orcid: '',
+  coAuthorsText: '',
+  coAuthorsList: [],
+  abstract: '',
+  coachingCue1: '',
+  coachingCue2: '',
+  coachingCue3: '',
+  fullTextOrUrl: '',
+  supplementaryUrl: '',
+  dataAvailability: 'open_access',
+  ethicsClearanceNumber: '',
+  ethicsDeclaration: false,
+  minorConsentDeclaration: false,
+  licenseDeclaration: false,
+  licenseType: 'cc-by-nc-nd-4.0',
+}
+
 export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageProps) {
   const [currentStep, setCurrentStep] = useState<number>(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -56,37 +107,31 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
 
   const errorBannerRef = useRef<HTMLDivElement>(null)
 
-  // Primary form data state
-  const [articleType, setArticleType] = useState('preprint')
-  const [title, setTitle] = useState('')
-  const [category, setCategory] = useState('sports-biomechanics')
-  const [keywords, setKeywords] = useState('')
-
-  // Authors state
-  const [primaryAuthorName, setPrimaryAuthorName] = useState('')
-  const [primaryAuthorEmail, setPrimaryAuthorEmail] = useState('')
-  const [primaryAuthorAffiliation, setPrimaryAuthorAffiliation] = useState('')
-  const [orcid, setOrcid] = useState('')
-  const [coAuthorsText, setCoAuthorsText] = useState('')
-  const [coAuthorsList, setCoAuthorsList] = useState<CoAuthor[]>([])
-
-  // Abstract & Coaching cues
-  const [abstract, setAbstract] = useState('')
-  const [coachingCue1, setCoachingCue1] = useState('')
-  const [coachingCue2, setCoachingCue2] = useState('')
-  const [coachingCue3, setCoachingCue3] = useState('')
-
-  // Files & Data
-  const [fullTextOrUrl, setFullTextOrUrl] = useState('')
-  const [supplementaryUrl, setSupplementaryUrl] = useState('')
-  const [dataAvailability, setDataAvailability] = useState('open_access')
-
-  // Ethics & Declarations
-  const [ethicsClearanceNumber, setEthicsClearanceNumber] = useState('')
-  const [ethicsDeclaration, setEthicsDeclaration] = useState(false)
-  const [minorConsentDeclaration, setMinorConsentDeclaration] = useState(false)
-  const [licenseDeclaration, setLicenseDeclaration] = useState(false)
-  const [licenseType, setLicenseType] = useState<ManuscriptLicenseType>('cc-by-nc-nd-4.0')
+  const manuscriptForm = useFormState<ManuscriptFormFields>(INITIAL_MANUSCRIPT_FORM)
+  const {
+    articleType,
+    title,
+    category,
+    keywords,
+    primaryAuthorName,
+    primaryAuthorEmail,
+    primaryAuthorAffiliation,
+    orcid,
+    coAuthorsText,
+    coAuthorsList,
+    abstract,
+    coachingCue1,
+    coachingCue2,
+    coachingCue3,
+    fullTextOrUrl,
+    supplementaryUrl,
+    dataAvailability,
+    ethicsClearanceNumber,
+    ethicsDeclaration,
+    minorConsentDeclaration,
+    licenseDeclaration,
+    licenseType,
+  } = manuscriptForm.fields
 
   const abstractWords = abstract.trim() ? abstract.trim().split(/\s+/).length : 0
 
@@ -126,29 +171,32 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     const restored = deserializeDraft(localStorage.getItem(STORAGE_DRAFT_KEY))
     if (!restored) return
 
-    if (restored.title) setTitle(restored.title)
-    if (restored.category) setCategory(restored.category)
-    if (restored.articleType) setArticleType(restored.articleType)
-    if (restored.keywords !== undefined) setKeywords(restored.keywords)
-    if (restored.primaryAuthorName) setPrimaryAuthorName(restored.primaryAuthorName)
-    if (restored.primaryAuthorEmail) setPrimaryAuthorEmail(restored.primaryAuthorEmail)
-    if (restored.primaryAuthorAffiliation) setPrimaryAuthorAffiliation(restored.primaryAuthorAffiliation)
-    if (restored.orcid) setOrcid(restored.orcid)
-    if (restored.coAuthorsText) setCoAuthorsText(restored.coAuthorsText)
-    if (restored.coAuthorsList && restored.coAuthorsList.length > 0) setCoAuthorsList(restored.coAuthorsList)
-    if (restored.abstract) setAbstract(restored.abstract)
-    if (restored.coachingCue1) setCoachingCue1(restored.coachingCue1)
-    if (restored.coachingCue2) setCoachingCue2(restored.coachingCue2)
-    if (restored.coachingCue3) setCoachingCue3(restored.coachingCue3)
-    if (restored.fullTextOrUrl) setFullTextOrUrl(restored.fullTextOrUrl)
-    if (restored.supplementaryUrl) setSupplementaryUrl(restored.supplementaryUrl)
-    if (restored.dataAvailability) setDataAvailability(restored.dataAvailability)
-    if (restored.ethicsClearanceNumber) setEthicsClearanceNumber(restored.ethicsClearanceNumber)
-    if (restored.licenseType) setLicenseType(restored.licenseType)
+    manuscriptForm.reset({
+      ...(restored.title ? { title: restored.title } : {}),
+      ...(restored.category ? { category: restored.category } : {}),
+      ...(restored.articleType ? { articleType: restored.articleType } : {}),
+      ...(restored.keywords !== undefined ? { keywords: restored.keywords } : {}),
+      ...(restored.primaryAuthorName ? { primaryAuthorName: restored.primaryAuthorName } : {}),
+      ...(restored.primaryAuthorEmail ? { primaryAuthorEmail: restored.primaryAuthorEmail } : {}),
+      ...(restored.primaryAuthorAffiliation ? { primaryAuthorAffiliation: restored.primaryAuthorAffiliation } : {}),
+      ...(restored.orcid ? { orcid: restored.orcid } : {}),
+      ...(restored.coAuthorsText ? { coAuthorsText: restored.coAuthorsText } : {}),
+      ...(restored.coAuthorsList && restored.coAuthorsList.length > 0 ? { coAuthorsList: restored.coAuthorsList } : {}),
+      ...(restored.abstract ? { abstract: restored.abstract } : {}),
+      ...(restored.coachingCue1 ? { coachingCue1: restored.coachingCue1 } : {}),
+      ...(restored.coachingCue2 ? { coachingCue2: restored.coachingCue2 } : {}),
+      ...(restored.coachingCue3 ? { coachingCue3: restored.coachingCue3 } : {}),
+      ...(restored.fullTextOrUrl ? { fullTextOrUrl: restored.fullTextOrUrl } : {}),
+      ...(restored.supplementaryUrl ? { supplementaryUrl: restored.supplementaryUrl } : {}),
+      ...(restored.dataAvailability ? { dataAvailability: restored.dataAvailability } : {}),
+      ...(restored.ethicsClearanceNumber ? { ethicsClearanceNumber: restored.ethicsClearanceNumber } : {}),
+      ...(restored.licenseType ? { licenseType: restored.licenseType } : {}),
+    })
     if (restored.currentStep) setCurrentStep(restored.currentStep)
     setDraftSavedAt(
       restored.updatedAt ? `Restored draft from ${restored.updatedAt}` : 'Restored previous draft',
     )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Auto-save full wizard state to localStorage on changes
@@ -226,28 +274,7 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_DRAFT_KEY)
     }
-    setTitle('')
-    setCategory('sports-biomechanics')
-    setArticleType('preprint')
-    setKeywords('')
-    setPrimaryAuthorName('')
-    setPrimaryAuthorEmail('')
-    setPrimaryAuthorAffiliation('')
-    setOrcid('')
-    setCoAuthorsText('')
-    setCoAuthorsList([])
-    setAbstract('')
-    setCoachingCue1('')
-    setCoachingCue2('')
-    setCoachingCue3('')
-    setFullTextOrUrl('')
-    setSupplementaryUrl('')
-    setDataAvailability('open_access')
-    setEthicsClearanceNumber('')
-    setEthicsDeclaration(false)
-    setMinorConsentDeclaration(false)
-    setLicenseDeclaration(false)
-    setLicenseType('cc-by-nc-nd-4.0')
+    manuscriptForm.reset()
     setDraftSavedAt(null)
     setErrorMessage(null)
     setSubmissionNotice(null)
@@ -271,7 +298,7 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
 
   const insertAbstractTemplate = () => {
     const template = `Background: \nMethods: \nResults: \nConclusion: `
-    setAbstract(prev => (prev ? `${prev}\n\n${template}` : template))
+    manuscriptForm.setField('abstract', abstract ? `${abstract}\n\n${template}` : template)
   }
 
   const addCoAuthor = () => {
@@ -282,15 +309,21 @@ export function KhelChronicleSubmitPage({ onNavigate }: KhelChronicleSubmitPageP
       affiliation: '',
       orcid: '',
     }
-    setCoAuthorsList(prev => [...prev, newAuthor])
+    manuscriptForm.setField('coAuthorsList', [...coAuthorsList, newAuthor])
   }
 
   const updateCoAuthor = (id: string, field: keyof CoAuthor, value: string) => {
-    setCoAuthorsList(prev => prev.map(a => (a.id === id ? { ...a, [field]: value } : a)))
+    manuscriptForm.setField(
+      'coAuthorsList',
+      coAuthorsList.map(a => (a.id === id ? { ...a, [field]: value } : a)),
+    )
   }
 
   const removeCoAuthor = (id: string) => {
-    setCoAuthorsList(prev => prev.filter(a => a.id !== id))
+    manuscriptForm.setField(
+      'coAuthorsList',
+      coAuthorsList.filter(a => a.id !== id),
+    )
   }
 
   const handleDownloadTemplate = () => {
@@ -715,7 +748,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                         key={t.id}
                         aria-pressed={articleType === t.id}
                         className={`kc-type-card ${articleType === t.id ? 'is-selected' : ''}`}
-                        onClick={() => setArticleType(t.id)}
+                        onClick={() => manuscriptForm.setField('articleType', t.id)}
                       >
                         <span className="kc-type-card-name">{t.name}</span>
                         <span className="kc-type-card-desc">{t.desc}</span>
@@ -737,7 +770,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     className="kc-input-text"
                     placeholder="e.g. Kinematic Analysis of Lumbar Spine Stress in Junior Fast Bowlers"
                     value={title}
-                    onChange={e => setTitle(e.target.value)}
+                    onChange={e => manuscriptForm.setField('title', e.target.value)}
                   />
                 </div>
 
@@ -749,7 +782,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     id="research-category"
                     className="kc-select"
                     value={category}
-                    onChange={e => setCategory(e.target.value)}
+                    onChange={e => manuscriptForm.setField('category', e.target.value)}
                   >
                     {categories.map(c => (
                       <option key={c.id} value={c.slug}>
@@ -771,7 +804,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     className="kc-input-text"
                     placeholder="e.g. Fast Bowling, Ground Reaction Force, Lumbar Spine, Biomechanics"
                     value={keywords}
-                    onChange={e => setKeywords(e.target.value)}
+                    onChange={e => manuscriptForm.setField('keywords', e.target.value)}
                   />
                 </div>
               </div>
@@ -805,7 +838,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                         className="kc-input-text"
                         placeholder="e.g. Dr. Rajeshwari Nair"
                         value={primaryAuthorName}
-                        onChange={e => setPrimaryAuthorName(e.target.value)}
+                        onChange={e => manuscriptForm.setField('primaryAuthorName', e.target.value)}
                       />
                     </div>
 
@@ -820,7 +853,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                         className="kc-input-text"
                         placeholder="author@institution.edu.in"
                         value={primaryAuthorEmail}
-                        onChange={e => setPrimaryAuthorEmail(e.target.value)}
+                        onChange={e => manuscriptForm.setField('primaryAuthorEmail', e.target.value)}
                       />
                     </div>
                   </div>
@@ -837,7 +870,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                         className="kc-input-text"
                         placeholder="e.g. Lakshmibai National Institute of Physical Education (LNIPE), Gwalior"
                         value={primaryAuthorAffiliation}
-                        onChange={e => setPrimaryAuthorAffiliation(e.target.value)}
+                        onChange={e => manuscriptForm.setField('primaryAuthorAffiliation', e.target.value)}
                       />
                     </div>
 
@@ -854,7 +887,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                         className="kc-input-text"
                         placeholder="0000-0002-8941-4412"
                         value={orcid}
-                        onChange={e => setOrcid(e.target.value)}
+                        onChange={e => manuscriptForm.setField('orcid', e.target.value)}
                       />
                     </div>
                   </div>
@@ -879,7 +912,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     className="kc-input-text"
                     placeholder="e.g. Dr. Alok Sen (SAI NCOE Bengaluru), Priya Narang (Delhi University)"
                     value={coAuthorsText}
-                    onChange={e => setCoAuthorsText(e.target.value)}
+                    onChange={e => manuscriptForm.setField('coAuthorsText', e.target.value)}
                   />
 
                   {/* Dynamic Co-Author Rows */}
@@ -987,7 +1020,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     className="kc-textarea"
                     placeholder="Background: State the problem and athletic performance rationale...&#10;Methods: Cohort size, sports discipline, test protocol, instrumentation...&#10;Results: Quantitative kinematics, statistical significance, effect sizes...&#10;Conclusion: Direct scientific implications for Indian athletes..."
                     value={abstract}
-                    onChange={e => setAbstract(e.target.value)}
+                    onChange={e => manuscriptForm.setField('abstract', e.target.value)}
                   />
                 </div>
 
@@ -1008,7 +1041,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       className="kc-input-text"
                       placeholder="Takeaway 1: e.g. Limit junior fast bowlers to maximum 30 match-intensity deliveries per spell to avoid lumbar bone stress"
                       value={coachingCue1}
-                      onChange={e => setCoachingCue1(e.target.value)}
+                      onChange={e => manuscriptForm.setField('coachingCue1', e.target.value)}
                     />
                     <input
                       type="text"
@@ -1016,7 +1049,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       className="kc-input-text"
                       placeholder="Takeaway 2: e.g. Implement frontal plane knee valgus screening during single-leg landing combine drills"
                       value={coachingCue2}
-                      onChange={e => setCoachingCue2(e.target.value)}
+                      onChange={e => manuscriptForm.setField('coachingCue2', e.target.value)}
                     />
                     <input
                       type="text"
@@ -1024,7 +1057,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       className="kc-input-text"
                       placeholder="Takeaway 3: e.g. Incorporate eccentric hamstring periodization during pre-monsoon conditioning camps"
                       value={coachingCue3}
-                      onChange={e => setCoachingCue3(e.target.value)}
+                      onChange={e => manuscriptForm.setField('coachingCue3', e.target.value)}
                     />
                   </div>
                 </div>
@@ -1086,7 +1119,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     className="kc-input-text"
                     placeholder="https://zenodo.org/records/... or https://institution.edu.in/paper.pdf"
                     value={fullTextOrUrl}
-                    onChange={e => setFullTextOrUrl(e.target.value)}
+                    onChange={e => manuscriptForm.setField('fullTextOrUrl', e.target.value)}
                   />
                 </div>
 
@@ -1106,7 +1139,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       className="kc-input-text"
                       placeholder="https://github.com/... or https://doi.org/10.5281/..."
                       value={supplementaryUrl}
-                      onChange={e => setSupplementaryUrl(e.target.value)}
+                      onChange={e => manuscriptForm.setField('supplementaryUrl', e.target.value)}
                     />
                   </div>
 
@@ -1118,7 +1151,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       id="data-availability-select"
                       className="kc-select"
                       value={dataAvailability}
-                      onChange={e => setDataAvailability(e.target.value)}
+                      onChange={e => manuscriptForm.setField('dataAvailability', e.target.value)}
                     >
                       <option value="open_access">Publicly available in open data repository</option>
                       <option value="upon_request">Available from corresponding author upon reasonable request</option>
@@ -1150,7 +1183,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                     className="kc-input-text"
                     placeholder="Enter institutional approval protocol or documented not-applicable declaration"
                     value={ethicsClearanceNumber}
-                    onChange={e => setEthicsClearanceNumber(e.target.value)}
+                    onChange={e => manuscriptForm.setField('ethicsClearanceNumber', e.target.value)}
                   />
                 </div>
 
@@ -1161,7 +1194,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       type="checkbox"
                       required
                       checked={ethicsDeclaration}
-                      onChange={e => setEthicsDeclaration(e.target.checked)}
+                      onChange={e => manuscriptForm.setField('ethicsDeclaration', e.target.checked)}
                       className="kc-checkbox-input"
                     />
                     <div>
@@ -1174,7 +1207,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       type="checkbox"
                       required
                       checked={minorConsentDeclaration}
-                      onChange={e => setMinorConsentDeclaration(e.target.checked)}
+                      onChange={e => manuscriptForm.setField('minorConsentDeclaration', e.target.checked)}
                       className="kc-checkbox-input"
                     />
                     <div>
@@ -1187,7 +1220,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       type="checkbox"
                       required
                       checked={licenseDeclaration}
-                      onChange={e => setLicenseDeclaration(e.target.checked)}
+                      onChange={e => manuscriptForm.setField('licenseDeclaration', e.target.checked)}
                       className="kc-checkbox-input"
                     />
                     <div>
@@ -1208,7 +1241,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       role="radio"
                       aria-checked={licenseType === 'cc-by-nc-nd-4.0'}
                       className={`kc-license-card ${licenseType === 'cc-by-nc-nd-4.0' ? 'is-selected' : ''}`}
-                      onClick={() => setLicenseType('cc-by-nc-nd-4.0')}
+                      onClick={() => manuscriptForm.setField('licenseType', 'cc-by-nc-nd-4.0')}
                     >
                       <div className="kc-license-card-title">CC BY-NC-ND 4.0</div>
                       <div className="kc-license-card-desc">
@@ -1220,7 +1253,7 @@ Author Guidelines & Formatting Standard for Indian Sports Science Research
                       role="radio"
                       aria-checked={licenseType === 'cc-by-4.0'}
                       className={`kc-license-card ${licenseType === 'cc-by-4.0' ? 'is-selected' : ''}`}
-                      onClick={() => setLicenseType('cc-by-4.0')}
+                      onClick={() => manuscriptForm.setField('licenseType', 'cc-by-4.0')}
                     >
                       <div className="kc-license-card-title">CC BY 4.0 (Attribution)</div>
                       <div className="kc-license-card-desc">

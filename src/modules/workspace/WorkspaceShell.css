@@ -1,0 +1,242 @@
+/* WorkspaceShell.css — Layout and chrome for the unified workspace shell */
+
+.kg-workspace-shell {
+  min-height: 100vh;
+  background: var(--page, #f8fafc);
+}
+
+/* ── Unauthenticated state ── */
+.kg-workspace-shell--unauthenticated {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+}
+
+.kg-shell-unauth {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 400px;
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.kg-shell-unauth h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text, #0f172a);
+  margin: 0;
+}
+
+.kg-shell-unauth p {
+  color: var(--text-muted, #64748b);
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.kg-shell-unauth-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ── Persona Switcher ── */
+.kg-persona-switcher {
+  display: flex;
+  gap: 4px;
+  padding: 12px 20px;
+  background: var(--surface, #fff);
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kg-persona-switcher::-webkit-scrollbar {
+  display: none;
+}
+
+.kg-persona-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted, #64748b);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.kg-persona-btn:hover {
+  background: var(--surface-soft, #f1f5f9);
+  color: var(--text, #0f172a);
+}
+
+.kg-persona-btn.is-active {
+  background: var(--accent-soft, #e8f7ef);
+  color: var(--accent, #07964f);
+  border-color: var(--accent-border, #a7f3d0);
+}
+
+/* ── Shell Header ── */
+.kg-shell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 12px;
+  background: var(--surface, #fff);
+  border-bottom: 1px solid var(--line, #e2e8f0);
+}
+
+.kg-shell-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kg-shell-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text, #0f172a);
+  margin: 0;
+}
+
+.kg-shell-sub {
+  font-size: 12.5px;
+  color: var(--text-muted, #64748b);
+  margin: 2px 0 0;
+}
+
+/* ── Entity Switcher ── */
+.kg-entity-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  color: var(--text, #0f172a);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.kg-entity-btn:hover {
+  border-color: var(--accent, #07964f);
+  background: var(--accent-soft, #e8f7ef);
+}
+
+/* ── KPI Strip in Shell ── */
+.kg-shell-kpi {
+  padding: 16px 24px;
+  background: var(--surface, #fff);
+  border-bottom: 1px solid var(--line, #e2e8f0);
+}
+
+/* ── Section Tabs ── */
+.kg-shell-section-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 24px;
+  background: var(--surface, #fff);
+  border-bottom: 2px solid var(--line, #e2e8f0);
+}
+
+.kg-section-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 18px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  background: transparent;
+  color: var(--text-muted, #64748b);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.kg-section-tab:hover {
+  color: var(--text, #0f172a);
+}
+
+.kg-section-tab.is-active {
+  color: var(--accent, #07964f);
+  border-bottom-color: var(--accent, #07964f);
+}
+
+/* ── Content ── */
+.kg-shell-content {
+  padding: 0;
+}
+
+.kg-shell-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--text-muted, #64748b);
+  font-size: 14px;
+}
+
+/* ── Dark mode ── */
+html.dark .kg-workspace-shell,
+html.dark .kg-persona-switcher,
+html.dark .kg-shell-header,
+html.dark .kg-shell-kpi,
+html.dark .kg-shell-section-tabs {
+  background: var(--surface, #0f172a);
+  border-color: var(--line, #1e293b);
+}
+
+html.dark .kg-persona-btn:hover,
+html.dark .kg-entity-btn:hover {
+  background: var(--surface-soft, #162234);
+}
+
+html.dark .kg-shell-title,
+html.dark .kg-shell-unauth h1 {
+  color: var(--text, #f1f5f9);
+}
+
+/* ── Mobile ── */
+@media (max-width: 700px) {
+  .kg-shell-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+  }
+
+  .kg-shell-section-tabs {
+    padding: 0 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .kg-section-tab {
+    padding: 10px 12px;
+    font-size: 12.5px;
+  }
+
+  .kg-shell-kpi {
+    padding: 12px 16px;
+  }
+
+  .kg-persona-switcher {
+    padding: 10px 12px;
+  }
+}

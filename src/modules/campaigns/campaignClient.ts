@@ -1336,6 +1336,12 @@ export function authorizeRewardPayoutBatch(
 // CREATOR PROFILE APIS
 // -------------------------------------------------------------------------
 
+export function getCreatorProfileForUser(userId?: string): CreatorProfile | null {
+  if (!userId) return null
+  const all = loadFromStorage<CreatorProfile[]>(STORAGE_KEYS.CREATORS, [])
+  return all.find(c => c.userId === userId || c.id === userId) ?? null
+}
+
 export function getCreatorProfile(userId?: string): CreatorProfile {
   const all = loadFromStorage<CreatorProfile[]>(STORAGE_KEYS.CREATORS, INITIAL_CREATOR_PROFILES)
   if (userId) {
