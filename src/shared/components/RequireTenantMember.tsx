@@ -5,6 +5,7 @@ export interface RequireTenantMemberProps {
   children: ReactNode
   allowedRoles?: string[]
   requiredTenantTypes?: string[]
+  requireTenantMembership?: boolean
   fallback?: ReactNode
   personaLabel?: string
   onboardingRole?: 'academy' | 'coach' | 'venue' | 'tournament'
@@ -22,7 +23,7 @@ export function RequireTenantMember({
 }: RequireTenantMemberProps) {
   const { isAuthenticated, userId, currentTenant, currentMembership, memberships, isLoading, error, switchTenant } = useTenant()
   const matchingMembership = requiredTenantTypes?.length
-    ? memberships.find(m => m.user_id === userId && m.status === 'active' && requiredTenantTypes.includes(m.tenant?.tenant_type || '') && (!allowedRoles?.length || allowedRoles.includes(m.role)))
+    ? memberships.find(m => m.user_id === userId && m.status === 'active' && requiredTenantTypes.includes(m.tenant?.tenant_type || '') && m.tenant?.status === 'active' && (!allowedRoles?.length || allowedRoles.includes(m.role)))
     : null
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export function RequireTenantMember({
     return <section className="kg-tenant-guard-card" role="alert"><h2>Workspace access could not be verified</h2><p>{error}</p></section>
   }
 
-  if (!currentTenant || !currentMembership || currentMembership.user_id !== userId || currentMembership.status !== 'active' || (requiredTenantTypes?.length && !matchingMembership)) {
+  if (!requireTenantMembership) return <>{children}</>\n\n  if (!currentTenant || !currentMembership || currentMembership.user_id !== userId || currentMembership.status !== 'active' || (requiredTenantTypes?.length && !matchingMembership)) {
     if (fallback) return <>{fallback}</>
     return (
       <section className="kg-tenant-guard-card" aria-labelledby="kg-tenant-membership-title">
