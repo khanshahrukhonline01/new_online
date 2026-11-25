@@ -182,9 +182,10 @@ function WorkspaceShellInner({
   }, [resolvedSection])
 
   const handlePersonaSwitch = useCallback((target: WorkspacePersona) => {
+    if (!availablePersonas.includes(target)) return
     const targetMeta = PERSONAS[target]
     onNavigate(undefined, `/workspace/${target}/${targetMeta.sections[0].id}`)
-  }, [onNavigate])
+  }, [availablePersonas, onNavigate])
 
   const handleSectionSwitch = useCallback((sectionId: string) => {
     setActiveSectionId(sectionId)
