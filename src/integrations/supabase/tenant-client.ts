@@ -552,57 +552,6 @@ export async function getUserTenantMemberships(userId: string): Promise<DbTenant
       membership.tenant?.status === 'active'
   )
 }
-  const client = getSupabaseClient()
-  if (!client) {
-    const user = getStoredAuthUser()
-    if (!user) return []
-    return [
-      {
-        id: `local-mem-${user.id}`,
-        tenant_id: 'delhi-cricket-academy',
-        user_id: user.id,
-        role: (user.role === 'coach' ? 'coach' : 'owner') as 'owner' | 'coach',
-        status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        tenant: {
-          id: 'delhi-cricket-academy',
-          name: 'Delhi Cricket Academy',
-          slug: 'delhi-cricket-academy',
-          tenant_type: 'academy',
-          status: 'active',
-          city: 'Delhi NCR',
-          state: 'Delhi',
-          sport: 'Cricket',
-          contact_phone: '9876543210',
-          contact_email: user.email || 'director@delhicricketacademy.com',
-          upi_vpa: 'delhicricket@upi',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      },
-    ]
-  }
-
-  try {
-    const { data, error } = await client
-      .from('tenant_memberships')
-      .select('*, tenant:tenants(*)')
-      .eq('status', 'active')
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.warn('[TenantClient] getUserTenantMemberships error:', error.message)
-      return []
-    }
-    return (data || []) as DbTenantMembership[]
-  } catch (err) {
-    console.warn('[TenantClient] Failed to fetch memberships:', err)
-    return []
-  }
-}
-
 /**
  * Update tenant profile settings (Restricted to owner & director)
  */
