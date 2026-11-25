@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, type ReactNode } from 'react'
+import { getSupabaseClient } from '../../integrations/supabase/realtime-client'
 import {
   getUserTenantMemberships,
   getTenantBySlug,
