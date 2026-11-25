@@ -1,0 +1,541 @@
+/* ============================================================================
+   WorkspaceHeader.css — Unified Global & Six-Workspace SaaS Header
+   KhelGrid Identity: Deep Navy (#0B192C) + Emerald (#10B981)
+   Single-line desktop (64px) & mobile (56px) discipline, tabular-nums KPIs.
+   ============================================================================ */
+
+.foundation-v1 .site-header.kg-workspace-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  height: 64px;
+  min-height: 64px;
+  max-height: 64px;
+  box-sizing: border-box;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 1px 2px rgba(11, 25, 44, 0.04);
+}
+
+html.dark .foundation-v1 .site-header.kg-workspace-header {
+  background: rgba(11, 17, 27, 0.92);
+  border-bottom-color: var(--line, #1e293b);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.foundation-v1 .site-header.kg-workspace-header .site-header-inner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(8px, 1vw, 16px);
+  width: 100%;
+  max-width: 1760px;
+  height: 100%;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ── Zone 1: Brand + Persona Context Trigger ── */
+.foundation-v1 .kg-workspace-header .header-zone-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.wh-persona-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.wh-persona-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid var(--line-strong, #cbd5e1);
+  background: var(--surface-soft, #f0f5f8);
+  color: var(--text, #142033);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.wh-persona-trigger:hover,
+.wh-persona-trigger[aria-expanded="true"] {
+  border-color: var(--accent, #07964f);
+  background: var(--accent-soft, #e8f7ef);
+  color: var(--accent, #07964f);
+}
+
+.wh-persona-trigger.is-workspace-active {
+  border-color: var(--accent-border, #a7f3d0);
+  background: var(--accent-soft, #e8f7ef);
+  color: var(--accent, #07964f);
+}
+
+html.dark .wh-persona-trigger {
+  background: var(--surface-raised, #162234);
+  border-color: var(--line-strong, #334155);
+  color: var(--text, #f1f5f9);
+}
+
+html.dark .wh-persona-trigger:hover,
+html.dark .wh-persona-trigger[aria-expanded="true"],
+html.dark .wh-persona-trigger.is-workspace-active {
+  border-color: var(--accent, #10b981);
+  background: var(--accent-soft, rgba(16, 185, 129, 0.16));
+  color: var(--accent, #10b981);
+}
+
+.wh-persona-chevron {
+  opacity: 0.75;
+  flex: 0 0 auto;
+  transition: transform 0.15s ease;
+}
+
+.wh-persona-trigger[aria-expanded="true"] .wh-persona-chevron {
+  transform: rotate(180deg);
+}
+
+/* ── Persona Switcher & Context Menu Popover ── */
+.wh-persona-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10000;
+  width: min(416px, calc(100vw - 24px));
+  max-height: min(86vh, 680px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line, #e2e8f0);
+  background: var(--surface, #ffffff);
+  box-shadow: 0 16px 40px -8px rgba(11, 25, 44, 0.22);
+}
+
+html.dark .wh-persona-popover {
+  background: var(--surface, #111a28);
+  border-color: var(--line-strong, #334155);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.55);
+}
+
+.wh-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 4px 10px;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+}
+
+.wh-popover-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted, #65748a);
+}
+
+.wh-popover-entity {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent, #07964f);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 190px;
+}
+
+.wh-persona-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  padding: 8px 0;
+}
+
+.wh-persona-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 10px;
+  border: 1px solid var(--line, #e2e8f0);
+  background: var(--surface-raised, #f8fafc);
+  color: var(--text, #142033);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.14s ease, background 0.14s ease;
+}
+
+.wh-persona-option:hover {
+  border-color: var(--accent, #07964f);
+  background: var(--surface, #ffffff);
+}
+
+.wh-persona-option.is-active {
+  border-color: var(--accent, #07964f);
+  background: var(--accent-soft, #e8f7ef);
+}
+
+html.dark .wh-persona-option {
+  background: var(--surface-raised, #162234);
+  border-color: var(--line, #1e293b);
+  color: var(--text, #f1f5f9);
+}
+
+html.dark .wh-persona-option.is-active {
+  border-color: var(--accent, #10b981);
+  background: var(--accent-soft, rgba(16, 185, 129, 0.16));
+}
+
+.wh-persona-option-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: 7px;
+  background: var(--surface, #ffffff);
+  color: var(--accent, #07964f);
+  border: 1px solid var(--line, #e2e8f0);
+}
+
+html.dark .wh-persona-option-icon {
+  background: var(--surface, #111a28);
+  border-color: var(--line-strong, #334155);
+}
+
+.wh-persona-option-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wh-persona-option-copy strong {
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wh-persona-option-copy small {
+  font-size: 10.5px;
+  line-height: 1.25;
+  color: var(--muted, #65748a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wh-popover-section {
+  padding-top: 7px;
+  border-top: 1px solid var(--line, #e2e8f0);
+}
+
+.wh-popover-section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 5px;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted, #65748a);
+}
+
+.wh-context-list {
+  display: grid;
+  gap: 2px;
+}
+
+.wh-context-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  color: var(--text-soft, #24344d);
+  text-decoration: none;
+  font-size: 12.5px;
+  font-weight: 650;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.wh-context-link:hover {
+  background: var(--surface-soft, #f0f5f8);
+  color: var(--accent, #07964f);
+}
+
+.wh-context-link-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.wh-context-link-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.wh-context-link-text small {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--muted, #65748a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wh-context-tag {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent, #07964f);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Zone 2: Discovery Nav & Dynamic Workspace KPIs ── */
+.foundation-v1 .kg-workspace-header .header-zone-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  white-space: nowrap;
+}
+
+.wh-kpi-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.wh-kpi-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line, #e2e8f0);
+  background: var(--surface-raised, #f8fafc);
+  color: var(--text, #142033);
+  text-decoration: none;
+  font-size: 11.5px;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.wh-kpi-item:hover {
+  border-color: var(--accent, #07964f);
+  background: var(--accent-soft, #e8f7ef);
+}
+
+.wh-kpi-item.is-emerald .wh-kpi-value {
+  color: var(--accent, #07964f);
+}
+
+.wh-kpi-item.is-warning .wh-kpi-value {
+  color: var(--warning, #b45309);
+}
+
+.wh-kpi-item.is-info .wh-kpi-value {
+  color: var(--info, #2563eb);
+}
+
+html.dark .wh-kpi-item {
+  background: var(--surface-raised, #162234);
+  border-color: var(--line, #1e293b);
+  color: var(--text, #f1f5f9);
+}
+
+html.dark .wh-kpi-item:hover {
+  border-color: var(--accent, #10b981);
+  background: var(--accent-soft, rgba(16, 185, 129, 0.15));
+}
+
+.wh-kpi-label {
+  color: var(--muted, #65748a);
+  font-weight: 600;
+}
+
+.wh-kpi-value {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text, #142033);
+}
+
+html.dark .wh-kpi-value {
+  color: var(--text, #f1f5f9);
+}
+
+/* ── Zone 3: Notification badge & Account dropdown ── */
+.wh-notif-btn {
+  position: relative;
+}
+
+.wh-notif-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent, #07964f);
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.header-user-dropdown-section-title {
+  padding: 5px 10px 3px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted, #65748a);
+}
+
+/* ── Responsive Discipline ── */
+@media (max-width: 1220px) {
+  .wh-kpi-strip .wh-kpi-item:nth-child(n + 3) {
+    display: none;
+  }
+}
+
+@media (max-width: 1040px) {
+  .wh-kpi-strip {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .foundation-v1 .site-header.kg-workspace-header {
+    height: 56px;
+    min-height: 56px;
+    max-height: 56px;
+  }
+  .foundation-v1 .site-header.kg-workspace-header .site-header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    gap: 6px;
+  }
+  .foundation-v1 .site-header.kg-workspace-header .header-zone-left {
+    flex: 0 1 auto;
+    min-width: 0;
+    gap: 6px;
+  }
+  .foundation-v1 .site-header.kg-workspace-header .header-zone-center {
+    display: none;
+  }
+  .foundation-v1 .site-header.kg-workspace-header .header-zone-right {
+    flex: 0 0 auto;
+    gap: 5px;
+  }
+  .foundation-v1 .site-header.kg-workspace-header .header-workspace-pill {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+    padding: 0;
+    justify-content: center;
+    flex: 0 0 38px;
+  }
+  .foundation-v1 .site-header.kg-workspace-header .header-workspace-pill-label {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .foundation-v1 .site-header.kg-workspace-header .wh-persona-trigger {
+    height: 38px;
+    min-height: 38px;
+    padding: 0 8px;
+  }
+  .wh-persona-popover {
+    position: fixed;
+    top: 62px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: 75vh;
+  }
+  .wh-persona-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  /* #wh-persona-trigger on the left gives direct 1-tap access to /workspace and all 6 personas */
+  .foundation-v1 .site-header.kg-workspace-header .header-workspace-pill {
+    display: none;
+  }
+  .foundation-v1 .site-header.kg-workspace-header .brand {
+    font-size: 12px;
+    gap: 5px;
+    letter-spacing: 0.04em;
+  }
+  .foundation-v1 .site-header.kg-workspace-header .brand .brand-logo {
+    width: 26px;
+    height: 26px;
+  }
+  .foundation-v1 .site-header.kg-workspace-header .header-icon-button,
+  .foundation-v1 .site-header.kg-workspace-header .navbar-settings-wrapper,
+  .foundation-v1 .site-header.kg-workspace-header .navbar-settings-wrapper > button,
+  .foundation-v1 .site-header.kg-workspace-header .header-user-btn,
+  .foundation-v1 .site-header.kg-workspace-header .header-account-icon-btn,
+  .foundation-v1 .site-header.kg-workspace-header .menu-toggle {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+    flex: 0 0 38px;
+  }
+  .foundation-v1 .site-header.kg-workspace-header .wh-persona-trigger {
+    width: 40px;
+    min-width: 40px;
+    height: 38px;
+    min-height: 38px;
+    padding: 0;
+    justify-content: center;
+    gap: 3px;
+  }
+  .foundation-v1 .site-header.kg-workspace-header .wh-persona-trigger-label {
+    display: none;
+  }
+}

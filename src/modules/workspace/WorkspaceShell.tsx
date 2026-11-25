@@ -11,11 +11,12 @@
  *  - 3 primary section tabs per workspace
  */
 
-import { useCallback, useEffect, useMemo, useState, Suspense, lazy } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useState, Suspense, lazy } from 'react'
 import type { MouseEvent } from 'react'
 import type { AuthUserProfile } from '../../integrations/supabase/auth-client'
 import type { WorkspacePersona } from '../../shared/routing'
 import { TenantProvider } from '../../shared/context/TenantContext'
+import { TenantContext } from '../../shared/context/tenantContextCore'
 import { useTenant } from '../../shared/context/useTenant'
 import { RequireTenantMember } from '../../shared/components/RequireTenantMember'
 import { KpiStrip, type KpiItem } from '../../shared/components/ui/KpiStrip'
@@ -133,6 +134,10 @@ interface WorkspaceShellProps {
 }
 
 export default function WorkspaceShell(props: WorkspaceShellProps) {
+  const existingTenantContext = useContext(TenantContext)
+  if (existingTenantContext) {
+    return <WorkspaceShellInner {...props} />
+  }
   return (
     <TenantProvider>
       <WorkspaceShellInner {...props} />
