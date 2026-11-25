@@ -539,7 +539,6 @@ export async function getUserTenantMemberships(userId: string): Promise<DbTenant
     .select('*, tenant:tenants(*)')
     .eq('user_id', userId)
     .eq('status', 'active')
-    .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
   if (error) {
