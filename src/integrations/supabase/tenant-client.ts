@@ -525,7 +525,34 @@ export async function createTenantStudent(
 /**
  * Fetch all active tenant memberships for the authenticated user
  */
-export async function getUserTenantMemberships(): Promise<DbTenantMembership[]> {
+export async function getUserTenantMemberships(userId: string): Promise<DbTenantMembership[]> {
+  const client = getSupabaseClient()
+  if (!client) {
+    throw new Error('Supabase is not configured. Tenant access cannot be verified.')
+  }
+  if (!userId) {
+    throw new Error('An authenticated user ID is required to resolve tenant memberships.')
+  }
+
+  const { data, error } = await client
+    .from('tenant_memberships')
+    .select('*, tenant:tenants(*)')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[TenantClient] getUserTenantMemberships failed:', error.message)
+    throw new Error('Could not verify workspace memberships. Please retry.')
+  }
+
+  return ((data || []) as DbTenantMembership[]).filter(
+    membership => membership.user_id === userId &&
+      membership.status === 'active' &&
+      membership.tenant?.status === 'active'
+  )
+}
   const client = getSupabaseClient()
   if (!client) {
     const user = getStoredAuthUser()
