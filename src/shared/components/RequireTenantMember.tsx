@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react'
+import React, { useEffect, type ReactNode } from 'react'
 import { useTenant } from '../context/useTenant'
 
 export interface RequireTenantMemberProps {
@@ -20,11 +20,20 @@ export function RequireTenantMember({
   onboardingRole = 'academy',
   onNavigate,
 }: RequireTenantMemberProps) {
-  const { isAuthenticated, userId, currentTenant, currentMembership, isLoading, error } = useTenant()
+  const { isAuthenticated, userId, currentTenant, currentMembership, memberships, isLoading, error, switchTenant } = useTenant()
+  const matchingMembership = requiredTenantTypes?.length
+    ? memberships.find(m => m.user_id === userId && m.status === 'active' && requiredTenantTypes.includes(m.tenant?.tenant_type || '') && (!allowedRoles?.length || allowedRoles.includes(m.role)))
+    : null
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && matchingMembership && currentMembership?.id !== matchingMembership.id) {
+      void switchTenant(matchingMembership.tenant_id)
+    }
+  }, [isLoading, isAuthenticated, matchingMembership, currentMembership?.id, switchTenant])
   const loginHref = `/partner-signup?mode=login&role=${onboardingRole}`
   const signupHref = `/partner-signup?mode=signup&role=${onboardingRole}`
 
-  if (isLoading) {
+  if (isLoading || (matchingMembership && currentMembership?.id !== matchingMembership.id)) {
     return <div className="kg-tenant-guard-loading" role="status"><p>Verifying your secure workspace access…</p></div>
   }
 
@@ -44,7 +53,7 @@ export function RequireTenantMember({
     return <section className="kg-tenant-guard-card" role="alert"><h2>Workspace access could not be verified</h2><p>{error}</p></section>
   }
 
-  if (!currentTenant || !currentMembership || currentMembership.user_id !== userId || currentMembership.status !== 'active') {
+  if (!currentTenant || !currentMembership || currentMembership.user_id !== userId || currentMembership.status !== 'active' || (requiredTenantTypes?.length && !matchingMembership)) {
     if (fallback) return <>{fallback}</>
     return (
       <section className="kg-tenant-guard-card" aria-labelledby="kg-tenant-membership-title">
