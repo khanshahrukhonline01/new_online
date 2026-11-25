@@ -26,12 +26,13 @@ import {
 } from '../../integrations/supabase/athlete-profile-client'
 import { getUserVenueBookings } from '../../shared/payments/paymentService'
 import { PlayerCard } from '../athlete-profile/PlayerCard'
+import type { AuthOpenInput } from '../../shared/components/auth/authModalTypes'
 import './UserDashboardPage.css'
 
 export interface UserDashboardPageProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
   onOpenIntake?: (category?: CommunityListingCategory) => void
-  onOpenAuth?: (tab?: 'login' | 'signup') => void
+  onOpenAuth?: (input?: AuthOpenInput) => void
 }
 
 type DashboardTab = 'overview' | 'profile' | 'matches' | 'saved'
@@ -97,7 +98,11 @@ export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth
   // Auto-prompt login modal on mount if guest visits dashboard directly
   useEffect(() => {
     if (!authUser && onOpenAuth) {
-      onOpenAuth('login')
+      onOpenAuth({
+        tab: 'login',
+        intentLabel: 'Sign in to access your athlete dashboard, passes & saved trials',
+        redirectTo: '/dashboard',
+      })
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

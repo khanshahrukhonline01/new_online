@@ -1,209 +1,184 @@
-import { useState, useEffect, useId, useRef, type FormEvent, type MouseEvent } from 'react'
-import { SiteIcon, type SiteIconName } from './SiteIcon'
+import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
+import { SiteIcon } from './SiteIcon'
 import {
-  signInWithEmail,
-  signUpWithEmail,
-  sendPasswordReset,
-  updatePassword,
   resendVerificationEmail,
-  type UserRole,
+  sendPasswordReset,
+  signInWithEmail,
+  signInWithGoogleOAuth,
+  signUpWithEmail,
+  updatePassword,
+  verifyEmailOtpCode,
+  type AuthAgeBand,
   type AuthUserProfile,
+  type UserRole,
 } from '../../integrations/supabase/auth-client'
+import { useFormState } from '../hooks/useFormState'
+import { AuthPartnerHandoffPanel } from './auth/AuthPartnerHandoffPanel'
+import { AuthRecoveryAndOtpPanel } from './auth/AuthRecoveryAndOtpPanel'
+import { AuthStepIdentityPanel } from './auth/AuthStepIdentityPanel'
+import { AuthStepProfilePanel } from './auth/AuthStepProfilePanel'
 import {
-  onboardPartnerOrganization,
-  type PartnerRole,
-} from '../../modules/partner/partnerOnboardingService'
+  resolvePostAuthTarget,
+  type AuthModalTab,
+  type OnboardingStep,
+} from './auth/authModalTypes'
 import './AuthModal.css'
 
-export type AuthModalTab = 'login' | 'signup' | 'partner' | 'forgot_password' | 'expired_link' | 'set_new_password'
+export type { AuthModalTab } from './auth/authModalTypes'
 
 export interface AuthModalProps {
   isOpen: boolean
   initialTab?: AuthModalTab
   initialError?: string
   initialEmail?: string
+  intentLabel?: string
+  redirectTo?: string
   onClose: () => void
   onSuccess?: (user: AuthUserProfile, options?: { skipRedirect?: boolean }) => void
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
-const MAJOR_CITIES = [
-  'Delhi NCR',
-  'Bengaluru',
-  'Mumbai',
-  'Hyderabad',
-  'Kolkata',
-  'Chennai',
-  'Pune',
-  'Ahmedabad',
-  'Chandigarh',
-  'Jaipur',
-  'Lucknow',
-  'Bhopal',
-  'Patna',
-  'Dehradun',
-  'Ranchi',
-  'Guwahati',
-  'Other',
-]
-
-const DEMO_ACCOUNTS: Array<{
-  label: string
-  role: UserRole
+interface AuthModalFields extends Record<string, unknown> {
   email: string
-  name: string
+  password: string
+  newPassword: string
+  confirmPassword: string
+  otpCode: string
+  fullName: string
+  role: Extract<UserRole, 'athlete' | 'parent' | 'scout'>
   city: string
-  icon: SiteIconName
-}> = [
-  {
-    label: 'Rohit Verma (Athlete)',
-    role: 'athlete',
-    email: 'rohit.verma@khelgrid.com',
-    name: 'Rohit Verma',
-    city: 'Delhi NCR',
-    icon: 'user-round',
-  },
-  {
-    label: 'Shivaji Cricket Academy (Director)',
-    role: 'academy',
-    email: 'director.shivaji@khelgrid.com',
-    name: 'Coach Anand Patil',
-    city: 'Pune',
-    icon: 'building',
-  },
-  {
-    label: 'Sunita Sharma (Parent)',
-    role: 'parent',
-    email: 'sunita.parent@khelgrid.com',
-    name: 'Sunita Sharma',
-    city: 'Delhi NCR',
-    icon: 'users',
-  },
-  {
-    label: 'FSV Arena (Turf Host)',
-    role: 'host',
-    email: 'host.fsv@khelgrid.com',
-    name: 'FSV Sports Arena',
-    city: 'Bengaluru',
-    icon: 'building',
-  },
-  {
-    label: 'Zaheer Farooq (Coach)',
-    role: 'coach',
-    email: 'zaheer.coach@khelgrid.com',
-    name: 'Coach Zaheer Farooq',
-    city: 'Delhi NCR',
-    icon: 'award',
-  },
-  {
-    label: 'KhelGrid Admin',
-    role: 'admin',
-    email: 'admin@khelgrid.com',
-    name: 'KhelGrid Staff Admin',
-    city: 'National',
-    icon: 'shield-check',
-  },
-]
+  phone: string
+  ageBand: AuthAgeBand
+  guardianEmail: string
+  guardianConsentAccepted: boolean
+}
+
+const FOCUSABLE_SELECTORS = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ')
 
 export default function AuthModal({
   isOpen,
   initialTab = 'login',
   initialError,
   initialEmail,
+  intentLabel,
+  redirectTo,
   onClose,
   onSuccess,
   onNavigate,
 }: AuthModalProps) {
   const [tab, setTab] = useState<AuthModalTab>(initialTab)
-
-  // Form Fields
-  const [email, setEmail] = useState(initialEmail || '')
-  const [password, setPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [role, setRole] = useState<UserRole>('athlete')
-  const [city, setCity] = useState('Delhi NCR')
-  const [phone, setPhone] = useState('')
+  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>('identity')
   const [showPassword, setShowPassword] = useState(false)
-
-  // Partner Form Fields
-  const [partnerCategory, setPartnerCategory] = useState<PartnerRole>('academy')
-  const [partnerAcademyName, setPartnerAcademyName] = useState('')
-  const [partnerSport, setPartnerSport] = useState('Cricket')
-  const [partnerCity, setPartnerCity] = useState('Delhi NCR')
-  const [partnerDirectorName, setPartnerDirectorName] = useState('')
-  const [partnerCoachCert, setPartnerCoachCert] = useState('SAI / NIS Patiala Diploma')
-  const [partnerWhatsApp, setPartnerWhatsApp] = useState('')
-  const [partnerUpi, setPartnerUpi] = useState('')
-
-  // Status & Feedback
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState(initialError || '')
   const [successMsg, setSuccessMsg] = useState('')
   const [emailVerificationPending, setEmailVerificationPending] = useState(false)
 
-  const emailInputId = useId()
-  const passwordInputId = useId()
-  const nameInputId = useId()
-  const cityInputId = useId()
-  const phoneInputId = useId()
+  const form = useFormState<AuthModalFields>({
+    email: initialEmail || '',
+    password: '',
+    newPassword: '',
+    confirmPassword: '',
+    otpCode: '',
+    fullName: '',
+    role: 'athlete',
+    city: 'Delhi NCR',
+    phone: '',
+    ageBand: 'adult',
+    guardianEmail: '',
+    guardianConsentAccepted: false,
+  })
 
   const cardRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<Element | null>(null)
+  const closeBtnRef = useRef<HTMLButtonElement>(null)
 
-  // Sync tab with initialTab and initialError prop
   useEffect(() => {
     setTab(initialTab)
-    if (initialError) {
-      setErrorMsg(initialError)
-    } else {
-      setErrorMsg('')
-    }
+    setOnboardingStep('identity')
+    setErrorMsg(initialError || '')
     if (initialEmail) {
-      setEmail(initialEmail)
+      form.setField('email', initialEmail)
     }
     setSuccessMsg('')
     setEmailVerificationPending(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialTab, initialError, initialEmail, isOpen])
 
-  // Close on Escape key
   useEffect(() => {
     if (!isOpen) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+    if (typeof document !== 'undefined') {
+      triggerRef.current = document.activeElement
+      requestAnimationFrame(() => closeBtnRef.current?.focus())
     }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab' || !cardRef.current) return
+      const focusable = Array.from(
+        cardRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS)
+      ).filter(el => !el.closest('[hidden]') && el.offsetParent !== null)
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      if (triggerRef.current && (triggerRef.current as HTMLElement).focus) {
+        ;(triggerRef.current as HTMLElement).focus()
+      }
+    }
   }, [isOpen, onClose])
 
   if (!isOpen) return null
+
+  const finishAuthNavigation = (user: AuthUserProfile) => {
+    const target = resolvePostAuthTarget(user, redirectTo)
+    onSuccess?.(user, { skipRedirect: Boolean(target) })
+    setTimeout(() => {
+      onClose()
+      if (target) {
+        onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, target)
+      }
+    }, 500)
+  }
 
   const handleLoginSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setErrorMsg('')
     setSuccessMsg('')
     setSubmitting(true)
-
     try {
-      const res = await signInWithEmail({ email, password })
+      const res = await signInWithEmail({
+        email: form.fields.email,
+        password: form.fields.password,
+        redirectTo,
+      })
       if (res.success && res.user) {
         setSuccessMsg(`Welcome back, ${res.user.fullName}!`)
-        onSuccess?.(res.user, { skipRedirect: true })
-        setTimeout(() => {
-          onClose()
-          if (res.user?.role === 'academy') {
-            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/academy/overview')
-          } else if (res.user?.role === 'venue_owner') {
-            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/turf/calendar')
-          } else if (res.user?.role === 'host') {
-            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/host/overview')
-          } else if (res.user?.role === 'coach') {
-            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/coach/overview')
-          }
-        }, 600)
+        finishAuthNavigation(res.user)
       } else if (res.requiresEmailVerification) {
         setEmailVerificationPending(true)
-        setSuccessMsg(`Magic login link sent to ${email}. Check your inbox.`)
+        setSuccessMsg(`Magic login link and 6-digit code sent to ${form.fields.email}.`)
       } else {
         setErrorMsg(res.message || 'Login failed. Please check your credentials.')
       }
@@ -215,19 +190,22 @@ export default function AuthModal({
   }
 
   const handleMagicLinkSubmit = async () => {
-    if (!email.trim() || !email.includes('@')) {
+    if (!form.fields.email.trim() || !form.fields.email.includes('@')) {
       setErrorMsg('Please enter a valid email address first to receive a magic link.')
       return
     }
     setErrorMsg('')
     setSuccessMsg('')
     setSubmitting(true)
-
     try {
-      const res = await signInWithEmail({ email, useMagicLink: true })
+      const res = await signInWithEmail({
+        email: form.fields.email,
+        useMagicLink: true,
+        redirectTo,
+      })
       if (res.success) {
         setEmailVerificationPending(true)
-        setSuccessMsg(`Magic sign-in link sent to ${email.trim()}. Check your inbox.`)
+        setSuccessMsg(`Magic sign-in link and code sent to ${form.fields.email.trim()}.`)
       } else {
         setErrorMsg(res.message || 'Could not send magic link.')
       }
@@ -238,43 +216,69 @@ export default function AuthModal({
     }
   }
 
+  const handleGoogleSignIn = async () => {
+    setErrorMsg('')
+    setSuccessMsg('')
+    setSubmitting(true)
+    try {
+      const res = await signInWithGoogleOAuth(redirectTo)
+      if (!res.success) {
+        setErrorMsg(res.message || 'Google Sign-In could not be started.')
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleAdvanceSignupStep = (e: FormEvent) => {
+    e.preventDefault()
+    setErrorMsg('')
+    if (!form.fields.email.trim() || !form.fields.email.includes('@')) {
+      setErrorMsg('Please enter a valid email address.')
+      return
+    }
+    if (!form.fields.password || form.fields.password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters long.')
+      return
+    }
+    setOnboardingStep('profile')
+  }
+
   const handleSignUpSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setErrorMsg('')
     setSuccessMsg('')
-    setSubmitting(true)
 
+    const isMinorAthlete =
+      form.fields.role === 'athlete' &&
+      (form.fields.ageBand === 'u14' || form.fields.ageBand === 'u16' || form.fields.ageBand === 'u18')
+
+    if (isMinorAthlete && (!form.fields.guardianEmail.trim() || !form.fields.guardianConsentAccepted)) {
+      setErrorMsg('Under-18 athlete accounts require a parent/guardian email and DPDP consent confirmation.')
+      return
+    }
+
+    setSubmitting(true)
     try {
-      const derivedName = fullName.trim() || email.split('@')[0] || 'KhelGrid Athlete'
+      const derivedName = form.fields.fullName.trim() || form.fields.email.split('@')[0] || 'KhelGrid Athlete'
       const res = await signUpWithEmail({
-        email,
-        password,
+        email: form.fields.email,
+        password: form.fields.password,
         fullName: derivedName,
-        role,
-        city: city || 'Delhi NCR',
-        phone,
+        role: form.fields.role,
+        city: form.fields.city || 'Delhi NCR',
+        phone: form.fields.phone,
+        ageBand: form.fields.role === 'athlete' ? form.fields.ageBand : undefined,
+        guardianEmail: isMinorAthlete ? form.fields.guardianEmail : undefined,
+        redirectTo,
       })
       if (res.success) {
         if (res.requiresEmailVerification) {
           setEmailVerificationPending(true)
-          setSuccessMsg(`Verification email sent to ${email}. Please verify your email to continue.`)
+          setSuccessMsg(`Verification link & 6-digit code sent to ${form.fields.email}.`)
         } else if (res.user) {
           setSuccessMsg(`Account created! Welcome, ${res.user.fullName}.`)
-          onSuccess?.(res.user, { skipRedirect: true })
-          setTimeout(() => {
-            onClose()
-            if (role === 'academy') {
-              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/academy/overview')
-            } else if (role === 'venue_owner') {
-              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/turf/calendar')
-            } else if (role === 'host') {
-              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/host/overview')
-            } else if (role === 'coach') {
-              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/coach/overview')
-            } else if (role === 'athlete' || role === 'parent') {
-              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/athlete/overview')
-            }
-          }, 600)
+          finishAuthNavigation(res.user)
         }
       } else {
         setErrorMsg(res.message || 'Registration could not be completed.')
@@ -286,52 +290,24 @@ export default function AuthModal({
     }
   }
 
-  const handlePartnerSubmit = async (e: FormEvent) => {
+  const handleVerifyOtpSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setErrorMsg('')
     setSuccessMsg('')
     setSubmitting(true)
-
     try {
-      const entityName =
-        partnerCategory === 'coach' ? partnerDirectorName.trim() : partnerAcademyName.trim()
-
-      const outcome = await onboardPartnerOrganization({
-        role: partnerCategory,
-        entityName,
-        directorName: partnerDirectorName.trim(),
-        sport: partnerSport || 'Multi-Sport',
-        city: partnerCity || 'Delhi NCR',
-        phone: partnerWhatsApp.trim(),
-        email: email.trim(),
-        password,
-        upiVpa: partnerUpi.trim(),
-        certification: partnerCategory === 'coach' ? partnerCoachCert.trim() : undefined,
+      const res = await verifyEmailOtpCode({
+        email: form.fields.email,
+        token: form.fields.otpCode,
+        type: 'email',
       })
-
-      if (!outcome.success) {
-        setErrorMsg(outcome.message || 'Could not complete partner registration.')
-        return
+      if (res.success && res.user) {
+        setEmailVerificationPending(false)
+        setSuccessMsg(`Verified! Welcome, ${res.user.fullName}.`)
+        finishAuthNavigation(res.user)
+      } else {
+        setErrorMsg(res.message || 'Could not verify code.')
       }
-
-      if (outcome.requiresEmailVerification) {
-        setSuccessMsg(outcome.message)
-        setEmailVerificationPending(true)
-        return
-      }
-
-      setSuccessMsg(outcome.message)
-      if (outcome.user) {
-        onSuccess?.(outcome.user, { skipRedirect: Boolean(outcome.workspacePath) })
-      }
-
-      const targetPath = outcome.workspacePath || '/workspace/academy/overview'
-      setTimeout(() => {
-        onClose()
-        onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, targetPath)
-      }, 500)
-    } catch {
-      setErrorMsg('Could not complete partner registration. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -342,16 +318,13 @@ export default function AuthModal({
     setErrorMsg('')
     setSuccessMsg('')
     setSubmitting(true)
-
     try {
-      const res = await sendPasswordReset(email)
+      const res = await sendPasswordReset(form.fields.email, redirectTo)
       if (res.success) {
-        setSuccessMsg(res.message || 'Password reset instructions sent. Please check your email.')
+        setSuccessMsg(res.message)
       } else {
-        setErrorMsg(res.message || 'Could not send reset email.')
+        setErrorMsg(res.message)
       }
-    } catch {
-      setErrorMsg('Failed to request password reset.')
     } finally {
       setSubmitting(false)
     }
@@ -359,33 +332,30 @@ export default function AuthModal({
 
   const handleSetNewPasswordSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    if (newPassword.length < 6) {
+    if (form.fields.newPassword.length < 6) {
       setErrorMsg('Password must be at least 6 characters long.')
       return
     }
-    if (newPassword !== confirmPassword) {
+    if (form.fields.newPassword !== form.fields.confirmPassword) {
       setErrorMsg('Passwords do not match. Please verify and try again.')
       return
     }
     setErrorMsg('')
     setSuccessMsg('')
     setSubmitting(true)
-
     try {
-      const res = await updatePassword(newPassword)
+      const res = await updatePassword(form.fields.newPassword)
       if (res.success) {
         setSuccessMsg(res.message || 'Password updated successfully! You can now sign in.')
         setTimeout(() => {
           setTab('login')
-          setPassword('')
-          setNewPassword('')
-          setConfirmPassword('')
-        }, 1500)
+          form.setField('password', '')
+          form.setField('newPassword', '')
+          form.setField('confirmPassword', '')
+        }, 1200)
       } else {
         setErrorMsg(res.message || 'Could not update password.')
       }
-    } catch {
-      setErrorMsg('Failed to update password. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -393,79 +363,39 @@ export default function AuthModal({
 
   const handleResendVerification = async (e?: FormEvent) => {
     if (e) e.preventDefault()
-    if (!email.trim() || !email.includes('@')) {
+    if (!form.fields.email.trim() || !form.fields.email.includes('@')) {
       setErrorMsg('Please enter your email address to receive a fresh verification link.')
       return
     }
     setErrorMsg('')
     setSuccessMsg('')
     setSubmitting(true)
-
     try {
-      const res = await resendVerificationEmail(email.trim())
+      const res = await resendVerificationEmail(form.fields.email.trim())
       if (res.success) {
         setSuccessMsg(res.message)
         setEmailVerificationPending(true)
       } else {
         setErrorMsg(res.message)
       }
-    } catch {
-      setErrorMsg('Failed to resend verification link. Please try again.')
     } finally {
       setSubmitting(false)
     }
   }
 
-  const handleDemoLogin = async (demo: (typeof DEMO_ACCOUNTS)[0]) => {
-    setEmail(demo.email)
-    setPassword('KhelGrid@2026')
-    setFullName(demo.name)
-    setRole(demo.role)
-    setSubmitting(true)
-    setErrorMsg('')
-
-    try {
-      const res = await signInWithEmail({ email: demo.email, password: 'demo-password' })
-      if (res.success && res.user) {
-        setSuccessMsg(`Signed in as demo ${demo.role}: ${res.user.fullName}`)
-        onSuccess?.(res.user)
-        setTimeout(() => {
-          onClose()
-          if (demo.role === 'academy') {
-            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/academy-hub')
-          } else if (demo.role === 'host') {
-            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/host')
-          } else if (demo.role === 'coach') {
-            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/coach-dashboard')
-          }
-        }, 600)
-      } else {
-        // Fallback sign up demo user
-        const signRes = await signUpWithEmail({
-          email: demo.email,
-          fullName: demo.name,
-          role: demo.role,
-          city: demo.city,
-        })
-        if (signRes.success && signRes.user) {
-          setSuccessMsg(`Demo profile activated: ${signRes.user.fullName}`)
-          onSuccess?.(signRes.user)
-          setTimeout(() => {
-            onClose()
-            if (demo.role === 'academy') {
-              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/academy-hub')
-            } else if (demo.role === 'host') {
-              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/host')
-            } else if (demo.role === 'coach') {
-              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/coach-dashboard')
-            }
-          }, 600)
-        }
-      }
-    } finally {
-      setSubmitting(false)
-    }
+  const handlePartnerRoute = (
+    partnerRole: 'academy' | 'coach' | 'venue' | 'tournament',
+    e: MouseEvent<HTMLAnchorElement>
+  ) => {
+    onClose()
+    onNavigate?.(e, `/partner-signup?role=${partnerRole}&mode=signup`)
   }
+
+  const recoveryView = emailVerificationPending
+    ? 'otp_pending'
+    : tab === 'forgot_password' || tab === 'expired_link' || tab === 'set_new_password'
+      ? tab
+      : null
 
   return (
     <div className="kg-auth-modal-backdrop" role="presentation" onClick={onClose}>
@@ -477,7 +407,6 @@ export default function AuthModal({
         aria-labelledby="kg-auth-title"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="kg-auth-header">
           <div className="kg-auth-brand">
             <span className="kg-auth-tiranga">
@@ -492,6 +421,7 @@ export default function AuthModal({
           </div>
 
           <button
+            ref={closeBtnRef}
             type="button"
             className="kg-auth-close-btn"
             onClick={onClose}
@@ -501,15 +431,23 @@ export default function AuthModal({
           </button>
         </div>
 
-        {/* Tab Switcher */}
-        <div className={`kg-auth-tabs ${tab === 'expired_link' ? 'has-five-tabs' : 'has-four-tabs'}`} role="tablist" aria-label="Sign in or register">
+        {intentLabel && (
+          <div className="kg-auth-intent-banner" role="status">
+            <SiteIcon name="target" size={15} />
+            <span>{intentLabel}</span>
+          </div>
+        )}
+
+        <div className="kg-auth-tabs has-two-tabs" role="tablist" aria-label="Sign in or register">
           <button
             type="button"
             role="tab"
-            aria-selected={tab === 'login'}
-            className={`kg-auth-tab ${tab === 'login' ? 'is-active' : ''}`}
+            aria-selected={tab === 'login' && !emailVerificationPending}
+            className={`kg-auth-tab ${tab === 'login' && !emailVerificationPending ? 'is-active' : ''}`}
             onClick={() => {
               setTab('login')
+              setOnboardingStep('identity')
+              setEmailVerificationPending(false)
               setErrorMsg('')
               setSuccessMsg('')
             }}
@@ -520,10 +458,12 @@ export default function AuthModal({
           <button
             type="button"
             role="tab"
-            aria-selected={tab === 'signup'}
-            className={`kg-auth-tab ${tab === 'signup' ? 'is-active' : ''}`}
+            aria-selected={tab === 'signup' && !emailVerificationPending}
+            className={`kg-auth-tab ${tab === 'signup' && !emailVerificationPending ? 'is-active' : ''}`}
             onClick={() => {
               setTab('signup')
+              setOnboardingStep('identity')
+              setEmailVerificationPending(false)
               setErrorMsg('')
               setSuccessMsg('')
             }}
@@ -531,49 +471,8 @@ export default function AuthModal({
             <SiteIcon name="plus" size={14} />
             <span>Create Account</span>
           </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === 'partner'}
-            className={`kg-auth-tab kg-auth-tab-partner ${tab === 'partner' ? 'is-active' : ''}`}
-            onClick={() => {
-              setTab('partner')
-              setErrorMsg('')
-              setSuccessMsg('')
-            }}
-          >
-            <SiteIcon name="sparkles" size={14} />
-            <span>Partner Signup</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === 'forgot_password'}
-            className={`kg-auth-tab ${tab === 'forgot_password' ? 'is-active' : ''}`}
-            onClick={() => {
-              setTab('forgot_password')
-              setErrorMsg('')
-              setSuccessMsg('')
-            }}
-          >
-            <SiteIcon name="help-circle" size={14} />
-            <span>Recovery</span>
-          </button>
-          {tab === 'expired_link' && (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={true}
-              className="kg-auth-tab is-active"
-              style={{ color: '#dc2626', borderBottomColor: '#dc2626' }}
-            >
-              <SiteIcon name="alert-circle" size={14} />
-              <span>Verify Link</span>
-            </button>
-          )}
         </div>
 
-        {/* Status Alerts */}
         {errorMsg && (
           <div className="kg-auth-alert kg-auth-alert-error" role="alert">
             <SiteIcon name="alert-circle" size={16} />
@@ -588,795 +487,101 @@ export default function AuthModal({
           </div>
         )}
 
-        {emailVerificationPending && (
-          <div className="kg-auth-verification-box">
-            <SiteIcon name="sparkles" size={20} className="kg-verify-icon" />
-            <div>
-              <strong>Verify Your Email Address</strong>
-              <p>
-                We sent a secure verification link to <strong>{email}</strong>. Click the link in
-                your email to complete authentication.
-              </p>
-            </div>
-          </div>
+        {recoveryView && (
+          <AuthRecoveryAndOtpPanel
+            view={recoveryView}
+            email={form.fields.email}
+            otpCode={form.fields.otpCode}
+            newPassword={form.fields.newPassword}
+            confirmPassword={form.fields.confirmPassword}
+            showPassword={showPassword}
+            submitting={submitting}
+            onEmailChange={v => form.setField('email', v)}
+            onOtpCodeChange={v => form.setField('otpCode', v)}
+            onNewPasswordChange={v => form.setField('newPassword', v)}
+            onConfirmPasswordChange={v => form.setField('confirmPassword', v)}
+            onTogglePassword={() => setShowPassword(s => !s)}
+            onVerifyOtpSubmit={handleVerifyOtpSubmit}
+            onForgotSubmit={handleForgotPasswordSubmit}
+            onResendSubmit={handleResendVerification}
+            onSetNewPasswordSubmit={handleSetNewPasswordSubmit}
+            onBackToLogin={() => {
+              setEmailVerificationPending(false)
+              setTab('login')
+              setErrorMsg('')
+            }}
+            onSwitchToSignup={() => {
+              setEmailVerificationPending(false)
+              setTab('signup')
+              setOnboardingStep('identity')
+              setErrorMsg('')
+            }}
+            onSwitchToOtpEntry={() => {
+              setEmailVerificationPending(true)
+              setErrorMsg('')
+            }}
+          />
         )}
 
-        {/* TAB 1: LOGIN */}
-        {tab === 'login' && !emailVerificationPending && (
-          <form className="kg-auth-form" onSubmit={handleLoginSubmit}>
-            <h2 id="kg-auth-title" className="kg-auth-title">
-              Sign in to your KhelGrid profile
-            </h2>
-            <p className="kg-auth-subtitle">
-              Access your saved trials, sports turf bookings, athlete CV, and academy management workspace.
-            </p>
-
-            {/* Merged Partner Portal Callout */}
-            <div className="kg-auth-partner-login-callout">
-              <div className="kg-auth-partner-login-text">
-                <SiteIcon name="building" size={15} />
-                <span>Operating a Sports Academy or Turf?</span>
-              </div>
-              <button
-                type="button"
-                className="kg-auth-partner-login-btn"
-                onClick={() => {
-                  setTab('partner')
-                  setErrorMsg('')
-                  setSuccessMsg('')
-                }}
-              >
-                ⚡ 30s Partner Signup →
-              </button>
-            </div>
-
-            <div className="kg-auth-field">
-              <label htmlFor={emailInputId}>Email Address</label>
-              <div className="kg-auth-input-wrap">
-                <SiteIcon name="mail" size={16} className="kg-input-icon" />
-                <input
-                  id={emailInputId}
-                  type="email"
-                  required
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  autoComplete="email"
-                />
-              </div>
-            </div>
-
-            <div className="kg-auth-field">
-              <div className="kg-field-header">
-                <label htmlFor={passwordInputId}>Password</label>
-                <button
-                  type="button"
-                  className="kg-text-link"
-                  onClick={() => setTab('forgot_password')}
-                >
-                  Forgot password?
-                </button>
-              </div>
-              <div className="kg-auth-input-wrap">
-                <SiteIcon name="shield-check" size={16} className="kg-input-icon" />
-                <input
-                  id={passwordInputId}
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  className="kg-password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  <SiteIcon name={showPassword ? 'eye-off' : 'eye'} size={15} />
-                </button>
-              </div>
-            </div>
-
-            {errorMsg && (errorMsg.toLowerCase().includes('confirm') || errorMsg.toLowerCase().includes('expired')) && (
-              <div style={{ margin: '8px 0 12px', textAlign: 'center' }}>
-                <button
-                  type="button"
-                  className="kg-text-link"
-                  onClick={() => setTab('expired_link')}
-                  style={{ fontWeight: 700 }}
-                >
-                  ✉️ Need a fresh confirmation link? Click here to resend →
-                </button>
-              </div>
-            )}
-
-            <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
-              {submitting ? 'Signing in…' : 'Sign In with Password'}
-            </button>
-
-            <div className="kg-auth-divider">
-              <span>OR</span>
-            </div>
-
-            <button
-              type="button"
-              className="kg-auth-magic-btn"
-              onClick={handleMagicLinkSubmit}
-              disabled={submitting}
-            >
-              <SiteIcon name="sparkles" size={15} />
-              <span>Send 1-Click Magic Login Link</span>
-            </button>
-
-            {/* Fast Demo Accounts */}
-            <div className="kg-auth-demo-section">
-              <span className="kg-demo-title">TEST / DEMO ACCOUNTS</span>
-              <div className="kg-demo-grid">
-                {DEMO_ACCOUNTS.map(demo => (
-                  <button
-                    key={demo.role}
-                    type="button"
-                    className="kg-demo-chip"
-                    onClick={() => handleDemoLogin(demo)}
-                  >
-                    <SiteIcon name={demo.icon} size={13} />
-                    <span>{demo.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </form>
+        {!recoveryView && tab === 'partner' && (
+          <AuthPartnerHandoffPanel
+            onSelectPartnerRole={handlePartnerRoute}
+            onSwitchToLogin={() => {
+              setTab('login')
+              setErrorMsg('')
+            }}
+          />
         )}
 
-        {/* TAB 2: SIGN UP */}
-        {tab === 'signup' && !emailVerificationPending && (
-          <form className="kg-auth-form" onSubmit={handleSignUpSubmit}>
-            <h2 id="kg-auth-title" className="kg-auth-title">
-              Join KhelGrid Sports Network
-            </h2>
-            <p className="kg-auth-subtitle">
-              Create your account to save trials, build an athlete CV, or host verified sports venues.
-            </p>
-
-            {/* Role Selection */}
-            <div className="kg-auth-field">
-              <span className="kg-auth-role-label">I AM JOINING AS:</span>
-              <div className="kg-role-picker-grid">
-                <button
-                  type="button"
-                  className={`kg-role-card ${role === 'athlete' ? 'is-selected' : ''}`}
-                  onClick={() => setRole('athlete')}
-                >
-                  <SiteIcon name="user-round" size={16} />
-                  <div className="kg-role-info">
-                    <strong>Athlete / Player</strong>
-                    <span>Find trials, build Sports CV, play matches</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  className={`kg-role-card ${role === 'parent' ? 'is-selected' : ''}`}
-                  onClick={() => setRole('parent')}
-                >
-                  <SiteIcon name="users" size={16} />
-                  <div className="kg-role-info">
-                    <strong>Parent / Guardian</strong>
-                    <span>Find sports academies &amp; trials for your child</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  className={`kg-role-card ${role === 'academy' ? 'is-selected' : ''}`}
-                  onClick={() => setRole('academy')}
-                >
-                  <SiteIcon name="building" size={16} />
-                  <div className="kg-role-info">
-                    <strong>Academy Director</strong>
-                    <span>Manage admissions, batches &amp; student passes</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  className={`kg-role-card ${role === 'host' ? 'is-selected' : ''}`}
-                  onClick={() => setRole('host')}
-                >
-                  <SiteIcon name="building" size={16} />
-                  <div className="kg-role-info">
-                    <strong>Turf &amp; Venue Host</strong>
-                    <span>Manage facility slots &amp; receive bookings</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  className={`kg-role-card ${role === 'coach' ? 'is-selected' : ''}`}
-                  onClick={() => setRole('coach')}
-                >
-                  <SiteIcon name="award" size={16} />
-                  <div className="kg-role-info">
-                    <strong>Certified Coach</strong>
-                    <span>List verified coaching credentials &amp; trainees</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  className={`kg-role-card ${role === 'scout' ? 'is-selected' : ''}`}
-                  onClick={() => setRole('scout')}
-                >
-                  <SiteIcon name="search" size={16} />
-                  <div className="kg-role-info">
-                    <strong>Talent Scout</strong>
-                    <span>Evaluate normative data &amp; scout athletes</span>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <div className="kg-auth-field">
-              <label htmlFor={nameInputId}>Full Name</label>
-              <div className="kg-auth-input-wrap">
-                <SiteIcon name="user-round" size={16} className="kg-input-icon" />
-                <input
-                  id={nameInputId}
-                  type="text"
-                  required
-                  placeholder="e.g. Aakash Sharma"
-                  value={fullName}
-                  onChange={e => setFullName(e.target.value)}
-                  autoComplete="name"
-                />
-              </div>
-            </div>
-
-            <div className="kg-auth-field">
-              <label htmlFor={emailInputId}>Email Address</label>
-              <div className="kg-auth-input-wrap">
-                <SiteIcon name="mail" size={16} className="kg-input-icon" />
-                <input
-                  id={emailInputId}
-                  type="email"
-                  required
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  autoComplete="email"
-                />
-              </div>
-            </div>
-
-            <div className="kg-auth-field">
-              <label htmlFor={passwordInputId}>Password (min 6 characters)</label>
-              <div className="kg-auth-input-wrap">
-                <SiteIcon name="shield-check" size={16} className="kg-input-icon" />
-                <input
-                  id={passwordInputId}
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  minLength={6}
-                  placeholder="Create a strong password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-                <button
-                  type="button"
-                  className="kg-password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  <SiteIcon name={showPassword ? 'eye-off' : 'eye'} size={15} />
-                </button>
-              </div>
-            </div>
-
-            <div className="kg-auth-row">
-              <div className="kg-auth-field">
-                <label htmlFor={cityInputId}>Home City</label>
-                <select
-                  id={cityInputId}
-                  value={city}
-                  onChange={e => setCity(e.target.value)}
-                >
-                  {MAJOR_CITIES.map(c => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="kg-auth-field">
-                <label htmlFor={phoneInputId}>Mobile / WhatsApp (Optional)</label>
-                <div className="kg-auth-input-wrap">
-                  <SiteIcon name="phone" size={16} className="kg-input-icon" />
-                  <input
-                    id={phoneInputId}
-                    type="tel"
-                    placeholder="+91 98765 43210"
-                    value={phone}
-                    onChange={e => setPhone(e.target.value)}
-                    autoComplete="tel"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
-              {submitting ? 'Creating Account…' : 'Create KhelGrid Account'}
-            </button>
-
-            {/* Direct Partner Onboarding Callout */}
-            <div className="kg-auth-partner-callout">
-              <div className="kg-auth-partner-callout-title">
-                <SiteIcon name="sparkles" size={14} />
-                <span>Operating a Sports Academy or Turf?</span>
-              </div>
-              <p>Launch your Admissions CRM &amp; Turf Slot Manager in under 30 seconds.</p>
-              <button
-                type="button"
-                className="kg-auth-partner-btn"
-                onClick={() => {
-                  setTab('partner')
-                  setErrorMsg('')
-                  setSuccessMsg('')
-                }}
-              >
-                ⚡ 30-Second Express Partner Onboarding →
-              </button>
-            </div>
-
-            <p className="kg-auth-terms-note">
-              By registering, you agree to KhelGrid’s <a href="/terms">Terms of Use</a>,{' '}
-              <a href="/privacy">Privacy Policy</a>, and DPDP Act standards.
-            </p>
-          </form>
+        {!recoveryView && (tab === 'login' || (tab === 'signup' && onboardingStep === 'identity')) && (
+          <AuthStepIdentityPanel
+            mode={tab === 'signup' ? 'signup' : 'login'}
+            email={form.fields.email}
+            password={form.fields.password}
+            showPassword={showPassword}
+            submitting={submitting}
+            errorMsg={errorMsg}
+            onEmailChange={v => form.setField('email', v)}
+            onPasswordChange={v => form.setField('password', v)}
+            onTogglePassword={() => setShowPassword(s => !s)}
+            onLoginSubmit={handleLoginSubmit}
+            onMagicLinkSubmit={handleMagicLinkSubmit}
+            onGoogleSignIn={() => void handleGoogleSignIn()}
+            onAdvanceSignupStep={handleAdvanceSignupStep}
+            onGoToForgotPassword={() => {
+              setTab('forgot_password')
+              setErrorMsg('')
+            }}
+            onGoToExpiredLink={() => {
+              setTab('expired_link')
+              setErrorMsg('')
+            }}
+            onNavigatePartner={handlePartnerRoute}
+          />
         )}
 
-        {/* TAB: PARTNER SIGNUP */}
-        {tab === 'partner' && !emailVerificationPending && (
-          <form className="kg-auth-form" onSubmit={handlePartnerSubmit}>
-            <h2 id="kg-auth-title" className="kg-auth-title">
-              {partnerCategory === 'coach' ? 'Register Coach Operations Profile' : 'Register Academy or Sports Facility'}
-            </h2>
-            <p className="kg-auth-subtitle">
-              {partnerCategory === 'coach'
-                ? 'Manage trainees, coaching batches, parent inquiries, and direct 0% commission UPI fee collections.'
-                : 'Free admissions CRM, turf slot scheduling, and UPI fee collections for sports academies & venues.'}
-            </p>
-
-            {/* Partner Track Selector */}
-            <div className="kg-auth-field">
-              <span className="kg-auth-role-label">I AM REGISTERING AS:</span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
-                <button
-                  type="button"
-                  className={`kg-role-card ${partnerCategory === 'academy' ? 'is-selected' : ''}`}
-                  onClick={() => setPartnerCategory('academy')}
-                  style={{ padding: '8px 10px' }}
-                >
-                  <SiteIcon name="building" size={15} />
-                  <div className="kg-role-info">
-                    <strong>Sports Academy</strong>
-                    <span style={{ fontSize: '10.5px' }}>Admissions &amp; Batches</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  className={`kg-role-card ${partnerCategory === 'coach' ? 'is-selected' : ''}`}
-                  onClick={() => setPartnerCategory('coach')}
-                  style={{ padding: '8px 10px' }}
-                >
-                  <SiteIcon name="award" size={15} />
-                  <div className="kg-role-info">
-                    <strong>Certified Coach</strong>
-                    <span style={{ fontSize: '10.5px' }}>Trainees &amp; Inquiries</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  className={`kg-role-card ${partnerCategory === 'venue' ? 'is-selected' : ''}`}
-                  onClick={() => setPartnerCategory('venue')}
-                  style={{ padding: '8px 10px' }}
-                >
-                  <SiteIcon name="venues" size={15} />
-                  <div className="kg-role-info">
-                    <strong>Turf &amp; Venue</strong>
-                    <span style={{ fontSize: '10.5px' }}>Hourly Slots</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  className={`kg-role-card ${partnerCategory === 'tournament' ? 'is-selected' : ''}`}
-                  onClick={() => setPartnerCategory('tournament')}
-                  style={{ padding: '8px 10px' }}
-                >
-                  <SiteIcon name="sparkles" size={15} />
-                  <div className="kg-role-info">
-                    <strong>Tournament Ops</strong>
-                    <span style={{ fontSize: '10.5px' }}>Brackets &amp; Scorer</span>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {partnerCategory !== 'coach' && (
-              <div className="kg-auth-field">
-                <label htmlFor="partner-name-input">Academy / Facility Name</label>
-                <div className="kg-auth-input-wrap">
-                  <SiteIcon name="building" size={16} className="kg-input-icon" />
-                  <input
-                    id="partner-name-input"
-                    type="text"
-                    required
-                    placeholder="e.g. Apex Cricket Academy, Kickoff Turf"
-                    value={partnerAcademyName}
-                    onChange={e => setPartnerAcademyName(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="kg-auth-row">
-              <div className="kg-auth-field">
-                <label htmlFor="partner-sport-input">Primary Sport</label>
-                <select
-                  id="partner-sport-input"
-                  value={partnerSport}
-                  onChange={e => setPartnerSport(e.target.value)}
-                >
-                  <option value="Cricket">Cricket</option>
-                  <option value="Football">Football</option>
-                  <option value="Badminton">Badminton</option>
-                  <option value="Multi-Sport">Multi-Sport</option>
-                  <option value="Tennis">Tennis</option>
-                  <option value="Basketball">Basketball</option>
-                  <option value="Swimming">Swimming</option>
-                  <option value="Martial Arts">Martial Arts</option>
-                  <option value="Athletics">Athletics</option>
-                  <option value="Table Tennis">Table Tennis</option>
-                  <option value="Squash">Squash</option>
-                  <option value="Hockey">Hockey</option>
-                </select>
-              </div>
-
-              <div className="kg-auth-field">
-                <label htmlFor="partner-city-input">Operating City</label>
-                <select
-                  id="partner-city-input"
-                  value={partnerCity}
-                  onChange={e => setPartnerCity(e.target.value)}
-                >
-                  {MAJOR_CITIES.map(c => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="kg-auth-row">
-              <div className="kg-auth-field">
-                <label htmlFor="partner-director-input">
-                  {partnerCategory === 'coach' ? 'Coach Full Name' : 'Director / Manager Name'}
-                </label>
-                <div className="kg-auth-input-wrap">
-                  <SiteIcon name="user-round" size={16} className="kg-input-icon" />
-                  <input
-                    id="partner-director-input"
-                    type="text"
-                    required
-                    placeholder={partnerCategory === 'coach' ? 'e.g. Coach Ramesh Powar' : 'e.g. Coach Rajesh Kumar'}
-                    value={partnerDirectorName}
-                    onChange={e => setPartnerDirectorName(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="kg-auth-field">
-                <label htmlFor="partner-phone-input">
-                  {partnerCategory === 'coach' ? 'WhatsApp (Inquiries)' : 'Director WhatsApp / Mobile'}
-                </label>
-                <div className="kg-auth-input-wrap">
-                  <SiteIcon name="phone" size={16} className="kg-input-icon" />
-                  <input
-                    id="partner-phone-input"
-                    type="tel"
-                    required
-                    placeholder="9845012345 (for admissions)"
-                    value={partnerWhatsApp}
-                    onChange={e => setPartnerWhatsApp(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {partnerCategory === 'coach' && (
-              <div className="kg-auth-field">
-                <label htmlFor="partner-cert-input">Certification / Accreditation</label>
-                <div className="kg-auth-input-wrap">
-                  <SiteIcon name="award" size={16} className="kg-input-icon" />
-                  <input
-                    id="partner-cert-input"
-                    type="text"
-                    required
-                    placeholder="e.g. BCCI Level 2 · SAI / NIS Patiala Diploma"
-                    value={partnerCoachCert}
-                    onChange={e => setPartnerCoachCert(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="kg-auth-row">
-              <div className="kg-auth-field">
-                <label htmlFor="partner-email-input">Account Email</label>
-                <div className="kg-auth-input-wrap">
-                  <SiteIcon name="mail" size={16} className="kg-input-icon" />
-                  <input
-                    id="partner-email-input"
-                    type="email"
-                    required
-                    placeholder="director@academy.com"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="kg-auth-field">
-                <label htmlFor="partner-password-input">Password (min 6 characters)</label>
-                <div className="kg-auth-input-wrap">
-                  <SiteIcon name="shield-check" size={16} className="kg-input-icon" />
-                  <input
-                    id="partner-password-input"
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    minLength={6}
-                    placeholder="Create password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="kg-password-toggle"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    <SiteIcon name={showPassword ? 'eye-off' : 'eye'} size={15} />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="kg-auth-field">
-              <label htmlFor="partner-upi-input">UPI ID for Direct Fee Collection (Optional)</label>
-              <div className="kg-auth-input-wrap">
-                <SiteIcon name="sparkles" size={16} className="kg-input-icon" />
-                <input
-                  id="partner-upi-input"
-                  type="text"
-                  placeholder="e.g. apexcricket@okhdfcbank (or configure in settings)"
-                  value={partnerUpi}
-                  onChange={e => setPartnerUpi(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="kg-auth-partner-trust-note">
-              <SiteIcon name="shield-check" size={18} style={{ color: '#d97706', flexShrink: 0 }} />
-              <div>
-                <strong>Express Launch &amp; Verification Protocol</strong>
-                <p style={{ margin: 0 }}>
-                  Your internal batch manager, student CRM, and UPI fee tracking activate immediately. The public <strong>&quot;KhelGrid Verified&quot;</strong> badge will appear on your listing upon review by the KhelGrid Editorial Moderation Desk.
-                </p>
-              </div>
-            </div>
-
-            <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
-              {submitting ? 'Setting Up Workspace…' : '⚡ Register Academy & Launch Hub (30s)'}
-            </button>
-
-            <p className="kg-auth-switch-note">
-              Already registered your academy or turf?{' '}
-              <button
-                type="button"
-                className="kg-text-link"
-                onClick={() => {
-                  setTab('login')
-                  setErrorMsg('')
-                  setSuccessMsg('')
-                }}
-              >
-                Sign In here →
-              </button>
-            </p>
-
-            <p className="kg-auth-terms-note">
-              By registering, you agree to KhelGrid’s <a href="/terms">Terms of Use</a>,{' '}
-              <a href="/privacy">Privacy Policy</a>, and Grassroots Host Agreement.
-            </p>
-          </form>
-        )}
-
-        {/* TAB 3: FORGOT PASSWORD */}
-        {tab === 'forgot_password' && !emailVerificationPending && (
-          <form className="kg-auth-form" onSubmit={handleForgotPasswordSubmit}>
-            <h2 id="kg-auth-title" className="kg-auth-title">
-              Reset Your Password
-            </h2>
-            <p className="kg-auth-subtitle">
-              Enter the email address registered with your KhelGrid account. We will email you
-              instructions to reset your password.
-            </p>
-
-            <div className="kg-auth-field">
-              <label htmlFor={emailInputId}>Registered Email Address</label>
-              <div className="kg-auth-input-wrap">
-                <SiteIcon name="mail" size={16} className="kg-input-icon" />
-                <input
-                  id={emailInputId}
-                  type="email"
-                  required
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  autoComplete="email"
-                />
-              </div>
-            </div>
-
-            <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
-              {submitting ? 'Sending Instructions…' : 'Send Reset Instructions'}
-            </button>
-
-            <div style={{ textAlign: 'center', marginTop: 16 }}>
-              <button
-                type="button"
-                className="kg-text-link"
-                onClick={() => setTab('login')}
-              >
-                ← Back to Sign In
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* TAB: SET NEW PASSWORD */}
-        {tab === 'set_new_password' && (
-          <form className="kg-auth-form" onSubmit={handleSetNewPasswordSubmit}>
-            <h2 id="kg-auth-title" className="kg-auth-title">
-              Create a New Password
-            </h2>
-            <p className="kg-auth-subtitle">
-              Enter and confirm your new secure password below (minimum 6 characters) to update your KhelGrid account.
-            </p>
-
-            <div className="kg-auth-field">
-              <label htmlFor="kg-new-password">New Password</label>
-              <div className="kg-auth-input-wrap">
-                <SiteIcon name="shield-check" size={16} className="kg-input-icon" />
-                <input
-                  id="kg-new-password"
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  minLength={6}
-                  placeholder="At least 6 characters"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-                <button
-                  type="button"
-                  className="kg-password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  <SiteIcon name={showPassword ? 'eye-off' : 'eye'} size={15} />
-                </button>
-              </div>
-            </div>
-
-            <div className="kg-auth-field">
-              <label htmlFor="kg-confirm-password">Confirm New Password</label>
-              <div className="kg-auth-input-wrap">
-                <SiteIcon name="shield-check" size={16} className="kg-input-icon" />
-                <input
-                  id="kg-confirm-password"
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  minLength={6}
-                  placeholder="Re-type new password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-              </div>
-            </div>
-
-            <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
-              {submitting ? 'Updating Password…' : 'Save New Password & Sign In'}
-            </button>
-
-            <div style={{ textAlign: 'center', marginTop: 16 }}>
-              <button
-                type="button"
-                className="kg-text-link"
-                onClick={() => setTab('login')}
-              >
-                ← Back to Sign In
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* TAB 4: EXPIRED LINK / RESEND VERIFICATION */}
-        {tab === 'expired_link' && !emailVerificationPending && (
-          <form className="kg-auth-form" onSubmit={handleResendVerification}>
-            <div style={{ textAlign: 'center', marginBottom: 16 }}>
-              <span style={{ display: 'inline-flex', padding: 12, borderRadius: '50%', background: '#fef2f2', color: '#dc2626' }}>
-                <SiteIcon name="alert-circle" size={28} />
-              </span>
-            </div>
-            <h2 id="kg-auth-title" className="kg-auth-title" style={{ textAlign: 'center' }}>
-              Verification Link Expired
-            </h2>
-            <p className="kg-auth-subtitle" style={{ textAlign: 'center' }}>
-              Email links expire after 1 hour or when pre-scanned by email security filters. Enter your registered email to receive a fresh verification link.
-            </p>
-
-            <div className="kg-auth-field">
-              <label htmlFor={emailInputId}>Your Registered Email</label>
-              <div className="kg-auth-input-wrap">
-                <SiteIcon name="mail" size={16} className="kg-input-icon" />
-                <input
-                  id={emailInputId}
-                  type="email"
-                  required
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  autoComplete="email"
-                />
-              </div>
-            </div>
-
-            <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
-              {submitting ? 'Sending Fresh Link…' : 'Resend Verification Email'}
-            </button>
-
-            <div style={{ textAlign: 'center', marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button
-                type="button"
-                className="kg-text-link"
-                onClick={() => {
-                  setTab('login')
-                  setErrorMsg('')
-                }}
-              >
-                Already verified? Sign in with password
-              </button>
-              <button
-                type="button"
-                className="kg-text-link"
-                onClick={() => {
-                  setTab('signup')
-                  setErrorMsg('')
-                }}
-              >
-                Need to create a new account? Register here
-              </button>
-            </div>
-          </form>
+        {!recoveryView && tab === 'signup' && onboardingStep === 'profile' && (
+          <AuthStepProfilePanel
+            email={form.fields.email}
+            role={form.fields.role}
+            fullName={form.fields.fullName}
+            city={form.fields.city}
+            phone={form.fields.phone}
+            ageBand={form.fields.ageBand}
+            guardianEmail={form.fields.guardianEmail}
+            guardianConsentAccepted={form.fields.guardianConsentAccepted}
+            submitting={submitting}
+            onRoleChange={r => form.setField('role', r)}
+            onFullNameChange={v => form.setField('fullName', v)}
+            onCityChange={v => form.setField('city', v)}
+            onPhoneChange={v => form.setField('phone', v)}
+            onAgeBandChange={b => form.setField('ageBand', b)}
+            onGuardianEmailChange={v => form.setField('guardianEmail', v)}
+            onGuardianConsentChange={checked => form.setField('guardianConsentAccepted', checked)}
+            onBackStep={() => setOnboardingStep('identity')}
+            onSubmitSignUp={handleSignUpSubmit}
+            onNavigatePartner={handlePartnerRoute}
+          />
         )}
       </div>
     </div>

@@ -9,14 +9,8 @@ import GameSportPlayAcrossIndia from './shared/components/GameSportPlayAcrossInd
 import FrequentlyAskedQuestions from './shared/components/FrequentlyAskedQuestions'
 import SiteAnnouncementBanner from './shared/components/SiteAnnouncementBanner'
 import TopNavbar from './shared/components/TopNavbar'
-import {
-  getStoredAuthUser,
-  onAuthChange,
-  signOut,
-  parseAuthUrlCallback,
-  clearAuthUrlHash,
-  type AuthUserProfile,
-} from './integrations/supabase/auth-client'
+import { AuthProvider } from './shared/auth/AuthContext'
+import { useAuth } from './shared/auth/useAuth'
 import { TenantProvider } from './shared/context/TenantContext'
 import { RequireTenantMember } from './shared/components/RequireTenantMember'
 import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAndShare'
@@ -89,7 +83,7 @@ const SpotlightSearchModal = lazy(() => import('./shared/components/SpotlightSea
 const FeedbackSupportModal = lazy(() => import('./shared/components/FeedbackSupportModal'))
 const UserConsentModal = lazy(() => import('./shared/components/UserConsentModal'))
 const GoProModal = lazy(() => import('./shared/components/GoProModal'))
-import type { AuthModalTab } from './shared/components/AuthModal'
+import { resolvePostAuthTarget } from './shared/components/auth/authModalTypes'
 const AuthModal = lazy(() => import('./shared/components/AuthModal'))
 import CustomCursor from './components/effects/CustomCursor'
 
@@ -113,6 +107,23 @@ function currentPath() {
 }
 
 export default function App({ initialPath = '/' }: { initialPath?: string } = {}) {
+  return (
+    <AuthProvider>
+      <AppInner initialPath={initialPath} />
+    </AuthProvider>
+  )
+}
+
+function AppInner({ initialPath = '/' }: { initialPath?: string }) {
+  const {
+    user: authUser,
+    modalOpen: authModalOpen,
+    intent: authIntent,
+    openAuth,
+    closeAuth,
+    setAuthenticatedUser: setAuthUser,
+    signOut,
+  } = useAuth()
   const [path, setPath] = useState(initialPath)
   const [menuOpen, setMenuOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
@@ -126,10 +137,6 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
   const [consentModalOpen, setConsentModalOpen] = useState(false)
   const [consentInitialTab, setConsentInitialTab] = useState<'sports_pass' | 'rules_privacy'>('sports_pass')
   const [goProModalOpen, setGoProModalOpen] = useState(false)
-  const [authModalOpen, setAuthModalOpen] = useState(false)
-  const [authModalTab, setAuthModalTab] = useState<AuthModalTab>('login')
-  const [authModalError, setAuthModalError] = useState<string | undefined>(undefined)
-  const [authUser, setAuthUser] = useState<AuthUserProfile | null>(() => getStoredAuthUser())
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [locationSearch, setLocationSearch] = useState(() =>
     typeof window !== 'undefined' ? window.location.search : '',
@@ -147,39 +154,6 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
     setLocationSearch(nextSearch)
     setMenuOpen(false)
   }
-
-  // Detect Supabase Auth callback errors or tokens from URL hash / search params
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const callbackInfo = parseAuthUrlCallback()
-
-    if (callbackInfo.type === 'error') {
-      const isOtpExpired =
-        callbackInfo.errorCode === 'otp_expired' ||
-        callbackInfo.errorDescription?.toLowerCase().includes('expired')
-      setAuthModalTab(isOtpExpired ? 'expired_link' : 'login')
-      setAuthModalError(
-        isOtpExpired
-          ? 'Email verification link is invalid or has expired. Enter your email below to receive a fresh verification link.'
-          : (callbackInfo.errorDescription || 'Authentication could not be completed. Please sign in with your credentials.')
-      )
-      setAuthModalOpen(true)
-      clearAuthUrlHash()
-    } else if (callbackInfo.type === 'recovery') {
-      setAuthModalTab('set_new_password')
-      setAuthModalError('')
-      setAuthModalOpen(true)
-      clearAuthUrlHash()
-    } else if (callbackInfo.type === 'signup_confirmed') {
-      clearAuthUrlHash()
-    }
-  }, [])
-
-  useEffect(() => {
-    return onAuthChange(user => {
-      setAuthUser(user)
-    })
-  }, [])
 
   useEffect(() => {
     setUserMenuOpen(false)
@@ -265,18 +239,15 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
       }
     }
     if (nextPath === '/login') {
-      setAuthModalTab('login')
-      setAuthModalOpen(true)
+      openAuth({ tab: 'login', redirectTo: path !== '/login' && path !== '/signup' ? `${path}${locationSearch}` : undefined })
       return
     }
     if (nextPath === '/signup') {
-      setAuthModalTab('signup')
-      setAuthModalOpen(true)
+      openAuth({ tab: 'signup', redirectTo: path !== '/login' && path !== '/signup' ? `${path}${locationSearch}` : undefined })
       return
     }
     if (nextPath === '/forgot-password') {
-      setAuthModalTab('forgot_password')
-      setAuthModalOpen(true)
+      openAuth({ tab: 'forgot_password' })
       return
     }
     setPath(nextPath)
@@ -312,10 +283,7 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
           persona={match.persona}
           section={match.section}
           authUser={authUser}
-          onOpenAuth={(tab: 'login' | 'signup' = 'login') => {
-            setAuthModalTab(tab)
-            setAuthModalOpen(true)
-          }}
+          onOpenAuth={openAuth}
           onNavigate={navigate}
         />
       )
@@ -330,10 +298,7 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
         page = (
           <WorkspacePage
             authUser={authUser}
-            onOpenAuth={(tab: 'login' | 'signup') => {
-              setAuthModalTab(tab)
-              setAuthModalOpen(true)
-            }}
+            onOpenAuth={openAuth}
             onNavigate={navigate}
           />
         )
@@ -342,10 +307,7 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
           <UserDashboardPage
             onNavigate={navigate}
             onOpenIntake={openListingSubmission}
-            onOpenAuth={tab => {
-              setAuthModalTab(tab || 'login')
-              setAuthModalOpen(true)
-            }}
+            onOpenAuth={openAuth}
           />
         )
       } else if (match.canonicalPath === '/profile' || match.canonicalPath === '/my-profile') {
@@ -357,10 +319,7 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
             <UserDashboardPage
               onNavigate={navigate}
               onOpenIntake={openListingSubmission}
-              onOpenAuth={tab => {
-                setAuthModalTab(tab || 'login')
-                setAuthModalOpen(true)
-              }}
+              onOpenAuth={openAuth}
             />
           )
         }
@@ -371,7 +330,7 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
       else if (match.canonicalPath === '/trust') page = <TrustPage onNavigate={navigate} />
       else if (match.canonicalPath === '/help-feedback' || match.canonicalPath === '/contact' || match.canonicalPath === '/help' || match.canonicalPath === '/support') page = <HelpFeedbackPage />
       else if (match.canonicalPath === '/sports-cv' || match.canonicalPath === '/start-from-zero') page = <SportsCvWizard />
-      else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} onOpenAuth={tab => { setAuthModalTab(tab || 'signup'); setAuthModalOpen(true) }} />
+      else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} onOpenAuth={openAuth} />
       else if (match.canonicalPath === '/play/lacrosse-sixes') page = <LacrosseSixesPage />
       else if (match.canonicalPath === '/play' || match.canonicalPath === '/community') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openListingSubmission('pickup_game')} />
       else if (match.canonicalPath === '/coaches') page = <CoachesPage onNavigate={navigate} onOpenCoachIntake={() => openListingSubmission('coach')} />
@@ -455,7 +414,7 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
       else if (match.canonicalPath === '/campaigns/create') page = <CampaignCreationPage onNavigate={navigate} />
       else if (match.canonicalPath === '/campaigns/manage') page = <AdvertiserCampaignManagePage onNavigate={navigate} />
       else if (match.canonicalPath === '/creator' || match.canonicalPath === '/creator-hub') page = <CreatorHubPage onNavigate={navigate} />
-      else if (match.canonicalPath === '/for-you') page = <ForYouPage onNavigate={navigate} onOpenAuth={tab => { setAuthModalTab(tab || 'signup'); setAuthModalOpen(true) }} />
+      else if (match.canonicalPath === '/for-you') page = <ForYouPage onNavigate={navigate} onOpenAuth={openAuth} />
       else if (match.canonicalPath === '/partner' || match.canonicalPath === '/partners') page = <PartnerPage onNavigate={navigate} onOpenIntake={openListingSubmission} />
       else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy','/open-science-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
@@ -484,14 +443,18 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
       userMenuOpen={userMenuOpen}
       onToggleUserMenu={() => setUserMenuOpen(open => !open)}
       onCloseUserMenu={() => setUserMenuOpen(false)}
-      onOpenLogin={() => {
-        setAuthModalTab('login')
-        setAuthModalOpen(true)
-      }}
-      onOpenSignup={() => {
-        setAuthModalTab('signup')
-        setAuthModalOpen(true)
-      }}
+      onOpenLogin={() =>
+        openAuth({
+          tab: 'login',
+          redirectTo: path !== '/login' && path !== '/signup' ? `${path}${locationSearch}` : undefined,
+        })
+      }
+      onOpenSignup={() =>
+        openAuth({
+          tab: 'signup',
+          redirectTo: path !== '/login' && path !== '/signup' ? `${path}${locationSearch}` : undefined,
+        })
+      }
       onSignOut={() => {
         void signOut()
       }}
@@ -507,10 +470,7 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
         collapsed={sidebarCollapsed}
         onToggleCollapsed={() => setSidebarCollapsed(c => !c)}
         onOpenIntake={() => openListingSubmission('pickup_game')}
-        onOpenAuth={tab => {
-          setAuthModalTab(tab || 'login')
-          setAuthModalOpen(true)
-        }}
+        onOpenAuth={openAuth}
         isLoggedIn={Boolean(authUser)}
       />
       <main id="main-content" className="page-shell">
@@ -738,28 +698,18 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
       {authModalOpen && (
         <AuthModal
           isOpen={authModalOpen}
-          initialTab={authModalTab}
-          initialError={authModalError}
-          onClose={() => {
-            setAuthModalOpen(false)
-            setAuthModalError(undefined)
-          }}
+          initialTab={authIntent.tab || 'login'}
+          initialError={authIntent.error}
+          initialEmail={authIntent.prefillEmail}
+          intentLabel={authIntent.intentLabel}
+          redirectTo={authIntent.redirectTo}
+          onClose={closeAuth}
           onSuccess={(user, opts) => {
             setAuthUser(user)
-            setAuthModalError(undefined)
+            authIntent.onAuthenticated?.(user)
             if (opts?.skipRedirect) return
-            // Redirect based on registered user role into unified WorkspaceShell
-            if (user.role === 'academy') {
-              navigate(undefined, '/workspace/academy/overview')
-            } else if (user.role === 'coach') {
-              navigate(undefined, '/workspace/coach/overview')
-            } else if (user.role === 'venue_owner') {
-              navigate(undefined, '/workspace/turf/calendar')
-            } else if (user.role === 'host') {
-              navigate(undefined, '/workspace/host/overview')
-            } else if (user.role === 'athlete' || user.role === 'parent') {
-              navigate(undefined, '/workspace/athlete/overview')
-            }
+            const nextTarget = resolvePostAuthTarget(user, authIntent.redirectTo)
+            if (nextTarget) navigate(undefined, nextTarget)
           }}
           onNavigate={navigate}
         />

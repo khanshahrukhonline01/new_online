@@ -20,6 +20,8 @@ import {
   createTestAuthUserFixture,
   adminAssignRole,
   adminRevokeRole,
+  verifyEmailOtpCode,
+  signInWithGoogleOAuth,
   type AuthUserProfile,
   type UserRole,
 } from './auth-client'
@@ -482,6 +484,62 @@ describe('Supabase Auth Client Architecture & Session Security', () => {
 
     it('clearAuthUrlHash operates without crashing', () => {
       expect(() => clearAuthUrlHash()).not.toThrow()
+    })
+  })
+
+  describe('9. 6-Digit Email OTP & Google OAuth Flow', () => {
+    it('validates 6-digit OTP token format and verifies via client.auth.verifyOtp', async () => {
+      const badToken = await verifyEmailOtpCode({ email: 'player@khelgrid.in', token: '123' })
+      expect(badToken.success).toBe(false)
+      expect(badToken.message).toContain('6-digit verification code')
+
+      const verifyOtp = vi.fn().mockResolvedValue({
+        data: {
+          user: {
+            id: 'usr-otp-1',
+            email: 'player@khelgrid.in',
+            email_confirmed_at: '2026-11-25T15:00:00Z',
+            user_metadata: { full_name: 'Vikram Singh', role: 'athlete' },
+          },
+        },
+        error: null,
+      })
+
+      vi.spyOn(realtimeModule, 'getSupabaseClient').mockReturnValue({
+        auth: { verifyOtp },
+        from: () => ({
+          select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null, error: null }) }) }),
+        }),
+      } as unknown as ReturnType<typeof realtimeModule.getSupabaseClient>)
+
+      const res = await verifyEmailOtpCode({ email: 'player@khelgrid.in', token: '482910' })
+      expect(verifyOtp).toHaveBeenCalledWith({
+        email: 'player@khelgrid.in',
+        token: '482910',
+        type: 'email',
+      })
+      expect(res.success).toBe(true)
+      expect(res.user?.id).toBe('usr-otp-1')
+      expect(res.user?.isVerified).toBe(true)
+    })
+
+    it('initiates Google OAuth PKCE redirect while preserving safe return paths', async () => {
+      const signInWithOAuth = vi.fn().mockResolvedValue({
+        data: { url: 'https://accounts.google.com/o/oauth2/v2/auth' },
+        error: null,
+      })
+      vi.spyOn(realtimeModule, 'getSupabaseClient').mockReturnValue({
+        auth: { signInWithOAuth },
+      } as unknown as ReturnType<typeof realtimeModule.getSupabaseClient>)
+
+      const res = await signInWithGoogleOAuth('/venues/sree-kanteerava-stadium')
+      expect(res.success).toBe(true)
+      expect(signInWithOAuth).toHaveBeenCalledWith({
+        provider: 'google',
+        options: {
+          redirectTo: 'https://khelgrid.com/venues/sree-kanteerava-stadium',
+        },
+      })
     })
   })
 })

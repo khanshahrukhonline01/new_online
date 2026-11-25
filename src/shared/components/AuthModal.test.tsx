@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import AuthModal from './AuthModal'
+import { AuthStepProfilePanel } from './auth/AuthStepProfilePanel'
+import { AuthRecoveryAndOtpPanel } from './auth/AuthRecoveryAndOtpPanel'
 
-describe('AuthModal Component', () => {
+describe('AuthModal Progressive Intent-First Redesign', () => {
   it('1. renders null when closed', () => {
     const html = renderToStaticMarkup(
       <AuthModal isOpen={false} onClose={vi.fn()} />
@@ -10,88 +12,138 @@ describe('AuthModal Component', () => {
     expect(html).toBe('')
   })
 
-  it('2. renders full accessible dialog structure when open in login mode', () => {
+  it('2. renders Step 1 Identity sign-in with Google OAuth, Magic Link/Code, Partner handoff, and NO public demo chips', () => {
     const html = renderToStaticMarkup(
-      <AuthModal isOpen={true} initialTab="login" onClose={vi.fn()} />
+      <AuthModal
+        isOpen={true}
+        initialTab="login"
+        intentLabel="Sign in to book Kanteerava Stadium Turf"
+        redirectTo="/venues/sree-kanteerava-stadium"
+        onClose={vi.fn()}
+      />
     )
 
-    // Modal dialog accessibility semantics
     expect(html).toContain('role="dialog"')
     expect(html).toContain('aria-modal="true"')
     expect(html).toContain('aria-labelledby="kg-auth-title"')
-
-    // Branding & DPDP Badge
     expect(html).toContain('KHELGRID AUTH')
     expect(html).toContain('DPDP 2023 Secure')
 
-    // Tab switcher
+    // Contextual intent banner
+    expect(html).toContain('Sign in to book Kanteerava Stadium Turf')
+
+    // Streamlined 2-tab switcher
     expect(html).toContain('Sign In')
     expect(html).toContain('Create Account')
-    expect(html).toContain('Partner Signup')
-    expect(html).toContain('Recovery')
 
-    // Merged Partner login callout
-    expect(html).toContain('Operating a Sports Academy or Turf?')
-    expect(html).toContain('30s Partner Signup')
-
-    // Login form fields
+    // Step 1 controls
+    expect(html).toContain('Continue with Google')
     expect(html).toContain('Sign in to your KhelGrid profile')
-    expect(html).toContain('Email Address')
-    expect(html).toContain('Password')
     expect(html).toContain('Forgot password?')
-    expect(html).toContain('Sign In with Password')
-    expect(html).toContain('Send 1-Click Magic Login Link')
+    expect(html).toContain('Send 1-Click Magic Link / Code')
 
-    // Fast demo accounts
-    expect(html).toContain('TEST / DEMO ACCOUNTS')
-    expect(html).toContain('Rohit Verma (Athlete)')
-    expect(html).toContain('Shivaji Cricket Academy (Director)')
-    expect(html).toContain('Sunita Sharma (Parent)')
-    expect(html).toContain('FSV Arena (Turf Host)')
-    expect(html).toContain('Zaheer Farooq (Coach)')
-    expect(html).toContain('KhelGrid Admin')
+    // Guided multi-tenant partner handoff links
+    expect(html).toContain('/partner-signup?role=academy')
+    expect(html).toContain('/partner-signup?role=coach')
+    expect(html).toContain('/partner-signup?role=venue')
+    expect(html).toContain('/partner-signup?role=tournament')
+
+    // Public demo chips removed
+    expect(html).not.toContain('TEST / DEMO ACCOUNTS')
+    expect(html).not.toContain('KhelGrid Admin')
   })
 
-  it('3. renders full signup form with multi-role selector when opened in signup mode', () => {
+  it('3. renders low-friction Step 1 signup form first without overwhelming all roles upfront', () => {
     const html = renderToStaticMarkup(
       <AuthModal isOpen={true} initialTab="signup" onClose={vi.fn()} />
     )
 
-    expect(html).toContain('Join KhelGrid Sports Network')
-    expect(html).toContain('I AM JOINING AS:')
-
-    // Roles
-    expect(html).toContain('Athlete / Player')
-    expect(html).toContain('Parent / Guardian')
-    expect(html).toContain('Academy Director')
-    expect(html).toContain('Turf &amp; Venue Host')
-    expect(html).toContain('Certified Coach')
-    expect(html).toContain('Talent Scout')
-
-    // Registration fields
-    expect(html).toContain('Full Name')
-    expect(html).toContain('Email Address')
-    expect(html).toContain('Password (min 6 characters)')
-    expect(html).toContain('Home City')
-    expect(html).toContain('Mobile / WhatsApp (Optional)')
-    expect(html).toContain('Create KhelGrid Account')
-    expect(html).toContain('30-Second Express Partner Onboarding')
-    expect(html).toContain('DPDP Act standards')
+    expect(html).toContain('Step 1 of 2 · Fast Account Setup')
+    expect(html).toContain('Start with your email &amp; password')
+    expect(html).toContain('Continue to Profile &amp; Safety Check')
+    expect(html).toContain('Continue with Google')
   })
 
-  it('4. renders password recovery form when opened in forgot_password mode', () => {
-    const html = renderToStaticMarkup(
-      <AuthModal isOpen={true} initialTab="forgot_password" onClose={vi.fn()} />
+  it('4. renders Step 2 adaptive consumer role profile with dynamic DPDP Under-18 Guardian check for youth athletes', () => {
+    const minorHtml = renderToStaticMarkup(
+      <AuthStepProfilePanel
+        email="junior@khelgrid.in"
+        role="athlete"
+        fullName="Tanmay Saxena"
+        city="Delhi NCR"
+        phone=""
+        ageBand="u16"
+        guardianEmail=""
+        guardianConsentAccepted={false}
+        submitting={false}
+        onRoleChange={vi.fn()}
+        onFullNameChange={vi.fn()}
+        onCityChange={vi.fn()}
+        onPhoneChange={vi.fn()}
+        onAgeBandChange={vi.fn()}
+        onGuardianEmailChange={vi.fn()}
+        onGuardianConsentChange={vi.fn()}
+        onBackStep={vi.fn()}
+        onSubmitSignUp={vi.fn()}
+        onNavigatePartner={vi.fn()}
+      />
     )
 
-    expect(html).toContain('Reset Your Password')
-    expect(html).toContain('Registered Email Address')
-    expect(html).toContain('Send Reset Instructions')
-    expect(html).toContain('Back to Sign In')
+    expect(minorHtml).toContain('Step 2 of 2 · Profile &amp; Safety')
+    expect(minorHtml).toContain('Athlete / Player')
+    expect(minorHtml).toContain('Parent / Guardian')
+    expect(minorHtml).toContain('Talent Scout')
+    expect(minorHtml).toContain('DPDP Act 2023 (Section 9)')
+    expect(minorHtml).toContain('Parent / Legal Guardian Email *')
+    expect(minorHtml).toContain('DPDP Under-18 Guardian Notice')
+
+    const adultHtml = renderToStaticMarkup(
+      <AuthStepProfilePanel
+        email="senior@khelgrid.in"
+        role="athlete"
+        fullName="Rohit Verma"
+        city="Mumbai"
+        phone=""
+        ageBand="adult"
+        guardianEmail=""
+        guardianConsentAccepted={false}
+        submitting={false}
+        onRoleChange={vi.fn()}
+        onFullNameChange={vi.fn()}
+        onCityChange={vi.fn()}
+        onPhoneChange={vi.fn()}
+        onAgeBandChange={vi.fn()}
+        onGuardianEmailChange={vi.fn()}
+        onGuardianConsentChange={vi.fn()}
+        onBackStep={vi.fn()}
+        onSubmitSignUp={vi.fn()}
+        onNavigatePartner={vi.fn()}
+      />
+    )
+
+    expect(adultHtml).not.toContain('Parent / Legal Guardian Email *')
   })
 
-  it('5. renders expired link recovery form with resend button in expired_link mode', () => {
+  it('5. renders guided Partner Workspace Handoff when opened in initialTab="partner"', () => {
     const html = renderToStaticMarkup(
+      <AuthModal isOpen={true} initialTab="partner" onClose={vi.fn()} />
+    )
+
+    expect(html).toContain('Launch Your Institutional Partner Workspace')
+    expect(html).toContain('/partner-signup?role=academy&amp;mode=signup')
+    expect(html).toContain('/partner-signup?role=coach&amp;mode=signup')
+    expect(html).toContain('/partner-signup?role=venue&amp;mode=signup')
+    expect(html).toContain('/partner-signup?role=tournament&amp;mode=signup')
+  })
+
+  it('6. renders password recovery, expired link with OTP fallback, and 6-digit OTP entry states', () => {
+    const forgotHtml = renderToStaticMarkup(
+      <AuthModal isOpen={true} initialTab="forgot_password" onClose={vi.fn()} />
+    )
+    expect(forgotHtml).toContain('Reset Your Password')
+    expect(forgotHtml).toContain('Send Reset Instructions')
+
+    const expiredHtml = renderToStaticMarkup(
       <AuthModal
         isOpen={true}
         initialTab="expired_link"
@@ -100,48 +152,40 @@ describe('AuthModal Component', () => {
         onClose={vi.fn()}
       />
     )
+    expect(expiredHtml).toContain('Verification Link Expired')
+    expect(expiredHtml).toContain('Have a 6-digit email code? Verify directly')
+    expect(expiredHtml).toContain('Resend Verification Email')
 
-    expect(html).toContain('Verification Link Expired')
-    expect(html).toContain('Resend Verification Email')
-    expect(html).toContain('user@example.com')
-    expect(html).toContain('Email verification link is invalid or has expired.')
-    expect(html).toContain('Already verified? Sign in with password')
-  })
-
-  it('6. renders create a new password form in set_new_password mode', () => {
-    const html = renderToStaticMarkup(
-      <AuthModal
-        isOpen={true}
-        initialTab="set_new_password"
-        onClose={vi.fn()}
+    const otpHtml = renderToStaticMarkup(
+      <AuthRecoveryAndOtpPanel
+        view="otp_pending"
+        email="athlete@example.com"
+        otpCode="482910"
+        newPassword=""
+        confirmPassword=""
+        showPassword={false}
+        submitting={false}
+        onEmailChange={vi.fn()}
+        onOtpCodeChange={vi.fn()}
+        onNewPasswordChange={vi.fn()}
+        onConfirmPasswordChange={vi.fn()}
+        onTogglePassword={vi.fn()}
+        onVerifyOtpSubmit={vi.fn()}
+        onForgotSubmit={vi.fn()}
+        onResendSubmit={vi.fn()}
+        onSetNewPasswordSubmit={vi.fn()}
+        onBackToLogin={vi.fn()}
+        onSwitchToSignup={vi.fn()}
+        onSwitchToOtpEntry={vi.fn()}
       />
     )
+    expect(otpHtml).toContain('6-Digit Email Verification Code')
+    expect(otpHtml).toContain('Verify 6-Digit Code &amp; Continue')
 
-    expect(html).toContain('Create a New Password')
-    expect(html).toContain('New Password')
-    expect(html).toContain('Confirm New Password')
-    expect(html).toContain('Save New Password &amp; Sign In')
-    expect(html).toContain('Back to Sign In')
-  })
-
-  it('7. renders express partner onboarding form when opened in partner mode', () => {
-    const html = renderToStaticMarkup(
-      <AuthModal isOpen={true} initialTab="partner" onClose={vi.fn()} />
+    const setPassHtml = renderToStaticMarkup(
+      <AuthModal isOpen={true} initialTab="set_new_password" onClose={vi.fn()} />
     )
-
-    expect(html).toContain('Register Academy or Sports Facility')
-    expect(html).toContain('Free admissions CRM, turf slot scheduling, and UPI fee collections')
-    expect(html).toContain('Academy / Facility Name')
-    expect(html).toContain('Primary Sport')
-    expect(html).toContain('Operating City')
-    expect(html).toContain('Director / Manager Name')
-    expect(html).toContain('Director WhatsApp / Mobile')
-    expect(html).toContain('Account Email')
-    expect(html).toContain('Password (min 6 characters)')
-    expect(html).toContain('UPI ID for Direct Fee Collection (Optional)')
-    expect(html).toContain('Register Academy &amp; Launch Hub (30s)')
-    expect(html).toContain('Express Launch &amp; Verification Protocol')
-    expect(html).toContain('Already registered your academy or turf?')
-    expect(html).toContain('Sign In here')
+    expect(setPassHtml).toContain('Create a New Password')
+    expect(setPassHtml).toContain('Save New Password &amp; Sign In')
   })
 })

@@ -22,6 +22,7 @@ import { KpiStrip, type KpiItem } from '../../shared/components/ui/KpiStrip'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { PartnerVerificationStatusTracker } from '../partner/components/PartnerVerificationStatusTracker'
 import { isPartnerVerificationPersona } from '../partner/partnerVerificationService'
+import type { AuthOpenInput } from '../../shared/components/auth/authModalTypes'
 import './WorkspaceShell.css'
 
 interface PersonaMeta {
@@ -128,7 +129,7 @@ interface WorkspaceShellProps {
   persona: WorkspacePersona
   section: string
   authUser: AuthUserProfile | null
-  onOpenAuth: (tab?: 'login' | 'signup') => void
+  onOpenAuth: (input?: AuthOpenInput) => void
   onNavigate: (event?: MouseEvent<HTMLAnchorElement>, target?: string) => void
 }
 
@@ -204,10 +205,30 @@ function WorkspaceShellInner({
           <h1>Your workspace is waiting</h1>
           <p>Sign in to access your {meta.label.toLowerCase()} workspace and all KhelGrid management tools.</p>
           <div className="kg-shell-unauth-actions">
-            <button type="button" className="kg-btn kg-btn-primary kg-touch-target" onClick={() => onOpenAuth('login')}>
+            <button
+              type="button"
+              className="kg-btn kg-btn-primary kg-touch-target"
+              onClick={() =>
+                onOpenAuth({
+                  tab: 'login',
+                  intentLabel: `Sign in to open your ${meta.label} Workspace`,
+                  redirectTo: `/workspace/${persona}/${resolvedSection}`,
+                })
+              }
+            >
               Sign in
             </button>
-            <button type="button" className="kg-btn kg-btn-ghost kg-touch-target" onClick={() => onOpenAuth('signup')}>
+            <button
+              type="button"
+              className="kg-btn kg-btn-ghost kg-touch-target"
+              onClick={() =>
+                onOpenAuth({
+                  tab: 'signup',
+                  intentLabel: `Create an account to start your ${meta.label} Workspace`,
+                  redirectTo: `/workspace/${persona}/${resolvedSection}`,
+                })
+              }
+            >
               Create account
             </button>
           </div>
@@ -325,7 +346,7 @@ function WorkspaceShellInner({
 function PersonaContent({ persona, section, onOpenAuth, onNavigate }: {
   persona: WorkspacePersona
   section: string
-  onOpenAuth: (tab?: 'login' | 'signup') => void
+  onOpenAuth: (input?: AuthOpenInput) => void
   onNavigate: (event?: MouseEvent<HTMLAnchorElement>, target?: string) => void
 }) {
   const handleStrictNav = useCallback((e: MouseEvent<HTMLAnchorElement>, target: string) => {

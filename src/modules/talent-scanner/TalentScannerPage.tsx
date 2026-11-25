@@ -14,7 +14,7 @@ import './TalentScanner.css'
 
 interface TalentScannerPageProps {
   onNavigate?: (e: React.MouseEvent<HTMLAnchorElement>, path: string) => void
-  onOpenAuth?: (mode?: 'login' | 'signup') => void
+  onOpenAuth?: (input?: import('../../shared/components/auth/authModalTypes').AuthOpenInput) => void
 }
 
 const SPORTS_LIST = [
@@ -496,7 +496,13 @@ export function TalentScannerPage({ onNavigate, onOpenAuth }: TalentScannerPageP
                     <button
                       type="button"
                       className="save-auth-trigger-btn"
-                      onClick={() => onOpenAuth('signup')}
+                      onClick={() =>
+                        onOpenAuth({
+                          tab: 'signup',
+                          intentLabel: 'Create an account to claim & sync your Talent Scanner benchmarks',
+                          redirectTo: '/talent-scanner',
+                        })
+                      }
                     >
                       <SiteIcon name="user" size={13} />
                       <span>Sign In to Claim Permanent Profile</span>
