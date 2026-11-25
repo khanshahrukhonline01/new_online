@@ -406,9 +406,17 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
           <TournamentOpsPage onNavigate={navigate} />
         </RequireTenantMember>
       )
-      else if (match.canonicalPath === '/parent-portal' || match.canonicalPath === '/parent' || match.canonicalPath === '/passbook') page = <ParentPortalPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/parent-portal' || match.canonicalPath === '/parent' || match.canonicalPath === '/passbook') page = (
+        <RequireTenantMember personaLabel="Parent" requireTenantMembership={false} onNavigate={navigate}>
+          <ParentPortalPage onNavigate={navigate} />
+        </RequireTenantMember>
+      )
       else if (match.canonicalPath === '/verify-pass' || match.canonicalPath === '/gate-checkin') page = <GateCheckInPage onNavigate={navigate} />
-      else if (match.canonicalPath === '/my-passes' || match.canonicalPath === '/passes') page = <MyPassesVaultPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/my-passes' || match.canonicalPath === '/passes') page = (
+        <RequireTenantMember personaLabel="Passbook" requireTenantMembership={false} onNavigate={navigate}>
+          <MyPassesVaultPage onNavigate={navigate} />
+        </RequireTenantMember>
+      )
       else if (match.canonicalPath === '/notifications') page = (
         <section className="content-page">
           <p className="eyebrow">YOUR UPDATES &amp; ALERTS</p>
