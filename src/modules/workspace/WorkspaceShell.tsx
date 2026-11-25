@@ -153,7 +153,28 @@ function WorkspaceShellInner({
   onOpenAuth,
   onNavigate,
 }: WorkspaceShellProps) {
-  const { currentTenant, memberships, userRole, switchTenant } = useTenant()
+  const { currentTenant, currentMembership, memberships, userRole, isLoading: membershipLoading, error: membershipError, switchTenant } = useTenant()
+  const personaMemberships = useMemo(() => {
+    switch (persona) {
+      case 'academy': return memberships.filter(m => m.tenant?.tenant_type === 'academy')
+      case 'coach': return memberships.filter(m => m.tenant?.tenant_type === 'coach' || ['coach', 'head_coach'].includes(m.role))
+      case 'turf':
+      case 'host': return memberships.filter(m => m.tenant?.tenant_type === 'venue')
+      case 'tournament': return memberships.filter(m => m.tenant?.tenant_type === 'tournament')
+      default: return []
+    }
+  }, [persona, memberships])
+  const availablePersonas = useMemo(() => {
+    const available = new Set<WorkspacePersona>(['athlete'])
+    for (const membership of memberships) {
+      const type = membership.tenant?.tenant_type
+      if (type === 'academy') available.add('academy')
+      if (type === 'coach' || ['coach', 'head_coach'].includes(membership.role)) available.add('coach')
+      if (type === 'venue') available.add('host')
+      if (type === 'tournament') available.add('tournament')
+    }
+    return (Object.keys(PERSONAS) as WorkspacePersona[]).filter(key => available.has(key))
+  }, [memberships])
   const meta = PERSONAS[persona] ?? PERSONAS.athlete
   const resolvedSection = meta.sections.find(s => s.id === section)?.id ?? meta.sections[0].id
   const [activeSectionId, setActiveSectionId] = useState(resolvedSection)
@@ -246,7 +267,7 @@ function WorkspaceShellInner({
     <section className="kg-workspace-shell" aria-label={`${meta.label} workspace`}>
       {/* ── Persona Switcher ── */}
       <nav className="kg-persona-switcher" role="tablist" aria-label="Workspace persona">
-        {(Object.entries(PERSONAS) as [WorkspacePersona, PersonaMeta][]).map(([key, p]) => (
+        {availablePersonas.map(key => { const p = PERSONAS[key]; return (
           <button
             key={key}
             type="button"
@@ -274,17 +295,17 @@ function WorkspaceShellInner({
         {/* Entity/Branch Switcher */}
         <div className="kg-entity-switcher">
           <label htmlFor="kg-shell-entity-select" className="skip-link">Select organisation or branch</label>
-          {memberships.length > 0 ? (
+          {personaMemberships.length > 0 ? (
             <select
               id="kg-shell-entity-select"
               className="kg-entity-btn kg-touch-target"
-              value={currentTenant?.id ?? ''}
+              value={personaMemberships.some(m => m.tenant_id === currentTenant?.id) ? (currentTenant?.id ?? '') : (personaMemberships[0]?.tenant_id ?? '')}
               onChange={e => {
                 if (e.target.value) void switchTenant(e.target.value)
               }}
               aria-label="Entity or branch switcher"
             >
-              {memberships.map(m => (
+              {personaMemberships.map(m => (
                 <option key={m.tenant_id} value={m.tenant_id}>
                   {m.tenant?.name || m.tenant_id} ({m.role})
                 </option>
@@ -292,12 +313,12 @@ function WorkspaceShellInner({
             </select>
           ) : (
             <a
-              href="/organizations"
-              onClick={e => onNavigate(e, '/organizations')}
+              href="/partner-signup"
+              onClick={e => onNavigate(e, '/partner-signup')}
               className="kg-entity-btn kg-touch-target"
             >
               <SiteIcon name="building" size={14} />
-              <span>Personal / Setup Org</span>
+              <span>{persona === 'athlete' ? 'Personal account' : 'Register or join a workspace'}</span>
             </a>
           )}
         </div>
@@ -333,15 +354,28 @@ function WorkspaceShellInner({
         />
       )}
 
+      {membershipError && <div className="kg-shell-access-error" role="alert">{membershipError}</div>}
+      {!membershipLoading && persona !== 'athlete' && personaMemberships.length === 0 && (
+        <div className="kg-shell-access-error" role="status">
+          <strong>Workspace access not available</strong>
+          <span>This account has no active membership for the {meta.label.toLowerCase()} workspace. Register or join an organisation to unlock it.</span>
+          <a href="/partner-signup" onClick={e => onNavigate(e, '/partner-signup')}>Register / join a workspace</a>
+        </div>
+      )}
+
       {/* ── Domain Content ── */}
       <div className="kg-shell-content" role="tabpanel">
         <Suspense fallback={<div className="kg-shell-loading" role="status" aria-label="Loading workspace">Loading…</div>}>
-          <PersonaContent
-            persona={persona}
-            section={activeSectionId}
-            onOpenAuth={onOpenAuth}
-            onNavigate={onNavigate}
-          />
+          {membershipLoading ? (
+            <div className="kg-shell-loading" role="status">Verifying workspace access…</div>
+          ) : persona !== 'athlete' && personaMemberships.length === 0 ? null : (
+            <PersonaContent
+              persona={persona}
+              section={activeSectionId}
+              onOpenAuth={onOpenAuth}
+              onNavigate={onNavigate}
+            />
+          )}
         </Suspense>
       </div>
     </section>
