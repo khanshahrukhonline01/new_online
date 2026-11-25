@@ -19,12 +19,12 @@ export interface TenantProviderProps {
  * tenant_memberships rows. Browser profile/localStorage values are never used
  * as proof of identity or membership.
  */
-export function TenantProvider({ children, initialTenantSlug, initialLoading = false }: TenantProviderProps) {
+export function TenantProvider({ children, initialTenantSlug }: TenantProviderProps) {
   const [userId, setUserId] = useState<string | null>(null)
   const [currentTenant, setCurrentTenant] = useState<DbTenant | null>(null)
   const [currentMembership, setCurrentMembership] = useState<DbTenantMembership | null>(null)
   const [memberships, setMemberships] = useState<DbTenantMembership[]>([])
-  const [isLoading, setIsLoading] = useState<boolean>(initialLoading || true)
+  const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
   const clearMemberships = useCallback(() => {
