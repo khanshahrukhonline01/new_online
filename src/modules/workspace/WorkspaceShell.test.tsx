@@ -56,9 +56,10 @@ describe('WorkspaceShell', () => {
       </Suspense>,
     )
 
-    for (const label of ['Athlete', 'Organisation', 'Academy', 'Coach', 'Turf', 'Host', 'Tournament', 'Creator']) {
-      expect(html).toContain(label)
-    }
+    expect(html).toContain('Athlete')
+    expect(html).not.toContain('>Organisation</span>')
+    expect(html).not.toContain('>Coach</span>')
+    expect(html).not.toContain('>Creator</span>')
 
     expect(html).toContain('Academy Workspace')
     expect(html).toContain('Overview')
