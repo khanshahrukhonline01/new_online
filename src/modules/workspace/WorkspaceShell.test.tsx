@@ -4,7 +4,7 @@
  * Tests for the unified WorkspaceShell.
  * Verifies:
  * - Unauthenticated state renders sign-in CTAs (no fake demo data)
- * - Persona switcher renders all 8 personas
+ * - Persona switcher only renders personas supported by resolved memberships
  * - Section tabs are capped at 3 per workspace
  * - Active persona is marked aria-selected="true"
  */
@@ -43,7 +43,7 @@ describe('WorkspaceShell', () => {
     expect(html).not.toContain('Rohan Sharma Sports')
   })
 
-  it('renders persona switcher with all 8 personas, <= 4 KPI strip, and 3 section tabs when signed in', () => {
+  it('does not expose unassigned personas before memberships are verified', () => {
     const html = renderToStaticMarkup(
       <Suspense fallback={<div>Loading…</div>}>
         <WorkspaceShell
@@ -64,6 +64,6 @@ describe('WorkspaceShell', () => {
     expect(html).toContain('Overview')
     expect(html).toContain('Batches')
     expect(html).toContain('Coaches')
-    expect(html).toContain('kg-kpi-strip')
+    expect(html).toContain('kg-kpi-strip')\n    expect(html).toContain('Verifying workspace access')
   })
 })
