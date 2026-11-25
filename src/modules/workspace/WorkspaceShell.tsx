@@ -123,8 +123,6 @@ const LazyCoachDashboard = lazy(() => import('../coaches/CoachDashboardPage'))
 const LazyTurfCalendar = lazy(() => import('../venues/TurfSlotCalendarPage'))
 const LazyHostDashboard = lazy(() => import('../host/HostDashboardPage'))
 const LazyTournamentOps = lazy(() => import('../events/TournamentOpsPage'))
-const LazyOrganizations = lazy(() => import('../organizations/OrganizationsWorkspacePage'))
-const LazyCreatorHub = lazy(() => import('../campaigns/CreatorHubPage').then(m => ({ default: m.CreatorHubPage })))
 
 interface WorkspaceShellProps {
   persona: WorkspacePersona
@@ -200,7 +198,6 @@ function WorkspaceShellInner({
         label: 'Active Workspace',
         value: meta.label,
         sub: `Section: ${meta.sections.find(s => s.id === activeSectionId)?.label ?? activeSectionId}`,
-        trend: 'up',
       },
       {
         id: 'entity',
@@ -212,7 +209,7 @@ function WorkspaceShellInner({
         id: 'role',
         label: 'Access Scope',
         value: (userRole || authUser?.role || 'guest').replace(/_/g, ' '),
-        sub: authUser?.isVerified ? 'Verified identity' : 'Standard account',
+        sub: authUser?.isVerified ? 'Email confirmed' : 'Email not confirmed',
       },
       {
         id: 'modules',
@@ -311,14 +308,12 @@ function WorkspaceShellInner({
                 </option>
               ))}
             </select>
+          ) : persona === 'athlete' ? (
+            <span className="kg-entity-btn" aria-label="Personal account">Personal account</span>
           ) : (
-            <a
-              href="/partner-signup"
-              onClick={e => onNavigate(e, '/partner-signup')}
-              className="kg-entity-btn kg-touch-target"
-            >
+            <a href="/partner-signup" onClick={e => onNavigate(e, '/partner-signup')} className="kg-entity-btn kg-touch-target">
               <SiteIcon name="building" size={14} />
-              <span>{persona === 'athlete' ? 'Personal account' : 'Register or join a workspace'}</span>
+              <span>Register or join a workspace</span>
             </a>
           )}
         </div>
@@ -397,7 +392,7 @@ function PersonaContent({ persona, section, onOpenAuth, onNavigate }: {
       return <LazyDashboard onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
     case 'academy':
       return (
-        <RequireTenantMember personaLabel="Academy" onboardingRole="academy" onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Academy" onboardingRole="academy" requiredTenantTypes={['academy']} allowedRoles={['owner', 'director', 'admin', 'head_coach', 'coach', 'staff']} onNavigate={handleStrictNav}>
           <LazyAcademyHub workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
