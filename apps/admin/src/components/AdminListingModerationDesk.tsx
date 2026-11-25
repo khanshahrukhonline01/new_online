@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { SiteIcon } from '../../../../src/shared/components/SiteIcon'
 import {
   getAdminModerationListings,
@@ -33,6 +33,7 @@ export function AdminListingModerationDesk({
 
   const [refreshTick, setRefreshTick] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [focusedRowIndex, setFocusedRowIndex] = useState<number>(-1)
   const [drawerTab, setDrawerTab] = useState<'preview' | 'details' | 'diff' | 'audit'>('preview')
   const [batchSelectedIds, setBatchSelectedIds] = useState<string[]>([])
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
@@ -157,6 +158,39 @@ export function AdminListingModerationDesk({
     if (!selectedId) return null
     return getAdminModerationListingDetails(selectedId)
   }, [selectedId, refreshTick])
+
+  // Keyboard triage navigation: J/K step through queue, Enter opens drawer, Escape closes
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName?.toLowerCase()
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) {
+        return
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey || actionModal) return
+
+      if (e.key === 'Escape' && selectedId) {
+        e.preventDefault()
+        setSelectedId(null)
+        return
+      }
+      if (filteredListings.length === 0) return
+
+      if (e.key.toLowerCase() === 'j') {
+        e.preventDefault()
+        setFocusedRowIndex(prev => Math.min(filteredListings.length - 1, prev + 1))
+      } else if (e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setFocusedRowIndex(prev => Math.max(0, prev <= 0 ? 0 : prev - 1))
+      } else if (e.key === 'Enter' && focusedRowIndex >= 0 && focusedRowIndex < filteredListings.length && !selectedId) {
+        e.preventDefault()
+        setSelectedId(filteredListings[focusedRowIndex].id)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [filteredListings, focusedRowIndex, selectedId, actionModal])
 
   // Batch toggle handlers
   const handleToggleSelectAll = () => {
@@ -515,6 +549,16 @@ export function AdminListingModerationDesk({
 
       {/* 4. Unified Listings Directory Table */}
       <section className="admin-mod-table-card">
+        <div className="admin-mod-kbd-bar">
+          <span className="tabular-nums">
+            Showing {filteredListings.length} of {allListings.length} submissions
+          </span>
+          <div className="admin-mod-kbd-hints">
+            <span><kbd>J</kbd> / <kbd>K</kbd> move</span>
+            <span><kbd>Enter</kbd> inspect</span>
+            <span><kbd>Esc</kbd> close drawer</span>
+          </div>
+        </div>
         <div className="admin-mod-table-wrapper">
           <table className="admin-mod-table">
             <thead>
@@ -544,11 +588,16 @@ export function AdminListingModerationDesk({
                   </td>
                 </tr>
               ) : (
-                filteredListings.map(item => {
+                filteredListings.map((item, rowIndex) => {
                   const isSelected = batchSelectedIds.includes(item.id)
+                  const isFocused = rowIndex === focusedRowIndex
 
                   return (
-                    <tr key={item.id} className="admin-mod-row">
+                    <tr
+                      key={item.id}
+                      className={`admin-mod-row ${isFocused ? 'is-keyboard-focused' : ''}`}
+                      onClick={() => setFocusedRowIndex(rowIndex)}
+                    >
                       {/* Checkbox */}
                       <td style={{ textAlign: 'center' }}>
                         <input
@@ -580,7 +629,7 @@ export function AdminListingModerationDesk({
                               </span>
                             )}
                           </div>
-                          <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--adm-text, #f8fafc)', fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {item.title}
                           </span>
                         </div>
@@ -608,7 +657,7 @@ export function AdminListingModerationDesk({
                       {/* Sport & Location */}
                       <td>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                          <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{item.sport}</span>
+                          <span style={{ fontWeight: 600, color: 'var(--adm-text-secondary, #e2e8f0)' }}>{item.sport}</span>
                           <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
                             {item.city}, {item.state}
                           </span>
@@ -714,7 +763,7 @@ export function AdminListingModerationDesk({
                     {selectedItem.status.replace(/_/g, ' ')}
                   </span>
                 </div>
-                <h2 style={{ margin: '0.35rem 0 0 0', fontSize: '1.2rem', color: '#ffffff', fontWeight: 800 }}>
+                <h2 style={{ margin: '0.35rem 0 0 0', fontSize: '1.2rem', color: 'var(--adm-text, #ffffff)', fontWeight: 800 }}>
                   {selectedItem.title}
                 </h2>
                 <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
@@ -784,11 +833,11 @@ export function AdminListingModerationDesk({
                         KhelGrid Catalogue Listing
                       </span>
                       <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                        Sport: <strong style={{ color: '#ffffff' }}>{selectedItem.sport}</strong>
+                        Sport: <strong style={{ color: 'var(--adm-text, #ffffff)' }}>{selectedItem.sport}</strong>
                       </span>
                     </div>
 
-                    <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#ffffff', fontWeight: 700 }}>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--adm-text, #ffffff)', fontWeight: 700 }}>
                       {selectedItem.title}
                     </h3>
 
@@ -1015,7 +1064,7 @@ export function AdminListingModerationDesk({
                             {new Date(rev.submittedAt).toLocaleString()}
                           </span>
                         </div>
-                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#e2e8f0' }}>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--adm-text-secondary, #e2e8f0)' }}>
                           {rev.changesSummary}
                         </p>
                         <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
@@ -1192,7 +1241,7 @@ export function AdminListingModerationDesk({
                       checked={approveVerifiedBadge}
                       onChange={e => setApproveVerifiedBadge(e.target.checked)}
                     />
-                    <label htmlFor="trust-badge-chk" style={{ fontSize: '0.8rem', color: '#ffffff', cursor: 'pointer' }}>
+                    <label htmlFor="trust-badge-chk" style={{ fontSize: '0.8rem', color: 'var(--adm-text, #ffffff)', cursor: 'pointer' }}>
                       Grant Verified Trust Seal (evidence cross-checked)
                     </label>
                   </div>

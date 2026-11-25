@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { SiteIcon } from '../../../../src/shared/components/SiteIcon'
 import type { AdminPlatformRole } from '../auth/adminSecurityPolicy'
+import type { AdminWorkspaceTab } from './AdminSidebar'
 
 export type AdminThemeMode = 'light' | 'dark' | 'cosmic' | 'system'
 
 export interface AdminHeaderProps {
   onToggleSidebar: () => void
   onOpenCommandPalette: () => void
+  onJumpToWorkspace?: (tab: AdminWorkspaceTab) => void
   onResetPassword: () => void
   onSignOut: () => void
   activeWorkspaceTitle: string
@@ -29,10 +31,11 @@ function getOperatorInitials(email: string): string {
 export function AdminHeader({
   onToggleSidebar,
   onOpenCommandPalette,
+  onJumpToWorkspace,
   onResetPassword,
   onSignOut,
   activeWorkspaceTitle,
-  activeWorkspaceSection = 'Workspaces',
+  activeWorkspaceSection = 'Operations',
   theme,
   onChangeTheme,
   pendingSubmissionsCount = 0,
@@ -42,34 +45,42 @@ export function AdminHeader({
   operatorEmail,
   operatorRole,
 }: AdminHeaderProps) {
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const headerRef = useRef<HTMLElement>(null)
 
   const totalAlerts = pendingSubmissionsCount + pendingManuscriptsCount
   const roleLabel = operatorRole === 'super_admin' ? 'Super Admin' : 'Moderator'
   const displayName = operatorEmail.includes('@') ? operatorEmail.split('@')[0] : operatorEmail
-
-  const handleToggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().catch(() => {})
-      setIsFullscreen(true)
-    } else {
-      document.exitFullscreen?.().catch(() => {})
-      setIsFullscreen(false)
-    }
-  }
+  const normalizedTheme: 'system' | 'light' | 'dark' =
+    theme === 'cosmic' ? 'dark' : theme
 
   useEffect(() => {
-    const handleFsChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement))
+    if (!isNotificationsOpen && !isProfileOpen) return
+
+    const handleOutside = (e: MouseEvent) => {
+      if (headerRef.current && !headerRef.current.contains(e.target as Node)) {
+        setIsNotificationsOpen(false)
+        setIsProfileOpen(false)
+      }
     }
-    document.addEventListener('fullscreenchange', handleFsChange)
-    return () => document.removeEventListener('fullscreenchange', handleFsChange)
-  }, [])
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsNotificationsOpen(false)
+        setIsProfileOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutside)
+    document.addEventListener('keydown', handleEsc)
+    return () => {
+      document.removeEventListener('mousedown', handleOutside)
+      document.removeEventListener('keydown', handleEsc)
+    }
+  }, [isNotificationsOpen, isProfileOpen])
 
   return (
-    <header className="admin-lte-topbar">
+    <header ref={headerRef} className="admin-lte-topbar">
       <div className="admin-topbar-left">
         <button
           type="button"
@@ -78,22 +89,7 @@ export function AdminHeader({
           title="Toggle Navigation Sidebar"
           aria-label="Toggle Navigation Sidebar"
         >
-          <SiteIcon name="menu" size={18} />
-        </button>
-
-        <span className="admin-topbar-brand-title" title="KhelGrid Admin Operations">
-          KhelGrid Admin Operations
-        </span>
-
-        <button
-          type="button"
-          className="admin-topbar-command-trigger"
-          onClick={onOpenCommandPalette}
-          title="Open Command Palette (Ctrl+K)"
-        >
-          <SiteIcon name="search" size={14} />
-          <span className="admin-topbar-search-text">Quick search actions, queues, tools…</span>
-          <kbd className="admin-topbar-kbd">Ctrl+K</kbd>
+          <SiteIcon name="menu" size={17} />
         </button>
 
         <nav className="admin-topbar-breadcrumbs" aria-label="Breadcrumb">
@@ -104,60 +100,88 @@ export function AdminHeader({
       </div>
 
       <div className="admin-topbar-right">
-        <div
-          className="admin-topbar-db-badge"
-          title={`Connected to approved Supabase project ${databaseId}`}
+        <button
+          type="button"
+          className="admin-topbar-command-trigger"
+          onClick={onOpenCommandPalette}
+          title="Open Command Palette (Ctrl+K)"
         >
-          <span className="admin-topbar-status-dot online" />
-          <span className="admin-topbar-db-label">Dev Database ({databaseId})</span>
-          {dbLatencyMs !== null && <span className="admin-topbar-latency">{dbLatencyMs}ms</span>}
-        </div>
+          <SiteIcon name="search" size={14} />
+          <span className="admin-topbar-search-text">Search desks &amp; actions…</span>
+          <kbd className="admin-topbar-kbd">Ctrl+K</kbd>
+        </button>
 
         <div className="admin-topbar-dropdown-wrap">
           <button
             type="button"
             className="admin-topbar-icon-btn has-badge"
             onClick={() => {
-              setIsNotificationsOpen(!isNotificationsOpen)
+              setIsNotificationsOpen(prev => !prev)
               setIsProfileOpen(false)
             }}
             title="Operational Alerts"
             aria-label="Operational Alerts"
             aria-expanded={isNotificationsOpen}
           >
-            <SiteIcon name="bell" size={18} />
-            {totalAlerts > 0 && <span className="admin-topbar-badge-pill">{totalAlerts}</span>}
+            <SiteIcon name="bell" size={16} />
+            {totalAlerts > 0 && (
+              <span className="admin-topbar-alert-count">{totalAlerts}</span>
+            )}
           </button>
 
           {isNotificationsOpen && (
             <div className="admin-topbar-popover admin-notifications-popover" role="menu">
               <div className="admin-popover-header">
-                <strong>Operational Alerts</strong>
-                <span className="admin-popover-count-pill">{totalAlerts} active</span>
+                <strong>Operational Queues</strong>
+                <span className="admin-popover-meta-line">
+                  <span className="tabular-nums">{totalAlerts}</span> pending items
+                </span>
               </div>
               <div className="admin-popover-body">
                 {pendingSubmissionsCount > 0 && (
-                  <div className="admin-alert-row warning">
+                  <button
+                    type="button"
+                    className="admin-alert-row"
+                    onClick={() => {
+                      setIsNotificationsOpen(false)
+                      onJumpToWorkspace?.('moderation_desk')
+                    }}
+                  >
                     <SiteIcon name="check-circle" size={16} />
                     <div>
-                      <span className="admin-alert-title">{pendingSubmissionsCount} Submissions Awaiting Moderation</span>
-                      <small className="admin-alert-sub">Directory venues, pickup games, and academies</small>
+                      <span className="admin-alert-title">
+                        {pendingSubmissionsCount} listing submissions awaiting review
+                      </span>
+                      <small className="admin-alert-sub">
+                        Open Listing Moderation Queue
+                      </small>
                     </div>
-                  </div>
+                  </button>
                 )}
                 {pendingManuscriptsCount > 0 && (
-                  <div className="admin-alert-row purple">
+                  <button
+                    type="button"
+                    className="admin-alert-row"
+                    onClick={() => {
+                      setIsNotificationsOpen(false)
+                      onJumpToWorkspace?.('chronicle_desk')
+                    }}
+                  >
                     <SiteIcon name="award" size={16} />
                     <div>
-                      <span className="admin-alert-title">{pendingManuscriptsCount} KhelChronicle Manuscripts</span>
-                      <small className="admin-alert-sub">Research papers awaiting editorial assessment</small>
+                      <span className="admin-alert-title">
+                        {pendingManuscriptsCount} KhelChronicle manuscripts pending
+                      </span>
+                      <small className="admin-alert-sub">
+                        Open Chronicle Peer-Review Desk
+                      </small>
                     </div>
-                  </div>
+                  </button>
                 )}
                 {totalAlerts === 0 && (
-                  <div className="admin-alert-row empty">
+                  <div className="admin-alert-row">
                     <SiteIcon name="check" size={16} />
-                    <span>All operational queues are clear.</span>
+                    <span className="admin-alert-title">All queues are clear.</span>
                   </div>
                 )}
               </div>
@@ -165,29 +189,26 @@ export function AdminHeader({
           )}
         </div>
 
-        <button
-          type="button"
-          className="admin-topbar-icon-btn"
-          onClick={handleToggleFullscreen}
-          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-          aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-        >
-          <SiteIcon name={isFullscreen ? 'close' : 'external-link'} size={16} />
-        </button>
-
-        <div className="admin-theme-select-wrap">
-          <SiteIcon name={theme === 'cosmic' ? 'sparkles' : theme === 'dark' ? 'moon' : 'sun'} size={15} />
-          <select
-            className="admin-topbar-theme-select"
-            value={theme}
-            onChange={e => onChangeTheme(e.target.value as AdminThemeMode)}
-            aria-label="Theme Mode Selection"
-          >
-            <option value="system">System default</option>
-            <option value="light">Corporate Light</option>
-            <option value="dark">Dark Slate</option>
-            <option value="cosmic">Cosmic Neon</option>
-          </select>
+        <div className="admin-theme-segmented" role="group" aria-label="Theme Mode Selection">
+          {(
+            [
+              { id: 'light', label: 'Light', icon: 'sun' },
+              { id: 'dark', label: 'Dark', icon: 'moon' },
+              { id: 'system', label: 'Auto', icon: 'settings' },
+            ] as const
+          ).map(opt => (
+            <button
+              key={opt.id}
+              type="button"
+              className={`admin-theme-seg-btn ${normalizedTheme === opt.id ? 'is-active' : ''}`}
+              onClick={() => onChangeTheme(opt.id)}
+              aria-pressed={normalizedTheme === opt.id}
+              title={`Switch to ${opt.label} theme`}
+            >
+              <SiteIcon name={opt.icon} size={13} />
+              <span className="admin-theme-seg-label">{opt.label}</span>
+            </button>
+          ))}
         </div>
 
         <div className="admin-topbar-dropdown-wrap">
@@ -195,15 +216,15 @@ export function AdminHeader({
             type="button"
             className="admin-topbar-profile-btn"
             onClick={() => {
-              setIsProfileOpen(!isProfileOpen)
+              setIsProfileOpen(prev => !prev)
               setIsNotificationsOpen(false)
             }}
             aria-label="Operator Account Menu"
             aria-expanded={isProfileOpen}
           >
-            <div className="admin-topbar-avatar">
-              <span>{getOperatorInitials(operatorEmail)}</span>
-            </div>
+            <span className="admin-topbar-avatar">
+              {getOperatorInitials(operatorEmail)}
+            </span>
             <span className="admin-topbar-profile-name">{displayName}</span>
             <SiteIcon name="chevron-down" size={13} />
           </button>
@@ -212,7 +233,14 @@ export function AdminHeader({
             <div className="admin-topbar-popover admin-profile-popover" role="menu">
               <div className="admin-popover-header">
                 <strong title={operatorEmail}>{operatorEmail}</strong>
-                <span className="admin-popover-role">{roleLabel}</span>
+                <span className="admin-popover-meta-line">
+                  <span>{roleLabel}</span>
+                  <span aria-hidden="true">·</span>
+                  <span className="tabular-nums">
+                    DB {databaseId}
+                    {dbLatencyMs !== null ? ` (${dbLatencyMs}ms)` : ''}
+                  </span>
+                </span>
               </div>
               <div className="admin-popover-actions">
                 <button

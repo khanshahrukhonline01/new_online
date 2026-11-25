@@ -22,15 +22,4 @@ describe('HostDashboardPage', () => {
     expect(html).toContain('A submission is not published or verified')
     expect(html).toContain('Tournament &amp; Sports Organisation Suite')
   })
-
-  it('scopes cards cleanly when workspaceSection is bookings vs facilities', () => {
-    const bookingsHtml = renderToStaticMarkup(<HostDashboardPage workspaceSection="bookings" />)
-    expect(bookingsHtml).toContain('Turf &amp; Facility Slot Booking Calendar')
-    expect(bookingsHtml).toContain('Universal Gate Check-In &amp; Pass Verifier Desk')
-    expect(bookingsHtml).not.toContain('Academy Admissions &amp; Batch Management SaaS')
-
-    const facilitiesHtml = renderToStaticMarkup(<HostDashboardPage workspaceSection="facilities" />)
-    expect(facilitiesHtml).toContain('Academy Admissions &amp; Batch Management SaaS')
-    expect(facilitiesHtml).toContain('/workspace/academy/overview')
-  })
 })

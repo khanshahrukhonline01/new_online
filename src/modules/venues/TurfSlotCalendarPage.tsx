@@ -1,43 +1,49 @@
-import { useState, useEffect, type MouseEvent } from 'react'
+import { useState, useEffect, type MouseEvent, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { ConfirmDialog } from '../../shared/components/ui/ConfirmDialog'
+import { generateQrSvgString } from '../../shared/utils/qrCodeGenerator'
 import {
   getTurfCourts,
   getTurfSlots,
+  bookTurfSlot,
   toggleSlotBlocked,
   cancelTurfBooking,
   getTurfVenueSettings,
+  saveTurfVenueSettings,
+  generateWhatsAppTurfConfirmationUrl,
+  generateTurfUpiPayLink,
   getTurfDayKpis,
   getTurfBookings,
   getTurfPricingConfig,
+  saveTurfPricingConfig,
+  isSlotPeakHour,
+  createQuickWalkInBooking,
+  createRecurringSubscription,
   getRecurringSubscriptions,
+  type TurfPricingConfig,
   type TurfCourt,
   type TurfSlot,
   type TurfBookingRecord,
 } from './turfSlotManager'
 import { exportTurfBookingsToCsv, downloadBlobFile } from './turfExportUtils'
-import { TurfActionDrawers } from './components/TurfActionDrawers'
-import { TurfSlotGridPanel } from './components/TurfSlotGridPanel'
-import { TurfUtilizationAndLedgerPanel } from './components/TurfUtilizationAndLedgerPanel'
-import {
-  CURATED_TURF_VENUES,
-  resolveTurfVenueMeta,
-  type TurfActiveDrawer,
-  type TurfShellSection,
-} from './turfCalendarTypes'
 import './TurfSlotCalendarPage.css'
 
 export interface TurfSlotCalendarPageProps {
   initialVenueSlug?: string
-  workspaceSection?: TurfShellSection | string
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
+const CURATED_TURF_VENUES = [
+  { slug: 'sree-kanteerava-stadium', name: 'Sree Kanteerava Stadium', city: 'Bengaluru', sport: 'Football, Box Cricket & Badminton' },
+  { slug: 'talkatora-indoor-stadium', name: 'Talkatora Indoor Stadium', city: 'Delhi', sport: 'Badminton & Table Tennis' },
+  { slug: 'andheri-sports-complex', name: 'Andheri Sports Complex', city: 'Mumbai', sport: 'Football Turf & Cricket Nets' },
+  { slug: 'decathlon-anubhava-turf', name: 'Decathlon Anubhava Turf Arena', city: 'Bengaluru', sport: '5v5 AstroTurf & Basketball' },
+]
+
 export default function TurfSlotCalendarPage({
   initialVenueSlug,
-  workspaceSection,
   onNavigate,
 }: TurfSlotCalendarPageProps) {
+  // Venue Selection State
   const [selectedVenueSlug, setSelectedVenueSlug] = useState<string>(() => {
     if (initialVenueSlug) return initialVenueSlug
     if (typeof window !== 'undefined') {
@@ -47,7 +53,14 @@ export default function TurfSlotCalendarPage({
     return 'sree-kanteerava-stadium'
   })
 
-  const currentVenue = resolveTurfVenueMeta(selectedVenueSlug)
+  const currentVenue = CURATED_TURF_VENUES.find(v => v.slug === selectedVenueSlug) || {
+    slug: selectedVenueSlug,
+    name: 'Grassroots Sports Complex',
+    city: 'India',
+    sport: 'Multi-Sport Turf',
+  }
+
+  // Courts for current venue
   const courts = getTurfCourts(selectedVenueSlug)
   const [selectedCourtId, setSelectedCourtId] = useState<string>(courts[0]?.id || '')
 
@@ -69,8 +82,11 @@ export default function TurfSlotCalendarPage({
     advanceDepositRate: 300,
   }
 
+  // Date selection State
   const [selectedDate, setSelectedDate] = useState<string>('Today')
   const [customDateInput, setCustomDateInput] = useState<string>('')
+
+  // Refresh trigger for cross-event reactivity
   const [refreshKey, setRefreshKey] = useState(0)
   const triggerRefresh = () => setRefreshKey(k => k + 1)
 
@@ -80,38 +96,186 @@ export default function TurfSlotCalendarPage({
     return () => window.removeEventListener('khelgrid:venue-booked', handleVenueBooked)
   }, [])
 
+  // Derived Slots & KPIs
   const effectiveDate = customDateInput || selectedDate
   const slots: TurfSlot[] = getTurfSlots(selectedVenueSlug, effectiveDate, activeCourt.id)
   const kpis = getTurfDayKpis(selectedVenueSlug, effectiveDate, activeCourt.id)
   const venueSettings = getTurfVenueSettings(selectedVenueSlug, currentVenue.name)
-  const bookings = getTurfBookings(selectedVenueSlug)
-  const subscriptions = getRecurringSubscriptions(selectedVenueSlug)
-  const pricingConfig = getTurfPricingConfig(selectedVenueSlug)
 
-  const [activeDrawer, setActiveDrawer] = useState<TurfActiveDrawer>(null)
+  // Booking Modal State
   const [bookingSlotTarget, setBookingSlotTarget] = useState<TurfSlot | null>(null)
+  const [customerName, setCustomerName] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
+  const [bookingPaymentMethod, setBookingPaymentMethod] = useState<'upi_advance_paid' | 'pay_at_venue' | 'fully_paid'>('upi_advance_paid')
+  const [bookingError, setBookingError] = useState('')
+
+  // Voucher / QR View Modal State
   const [activeVoucher, setActiveVoucher] = useState<TurfBookingRecord | null>(null)
-  const [pendingCancelSlot, setPendingCancelSlot] = useState<TurfSlot | null>(null)
 
-  const resolvedSection: TurfShellSection =
-    workspaceSection === 'utilization' || workspaceSection === 'maintenance'
-      ? workspaceSection
-      : 'calendar'
+  // Venue Settings Modal State
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
+  const [editManagerName, setEditManagerName] = useState(venueSettings.managerName)
+  const [editManagerPhone, setEditManagerPhone] = useState(venueSettings.managerWhatsApp)
+  const [editUpiVpa, setEditUpiVpa] = useState(venueSettings.upiVpa)
 
-  const handleExportCsv = () => {
-    const csv = exportTurfBookingsToCsv(getTurfBookings(selectedVenueSlug), currentVenue.name)
-    downloadBlobFile(`${selectedVenueSlug}-turf-ledger.csv`, csv)
+  // Dynamic Peak Pricing Modal State
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false)
+  const [pricingConfig, setPricingConfig] = useState<TurfPricingConfig>(() => getTurfPricingConfig(selectedVenueSlug))
+
+  // Quick Phone / Walk-In Modal State
+  const [isQuickWalkInModalOpen, setIsQuickWalkInModalOpen] = useState(false)
+  const [walkInName, setWalkInName] = useState('')
+  const [walkInPhone, setWalkInPhone] = useState('')
+  const [walkInCourtId, setWalkInCourtId] = useState(selectedCourtId)
+  const [walkInDate, setWalkInDate] = useState(selectedDate)
+  const [walkInTimeSlot, setWalkInTimeSlot] = useState('07:00 PM – 08:00 PM')
+  const [walkInPaymentStatus, setWalkInPaymentStatus] = useState<'upi_advance_paid' | 'pay_at_venue' | 'fully_paid'>('fully_paid')
+  const [walkInMsg, setWalkInMsg] = useState('')
+
+  // Recurring Subscriptions Modal State
+  const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false)
+  const [recCustomerName, setRecCustomerName] = useState('')
+  const [recCustomerPhone, setRecCustomerPhone] = useState('')
+  const [recDayOfWeek, setRecDayOfWeek] = useState(0) // Sunday
+  const [recTimeSlot, setRecTimeSlot] = useState('06:00 AM – 08:00 AM')
+  const [recWeeksCount, setRecWeeksCount] = useState(8)
+  const [recWeeklyRate, setRecWeeklyRate] = useState(2000)
+  const [recDeposit, setRecDeposit] = useState(4000)
+  const [recMsg, setRecMsg] = useState('')
+
+  function handleQuickWalkIn(e: FormEvent) {
+    e.preventDefault()
+    if (!walkInName.trim() || !walkInPhone.trim()) {
+      setWalkInMsg('Please enter customer name and phone.')
+      return
+    }
+    const res = createQuickWalkInBooking({
+      venueSlug: selectedVenueSlug,
+      courtId: walkInCourtId,
+      date: walkInDate,
+      timeSlot: walkInTimeSlot,
+      customerName: walkInName.trim(),
+      customerPhone: walkInPhone.trim(),
+      totalAmount: 1500,
+      paidAmount: 1500,
+      paymentStatus: walkInPaymentStatus,
+    })
+    if (res.success) {
+      setWalkInMsg(res.message)
+      triggerRefresh()
+      setTimeout(() => {
+        setIsQuickWalkInModalOpen(false)
+        setWalkInName('')
+        setWalkInPhone('')
+        setWalkInMsg('')
+      }, 1500)
+    } else {
+      setWalkInMsg(res.message)
+    }
   }
 
-  const handleConfirmCancel = () => {
-    if (!pendingCancelSlot) return
-    cancelTurfBooking(selectedVenueSlug, effectiveDate, activeCourt.id, pendingCancelSlot.timeSlot)
-    setPendingCancelSlot(null)
+  function handleCreateSubscription(e: FormEvent) {
+    e.preventDefault()
+    if (!recCustomerName.trim() || !recCustomerPhone.trim()) {
+      setRecMsg('Please enter customer/club name and phone.')
+      return
+    }
+    const court = courts.find(c => c.id === walkInCourtId) || courts[0]
+    const res = createRecurringSubscription({
+      venueSlug: selectedVenueSlug,
+      courtId: court?.id || 'court-1',
+      courtName: court?.name || 'Pitch 1',
+      dayOfWeek: Number(recDayOfWeek),
+      timeSlot: recTimeSlot,
+      startDate: selectedDate,
+      weeksCount: Number(recWeeksCount),
+      customerName: recCustomerName.trim(),
+      customerPhone: recCustomerPhone.trim(),
+      weeklyRate: Number(recWeeklyRate),
+      advanceDepositPaid: Number(recDeposit),
+    })
+    if (res.success) {
+      setRecMsg(res.message)
+      triggerRefresh()
+      setTimeout(() => {
+        setRecCustomerName('')
+        setRecCustomerPhone('')
+        setRecMsg('')
+      }, 1500)
+    } else {
+      setRecMsg(res.message)
+    }
+  }
+
+  function handleSavePricing(e: FormEvent) {
+    e.preventDefault()
+    saveTurfPricingConfig(pricingConfig)
+    setIsPricingModalOpen(false)
+    triggerRefresh()
+  }
+
+  // Handle slot reservation form submission
+  function handleConfirmBooking(e: FormEvent) {
+    e.preventDefault()
+    if (!bookingSlotTarget) return
+
+    if (customerName.trim().length < 2) {
+      setBookingError('Please enter full customer or team captain name.')
+      return
+    }
+    if (customerPhone.replace(/\D/g, '').length < 10) {
+      setBookingError('Please enter a valid 10-digit mobile number.')
+      return
+    }
+
+    const res = bookTurfSlot({
+      venueSlug: selectedVenueSlug,
+      venueName: currentVenue.name,
+      courtId: activeCourt.id,
+      courtName: activeCourt.name,
+      date: effectiveDate,
+      timeSlot: bookingSlotTarget.timeSlot,
+      customerName: customerName.trim(),
+      customerPhone: customerPhone.replace(/\D/g, ''),
+      sport: activeCourt.sport,
+      paymentMethod: bookingPaymentMethod,
+      hourlyPrice: bookingSlotTarget.hourlyPrice,
+      advanceDeposit: bookingSlotTarget.advanceDeposit,
+      upiVpa: venueSettings.upiVpa,
+    })
+
+    if (!res.success || !res.booking) {
+      setBookingError(res.error || 'Failed to book slot.')
+      return
+    }
+
+    setBookingSlotTarget(null)
+    setCustomerName('')
+    setCustomerPhone('')
+    setBookingError('')
+    setActiveVoucher(res.booking)
+    triggerRefresh()
+  }
+
+  // Handle Settings Save
+  function handleSaveSettings(e: FormEvent) {
+    e.preventDefault()
+    saveTurfVenueSettings({
+      venueSlug: selectedVenueSlug,
+      venueName: currentVenue.name,
+      managerName: editManagerName.trim(),
+      managerWhatsApp: editManagerPhone.replace(/\D/g, ''),
+      upiVpa: editUpiVpa.trim(),
+      allowPayAtVenue: true,
+      autoWhatsAppConfirmEnabled: true,
+    })
+    setIsSettingsModalOpen(false)
     triggerRefresh()
   }
 
   return (
     <main className="turf-calendar-root" key={refreshKey}>
+      {/* Header Banner */}
       <header className="turf-header-banner">
         <div className="turf-title-group">
           <div className="turf-launch-badge">
@@ -128,7 +292,11 @@ export default function TurfSlotCalendarPage({
           <button
             type="button"
             className="turf-btn turf-btn-outline"
-            onClick={handleExportCsv}
+            onClick={() => {
+              const bookings = getTurfBookings(selectedVenueSlug)
+              const csv = exportTurfBookingsToCsv(bookings, currentVenue.name)
+              downloadBlobFile(`${selectedVenueSlug}-turf-ledger.csv`, csv)
+            }}
           >
             <SiteIcon name="download" size={16} />
             <span>Export Ledger (CSV)</span>
@@ -136,7 +304,12 @@ export default function TurfSlotCalendarPage({
           <button
             type="button"
             className="turf-btn turf-btn-outline"
-            onClick={() => setActiveDrawer('settings')}
+            onClick={() => {
+              setEditManagerName(venueSettings.managerName)
+              setEditManagerPhone(venueSettings.managerWhatsApp)
+              setEditUpiVpa(venueSettings.upiVpa)
+              setIsSettingsModalOpen(true)
+            }}
           >
             <SiteIcon name="settings" size={16} />
             <span>Turf Settings &amp; UPI</span>
@@ -144,7 +317,12 @@ export default function TurfSlotCalendarPage({
           <button
             type="button"
             className="turf-btn turf-btn-outline"
-            onClick={() => setActiveDrawer('walkin')}
+            onClick={() => {
+              setWalkInCourtId(selectedCourtId)
+              setWalkInDate(selectedDate)
+              setWalkInMsg('')
+              setIsQuickWalkInModalOpen(true)
+            }}
           >
             <SiteIcon name="phone" size={16} />
             <span>⚡ Quick Phone Walk-In</span>
@@ -152,7 +330,10 @@ export default function TurfSlotCalendarPage({
           <button
             type="button"
             className="turf-btn turf-btn-outline"
-            onClick={() => setActiveDrawer('recurring')}
+            onClick={() => {
+              setRecMsg('')
+              setIsRecurringModalOpen(true)
+            }}
           >
             <SiteIcon name="calendar" size={16} />
             <span>📅 Subscriptions &amp; Leagues</span>
@@ -160,7 +341,10 @@ export default function TurfSlotCalendarPage({
           <button
             type="button"
             className="turf-btn turf-btn-outline"
-            onClick={() => setActiveDrawer('pricing')}
+            onClick={() => {
+              setPricingConfig(getTurfPricingConfig(selectedVenueSlug))
+              setIsPricingModalOpen(true)
+            }}
           >
             <SiteIcon name="wallet" size={16} />
             <span>⚡ Dynamic Peak Pricing</span>
@@ -176,6 +360,7 @@ export default function TurfSlotCalendarPage({
         </div>
       </header>
 
+      {/* Control Bar: Venue selector & Court Tabs */}
       <section className="turf-controls-bar" aria-label="Venue and Court Selector">
         <div className="turf-venue-selector-row">
           <div>
@@ -198,11 +383,12 @@ export default function TurfSlotCalendarPage({
             </select>
           </div>
 
-          <div style={{ fontSize: '0.85rem', color: 'var(--muted, #64748b)' }}>
+          <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
             Direct UPI Settlement: <strong>{venueSettings.upiVpa}</strong> (0% commission)
           </div>
         </div>
 
+        {/* Court / Pitch Tabs */}
         <div className="turf-court-tabs" role="tablist" aria-label="Facility Courts and Pitches">
           {courts.map(court => (
             <button
@@ -221,6 +407,7 @@ export default function TurfSlotCalendarPage({
         </div>
       </section>
 
+      {/* Date Bar */}
       <section className="turf-date-bar" aria-label="Date Selection">
         <div className="turf-date-chips">
           {['Today', 'Tomorrow', 'Day After'].map(d => (
@@ -239,7 +426,7 @@ export default function TurfSlotCalendarPage({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <label htmlFor="custom-date-picker" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-soft, #475569)' }}>
+          <label htmlFor="custom-date-picker" style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>
             Specific Date:
           </label>
           <input
@@ -255,6 +442,7 @@ export default function TurfSlotCalendarPage({
         </div>
       </section>
 
+      {/* KPI Metrics Ribbon */}
       <section className="turf-kpi-grid" aria-label="Turf Daily Overview">
         <div className="turf-kpi-card">
           <span className="turf-kpi-val">{kpis.totalSlots}</span>
@@ -262,7 +450,7 @@ export default function TurfSlotCalendarPage({
         </div>
         <div className="turf-kpi-card" style={{ borderColor: 'rgba(59, 130, 246, 0.4)' }}>
           <span className="turf-kpi-val" style={{ color: '#2563eb' }}>
-            {kpis.bookedCount} <small style={{ fontSize: '0.85rem', color: 'var(--muted, #64748b)' }}>({kpis.occupancyRate}% Booked)</small>
+            {kpis.bookedCount} <small style={{ fontSize: '0.85rem', color: '#64748b' }}>({kpis.occupancyRate}% Booked)</small>
           </span>
           <span className="turf-kpi-lbl">Reserved Slots</span>
         </div>
@@ -280,86 +468,761 @@ export default function TurfSlotCalendarPage({
         </div>
       </section>
 
-      {resolvedSection === 'utilization' ? (
-        <TurfUtilizationAndLedgerPanel
-          bookings={bookings}
-          subscriptions={subscriptions}
-          pricingConfig={pricingConfig}
-          onExportCsv={handleExportCsv}
-          onOpenPricingDrawer={() => setActiveDrawer('pricing')}
-          onOpenRecurringDrawer={() => setActiveDrawer('recurring')}
-          onViewVoucher={record => {
-            setActiveVoucher(record)
-            setActiveDrawer('voucher')
-          }}
-        />
-      ) : (
-        <TurfSlotGridPanel
-          venueSlug={selectedVenueSlug}
-          venueName={currentVenue.name}
-          activeCourt={activeCourt}
-          effectiveDate={effectiveDate}
-          slots={slots}
-          maintenanceOnly={resolvedSection === 'maintenance'}
-          onOpenBookingDrawer={slot => {
-            setBookingSlotTarget(slot)
-            setActiveDrawer('booking')
-          }}
-          onToggleBlocked={slot => {
-            toggleSlotBlocked(
-              selectedVenueSlug,
-              effectiveDate,
-              activeCourt.id,
-              slot.timeSlot,
-              slot.status === 'blocked' ? undefined : 'Turf Maintenance'
-            )
-            triggerRefresh()
-          }}
-          onViewVoucher={record => {
-            setActiveVoucher(record)
-            setActiveDrawer('voucher')
-          }}
-          onRequestCancelSlot={slot => setPendingCancelSlot(slot)}
-        />
+      {/* Interactive Hourly Slots Grid */}
+      <section aria-label="Hourly Turf Slot Grid">
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 1rem' }}>
+          Hourly Slot Management Grid — {activeCourt.name}
+        </h2>
+
+        <div className="turf-slots-grid">
+          {slots.map(slot => (
+            <article
+              key={slot.id}
+              className={`turf-slot-card status-${slot.status}`}
+              data-slot-time={slot.timeSlot}
+            >
+              <div className="turf-slot-header">
+                <span className="turf-slot-time">{slot.timeSlot}</span>
+                <span className={`turf-slot-badge badge-${slot.status}`}>
+                  {slot.status === 'available' ? 'Available' : slot.status === 'booked' ? 'Reserved' : slot.status === 'held' ? 'Held (Cart Lock)' : 'Blocked'}
+                </span>
+              </div>
+
+              <div className="turf-slot-body">
+                {slot.status === 'available' && (
+                  <div>
+                    <span className="turf-slot-price">₹{slot.hourlyPrice.toLocaleString('en-IN')}/hr</span>
+                    <span className="turf-slot-deposit-note">Advance required: ₹{slot.advanceDeposit} via UPI</span>
+                    {isSlotPeakHour(slot.timeSlot, effectiveDate) && (
+                      <span style={{ display: 'inline-block', fontSize: '0.7rem', color: '#b45309', background: '#fef3c7', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 700, marginTop: '0.25rem' }}>
+                        ⚡ Prime Peak Slot
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {slot.status === 'held' && (
+                  <div style={{ color: '#d97706', fontSize: '0.85rem', fontWeight: 600 }}>
+                    ⏱️ Held in customer cart
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>Auto-releases in 10 mins if unpaid</div>
+                  </div>
+                )}
+
+                {slot.status === 'booked' && (
+                  <div className="turf-slot-booking-info">
+                    <span className="turf-slot-player-name">👤 {slot.customerName}</span>
+                    <span className="turf-slot-player-phone">📞 +91 {slot.customerPhone}</span>
+                    <div style={{ fontSize: '0.78rem', marginTop: '0.2rem', color: '#15803d' }}>
+                      Advance: ₹{slot.advanceDeposit} · Remainder: ₹{Math.max(0, slot.hourlyPrice - slot.advanceDeposit)}
+                    </div>
+                  </div>
+                )}
+
+                {slot.status === 'blocked' && (
+                  <div style={{ fontStyle: 'italic', color: '#64748b', fontSize: '0.85rem' }}>
+                    🔒 {slot.blockedReason || 'Maintenance / Private Booking'}
+                  </div>
+                )}
+              </div>
+
+              <div className="turf-slot-actions">
+                {slot.status === 'available' && (
+                  <>
+                    <button
+                      type="button"
+                      className="turf-mini-btn primary"
+                      onClick={() => {
+                        setBookingSlotTarget(slot)
+                        setBookingError('')
+                      }}
+                    >
+                      <SiteIcon name="check" size={13} />
+                      <span>Book Slot</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="turf-mini-btn"
+                      onClick={() => {
+                        toggleSlotBlocked(selectedVenueSlug, effectiveDate, activeCourt.id, slot.timeSlot, 'Turf Maintenance')
+                        triggerRefresh()
+                      }}
+                      title="Block for maintenance"
+                    >
+                      <SiteIcon name="lock" size={13} />
+                      <span>Block</span>
+                    </button>
+                  </>
+                )}
+
+                {slot.status === 'booked' && (
+                  <>
+                    <button
+                      type="button"
+                      className="turf-mini-btn"
+                      onClick={() => {
+                        setActiveVoucher({
+                          bookingId: slot.bookingId || 'TRF-RECORD',
+                          venueSlug: selectedVenueSlug,
+                          venueName: currentVenue.name,
+                          courtId: activeCourt.id,
+                          courtName: activeCourt.name,
+                          sport: activeCourt.sport,
+                          slotDate: effectiveDate,
+                          slotTime: slot.timeSlot,
+                          customerName: slot.customerName || 'Player',
+                          customerPhone: slot.customerPhone || '9876543210',
+                          totalAmount: slot.hourlyPrice,
+                          paidAmount: slot.advanceDeposit,
+                          balanceAmount: Math.max(0, slot.hourlyPrice - slot.advanceDeposit),
+                          paymentStatus: slot.paymentStatus || 'upi_advance_paid',
+                          bookedAt: slot.bookedAt || new Date().toISOString(),
+                          qrCodePayload: JSON.stringify({ ref: slot.bookingId, venue: currentVenue.name, slot: slot.timeSlot }),
+                        })
+                      }}
+                    >
+                      <SiteIcon name="file-text" size={13} />
+                      <span>Voucher</span>
+                    </button>
+                    <a
+                      href={generateWhatsAppTurfConfirmationUrl(
+                        {
+                          bookingId: slot.bookingId || 'TRF-RECORD',
+                          venueSlug: selectedVenueSlug,
+                          venueName: currentVenue.name,
+                          courtId: activeCourt.id,
+                          courtName: activeCourt.name,
+                          sport: activeCourt.sport,
+                          slotDate: effectiveDate,
+                          slotTime: slot.timeSlot,
+                          customerName: slot.customerName || 'Player',
+                          customerPhone: slot.customerPhone || '9876543210',
+                          totalAmount: slot.hourlyPrice,
+                          paidAmount: slot.advanceDeposit,
+                          balanceAmount: Math.max(0, slot.hourlyPrice - slot.advanceDeposit),
+                          paymentStatus: slot.paymentStatus || 'upi_advance_paid',
+                          bookedAt: slot.bookedAt || new Date().toISOString(),
+                          qrCodePayload: 'test',
+                        },
+                        slot.customerPhone
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="turf-mini-btn"
+                      title="Send WhatsApp confirmation to team captain"
+                    >
+                      <SiteIcon name="phone" size={13} />
+                      <span>WhatsApp</span>
+                    </a>
+                    <button
+                      type="button"
+                      className="turf-mini-btn danger"
+                      onClick={() => {
+                        if (window.confirm?.(`Cancel reservation for ${slot.timeSlot}? This will free the slot immediately.`)) {
+                          cancelTurfBooking(selectedVenueSlug, effectiveDate, activeCourt.id, slot.timeSlot)
+                          triggerRefresh()
+                        }
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+
+                {slot.status === 'blocked' && (
+                  <button
+                    type="button"
+                    className="turf-mini-btn primary"
+                    onClick={() => {
+                      toggleSlotBlocked(selectedVenueSlug, effectiveDate, activeCourt.id, slot.timeSlot)
+                      triggerRefresh()
+                    }}
+                  >
+                    <span>Unblock &amp; Open</span>
+                  </button>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Walk-in / Manual Booking Modal */}
+      {bookingSlotTarget && (
+        <div className="turf-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="booking-modal-title">
+          <div className="turf-modal-card">
+            <div className="turf-modal-header">
+              <h3 id="booking-modal-title">Reserve Slot — {bookingSlotTarget.timeSlot}</h3>
+              <button
+                type="button"
+                className="turf-modal-close"
+                onClick={() => setBookingSlotTarget(null)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {bookingError && (
+              <div style={{ padding: '0.6rem 0.8rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#b91c1c', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                {bookingError}
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmBooking}>
+              <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                <div><strong>Venue:</strong> {currentVenue.name}</div>
+                <div><strong>Court:</strong> {activeCourt.name}</div>
+                <div><strong>Date &amp; Time:</strong> {effectiveDate} · {bookingSlotTarget.timeSlot}</div>
+                <div><strong>Hourly Fee:</strong> ₹{bookingSlotTarget.hourlyPrice.toLocaleString('en-IN')}</div>
+              </div>
+
+              <div className="turf-form-group">
+                <label htmlFor="turf-player-name">Player / Team Captain Name *</label>
+                <input
+                  id="turf-player-name"
+                  type="text"
+                  className="turf-form-input"
+                  value={customerName}
+                  onChange={e => setCustomerName(e.target.value)}
+                  placeholder="e.g. Vikram Verma"
+                  required
+                />
+              </div>
+
+              <div className="turf-form-group">
+                <label htmlFor="turf-player-phone">WhatsApp Mobile Number *</label>
+                <input
+                  id="turf-player-phone"
+                  type="tel"
+                  className="turf-form-input"
+                  value={customerPhone}
+                  onChange={e => setCustomerPhone(e.target.value)}
+                  placeholder="10-digit mobile number"
+                  required
+                />
+              </div>
+
+              <div className="turf-form-group">
+                <label>Payment Settlement Mode</label>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className={`turf-date-chip ${bookingPaymentMethod === 'upi_advance_paid' ? 'active' : ''}`}
+                    onClick={() => setBookingPaymentMethod('upi_advance_paid')}
+                  >
+                    UPI Advance (₹{bookingSlotTarget.advanceDeposit})
+                  </button>
+                  <button
+                    type="button"
+                    className={`turf-date-chip ${bookingPaymentMethod === 'fully_paid' ? 'active' : ''}`}
+                    onClick={() => setBookingPaymentMethod('fully_paid')}
+                  >
+                    Full UPI (₹{bookingSlotTarget.hourlyPrice})
+                  </button>
+                  <button
+                    type="button"
+                    className={`turf-date-chip ${bookingPaymentMethod === 'pay_at_venue' ? 'active' : ''}`}
+                    onClick={() => setBookingPaymentMethod('pay_at_venue')}
+                  >
+                    Pay at Venue
+                  </button>
+                </div>
+              </div>
+
+              {/* Instant Desk UPI QR Preview */}
+              {bookingPaymentMethod !== 'pay_at_venue' && (
+                <div className="turf-qr-box">
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#059669', marginBottom: '0.5rem' }}>
+                    Instant On-Desk UPI QR (0% Commission)
+                  </div>
+                  <img
+                    src={`data:image/svg+xml;utf8,${encodeURIComponent(
+                      generateQrSvgString(
+                        generateTurfUpiPayLink({
+                          vpa: venueSettings.upiVpa,
+                          name: currentVenue.name,
+                          amount: bookingPaymentMethod === 'fully_paid' ? bookingSlotTarget.hourlyPrice : bookingSlotTarget.advanceDeposit,
+                          note: `Turf Slot ${bookingSlotTarget.timeSlot}`,
+                        }),
+                        { size: 160 }
+                      )
+                    )}`}
+                    alt="UPI Payment QR Code"
+                    className="turf-qr-img"
+                  />
+                  <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                    Scan with PhonePe, GPay, or Paytm to settle <strong>₹{bookingPaymentMethod === 'fully_paid' ? bookingSlotTarget.hourlyPrice : bookingSlotTarget.advanceDeposit}</strong> directly to <strong>{venueSettings.upiVpa}</strong>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="turf-btn turf-btn-outline"
+                  onClick={() => setBookingSlotTarget(null)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="turf-btn turf-btn-primary">
+                  Confirm Reservation →
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
-      <TurfActionDrawers
-        activeDrawer={activeDrawer}
-        onCloseDrawer={() => {
-          setActiveDrawer(null)
-          setBookingSlotTarget(null)
-        }}
-        venueSlug={selectedVenueSlug}
-        venueName={currentVenue.name}
-        activeCourt={activeCourt}
-        courts={courts}
-        effectiveDate={effectiveDate}
-        selectedDate={selectedDate}
-        venueSettings={venueSettings}
-        initialPricingConfig={pricingConfig}
-        bookingSlotTarget={bookingSlotTarget}
-        activeVoucher={activeVoucher}
-        onVoucherIssued={booking => {
-          setBookingSlotTarget(null)
-          setActiveVoucher(booking)
-          setActiveDrawer('voucher')
-        }}
-        onMutationSuccess={triggerRefresh}
-      />
+      {/* Turf Booking Voucher & QR Modal */}
+      {activeVoucher && (
+        <div className="turf-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="voucher-modal-title">
+          <div className="turf-modal-card" style={{ textAlign: 'center' }}>
+            <div className="turf-modal-header">
+              <h3 id="voucher-modal-title">Turf Reservation Voucher</h3>
+              <button
+                type="button"
+                className="turf-modal-close"
+                onClick={() => setActiveVoucher(null)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
 
-      <ConfirmDialog
-        open={Boolean(pendingCancelSlot)}
-        title="Cancel Turf Reservation?"
-        message={
-          pendingCancelSlot
-            ? `Cancel reservation for ${pendingCancelSlot.timeSlot} (${pendingCancelSlot.customerName || 'Player'})? This will immediately reopen the slot.`
-            : ''
-        }
-        confirmLabel="Cancel Reservation"
-        destructive
-        onConfirm={handleConfirmCancel}
-        onCancel={() => setPendingCancelSlot(null)}
-      />
+            <div style={{ padding: '0.75rem', background: '#ecfdf5', borderRadius: '8px', color: '#065f46', fontWeight: 700, fontSize: '0.95rem', marginBottom: '1rem' }}>
+              ✓ Reservation Confirmed: #{activeVoucher.bookingId}
+            </div>
+
+            <div style={{ textAlign: 'left', background: '#f8fafc', padding: '1rem', borderRadius: '10px', fontSize: '0.88rem', marginBottom: '1rem' }}>
+              <div><strong>Facility:</strong> {activeVoucher.venueName}</div>
+              <div><strong>Court / Pitch:</strong> {activeVoucher.courtName} ({activeVoucher.sport})</div>
+              <div><strong>Date &amp; Time:</strong> {activeVoucher.slotDate} · {activeVoucher.slotTime}</div>
+              <div><strong>Team / Player:</strong> {activeVoucher.customerName} (+91 {activeVoucher.customerPhone})</div>
+              <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #e2e8f0' }}>
+                <strong>Tariff:</strong> ₹{activeVoucher.totalAmount} (Paid: ₹{activeVoucher.paidAmount} · Balance: ₹{activeVoucher.balanceAmount})
+              </div>
+            </div>
+
+            {/* Verifiable QR Code */}
+            <div className="turf-qr-box">
+              <img
+                src={`data:image/svg+xml;utf8,${encodeURIComponent(
+                  generateQrSvgString(activeVoucher.qrCodePayload, { size: 180 })
+                )}`}
+                alt="Turf Gate Entry QR Code"
+                className="turf-qr-img"
+              />
+              <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                Present this QR code at the turf entry reception for verification.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <a
+                href={generateWhatsAppTurfConfirmationUrl(activeVoucher)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="turf-btn turf-btn-primary"
+                style={{ flex: 1, justifyContent: 'center' }}
+              >
+                <SiteIcon name="phone" size={15} />
+                <span>Send via WhatsApp</span>
+              </a>
+              <button
+                type="button"
+                className="turf-btn turf-btn-outline"
+                onClick={() => window.print?.()}
+              >
+                <SiteIcon name="download" size={15} />
+                <span>Print</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Venue Settings Modal */}
+      {isSettingsModalOpen && (
+        <div className="turf-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+          <div className="turf-modal-card">
+            <div className="turf-modal-header">
+              <h3 id="settings-modal-title">Turf Settings &amp; UPI Configuration</h3>
+              <button
+                type="button"
+                className="turf-modal-close"
+                onClick={() => setIsSettingsModalOpen(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSettings}>
+              <div className="turf-form-group">
+                <label htmlFor="settings-manager-name">Operations Manager Name</label>
+                <input
+                  id="settings-manager-name"
+                  type="text"
+                  className="turf-form-input"
+                  value={editManagerName}
+                  onChange={e => setEditManagerName(e.target.value)}
+                  placeholder="e.g. Manager Rajesh"
+                  required
+                />
+              </div>
+
+              <div className="turf-form-group">
+                <label htmlFor="settings-manager-phone">Manager WhatsApp Mobile</label>
+                <input
+                  id="settings-manager-phone"
+                  type="tel"
+                  className="turf-form-input"
+                  value={editManagerPhone}
+                  onChange={e => setEditManagerPhone(e.target.value)}
+                  placeholder="10-digit mobile number"
+                  required
+                />
+              </div>
+
+              <div className="turf-form-group">
+                <label htmlFor="settings-upi-vpa">Facility UPI ID (VPA) for Direct Payouts</label>
+                <input
+                  id="settings-upi-vpa"
+                  type="text"
+                  className="turf-form-input"
+                  value={editUpiVpa}
+                  onChange={e => setEditUpiVpa(e.target.value)}
+                  placeholder="e.g. kanteeravaturf@okhdfcbank"
+                  required
+                />
+                <small style={{ display: 'block', marginTop: '0.35rem', color: '#059669', fontSize: '0.78rem' }}>
+                  ✓ 100% direct bank deposit. KhelGrid charges 0% platform fee during grassroots launch.
+                </small>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="turf-btn turf-btn-outline"
+                  onClick={() => setIsSettingsModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="turf-btn turf-btn-primary">
+                  Save Configuration
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Peak Pricing Modal */}
+      {isPricingModalOpen && (
+        <div className="turf-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pricing-modal-title">
+          <div className="turf-modal-card">
+            <div className="turf-modal-header">
+              <h3 id="pricing-modal-title">⚡ Dynamic Peak-Hour Yield &amp; Pricing</h3>
+              <button
+                type="button"
+                className="turf-modal-close"
+                onClick={() => setIsPricingModalOpen(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePricing}>
+              <div className="turf-form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+                  <input
+                    type="checkbox"
+                    checked={pricingConfig.isDynamicPricingEnabled}
+                    onChange={e => setPricingConfig({ ...pricingConfig, isDynamicPricingEnabled: e.target.checked })}
+                  />
+                  <span>Enable Automatic Dynamic Peak Pricing</span>
+                </label>
+                <small style={{ color: '#64748b', display: 'block', marginTop: '0.25rem' }}>
+                  Automatically adjusts rates for evening prime floodlight slots (18:00 – 23:00) and weekends.
+                </small>
+              </div>
+
+              {pricingConfig.isDynamicPricingEnabled && (
+                <>
+                  <div className="turf-form-group">
+                    <label htmlFor="pricing-peak-mult">Evening Floodlit Peak Multiplier</label>
+                    <select
+                      id="pricing-peak-mult"
+                      className="turf-form-input"
+                      value={pricingConfig.peakMultiplier}
+                      onChange={e => setPricingConfig({ ...pricingConfig, peakMultiplier: parseFloat(e.target.value) })}
+                    >
+                      <option value="1.20">+20% (1.20x standard rate)</option>
+                      <option value="1.35">+35% (1.35x prime floodlight)</option>
+                      <option value="1.50">+50% (1.50x high demand peak)</option>
+                      <option value="1.75">+75% (1.75x tournament weekend)</option>
+                    </select>
+                  </div>
+
+                  <div className="turf-form-group">
+                    <label htmlFor="pricing-weekend-mult">Weekend High-Demand Multiplier</label>
+                    <select
+                      id="pricing-weekend-mult"
+                      className="turf-form-input"
+                      value={pricingConfig.weekendMultiplier}
+                      onChange={e => setPricingConfig({ ...pricingConfig, weekendMultiplier: parseFloat(e.target.value) })}
+                    >
+                      <option value="1.15">+15% Saturday &amp; Sunday boost</option>
+                      <option value="1.25">+25% Standard weekend rate</option>
+                      <option value="1.40">+40% Weekend tournament rate</option>
+                    </select>
+                  </div>
+
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '0.85rem', color: '#166534', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                    <strong>Projected Venue Yield:</strong> Facilities utilizing automated floodlight pricing report an average <strong>+28% to +35% higher monthly revenue</strong> while keeping morning community rates affordable.
+                  </div>
+                </>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="turf-btn turf-btn-outline"
+                  onClick={() => setIsPricingModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="turf-btn turf-btn-primary">
+                  Save Pricing Rules
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Phone / Walk-in Booking Modal */}
+      {isQuickWalkInModalOpen && (
+        <div className="turf-modal-overlay" onClick={() => setIsQuickWalkInModalOpen(false)}>
+          <div className="turf-modal" onClick={e => e.stopPropagation()}>
+            <div className="turf-modal-header">
+              <h2>⚡ 5-Second Phone / Walk-In Reservation</h2>
+              <button type="button" className="turf-modal-close" onClick={() => setIsQuickWalkInModalOpen(false)}>×</button>
+            </div>
+            <form onSubmit={handleQuickWalkIn} className="turf-modal-body">
+              {walkInMsg && (
+                <div style={{ padding: '0.75rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', color: '#166534', fontSize: '0.88rem', marginBottom: '1rem' }}>
+                  {walkInMsg}
+                </div>
+              )}
+              <div className="turf-form-group">
+                <label htmlFor="walkin-name">Customer / Captain Name</label>
+                <input
+                  id="walkin-name"
+                  type="text"
+                  className="turf-form-input"
+                  placeholder="e.g. Sameer Khan"
+                  value={walkInName}
+                  onChange={e => setWalkInName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="turf-form-group">
+                <label htmlFor="walkin-phone">Mobile Phone (for instant WhatsApp pass)</label>
+                <input
+                  id="walkin-phone"
+                  type="tel"
+                  className="turf-form-input"
+                  placeholder="e.g. 9876543210"
+                  value={walkInPhone}
+                  onChange={e => setWalkInPhone(e.target.value)}
+                  required
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="turf-form-group">
+                  <label htmlFor="walkin-court">Court</label>
+                  <select
+                    id="walkin-court"
+                    className="turf-form-input"
+                    value={walkInCourtId}
+                    onChange={e => setWalkInCourtId(e.target.value)}
+                  >
+                    {courts.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="turf-form-group">
+                  <label htmlFor="walkin-slot">Time Slot</label>
+                  <input
+                    id="walkin-slot"
+                    type="text"
+                    className="turf-form-input"
+                    value={walkInTimeSlot}
+                    onChange={e => setWalkInTimeSlot(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="turf-form-group">
+                <label htmlFor="walkin-pay-status">Payment Status</label>
+                <select
+                  id="walkin-pay-status"
+                  className="turf-form-input"
+                  value={walkInPaymentStatus}
+                  onChange={e => setWalkInPaymentStatus(e.target.value as 'fully_paid' | 'upi_advance_paid' | 'pay_at_venue')}
+                >
+                  <option value="fully_paid">Fully Paid (Cash / UPI at Counter)</option>
+                  <option value="upi_advance_paid">Advance Deposit Paid</option>
+                  <option value="pay_at_venue">Pay Post-Match (Trusted regular)</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                <button type="button" className="turf-btn turf-btn-outline" onClick={() => setIsQuickWalkInModalOpen(false)}>Cancel</button>
+                <button type="submit" className="turf-btn turf-btn-primary">Confirm &amp; Generate WhatsApp Pass</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Recurring Subscriptions & Corporate Leagues Modal */}
+      {isRecurringModalOpen && (
+        <div className="turf-modal-overlay" onClick={() => setIsRecurringModalOpen(false)}>
+          <div className="turf-modal" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+            <div className="turf-modal-header">
+              <h2>📅 Recurring Slot Subscriptions &amp; Weekend Leagues</h2>
+              <button type="button" className="turf-modal-close" onClick={() => setIsRecurringModalOpen(false)}>×</button>
+            </div>
+            <div className="turf-modal-body">
+              {recMsg && (
+                <div style={{ padding: '0.75rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', color: '#166534', fontSize: '0.88rem', marginBottom: '1rem' }}>
+                  {recMsg}
+                </div>
+              )}
+              <form onSubmit={handleCreateSubscription} style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #e2e8f0' }}>
+                <h3 style={{ fontSize: '1rem', margin: '0 0 0.75rem', color: '#0f172a' }}>Add New Weekly Recurring Reservation</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div className="turf-form-group">
+                    <label htmlFor="rec-name">Team / Corporate Name</label>
+                    <input
+                      id="rec-name"
+                      type="text"
+                      className="turf-form-input"
+                      placeholder="e.g. Infosys Weekend Club"
+                      value={recCustomerName}
+                      onChange={e => setRecCustomerName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="turf-form-group">
+                    <label htmlFor="rec-phone">Captain Mobile</label>
+                    <input
+                      id="rec-phone"
+                      type="tel"
+                      className="turf-form-input"
+                      placeholder="e.g. 9845012345"
+                      value={recCustomerPhone}
+                      onChange={e => setRecCustomerPhone(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                  <div className="turf-form-group">
+                    <label htmlFor="rec-day">Day of Week</label>
+                    <select
+                      id="rec-day"
+                      className="turf-form-input"
+                      value={recDayOfWeek}
+                      onChange={e => setRecDayOfWeek(parseInt(e.target.value))}
+                    >
+                      <option value="0">Sunday</option>
+                      <option value="1">Monday</option>
+                      <option value="2">Tuesday</option>
+                      <option value="3">Wednesday</option>
+                      <option value="4">Thursday</option>
+                      <option value="5">Friday</option>
+                      <option value="6">Saturday</option>
+                    </select>
+                  </div>
+                  <div className="turf-form-group">
+                    <label htmlFor="rec-slot">Slot Time</label>
+                    <input
+                      id="rec-slot"
+                      type="text"
+                      className="turf-form-input"
+                      value={recTimeSlot}
+                      onChange={e => setRecTimeSlot(e.target.value)}
+                    />
+                  </div>
+                  <div className="turf-form-group">
+                    <label htmlFor="rec-weeks">Duration (Weeks)</label>
+                    <input
+                      id="rec-weeks"
+                      type="number"
+                      min="2"
+                      max="52"
+                      className="turf-form-input"
+                      value={recWeeksCount}
+                      onChange={e => setRecWeeksCount(parseInt(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div className="turf-form-group">
+                    <label htmlFor="rec-rate">Weekly Rate (INR)</label>
+                    <input
+                      id="rec-rate"
+                      type="number"
+                      className="turf-form-input"
+                      value={recWeeklyRate}
+                      onChange={e => setRecWeeklyRate(parseInt(e.target.value))}
+                    />
+                  </div>
+                  <div className="turf-form-group">
+                    <label htmlFor="rec-deposit">Advance Deposit Paid</label>
+                    <input
+                      id="rec-deposit"
+                      type="number"
+                      className="turf-form-input"
+                      value={recDeposit}
+                      onChange={e => setRecDeposit(parseInt(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                  <button type="submit" className="turf-btn turf-btn-primary">Create Recurring Subscription</button>
+                </div>
+              </form>
+
+              <div>
+                <h3 style={{ fontSize: '1rem', margin: '0 0 0.75rem', color: '#0f172a' }}>Active Subscriptions</h3>
+                {getRecurringSubscriptions(selectedVenueSlug).length === 0 ? (
+                  <p style={{ color: '#64748b', fontSize: '0.88rem' }}>No active recurring subscriptions for this venue.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {getRecurringSubscriptions(selectedVenueSlug).map(sub => (
+                      <div key={sub.subscriptionId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.85rem' }}>
+                        <div>
+                          <strong>{sub.customerName}</strong> ({sub.customerPhone}) · {sub.timeSlot}
+                          <div style={{ color: '#64748b', fontSize: '0.78rem' }}>
+                            {sub.weeksCount} weeks ({sub.startDate} to {sub.endDate}) · Total: ₹{sub.totalFee} · Balance: ₹{sub.balanceDue}
+                          </div>
+                        </div>
+                        <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold', background: sub.status === 'active' ? '#dcfce7' : '#f1f5f9', color: sub.status === 'active' ? '#166534' : '#64748b' }}>
+                          {sub.status.toUpperCase()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

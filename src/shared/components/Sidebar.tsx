@@ -15,7 +15,6 @@ import {
   stripLeadingPlus,
   type SidebarMode,
 } from './sidebarUtils'
-import type { AuthOpenInput } from './auth/authModalTypes'
 import './Sidebar.css'
 
 type SidebarProps = {
@@ -27,7 +26,7 @@ type SidebarProps = {
   collapsed: boolean
   onToggleCollapsed?: () => void
   onOpenIntake?: () => void
-  onOpenAuth?: (input?: AuthOpenInput) => void
+  onOpenAuth?: (tab?: 'login' | 'signup') => void
   isLoggedIn?: boolean
 }
 
@@ -50,7 +49,7 @@ function SidebarLink({
   onClose?: () => void
   collapsed?: boolean
   isLoggedIn?: boolean
-  onOpenAuth?: (input?: AuthOpenInput) => void
+  onOpenAuth?: (tab?: 'login' | 'signup') => void
   savedCount?: number
 }) {
   const { t } = useTranslation(['navigation', 'common'])
@@ -111,11 +110,7 @@ function SidebarLink({
           if (!isLoggedIn && item.id === 'for-you') {
             onNavigate(event, item.href)
             onClose?.()
-            onOpenAuth?.({
-              tab: 'signup',
-              intentLabel: 'Sign in or create an account to personalize your For You feed',
-              redirectTo: item.href,
-            })
+            onOpenAuth?.('signup')
             return
           }
           onNavigate(event, item.href)

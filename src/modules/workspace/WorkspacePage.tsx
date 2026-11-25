@@ -1,12 +1,11 @@
 import type { MouseEvent } from 'react'
 import type { AuthUserProfile } from '../../integrations/supabase/auth-client'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import type { AuthOpenInput } from '../../shared/components/auth/authModalTypes'
 import './WorkspacePage.css'
 
 type WorkspacePageProps = {
   authUser: AuthUserProfile | null
-  onOpenAuth: (input?: AuthOpenInput) => void
+  onOpenAuth: (tab: 'login' | 'signup') => void
   onNavigate: (event?: MouseEvent<HTMLAnchorElement>, target?: string) => void
 }
 
@@ -53,30 +52,10 @@ export default function WorkspacePage({ authUser, onOpenAuth, onNavigate }: Work
           </p>
           {!authUser && (
             <div className="kg-workspace-actions">
-              <button
-                type="button"
-                className="kg-workspace-primary"
-                onClick={() =>
-                  onOpenAuth({
-                    tab: 'login',
-                    intentLabel: 'Sign in to unlock your KhelGrid Workspace tools',
-                    redirectTo: '/workspace',
-                  })
-                }
-              >
+              <button type="button" className="kg-workspace-primary" onClick={() => onOpenAuth('login')}>
                 <SiteIcon name="user-round" size={17} /> Sign in
               </button>
-              <button
-                type="button"
-                className="kg-workspace-secondary"
-                onClick={() =>
-                  onOpenAuth({
-                    tab: 'signup',
-                    intentLabel: 'Create a free KhelGrid account to start your sports journey',
-                    redirectTo: '/workspace',
-                  })
-                }
-              >
+              <button type="button" className="kg-workspace-secondary" onClick={() => onOpenAuth('signup')}>
                 Create an account <SiteIcon name="arrow-right" size={16} />
               </button>
             </div>

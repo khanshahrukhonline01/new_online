@@ -11,19 +11,17 @@
  *  - 3 primary section tabs per workspace
  */
 
-import { useCallback, useContext, useEffect, useMemo, useState, Suspense, lazy } from 'react'
+import { useCallback, useEffect, useMemo, useState, Suspense, lazy } from 'react'
 import type { MouseEvent } from 'react'
 import type { AuthUserProfile } from '../../integrations/supabase/auth-client'
 import type { WorkspacePersona } from '../../shared/routing'
 import { TenantProvider } from '../../shared/context/TenantContext'
-import { TenantContext } from '../../shared/context/tenantContextCore'
 import { useTenant } from '../../shared/context/useTenant'
 import { RequireTenantMember } from '../../shared/components/RequireTenantMember'
 import { KpiStrip, type KpiItem } from '../../shared/components/ui/KpiStrip'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { PartnerVerificationStatusTracker } from '../partner/components/PartnerVerificationStatusTracker'
 import { isPartnerVerificationPersona } from '../partner/partnerVerificationService'
-import type { AuthOpenInput } from '../../shared/components/auth/authModalTypes'
 import './WorkspaceShell.css'
 
 interface PersonaMeta {
@@ -130,15 +128,11 @@ interface WorkspaceShellProps {
   persona: WorkspacePersona
   section: string
   authUser: AuthUserProfile | null
-  onOpenAuth: (input?: AuthOpenInput) => void
+  onOpenAuth: (tab?: 'login' | 'signup') => void
   onNavigate: (event?: MouseEvent<HTMLAnchorElement>, target?: string) => void
 }
 
 export default function WorkspaceShell(props: WorkspaceShellProps) {
-  const existingTenantContext = useContext(TenantContext)
-  if (existingTenantContext) {
-    return <WorkspaceShellInner {...props} />
-  }
   return (
     <TenantProvider>
       <WorkspaceShellInner {...props} />
@@ -210,30 +204,10 @@ function WorkspaceShellInner({
           <h1>Your workspace is waiting</h1>
           <p>Sign in to access your {meta.label.toLowerCase()} workspace and all KhelGrid management tools.</p>
           <div className="kg-shell-unauth-actions">
-            <button
-              type="button"
-              className="kg-btn kg-btn-primary kg-touch-target"
-              onClick={() =>
-                onOpenAuth({
-                  tab: 'login',
-                  intentLabel: `Sign in to open your ${meta.label} Workspace`,
-                  redirectTo: `/workspace/${persona}/${resolvedSection}`,
-                })
-              }
-            >
+            <button type="button" className="kg-btn kg-btn-primary kg-touch-target" onClick={() => onOpenAuth('login')}>
               Sign in
             </button>
-            <button
-              type="button"
-              className="kg-btn kg-btn-ghost kg-touch-target"
-              onClick={() =>
-                onOpenAuth({
-                  tab: 'signup',
-                  intentLabel: `Create an account to start your ${meta.label} Workspace`,
-                  redirectTo: `/workspace/${persona}/${resolvedSection}`,
-                })
-              }
-            >
+            <button type="button" className="kg-btn kg-btn-ghost kg-touch-target" onClick={() => onOpenAuth('signup')}>
               Create account
             </button>
           </div>
@@ -351,7 +325,7 @@ function WorkspaceShellInner({
 function PersonaContent({ persona, section, onOpenAuth, onNavigate }: {
   persona: WorkspacePersona
   section: string
-  onOpenAuth: (input?: AuthOpenInput) => void
+  onOpenAuth: (tab?: 'login' | 'signup') => void
   onNavigate: (event?: MouseEvent<HTMLAnchorElement>, target?: string) => void
 }) {
   const handleStrictNav = useCallback((e: MouseEvent<HTMLAnchorElement>, target: string) => {
@@ -363,32 +337,20 @@ function PersonaContent({ persona, section, onOpenAuth, onNavigate }: {
       return <LazyDashboard onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
     case 'academy':
       return (
-        <RequireTenantMember personaLabel="Academy" onboardingRole="academy" onNavigate={handleStrictNav}>
+        <RequireTenantMember onNavigate={handleStrictNav}>
           <LazyAcademyHub workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'coach':
       return <LazyCoachDashboard workspaceSection={section} onNavigate={handleStrictNav} />
     case 'turf':
-      return (
-        <RequireTenantMember personaLabel="Venue / Turf" onboardingRole="venue" onNavigate={handleStrictNav}>
-          <LazyTurfCalendar workspaceSection={section} onNavigate={handleStrictNav} />
-        </RequireTenantMember>
-      )
+      return <LazyTurfCalendar onNavigate={handleStrictNav} />
     case 'host':
-      return <LazyHostDashboard workspaceSection={section} onNavigate={handleStrictNav} />
+      return <LazyHostDashboard onNavigate={handleStrictNav} />
     case 'tournament':
-      return (
-        <RequireTenantMember personaLabel="Tournament" onboardingRole="tournament" onNavigate={handleStrictNav}>
-          <LazyTournamentOps workspaceSection={section} onNavigate={handleStrictNav} />
-        </RequireTenantMember>
-      )
+      return <LazyTournamentOps onNavigate={handleStrictNav} />
     case 'organization':
-      return (
-        <RequireTenantMember personaLabel="Organisation" onboardingRole="academy" onNavigate={handleStrictNav}>
-          <LazyOrganizations workspaceSection={section} onNavigate={onNavigate} />
-        </RequireTenantMember>
-      )
+      return <LazyOrganizations onNavigate={onNavigate} />
     case 'creator':
       return <LazyCreatorHub onNavigate={onNavigate} />
     default:

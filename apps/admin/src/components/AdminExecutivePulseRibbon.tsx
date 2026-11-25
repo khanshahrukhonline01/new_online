@@ -30,13 +30,17 @@ export function AdminExecutivePulseRibbon({
   onOpenCommandPalette,
 }: AdminExecutivePulseRibbonProps) {
   const latencyBadge = useMemo(() => {
-    if (dbLatencyMs === null) return { text: 'Testing…', status: 'neutral' }
+    if (dbLatencyMs === null) return { text: 'Checking…', status: 'neutral' }
     if (dbLatencyMs < 100) return { text: `${dbLatencyMs}ms (Optimal)`, status: 'optimal' }
     if (dbLatencyMs < 300) return { text: `${dbLatencyMs}ms (Good)`, status: 'good' }
     return { text: `${dbLatencyMs}ms (High Latency)`, status: 'slow' }
   }, [dbLatencyMs])
 
-  const categories: Array<{ id: string; label: string; icon: 'activity' | 'opportunities' | 'venues' | 'users' | 'building' | 'calendar' | 'sports' }> = [
+  const categories: Array<{
+    id: string
+    label: string
+    icon: 'activity' | 'opportunities' | 'venues' | 'users' | 'building' | 'calendar' | 'sports'
+  }> = [
     { id: 'all', label: 'All Categories', icon: 'activity' },
     { id: 'opportunity', label: 'Trials & Opportunities', icon: 'opportunities' },
     { id: 'venue', label: 'Sports Venues', icon: 'venues' },
@@ -47,95 +51,86 @@ export function AdminExecutivePulseRibbon({
   ]
 
   return (
-    <div className="admin-executive-ribbon" role="region" aria-label="Executive Operations & System Health Ribbon">
-      {/* Top Pulse Row */}
+    <div
+      className="admin-executive-ribbon"
+      role="region"
+      aria-label="Executive Operations & System Health Ribbon"
+    >
       <div className="admin-ribbon-metrics-row">
-        {/* Metric 1: Pending Moderation */}
         <div className={`admin-ribbon-card ${pendingSubmissionsCount > 0 ? 'is-warning' : 'is-success'}`}>
-          <div className="admin-ribbon-card-icon">
-            <SiteIcon name="check-circle" size={20} />
-          </div>
           <div className="admin-ribbon-card-content">
             <span className="admin-ribbon-card-label">Pending Directory Triage</span>
             <div className="admin-ribbon-card-val-row">
-              <strong className="admin-ribbon-card-val">{pendingSubmissionsCount}</strong>
+              <strong className="admin-ribbon-card-val tabular-nums">{pendingSubmissionsCount}</strong>
               <span className={`admin-ribbon-tag ${pendingSubmissionsCount > 0 ? 'tag-warn' : 'tag-ok'}`}>
                 {pendingSubmissionsCount > 0 ? 'Requires Action' : 'Queue Clear'}
               </span>
               <AdminSparkline
                 data={[12, 14, 18, 15, 11, 9, Math.max(pendingSubmissionsCount, 1)]}
-                color="#f59e0b"
-                width={56}
-                height={20}
+                color="#d97706"
+                width={52}
+                height={18}
                 ariaLabel="7-day submissions intake sparkline"
               />
             </div>
-            <small className="admin-ribbon-card-sub">Directory venues, trials, coaches, academies</small>
+            <small className="admin-ribbon-card-sub">
+              Venues, trials, coaches, and academies
+            </small>
           </div>
         </div>
 
-        {/* Metric 2: Chronicle Research */}
         <div className={`admin-ribbon-card ${pendingManuscriptsCount > 0 ? 'is-purple' : 'is-neutral'}`}>
-          <div className="admin-ribbon-card-icon">
-            <SiteIcon name="award" size={20} />
-          </div>
           <div className="admin-ribbon-card-content">
             <span className="admin-ribbon-card-label">KhelChronicle Manuscripts</span>
             <div className="admin-ribbon-card-val-row">
-              <strong className="admin-ribbon-card-val">{pendingManuscriptsCount}</strong>
+              <strong className="admin-ribbon-card-val tabular-nums">{pendingManuscriptsCount}</strong>
               <span className="admin-ribbon-tag tag-purple">
                 {pendingManuscriptsCount > 0 ? 'Peer Review Pending' : 'Archive Synchronized'}
               </span>
               <AdminSparkline
                 data={[3, 4, 6, 5, 7, 6, Math.max(pendingManuscriptsCount, 1)]}
-                color="#8b5cf6"
-                width={56}
-                height={20}
+                color="#2563eb"
+                width={52}
+                height={18}
                 ariaLabel="7-day manuscript pipeline sparkline"
               />
             </div>
-            <small className="admin-ribbon-card-sub">Diamond Open Access sports research queue</small>
+            <small className="admin-ribbon-card-sub">
+              Open access sports research queue
+            </small>
           </div>
         </div>
 
-        {/* Metric 3: System & DB Health */}
         <div className="admin-ribbon-card is-health">
-          <div className="admin-ribbon-card-icon">
-            <SiteIcon name="shield-check" size={20} />
-          </div>
           <div className="admin-ribbon-card-content">
             <span className="admin-ribbon-card-label">Database &amp; RLS Health</span>
             <div className="admin-ribbon-card-val-row">
-              <strong className="admin-ribbon-card-val" style={{ fontSize: '1.05rem', color: '#10b981' }}>
-                🟢 Connected
+              <strong className="admin-ribbon-card-val" style={{ fontSize: '0.96rem', color: 'var(--adm-success)' }}>
+                Connected
               </strong>
               <span className={`admin-ribbon-tag tag-latency ${latencyBadge.status}`}>
                 {latencyBadge.text}
               </span>
               <AdminSparkline
                 data={[42, 38, 45, 36, 39, 35, dbLatencyMs ?? 34]}
-                color="#10b981"
-                width={56}
-                height={20}
+                color="#16a34a"
+                width={52}
+                height={18}
                 trendLabel="7-day latency trend (ms)"
                 ariaLabel="7-day database latency trend sparkline"
               />
             </div>
             <small className="admin-ribbon-card-sub">
-              Ref: <code style={{ color: '#94a3b8' }}>{databaseId}</code> · Least-Privilege Definer
+              Ref: <code>{databaseId}</code> · Least-Privilege Definer
             </small>
           </div>
         </div>
 
-        {/* Metric 4: Operator Clearance */}
         <div className="admin-ribbon-card is-operator">
-          <div className="admin-ribbon-card-icon">
-            <SiteIcon name="user" size={20} />
-          </div>
           <div className="admin-ribbon-card-content">
             <span className="admin-ribbon-card-label">Active Operator Clearance</span>
             <div className="admin-ribbon-card-val-row">
-              <strong className="admin-ribbon-card-val" style={{ fontSize: '1rem', textTransform: 'capitalize' }}>
+              <strong className="admin-ribbon-card-val" style={{ fontSize: '0.96rem' }}>
                 {operatorRole === 'super_admin' ? 'Super Administrator' : 'Platform Moderator'}
               </strong>
             </div>
@@ -146,11 +141,10 @@ export function AdminExecutivePulseRibbon({
         </div>
       </div>
 
-      {/* Action / Category Filter Bar */}
       <div className="admin-ribbon-category-strip">
         <div className="admin-ribbon-chips-scroll" role="tablist" aria-label="Category triage filter">
           <span className="admin-ribbon-chips-title">
-            <SiteIcon name="search" size={13} /> Quick Filter:
+            <SiteIcon name="search" size={13} /> Filter:
           </span>
           {categories.map(cat => (
             <button
@@ -192,7 +186,6 @@ export function AdminExecutivePulseRibbon({
         </div>
       </div>
 
-      {/* Real-Time Operational Event Stream Ticker (Phase 4) */}
       <AdminRealtimeAuditTicker isLive={true} />
     </div>
   )

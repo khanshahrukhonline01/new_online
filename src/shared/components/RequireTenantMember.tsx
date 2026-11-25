@@ -6,8 +6,6 @@ export interface RequireTenantMemberProps {
   children: ReactNode
   allowedRoles?: string[]
   fallback?: ReactNode
-  personaLabel?: string
-  onboardingRole?: 'academy' | 'coach' | 'venue' | 'tournament'
   onNavigate?: (e: React.MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
@@ -15,14 +13,10 @@ export function RequireTenantMember({
   children,
   allowedRoles,
   fallback,
-  personaLabel = 'Academy',
-  onboardingRole = 'academy',
   onNavigate,
 }: RequireTenantMemberProps) {
   const { currentTenant, currentMembership, userRole, isLoading } = useTenant()
   const user = getStoredAuthUser()
-  const loginHref = `/partner-signup?mode=login&role=${onboardingRole}`
-  const signupHref = `/partner-signup?mode=signup&role=${onboardingRole}`
 
   if (isLoading) {
     return (
@@ -40,14 +34,14 @@ export function RequireTenantMember({
         <div className="kg-tenant-guard-icon" aria-hidden="true">🔒</div>
         <h2 className="kg-tenant-guard-title">Authentication Required</h2>
         <p className="kg-tenant-guard-desc">
-          KhelGrid {personaLabel} SaaS workspaces are strictly isolated by organization. Please sign in with your institutional credentials to access management records.
+          KhelGrid Academy SaaS workspaces are strictly isolated by organization. Please sign in with your institutional credentials to access management records.
         </p>
         <a
-          href={loginHref}
-          onClick={e => onNavigate?.(e, loginHref)}
+          href="/partner/onboarding?mode=login"
+          onClick={e => onNavigate?.(e, '/partner/onboarding?mode=login')}
           className="kg-btn kg-btn-navy"
         >
-          Sign In to {personaLabel} Workspace
+          Sign In to Academy Workspace
         </a>
       </div>
     )
@@ -59,18 +53,16 @@ export function RequireTenantMember({
     return (
       <div className="kg-tenant-guard-card">
         <div className="kg-tenant-guard-icon" aria-hidden="true">🏟️</div>
-        <h2 className="kg-tenant-guard-title">No Active {personaLabel} Membership</h2>
+        <h2 className="kg-tenant-guard-title">No Active Academy Membership</h2>
         <p className="kg-tenant-guard-desc">
-          Signed in as <strong>{user.email || user.fullName}</strong>, but no active {personaLabel.toLowerCase()} workspace is linked to your account.
+          Signed in as <strong>{user.email || user.fullName}</strong>, but no active academy or coaching workspace is linked to your account.
         </p>
         <a
-          href={signupHref}
-          onClick={e => onNavigate?.(e, signupHref)}
+          href="/partner/onboarding?mode=signup"
+          onClick={e => onNavigate?.(e, '/partner/onboarding?mode=signup')}
           className="kg-btn kg-btn-primary"
         >
-          {personaLabel === 'Academy'
-            ? 'Register Your Sports Academy'
-            : `Register Your ${personaLabel} Workspace`}
+          Register Your Sports Academy
         </a>
       </div>
     )

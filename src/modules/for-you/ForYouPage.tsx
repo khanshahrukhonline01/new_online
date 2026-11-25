@@ -13,12 +13,11 @@ import {
 } from '../../shared/cache/catalogueQueryCache'
 import type { Opportunity, Venue, Coach } from '../../shared/domain'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import type { AuthOpenInput } from '../../shared/components/auth/authModalTypes'
 import './ForYouPage.css'
 
 export interface ForYouPageProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
-  onOpenAuth?: (input?: AuthOpenInput) => void
+  onOpenAuth?: (tab?: 'login' | 'signup') => void
 }
 
 export default function ForYouPage({ onNavigate, onOpenAuth }: ForYouPageProps) {
@@ -39,11 +38,7 @@ export default function ForYouPage({ onNavigate, onOpenAuth }: ForYouPageProps) 
   // Auto-open auth modal on mount if guest
   useEffect(() => {
     if (!authUser && onOpenAuth) {
-      onOpenAuth({
-        tab: 'signup',
-        intentLabel: 'Create your account to personalize recommended trials & local pickup matches',
-        redirectTo: '/for-you',
-      })
+      onOpenAuth('signup')
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

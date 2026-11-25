@@ -8,10 +8,15 @@ import TopSportsComplexes from './shared/components/TopSportsComplexes'
 import GameSportPlayAcrossIndia from './shared/components/GameSportPlayAcrossIndia'
 import FrequentlyAskedQuestions from './shared/components/FrequentlyAskedQuestions'
 import SiteAnnouncementBanner from './shared/components/SiteAnnouncementBanner'
-import WorkspaceHeader from './shared/components/WorkspaceHeader'
-import type { CanonicalWorkspaceId } from './shared/components/workspaceHeaderEngine'
-import { AuthProvider } from './shared/auth/AuthContext'
-import { useAuth } from './shared/auth/useAuth'
+import TopNavbar from './shared/components/TopNavbar'
+import {
+  getStoredAuthUser,
+  onAuthChange,
+  signOut,
+  parseAuthUrlCallback,
+  clearAuthUrlHash,
+  type AuthUserProfile,
+} from './integrations/supabase/auth-client'
 import { TenantProvider } from './shared/context/TenantContext'
 import { RequireTenantMember } from './shared/components/RequireTenantMember'
 import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAndShare'
@@ -77,6 +82,7 @@ const CampaignMarketplacePage = lazy(() => import('./modules/campaigns/CampaignM
 const CampaignCreationPage = lazy(() => import('./modules/campaigns/CampaignCreationPage').then(m => ({ default: m.CampaignCreationPage })))
 const AdvertiserCampaignManagePage = lazy(() => import('./modules/campaigns/AdvertiserCampaignManagePage').then(m => ({ default: m.AdvertiserCampaignManagePage })))
 const CreatorHubPage = lazy(() => import('./modules/campaigns/CreatorHubPage').then(m => ({ default: m.CreatorHubPage })))
+const AdminPreviewPortal = lazy(() => import('./modules/admin/AdminPreviewPortal'))
 
 // Code-split heavyweight modal dialogs
 const NotificationCenterDrawer = lazy(() => import('./shared/components/NotificationCenterDrawer'))
@@ -84,7 +90,7 @@ const SpotlightSearchModal = lazy(() => import('./shared/components/SpotlightSea
 const FeedbackSupportModal = lazy(() => import('./shared/components/FeedbackSupportModal'))
 const UserConsentModal = lazy(() => import('./shared/components/UserConsentModal'))
 const GoProModal = lazy(() => import('./shared/components/GoProModal'))
-import { resolvePostAuthTarget } from './shared/components/auth/authModalTypes'
+import type { AuthModalTab } from './shared/components/AuthModal'
 const AuthModal = lazy(() => import('./shared/components/AuthModal'))
 import CustomCursor from './components/effects/CustomCursor'
 
@@ -108,23 +114,6 @@ function currentPath() {
 }
 
 export default function App({ initialPath = '/' }: { initialPath?: string } = {}) {
-  return (
-    <AuthProvider>
-      <AppInner initialPath={initialPath} />
-    </AuthProvider>
-  )
-}
-
-function AppInner({ initialPath = '/' }: { initialPath?: string }) {
-  const {
-    user: authUser,
-    modalOpen: authModalOpen,
-    intent: authIntent,
-    openAuth,
-    closeAuth,
-    setAuthenticatedUser: setAuthUser,
-    signOut,
-  } = useAuth()
   const [path, setPath] = useState(initialPath)
   const [menuOpen, setMenuOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
@@ -138,8 +127,11 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
   const [consentModalOpen, setConsentModalOpen] = useState(false)
   const [consentInitialTab, setConsentInitialTab] = useState<'sports_pass' | 'rules_privacy'>('sports_pass')
   const [goProModalOpen, setGoProModalOpen] = useState(false)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [authModalTab, setAuthModalTab] = useState<AuthModalTab>('login')
+  const [authModalError, setAuthModalError] = useState<string | undefined>(undefined)
+  const [authUser, setAuthUser] = useState<AuthUserProfile | null>(() => getStoredAuthUser())
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [activeHeaderPersona, setActiveHeaderPersona] = useState<CanonicalWorkspaceId | null>(null)
   const [locationSearch, setLocationSearch] = useState(() =>
     typeof window !== 'undefined' ? window.location.search : '',
   )
@@ -157,12 +149,49 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
     setMenuOpen(false)
   }
 
+  // Detect Supabase Auth callback errors or tokens from URL hash / search params
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const callbackInfo = parseAuthUrlCallback()
+
+    if (callbackInfo.type === 'error') {
+      const isOtpExpired =
+        callbackInfo.errorCode === 'otp_expired' ||
+        callbackInfo.errorDescription?.toLowerCase().includes('expired')
+      setAuthModalTab(isOtpExpired ? 'expired_link' : 'login')
+      setAuthModalError(
+        isOtpExpired
+          ? 'Email verification link is invalid or has expired. Enter your email below to receive a fresh verification link.'
+          : (callbackInfo.errorDescription || 'Authentication could not be completed. Please sign in with your credentials.')
+      )
+      setAuthModalOpen(true)
+      clearAuthUrlHash()
+    } else if (callbackInfo.type === 'recovery') {
+      setAuthModalTab('set_new_password')
+      setAuthModalError('')
+      setAuthModalOpen(true)
+      clearAuthUrlHash()
+    } else if (callbackInfo.type === 'signup_confirmed') {
+      clearAuthUrlHash()
+    }
+  }, [])
+
+  useEffect(() => {
+    return onAuthChange(user => {
+      setAuthUser(user)
+    })
+  }, [])
+
   useEffect(() => {
     setUserMenuOpen(false)
   }, [path])
 
+  const isAdminPreviewRoute =
+    path === '/admin' || path === '/admin-panel' || path.startsWith('/admin/')
+
   useEffect(() => {
     function handleGlobalKeyDown(event: globalThis.KeyboardEvent) {
+      if (isAdminPreviewRoute) return
       if ((event.metaKey || event.ctrlKey) && (event.key === 'k' || event.key === 'K')) {
         event.preventDefault()
         setSearchModalOpen(open => !open)
@@ -170,7 +199,7 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
     }
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [])
+  }, [isAdminPreviewRoute])
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 700px)')
@@ -241,15 +270,18 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       }
     }
     if (nextPath === '/login') {
-      openAuth({ tab: 'login', redirectTo: path !== '/login' && path !== '/signup' ? `${path}${locationSearch}` : undefined })
+      setAuthModalTab('login')
+      setAuthModalOpen(true)
       return
     }
     if (nextPath === '/signup') {
-      openAuth({ tab: 'signup', redirectTo: path !== '/login' && path !== '/signup' ? `${path}${locationSearch}` : undefined })
+      setAuthModalTab('signup')
+      setAuthModalOpen(true)
       return
     }
     if (nextPath === '/forgot-password') {
-      openAuth({ tab: 'forgot_password' })
+      setAuthModalTab('forgot_password')
+      setAuthModalOpen(true)
       return
     }
     setPath(nextPath)
@@ -285,7 +317,10 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
           persona={match.persona}
           section={match.section}
           authUser={authUser}
-          onOpenAuth={openAuth}
+          onOpenAuth={(tab: 'login' | 'signup' = 'login') => {
+            setAuthModalTab(tab)
+            setAuthModalOpen(true)
+          }}
           onNavigate={navigate}
         />
       )
@@ -300,7 +335,10 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
         page = (
           <WorkspacePage
             authUser={authUser}
-            onOpenAuth={openAuth}
+            onOpenAuth={(tab: 'login' | 'signup') => {
+              setAuthModalTab(tab)
+              setAuthModalOpen(true)
+            }}
             onNavigate={navigate}
           />
         )
@@ -309,7 +347,10 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
           <UserDashboardPage
             onNavigate={navigate}
             onOpenIntake={openListingSubmission}
-            onOpenAuth={openAuth}
+            onOpenAuth={tab => {
+              setAuthModalTab(tab || 'login')
+              setAuthModalOpen(true)
+            }}
           />
         )
       } else if (match.canonicalPath === '/profile' || match.canonicalPath === '/my-profile') {
@@ -321,7 +362,10 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
             <UserDashboardPage
               onNavigate={navigate}
               onOpenIntake={openListingSubmission}
-              onOpenAuth={openAuth}
+              onOpenAuth={tab => {
+                setAuthModalTab(tab || 'login')
+                setAuthModalOpen(true)
+              }}
             />
           )
         }
@@ -332,7 +376,7 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       else if (match.canonicalPath === '/trust') page = <TrustPage onNavigate={navigate} />
       else if (match.canonicalPath === '/help-feedback' || match.canonicalPath === '/contact' || match.canonicalPath === '/help' || match.canonicalPath === '/support') page = <HelpFeedbackPage />
       else if (match.canonicalPath === '/sports-cv' || match.canonicalPath === '/start-from-zero') page = <SportsCvWizard />
-      else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} onOpenAuth={openAuth} />
+      else if (match.canonicalPath === '/talent-scanner') page = <TalentScannerPage onNavigate={navigate} onOpenAuth={tab => { setAuthModalTab(tab || 'signup'); setAuthModalOpen(true) }} />
       else if (match.canonicalPath === '/play/lacrosse-sixes') page = <LacrosseSixesPage />
       else if (match.canonicalPath === '/play' || match.canonicalPath === '/community') page = <PlayPage onNavigate={navigate} onOpenIntake={() => openListingSubmission('pickup_game')} />
       else if (match.canonicalPath === '/coaches') page = <CoachesPage onNavigate={navigate} onOpenCoachIntake={() => openListingSubmission('coach')} />
@@ -416,7 +460,7 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       else if (match.canonicalPath === '/campaigns/create') page = <CampaignCreationPage onNavigate={navigate} />
       else if (match.canonicalPath === '/campaigns/manage') page = <AdvertiserCampaignManagePage onNavigate={navigate} />
       else if (match.canonicalPath === '/creator' || match.canonicalPath === '/creator-hub') page = <CreatorHubPage onNavigate={navigate} />
-      else if (match.canonicalPath === '/for-you') page = <ForYouPage onNavigate={navigate} onOpenAuth={openAuth} />
+      else if (match.canonicalPath === '/for-you') page = <ForYouPage onNavigate={navigate} onOpenAuth={tab => { setAuthModalTab(tab || 'signup'); setAuthModalOpen(true) }} />
       else if (match.canonicalPath === '/partner' || match.canonicalPath === '/partners') page = <PartnerPage onNavigate={navigate} onOpenIntake={openListingSubmission} />
       else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy','/open-science-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
@@ -425,13 +469,20 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       page = <section className="content-page"><p className="eyebrow">PAGE NOT AVAILABLE</p><h1>This page isn’t here yet.</h1><p className="page-intro">This route has not been implemented. Return to a published section to continue exploring.</p><a className="primary-link" href="/" onClick={event => navigate(event, '/')}>Back home <SiteIcon name="arrow-up-right" size={16} /></a></section>
   }
 
+  if (isAdminPreviewRoute) {
+    return (
+      <Suspense fallback={<PageFallbackLoader />}>
+        <AdminPreviewPortal onNavigate={navigate} />
+      </Suspense>
+    )
+  }
+
   const isOperational = isOperationalRoutePath(path)
 
-  return <TenantProvider>
-    <div className={`app-shell foundation-v1 ${sidebarCollapsed ? 'sidebar-is-collapsed' : 'sidebar-is-expanded'}${isOperational ? ' is-operational-route' : ''}`}>
+  return <div className={`app-shell foundation-v1 ${sidebarCollapsed ? 'sidebar-is-collapsed' : 'sidebar-is-expanded'}${isOperational ? ' is-operational-route' : ''}`}>
     {!isOperational && <CustomCursor />}
     <a className="skip-link" href="#main-content">Skip to content</a>
-    <WorkspaceHeader
+    <TopNavbar
       path={path}
       isMobile={isMobile}
       menuOpen={menuOpen}
@@ -446,26 +497,18 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       userMenuOpen={userMenuOpen}
       onToggleUserMenu={() => setUserMenuOpen(open => !open)}
       onCloseUserMenu={() => setUserMenuOpen(false)}
-      onOpenLogin={() =>
-        openAuth({
-          tab: 'login',
-          redirectTo: path !== '/login' && path !== '/signup' ? `${path}${locationSearch}` : undefined,
-        })
-      }
-      onOpenSignup={() =>
-        openAuth({
-          tab: 'signup',
-          redirectTo: path !== '/login' && path !== '/signup' ? `${path}${locationSearch}` : undefined,
-        })
-      }
+      onOpenLogin={() => {
+        setAuthModalTab('login')
+        setAuthModalOpen(true)
+      }}
+      onOpenSignup={() => {
+        setAuthModalTab('signup')
+        setAuthModalOpen(true)
+      }}
       onSignOut={() => {
-        setActiveHeaderPersona(null)
         void signOut()
       }}
       onOpenGoPro={() => setGoProModalOpen(true)}
-      activePersona={activeHeaderPersona}
-      onPersonaChange={setActiveHeaderPersona}
-      unreadNotifCount={unreadNotifCount}
     />
     <div className="app-workspace">
       <Sidebar
@@ -477,7 +520,10 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
         collapsed={sidebarCollapsed}
         onToggleCollapsed={() => setSidebarCollapsed(c => !c)}
         onOpenIntake={() => openListingSubmission('pickup_game')}
-        onOpenAuth={openAuth}
+        onOpenAuth={tab => {
+          setAuthModalTab(tab || 'login')
+          setAuthModalOpen(true)
+        }}
         isLoggedIn={Boolean(authUser)}
       />
       <main id="main-content" className="page-shell">
@@ -498,6 +544,7 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
           <div className="compact-operational-footer-links">
             <a href="/" onClick={event => navigate(event, '/')}>Discovery Home</a>
             <a href="/workspace" onClick={event => navigate(event, '/workspace')}>All Workspaces</a>
+            <a href="/admin" onClick={event => navigate(event, '/admin')}>Admin Panel</a>
             <a href="/help-feedback" onClick={event => navigate(event, '/help-feedback')}>Support</a>
             <a href="/privacy" onClick={event => navigate(event, '/privacy')}>Privacy</a>
             <a href="/terms" onClick={event => navigate(event, '/terms')}>Terms</a>
@@ -637,6 +684,7 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
         <a href="/correction-policy" onClick={event => navigate(event, '/correction-policy')}>Corrections</a>
         <a href="/open-science-policy" onClick={event => navigate(event, '/open-science-policy')}>Open Science</a>
         <a href="/khelchronicle" onClick={event => navigate(event, '/khelchronicle')}>KhelChronicle</a>
+        <a href="/admin" onClick={event => navigate(event, '/admin')}>Admin Panel</a>
         <a href="https://www.khelgrid.com/sitemap.xml" target="_blank" rel="noopener noreferrer">Sitemap</a>
         <a
           href="#sports-pass"
@@ -705,23 +753,32 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       {authModalOpen && (
         <AuthModal
           isOpen={authModalOpen}
-          initialTab={authIntent.tab || 'login'}
-          initialError={authIntent.error}
-          initialEmail={authIntent.prefillEmail}
-          intentLabel={authIntent.intentLabel}
-          redirectTo={authIntent.redirectTo}
-          onClose={closeAuth}
+          initialTab={authModalTab}
+          initialError={authModalError}
+          onClose={() => {
+            setAuthModalOpen(false)
+            setAuthModalError(undefined)
+          }}
           onSuccess={(user, opts) => {
             setAuthUser(user)
-            authIntent.onAuthenticated?.(user)
+            setAuthModalError(undefined)
             if (opts?.skipRedirect) return
-            const nextTarget = resolvePostAuthTarget(user, authIntent.redirectTo)
-            if (nextTarget) navigate(undefined, nextTarget)
+            // Redirect based on registered user role into unified WorkspaceShell
+            if (user.role === 'academy') {
+              navigate(undefined, '/workspace/academy/overview')
+            } else if (user.role === 'coach') {
+              navigate(undefined, '/workspace/coach/overview')
+            } else if (user.role === 'venue_owner') {
+              navigate(undefined, '/workspace/turf/calendar')
+            } else if (user.role === 'host') {
+              navigate(undefined, '/workspace/host/overview')
+            } else if (user.role === 'athlete' || user.role === 'parent') {
+              navigate(undefined, '/workspace/athlete/overview')
+            }
           }}
           onNavigate={navigate}
         />
       )}
     </Suspense>
-    </div>
-  </TenantProvider>
+  </div>
 }

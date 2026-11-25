@@ -1,6 +1,5 @@
 import { getSupabaseClient } from './realtime-client'
 import type { KhelGridUser } from './public-client'
-import { recordUserConsent } from '../../shared/privacy/privacyService'
 export type { KhelGridUser }
 export { getStoredUser } from './public-client'
 
@@ -32,8 +31,6 @@ export interface AuthUserProfile {
   updatedAt?: string
 }
 
-export type AuthAgeBand = 'u14' | 'u16' | 'u18' | 'adult'
-
 export interface SignUpInput {
   email: string
   password?: string
@@ -43,16 +40,12 @@ export interface SignUpInput {
   phone?: string
   preferredSports?: string[]
   useMagicLink?: boolean
-  ageBand?: AuthAgeBand
-  guardianEmail?: string
-  redirectTo?: string
 }
 
 export interface SignInInput {
   email: string
   password?: string
   useMagicLink?: boolean
-  redirectTo?: string
 }
 
 export interface AuthResult {
@@ -143,15 +136,6 @@ export function getSafeRedirectUrl(targetUrl?: string | null, fallback = '/'): s
     return trimmed
   }
   return fallback
-}
-
-function resolveEmailRedirectUrl(redirectTo?: string): string | undefined {
-  if (typeof window === 'undefined') return undefined
-  const origin = window.location?.origin
-  if (!origin) return undefined
-  if (!redirectTo) return origin
-  const safePath = getSafeRedirectUrl(redirectTo, '/')
-  return safePath === '/' ? origin : `${origin}${safePath}`
 }
 
 /**
@@ -281,10 +265,6 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
   }
 
   try {
-    const cleanGuardianEmail = input.guardianEmail ? input.guardianEmail.trim().toLowerCase() : null
-    const isMinorAgeBand = input.ageBand === 'u14' || input.ageBand === 'u16' || input.ageBand === 'u18'
-    const redirectTarget = resolveEmailRedirectUrl(input.redirectTo)
-
     if (input.useMagicLink || !input.password) {
       const { error } = await client.auth.signInWithOtp({
         email: cleanEmail,
@@ -295,10 +275,8 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
             role,
             city: input.city || null,
             phone: input.phone || null,
-            age_band: input.ageBand || null,
-            guardian_email: isMinorAgeBand ? cleanGuardianEmail : null,
           },
-          emailRedirectTo: redirectTarget,
+          emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
         },
       })
       if (error) return { success: false, message: error.message }
@@ -309,7 +287,6 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
       email: cleanEmail,
       password: input.password,
       options: {
-        emailRedirectTo: redirectTarget,
         data: {
           full_name: cleanName,
           name: cleanName,
@@ -317,8 +294,6 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
           city: input.city || null,
           phone: input.phone || null,
           preferred_sports: input.preferredSports || [],
-          age_band: input.ageBand || null,
-          guardian_email: isMinorAgeBand ? cleanGuardianEmail : null,
         },
       },
     })
@@ -368,11 +343,6 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
       } catch {
         // Continue even if profile table is unprovisioned
       }
-      if (isMinorAgeBand) {
-        recordUserConsent(profile.id, 'minor_guardian_consent', 'granted').catch(() => {
-          // Best-effort consent audit logging
-        })
-      }
     }
 
     return {
@@ -412,7 +382,7 @@ export async function signInWithEmail(input: SignInInput): Promise<AuthResult> {
       const { error } = await client.auth.signInWithOtp({
         email: cleanEmail,
         options: {
-          emailRedirectTo: resolveEmailRedirectUrl(input.redirectTo),
+          emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
         },
       })
       if (error) return { success: false, message: error.message }
@@ -689,125 +659,6 @@ export async function signOut(): Promise<void> {
 }
 
 /**
- * Signs out across all active devices and sessions using global scope.
- */
-export async function signOutAllDevices(): Promise<void> {
-  const client = getSupabaseClient()
-  if (client) {
-    try {
-      await client.auth.signOut({ scope: 'global' })
-    } catch {
-      // Ignore network errors during sign out
-    }
-  }
-  setStoredAuthUser(null)
-}
-
-/**
- * Verifies a 6-digit email OTP code directly inside the app (mitigating email link-scanner expiry).
- */
-export async function verifyEmailOtpCode(params: {
-  email: string
-  token: string
-  type?: 'signup' | 'email' | 'recovery'
-}): Promise<AuthResult> {
-  const cleanEmail = params.email ? params.email.trim().toLowerCase() : ''
-  const cleanToken = params.token ? params.token.trim().replace(/\s+/g, '') : ''
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-
-  if (!cleanEmail || !emailRegex.test(cleanEmail)) {
-    return { success: false, message: 'Please provide a valid email address.' }
-  }
-  if (!/^\d{6}$/.test(cleanToken)) {
-    return { success: false, message: 'Please enter the 6-digit verification code sent to your inbox.' }
-  }
-
-  const client = getSupabaseClient()
-  if (!client) {
-    return {
-      success: false,
-      message: 'Authentication service is not configured. Please verify your Supabase credentials.',
-    }
-  }
-
-  try {
-    const { data, error } = await client.auth.verifyOtp({
-      email: cleanEmail,
-      token: cleanToken,
-      type: params.type || 'email',
-    })
-
-    if (error || !data.user) {
-      return {
-        success: false,
-        message: error?.message || 'Verification code is invalid or has expired.',
-      }
-    }
-
-    const dbProfile = await syncProfileFromDatabase(data.user.id)
-    if (dbProfile) {
-      dbProfile.isVerified = true
-      setStoredAuthUser(dbProfile)
-      return { success: true, user: dbProfile }
-    }
-
-    const metaProfile = mapToUserProfile(
-      {
-        ...(data.user.user_metadata || {}),
-        role: sanitizeUntrustedRole(data.user.user_metadata?.role, 'athlete'),
-        email_confirmed_at: data.user.email_confirmed_at || new Date().toISOString(),
-      } as Record<string, unknown>,
-      cleanEmail,
-      'athlete',
-    )
-    metaProfile.id = data.user.id
-    metaProfile.isVerified = true
-    setStoredAuthUser(metaProfile)
-    return { success: true, user: metaProfile }
-  } catch (err: unknown) {
-    return {
-      success: false,
-      message: err instanceof Error ? err.message : 'Could not verify code.',
-    }
-  }
-}
-
-/**
- * Initiates PKCE OAuth flow via Google while preserving a safe return URL.
- */
-export async function signInWithGoogleOAuth(redirectTo?: string): Promise<{
-  success: boolean
-  message?: string
-  url?: string
-}> {
-  const client = getSupabaseClient()
-  if (!client) {
-    return {
-      success: false,
-      message: 'Google Sign-In requires Supabase Auth configuration.',
-    }
-  }
-
-  try {
-    const { data, error } = await client.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: resolveEmailRedirectUrl(redirectTo),
-      },
-    })
-    if (error) {
-      return { success: false, message: error.message }
-    }
-    return { success: true, url: data?.url }
-  } catch (err: unknown) {
-    return {
-      success: false,
-      message: err instanceof Error ? err.message : 'Google Sign-In could not be started.',
-    }
-  }
-}
-
-/**
  * Updates user profile attributes both locally and in Supabase.
  * Shields role, id, and isVerified from client-side privilege self-escalation.
  */
@@ -1041,19 +892,11 @@ export function onAuthChange(callback: (user: AuthUserProfile | null) => void): 
     callback(detail?.user ?? null)
   }
 
-  // 3. Cross-tab StorageEvent listener
-  const handleStorageEvent = (e: StorageEvent) => {
-    if (e.key === KHELGRID_AUTH_STORAGE_KEY || e.key === null) {
-      callback(getStoredAuthUser())
-    }
-  }
-
   if (typeof window !== 'undefined') {
     window.addEventListener('khelgrid:auth-changed', handleCustomEvent)
-    window.addEventListener('storage', handleStorageEvent)
   }
 
-  // 4. Supabase Auth listener
+  // 3. Supabase Auth listener
   const client = getSupabaseClient()
   let supabaseUnsub: (() => void) | undefined
 
@@ -1073,13 +916,6 @@ export function onAuthChange(callback: (user: AuthUserProfile | null) => void): 
         )
         user.id = session.user.id
         setStoredAuthUser(user)
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          syncProfileFromDatabase(session.user.id).then(dbProfile => {
-            if (dbProfile) setStoredAuthUser(dbProfile)
-          }).catch(() => {
-            // Keep metadata profile if profiles table query fails
-          })
-        }
       }
     })
     supabaseUnsub = data.subscription.unsubscribe
@@ -1088,7 +924,6 @@ export function onAuthChange(callback: (user: AuthUserProfile | null) => void): 
   return () => {
     if (typeof window !== 'undefined') {
       window.removeEventListener('khelgrid:auth-changed', handleCustomEvent)
-      window.removeEventListener('storage', handleStorageEvent)
     }
     supabaseUnsub?.()
   }

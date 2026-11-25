@@ -12,20 +12,6 @@
 
 import { bookTurfSlot, getTurfCourts } from '../venues/turfSlotManager'
 
-export type TournamentTab = 'brackets' | 'squad-audit' | 'scorer' | 'certificates'
-
-/** Maps unified WorkspaceShell section IDs to TournamentOpsPage tabs. */
-export function resolveTournamentTabForSection(section?: string): TournamentTab {
-  switch (section) {
-    case 'registrations':
-      return 'squad-audit'
-    case 'brackets':
-    case 'overview':
-    default:
-      return 'brackets'
-  }
-}
-
 export type TournamentBracketFormat = 'single_elimination' | 'double_elimination' | 'round_robin_knockout'
 
 export interface TournamentBracketNode {
