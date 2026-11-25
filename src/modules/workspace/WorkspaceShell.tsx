@@ -301,6 +301,7 @@ function WorkspaceShellInner({
         <Suspense fallback={<div className="kg-shell-loading" role="status" aria-label="Loading workspace">Loading…</div>}>
           <PersonaContent
             persona={persona}
+            section={activeSectionId}
             onOpenAuth={onOpenAuth}
             onNavigate={onNavigate}
           />
@@ -310,8 +311,9 @@ function WorkspaceShellInner({
   )
 }
 
-function PersonaContent({ persona, onOpenAuth, onNavigate }: {
+function PersonaContent({ persona, section, onOpenAuth, onNavigate }: {
   persona: WorkspacePersona
+  section: string
   onOpenAuth: (tab?: 'login' | 'signup') => void
   onNavigate: (event?: MouseEvent<HTMLAnchorElement>, target?: string) => void
 }) {
@@ -325,11 +327,11 @@ function PersonaContent({ persona, onOpenAuth, onNavigate }: {
     case 'academy':
       return (
         <RequireTenantMember onNavigate={handleStrictNav}>
-          <LazyAcademyHub onNavigate={handleStrictNav} />
+          <LazyAcademyHub workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'coach':
-      return <LazyCoachDashboard onNavigate={handleStrictNav} />
+      return <LazyCoachDashboard workspaceSection={section} onNavigate={handleStrictNav} />
     case 'turf':
       return <LazyTurfCalendar onNavigate={handleStrictNav} />
     case 'host':

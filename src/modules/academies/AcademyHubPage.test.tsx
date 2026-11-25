@@ -78,4 +78,18 @@ describe('AcademyHubPage SaaS Workspace Suite', () => {
     expect(html).toContain('Execute Pitch-Side Ground Roll-Call')
     expect(html).toContain('Assign Coaching Staff &amp; POCSO Officer')
   })
+
+  it('wires WorkspaceShell workspaceSection prop directly to the corresponding sub-panel', () => {
+    const batchesHtml = renderToStaticMarkup(
+      <AcademyHubPage initialAcademySlug="bengaluru-fc-academy" workspaceSection="batches" />
+    )
+    expect(batchesHtml).toContain('Coaching Batches &amp; Timings')
+    expect(batchesHtml).toContain('Create Coaching Batch')
+
+    const coachesHtml = renderToStaticMarkup(
+      <AcademyHubPage initialAcademySlug="bengaluru-fc-academy" workspaceSection="coaches" />
+    )
+    expect(coachesHtml).toContain('Coaching Staff &amp; Operational Roles')
+    expect(coachesHtml).toContain('Add Staff Member')
+  })
 })

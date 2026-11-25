@@ -62,4 +62,18 @@ describe('CoachDashboardPage Component', () => {
     expect(html).toContain('Weekly Drills &amp; Homework')
     expect(html).toContain('Verified Endorsements')
   })
+
+  it('wires WorkspaceShell workspaceSection prop directly to athletes and credentials sub-panels', () => {
+    const athletesHtml = renderToStaticMarkup(
+      <CoachDashboardPage initialCoachSlug="zaheer-farooq-coach" workspaceSection="athletes" />
+    )
+    expect(athletesHtml).toContain('Daily Batch Attendance')
+    expect(athletesHtml).toContain('Save Attendance')
+
+    const credsHtml = renderToStaticMarkup(
+      <CoachDashboardPage initialCoachSlug="zaheer-farooq-coach" workspaceSection="credentials" />
+    )
+    expect(credsHtml).toContain('Coaching Credentials &amp; Verification Evidence')
+    expect(credsHtml).toContain('Primary Certification:')
+  })
 })
