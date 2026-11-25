@@ -155,7 +155,7 @@ function WorkspaceShellInner({
   const personaMemberships = useMemo(() => {
     switch (persona) {
       case 'academy': return memberships.filter(m => m.tenant?.tenant_type === 'academy')
-      case 'coach': return memberships.filter(m => m.tenant?.tenant_type === 'coach' || ['coach', 'head_coach'].includes(m.role))
+      case 'coach': return memberships.filter(m => m.tenant?.tenant_type === 'coach' || (m.tenant?.tenant_type === 'academy' && ['coach', 'head_coach'].includes(m.role)))
       case 'turf':
       case 'host': return memberships.filter(m => m.tenant?.tenant_type === 'venue')
       case 'tournament': return memberships.filter(m => m.tenant?.tenant_type === 'tournament')
@@ -167,7 +167,7 @@ function WorkspaceShellInner({
     for (const membership of memberships) {
       const type = membership.tenant?.tenant_type
       if (type === 'academy') available.add('academy')
-      if (type === 'coach' || ['coach', 'head_coach'].includes(membership.role)) available.add('coach')
+      if (type === 'coach' || (type === 'academy' && ['coach', 'head_coach'].includes(membership.role))) available.add('coach')
       if (type === 'venue') available.add('host')
       if (type === 'tournament') available.add('tournament')
     }
@@ -211,12 +211,6 @@ function WorkspaceShellInner({
         label: 'Access Scope',
         value: (userRole || authUser?.role || 'guest').replace(/_/g, ' '),
         sub: authUser?.isVerified ? 'Email confirmed' : 'Email not confirmed',
-      },
-      {
-        id: 'modules',
-        label: 'Ecosystem Links',
-        value: 8,
-        sub: 'Consolidated partner & athlete tools',
       },
     ]
   }, [meta, activeSectionId, currentTenant?.name, memberships.length, userRole, authUser?.role, authUser?.isVerified])
