@@ -5,8 +5,11 @@ export type SidebarMode = 'athlete' | 'partner'
 export const PARTNER_ROUTE_PREFIXES = [
   '/organizations',
   '/partner-signup',
+  '/partner-login',
   '/partner/signup',
   '/partner/login',
+  '/partner/onboarding',
+  '/academy/signup',
   '/academy-hub',
   '/academies/manage',
   '/coach-dashboard',

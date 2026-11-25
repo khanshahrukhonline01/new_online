@@ -4,7 +4,7 @@
   margin: 1.5rem auto 4rem;
   padding: 0 1rem;
   font-family: inherit;
-  color: var(--text, #0f172a);
+  color: var(--text);
 }
 
 .partner-onboarding-header {
@@ -12,16 +12,21 @@
   margin-bottom: 2rem;
 }
 
+.partner-onboarding-eyebrow {
+  color: var(--accent);
+  font-weight: 800;
+}
+
 .partner-onboarding-header h1 {
   font-size: 2rem;
   font-weight: 850;
   letter-spacing: -0.03em;
   margin: 0.35rem 0 0.5rem;
-  color: #0f172a;
+  color: var(--text);
 }
 
 .partner-onboarding-header p {
-  color: #64748b;
+  color: var(--muted);
   font-size: 0.95rem;
   max-width: 600px;
   margin: 0 auto;
@@ -33,7 +38,8 @@
   justify-content: center;
   gap: 0.5rem;
   margin-bottom: 1.75rem;
-  background: #f1f5f9;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
   padding: 4px;
   border-radius: 10px;
   width: fit-content;
@@ -42,29 +48,43 @@
 }
 
 .partner-auth-tab {
+  min-height: var(--touch-min, 44px);
   padding: 8px 20px;
   font-size: 0.88rem;
   font-weight: 700;
   border: none;
   background: transparent;
-  color: #64748b;
+  color: var(--muted);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .partner-auth-tab.active {
-  background: #ffffff;
-  color: #059669;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: var(--shadow-card);
 }
 
 .partner-form-card {
-  background: #ffffff;
-  border: 1px solid var(--line, #e2e8f0);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-card);
+}
+
+.partner-role-heading-wrap {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.partner-role-heading {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* Role Selector Grid */
@@ -76,34 +96,39 @@
 }
 
 .partner-role-option {
-  border: 2px solid var(--line, #e2e8f0);
+  border: 2px solid var(--line);
   border-radius: 12px;
   padding: 1rem;
+  min-height: var(--touch-min, 44px);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   gap: 0.4rem;
   cursor: pointer;
-  background: #ffffff;
+  background: var(--surface-raised);
+  color: var(--text);
   transition: all 0.15s ease;
 }
 
 .partner-role-option:hover {
-  border-color: #cbd5e1;
+  border-color: var(--line-strong);
+}
+
+.partner-role-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .partner-role-option.selected {
-  border-color: #059669;
-  background: #ecfdf5;
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .role-icon-wrap {
   width: 44px;
   height: 44px;
   border-radius: 10px;
-  background: rgba(5, 150, 105, 0.1);
-  color: #059669;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -113,16 +138,20 @@
 .role-title {
   font-size: 0.92rem;
   font-weight: 750;
-  color: #0f172a;
+  color: var(--text);
 }
 
 .role-desc {
   font-size: 0.74rem;
-  color: #64748b;
+  color: var(--muted);
   line-height: 1.35;
 }
 
 /* Form Fields */
+.partner-onboarding-form {
+  margin-top: 1.5rem;
+}
+
 .partner-form-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -140,64 +169,116 @@
 .partner-form-field label {
   font-size: 0.82rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--text-soft);
 }
 
 .partner-form-field input,
 .partner-form-field select {
+  min-height: var(--touch-min, 44px);
   padding: 0.65rem 0.85rem;
-  border: 1px solid var(--line, #cbd5e1);
+  border: 1px solid var(--line-strong);
   border-radius: 8px;
   font-size: 0.88rem;
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--surface);
+  color: var(--text);
 }
 
 .partner-form-field input:focus,
 .partner-form-field select:focus {
   outline: none;
-  border-color: #059669;
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
-/* Fast Track Demo Switcher Box */
-.partner-demo-box {
-  margin-top: 2rem;
-  padding: 1.25rem;
-  background: #f8fafc;
-  border: 1px dashed #cbd5e1;
-  border-radius: 12px;
-}
-
-.partner-demo-box h4 {
-  margin: 0 0 0.4rem;
-  font-size: 0.85rem;
-  color: #475569;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.partner-demo-buttons {
+.partner-session-banner {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--info);
+  background: var(--info-soft);
+  color: var(--text);
+  font-size: 0.86rem;
+  margin-bottom: 1.25rem;
+}
+
+.partner-guarantee-banner {
+  background: var(--accent-soft);
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-border);
+  font-size: 0.84rem;
+  color: var(--text);
   margin-top: 0.5rem;
 }
 
-.partner-demo-pill {
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 650;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #334155;
-  cursor: pointer;
-  transition: all 0.15s ease;
+.partner-status-banner {
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
 }
 
-.partner-demo-pill:hover {
-  border-color: #059669;
-  color: #059669;
-  background: #ecfdf5;
+.partner-status-banner.is-error {
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+
+.partner-status-banner.is-success {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+}
+
+.partner-submit-btn {
+  width: 100%;
+  min-height: var(--touch-min, 44px);
+  padding: 12px 16px;
+  font-size: 1rem;
+  margin-top: 1.25rem;
+  justify-content: center;
+}
+
+.partner-secondary-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.partner-link-btn {
+  min-height: var(--touch-min, 44px);
+  padding: 0 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  color: var(--text-soft);
+  font-size: 0.84rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.partner-link-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (max-width: 700px) {
+  .partner-form-card {
+    padding: 1.25rem;
+  }
+
+  .partner-tabs-container {
+    width: 100%;
+  }
+
+  .partner-auth-tab {
+    flex: 1;
+    padding: 8px 10px;
+  }
 }

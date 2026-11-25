@@ -9,8 +9,10 @@ import {
   type UserRole,
   type AuthUserProfile,
 } from '../../integrations/supabase/auth-client'
-import { registerCustomAcademy } from '../../modules/academies/academySaaSClient'
-import { registerCustomCoach } from '../../modules/coaches/coachSaaSClient'
+import {
+  onboardPartnerOrganization,
+  type PartnerRole,
+} from '../../modules/partner/partnerOnboardingService'
 import './AuthModal.css'
 
 export type AuthModalTab = 'login' | 'signup' | 'partner' | 'forgot_password' | 'expired_link' | 'set_new_password'
@@ -21,7 +23,7 @@ export interface AuthModalProps {
   initialError?: string
   initialEmail?: string
   onClose: () => void
-  onSuccess?: (user: AuthUserProfile) => void
+  onSuccess?: (user: AuthUserProfile, options?: { skipRedirect?: boolean }) => void
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
@@ -126,7 +128,7 @@ export default function AuthModal({
   const [showPassword, setShowPassword] = useState(false)
 
   // Partner Form Fields
-  const [partnerCategory, setPartnerCategory] = useState<'academy' | 'coach' | 'host'>('academy')
+  const [partnerCategory, setPartnerCategory] = useState<PartnerRole>('academy')
   const [partnerAcademyName, setPartnerAcademyName] = useState('')
   const [partnerSport, setPartnerSport] = useState('Cricket')
   const [partnerCity, setPartnerCity] = useState('Delhi NCR')
@@ -186,15 +188,17 @@ export default function AuthModal({
       const res = await signInWithEmail({ email, password })
       if (res.success && res.user) {
         setSuccessMsg(`Welcome back, ${res.user.fullName}!`)
-        onSuccess?.(res.user)
+        onSuccess?.(res.user, { skipRedirect: true })
         setTimeout(() => {
           onClose()
           if (res.user?.role === 'academy') {
-            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/academy-hub')
-          } else if (res.user?.role === 'host' || res.user?.role === 'venue_owner') {
-            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/host')
+            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/academy/overview')
+          } else if (res.user?.role === 'venue_owner') {
+            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/turf/calendar')
+          } else if (res.user?.role === 'host') {
+            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/host/overview')
           } else if (res.user?.role === 'coach') {
-            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/coach-dashboard')
+            onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/coach/overview')
           }
         }, 600)
       } else if (res.requiresEmailVerification) {
@@ -256,17 +260,19 @@ export default function AuthModal({
           setSuccessMsg(`Verification email sent to ${email}. Please verify your email to continue.`)
         } else if (res.user) {
           setSuccessMsg(`Account created! Welcome, ${res.user.fullName}.`)
-          onSuccess?.(res.user)
+          onSuccess?.(res.user, { skipRedirect: true })
           setTimeout(() => {
             onClose()
             if (role === 'academy') {
-              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/academy-hub')
-            } else if (role === 'host' || role === 'venue_owner') {
-              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/host')
+              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/academy/overview')
+            } else if (role === 'venue_owner') {
+              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/turf/calendar')
+            } else if (role === 'host') {
+              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/host/overview')
             } else if (role === 'coach') {
-              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/coach-dashboard')
+              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/coach/overview')
             } else if (role === 'athlete' || role === 'parent') {
-              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/dashboard')
+              onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/workspace/athlete/overview')
             }
           }, 600)
         }
@@ -287,99 +293,43 @@ export default function AuthModal({
     setSubmitting(true)
 
     try {
-      if (!partnerDirectorName.trim()) {
-        setErrorMsg(partnerCategory === 'coach' ? 'Please enter Coach Name.' : 'Please enter the Director or Manager Name.')
-        return
-      }
-      if (partnerCategory !== 'coach' && !partnerAcademyName.trim()) {
-        setErrorMsg('Please enter your Academy or Facility Name.')
-        return
-      }
-      if (!partnerWhatsApp.trim() || partnerWhatsApp.replace(/\D/g, '').length < 10) {
-        setErrorMsg('Please provide a valid 10-digit WhatsApp/mobile number.')
-        return
-      }
-      if (!email.trim() || !email.includes('@')) {
-        setErrorMsg('Please provide a valid account email address.')
-        return
-      }
-      if (password.length < 6) {
-        setErrorMsg('Password must be at least 6 characters long.')
-        return
-      }
+      const entityName =
+        partnerCategory === 'coach' ? partnerDirectorName.trim() : partnerAcademyName.trim()
 
-      if (partnerCategory === 'coach') {
-        const coachName = partnerDirectorName.trim()
-        const registeredCoach = registerCustomCoach({
-          name: coachName,
-          sport: partnerSport || 'Cricket',
-          city: partnerCity || 'Delhi NCR',
-          phone: partnerWhatsApp.trim(),
-          email: email.trim(),
-          certification: partnerCoachCert || 'SAI NIS / Federation Certified Coach',
-          monthlyFee: 3500,
-          upiVpa: partnerUpi.trim(),
-        })
-
-        const res = await signUpWithEmail({
-          email,
-          password,
-          fullName: coachName,
-          role: 'coach',
-          city: partnerCity || 'Delhi NCR',
-          phone: partnerWhatsApp.trim(),
-        })
-
-        if (res.user) {
-          setSuccessMsg(`Welcome, ${coachName}! Coach profile registered successfully.`)
-          onSuccess?.(res.user)
-        } else {
-          setSuccessMsg(`Coach profile registered! Launching Coach Hub...`)
-        }
-
-        setTimeout(() => {
-          onClose()
-          onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, `/coach-dashboard?coach=${registeredCoach.slug}`)
-        }, 700)
-        return
-      }
-
-      // 1. Register Academy in local SaaS storage with pending_review status
-      const registered = registerCustomAcademy({
-        name: partnerAcademyName.trim(),
+      const outcome = await onboardPartnerOrganization({
+        role: partnerCategory,
+        entityName,
+        directorName: partnerDirectorName.trim(),
         sport: partnerSport || 'Multi-Sport',
         city: partnerCity || 'Delhi NCR',
-        directorName: partnerDirectorName.trim(),
-        directorWhatsApp: partnerWhatsApp.trim(),
-        upiVpa: partnerUpi.trim() || `${partnerAcademyName.toLowerCase().replace(/[^a-z0-9]/g, '')}@upi`,
-      })
-
-      // 2. Create User Account with role 'academy' or 'host'
-      const assignedRole = partnerCategory === 'host' ? 'host' : 'academy'
-      const res = await signUpWithEmail({
-        email,
-        password,
-        fullName: partnerDirectorName.trim(),
-        role: assignedRole,
-        city: partnerCity || 'Delhi NCR',
         phone: partnerWhatsApp.trim(),
+        email: email.trim(),
+        password,
+        upiVpa: partnerUpi.trim(),
+        certification: partnerCategory === 'coach' ? partnerCoachCert.trim() : undefined,
       })
 
-      if (res.user) {
-        setSuccessMsg(`Welcome, ${partnerDirectorName}! ${partnerCategory === 'host' ? 'Facility' : 'Academy'} "${registered.name}" registered successfully.`)
-        onSuccess?.(res.user)
-      } else {
-        setSuccessMsg(`Partner workspace registered! Launching hub...`)
+      if (!outcome.success) {
+        setErrorMsg(outcome.message || 'Could not complete partner registration.')
+        return
       }
 
+      if (outcome.requiresEmailVerification) {
+        setSuccessMsg(outcome.message)
+        setEmailVerificationPending(true)
+        return
+      }
+
+      setSuccessMsg(outcome.message)
+      if (outcome.user) {
+        onSuccess?.(outcome.user, { skipRedirect: Boolean(outcome.workspacePath) })
+      }
+
+      const targetPath = outcome.workspacePath || '/workspace/academy/overview'
       setTimeout(() => {
         onClose()
-        if (partnerCategory === 'host') {
-          onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, '/host')
-        } else {
-          onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, `/academy-hub?academy=${registered.slug}`)
-        }
-      }, 700)
+        onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, targetPath)
+      }, 500)
     } catch {
       setErrorMsg('Could not complete partner registration. Please try again.')
     } finally {
@@ -1032,14 +982,27 @@ export default function AuthModal({
 
                 <button
                   type="button"
-                  className={`kg-role-card ${partnerCategory === 'host' ? 'is-selected' : ''}`}
-                  onClick={() => setPartnerCategory('host')}
+                  className={`kg-role-card ${partnerCategory === 'venue' ? 'is-selected' : ''}`}
+                  onClick={() => setPartnerCategory('venue')}
                   style={{ padding: '8px 10px' }}
                 >
                   <SiteIcon name="venues" size={15} />
                   <div className="kg-role-info">
                     <strong>Turf &amp; Venue</strong>
                     <span style={{ fontSize: '10.5px' }}>Hourly Slots</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`kg-role-card ${partnerCategory === 'tournament' ? 'is-selected' : ''}`}
+                  onClick={() => setPartnerCategory('tournament')}
+                  style={{ padding: '8px 10px' }}
+                >
+                  <SiteIcon name="sparkles" size={15} />
+                  <div className="kg-role-info">
+                    <strong>Tournament Ops</strong>
+                    <span style={{ fontSize: '10.5px' }}>Brackets &amp; Scorer</span>
                   </div>
                 </button>
               </div>

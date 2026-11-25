@@ -21,22 +21,33 @@ describe('PartnerOnboardingPage Component Suite', () => {
     expect(html).toContain('Tournament Ops')
   })
 
-  it('renders zero platform commission guarantee and launch action button', () => {
+  it('renders authentic email/password onboarding controls without demo auth bypasses', () => {
     const html = renderToStaticMarkup(<PartnerOnboardingPage />)
 
     expect(html).toContain('Zero Platform Commission Guarantee')
     expect(html).toContain('Launch Your Verified SaaS Workspace (30 Seconds)')
-    expect(html).toContain('Fast-Track Demo Workspace Access')
-    expect(html).toContain('Demo Academy: Delhi Cricket Academy')
-    expect(html).toContain('Demo Coach: Coach Zaheer Farooq')
-    expect(html).toContain('Demo Turf: Sree Kanteerava Arena')
-    expect(html).toContain('Demo Tournament Ops Suite')
+    expect(html).toContain('Official Account Email')
+    expect(html).toContain('Account Password (min 6 characters)')
+    expect(html).toContain('Use 1-Click Magic Email Link instead of password')
+    expect(html).not.toContain('Fast-Track Demo Workspace Access')
+    expect(html).not.toContain('Demo Academy:')
   })
 
-  it('renders sign in mode form when initialMode is login', () => {
-    const html = renderToStaticMarkup(<PartnerOnboardingPage initialMode="login" />)
+  it('preselects role-specific fields when initialRole is provided', () => {
+    const coachHtml = renderToStaticMarkup(<PartnerOnboardingPage initialRole="coach" />)
+    expect(coachHtml).toContain('Full Coach Name')
+    expect(coachHtml).toContain('Coaching Certification / Accreditation')
 
-    expect(html).toContain('Registered Phone Number or Email')
-    expect(html).toContain('Sign In to')
+    const tournamentHtml = renderToStaticMarkup(<PartnerOnboardingPage initialRole="tournament" />)
+    expect(tournamentHtml).toContain('Tournament / Sports Organisation Title')
+  })
+
+  it('renders authentic email/password sign in form when initialMode is login', () => {
+    const html = renderToStaticMarkup(<PartnerOnboardingPage initialMode="login" initialRole="venue" />)
+
+    expect(html).toContain('Registered Email Address')
+    expect(html).toContain('Account Password')
+    expect(html).toContain('Sign In to Turf &amp; Venue Workspace')
+    expect(html).toContain('Send 1-Click Magic Login Link')
   })
 })

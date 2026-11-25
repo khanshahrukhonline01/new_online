@@ -1,186 +1,178 @@
 import { useState, type FormEvent, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { registerCustomAcademy } from '../academies/academySaaSClient'
-import { registerCustomCoach } from '../coaches/coachSaaSClient'
-import { saveTurfVenueSettings } from '../venues/turfSlotManager'
-import { provisionInitialTenantOwner } from '../../integrations/supabase/tenant-client'
-import { getStoredAuthUser, setStoredAuthUser } from '../../integrations/supabase/auth-client'
+import { useFormState } from '../../shared/hooks/useFormState'
+import {
+  getStoredAuthUser,
+  type AuthUserProfile,
+} from '../../integrations/supabase/auth-client'
+import {
+  normalizePartnerRole,
+  onboardPartnerOrganization,
+  PARTNER_ROLE_CONFIG,
+  PARTNER_ROLES_ORDERED,
+  signInPartnerAccount,
+  type PartnerRole,
+} from './partnerOnboardingService'
 import './PartnerOnboardingPage.css'
 
 export interface PartnerOnboardingPageProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
   initialMode?: 'signup' | 'login'
-  initialRole?: 'academy' | 'coach' | 'venue' | 'tournament'
+  initialRole?: PartnerRole
+  onAuthSuccess?: (user: AuthUserProfile) => void
 }
 
-type PartnerRole = 'academy' | 'coach' | 'venue' | 'tournament'
+const ROLE_ICON: Record<PartnerRole, 'building' | 'award' | 'calendar' | 'sparkles'> = {
+  academy: 'building',
+  coach: 'award',
+  venue: 'calendar',
+  tournament: 'sparkles',
+}
+
+interface OnboardingFormFields extends Record<string, unknown> {
+  entityName: string
+  directorName: string
+  sport: string
+  city: string
+  phone: string
+  email: string
+  password: string
+  upiVpa: string
+  certification: string
+  loginEmail: string
+  loginPassword: string
+}
 
 export default function PartnerOnboardingPage({
   onNavigate,
   initialMode = 'signup',
   initialRole = 'academy',
+  onAuthSuccess,
 }: PartnerOnboardingPageProps) {
+  const existingUser = getStoredAuthUser()
   const [mode, setMode] = useState<'signup' | 'login'>(initialMode)
-  const [selectedRole, setSelectedRole] = useState<PartnerRole>(initialRole)
+  const [selectedRole, setSelectedRole] = useState<PartnerRole>(() => normalizePartnerRole(initialRole))
+  const [statusMessage, setStatusMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null)
 
-  // Registration Form State
-  const [entityName, setEntityName] = useState('')
-  const [sport, setSport] = useState('Cricket')
-  const [city, setCity] = useState('Delhi NCR')
-  const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
-  const [upiVpa, setUpiVpa] = useState('')
+  const form = useFormState<OnboardingFormFields>({
+    entityName: '',
+    directorName: existingUser?.fullName || '',
+    sport: 'Cricket',
+    city: existingUser?.city || 'Delhi NCR',
+    phone: existingUser?.phone || '',
+    email: existingUser?.email || '',
+    password: '',
+    upiVpa: '',
+    certification: '',
+    loginEmail: existingUser?.email || '',
+    loginPassword: '',
+  })
 
-  // Login Form State
-  const [loginIdentifier, setLoginIdentifier] = useState('')
+  const roleConfig = PARTNER_ROLE_CONFIG[selectedRole]
+
+  const navigateToWorkspace = (targetRoute: string) => {
+    if (onNavigate) {
+      const syntheticEvent = { preventDefault: () => {} } as MouseEvent<HTMLAnchorElement>
+      onNavigate(syntheticEvent, targetRoute)
+    } else if (typeof window !== 'undefined') {
+      window.location.href = targetRoute
+    }
+  }
+
+  const submitOnboarding = async (useMagicLink = false) => {
+    setStatusMessage(null)
+    form.beginSubmit()
+    try {
+      const outcome = await onboardPartnerOrganization({
+        role: selectedRole,
+        entityName: form.fields.entityName,
+        directorName: form.fields.directorName,
+        sport: form.fields.sport,
+        city: form.fields.city,
+        phone: form.fields.phone,
+        email: form.fields.email,
+        password: form.fields.password,
+        upiVpa: form.fields.upiVpa,
+        certification: form.fields.certification,
+        useMagicLink,
+      })
+
+      if (!outcome.success) {
+        setStatusMessage({ kind: 'error', text: outcome.message })
+        return
+      }
+
+      if (outcome.user) {
+        onAuthSuccess?.(outcome.user)
+      }
+
+      setStatusMessage({ kind: 'success', text: outcome.message })
+      if (!outcome.requiresEmailVerification && outcome.workspacePath) {
+        navigateToWorkspace(outcome.workspacePath)
+      }
+    } catch (err) {
+      setStatusMessage({
+        kind: 'error',
+        text: err instanceof Error ? err.message : 'Partner onboarding could not be completed.',
+      })
+    } finally {
+      form.endSubmit()
+    }
+  }
 
   const handleRegisterSubmit = (e: FormEvent) => {
     e.preventDefault()
-    if (!entityName.trim() || !phone.trim()) return
+    void submitOnboarding(false)
+  }
 
-    // Ensure session credentials for authenticated workspace tenancy
-    let currentUser = getStoredAuthUser()
-    if (!currentUser) {
-      currentUser = {
-        id: `usr-${Date.now().toString(36)}`,
-        email: email.trim() || `${phone.trim()}@partner.khelgrid.com`,
-        fullName: `${entityName.trim()} Admin`,
-        name: `${entityName.trim()} Admin`,
-        role: selectedRole === 'coach' ? 'coach' : 'academy',
-        phone: phone.trim(),
-        city,
-        isVerified: true,
-        createdAt: new Date().toISOString(),
+  const submitLogin = async (useMagicLink = false) => {
+    setStatusMessage(null)
+    form.beginSubmit()
+    try {
+      const outcome = await signInPartnerAccount({
+        role: selectedRole,
+        email: form.fields.loginEmail,
+        password: form.fields.loginPassword,
+        useMagicLink,
+      })
+
+      if (!outcome.success) {
+        setStatusMessage({ kind: 'error', text: outcome.message })
+        return
       }
-      setStoredAuthUser(currentUser)
-    }
 
-    let targetRoute = '/academy-hub'
+      if (outcome.user) {
+        onAuthSuccess?.(outcome.user)
+      }
 
-    if (selectedRole === 'academy') {
-      const newAcademy = registerCustomAcademy({
-        name: entityName.trim(),
-        sport,
-        city,
-        state: 'India',
-        directorName: 'Academy Director',
-        directorWhatsApp: phone.trim(),
-        upiVpa: upiVpa.trim(),
+      setStatusMessage({ kind: 'success', text: outcome.message })
+      if (!outcome.requiresEmailVerification && outcome.workspacePath) {
+        navigateToWorkspace(outcome.workspacePath)
+      }
+    } catch (err) {
+      setStatusMessage({
+        kind: 'error',
+        text: err instanceof Error ? err.message : 'Sign-in could not be completed.',
       })
-      provisionInitialTenantOwner({
-        slug: newAcademy.slug,
-        name: entityName.trim(),
-        tenantType: 'academy',
-        city,
-        sport,
-        contactPhone: phone.trim(),
-        contactEmail: email.trim() || undefined,
-      }).catch(err => console.warn('[PartnerOnboarding] Remote tenant provision error:', err))
-      targetRoute = `/academy-hub?academy=${newAcademy.slug}`
-    } else if (selectedRole === 'coach') {
-      const newCoach = registerCustomCoach({
-        name: entityName.trim(),
-        sport,
-        city,
-        phone: phone.trim(),
-        email: email.trim() || `${entityName.toLowerCase().replace(/[^a-z0-9]/g, '')}@coach.khelgrid.com`,
-        certification: 'Unverified / Pending Credential Verification',
-        monthlyFee: 3000,
-        upiVpa: upiVpa.trim(),
-      })
-      targetRoute = `/coach-dashboard?coach=${newCoach.slug}`
-    } else if (selectedRole === 'venue') {
-      const venueSlug = entityName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'my-sports-turf'
-      saveTurfVenueSettings({
-        venueSlug,
-        venueName: entityName.trim(),
-        managerName: 'Facility Manager',
-        managerWhatsApp: phone.trim(),
-        upiVpa: upiVpa.trim(),
-        allowPayAtVenue: true,
-        autoWhatsAppConfirmEnabled: true,
-      })
-      targetRoute = `/turf-calendar?venue=${venueSlug}`
-    } else {
-      // tournament
-      targetRoute = '/tournament-ops'
-    }
-
-    if (onNavigate) {
-      // Synthetic navigation event
-      const fakeEvent = { preventDefault: () => {} } as MouseEvent<HTMLAnchorElement>
-      onNavigate(fakeEvent, targetRoute)
-    } else if (typeof window !== 'undefined') {
-      window.location.href = targetRoute
+    } finally {
+      form.endSubmit()
     }
   }
 
   const handleLoginSubmit = (e: FormEvent) => {
     e.preventDefault()
-    if (!loginIdentifier.trim()) return
-
-    // Ensure session credentials for authenticated workspace tenancy
-    let currentUser = getStoredAuthUser()
-    if (!currentUser) {
-      currentUser = {
-        id: `usr-${Date.now().toString(36)}`,
-        email: loginIdentifier.includes('@') ? loginIdentifier.trim() : `${loginIdentifier.trim()}@partner.khelgrid.com`,
-        fullName: `${selectedRole.toUpperCase()} Partner`,
-        name: `${selectedRole.toUpperCase()} Partner`,
-        role: selectedRole === 'coach' ? 'coach' : 'academy',
-        phone: !loginIdentifier.includes('@') ? loginIdentifier.trim() : undefined,
-        city: 'India',
-        isVerified: true,
-        createdAt: new Date().toISOString(),
-      }
-      setStoredAuthUser(currentUser)
-    }
-
-    let targetRoute = '/academy-hub'
-    if (selectedRole === 'coach') targetRoute = '/coach-dashboard'
-    else if (selectedRole === 'venue') targetRoute = '/turf-calendar'
-    else if (selectedRole === 'tournament') targetRoute = '/tournament-ops'
-
-    if (onNavigate) {
-      const fakeEvent = { preventDefault: () => {} } as MouseEvent<HTMLAnchorElement>
-      onNavigate(fakeEvent, targetRoute)
-    } else if (typeof window !== 'undefined') {
-      window.location.href = targetRoute
-    }
+    void submitLogin(false)
   }
 
-  const handleFastTrackDemo = (role: PartnerRole, route: string) => {
-    setSelectedRole(role)
-
-    // Ensure demo director session credentials
-    let currentUser = getStoredAuthUser()
-    if (!currentUser) {
-      currentUser = {
-        id: 'usr-demo-partner',
-        email: 'director@khelgrid.com',
-        fullName: 'Demo Partner Director',
-        name: 'Demo Partner Director',
-        role: role === 'coach' ? 'coach' : 'academy',
-        city: 'Delhi NCR',
-        isVerified: true,
-        createdAt: new Date().toISOString(),
-      }
-      setStoredAuthUser(currentUser)
-    }
-
-    if (onNavigate) {
-      const fakeEvent = { preventDefault: () => {} } as MouseEvent<HTMLAnchorElement>
-      onNavigate(fakeEvent, route)
-    } else if (typeof window !== 'undefined') {
-      window.location.href = route
-    }
+  const handleModeSwitch = (nextMode: 'signup' | 'login') => {
+    setMode(nextMode)
+    setStatusMessage(null)
   }
 
   return (
     <div className="partner-onboarding-root content-page">
-      {/* Top Header */}
       <header className="partner-onboarding-header">
-        <p className="eyebrow" style={{ color: '#059669', fontWeight: 800 }}>
+        <p className="eyebrow partner-onboarding-eyebrow">
           KHELGRID · PARTNER ONBOARDING &amp; SIGN IN
         </p>
         <h1>India&apos;s National Sports Operations Infrastructure</h1>
@@ -189,14 +181,13 @@ export default function PartnerOnboardingPage({
         </p>
       </header>
 
-      {/* Mode Switcher: Sign Up vs Sign In */}
-      <div className="partner-tabs-container" role="tablist">
+      <div className="partner-tabs-container" role="tablist" aria-label="Partner onboarding mode">
         <button
           type="button"
           role="tab"
           aria-selected={mode === 'signup'}
           className={`partner-auth-tab ${mode === 'signup' ? 'active' : ''}`}
-          onClick={() => setMode('signup')}
+          onClick={() => handleModeSwitch('signup')}
         >
           New Partner Onboarding (Free)
         </button>
@@ -205,112 +196,86 @@ export default function PartnerOnboardingPage({
           role="tab"
           aria-selected={mode === 'login'}
           className={`partner-auth-tab ${mode === 'login' ? 'active' : ''}`}
-          onClick={() => setMode('login')}
+          onClick={() => handleModeSwitch('login')}
         >
           Sign In to Workspace
         </button>
       </div>
 
       <div className="partner-form-card">
-        {/* Step 1: Role Selector */}
-        <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-          <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div className="partner-role-heading-wrap">
+          <span className="partner-role-heading">
             Select Your Sports Organisation Category:
           </span>
         </div>
 
-        <div className="partner-role-grid" role="radiogroup">
-          <div
-            className={`partner-role-option ${selectedRole === 'academy' ? 'selected' : ''}`}
-            onClick={() => setSelectedRole('academy')}
-            role="radio"
-            aria-checked={selectedRole === 'academy'}
-            tabIndex={0}
-          >
-            <div className="role-icon-wrap">
-              <SiteIcon name="building" size={20} />
-            </div>
-            <span className="role-title">Sports Academy</span>
-            <span className="role-desc">Admissions, student batches, attendance &amp; direct UPI fees</span>
-          </div>
-
-          <div
-            className={`partner-role-option ${selectedRole === 'coach' ? 'selected' : ''}`}
-            onClick={() => setSelectedRole('coach')}
-            role="radio"
-            aria-checked={selectedRole === 'coach'}
-            tabIndex={0}
-          >
-            <div className="role-icon-wrap" style={{ background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb' }}>
-              <SiteIcon name="award" size={20} />
-            </div>
-            <span className="role-title">Coach &amp; Trainer</span>
-            <span className="role-desc">Private trainees, combine percentiles &amp; NIS endorsements</span>
-          </div>
-
-          <div
-            className={`partner-role-option ${selectedRole === 'venue' ? 'selected' : ''}`}
-            onClick={() => setSelectedRole('venue')}
-            role="radio"
-            aria-checked={selectedRole === 'venue'}
-            tabIndex={0}
-          >
-            <div className="role-icon-wrap" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#d97706' }}>
-              <SiteIcon name="calendar" size={20} />
-            </div>
-            <span className="role-title">Turf &amp; Venue</span>
-            <span className="role-desc">Hourly courts, floodlight peak pricing &amp; gate check-in</span>
-          </div>
-
-          <div
-            className={`partner-role-option ${selectedRole === 'tournament' ? 'selected' : ''}`}
-            onClick={() => setSelectedRole('tournament')}
-            role="radio"
-            aria-checked={selectedRole === 'tournament'}
-            tabIndex={0}
-          >
-            <div className="role-icon-wrap" style={{ background: 'rgba(147, 51, 234, 0.1)', color: '#9333ea' }}>
-              <SiteIcon name="sparkles" size={20} />
-            </div>
-            <span className="role-title">Tournament Ops</span>
-            <span className="role-desc">Brackets, anti-age-fraud scans &amp; pitch-side live scoring</span>
-          </div>
+        <div className="partner-role-grid" role="radiogroup" aria-label="Sports organisation category">
+          {PARTNER_ROLES_ORDERED.map(roleDef => {
+            const isSelected = selectedRole === roleDef.role
+            return (
+              <button
+                key={roleDef.role}
+                type="button"
+                className={`partner-role-option ${isSelected ? 'selected' : ''}`}
+                onClick={() => setSelectedRole(roleDef.role)}
+                role="radio"
+                aria-checked={isSelected}
+              >
+                <div
+                  className="role-icon-wrap"
+                  style={{ background: roleDef.accentBg, color: roleDef.accentColor }}
+                >
+                  <SiteIcon name={ROLE_ICON[roleDef.role]} size={20} />
+                </div>
+                <span className="role-title">{roleDef.label}</span>
+                <span className="role-desc">{roleDef.description}</span>
+              </button>
+            )
+          })}
         </div>
 
-        {/* Step 2: Form Content */}
+        {statusMessage && (
+          <div
+            role={statusMessage.kind === 'error' ? 'alert' : 'status'}
+            aria-live="polite"
+            className={`partner-status-banner ${statusMessage.kind === 'error' ? 'is-error' : 'is-success'}`}
+          >
+            {statusMessage.text}
+          </div>
+        )}
+
         {mode === 'signup' ? (
-          <form onSubmit={handleRegisterSubmit} style={{ marginTop: '1.5rem' }}>
+          <form onSubmit={handleRegisterSubmit} className="partner-onboarding-form">
+            {existingUser && (
+              <div className="partner-session-banner" role="status">
+                <SiteIcon name="shield-check" size={18} />
+                <span>
+                  Authenticated as <strong>{existingUser.email}</strong>. Launching will provision a verified{' '}
+                  <strong>{roleConfig.label}</strong> organisation tenant under your account.
+                </span>
+              </div>
+            )}
+
             <div className="partner-form-row">
               <div className="partner-form-field">
-                <label>
-                  {selectedRole === 'academy'
-                    ? 'Academy / Coaching Centre Name'
-                    : selectedRole === 'coach'
-                    ? 'Full Coach Name'
-                    : selectedRole === 'venue'
-                    ? 'Sports Complex / Turf Arena Name'
-                    : 'Tournament / Sports Organisation Title'}
-                </label>
+                <label htmlFor="partner-entity-name">{roleConfig.entityLabel}</label>
                 <input
+                  id="partner-entity-name"
                   type="text"
                   required
-                  placeholder={
-                    selectedRole === 'academy'
-                      ? 'e.g. Bhaichung Bhutia Football Schools'
-                      : selectedRole === 'coach'
-                      ? 'e.g. Coach Zaheer Farooq'
-                      : selectedRole === 'venue'
-                      ? 'e.g. Sree Kanteerava AstroTurf Arena'
-                      : 'e.g. National Youth Cup 2026'
-                  }
-                  value={entityName}
-                  onChange={e => setEntityName(e.target.value)}
+                  placeholder={roleConfig.entityPlaceholder}
+                  value={form.fields.entityName}
+                  onChange={e => form.setField('entityName', e.target.value)}
                 />
               </div>
 
               <div className="partner-form-field">
-                <label>Primary Sport</label>
-                <select value={sport} onChange={e => setSport(e.target.value)}>
+                <label htmlFor="partner-sport">Primary Sport</label>
+                <select
+                  id="partner-sport"
+                  value={form.fields.sport}
+                  onChange={e => form.setField('sport', e.target.value)}
+                >
                   <option value="Cricket">Cricket</option>
                   <option value="Football">Football</option>
                   <option value="Badminton">Badminton</option>
@@ -324,121 +289,199 @@ export default function PartnerOnboardingPage({
 
             <div className="partner-form-row">
               <div className="partner-form-field">
-                <label>Operating City</label>
+                <label htmlFor="partner-director-name">{roleConfig.directorLabel}</label>
                 <input
+                  id="partner-director-name"
                   type="text"
                   required
-                  placeholder="e.g. Delhi NCR, Bengaluru, Mumbai"
-                  value={city}
-                  onChange={e => setCity(e.target.value)}
+                  placeholder={roleConfig.directorPlaceholder}
+                  value={form.fields.directorName}
+                  onChange={e => form.setField('directorName', e.target.value)}
                 />
               </div>
 
               <div className="partner-form-field">
-                <label>Contact Phone (WhatsApp Alerts)</label>
+                <label htmlFor="partner-city">Operating City</label>
                 <input
-                  type="tel"
+                  id="partner-city"
+                  type="text"
                   required
-                  placeholder="9876543210"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
+                  placeholder="e.g. Delhi NCR, Bengaluru, Mumbai"
+                  value={form.fields.city}
+                  onChange={e => form.setField('city', e.target.value)}
                 />
               </div>
             </div>
 
             <div className="partner-form-row">
               <div className="partner-form-field">
-                <label>Official Email (Optional)</label>
+                <label htmlFor="partner-phone">Contact Phone (WhatsApp Alerts)</label>
                 <input
-                  type="email"
-                  placeholder="admin@organisation.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  id="partner-phone"
+                  type="tel"
+                  required
+                  placeholder="9876543210"
+                  value={form.fields.phone}
+                  onChange={e => form.setField('phone', e.target.value)}
                 />
               </div>
 
               <div className="partner-form-field">
-                <label>Direct UPI ID (0% Platform Deductions)</label>
+                <label htmlFor="partner-upi">Direct UPI ID (0% Platform Deductions)</label>
                 <input
+                  id="partner-upi"
                   type="text"
                   placeholder="e.g. academy@okaxis or coach@okhdfcbank"
-                  value={upiVpa}
-                  onChange={e => setUpiVpa(e.target.value)}
+                  value={form.fields.upiVpa}
+                  onChange={e => form.setField('upiVpa', e.target.value)}
                 />
               </div>
             </div>
 
-            <div style={{ background: '#ecfdf5', padding: '12px 14px', borderRadius: '8px', border: '1px solid #6ee7b7', fontSize: '0.84rem', color: '#065f46', marginTop: '0.5rem' }}>
+            {selectedRole === 'coach' && (
+              <div className="partner-form-field">
+                <label htmlFor="partner-certification">Coaching Certification / Accreditation</label>
+                <input
+                  id="partner-certification"
+                  type="text"
+                  placeholder="e.g. BCCI Level 2 · SAI / NIS Patiala Diploma"
+                  value={form.fields.certification}
+                  onChange={e => form.setField('certification', e.target.value)}
+                />
+              </div>
+            )}
+
+            {!existingUser && (
+              <div className="partner-form-row">
+                <div className="partner-form-field">
+                  <label htmlFor="partner-email">Official Account Email</label>
+                  <input
+                    id="partner-email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    placeholder="admin@organisation.com"
+                    value={form.fields.email}
+                    onChange={e => form.setField('email', e.target.value)}
+                  />
+                </div>
+
+                <div className="partner-form-field">
+                  <label htmlFor="partner-password">Account Password (min 6 characters)</label>
+                  <input
+                    id="partner-password"
+                    type="password"
+                    required
+                    minLength={6}
+                    autoComplete="new-password"
+                    placeholder="Create secure workspace password"
+                    value={form.fields.password}
+                    onChange={e => form.setField('password', e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="partner-guarantee-banner">
               🛡️ <strong>Zero Platform Commission Guarantee:</strong> All student fees and court booking deposits flow directly into your own UPI VPA bank account with zero platform commission deductions.
             </div>
 
             <button
               type="submit"
-              className="coach-primary-btn"
-              style={{ width: '100%', padding: '12px', fontSize: '1rem', marginTop: '1.5rem', justifyContent: 'center' }}
+              disabled={form.submitting}
+              className="coach-primary-btn partner-submit-btn"
             >
               <SiteIcon name="sparkles" size={16} />
-              <span>Launch Your Verified SaaS Workspace (30 Seconds)</span>
+              <span>
+                {form.submitting
+                  ? 'Provisioning Verified Workspace...'
+                  : 'Launch Your Verified SaaS Workspace (30 Seconds)'}
+              </span>
             </button>
+
+            {!existingUser && (
+              <div className="partner-secondary-actions">
+                <button
+                  type="button"
+                  disabled={form.submitting}
+                  className="partner-link-btn"
+                  onClick={() => void submitOnboarding(true)}
+                >
+                  Use 1-Click Magic Email Link instead of password
+                </button>
+                <button
+                  type="button"
+                  className="partner-link-btn"
+                  onClick={() => handleModeSwitch('login')}
+                >
+                  Already have an account? Sign In
+                </button>
+              </div>
+            )}
           </form>
         ) : (
-          <form onSubmit={handleLoginSubmit} style={{ marginTop: '1.5rem' }}>
-            <div className="partner-form-field">
-              <label>Registered Phone Number or Email</label>
-              <input
-                type="text"
-                required
-                placeholder="Enter 10-digit mobile or official email"
-                value={loginIdentifier}
-                onChange={e => setLoginIdentifier(e.target.value)}
-              />
+          <form onSubmit={handleLoginSubmit} className="partner-onboarding-form">
+            <div className="partner-form-row">
+              <div className="partner-form-field">
+                <label htmlFor="partner-login-email">Registered Email Address</label>
+                <input
+                  id="partner-login-email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  placeholder="director@organisation.com"
+                  value={form.fields.loginEmail}
+                  onChange={e => form.setField('loginEmail', e.target.value)}
+                />
+              </div>
+
+              <div className="partner-form-field">
+                <label htmlFor="partner-login-password">Account Password</label>
+                <input
+                  id="partner-login-password"
+                  type="password"
+                  required
+                  minLength={6}
+                  autoComplete="current-password"
+                  placeholder="Enter your password"
+                  value={form.fields.loginPassword}
+                  onChange={e => form.setField('loginPassword', e.target.value)}
+                />
+              </div>
             </div>
 
             <button
               type="submit"
-              className="coach-primary-btn"
-              style={{ width: '100%', padding: '12px', fontSize: '1rem', marginTop: '1rem', justifyContent: 'center' }}
+              disabled={form.submitting}
+              className="coach-primary-btn partner-submit-btn"
             >
               <SiteIcon name="arrow-up-right" size={16} />
-              <span>Sign In to {selectedRole.toUpperCase()} Workspace</span>
+              <span>
+                {form.submitting
+                  ? 'Verifying Credentials...'
+                  : `Sign In to ${roleConfig.label} Workspace`}
+              </span>
             </button>
+
+            <div className="partner-secondary-actions">
+              <button
+                type="button"
+                disabled={form.submitting}
+                className="partner-link-btn"
+                onClick={() => void submitLogin(true)}
+              >
+                Send 1-Click Magic Login Link
+              </button>
+              <button
+                type="button"
+                className="partner-link-btn"
+                onClick={() => handleModeSwitch('signup')}
+              >
+                New Partner? Provision Free Workspace
+              </button>
+            </div>
           </form>
         )}
-
-        {/* Demo Fast-Track Access */}
-        <div className="partner-demo-box">
-          <h4>Fast-Track Demo Workspace Access (Immediate Preview):</h4>
-          <div className="partner-demo-buttons">
-            <button
-              type="button"
-              className="partner-demo-pill"
-              onClick={() => handleFastTrackDemo('academy', '/academy-hub?academy=delhi-cricket-academy')}
-            >
-              Demo Academy: Delhi Cricket Academy
-            </button>
-            <button
-              type="button"
-              className="partner-demo-pill"
-              onClick={() => handleFastTrackDemo('coach', '/coach-dashboard?coach=zaheer-farooq-coach')}
-            >
-              Demo Coach: Coach Zaheer Farooq
-            </button>
-            <button
-              type="button"
-              className="partner-demo-pill"
-              onClick={() => handleFastTrackDemo('venue', '/turf-calendar?venue=sree-kanteerava-stadium')}
-            >
-              Demo Turf: Sree Kanteerava Arena
-            </button>
-            <button
-              type="button"
-              className="partner-demo-pill"
-              onClick={() => handleFastTrackDemo('tournament', '/tournament-ops')}
-            >
-              Demo Tournament Ops Suite
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   )

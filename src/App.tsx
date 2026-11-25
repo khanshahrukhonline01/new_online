@@ -207,10 +207,6 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
   useEffect(() => {
     const initialP = currentPath()
     setPath(initialP)
-    if (initialP === '/partner-signup' || initialP === '/partner-login' || initialP === '/academy/signup') {
-      setAuthModalTab('partner')
-      setAuthModalOpen(true)
-    }
     setHeaderQuery(new URLSearchParams(window.location.search).get('q') ?? '')
     setSearchQuery(new URLSearchParams(window.location.search).get('q') ?? '')
     const handlePopState = () => {
@@ -275,11 +271,6 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
     }
     if (nextPath === '/signup') {
       setAuthModalTab('signup')
-      setAuthModalOpen(true)
-      return
-    }
-    if (nextPath === '/partner-signup' || nextPath === '/partner-login' || nextPath === '/academy/signup') {
-      setAuthModalTab('partner')
       setAuthModalOpen(true)
       return
     }
@@ -400,7 +391,28 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
       else if (match.canonicalPath === '/book') page = <VenuesPage onOpenIntake={() => openListingSubmission('venue')} onNavigate={navigate} />
       else if (match.canonicalPath === '/train') page = <AcademiesPage onOpenIntake={() => openListingSubmission('academy')} onNavigate={navigate} />
       else if (match.canonicalPath === '/organizations' || match.canonicalPath === '/workspaces') page = <OrganizationsWorkspacePage onNavigate={navigate} />
-      else if (match.canonicalPath === '/partner-signup' || match.canonicalPath === '/partner/signup' || match.canonicalPath === '/partner/login') page = <PartnerOnboardingPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/partner-signup' || match.canonicalPath === '/partner/signup' || match.canonicalPath === '/partner/login') {
+        const searchParams = new URLSearchParams(locationSearch)
+        const modeParam = searchParams.get('mode') === 'login' || path === '/partner-login' || path === '/partner/login' ? 'login' : 'signup'
+        const rawRole = (searchParams.get('role') || '').toLowerCase()
+        const roleParam: 'academy' | 'coach' | 'venue' | 'tournament' =
+          rawRole === 'coach'
+            ? 'coach'
+            : rawRole === 'venue' || rawRole === 'turf' || rawRole === 'host'
+              ? 'venue'
+              : rawRole === 'tournament'
+                ? 'tournament'
+                : 'academy'
+        page = (
+          <PartnerOnboardingPage
+            key={`${path}:${locationSearch}`}
+            onNavigate={navigate}
+            initialMode={modeParam}
+            initialRole={roleParam}
+            onAuthSuccess={user => setAuthUser(user)}
+          />
+        )
+      }
       else if (match.canonicalPath === '/academy-hub' || match.canonicalPath === '/academies/manage') page = (
         <TenantProvider>
           <RequireTenantMember onNavigate={navigate}>
@@ -732,16 +744,21 @@ export default function App({ initialPath = '/' }: { initialPath?: string } = {}
             setAuthModalOpen(false)
             setAuthModalError(undefined)
           }}
-          onSuccess={user => {
+          onSuccess={(user, opts) => {
             setAuthUser(user)
             setAuthModalError(undefined)
-            // Intelligent 3-Tier Redirection based on registered user role
+            if (opts?.skipRedirect) return
+            // Redirect based on registered user role into unified WorkspaceShell
             if (user.role === 'academy') {
-              navigate(undefined, '/academy-hub')
-            } else if (user.role === 'host' || user.role === 'venue_owner') {
-              navigate(undefined, '/host')
+              navigate(undefined, '/workspace/academy/overview')
+            } else if (user.role === 'coach') {
+              navigate(undefined, '/workspace/coach/overview')
+            } else if (user.role === 'venue_owner') {
+              navigate(undefined, '/workspace/turf/calendar')
+            } else if (user.role === 'host') {
+              navigate(undefined, '/workspace/host/overview')
             } else if (user.role === 'athlete' || user.role === 'parent') {
-              navigate(undefined, '/dashboard')
+              navigate(undefined, '/workspace/athlete/overview')
             }
           }}
           onNavigate={navigate}

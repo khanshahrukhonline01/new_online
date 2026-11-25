@@ -64,7 +64,7 @@ const featurePages: Record<string, string> = {
   '/calendar': 'Sports Calendar', '/for-you': 'For You', '/trust': 'Trust Center',
   '/pricing': 'Pricing & Memberships', '/mobile-app': 'KhelGrid Mobile App', '/careers': 'Careers',
   '/academy-hub': 'Academy Admissions & Operations Hub', '/academies/manage': 'Academy Admissions & Operations Hub',
-  '/partner-signup': 'Partner Onboarding Wizard', '/academy/signup': 'Academy Admissions & Operations Hub',
+  '/partner-signup': 'Partner Onboarding Wizard', '/partner-login': 'Partner Onboarding Wizard', '/partner/signup': 'Partner Onboarding Wizard', '/partner/login': 'Partner Onboarding Wizard', '/partner/onboarding': 'Partner Onboarding Wizard', '/academy/signup': 'Partner Onboarding Wizard',
   '/workspace': 'KhelGrid Workspace',
   '/organizations': 'Organizations & Partner Workspaces', '/workspaces': 'Organizations & Partner Workspaces',
   '/parent-portal': 'Parent & Athlete Passbook', '/parent': 'Parent & Athlete Passbook', '/passbook': 'Parent & Athlete Passbook',
@@ -154,10 +154,17 @@ export function resolveRoute(pathname: string): RouteMatch {
       }
     }
   }
-  if (path === '/academy-hub' || path === '/academies/manage' || path === '/academy/signup') {
+  if (path === '/academy-hub' || path === '/academies/manage') {
     return { name: 'feature', canonicalPath: '/academy-hub', slug: 'Academy Admissions & Operations Hub' }
   }
-  if (path === '/partner-signup' || path === '/partner/signup' || path === '/partner/login') {
+  if (
+    path === '/partner-signup' ||
+    path === '/partner-login' ||
+    path === '/partner/signup' ||
+    path === '/partner/login' ||
+    path === '/partner/onboarding' ||
+    path === '/academy/signup'
+  ) {
     return { name: 'feature', canonicalPath: '/partner-signup', slug: 'Partner Onboarding Wizard' }
   }
   if (path === '/organizations' || path === '/workspaces') {
