@@ -41,4 +41,42 @@ describe('SpotlightSearchModal component', () => {
     expect(html).toContain('Academies')
     expect(html).toContain('Research')
   })
+
+  it('scopes sources and categories when activeHeaderPersona is set to academy', () => {
+    const html = renderToStaticMarkup(
+      <SpotlightSearchModal
+        isOpen={true}
+        onClose={vi.fn()}
+        initialQuery="Cricket"
+        activeHeaderPersona="academy"
+      />
+    )
+    expect(html).toContain('data-workspace-persona="academy"')
+    expect(html).toContain('Academy Workspace Scope')
+    expect(html).toContain('Academies')
+    expect(html).toContain('Coaches')
+    expect(html).toContain('Trials')
+    expect(html).toContain('Venues')
+    expect(html).not.toContain('>Research<')
+  })
+
+  it('scopes quick suggestions and categories when activeHeaderPersona is venue or creator', () => {
+    const venueHtml = renderToStaticMarkup(
+      <SpotlightSearchModal isOpen={true} onClose={vi.fn()} activeHeaderPersona="venue" />
+    )
+    expect(venueHtml).toContain('Venue Workspace Scope')
+    expect(venueHtml).toContain('Open Slot Calendar')
+    expect(venueHtml).not.toContain('Football Trials')
+
+    const creatorHtml = renderToStaticMarkup(
+      <SpotlightSearchModal
+        isOpen={true}
+        onClose={vi.fn()}
+        initialQuery="Brief"
+        activeHeaderPersona="creator"
+      />
+    )
+    expect(creatorHtml).toContain('Creator Workspace Scope')
+    expect(creatorHtml).toContain('Campaigns')
+  })
 })

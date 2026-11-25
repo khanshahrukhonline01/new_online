@@ -17,13 +17,14 @@ import {
   getCities,
   getAnnouncements,
   getCoaches,
+  getEvents,
   clearCatalogueCache as _clearPublicCatalogueCache,
   type CatalogueResult,
   type DatabaseAnnouncement,
   type DatabaseCity,
   type DatabasePickupGame,
 } from '../../integrations/supabase/public-client'
-import type { Academy, Coach, Opportunity, Sport, Venue } from '../domain'
+import type { Academy, Coach, EventItem, Opportunity, Sport, Venue } from '../domain'
 
 export { clearCatalogueCache } from '../../integrations/supabase/public-client'
 
@@ -97,6 +98,10 @@ export function getCachedAnnouncements(): Promise<CatalogueResult<DatabaseAnnoun
 
 export function getCachedCoaches(): Promise<CatalogueResult<Coach>> {
   return fetchWithDedup('coaches', getCoaches)
+}
+
+export function getCachedEvents(): Promise<CatalogueResult<EventItem>> {
+  return fetchWithDedup('events', getEvents)
 }
 
 export interface CatalogueData {

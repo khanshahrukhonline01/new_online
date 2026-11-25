@@ -1,18 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type KeyboardEvent } from 'react'
 import { SiteIcon } from './SiteIcon'
 import {
-  getCachedAcademies,
-  getCachedCities,
-  getCachedOpportunities,
-  getCachedPickupGames,
-  getCachedSports,
-  getCachedVenues,
-} from '../cache/catalogueQueryCache'
-import type { Academy, Opportunity, Sport, Venue } from '../../shared/domain'
-import type { DatabaseCity, DatabasePickupGame } from '../../integrations/supabase/public-client'
-import { RESEARCH_PAPERS } from '../../modules/khelchronicle/data/khelchronicleData'
-import { ALL_INDIAN_CITIES } from '../components/citiesData'
-import { VERIFIED_SPORTS } from '../sitemapGenerator'
+  ALL_SEARCH_CATEGORIES,
+  WorkspaceSearch,
+  type WorkspaceSearchCategory,
+  type WorkspaceSearchDatasets,
+} from '../../modules/workspace/WorkspaceSearch'
+import type { CanonicalWorkspaceId } from './workspaceHeaderEngine'
 import './SpotlightSearchModal.css'
 
 export interface SpotlightSearchModalProps {
@@ -20,59 +14,65 @@ export interface SpotlightSearchModalProps {
   onClose: () => void
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
   initialQuery?: string
+  activeHeaderPersona?: CanonicalWorkspaceId
 }
-
-interface SearchItem {
-  id: string
-  title: string
-  subtitle: string
-  category: 'sport' | 'trial' | 'venue' | 'city' | 'academy' | 'game' | 'paper'
-  categoryLabel: string
-  href: string
-  badge?: string
-  icon: string
-}
-
-const POPULAR_SEARCH_CHIPS = [
-  { label: '⚽ Football Trials', query: 'Football' },
-  { label: '🏸 Badminton Turfs', query: 'Badminton' },
-  { label: '🏏 Cricket Academies', query: 'Cricket' },
-  { label: '📍 Delhi Hub', query: 'Delhi' },
-  { label: '📍 Bengaluru Hub', query: 'Bengaluru' },
-  { label: '⚡ Pickleball Games', query: 'Pickleball' },
-  { label: '🥍 Lacrosse Sixes', query: 'Lacrosse' },
-  { label: '📋 Sports CV Wizard', href: '/sports-cv' },
-  { label: '📊 Live Match Center', href: '/live' },
-]
 
 export default function SpotlightSearchModal({
   isOpen,
   onClose,
   onNavigate,
   initialQuery = '',
+  activeHeaderPersona = 'athlete',
 }: SpotlightSearchModalProps) {
   const [query, setQuery] = useState(initialQuery)
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [selectedIndex, setSelectedIndex] = useState(0)
-
-  // Catalogues
-  const [sports, setSports] = useState<Sport[]>([])
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([])
-  const [venues, setVenues] = useState<Venue[]>([])
-  const [pickupGames, setPickupGames] = useState<DatabasePickupGame[]>([])
-  const [academies, setAcademies] = useState<Academy[]>([])
-  const [cities, setCities] = useState<DatabaseCity[]>([])
+  const [unscoped, setUnscoped] = useState(false)
+  const [datasets, setDatasets] = useState<WorkspaceSearchDatasets>({})
+  const [isLoadingScope, setIsLoadingScope] = useState(false)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const resultsContainerRef = useRef<HTMLDivElement>(null)
 
-  // Auto-focus and ESC listener
+  const profile = useMemo(
+    () => WorkspaceSearch.getProfile(activeHeaderPersona),
+    [activeHeaderPersona],
+  )
+
+  const activeSources = useMemo(
+    () => WorkspaceSearch.getAllowedSources(activeHeaderPersona, { unscoped }),
+    [activeHeaderPersona, unscoped],
+  )
+
+  const categoryOptions = useMemo(() => {
+    if (unscoped) return ALL_SEARCH_CATEGORIES
+    return profile.categoryLabels
+  }, [profile.categoryLabels, unscoped])
+
+  // Reset category and scope override when persona changes or modal opens
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 50)
-      setSelectedIndex(0)
+    setActiveCategory('all')
+    setSelectedIndex(0)
+  }, [activeHeaderPersona, unscoped])
+
+  // Auto-focus when opening & support Escape from any control inside dialog
+  useEffect(() => {
+    if (!isOpen) return
+    const timer = setTimeout(() => inputRef.current?.focus(), 50)
+    setSelectedIndex(0)
+
+    const onWindowKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
     }
-  }, [isOpen])
+    window.addEventListener('keydown', onWindowKeyDown)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('keydown', onWindowKeyDown)
+    }
+  }, [isOpen, onClose])
 
   // Sync initial query
   useEffect(() => {
@@ -81,163 +81,48 @@ export default function SpotlightSearchModal({
     }
   }, [initialQuery])
 
-  // Fetch catalogues in background
+  // Query ONLY the data sources permitted for activeHeaderPersona via WorkspaceSearch
   useEffect(() => {
+    if (!isOpen) return
     let active = true
+    setIsLoadingScope(true)
 
-    Promise.all([
-      getCachedSports(),
-      getCachedOpportunities(),
-      getCachedVenues(),
-      getCachedPickupGames(),
-      getCachedAcademies(),
-      getCachedCities(),
-    ]).then(([sRes, oRes, vRes, pRes, aRes, cRes]) => {
-      if (!active) return
-
-      if (sRes.status === 'ready') setSports(sRes.data)
-      if (oRes.status === 'ready') setOpportunities(oRes.data)
-      if (vRes.status === 'ready') setVenues(vRes.data)
-      if (pRes.status === 'ready') setPickupGames(pRes.data)
-      if (aRes.status === 'ready') setAcademies(aRes.data)
-      if (cRes.status === 'ready') setCities(cRes.data)
-    })
+    WorkspaceSearch.loadScopeDatasets(activeHeaderPersona, { unscoped })
+      .then(({ datasets: nextDatasets }) => {
+        if (!active) return
+        setDatasets(nextDatasets)
+      })
+      .finally(() => {
+        if (active) setIsLoadingScope(false)
+      })
 
     return () => {
       active = false
     }
-  }, [])
+  }, [isOpen, activeHeaderPersona, unscoped])
 
-  // Multi-entity search index
-  const allSearchItems: SearchItem[] = useMemo(() => {
-    const items: SearchItem[] = []
+  // Scoped Search Results via centralized WorkspaceSearch utility
+  const searchResult = useMemo(
+    () =>
+      WorkspaceSearch.searchSync({
+        persona: activeHeaderPersona,
+        query,
+        datasets,
+        category: activeCategory as WorkspaceSearchCategory | 'all',
+        limit: 30,
+        unscoped,
+      }),
+    [activeHeaderPersona, query, datasets, activeCategory, unscoped],
+  )
 
-    // 1. Sports
-    const sportList = sports.length > 0 ? sports : VERIFIED_SPORTS.map(s => ({
-      id: s,
-      slug: s,
-      name: s.charAt(0).toUpperCase() + s.slice(1).replace('-', ' '),
-    }))
+  const filteredResults = searchResult.items
 
-    sportList.forEach(s => {
-      items.push({
-        id: `sport-${s.slug}`,
-        title: s.name,
-        subtitle: 'Olympic & Competitive Sport Directory',
-        category: 'sport',
-        categoryLabel: 'Sport',
-        href: `/sports/${s.slug}`,
-        icon: 'sports',
-      })
-    })
-
-    // 2. Selection Trials
-    opportunities.forEach(opp => {
-      items.push({
-        id: `trial-${opp.id}`,
-        title: opp.title,
-        subtitle: `${opp.opportunity_type || 'Trial'} · ${opp.city || 'Pan-India'}`,
-        category: 'trial',
-        categoryLabel: 'Trial',
-        href: `/opportunities/${opp.slug}`,
-        badge: opp.is_featured ? 'Featured' : undefined,
-        icon: 'trophy',
-      })
-    })
-
-    // 3. Venues & Turfs
-    venues.forEach(v => {
-      items.push({
-        id: `venue-${v.id}`,
-        title: v.name,
-        subtitle: `${v.city}${v.address ? ` · ${v.address}` : ''}`,
-        category: 'venue',
-        categoryLabel: 'Venue',
-        href: `/venues/${v.slug}`,
-        badge: v.government_facility ? 'Govt Facility' : undefined,
-        icon: 'calendar-check',
-      })
-    })
-
-    // 4. City Hubs
-    const cityList = cities.length > 0 ? cities : ALL_INDIAN_CITIES.map(c => ({
-      slug: c.slug,
-      name: c.name,
-      state: c.state,
-      zone: c.zone,
-      is_metro: c.isMetro,
-      venues: c.venues,
-    }))
-
-    cityList.forEach(c => {
-      items.push({
-        id: `city-${c.slug}`,
-        title: `${c.name} Sports Hub`,
-        subtitle: `${c.state} · ${c.is_metro ? 'Premier Metro Hub' : 'Regional Sports City'}`,
-        category: 'city',
-        categoryLabel: 'City Hub',
-        href: `/cities/${c.slug}`,
-        badge: c.is_metro ? 'Metro' : undefined,
-        icon: 'map-pin',
-      })
-    })
-
-    // 5. Academies
-    academies.forEach(acad => {
-      items.push({
-        id: `academy-${acad.id}`,
-        title: acad.name,
-        subtitle: `${acad.city}${acad.state ? `, ${acad.state}` : ''}`,
-        category: 'academy',
-        categoryLabel: 'Academy',
-        href: `/academies?q=${encodeURIComponent(acad.name)}`,
-        icon: 'building',
-      })
-    })
-
-    // 6. Pickup Matches
-    pickupGames.forEach(g => {
-      items.push({
-        id: `pickup-${g.id}`,
-        title: `${g.emoji || '⚽'} ${g.sport} in ${g.city}`,
-        subtitle: `${g.venue_name} · ${g.time_label} (${g.spots_open} spots)`,
-        category: 'game',
-        categoryLabel: 'Pickup Match',
-        href: '/play',
-        icon: 'activity',
-      })
-    })
-
-    // 7. KhelChronicle Research Preprints
-    RESEARCH_PAPERS.forEach(paper => {
-      items.push({
-        id: `paper-${paper.id}`,
-        title: paper.title,
-        subtitle: `${paper.authors.join(', ')} · ${paper.category}`,
-        category: 'paper',
-        categoryLabel: 'Research',
-        href: `/khelchronicle/${paper.slug}`,
-        icon: 'book-open',
-      })
-    })
-
-    return items
-  }, [sports, opportunities, venues, cities, academies, pickupGames])
-
-  // Filtered Results
-  const filteredResults = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return []
-
-    return allSearchItems.filter(item => {
-      const matchCat = activeCategory === 'all' || item.category === activeCategory
-      const matchText =
-        item.title.toLowerCase().includes(q) ||
-        item.subtitle.toLowerCase().includes(q) ||
-        item.categoryLabel.toLowerCase().includes(q)
-      return matchCat && matchText
-    }).slice(0, 30)
-  }, [allSearchItems, query, activeCategory])
+  const fullSearchHref = useMemo(() => {
+    const params = new URLSearchParams()
+    if (query.trim()) params.set('q', query.trim())
+    if (!unscoped) params.set('persona', activeHeaderPersona)
+    return `/search?${params.toString()}`
+  }, [query, unscoped, activeHeaderPersona])
 
   // Keyboard navigation inside modal
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -253,7 +138,7 @@ export default function SpotlightSearchModal({
         const item = filteredResults[selectedIndex]
         executeNavigate(item.href)
       } else if (query.trim()) {
-        executeNavigate(`/search?q=${encodeURIComponent(query.trim())}`)
+        executeNavigate(fullSearchHref)
       }
     } else if (e.key === 'Escape') {
       e.preventDefault()
@@ -278,7 +163,6 @@ export default function SpotlightSearchModal({
     }
 
     if (onNavigate) {
-      // Fake event
       const fakeEvent = {
         preventDefault: () => {},
         metaKey: false,
@@ -294,6 +178,12 @@ export default function SpotlightSearchModal({
 
   if (!isOpen) return null
 
+  const formattedSources = activeSources
+    .filter(src => src !== 'workspace')
+    .slice(0, 5)
+    .map(src => src.charAt(0).toUpperCase() + src.slice(1))
+    .join(' · ')
+
   return (
     <div className="spotlight-overlay" role="presentation">
       <div className="spotlight-backdrop" onClick={onClose} aria-hidden="true" />
@@ -302,6 +192,8 @@ export default function SpotlightSearchModal({
         role="dialog"
         aria-modal="true"
         aria-label="Search KhelGrid catalogue"
+        data-workspace-persona={activeHeaderPersona}
+        data-workspace-scoped={unscoped ? 'false' : 'true'}
       >
         {/* Top Search Bar Input */}
         <div className="spotlight-input-bar">
@@ -310,7 +202,7 @@ export default function SpotlightSearchModal({
             ref={inputRef}
             type="search"
             className="spotlight-input"
-            placeholder="Search sports, trials, turfs, cities, academies, preprints…"
+            placeholder={unscoped ? 'Search all KhelGrid data sources…' : profile.placeholder}
             value={query}
             onChange={e => {
               setQuery(e.target.value)
@@ -338,6 +230,26 @@ export default function SpotlightSearchModal({
           )}
         </div>
 
+        {/* Workspace Scope Strip */}
+        <div className="spotlight-scope-bar" aria-label="Active workspace search scope">
+          <div className="spotlight-scope-meta">
+            <span className="spotlight-scope-badge">
+              <span className="spotlight-scope-dot" aria-hidden="true" />
+              {unscoped ? 'All KhelGrid Sources' : profile.scopeLabel}
+            </span>
+            <span className="spotlight-scope-sources">
+              {unscoped ? 'All modules & catalogues' : `Sources: ${formattedSources}`}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="spotlight-scope-toggle"
+            onClick={() => setUnscoped(prev => !prev)}
+          >
+            {unscoped ? `Scope to ${profile.label}` : 'Search all'}
+          </button>
+        </div>
+
         {/* Category Filters (when typing) */}
         {query.trim().length > 0 && (
           <nav className="spotlight-category-bar" aria-label="Filter search results by category">
@@ -348,48 +260,16 @@ export default function SpotlightSearchModal({
             >
               All
             </button>
-            <button
-              type="button"
-              className={`spotlight-cat-pill ${activeCategory === 'sport' ? 'is-active' : ''}`}
-              onClick={() => setActiveCategory('sport')}
-            >
-              Sports
-            </button>
-            <button
-              type="button"
-              className={`spotlight-cat-pill ${activeCategory === 'trial' ? 'is-active' : ''}`}
-              onClick={() => setActiveCategory('trial')}
-            >
-              Trials
-            </button>
-            <button
-              type="button"
-              className={`spotlight-cat-pill ${activeCategory === 'venue' ? 'is-active' : ''}`}
-              onClick={() => setActiveCategory('venue')}
-            >
-              Venues
-            </button>
-            <button
-              type="button"
-              className={`spotlight-cat-pill ${activeCategory === 'city' ? 'is-active' : ''}`}
-              onClick={() => setActiveCategory('city')}
-            >
-              Cities
-            </button>
-            <button
-              type="button"
-              className={`spotlight-cat-pill ${activeCategory === 'academy' ? 'is-active' : ''}`}
-              onClick={() => setActiveCategory('academy')}
-            >
-              Academies
-            </button>
-            <button
-              type="button"
-              className={`spotlight-cat-pill ${activeCategory === 'paper' ? 'is-active' : ''}`}
-              onClick={() => setActiveCategory('paper')}
-            >
-              Research
-            </button>
+            {categoryOptions.map(cat => (
+              <button
+                key={cat.id}
+                type="button"
+                className={`spotlight-cat-pill ${activeCategory === cat.id ? 'is-active' : ''}`}
+                onClick={() => setActiveCategory(cat.id)}
+              >
+                {cat.label}
+              </button>
+            ))}
           </nav>
         )}
 
@@ -397,9 +277,13 @@ export default function SpotlightSearchModal({
         <div ref={resultsContainerRef} className="spotlight-results-container">
           {!query.trim() ? (
             <div className="spotlight-suggestions">
-              <p className="spotlight-section-heading">POPULAR &amp; TRENDING DISCOVERY</p>
+              <p className="spotlight-section-heading">
+                {activeHeaderPersona === 'athlete' && !unscoped
+                  ? 'POPULAR & TRENDING DISCOVERY'
+                  : `${profile.label.toUpperCase()} WORKSPACE QUICK SEARCH`}
+              </p>
               <div className="spotlight-chips-grid">
-                {POPULAR_SEARCH_CHIPS.map(chip => (
+                {profile.quickChips.map(chip => (
                   <button
                     key={chip.label}
                     type="button"
@@ -422,16 +306,35 @@ export default function SpotlightSearchModal({
           ) : filteredResults.length === 0 ? (
             <div className="spotlight-empty-state">
               <SiteIcon name="search" size={28} />
-              <h3>No exact match found for “{query.trim()}”</h3>
-              <p>Search across the full database catalogue or adjust your search keywords.</p>
-              <button
-                type="button"
-                className="spotlight-full-search-btn"
-                onClick={() => executeNavigate(`/search?q=${encodeURIComponent(query.trim())}`)}
-              >
-                <span>Search full catalogue for “{query.trim()}”</span>
-                <SiteIcon name="arrow-up-right" size={14} />
-              </button>
+              <h3>
+                {isLoadingScope
+                  ? `Searching ${profile.label.toLowerCase()} workspace sources…`
+                  : `No exact match found for “${query.trim()}”`}
+              </h3>
+              <p>
+                {unscoped
+                  ? 'Search across the full database catalogue or adjust your search keywords.'
+                  : `Currently scoped to ${profile.label} sources (${formattedSources}). Adjust keywords or broaden your scope.`}
+              </p>
+              <div className="spotlight-empty-actions">
+                {!unscoped && (
+                  <button
+                    type="button"
+                    className="spotlight-secondary-scope-btn"
+                    onClick={() => setUnscoped(true)}
+                  >
+                    Search all KhelGrid instead
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="spotlight-full-search-btn"
+                  onClick={() => executeNavigate(fullSearchHref)}
+                >
+                  <span>Search full catalogue for “{query.trim()}”</span>
+                  <SiteIcon name="arrow-up-right" size={14} />
+                </button>
+              </div>
             </div>
           ) : (
             <ul className="spotlight-results-list" role="listbox">
@@ -486,7 +389,7 @@ export default function SpotlightSearchModal({
             <button
               type="button"
               className="spotlight-footer-view-all"
-              onClick={() => executeNavigate(`/search?q=${encodeURIComponent(query.trim())}`)}
+              onClick={() => executeNavigate(fullSearchHref)}
             >
               <span>Full catalogue search</span>
               <SiteIcon name="chevron-right" size={12} />

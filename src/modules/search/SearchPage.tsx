@@ -1,36 +1,59 @@
 import { useMemo, useState, useEffect } from 'react'
-import {
-  getAcademies,
-  getCities,
-  getCoaches,
-  getEvents,
-  getOpportunities,
-  getPickupGames,
-  getSports,
-  getVenues,
-} from '../../integrations/supabase/public-client'
-import type { CatalogueResult, DatabaseCity, DatabasePickupGame } from '../../integrations/supabase/public-client'
-import { getChroniclePapers } from '../../integrations/supabase/chronicle-client'
-import type { ChronicleCatalogueResult } from '../../integrations/supabase/chronicle-client'
-import type { ResearchPaper } from '../khelchronicle/data/khelchronicleData'
-import type { Academy, Coach, EventItem, Opportunity, Sport, Venue } from '../../shared/domain'
 import { AsyncState } from '../../shared/components/AsyncState'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { CatalogueEmptyState, CatalogueFilterPanel, CatalogueActiveChips } from '../../shared/components/CatalogueFilterPanel'
+import type { CanonicalWorkspaceId } from '../../shared/components/workspaceHeaderEngine'
+import { CANONICAL_WORKSPACES } from '../../shared/components/workspaceHeaderEngine'
+import {
+  WorkspaceSearch,
+  type WorkspaceSearchCategory,
+  type WorkspaceSearchDatasets,
+  type WorkspaceSearchSource,
+} from '../workspace/WorkspaceSearch'
 
 type SearchRecord = {
-  type: 'Sport' | 'Opportunity' | 'Venue' | 'Academy' | 'Coach' | 'Event' | 'Research' | 'City' | 'Pickup'
+  type: 'Sport' | 'Opportunity' | 'Venue' | 'Academy' | 'Coach' | 'Event' | 'Research' | 'City' | 'Pickup' | 'Campaign' | 'Workspace'
   title: string
   detail: string
   href: string
   keywords?: string[]
 }
 
-export default function SearchPage({ initialQuery = '' }: { initialQuery?: string }) {
+const CATEGORY_TO_RECORD_TYPE: Record<WorkspaceSearchCategory, SearchRecord['type']> = {
+  sport: 'Sport',
+  trial: 'Opportunity',
+  venue: 'Venue',
+  academy: 'Academy',
+  coach: 'Coach',
+  event: 'Event',
+  paper: 'Research',
+  city: 'City',
+  game: 'Pickup',
+  campaign: 'Campaign',
+  workspace: 'Workspace',
+}
+
+function isCanonicalWorkspaceId(value: string | null): value is CanonicalWorkspaceId {
+  return Boolean(value && CANONICAL_WORKSPACES.some(w => w.id === value))
+}
+
+export default function SearchPage({
+  initialQuery = '',
+  activeHeaderPersona,
+}: {
+  initialQuery?: string
+  activeHeaderPersona?: CanonicalWorkspaceId
+}) {
   const params = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search)
   const [query, setQuery] = useState(params.get('q') ?? initialQuery)
   const [category, setCategory] = useState(params.get('category') ?? '')
   const [sort, setSort] = useState(params.get('sort') ?? 'relevance')
+  const personaParam = params.get('persona')
+  const resolvedPersona: CanonicalWorkspaceId | undefined = isCanonicalWorkspaceId(personaParam)
+    ? personaParam
+    : activeHeaderPersona
+  const [unscoped, setUnscoped] = useState(!resolvedPersona)
+
   const sportParam = params.get('sport')
   const cityParam = params.get('city')
   const filterSport = sportParam && !sportParam.toLowerCase().includes('all') ? sportParam.toLowerCase() : ''
@@ -42,175 +65,60 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
     }
   }, [initialQuery])
 
-  const [sports, setSports] = useState<CatalogueResult<Sport> | { status: 'loading'; data: [] }>({
-    status: 'loading',
-    data: [],
-  })
-  const [opportunities, setOpportunities] = useState<CatalogueResult<Opportunity> | { status: 'loading'; data: [] }>({
-    status: 'loading',
-    data: [],
-  })
-  const [venues, setVenues] = useState<CatalogueResult<Venue> | { status: 'loading'; data: [] }>({
-    status: 'loading',
-    data: [],
-  })
-  const [academies, setAcademies] = useState<CatalogueResult<Academy> | { status: 'loading'; data: [] }>({
-    status: 'loading',
-    data: [],
-  })
-  const [coaches, setCoaches] = useState<CatalogueResult<Coach> | { status: 'loading'; data: [] }>({
-    status: 'loading',
-    data: [],
-  })
-  const [events, setEvents] = useState<CatalogueResult<EventItem> | { status: 'loading'; data: [] }>({
-    status: 'loading',
-    data: [],
-  })
-  const [chroniclePapers, setChroniclePapers] = useState<
-    ChronicleCatalogueResult<ResearchPaper[]> | { status: 'loading'; data: [] }
-  >({
-    status: 'loading',
-    data: [],
-  })
-  const [cities, setCities] = useState<CatalogueResult<DatabaseCity> | { status: 'loading'; data: [] }>({
-    status: 'loading',
-    data: [],
-  })
-  const [pickupGames, setPickupGames] = useState<
-    CatalogueResult<DatabasePickupGame> | { status: 'loading'; data: [] }
-  >({
-    status: 'loading',
-    data: [],
-  })
+  useEffect(() => {
+    setUnscoped(!resolvedPersona)
+    setCategory('')
+  }, [resolvedPersona])
 
+  const effectivePersona: CanonicalWorkspaceId = resolvedPersona ?? 'athlete'
+  const searchProfile = useMemo(
+    () => WorkspaceSearch.getProfile(effectivePersona),
+    [effectivePersona],
+  )
+  const activeSources = useMemo<readonly WorkspaceSearchSource[]>(
+    () => WorkspaceSearch.getAllowedSources(effectivePersona, { unscoped }),
+    [effectivePersona, unscoped],
+  )
+
+  const [datasets, setDatasets] = useState<WorkspaceSearchDatasets>({})
+  const [loadStatus, setLoadStatus] = useState<'loading' | 'ready'>('loading')
+
+  // Query ONLY the data sources permitted by activeSources via centralized WorkspaceSearch
   useEffect(() => {
     let active = true
-    Promise.all([
-      getSports(),
-      getOpportunities(),
-      getVenues(),
-      getAcademies(),
-      getCoaches(),
-      getEvents(),
-      getChroniclePapers(),
-      getCities(),
-      getPickupGames(),
-    ]).then(([s, o, v, a, c, e, cp, ci, pg]) => {
-      if (active) {
-        setSports(s)
-        setOpportunities(o)
-        setVenues(v)
-        setAcademies(a)
-        setCoaches(c)
-        setEvents(e)
-        setChroniclePapers(cp)
-        setCities(ci)
-        setPickupGames(pg)
-      }
-    })
+    setLoadStatus('loading')
+    WorkspaceSearch.loadScopeDatasets(effectivePersona, { unscoped })
+      .then(({ datasets: nextDatasets }) => {
+        if (!active) return
+        setDatasets(nextDatasets)
+        setLoadStatus('ready')
+      })
+      .catch(() => {
+        if (!active) return
+        setDatasets({})
+        setLoadStatus('ready')
+      })
     return () => {
       active = false
     }
-  }, [])
+  }, [effectivePersona, unscoped])
 
-  const records = useMemo<SearchRecord[]>(
-    () => [
-      ...(sports.status === 'ready'
-        ? sports.data.map(item => ({
-            type: 'Sport' as const,
-            title: item.name,
-            detail: 'Sports directory',
-            href: `/sports/${encodeURIComponent(item.slug)}`,
-          }))
-        : []),
-      ...(opportunities.status === 'ready'
-        ? opportunities.data.map(item => ({
-            type: 'Opportunity' as const,
-            title: item.title,
-            detail: [item.organizer_name, item.city].filter(Boolean).join(' · ') || 'Opportunity details',
-            href: `/opportunities/${encodeURIComponent(item.slug)}`,
-            keywords: [
-              item.opportunity_type,
-              item.city || '',
-              item.venue_name || '',
-              item.organizer_name || '',
-              item.age_category || '',
-              item.registration_fee === 0 ? 'free' : '',
-              item.available_spots ? `${item.available_spots} spots` : '',
-            ].filter(Boolean),
-          }))
-        : []),
-      ...(venues.status === 'ready'
-        ? venues.data.map(item => ({
-            type: 'Venue' as const,
-            title: item.name,
-            detail: item.city,
-            href: `/venues/${encodeURIComponent(item.slug)}`,
-          }))
-        : []),
-      ...(academies.status === 'ready'
-        ? academies.data.map(item => ({
-            type: 'Academy' as const,
-            title: item.name,
-            detail: [item.city, item.state].filter(Boolean).join(', ') || 'Sports academy',
-            href: `/academies?q=${encodeURIComponent(item.name)}`,
-          }))
-        : []),
-      ...(coaches.status === 'ready'
-        ? coaches.data.map(item => ({
-            type: 'Coach' as const,
-            title: item.display_name,
-            detail: [item.city, item.state].filter(Boolean).join(', ') || 'Coach profile',
-            href: `/coaches?q=${encodeURIComponent(item.display_name)}`,
-          }))
-        : []),
-      ...(events.status === 'ready'
-        ? events.data.map(item => ({
-            type: 'Event' as const,
-            title: item.title,
-            detail: [item.organizer_name, item.city].filter(Boolean).join(' · ') || 'Sports event',
-            href: `/events?q=${encodeURIComponent(item.title)}`,
-          }))
-        : []),
-      ...(chroniclePapers.status === 'ready'
-        ? chroniclePapers.data.map(p => ({
-            type: 'Research' as const,
-            title: p.title,
-            detail: `${p.categoryName || p.category} · ${p.authors.map(a => a.name).join(', ')} · ${p.paperId}`,
-            href: `/khelchronicle/${encodeURIComponent(p.slug)}`,
-            keywords: [
-              p.paperId,
-              p.category,
-              p.categoryName || '',
-              ...(p.keywords || []),
-              ...(p.abstract ? [p.abstract.results, p.abstract.background, p.abstract.methods, p.abstract.conclusion] : []),
-            ],
-          }))
-        : []),
-      ...(cities.status === 'ready'
-        ? cities.data.map(item => ({
-            type: 'City' as const,
-            title: `${item.name}, ${item.state}`,
-            detail: `${item.zone} India · ${item.venues?.length || 0} sports venues & grounds`,
-            href: `/venues?city=${encodeURIComponent(item.name)}`,
-            keywords: [item.name, item.state, item.zone, ...(item.venues || [])],
-          }))
-        : []),
-      ...(pickupGames.status === 'ready'
-        ? pickupGames.data.map(item => ({
-            type: 'Pickup' as const,
-            title: `${item.sport} Pickup Match · ${item.venue_name}`,
-            detail: `${item.city} · ${item.time_label} · ${item.spots_open} spots open · ${item.price_per_player}`,
-            href: '/play',
-            keywords: [item.sport, item.venue_name, item.city, item.skill_level, item.host_name, 'pickup', 'game', 'play'],
-          }))
-        : []),
-    ],
-    [sports, opportunities, venues, academies, coaches, events, chroniclePapers, cities, pickupGames],
-  )
+  const records = useMemo<SearchRecord[]>(() => {
+    if (loadStatus !== 'ready') return []
+    const items = WorkspaceSearch.buildScopedSearchIndex(effectivePersona, datasets, { unscoped })
+    return items
+      .filter(item => item.source !== 'workspace')
+      .map(item => ({
+        type: CATEGORY_TO_RECORD_TYPE[item.category],
+        title: item.title,
+        detail: item.subtitle,
+        href: item.href,
+        keywords: item.keywords,
+      }))
+  }, [loadStatus, effectivePersona, datasets, unscoped])
 
-  const ready = [sports, opportunities, venues, academies, coaches, events, chroniclePapers, cities, pickupGames].some(result => result.status === 'ready')
-  const pending = [sports, opportunities, venues, academies, coaches, events, chroniclePapers, cities, pickupGames].some(result => result.status === 'loading')
+  const ready = loadStatus === 'ready'
+  const pending = loadStatus === 'loading'
 
   const q = query.trim().toLocaleLowerCase()
   const results = useMemo(
@@ -238,13 +146,35 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
     setSort('relevance')
   }
 
+  const allowedTypeOptions = useMemo(() => {
+    if (unscoped) {
+      return ['Sport', 'Opportunity', 'Venue', 'Academy', 'Coach', 'Event', 'Research', 'City', 'Pickup']
+    }
+    const map: Record<WorkspaceSearchSource, SearchRecord['type'] | null> = {
+      sports: 'Sport',
+      trials: 'Opportunity',
+      venues: 'Venue',
+      academies: 'Academy',
+      coaches: 'Coach',
+      events: 'Event',
+      papers: 'Research',
+      cities: 'City',
+      games: 'Pickup',
+      campaigns: 'Campaign',
+      workspace: null,
+    }
+    return activeSources
+      .map(s => map[s])
+      .filter((val): val is SearchRecord['type'] => Boolean(val))
+  }, [activeSources, unscoped])
+
   const fields = [
     {
       key: 'category',
       label: 'Content type',
       value: category,
       onChange: setCategory,
-      options: ['Sport', 'Opportunity', 'Venue', 'Academy', 'Coach', 'Event', 'Research', 'City', 'Pickup'].map(value => ({
+      options: allowedTypeOptions.map(value => ({
         value: value.toLocaleLowerCase(),
         label: value === 'Research' ? 'Research (KhelChronicle)' : value === 'Pickup' ? 'Pickup Games' : value,
       })),
@@ -255,12 +185,34 @@ export default function SearchPage({ initialQuery = '' }: { initialQuery?: strin
 
   return (
     <section className="content-page">
-      <p className="eyebrow">DISCOVER</p>
+      <p className="eyebrow">{unscoped ? 'DISCOVER' : searchProfile.scopeLabel.toUpperCase()}</p>
       <h1>Search KhelGrid.</h1>
       <p className="page-intro">
-        Search published sports, opportunities, venues, academies, coaches, events and sports science research preprints. Results come from the connected
-        catalogue, not sample listings.
+        {unscoped
+          ? 'Search published sports, opportunities, venues, academies, coaches, events and sports science research preprints. Results come from the connected catalogue, not sample listings.'
+          : `${searchProfile.description}. Results come directly from connected workspace data sources.`}
       </p>
+      {resolvedPersona && (
+        <div
+          className="kg-search-scope-banner"
+          role="region"
+          aria-label="Workspace search scope"
+        >
+          <span className="kg-search-scope-label">
+            <span className="kg-search-scope-dot" aria-hidden="true" />
+            {unscoped
+              ? 'Showing results across all KhelGrid data sources'
+              : `Scoped to ${searchProfile.label} Workspace (${activeSources.filter(s => s !== 'workspace').join(', ')})`}
+          </span>
+          <button
+            type="button"
+            className="kg-search-scope-btn"
+            onClick={() => setUnscoped(prev => !prev)}
+          >
+            {unscoped ? `Scope to ${searchProfile.label}` : 'Search all KhelGrid'}
+          </button>
+        </div>
+      )}
       <div className="kg-catalogue-layout kg-no-filter-fields">
         <CatalogueFilterPanel
           search={query}

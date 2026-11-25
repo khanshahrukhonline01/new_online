@@ -867,3 +867,76 @@
   color: var(--muted-strong);
   font-size: 0.875rem;
 }
+
+/* Search Page Workspace Scope Banner */
+.foundation-v1 .kg-search-scope-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin: 0 0 20px;
+  padding: 10px 14px;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 12px;
+  background: var(--surface-soft, #f8fafc);
+  font-size: 12.5px;
+  color: var(--text-soft, #334155);
+}
+
+.foundation-v1 .kg-search-scope-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 650;
+}
+
+.foundation-v1 .kg-search-scope-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--kg-emerald, #10b981);
+  flex: 0 0 8px;
+}
+
+.foundation-v1 .kg-search-scope-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong, #cbd5e1);
+  border-radius: 8px;
+  background: var(--surface, #ffffff);
+  color: var(--text, #0f172a);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.foundation-v1 .kg-search-scope-btn:hover {
+  border-color: var(--accent, #07964f);
+  color: var(--accent, #07964f);
+  background: var(--accent-soft, #ecfdf5);
+}
+
+html.dark .foundation-v1 .kg-search-scope-banner {
+  background: #111a28;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+html.dark .foundation-v1 .kg-search-scope-btn {
+  background: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+html.dark .foundation-v1 .kg-search-scope-btn:hover {
+  border-color: #10b981;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+}
+
