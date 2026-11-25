@@ -65,6 +65,7 @@ describe('WorkspaceShell', () => {
     expect(html).toContain('Overview')
     expect(html).toContain('Batches')
     expect(html).toContain('Coaches')
-    expect(html).toContain('kg-kpi-strip')\n    expect(html).toContain('Verifying workspace access')
+    expect(html).toContain('kg-kpi-strip')
+    expect(html).toContain('Verifying workspace access')
   })
 })
