@@ -391,24 +391,51 @@ export function createSeedWorkspaceState(): SaaSWorkspaceState {
   }
 }
 
+/**
+ * Returns an honest, empty multi-tenant SaaS workspace scoped to the authenticated
+ * session (or guest identity) without inventing seeded organizations or memberships.
+ */
+export function createEmptyWorkspaceState(
+  authUser: ReturnType<typeof getStoredAuthUser> = getStoredAuthUser()
+): SaaSWorkspaceState {
+  return {
+    currentUserId: authUser?.id || 'guest',
+    currentUserName: authUser?.fullName || authUser?.name || 'Guest User',
+    currentUserEmail: authUser?.email || '',
+    activeContext: { kind: 'personal' },
+    organizations: [],
+    memberships: [],
+    invitations: [],
+    units: [],
+    resources: [],
+    subscriptions: [],
+    overrides: [],
+    usageBySubject: {},
+    auditLogs: [],
+    storageMode: 'local_sandbox',
+  }
+}
+
 export function loadWorkspaceState(): SaaSWorkspaceState {
+  const authUser = getStoredAuthUser()
   if (typeof window === 'undefined' || !window.localStorage) {
-    return createSeedWorkspaceState()
+    return createEmptyWorkspaceState(authUser)
   }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) {
-      const seed = createSeedWorkspaceState()
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seed))
-      return seed
+      return createEmptyWorkspaceState(authUser)
     }
     const parsed = JSON.parse(raw) as SaaSWorkspaceState
     if (!parsed || !Array.isArray(parsed.organizations)) {
-      return createSeedWorkspaceState()
+      return createEmptyWorkspaceState(authUser)
+    }
+    if (authUser && parsed.currentUserId === 'usr-athlete-demo-01' && authUser.id !== 'usr-athlete-demo-01') {
+      return createEmptyWorkspaceState(authUser)
     }
     return parsed
   } catch {
-    return createSeedWorkspaceState()
+    return createEmptyWorkspaceState(authUser)
   }
 }
 

@@ -1,5 +1,6 @@
-import { useState, type MouseEvent, type FormEvent } from 'react'
+import { useEffect, useState, type MouseEvent, type FormEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { WorkspaceDetailDrawer } from '../../shared/components/ui/WorkspaceDetailDrawer'
 import {
   getTournamentBracket,
   generateTournamentBracket,
@@ -11,24 +12,35 @@ import {
   generateWhatsAppCertificateUrl,
   getRegisteredSquads,
   bookVenueSlotForTournamentMatch,
+  resolveTournamentTabForSection,
   SAMPLE_SQUAD_ROSTER,
   type TournamentBracketNode,
   type LiveScorerState,
   type TournamentCertificate,
   type RegisteredAcademySquad,
+  type TournamentTab,
 } from './tournamentOpsEngine'
 import './TournamentOpsPage.css'
 
 export interface TournamentOpsPageProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
+  workspaceSection?: string
 }
 
-export default function TournamentOpsPage({ onNavigate }: TournamentOpsPageProps) {
+export default function TournamentOpsPage({ onNavigate, workspaceSection }: TournamentOpsPageProps) {
   const [selectedTournamentId] = useState('tour-national-u16-2026')
   const [refreshKey, setRefreshKey] = useState(0)
   const triggerRefresh = () => setRefreshKey(k => k + 1)
 
-  const [activeTab, setActiveTab] = useState<'brackets' | 'squad-audit' | 'scorer' | 'certificates'>('brackets')
+  const [activeTab, setActiveTab] = useState<TournamentTab>(() =>
+    resolveTournamentTabForSection(workspaceSection)
+  )
+
+  useEffect(() => {
+    if (workspaceSection) {
+      setActiveTab(resolveTournamentTabForSection(workspaceSection))
+    }
+  }, [workspaceSection])
 
   // Data
   const matches: TournamentBracketNode[] = getTournamentBracket(selectedTournamentId)
@@ -796,157 +808,135 @@ export default function TournamentOpsPage({ onNavigate }: TournamentOpsPageProps
         </div>
       )}
 
-      {/* MODAL: GENERATE BRACKET */}
-      {isGenerateBracketModalOpen && (
-        <div className="coach-modal-backdrop" onClick={() => setIsGenerateBracketModalOpen(false)}>
-          <div className="coach-modal-card" onClick={e => e.stopPropagation()}>
-            <div className="coach-modal-header">
-              <h3>Tournament Format &amp; Fixture Wizard</h3>
-              <button
-                type="button"
-                className="coach-modal-close-btn"
-                onClick={() => setIsGenerateBracketModalOpen(false)}
+      <WorkspaceDetailDrawer
+        open={isGenerateBracketModalOpen}
+        onClose={() => setIsGenerateBracketModalOpen(false)}
+        title="Tournament Format & Fixture Wizard"
+      >
+        <form onSubmit={handleGenerateBracketSubmit} className="coach-modal-form">
+          <div className="coach-modal-row">
+            <div className="coach-modal-field">
+              <label>Tournament Format</label>
+              <select
+                value={bracketFormat}
+                onChange={e => setBracketFormat(e.target.value as 'single_elimination' | 'round_robin_knockout')}
               >
-                <SiteIcon name="close" size={16} />
-              </button>
+                <option value="single_elimination">Single Elimination (Knockout)</option>
+                <option value="round_robin_knockout">Round Robin Groups + Knockouts</option>
+              </select>
             </div>
-            <form onSubmit={handleGenerateBracketSubmit} className="coach-modal-form">
-              <div className="coach-modal-row">
-                <div className="coach-modal-field">
-                  <label>Tournament Format</label>
-                  <select
-                    value={bracketFormat}
-                    onChange={e => setBracketFormat(e.target.value as 'single_elimination' | 'round_robin_knockout')}
-                  >
-                    <option value="single_elimination">Single Elimination (Knockout)</option>
-                    <option value="round_robin_knockout">Round Robin Groups + Knockouts</option>
-                  </select>
-                </div>
-                <div className="coach-modal-field">
-                  <label>Team Bracket Size</label>
-                  <select
-                    value={bracketTeamCount}
-                    onChange={e => setBracketTeamCount(e.target.value as '4' | '8')}
-                  >
-                    <option value="4">4 Teams (2 Semis + Final)</option>
-                    <option value="8">8 Teams (4 QFs + 2 Semis + Final)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="coach-modal-field">
-                <label>Participating Teams (1 per line)</label>
-                <textarea
-                  rows={6}
-                  required
-                  value={bracketTeamsInput}
-                  onChange={e => setBracketTeamsInput(e.target.value)}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '1rem', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  className="coach-hub-btn-outline"
-                  onClick={() => setIsGenerateBracketModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="coach-primary-btn">
-                  Generate Fixtures Tree
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: ISSUE TOURNAMENT CERTIFICATE */}
-      {isIssueCertModalOpen && (
-        <div className="coach-modal-backdrop" onClick={() => setIsIssueCertModalOpen(false)}>
-          <div className="coach-modal-card" onClick={e => e.stopPropagation()}>
-            <div className="coach-modal-header">
-              <h3>Issue Verifiable Tournament Certificate</h3>
-              <button
-                type="button"
-                className="coach-modal-close-btn"
-                onClick={() => setIsIssueCertModalOpen(false)}
+            <div className="coach-modal-field">
+              <label>Team Bracket Size</label>
+              <select
+                value={bracketTeamCount}
+                onChange={e => setBracketTeamCount(e.target.value as '4' | '8')}
               >
-                <SiteIcon name="close" size={16} />
-              </button>
+                <option value="4">4 Teams (2 Semis + Final)</option>
+                <option value="8">8 Teams (4 QFs + 2 Semis + Final)</option>
+              </select>
             </div>
-            <form onSubmit={handleIssueCertSubmit} className="coach-modal-form">
-              <div className="coach-modal-row">
-                <div className="coach-modal-field">
-                  <label>Athlete Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={certAthlete}
-                    onChange={e => setCertAthlete(e.target.value)}
-                  />
-                </div>
-                <div className="coach-modal-field">
-                  <label>Team Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={certTeam}
-                    onChange={e => setCertTeam(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="coach-modal-row">
-                <div className="coach-modal-field">
-                  <label>Sport</label>
-                  <input
-                    type="text"
-                    required
-                    value={certSport}
-                    onChange={e => setCertSport(e.target.value)}
-                  />
-                </div>
-                <div className="coach-modal-field">
-                  <label>Achievement / Merit Level</label>
-                  <select
-                    value={certRole}
-                    onChange={e => setCertRole(e.target.value as TournamentCertificate['achievementRole'])}
-                  >
-                    <option value="Champion Winner">Champion Winner (Gold Medal)</option>
-                    <option value="Runner-Up Finalist">Runner-Up Finalist (Silver Medal)</option>
-                    <option value="Player of the Tournament">Player of the Tournament (MVP)</option>
-                    <option value="Verified Participant">Verified Participant</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="coach-modal-field">
-                <label>Issuing Sports Authority</label>
-                <input
-                  type="text"
-                  required
-                  value={certAuthority}
-                  onChange={e => setCertAuthority(e.target.value)}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '1rem', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  className="coach-hub-btn-outline"
-                  onClick={() => setIsIssueCertModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="coach-primary-btn">
-                  Publish Certificate Now
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+
+          <div className="coach-modal-field">
+            <label>Participating Teams (1 per line)</label>
+            <textarea
+              rows={6}
+              required
+              value={bracketTeamsInput}
+              onChange={e => setBracketTeamsInput(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', marginTop: '1rem', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              className="coach-hub-btn-outline"
+              onClick={() => setIsGenerateBracketModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="coach-primary-btn">
+              Generate Fixtures Tree
+            </button>
+          </div>
+        </form>
+      </WorkspaceDetailDrawer>
+
+      <WorkspaceDetailDrawer
+        open={isIssueCertModalOpen}
+        onClose={() => setIsIssueCertModalOpen(false)}
+        title="Issue Verifiable Tournament Certificate"
+      >
+        <form onSubmit={handleIssueCertSubmit} className="coach-modal-form">
+          <div className="coach-modal-row">
+            <div className="coach-modal-field">
+              <label>Athlete Name</label>
+              <input
+                type="text"
+                required
+                value={certAthlete}
+                onChange={e => setCertAthlete(e.target.value)}
+              />
+            </div>
+            <div className="coach-modal-field">
+              <label>Team Name</label>
+              <input
+                type="text"
+                required
+                value={certTeam}
+                onChange={e => setCertTeam(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="coach-modal-row">
+            <div className="coach-modal-field">
+              <label>Sport</label>
+              <input
+                type="text"
+                required
+                value={certSport}
+                onChange={e => setCertSport(e.target.value)}
+              />
+            </div>
+            <div className="coach-modal-field">
+              <label>Achievement / Merit Level</label>
+              <select
+                value={certRole}
+                onChange={e => setCertRole(e.target.value as TournamentCertificate['achievementRole'])}
+              >
+                <option value="Champion Winner">Champion Winner (Gold Medal)</option>
+                <option value="Runner-Up Finalist">Runner-Up Finalist (Silver Medal)</option>
+                <option value="Player of the Tournament">Player of the Tournament (MVP)</option>
+                <option value="Verified Participant">Verified Participant</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="coach-modal-field">
+            <label>Issuing Sports Authority</label>
+            <input
+              type="text"
+              required
+              value={certAuthority}
+              onChange={e => setCertAuthority(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', marginTop: '1rem', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              className="coach-hub-btn-outline"
+              onClick={() => setIsIssueCertModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="coach-primary-btn">
+              Publish Certificate Now
+            </button>
+          </div>
+        </form>
+      </WorkspaceDetailDrawer>
     </div>
   )
 }

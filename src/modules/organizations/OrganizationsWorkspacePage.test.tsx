@@ -19,5 +19,17 @@ describe('OrganizationsWorkspacePage', () => {
     expect(html).toContain('Permissions &amp; Ownership')
     expect(html).toContain('Entitlements &amp; Metering')
     expect(html).toContain('Branches, Matrix &amp; Audit')
+    expect(html).toContain('No linked organizations yet')
+    expect(html).not.toContain('NCR Elite Cricket Academy')
+  })
+
+  it('wires workspaceSection props directly to matching organization workspace tabs', () => {
+    const membersHtml = renderToStaticMarkup(<OrganizationsWorkspacePage workspaceSection="members" />)
+    expect(membersHtml).toContain('Organization Members &amp; Anti-Escalation RBAC')
+    expect(membersHtml).toContain('Invite Organization Member')
+
+    const branchesHtml = renderToStaticMarkup(<OrganizationsWorkspacePage workspaceSection="branches" />)
+    expect(branchesHtml).toContain('Organization Units (Branches, Teams &amp; Facilities)')
+    expect(branchesHtml).toContain('30-Module Platform SaaS Adoption Matrix')
   })
 })

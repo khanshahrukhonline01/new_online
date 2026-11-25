@@ -337,20 +337,32 @@ function PersonaContent({ persona, section, onOpenAuth, onNavigate }: {
       return <LazyDashboard onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
     case 'academy':
       return (
-        <RequireTenantMember onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Academy" onboardingRole="academy" onNavigate={handleStrictNav}>
           <LazyAcademyHub workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'coach':
       return <LazyCoachDashboard workspaceSection={section} onNavigate={handleStrictNav} />
     case 'turf':
-      return <LazyTurfCalendar onNavigate={handleStrictNav} />
+      return (
+        <RequireTenantMember personaLabel="Venue / Turf" onboardingRole="venue" onNavigate={handleStrictNav}>
+          <LazyTurfCalendar workspaceSection={section} onNavigate={handleStrictNav} />
+        </RequireTenantMember>
+      )
     case 'host':
-      return <LazyHostDashboard onNavigate={handleStrictNav} />
+      return <LazyHostDashboard workspaceSection={section} onNavigate={handleStrictNav} />
     case 'tournament':
-      return <LazyTournamentOps onNavigate={handleStrictNav} />
+      return (
+        <RequireTenantMember personaLabel="Tournament" onboardingRole="tournament" onNavigate={handleStrictNav}>
+          <LazyTournamentOps workspaceSection={section} onNavigate={handleStrictNav} />
+        </RequireTenantMember>
+      )
     case 'organization':
-      return <LazyOrganizations onNavigate={onNavigate} />
+      return (
+        <RequireTenantMember personaLabel="Organisation" onboardingRole="academy" onNavigate={handleStrictNav}>
+          <LazyOrganizations workspaceSection={section} onNavigate={onNavigate} />
+        </RequireTenantMember>
+      )
     case 'creator':
       return <LazyCreatorHub onNavigate={onNavigate} />
     default:

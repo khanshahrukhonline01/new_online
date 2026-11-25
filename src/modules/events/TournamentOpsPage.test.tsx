@@ -38,4 +38,10 @@ describe('TournamentOpsPage Component Suite', () => {
     expect(html).toContain('Hyderabad Strikers')
     expect(html).toContain('Generate New Bracket')
   })
+
+  it('routes workspaceSection="registrations" directly to squad eligibility audit', () => {
+    const html = renderToStaticMarkup(<TournamentOpsPage workspaceSection="registrations" />)
+    expect(html).toContain('Age Fraud Alert')
+    expect(html).toContain('Academy Batch Squads (Direct from Academy Hub)')
+  })
 })

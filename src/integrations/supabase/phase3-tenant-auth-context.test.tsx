@@ -143,4 +143,37 @@ describe('KhelGrid SaaS Platform — Phase 3 Tenant Auth & Context', () => {
     expect(html).not.toContain('Sandbox Preview')
     expect(html).toContain('VIEWER (AUTHENTICATING)')
   })
+
+  it('customizes RequireTenantMember copy and partner-signup role links for venue workspaces', () => {
+    setStoredAuthUser(null)
+    const unauthHtml = renderToStaticMarkup(
+      <TenantProvider>
+        <RequireTenantMember personaLabel="Venue / Turf" onboardingRole="venue">
+          <div>Protected Venue Content</div>
+        </RequireTenantMember>
+      </TenantProvider>
+    )
+    expect(unauthHtml).toContain('Sign In to Venue / Turf Workspace')
+    expect(unauthHtml).toContain('/partner-signup?mode=login&amp;role=venue')
+
+    setStoredAuthUser({
+      id: 'usr-venue-1',
+      email: 'ops@venue.in',
+      fullName: 'Venue Ops',
+      name: 'Venue Ops',
+      role: 'academy',
+      isVerified: true,
+      createdAt: '2026-03-29T00:00:00Z',
+    })
+    const noMembershipHtml = renderToStaticMarkup(
+      <TenantProvider>
+        <RequireTenantMember personaLabel="Venue / Turf" onboardingRole="venue">
+          <div>Protected Venue Content</div>
+        </RequireTenantMember>
+      </TenantProvider>
+    )
+    expect(noMembershipHtml).toContain('No Active Venue / Turf Membership')
+    expect(noMembershipHtml).toContain('Register Your Venue / Turf Workspace')
+    expect(noMembershipHtml).toContain('/partner-signup?mode=signup&amp;role=venue')
+  })
 })

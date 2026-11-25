@@ -17,10 +17,12 @@ import {
 } from './saasCoreEngine'
 import {
   bindResourceOwnership,
+  createEmptyWorkspaceState,
   createOrganizationUnit,
   createSeedWorkspaceState,
   grantAuditedEntitlementOverride,
   inviteMemberToOrganization,
+  loadWorkspaceState,
   previewSwitchSubscriptionPlan,
   provisionOrganizationWorkspace,
   resolveOrganizationInvitation,
@@ -467,5 +469,16 @@ describe('KhelGrid Platform-Wide SaaS Core Engine & Security Guards', () => {
     // Immutable audit logs: no UPDATE/DELETE granted to authenticated
     expect(sql).toMatch(/REVOKE ALL ON public\.saas_audit_logs FROM PUBLIC, anon, authenticated;/i)
     expect(sql).toMatch(/GRANT SELECT, INSERT ON public\.saas_audit_logs TO authenticated;/i)
+  })
+
+  it('starts loadWorkspaceState with an honest empty workspace rather than seeding demo organizations', () => {
+    const empty = createEmptyWorkspaceState(null)
+    expect(empty.organizations).toEqual([])
+    expect(empty.memberships).toEqual([])
+    expect(empty.activeContext).toEqual({ kind: 'personal' })
+
+    const loaded = loadWorkspaceState()
+    expect(loaded.organizations).toEqual([])
+    expect(loaded.currentUserId).not.toBe('usr-athlete-demo-01')
   })
 })

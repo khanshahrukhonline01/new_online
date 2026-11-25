@@ -37,4 +37,14 @@ describe('TurfSlotCalendarPage UI Component', () => {
     expect(html).toContain('Book Slot')
     expect(html).toContain('Block')
   })
+
+  it('renders utilization ledger and maintenance panels when driven by workspaceSection', () => {
+    const utilizationHtml = renderToStaticMarkup(<TurfSlotCalendarPage workspaceSection="utilization" />)
+    expect(utilizationHtml).toContain('Dynamic Yield &amp; Recurring Subscriptions')
+    expect(utilizationHtml).toContain('Facility Booking Ledger')
+
+    const maintenanceHtml = renderToStaticMarkup(<TurfSlotCalendarPage workspaceSection="maintenance" />)
+    expect(maintenanceHtml).toContain('Maintenance &amp; Pitch Lock Schedule')
+    expect(maintenanceHtml).toContain('Lock for Maintenance')
+  })
 })
