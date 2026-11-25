@@ -21,6 +21,8 @@ export interface AdminSidebarProps {
   onSelectWorkspace: (tab: AdminWorkspaceTab) => void
   isCollapsed: boolean
   onToggleCollapse: () => void
+  isMobileOpen?: boolean
+  onCloseMobile?: () => void
   pendingSubmissionsCount?: number
   pendingManuscriptsCount?: number
   moderatorEmail: string
@@ -33,8 +35,12 @@ interface NavMenuItem {
   label: string
   section: string
   icon: SiteIconName
-  badge?: string
-  badgeVariant?: 'primary' | 'success' | 'warning' | 'danger' | 'purple'
+  count?: number
+}
+
+function getInitials(email: string): string {
+  const local = email.split('@')[0]?.replace(/[^a-zA-Z0-9]/g, '') || 'OP'
+  return local.slice(0, 2).toUpperCase()
 }
 
 export function AdminSidebar({
@@ -42,6 +48,8 @@ export function AdminSidebar({
   onSelectWorkspace,
   isCollapsed,
   onToggleCollapse,
+  isMobileOpen = false,
+  onCloseMobile,
   pendingSubmissionsCount = 0,
   pendingManuscriptsCount = 0,
   moderatorEmail,
@@ -55,100 +63,79 @@ export function AdminSidebar({
       {
         id: 'command',
         label: 'Command Centre',
-        section: 'CORE WORKSPACES',
+        section: 'Operations',
         icon: 'activity',
-        badge: moderatorRole === 'super_admin' ? 'Admin' : 'Mod',
-        badgeVariant: 'primary',
       },
       {
         id: 'moderation_desk',
         label: 'Listing Moderation Queue',
-        section: 'CORE WORKSPACES',
+        section: 'Operations',
         icon: 'check-circle',
-        badge: pendingSubmissionsCount > 0 ? `${pendingSubmissionsCount} Pending` : 'Queue',
-        badgeVariant: pendingSubmissionsCount > 0 ? 'warning' : 'success',
+        count: pendingSubmissionsCount > 0 ? pendingSubmissionsCount : undefined,
       },
       {
         id: 'analytics',
         label: 'Operations & KPI Analytics',
-        section: 'CORE WORKSPACES',
+        section: 'Operations',
         icon: 'chart',
-      },
-      {
-        id: 'chronicle_desk',
-        label: 'Chronicle Peer-Review Desk',
-        section: 'EDITORIAL GOVERNANCE',
-        icon: 'award',
-        badge: pendingManuscriptsCount > 0 ? `${pendingManuscriptsCount} MSS` : undefined,
-        badgeVariant: 'purple',
       },
       {
         id: 'tenant_governance',
         label: 'Tenant & Org Governance',
-        section: 'SAAS PLATFORM GOVERNANCE',
+        section: 'Governance & Trust',
         icon: 'building',
-        badge: 'SaaS Active',
-        badgeVariant: 'success',
       },
       {
         id: 'verification_vault',
         label: 'Verification & Evidence',
-        section: 'SAAS PLATFORM GOVERNANCE',
+        section: 'Governance & Trust',
         icon: 'shield-check',
-        badge: 'Vault Active',
-        badgeVariant: 'primary',
       },
       {
         id: 'fraud_disputes',
         label: 'Trust & Safety / Sanctions',
-        section: 'SAAS PLATFORM GOVERNANCE',
+        section: 'Governance & Trust',
         icon: 'flag',
-        badge: 'Safety Desk',
-        badgeVariant: 'danger',
-      },
-      {
-        id: 'creator_campaigns',
-        label: 'Creator & Attribution Desk',
-        section: 'CREATOR ECONOMY OPS',
-        icon: 'award',
-        badge: 'Attribution',
-        badgeVariant: 'purple',
       },
       {
         id: 'platform_governance',
         label: 'Platform Settings & RBAC',
-        section: 'SYSTEM GOVERNANCE',
+        section: 'Governance & Trust',
         icon: 'settings',
-        badge: 'Gov & Audit',
-        badgeVariant: 'primary',
       },
-
+      {
+        id: 'chronicle_desk',
+        label: 'Chronicle Peer-Review Desk',
+        section: 'Editorial & Creators',
+        icon: 'award',
+        count: pendingManuscriptsCount > 0 ? pendingManuscriptsCount : undefined,
+      },
+      {
+        id: 'creator_campaigns',
+        label: 'Creator & Attribution Desk',
+        section: 'Editorial & Creators',
+        icon: 'award',
+      },
       {
         id: 'gate_desk',
         label: 'Gate Check-In Telemetry',
-        section: 'GROUND & FACILITY OPERATIONS',
+        section: 'Facilities',
         icon: 'shield-check',
-        badge: 'QR Scans',
-        badgeVariant: 'success',
       },
       {
         id: 'turf_oversight',
         label: 'Turf Utilization & Maintenance',
-        section: 'GROUND & FACILITY OPERATIONS',
+        section: 'Facilities',
         icon: 'calendar',
-        badge: 'Slots Live',
-        badgeVariant: 'primary',
       },
       {
         id: 'academy_oversight',
         label: 'Academy Batch & Attendance',
-        section: 'GROUND & FACILITY OPERATIONS',
+        section: 'Facilities',
         icon: 'building',
-        badge: 'Cohorts',
-        badgeVariant: 'warning',
       },
     ],
-    [moderatorRole, pendingSubmissionsCount, pendingManuscriptsCount],
+    [pendingSubmissionsCount, pendingManuscriptsCount],
   )
 
   const filteredItems = useMemo(() => {
@@ -168,108 +155,126 @@ export function AdminSidebar({
     return map
   }, [filteredItems])
 
+  const operatorHandle = moderatorEmail.includes('@')
+    ? moderatorEmail.split('@')[0]
+    : moderatorEmail
+  const roleLabel = moderatorRole === 'super_admin' ? 'Super Admin' : 'Moderator'
+
+  const handleSelect = (tab: AdminWorkspaceTab) => {
+    onSelectWorkspace(tab)
+    onCloseMobile?.()
+  }
+
   return (
-    <aside className={`admin-lte-sidebar ${isCollapsed ? 'is-collapsed' : ''}`} aria-label="Admin Navigation Sidebar">
-      <div className="admin-sidebar-brand">
-        <span className="admin-sidebar-logo-badge" title="KhelGrid Operations">KG</span>
-        <div className="admin-sidebar-brand-text">
-          <span className="admin-sidebar-app-name">KhelGrid Admin Operations</span>
-          <span className="admin-sidebar-sub-name">admin.khelgrid.com</span>
-        </div>
-        <button
-          type="button"
-          className="admin-sidebar-collapse-btn"
-          onClick={onToggleCollapse}
-          title={isCollapsed ? 'Expand sidebar' : 'Collapse to icon-only'}
-          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse to icon-only'}
-        >
-          <SiteIcon name={isCollapsed ? 'chevron-right' : 'menu'} size={16} />
-        </button>
-      </div>
-
-      <div className="admin-sidebar-user-panel">
-        <div className="admin-sidebar-user-avatar">
-          <SiteIcon name="user" size={18} />
-          <span className="admin-sidebar-status-dot online" title="Verified server session" />
-        </div>
-        <div className="admin-sidebar-user-info">
-          <span className="admin-sidebar-user-email" title={moderatorEmail}>
-            {moderatorEmail.includes('@') ? moderatorEmail.split('@')[0] : moderatorEmail}
+    <>
+      <div
+        className={`admin-sidebar-mobile-backdrop ${isMobileOpen ? 'is-open' : ''}`}
+        onClick={onCloseMobile}
+        aria-hidden="true"
+      />
+      <aside
+        className={`admin-lte-sidebar ${isCollapsed ? 'is-collapsed' : ''} ${isMobileOpen ? 'is-mobile-open' : ''}`}
+        aria-label="Admin Navigation Sidebar"
+      >
+        <div className="admin-sidebar-brand">
+          <span className="admin-sidebar-logo-badge" title="KhelGrid Operations">
+            KG
           </span>
-          <span className={`admin-sidebar-role-badge ${moderatorRole === 'super_admin' ? 'super' : 'mod'}`}>
-            {moderatorRole === 'super_admin' ? 'Super Admin' : 'Moderator'}
-          </span>
-        </div>
-      </div>
-
-      {!isCollapsed && (
-        <div className="admin-sidebar-search">
-          <div className="admin-sidebar-search-inner">
-            <SiteIcon name="search" size={14} className="admin-sidebar-search-icon" />
-            <input
-              type="text"
-              className="admin-sidebar-search-input"
-              placeholder="Filter desks & tools…"
-              value={menuFilter}
-              onChange={e => setMenuFilter(e.target.value)}
-              aria-label="Filter admin navigation menus"
-            />
-            {menuFilter && (
-              <button
-                type="button"
-                className="admin-sidebar-search-clear"
-                onClick={() => setMenuFilter('')}
-                aria-label="Clear filter"
-              >
-                <SiteIcon name="close" size={12} />
-              </button>
-            )}
+          <div className="admin-sidebar-brand-text">
+            <span className="admin-sidebar-app-name">KhelGrid Admin Operations</span>
+            <span className="admin-sidebar-sub-name">admin.khelgrid.com</span>
           </div>
+          <button
+            type="button"
+            className="admin-sidebar-collapse-btn"
+            onClick={onToggleCollapse}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse to icon rail'}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse to icon rail'}
+          >
+            <SiteIcon name={isCollapsed ? 'chevron-right' : 'menu'} size={15} />
+          </button>
         </div>
-      )}
 
-      <nav className="admin-sidebar-nav-tree" aria-label="Main Administration Desks">
-        {Object.entries(sections).map(([sectionTitle, items]) => (
-          <div key={sectionTitle} className="admin-sidebar-nav-section">
-            <div className="admin-sidebar-section-header">
-              <span>{sectionTitle}</span>
+        {!isCollapsed && (
+          <div className="admin-sidebar-search">
+            <div className="admin-sidebar-search-inner">
+              <SiteIcon name="search" size={14} className="admin-sidebar-search-icon" />
+              <input
+                type="text"
+                className="admin-sidebar-search-input"
+                placeholder="Filter workspaces…"
+                value={menuFilter}
+                onChange={e => setMenuFilter(e.target.value)}
+                aria-label="Filter admin navigation menus"
+              />
+              {menuFilter && (
+                <button
+                  type="button"
+                  className="admin-sidebar-search-clear"
+                  onClick={() => setMenuFilter('')}
+                  aria-label="Clear filter"
+                >
+                  <SiteIcon name="close" size={12} />
+                </button>
+              )}
             </div>
-
-            <ul className="admin-sidebar-menu-list">
-              {items.map(item => {
-                const isActive = activeWorkspace === item.id
-                return (
-                  <li key={item.id} className="admin-sidebar-menu-item">
-                    <button
-                      type="button"
-                      className={`admin-sidebar-link ${isActive ? 'is-active' : ''}`}
-                      onClick={() => onSelectWorkspace(item.id)}
-                      title={item.label}
-                    >
-                      <span className="admin-sidebar-item-icon">
-                        <SiteIcon name={item.icon} size={16} />
-                      </span>
-                      <span className="admin-sidebar-item-label">{item.label}</span>
-                      {item.badge && (
-                        <span className={`admin-sidebar-item-badge ${item.badgeVariant ? `badge-${item.badgeVariant}` : ''}`}>
-                          {item.badge}
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
           </div>
-        ))}
-      </nav>
+        )}
 
-      <div className="admin-sidebar-footer">
-        <div className="admin-sidebar-db-telemetry">
-          <span className="admin-sidebar-pulse-dot" />
-          <span className="admin-sidebar-db-name">{databaseId}</span>
+        <nav className="admin-sidebar-nav-tree" aria-label="Main Administration Desks">
+          {Object.entries(sections).map(([sectionTitle, items]) => (
+            <div key={sectionTitle} className="admin-sidebar-nav-section">
+              <div className="admin-sidebar-section-header">
+                <span>{sectionTitle}</span>
+              </div>
+
+              <ul className="admin-sidebar-menu-list">
+                {items.map(item => {
+                  const isActive = activeWorkspace === item.id
+                  return (
+                    <li key={item.id} className="admin-sidebar-menu-item">
+                      <button
+                        type="button"
+                        className={`admin-sidebar-link ${isActive ? 'is-active' : ''}`}
+                        onClick={() => handleSelect(item.id)}
+                        title={item.label}
+                        aria-current={isActive ? 'page' : undefined}
+                      >
+                        <span className="admin-sidebar-item-icon">
+                          <SiteIcon name={item.icon} size={16} />
+                        </span>
+                        <span className="admin-sidebar-item-label">{item.label}</span>
+                        {typeof item.count === 'number' && (
+                          <span className="admin-sidebar-count" aria-label={`${item.count} pending`}>
+                            {item.count}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
+
+        <div className="admin-sidebar-footer">
+          <div className="admin-sidebar-operator-row">
+            <div className="admin-sidebar-user-avatar" aria-hidden="true">
+              {getInitials(moderatorEmail)}
+            </div>
+            <div className="admin-sidebar-user-info">
+              <span className="admin-sidebar-user-email" title={moderatorEmail}>
+                {operatorHandle}
+              </span>
+              <span className="admin-sidebar-user-meta">{roleLabel}</span>
+            </div>
+          </div>
+          <div className="admin-sidebar-db-ref" title={`Supabase project ${databaseId}`}>
+            DB · {databaseId}
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   )
 }

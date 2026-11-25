@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { AdminControlPanelPage } from '../../../src/modules/admin/AdminControlPanelPage'
 import { AdminAnalyticsDashboard } from '../../../src/modules/admin/AdminAnalyticsDashboard'
 import { SiteIcon } from '../../../src/shared/components/SiteIcon'
@@ -26,45 +26,69 @@ import {
 } from '../../../src/integrations/supabase/public-client'
 import { getChronicleModerationQueue } from '../../../src/integrations/supabase/chronicle-client'
 import './admin-app.css'
+import './admin-modern-theme.css'
 
 export interface AdminAppProps {
   /**
    * Controlled unit-test injection only; never populated in runtime entrypoints.
    */
   initialAuthOverride?: AdminAuthGateProps['initialAuthOverride']
+  initialWorkspace?: AdminWorkspaceTab
 }
 
-function AuthenticatedAdminShell() {
-  const { identity, databaseProjectRef, signOut, revalidate, openPasswordReset } = useAdminAuth()
-  const { preferences, updatePreferences } = usePreferences()
+const KEY_CHORD_WORKSPACES: Record<string, AdminWorkspaceTab> = {
+  c: 'command',
+  m: 'moderation_desk',
+  a: 'analytics',
+  r: 'chronicle_desk',
+  t: 'tenant_governance',
+  v: 'verification_vault',
+  s: 'fraud_disputes',
+  p: 'platform_governance',
+  g: 'gate_desk',
+  u: 'turf_oversight',
+  b: 'academy_oversight',
+}
 
-  const [activeWorkspace, setActiveWorkspace] = useState<AdminWorkspaceTab>('command')
+function AuthenticatedAdminShell({
+  initialWorkspace = 'command',
+}: {
+  initialWorkspace?: AdminWorkspaceTab
+}) {
+  const { identity, databaseProjectRef, signOut, revalidate, openPasswordReset } = useAdminAuth()
+  const { updatePreferences } = usePreferences()
+
+  const [activeWorkspace, setActiveWorkspace] = useState<AdminWorkspaceTab>(initialWorkspace)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [pendingListingsCount, setPendingListingsCount] = useState(0)
   const [pendingManuscriptsCount, setPendingManuscriptsCount] = useState(0)
   const [toastNotification, setToastNotification] = useState<string | null>(null)
   const [dbLatencyMs, setDbLatencyMs] = useState<number | null>(null)
+  const [isRefreshingCounts, setIsRefreshingCounts] = useState(false)
+  const lastGKeyTimeRef = useRef<number>(0)
 
   const [adminTheme, setAdminTheme] = useState<AdminThemeMode>(() => {
     if (typeof window !== 'undefined') {
       const saved = window.localStorage.getItem('khelgrid_admin_theme') as AdminThemeMode | null
       if (saved && ['light', 'dark', 'cosmic', 'system'].includes(saved)) {
-        return saved
+        return saved === 'cosmic' ? 'dark' : saved
       }
     }
-    return (preferences.theme as AdminThemeMode) || 'system'
+    return 'dark'
   })
 
   const handleThemeChange = useCallback(
     (newTheme: AdminThemeMode) => {
-      setAdminTheme(newTheme)
+      const normalized = newTheme === 'cosmic' ? 'dark' : newTheme
+      setAdminTheme(normalized)
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem('khelgrid_admin_theme', newTheme)
+        window.localStorage.setItem('khelgrid_admin_theme', normalized)
       }
-      if (newTheme === 'cosmic' || newTheme === 'dark') {
+      if (normalized === 'dark') {
         updatePreferences({ theme: 'dark' })
-      } else if (newTheme === 'light') {
+      } else if (normalized === 'light') {
         updatePreferences({ theme: 'light' })
       } else {
         updatePreferences({ theme: 'system' })
@@ -73,31 +97,42 @@ function AuthenticatedAdminShell() {
     [updatePreferences],
   )
 
-  // Apply data-admin-theme attribute to <html>
   useEffect(() => {
     document.title = 'KhelGrid Admin Operations · admin.khelgrid.com'
-    if (typeof document !== 'undefined') {
-      const root = document.documentElement
-      if (adminTheme === 'cosmic') {
-        root.setAttribute('data-admin-theme', 'cosmic')
-        root.classList.add('cosmic')
-        root.classList.remove('dark')
-      } else if (adminTheme === 'dark') {
-        root.setAttribute('data-admin-theme', 'dark')
-        root.classList.add('dark')
-        root.classList.remove('cosmic')
-      } else if (adminTheme === 'light') {
-        root.setAttribute('data-admin-theme', 'light')
-        root.classList.remove('dark', 'cosmic')
-      } else {
-        root.removeAttribute('data-admin-theme')
-        root.classList.remove('cosmic')
-      }
+    if (typeof document === 'undefined' || typeof window === 'undefined') return
+
+    const root = document.documentElement
+    const applyResolvedTheme = (resolved: 'light' | 'dark') => {
+      root.setAttribute('data-admin-theme', resolved)
+      root.classList.toggle('dark', resolved === 'dark')
+      root.classList.remove('cosmic')
     }
+
+    if (adminTheme === 'dark' || adminTheme === 'cosmic') {
+      applyResolvedTheme('dark')
+      return
+    }
+    if (adminTheme === 'light') {
+      applyResolvedTheme('light')
+      return
+    }
+
+    const mediaQuery =
+      typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-color-scheme: dark)')
+        : null
+    applyResolvedTheme(mediaQuery?.matches ? 'dark' : 'light')
+
+    if (!mediaQuery) return
+    const handleMediaChange = (event: MediaQueryListEvent) => {
+      applyResolvedTheme(event.matches ? 'dark' : 'light')
+    }
+    mediaQuery.addEventListener('change', handleMediaChange)
+    return () => mediaQuery.removeEventListener('change', handleMediaChange)
   }, [adminTheme])
 
-  // Fetch queue counts ONLY after server-verified authorization succeeds
   const loadCounts = useCallback(async () => {
+    setIsRefreshingCounts(true)
     const start = Date.now()
     try {
       const [queueRes, chronicleRes] = await Promise.all([
@@ -113,6 +148,8 @@ function AuthenticatedAdminShell() {
       }
     } catch {
       setDbLatencyMs(null)
+    } finally {
+      setIsRefreshingCounts(false)
     }
   }, [])
 
@@ -120,7 +157,59 @@ function AuthenticatedAdminShell() {
     void loadCounts()
   }, [loadCounts])
 
-  // Listen to custom switch workspace events (only active when authorized)
+  // Global keyboard navigation chords (G + workspace key), suppressed inside inputs or open dialogs
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isMobileSidebarOpen) {
+        setIsMobileSidebarOpen(false)
+        return
+      }
+      if (isCommandPaletteOpen) return
+      if (typeof document !== 'undefined' && document.querySelector('[role="dialog"], [aria-modal="true"]')) {
+        lastGKeyTimeRef.current = 0
+        return
+      }
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName?.toLowerCase()
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) {
+        return
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+
+      const key = e.key.toLowerCase()
+      const now = Date.now()
+
+      if (lastGKeyTimeRef.current && now - lastGKeyTimeRef.current < 900) {
+        const nextTab = KEY_CHORD_WORKSPACES[key]
+        if (nextTab) {
+          e.preventDefault()
+          setActiveWorkspace(nextTab)
+          lastGKeyTimeRef.current = 0
+          return
+        }
+      }
+
+      if (key === 'g') {
+        lastGKeyTimeRef.current = now
+      } else {
+        lastGKeyTimeRef.current = 0
+      }
+    }
+
+    const handleResize = () => {
+      if (window.innerWidth > 820) {
+        setIsMobileSidebarOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [isCommandPaletteOpen, isMobileSidebarOpen])
+
   useEffect(() => {
     const handleSwitchWorkspace = (e: Event) => {
       const detail = (e as CustomEvent<{ workspace?: AdminWorkspaceTab }>).detail
@@ -138,13 +227,20 @@ function AuthenticatedAdminShell() {
     }
   }, [])
 
-  // Command palette actions (only exposes real operational workspaces + honest unavailable notices)
+  const handleToggleSidebar = useCallback(() => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 820) {
+      setIsMobileSidebarOpen(prev => !prev)
+    } else {
+      setIsSidebarCollapsed(prev => !prev)
+    }
+  }, [])
+
   const commandActions: CommandPaletteAction[] = useMemo(
     () => [
       {
         id: 'cmd-command',
         title: 'Open Command Centre',
-        section: 'Workspaces',
+        section: 'Operations',
         icon: 'activity',
         shortcut: 'G C',
         onSelect: () => setActiveWorkspace('command'),
@@ -152,33 +248,24 @@ function AuthenticatedAdminShell() {
       {
         id: 'cmd-moderation',
         title: 'Open Listing Moderation Queue',
-        section: 'Workspaces',
+        section: 'Operations',
         icon: 'check-circle',
-        badge: `${pendingListingsCount} Pending`,
+        badge: pendingListingsCount > 0 ? `${pendingListingsCount} Pending` : undefined,
         shortcut: 'G M',
         onSelect: () => setActiveWorkspace('moderation_desk'),
       },
       {
         id: 'cmd-analytics',
         title: 'Open KPI & Operations Analytics',
-        section: 'Workspaces',
+        section: 'Operations',
         icon: 'chart',
         shortcut: 'G A',
         onSelect: () => setActiveWorkspace('analytics'),
       },
       {
-        id: 'cmd-chronicle',
-        title: 'Open Chronicle Peer-Review Desk',
-        section: 'Governance',
-        icon: 'award',
-        badge: `${pendingManuscriptsCount} Manuscripts`,
-        shortcut: 'G R',
-        onSelect: () => setActiveWorkspace('chronicle_desk'),
-      },
-      {
         id: 'cmd-tenant-governance',
         title: 'Open Tenant & Organisation Governance Desk',
-        section: 'Workspaces',
+        section: 'Governance & Trust',
         icon: 'building',
         shortcut: 'G T',
         onSelect: () => setActiveWorkspace('tenant_governance'),
@@ -186,24 +273,15 @@ function AuthenticatedAdminShell() {
       {
         id: 'cmd-verification-vault',
         title: 'Open Verification Centre & Evidence Vault',
-        section: 'Workspaces',
+        section: 'Governance & Trust',
         icon: 'shield-check',
         shortcut: 'G V',
         onSelect: () => setActiveWorkspace('verification_vault'),
       },
       {
-        id: 'cmd-creator-campaigns',
-        title: 'Open Sports Creator Campaigns & Attribution Desk',
-        section: 'Creator Economy',
-        icon: 'award',
-        badge: 'Attribution',
-        shortcut: 'G C',
-        onSelect: () => setActiveWorkspace('creator_campaigns'),
-      },
-      {
         id: 'cmd-trust-safety',
         title: 'Open Trust & Safety, Complaints & Sanctions Desk',
-        section: 'Governance',
+        section: 'Governance & Trust',
         icon: 'flag',
         shortcut: 'G S',
         onSelect: () => setActiveWorkspace('fraud_disputes'),
@@ -211,16 +289,31 @@ function AuthenticatedAdminShell() {
       {
         id: 'cmd-platform-governance',
         title: 'Open Platform Settings, Audit Trails & RBAC Desk',
-        section: 'Governance',
+        section: 'Governance & Trust',
         icon: 'settings',
-        badge: 'Gov & Audit',
         shortcut: 'G P',
         onSelect: () => setActiveWorkspace('platform_governance'),
       },
       {
+        id: 'cmd-chronicle',
+        title: 'Open Chronicle Peer-Review Desk',
+        section: 'Editorial & Creators',
+        icon: 'award',
+        badge: pendingManuscriptsCount > 0 ? `${pendingManuscriptsCount} Pending` : undefined,
+        shortcut: 'G R',
+        onSelect: () => setActiveWorkspace('chronicle_desk'),
+      },
+      {
+        id: 'cmd-creator-campaigns',
+        title: 'Open Sports Creator Campaigns & Attribution Desk',
+        section: 'Editorial & Creators',
+        icon: 'award',
+        onSelect: () => setActiveWorkspace('creator_campaigns'),
+      },
+      {
         id: 'cmd-gate-desk',
         title: 'Open QR Gate Check-In Telemetry Desk',
-        section: 'Ground Operations',
+        section: 'Facilities',
         icon: 'shield-check',
         shortcut: 'G G',
         onSelect: () => setActiveWorkspace('gate_desk'),
@@ -228,7 +321,7 @@ function AuthenticatedAdminShell() {
       {
         id: 'cmd-turf-oversight',
         title: 'Open Turf Utilization & Maintenance Desk',
-        section: 'Ground Operations',
+        section: 'Facilities',
         icon: 'calendar',
         shortcut: 'G U',
         onSelect: () => setActiveWorkspace('turf_oversight'),
@@ -236,7 +329,7 @@ function AuthenticatedAdminShell() {
       {
         id: 'cmd-academy-oversight',
         title: 'Open Academy Batch & Attendance Oversight Desk',
-        section: 'Ground Operations',
+        section: 'Facilities',
         icon: 'building',
         shortcut: 'G B',
         onSelect: () => setActiveWorkspace('academy_oversight'),
@@ -256,9 +349,6 @@ function AuthenticatedAdminShell() {
         section: 'System Tools',
         icon: 'refresh',
         onSelect: () => {
-          if (!window.confirm('Clear the client catalogue cache? Fresh catalogue data will be re-fetched on next load.')) {
-            return
-          }
           clearCatalogueCache()
           setToastNotification('Client catalogue cache cleared.')
           window.setTimeout(() => setToastNotification(null), 3000)
@@ -266,14 +356,14 @@ function AuthenticatedAdminShell() {
       },
       {
         id: 'cmd-theme-dark',
-        title: 'Switch to Dark Slate Theme',
+        title: 'Switch to Dark Theme',
         section: 'Appearance',
         icon: 'moon',
         onSelect: () => handleThemeChange('dark'),
       },
       {
         id: 'cmd-theme-light',
-        title: 'Switch to Corporate Light Theme',
+        title: 'Switch to Light Theme',
         section: 'Appearance',
         icon: 'sun',
         onSelect: () => handleThemeChange('light'),
@@ -299,28 +389,33 @@ function AuthenticatedAdminShell() {
   )
 
   const workspaceDetails: Record<AdminWorkspaceTab, { title: string; section: string }> = {
-    command: { title: 'Command Centre', section: 'Core Operations' },
-    moderation_desk: { title: 'Listing Moderation Queue', section: 'Content Moderation' },
-    analytics: { title: 'Operations & KPI Analytics', section: 'Intelligence' },
-    chronicle_desk: { title: 'Chronicle Peer-Review Desk', section: 'Editorial Governance' },
-    tenant_governance: { title: 'Tenant & Organisation Governance', section: 'SaaS Platform Governance' },
-    verification_vault: { title: 'Verification Centre & Evidence Vault', section: 'SaaS Platform Governance' },
-    creator_campaigns: { title: 'Creator Campaigns & Attribution Desk', section: 'Creator Economy Operations' },
-    fraud_disputes: { title: 'Trust & Safety, Complaints & Sanctions Desk', section: 'SaaS Platform Governance' },
-    platform_governance: { title: 'Platform Settings, Audit Trails & RBAC', section: 'System Governance' },
-    gate_desk: { title: 'Gate Check-In Telemetry', section: 'Ground & Facility Operations' },
-    turf_oversight: { title: 'Turf Utilization & Maintenance', section: 'Ground & Facility Operations' },
-    academy_oversight: { title: 'Academy Batch & Attendance', section: 'Ground & Facility Operations' },
+    command: { title: 'Command Centre', section: 'Operations' },
+    moderation_desk: { title: 'Listing Moderation Queue', section: 'Operations' },
+    analytics: { title: 'Operations & KPI Analytics', section: 'Operations' },
+    tenant_governance: { title: 'Tenant & Org Governance', section: 'Governance & Trust' },
+    verification_vault: { title: 'Verification & Evidence', section: 'Governance & Trust' },
+    fraud_disputes: { title: 'Trust & Safety / Sanctions', section: 'Governance & Trust' },
+    platform_governance: { title: 'Platform Settings & RBAC', section: 'Governance & Trust' },
+    chronicle_desk: { title: 'Chronicle Peer-Review Desk', section: 'Editorial & Creators' },
+    creator_campaigns: { title: 'Creator & Attribution Desk', section: 'Editorial & Creators' },
+    gate_desk: { title: 'Gate Check-In Telemetry', section: 'Facilities' },
+    turf_oversight: { title: 'Turf Utilization & Maintenance', section: 'Facilities' },
+    academy_oversight: { title: 'Academy Batch & Attendance', section: 'Facilities' },
   }
 
   return (
-    <main className="khelgrid-admin-app admin-lte-layout" aria-label="KhelGrid private administration">
+    <main
+      className="khelgrid-admin-app admin-lte-layout admin-v2-shell"
+      aria-label="KhelGrid private administration"
+    >
       <div className="admin-lte-main-wrapper">
         <AdminSidebar
           activeWorkspace={activeWorkspace}
           onSelectWorkspace={tab => setActiveWorkspace(tab)}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+          isMobileOpen={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
           pendingSubmissionsCount={pendingListingsCount}
           pendingManuscriptsCount={pendingManuscriptsCount}
           moderatorEmail={identity.email}
@@ -330,8 +425,9 @@ function AuthenticatedAdminShell() {
 
         <div className="admin-lte-content-canvas">
           <AdminHeader
-            onToggleSidebar={() => setIsSidebarCollapsed(prev => !prev)}
+            onToggleSidebar={handleToggleSidebar}
             onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+            onJumpToWorkspace={tab => setActiveWorkspace(tab)}
             onResetPassword={openPasswordReset}
             onSignOut={() => void signOut()}
             activeWorkspaceTitle={workspaceDetails[activeWorkspace]?.title || 'Command Centre'}
@@ -345,6 +441,73 @@ function AuthenticatedAdminShell() {
             operatorEmail={identity.email}
             operatorRole={identity.role}
           />
+
+          {/* Compact Actionable Triage Strip */}
+          <div className="admin-triage-strip" role="region" aria-label="Quick queue jump bar">
+            <div className="admin-triage-items">
+              <button
+                type="button"
+                className={`admin-triage-link ${activeWorkspace === 'moderation_desk' ? 'is-active' : ''}`}
+                onClick={() => setActiveWorkspace('moderation_desk')}
+              >
+                <span>Listing Queue</span>
+                <span className={`admin-triage-count ${pendingListingsCount > 0 ? 'is-pending' : ''}`}>
+                  {pendingListingsCount}
+                </span>
+              </button>
+              <span className="admin-triage-sep" aria-hidden="true">·</span>
+              <button
+                type="button"
+                className={`admin-triage-link ${activeWorkspace === 'chronicle_desk' ? 'is-active' : ''}`}
+                onClick={() => setActiveWorkspace('chronicle_desk')}
+              >
+                <span>Manuscripts</span>
+                <span className={`admin-triage-count ${pendingManuscriptsCount > 0 ? 'is-pending' : ''}`}>
+                  {pendingManuscriptsCount}
+                </span>
+              </button>
+              <span className="admin-triage-sep" aria-hidden="true">·</span>
+              <button
+                type="button"
+                className={`admin-triage-link ${activeWorkspace === 'verification_vault' ? 'is-active' : ''}`}
+                onClick={() => setActiveWorkspace('verification_vault')}
+              >
+                <span>Verification Vault</span>
+              </button>
+              <span className="admin-triage-sep" aria-hidden="true">·</span>
+              <button
+                type="button"
+                className={`admin-triage-link ${activeWorkspace === 'fraud_disputes' ? 'is-active' : ''}`}
+                onClick={() => setActiveWorkspace('fraud_disputes')}
+              >
+                <span>Trust &amp; Safety</span>
+              </button>
+              <span className="admin-triage-sep" aria-hidden="true">·</span>
+              <button
+                type="button"
+                className={`admin-triage-link ${activeWorkspace === 'analytics' ? 'is-active' : ''}`}
+                onClick={() => setActiveWorkspace('analytics')}
+              >
+                <span>KPI Analytics</span>
+              </button>
+            </div>
+
+            <div className="admin-triage-actions">
+              <span className="admin-triage-shortcut-hint">
+                Press <kbd>G</kbd> + <kbd>M</kbd> for queue · <kbd>Ctrl+K</kbd> command
+              </span>
+              <button
+                type="button"
+                className="admin-triage-refresh-btn"
+                onClick={() => void loadCounts()}
+                disabled={isRefreshingCounts}
+                title="Refresh queue counts"
+              >
+                <SiteIcon name="refresh" size={13} className={isRefreshingCounts ? 'spinning' : ''} />
+                <span>{isRefreshingCounts ? 'Syncing…' : 'Refresh'}</span>
+              </button>
+            </div>
+          </div>
 
           {toastNotification && (
             <div className="admin-floating-toast" role="status">
@@ -411,10 +574,10 @@ function AuthenticatedAdminShell() {
   )
 }
 
-export function AdminApp({ initialAuthOverride }: AdminAppProps = {}) {
+export function AdminApp({ initialAuthOverride, initialWorkspace }: AdminAppProps = {}) {
   return (
     <AdminAuthGate initialAuthOverride={initialAuthOverride}>
-      <AuthenticatedAdminShell />
+      <AuthenticatedAdminShell initialWorkspace={initialWorkspace} />
     </AdminAuthGate>
   )
 }

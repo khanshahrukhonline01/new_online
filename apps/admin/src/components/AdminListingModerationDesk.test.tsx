@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { AdminListingModerationDesk } from './AdminListingModerationDesk'
+import moderationDeskTsx from './AdminListingModerationDesk.tsx?raw'
 import {
   getAdminModerationListings,
   getAdminModerationListingDetails,
@@ -182,5 +183,21 @@ describe('AdminListingModerationDesk & Content Moderation Queue', () => {
     expect(csv).toContain('Football')
     expect(csv).toContain('Bengaluru')
     expect(csv).toContain('published')
+  })
+
+  it('provides accessible arrow-key and J/K row navigation hints, focusable rows, and light-safe CSS tokens', () => {
+    const html = renderToStaticMarkup(
+      <AdminListingModerationDesk operatorEmail="lead.moderator@khelgrid.com" />
+    )
+    expect(html).toContain('admin-mod-kbd-bar')
+    expect(html).toContain('tabindex="0"')
+    expect(html).toContain('Inspect')
+
+    expect(moderationDeskTsx).toContain("e.key === 'ArrowDown'")
+    expect(moderationDeskTsx).toContain("e.key === 'ArrowUp'")
+    expect(moderationDeskTsx).toContain('focusQueueRow')
+    expect(moderationDeskTsx).toContain('closeInspectionDrawer')
+    expect(moderationDeskTsx).not.toMatch(/color:\s*['"]#(ffffff|f1f5f9|cbd5e1|fef08a|fca5a5)['"]/i)
+    expect(moderationDeskTsx).not.toMatch(/background:\s*['"]#090e18['"]/i)
   })
 })

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { AdminApp } from './AdminApp'
+import adminAppTsx from './AdminApp.tsx?raw'
+import adminIndexHtml from '../index.html?raw'
 
 const VALID_TEST_KEY = 'a'.repeat(64)
 
@@ -68,11 +70,26 @@ describe('AdminApp Root Authentication Gate & Fail-Closed Shell (Phase 1)', () =
       expect(html).toContain('Turf Utilization &amp; Maintenance')
       expect(html).toContain('Academy Batch &amp; Attendance')
       expect(html).toContain('Platform Settings &amp; RBAC')
+      expect(html).toContain('admin-v2-shell')
+      expect(html).toContain('admin-triage-strip')
+      expect(html).toContain('Theme Mode Selection')
       expect(html).not.toContain('Unavailable')
       expect(html).not.toContain('admin@khelgrid.com')
       expect(html).not.toContain('Super Admin')
     } finally {
       vi.unstubAllEnvs()
     }
+  })
+
+  it('enforces typography fonts, dialog-safe keyboard shortcuts, system theme sync, and fail-closed JSDoc boundary', () => {
+    expect(adminIndexHtml).toContain('JetBrains+Mono')
+    expect(adminIndexHtml).toContain('Plus+Jakarta+Sans')
+    expect(adminIndexHtml).toContain('Public+Sans')
+
+    expect(adminAppTsx).toContain('KEY_CHORD_WORKSPACES')
+    expect(adminAppTsx).toContain('prefers-color-scheme: dark')
+    expect(adminAppTsx).toContain('[role="dialog"], [aria-modal="true"]')
+    expect(adminAppTsx).toContain('Controlled unit-test injection only; never populated in runtime entrypoints.')
+    expect(adminAppTsx).not.toContain('AdminPreviewPortal')
   })
 })

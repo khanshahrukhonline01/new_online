@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { SiteIcon } from '../../../../src/shared/components/SiteIcon'
 import {
   getAdminModerationListings,
@@ -33,10 +33,14 @@ export function AdminListingModerationDesk({
 
   const [refreshTick, setRefreshTick] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [focusedRowIndex, setFocusedRowIndex] = useState<number>(-1)
   const [drawerTab, setDrawerTab] = useState<'preview' | 'details' | 'diff' | 'audit'>('preview')
   const [batchSelectedIds, setBatchSelectedIds] = useState<string[]>([])
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const rowRefs = useRef<Array<HTMLTableRowElement | null>>([])
+  const drawerCloseRef = useRef<HTMLButtonElement | null>(null)
+  const lastOpenedRowIndexRef = useRef<number>(-1)
 
   // Governance Action Modals
   const [actionModal, setActionModal] = useState<{
@@ -157,6 +161,98 @@ export function AdminListingModerationDesk({
     if (!selectedId) return null
     return getAdminModerationListingDetails(selectedId)
   }, [selectedId, refreshTick])
+
+  const focusQueueRow = useCallback((nextIndex: number) => {
+    setFocusedRowIndex(nextIndex)
+    const rowEl = rowRefs.current[nextIndex]
+    if (rowEl) {
+      rowEl.focus({ preventScroll: true })
+      rowEl.scrollIntoView?.({ block: 'nearest' })
+    }
+  }, [])
+
+  const openInspectionDrawer = useCallback((id: string, rowIndex: number) => {
+    lastOpenedRowIndexRef.current = rowIndex
+    setFocusedRowIndex(rowIndex)
+    setSelectedId(id)
+    setDrawerTab('preview')
+  }, [])
+
+  const closeInspectionDrawer = useCallback(() => {
+    setSelectedId(null)
+    const restoreIndex = lastOpenedRowIndexRef.current
+    if (restoreIndex >= 0 && typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => {
+        rowRefs.current[restoreIndex]?.focus({ preventScroll: true })
+      })
+    }
+  }, [])
+
+  // Keep focusedRowIndex within bounds when filters narrow or clear results
+  useEffect(() => {
+    setFocusedRowIndex(prev => {
+      if (filteredListings.length === 0) return -1
+      return prev >= filteredListings.length ? filteredListings.length - 1 : prev
+    })
+  }, [filteredListings.length])
+
+  // Move keyboard focus into inspection drawer when opened
+  useEffect(() => {
+    if (selectedId && typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => {
+        drawerCloseRef.current?.focus()
+      })
+    }
+  }, [selectedId])
+
+  // Keyboard triage navigation: ArrowDown/ArrowUp + J/K + Home/End, Enter opens drawer, Escape closes
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName?.toLowerCase()
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) {
+        return
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey || actionModal) return
+
+      if (e.key === 'Escape' && selectedId) {
+        e.preventDefault()
+        closeInspectionDrawer()
+        return
+      }
+      if (selectedId || filteredListings.length === 0) return
+      if (target?.closest('[role="dialog"], [aria-modal="true"]')) return
+
+      const lower = e.key.toLowerCase()
+      if (e.key === 'ArrowDown' || lower === 'j') {
+        e.preventDefault()
+        const nextIndex = Math.min(filteredListings.length - 1, focusedRowIndex < 0 ? 0 : focusedRowIndex + 1)
+        focusQueueRow(nextIndex)
+      } else if (e.key === 'ArrowUp' || lower === 'k') {
+        e.preventDefault()
+        const nextIndex = Math.max(0, focusedRowIndex <= 0 ? 0 : focusedRowIndex - 1)
+        focusQueueRow(nextIndex)
+      } else if (e.key === 'Home') {
+        e.preventDefault()
+        focusQueueRow(0)
+      } else if (e.key === 'End') {
+        e.preventDefault()
+        focusQueueRow(filteredListings.length - 1)
+      } else if (
+        e.key === 'Enter' &&
+        tag !== 'button' &&
+        tag !== 'a' &&
+        focusedRowIndex >= 0 &&
+        focusedRowIndex < filteredListings.length
+      ) {
+        e.preventDefault()
+        openInspectionDrawer(filteredListings[focusedRowIndex].id, focusedRowIndex)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [filteredListings, focusedRowIndex, selectedId, actionModal, focusQueueRow, openInspectionDrawer, closeInspectionDrawer])
 
   // Batch toggle handlers
   const handleToggleSelectAll = () => {
@@ -515,6 +611,16 @@ export function AdminListingModerationDesk({
 
       {/* 4. Unified Listings Directory Table */}
       <section className="admin-mod-table-card">
+        <div className="admin-mod-kbd-bar">
+          <span className="tabular-nums">
+            Showing {filteredListings.length} of {allListings.length} submissions
+          </span>
+          <div className="admin-mod-kbd-hints">
+            <span><kbd>↑</kbd> / <kbd>↓</kbd> or <kbd>J</kbd> / <kbd>K</kbd> move</span>
+            <span><kbd>Enter</kbd> inspect</span>
+            <span><kbd>Esc</kbd> close drawer</span>
+          </div>
+        </div>
         <div className="admin-mod-table-wrapper">
           <table className="admin-mod-table">
             <thead>
@@ -539,16 +645,27 @@ export function AdminListingModerationDesk({
             <tbody>
               {filteredListings.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748b' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--adm-text-muted)' }}>
                     No listing submissions match the selected filters.
                   </td>
                 </tr>
               ) : (
-                filteredListings.map(item => {
+                filteredListings.map((item, rowIndex) => {
                   const isSelected = batchSelectedIds.includes(item.id)
+                  const isFocused = rowIndex === focusedRowIndex
 
                   return (
-                    <tr key={item.id} className="admin-mod-row">
+                    <tr
+                      key={item.id}
+                      ref={el => {
+                        rowRefs.current[rowIndex] = el
+                      }}
+                      tabIndex={rowIndex === (focusedRowIndex >= 0 ? focusedRowIndex : 0) ? 0 : -1}
+                      aria-selected={isFocused}
+                      className={`admin-mod-row ${isFocused ? 'is-keyboard-focused' : ''}`}
+                      onClick={() => setFocusedRowIndex(rowIndex)}
+                      onFocus={() => setFocusedRowIndex(rowIndex)}
+                    >
                       {/* Checkbox */}
                       <td style={{ textAlign: 'center' }}>
                         <input
@@ -563,24 +680,25 @@ export function AdminListingModerationDesk({
                       <td>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', maxWidth: '320px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <span style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: '#38bdf8', background: 'rgba(56, 189, 248, 0.1)', padding: '0.1rem 0.35rem', borderRight: '4px' }}>
+                            <span style={{ fontFamily: 'var(--adm-font-mono)', fontSize: '0.7rem', color: 'var(--adm-info)', background: 'var(--adm-info-soft)', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
                               {item.referenceCode}
                             </span>
                             <button
                               type="button"
                               onClick={() => handleCopyCode(item.referenceCode)}
-                              style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0 }}
+                              style={{ background: 'transparent', border: 'none', color: 'var(--adm-text-muted)', cursor: 'pointer', padding: 0 }}
                               title="Copy code"
+                              aria-label={`Copy reference code ${item.referenceCode}`}
                             >
                               <SiteIcon name={copiedCode === item.referenceCode ? 'check' : 'copy'} size={12} />
                             </button>
                             {item.isVerifiedTrustBadge && (
-                              <span title="Verified Trust Seal" style={{ color: '#10b981', display: 'inline-flex' }}>
+                              <span title="Verified Trust Seal" style={{ color: 'var(--adm-success)', display: 'inline-flex' }}>
                                 <SiteIcon name="badge-check" size={13} />
                               </span>
                             )}
                           </div>
-                          <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--adm-text)', fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {item.title}
                           </span>
                         </div>
@@ -596,10 +714,10 @@ export function AdminListingModerationDesk({
                       {/* Organization / Submitter */}
                       <td>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                          <span style={{ fontWeight: 600, color: '#f1f5f9' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--adm-text)' }}>
                             {item.organizationName ?? 'Direct Individual'}
                           </span>
-                          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)' }}>
                             {item.submitterName}
                           </span>
                         </div>
@@ -608,8 +726,8 @@ export function AdminListingModerationDesk({
                       {/* Sport & Location */}
                       <td>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                          <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{item.sport}</span>
-                          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--adm-text-secondary)' }}>{item.sport}</span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)' }}>
                             {item.city}, {item.state}
                           </span>
                         </div>
@@ -634,7 +752,7 @@ export function AdminListingModerationDesk({
 
                       {/* Priority */}
                       <td>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: item.priorityRank >= 4 ? '#38bdf8' : '#94a3b8' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: item.priorityRank >= 4 ? 'var(--adm-info)' : 'var(--adm-text-muted)' }}>
                           P{item.priorityRank}
                         </span>
                       </td>
@@ -645,10 +763,7 @@ export function AdminListingModerationDesk({
                           <button
                             type="button"
                             className="admin-mod-btn admin-mod-btn-secondary"
-                            onClick={() => {
-                              setSelectedId(item.id)
-                              setDrawerTab('preview')
-                            }}
+                            onClick={() => openInspectionDrawer(item.id, rowIndex)}
                           >
                             <SiteIcon name="eye" size={13} />
                             <span>Inspect</span>
@@ -692,9 +807,10 @@ export function AdminListingModerationDesk({
       {selectedItem && (
         <div
           className="admin-mod-drawer-backdrop"
-          onClick={() => setSelectedId(null)}
+          onClick={closeInspectionDrawer}
           role="dialog"
           aria-modal="true"
+          aria-label={`Inspect ${selectedItem.title}`}
         >
           <div
             className="admin-mod-drawer"
@@ -707,26 +823,27 @@ export function AdminListingModerationDesk({
                   <span className={`admin-mod-cat-badge ${selectedItem.listingType}`}>
                     {selectedItem.listingType.replace(/_/g, ' ')}
                   </span>
-                  <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#38bdf8' }}>
+                  <span style={{ fontFamily: 'var(--adm-font-mono)', fontSize: '0.72rem', color: 'var(--adm-info)' }}>
                     {selectedItem.referenceCode}
                   </span>
                   <span className={`admin-mod-status-badge ${selectedItem.status}`}>
                     {selectedItem.status.replace(/_/g, ' ')}
                   </span>
                 </div>
-                <h2 style={{ margin: '0.35rem 0 0 0', fontSize: '1.2rem', color: '#ffffff', fontWeight: 800 }}>
+                <h2 style={{ margin: '0.35rem 0 0 0', fontSize: '1.2rem', color: 'var(--adm-text)', fontWeight: 800 }}>
                   {selectedItem.title}
                 </h2>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--adm-text-muted)' }}>
                   {selectedItem.organizationName ? `${selectedItem.organizationName} · ` : ''}
                   {selectedItem.city}, {selectedItem.state}
                 </span>
               </div>
 
               <button
+                ref={drawerCloseRef}
                 type="button"
                 className="admin-mod-drawer-close"
-                onClick={() => setSelectedId(null)}
+                onClick={closeInspectionDrawer}
                 aria-label="Close drawer"
               >
                 <SiteIcon name="close" size={18} />
@@ -783,20 +900,20 @@ export function AdminListingModerationDesk({
                         <SiteIcon name="badge-check" size={12} />
                         KhelGrid Catalogue Listing
                       </span>
-                      <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                        Sport: <strong style={{ color: '#ffffff' }}>{selectedItem.sport}</strong>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)' }}>
+                        Sport: <strong style={{ color: 'var(--adm-text)' }}>{selectedItem.sport}</strong>
                       </span>
                     </div>
 
-                    <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#ffffff', fontWeight: 700 }}>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--adm-text)', fontWeight: 700 }}>
                       {selectedItem.title}
                     </h3>
 
-                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.6 }}>
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--adm-text-secondary)', lineHeight: 1.6 }}>
                       {selectedItem.description}
                     </p>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#94a3b8' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: 'var(--adm-text-muted)' }}>
                       <SiteIcon name="map-pin" size={13} />
                       <span>{selectedItem.address}</span>
                     </div>
@@ -808,7 +925,7 @@ export function AdminListingModerationDesk({
                           href={selectedItem.sourceUrl}
                           target="_blank"
                           rel="noreferrer"
-                          style={{ color: '#38bdf8', textDecoration: 'underline' }}
+                          style={{ color: 'var(--adm-info)', textDecoration: 'underline' }}
                         >
                           {selectedItem.sourceUrl}
                         </a>
@@ -842,22 +959,22 @@ export function AdminListingModerationDesk({
                   </div>
 
                   {selectedItem.correctionRequest && (
-                    <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '6px', padding: '0.75rem' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f59e0b', display: 'block', marginBottom: '0.2rem' }}>
+                    <div style={{ background: 'var(--adm-warning-soft)', border: '1px solid var(--adm-warning)', borderRadius: '6px', padding: '0.75rem' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--adm-warning)', display: 'block', marginBottom: '0.2rem' }}>
                         Active Revision Request Dispatched to Submitter:
                       </span>
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#fef08a' }}>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--adm-text)' }}>
                         {selectedItem.correctionRequest}
                       </p>
                     </div>
                   )}
 
                   {selectedItem.rejectionReason && (
-                    <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', padding: '0.75rem' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444', display: 'block', marginBottom: '0.2rem' }}>
+                    <div style={{ background: 'var(--adm-danger-soft)', border: '1px solid var(--adm-danger)', borderRadius: '6px', padding: '0.75rem' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--adm-danger)', display: 'block', marginBottom: '0.2rem' }}>
                         Rejection Justification:
                       </span>
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#fca5a5' }}>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--adm-text)' }}>
                         {selectedItem.rejectionReason}
                       </p>
                     </div>
@@ -998,8 +1115,8 @@ export function AdminListingModerationDesk({
                       <div
                         key={rev.version}
                         style={{
-                          background: '#090e18',
-                          border: '1px solid #1e293b',
+                          background: 'var(--adm-surface-subtle)',
+                          border: '1px solid var(--adm-border)',
                           borderRadius: '8px',
                           padding: '0.85rem',
                           display: 'flex',
@@ -1008,17 +1125,17 @@ export function AdminListingModerationDesk({
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                          <span style={{ fontWeight: 700, color: '#38bdf8' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--adm-info)' }}>
                             Version {rev.version}
                           </span>
-                          <span style={{ color: '#64748b' }}>
+                          <span style={{ color: 'var(--adm-text-muted)' }}>
                             {new Date(rev.submittedAt).toLocaleString()}
                           </span>
                         </div>
-                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#e2e8f0' }}>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--adm-text-secondary)' }}>
                           {rev.changesSummary}
                         </p>
-                        <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--adm-text-muted)' }}>
                           Author: {rev.submittedBy}
                         </span>
                       </div>
@@ -1050,15 +1167,15 @@ export function AdminListingModerationDesk({
                     {selectedItem.auditTrail.map(audit => (
                       <div key={audit.id} className="admin-mod-audit-item">
                         <div className="admin-mod-audit-bullet" />
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748b' }}>
-                          <span style={{ fontWeight: 700, color: '#38bdf8' }}>{audit.operatorEmail}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--adm-text-muted)' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--adm-info)' }}>{audit.operatorEmail}</span>
                           <span>{new Date(audit.timestamp).toLocaleString()}</span>
                         </div>
-                        <span style={{ fontSize: '0.82rem', color: '#f1f5f9', fontWeight: 600 }}>
+                        <span style={{ fontSize: '0.82rem', color: 'var(--adm-text)', fontWeight: 600 }}>
                           {audit.summary}
                         </span>
                         {audit.notes && (
-                          <div style={{ fontSize: '0.75rem', color: '#94a3b8', background: 'rgba(0,0,0,0.2)', padding: '0.4rem 0.6rem', borderRadius: '4px', borderLeft: '2px solid #38bdf8' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--adm-text-secondary)', background: 'var(--adm-surface-subtle)', padding: '0.4rem 0.6rem', borderRadius: '4px', borderLeft: '2px solid var(--adm-info)' }}>
                             {audit.notes}
                           </div>
                         )}
@@ -1166,7 +1283,7 @@ export function AdminListingModerationDesk({
               {/* APPROVE MODAL */}
               {actionModal.type === 'approve' && (
                 <>
-                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#cbd5e1' }}>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--adm-text-secondary)' }}>
                     Publishing <strong>{actionModal.item.title}</strong> to active KhelGrid search and discovery.
                   </p>
 
@@ -1192,7 +1309,7 @@ export function AdminListingModerationDesk({
                       checked={approveVerifiedBadge}
                       onChange={e => setApproveVerifiedBadge(e.target.checked)}
                     />
-                    <label htmlFor="trust-badge-chk" style={{ fontSize: '0.8rem', color: '#ffffff', cursor: 'pointer' }}>
+                    <label htmlFor="trust-badge-chk" style={{ fontSize: '0.8rem', color: 'var(--adm-text)', cursor: 'pointer' }}>
                       Grant Verified Trust Seal (evidence cross-checked)
                     </label>
                   </div>
@@ -1225,7 +1342,7 @@ export function AdminListingModerationDesk({
               {/* CORRECTIONS MODAL */}
               {actionModal.type === 'corrections' && (
                 <>
-                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#cbd5e1' }}>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--adm-text-secondary)' }}>
                     Dispatch revision instructions to <strong>{actionModal.item.submitterEmail}</strong>.
                   </p>
 
@@ -1257,7 +1374,7 @@ export function AdminListingModerationDesk({
               {/* REJECT MODAL */}
               {actionModal.type === 'reject' && (
                 <>
-                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#cbd5e1' }}>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--adm-text-secondary)' }}>
                     Reject submission <strong>{actionModal.item.title}</strong>.
                   </p>
 
@@ -1289,7 +1406,7 @@ export function AdminListingModerationDesk({
               {/* UNPUBLISH MODAL */}
               {actionModal.type === 'unpublish' && (
                 <>
-                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#f87171' }}>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--adm-danger)' }}>
                     Withdrawing <strong>{actionModal.item.title}</strong> will immediately remove it from public search and maps.
                   </p>
 
@@ -1308,7 +1425,7 @@ export function AdminListingModerationDesk({
 
               {/* REPUBLISH MODAL */}
               {actionModal.type === 'republish' && (
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#cbd5e1' }}>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--adm-text-secondary)' }}>
                   Are you sure you want to reinstate and republish <strong>{actionModal.item.title}</strong> to active discovery?
                 </p>
               )}
@@ -1316,7 +1433,7 @@ export function AdminListingModerationDesk({
               {/* ADD NOTE MODAL */}
               {actionModal.type === 'add_note' && (
                 <>
-                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#cbd5e1' }}>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--adm-text-secondary)' }}>
                     Add internal observation for <strong>{actionModal.item.title}</strong>.
                   </p>
                   <div className="admin-mod-modal-field">
