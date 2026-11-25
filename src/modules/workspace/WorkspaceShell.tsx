@@ -402,29 +402,33 @@ function PersonaContent({ persona, section, onOpenAuth, onNavigate }: {
         </RequireTenantMember>
       )
     case 'coach':
-      return <LazyCoachDashboard workspaceSection={section} onNavigate={handleStrictNav} />
+      return (
+        <RequireTenantMember personaLabel="Coach" onboardingRole="coach" requiredTenantTypes={['coach', 'academy']} allowedRoles={['owner', 'director', 'admin', 'head_coach', 'coach']} onNavigate={handleStrictNav}>
+          <LazyCoachDashboard workspaceSection={section} onNavigate={handleStrictNav} />
+        </RequireTenantMember>
+      )
     case 'turf':
       return (
-        <RequireTenantMember personaLabel="Venue / Turf" onboardingRole="venue" onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Venue / Turf" onboardingRole="venue" requiredTenantTypes={['venue']} allowedRoles={['owner', 'director', 'admin', 'front_desk', 'staff']} onNavigate={handleStrictNav}>
           <LazyTurfCalendar workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'host':
-      return <LazyHostDashboard workspaceSection={section} onNavigate={handleStrictNav} />
+      return (
+        <RequireTenantMember personaLabel="Venue / Host" onboardingRole="venue" requiredTenantTypes={['venue']} allowedRoles={['owner', 'director', 'admin', 'front_desk', 'staff']} onNavigate={handleStrictNav}>
+          <LazyHostDashboard workspaceSection={section} onNavigate={handleStrictNav} />
+        </RequireTenantMember>
+      )
     case 'tournament':
       return (
-        <RequireTenantMember personaLabel="Tournament" onboardingRole="tournament" onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Tournament" onboardingRole="tournament" requiredTenantTypes={['tournament']} allowedRoles={['owner', 'director', 'admin', 'staff']} onNavigate={handleStrictNav}>
           <LazyTournamentOps workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'organization':
-      return (
-        <RequireTenantMember personaLabel="Organisation" onboardingRole="academy" onNavigate={handleStrictNav}>
-          <LazyOrganizations workspaceSection={section} onNavigate={onNavigate} />
-        </RequireTenantMember>
-      )
+      return <div className="kg-shell-access-error" role="status">Organisation workspace is not enabled until an authoritative organisation tenant type and membership contract are available.</div>
     case 'creator':
-      return <LazyCreatorHub onNavigate={onNavigate} />
+      return <div className="kg-shell-access-error" role="status">Creator workspace is not enabled until creator membership and data permissions are available.</div>
     default:
       return <LazyDashboard onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
   }
