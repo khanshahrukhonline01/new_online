@@ -93,6 +93,39 @@ const featurePages: Record<string, string> = {
   '/creator-hub': 'Sports Creator Hub',
 }
 
+const COACH_WORKSPACE_SUBROUTES = new Set([
+  'profile',
+  'credentials',
+  'athletes',
+  'programmes',
+  'calendar',
+  'sessions',
+  'attendance',
+  'assessments',
+  'video-analysis',
+  'academy',
+  'teams',
+  'venues',
+  'messages',
+  'opportunities',
+  'documents',
+  'reports',
+  'reviews',
+  'services',
+  'notifications',
+  'settings',
+])
+
+function isCoachWorkspaceSubpath(path: string): boolean {
+  if (!path.startsWith('/coach-dashboard/')) return false
+  const parts = path.slice('/coach-dashboard/'.length).split('/').filter(Boolean)
+  if (parts.length === 0 || parts.length > 2) return false
+  const [section, detail] = parts
+  if (!COACH_WORKSPACE_SUBROUTES.has(section)) return false
+  if (!detail) return true
+  return section === 'athletes' || section === 'programmes' || section === 'sessions'
+}
+
 function normalizePath(pathname: string): string {
   if (!pathname || pathname === '/') return '/'
   return pathname.replace(/\/+$/, '') || '/'
@@ -100,6 +133,9 @@ function normalizePath(pathname: string): string {
 export function resolveRoute(pathname: string): RouteMatch {
   const path = normalizePath(pathname)
   if (path === '/') return { name: 'home', canonicalPath: '/' }
+  if (path === '/coach-dashboard' || path === '/coach/hub' || path === '/coach/manage' || isCoachWorkspaceSubpath(path)) {
+    return { name: 'feature', canonicalPath: '/coach-dashboard', slug: 'Coach Operations Hub' }
+  }
   if (path === '/sports') return { name: 'sports-index', canonicalPath: '/sports' }
   if (path.startsWith('/sports/') || path.startsWith('/sport/')) {
     const prefix = path.startsWith('/sports/') ? '/sports/' : '/sport/'
@@ -329,6 +365,8 @@ const OPERATIONAL_PREFIXES = [
   '/dashboard',
   '/academy-hub',
   '/coach-dashboard',
+  '/coach/hub',
+  '/coach/manage',
   '/turf-calendar',
   '/host',
   '/tournament-ops',

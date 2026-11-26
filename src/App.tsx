@@ -413,7 +413,15 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       )
       else if (match.canonicalPath === '/coach-dashboard' || match.canonicalPath === '/coach/hub' || match.canonicalPath === '/coach/manage') page = (
         <RegulatoryWorkspaceGuard persona="coach" onNavigate={navigate}>
-          <CoachDashboardPage onNavigate={navigate} />
+          <RequireTenantMember
+            personaLabel="Coach"
+            onboardingRole="coach"
+            requiredTenantTypes={['coach', 'academy']}
+            allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'head_coach', 'coach']}
+            onNavigate={navigate}
+          >
+            <CoachDashboardPage currentPath={path} onNavigate={navigate} />
+          </RequireTenantMember>
         </RegulatoryWorkspaceGuard>
       )
       else if (match.canonicalPath === '/turf-calendar' || match.canonicalPath === '/venues/manage' || match.canonicalPath === '/turf') page = (

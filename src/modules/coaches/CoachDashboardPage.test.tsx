@@ -1,79 +1,218 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { AuthContext, type AuthContextValue } from '../../shared/auth/useAuth'
+import { TenantContext, type TenantContextValue } from '../../shared/context/tenantContextCore'
+import { RequireTenantMember } from '../../shared/components/RequireTenantMember'
+import type { AuthUserProfile } from '../../integrations/supabase/auth-client'
+import type { DbTenant, DbTenantMembership } from '../../integrations/supabase/tenant-client'
 import CoachDashboardPage from './CoachDashboardPage'
 
-describe('CoachDashboardPage Component', () => {
-  it('renders coach workspace header and verified status', () => {
+function makeAuthValue(user: AuthUserProfile | null): AuthContextValue {
+  return {
+    user,
+    isAuthenticated: Boolean(user),
+    modalOpen: false,
+    intent: { tab: 'login' },
+    openAuth: vi.fn(),
+    closeAuth: vi.fn(),
+    setAuthenticatedUser: vi.fn(),
+    signOut: vi.fn(async () => {}),
+    clearIntent: vi.fn(),
+  }
+}
+
+const sampleCoachTenant: DbTenant = {
+  id: 'tenant-coach-101',
+  slug: 'elite-track-coaching',
+  name: 'Elite Track Coaching Hub',
+  tenant_type: 'coach',
+  status: 'active',
+  verification_status: 'unverified',
+  city: 'Bengaluru',
+  state: 'Karnataka',
+  sport: 'Athletics',
+  created_at: '2026-11-26T00:00:00Z',
+  updated_at: '2026-11-26T00:00:00Z',
+}
+
+const sampleCoachMembership: DbTenantMembership = {
+  id: 'mem-coach-101',
+  tenant_id: 'tenant-coach-101',
+  user_id: 'usr-coach-101',
+  role: 'owner',
+  status: 'active',
+  created_at: '2026-11-26T00:00:00Z',
+  updated_at: '2026-11-26T00:00:00Z',
+  tenant: sampleCoachTenant,
+}
+
+const sampleCoachUser: AuthUserProfile = {
+  id: 'usr-coach-101',
+  name: 'Raghavendra Rao',
+  fullName: 'Raghavendra Rao',
+  email: 'raghav@example.com',
+  role: 'coach',
+  isVerified: true,
+  createdAt: '2026-11-26T00:00:00Z',
+}
+
+function makeTenantValue(overrides: Partial<TenantContextValue> = {}): TenantContextValue {
+  return {
+    userId: 'usr-coach-101',
+    isAuthenticated: true,
+    currentTenant: sampleCoachTenant,
+    currentMembership: sampleCoachMembership,
+    userRole: 'owner',
+    memberships: [sampleCoachMembership],
+    pendingInvitations: [],
+    isLoading: false,
+    error: null,
+    refreshTenant: vi.fn(async () => {}),
+    switchTenant: vi.fn(async () => true),
+    switchTenantBySlug: vi.fn(async () => true),
+    ...overrides,
+  }
+}
+
+describe('CoachDashboardPage Foundation & Security Gates (Phase 1)', () => {
+  it('blocks unauthenticated access cleanly without exposing sample trainees or payment panels', () => {
     const html = renderToStaticMarkup(
-      <CoachDashboardPage initialCoachSlug="zaheer-farooq-coach" />
+      <AuthContext.Provider value={makeAuthValue(null)}>
+        <TenantContext.Provider
+          value={makeTenantValue({
+            userId: null,
+            isAuthenticated: false,
+            currentTenant: null,
+            currentMembership: null,
+            memberships: [],
+          })}
+        >
+          <RequireTenantMember
+            personaLabel="Coach"
+            onboardingRole="coach"
+            requiredTenantTypes={['coach', 'academy']}
+            allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'head_coach', 'coach']}
+          >
+            <CoachDashboardPage />
+          </RequireTenantMember>
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
     )
 
-    expect(html).toContain('KHELGRID · COACH OPERATIONS HUB')
-    expect(html).toContain('Coach Zaheer Farooq')
-    expect(html).toContain('KhelGrid Verified Coach')
-    expect(html).toContain('Official KhelGrid Verified Coach')
+    expect(html).toContain('Sign in required')
+    expect(html).not.toContain('Zaheer Farooq')
+    expect(html).not.toContain('Arjun Mehra')
+    expect(html).not.toContain('Collected This Month')
   })
 
-  it('renders all 4 admincn-style metric statistics cards', () => {
+  it('blocks non-coach athlete users lacking an active coach or academy coaching membership', () => {
+    const athleteUser: AuthUserProfile = {
+      ...sampleCoachUser,
+      id: 'usr-athlete-999',
+      role: 'athlete',
+      fullName: 'Vikram Athlete',
+    }
     const html = renderToStaticMarkup(
-      <CoachDashboardPage initialCoachSlug="zaheer-farooq-coach" />
+      <AuthContext.Provider value={makeAuthValue(athleteUser)}>
+        <TenantContext.Provider
+          value={makeTenantValue({
+            userId: athleteUser.id,
+            currentTenant: null,
+            currentMembership: null,
+            userRole: null,
+            memberships: [],
+          })}
+        >
+          <RequireTenantMember
+            personaLabel="Coach"
+            onboardingRole="coach"
+            requiredTenantTypes={['coach', 'academy']}
+            allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'head_coach', 'coach']}
+          >
+            <CoachDashboardPage />
+          </RequireTenantMember>
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
     )
 
-    expect(html).toContain('Active Trainees')
-    expect(html).toContain('Collected This Month')
-    expect(html).toContain('New Inquiries')
-    expect(html).toContain('Active Batches')
-    expect(html).toContain('+14.2%')
+    expect(html).toContain('No active Coach membership')
+    expect(html).not.toContain('Authorized Database Metrics')
   })
 
-  it('renders tab switcher and default trainee roster datatable', () => {
+  it('renders authenticated Coach Workspace overview with zero hardcoded fixtures or admin verify overrides', () => {
     const html = renderToStaticMarkup(
-      <CoachDashboardPage initialCoachSlug="zaheer-farooq-coach" />
+      <AuthContext.Provider value={makeAuthValue(sampleCoachUser)}>
+        <TenantContext.Provider value={makeTenantValue()}>
+          <CoachDashboardPage workspaceSection="overview" />
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
     )
 
-    expect(html).toContain('Trainee Roster')
-    expect(html).toContain('Inbound Inquiries')
-    expect(html).toContain('Batches &amp; Timings')
-    expect(html).toContain('Daily Attendance')
-    expect(html).toContain('Total Earnings &amp; UPI QR')
-    expect(html).toContain('Credentials &amp; Evidence')
+    expect(html).toContain('KHELGRID · COACH WORKSPACE')
+    expect(html).toContain('Raghavendra Rao')
+    expect(html).toContain('Authorized Database Metrics')
+    expect(html).toContain('Quick Actions')
+    expect(html).toContain('Professional Profile')
+    expect(html).toContain('Verification &amp; Badges')
+    expect(html).toContain('Academy Associations')
 
-    // Table elements and new feature controls
-    expect(html).toContain('Arjun Mehra')
-    expect(html).toContain('Rohan Deshmukh')
-    expect(html).toContain('Morning Elite Fast Bowlers Camp')
-    expect(html).toContain('Add Trainee')
-    expect(html).toContain('Import CSV')
-    expect(html).toContain('Public Profile')
-    expect(html).toContain('Share WhatsApp Card')
-    expect(html).toContain('Receipt')
-    expect(html).toContain('Combines &amp; Benchmarks')
-    expect(html).toContain('Weekly Drills &amp; Homework')
-    expect(html).toContain('Verified Endorsements')
+    // Strictly absent hardcoded sample coaches/trainees, local bypasses, payment collection, or client verify overrides
+    expect(html).not.toContain('Zaheer Farooq')
+    expect(html).not.toContain('Arjun Mehra')
+    expect(html).not.toContain('+14.2%')
+    expect(html).not.toContain('Total Earnings &amp; UPI QR')
+    expect(html).not.toContain('Confirm &amp; Grant Verified Tag')
+    expect(html).not.toContain('+ Register Coach')
   })
 
-  it('renders combines and normative talent battery when tab is active', () => {
-    // We can verify default elements and modals exist
-    const html = renderToStaticMarkup(
-      <CoachDashboardPage initialCoachSlug="zaheer-farooq-coach" />
-    )
+  it('supports Section 3 sub-routes (/coach-dashboard/academy, /settings, /athletes/:id, /programmes/create)', () => {
+    const academyMembership: DbTenantMembership = {
+      id: 'mem-acad-2',
+      tenant_id: 'tenant-acad-2',
+      user_id: sampleCoachUser.id,
+      role: 'head_coach',
+      status: 'active',
+      created_at: '2026-11-26T00:00:00Z',
+      updated_at: '2026-11-26T00:00:00Z',
+      tenant: {
+        ...sampleCoachTenant,
+        id: 'tenant-acad-2',
+        slug: 'sunrise-academy',
+        name: 'Sunrise Sports Academy',
+        tenant_type: 'academy',
+      },
+    }
 
-    expect(html).toContain('Combines &amp; Benchmarks')
-    expect(html).toContain('Weekly Drills &amp; Homework')
-    expect(html).toContain('Verified Endorsements')
-  })
-
-  it('wires WorkspaceShell workspaceSection prop directly to athletes and credentials sub-panels', () => {
-    const athletesHtml = renderToStaticMarkup(
-      <CoachDashboardPage initialCoachSlug="zaheer-farooq-coach" workspaceSection="athletes" />
+    const academyHtml = renderToStaticMarkup(
+      <AuthContext.Provider value={makeAuthValue(sampleCoachUser)}>
+        <TenantContext.Provider
+          value={makeTenantValue({ memberships: [sampleCoachMembership, academyMembership] })}
+        >
+          <CoachDashboardPage currentPath="/coach-dashboard/academy" />
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
     )
-    expect(athletesHtml).toContain('Daily Batch Attendance')
-    expect(athletesHtml).toContain('Save Attendance')
+    expect(academyHtml).toContain('Authorized Academy &amp; Institutional Associations')
+    expect(academyHtml).toContain('Sunrise Sports Academy')
 
-    const credsHtml = renderToStaticMarkup(
-      <CoachDashboardPage initialCoachSlug="zaheer-farooq-coach" workspaceSection="credentials" />
+    const settingsHtml = renderToStaticMarkup(
+      <AuthContext.Provider value={makeAuthValue(sampleCoachUser)}>
+        <TenantContext.Provider value={makeTenantValue()}>
+          <CoachDashboardPage currentPath="/coach-dashboard/settings" />
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
     )
-    expect(credsHtml).toContain('Coaching Credentials &amp; Verification Evidence')
-    expect(credsHtml).toContain('Primary Certification:')
+    expect(settingsHtml).toContain('Account, Security &amp; Privacy Settings')
+    expect(settingsHtml).toContain('Paused')
+
+    const athleteDetailHtml = renderToStaticMarkup(
+      <AuthContext.Provider value={makeAuthValue(sampleCoachUser)}>
+        <TenantContext.Provider value={makeTenantValue()}>
+          <CoachDashboardPage currentPath="/coach-dashboard/athletes/ath-101" />
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
+    )
+    expect(athleteDetailHtml).toContain('Scheduled for Phase 2')
+    expect(athleteDetailHtml).toContain('ath-101')
   })
 })
