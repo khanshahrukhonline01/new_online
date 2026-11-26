@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import App from '../../App'
+import { resolveRoute } from '../routing'
 import WorkspacePage from '../../modules/workspace/WorkspacePage'
 import { AuthTenantPickerPanel } from '../components/auth/AuthTenantPickerPanel'
 import { AuthStepProfilePanel } from '../components/auth/AuthStepProfilePanel'
@@ -60,6 +61,14 @@ function makeMembership(
 }
 
 describe('Multi-tenant & All-Persona Frontend Login Routing', () => {
+  it('routes partner email verification to the public verification page', () => {
+    expect(resolveRoute('/partner/verify')).toEqual({
+      name: 'feature',
+      canonicalPath: '/partner/verify',
+      slug: 'Partner Email Verification',
+    })
+  })
+
   it('exposes all consumer onboarding tracks including creator in AuthModal Step 2', () => {
     const roles = CONSUMER_ROLE_OPTIONS.map(o => o.role)
     expect(roles).toEqual(['athlete', 'parent', 'scout', 'creator'])
