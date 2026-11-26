@@ -9,13 +9,16 @@ import {
   buildComplianceHeatmapMatrix,
   buildComplianceSignals,
   classifyComplianceRiskTier,
+  DEFAULT_COMPLIANCE_DATE_RANGE,
   EMPTY_DRILLDOWN_FILTER,
+  filterSignalsByDateRange,
   formatRiskTierLabel,
   formatTrendDeltaLabel,
   getIncidentTypeLabel,
   getPartnerCategoryLabel,
   hasActiveDrilldown,
   matchesSignalDrilldown,
+  type ComplianceDateRange,
   type ComplianceRiskTier,
   type ComplianceSignalRecord,
   type HeatmapAxisItem,
@@ -37,6 +40,7 @@ export interface AdminComplianceHeatmapProps {
   onModeChange?: (next: HeatmapMatrixMode) => void
   scope?: HeatmapSignalScope
   onScopeChange?: (next: HeatmapSignalScope) => void
+  dateRange?: ComplianceDateRange
 }
 
 function readIsDarkTheme(): boolean {
@@ -68,6 +72,7 @@ export function AdminComplianceHeatmap({
   onModeChange,
   scope: controlledScope,
   onScopeChange,
+  dateRange = DEFAULT_COMPLIANCE_DATE_RANGE,
 }: AdminComplianceHeatmapProps) {
   const [signals, setSignals] = useState<ComplianceSignalRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -187,20 +192,21 @@ export function AdminComplianceHeatmap({
   }, [])
 
   const matrix = useMemo(
-    () => buildComplianceHeatmapMatrix(signals, mode, scope),
-    [signals, mode, scope],
+    () => buildComplianceHeatmapMatrix(signals, mode, scope, dateRange),
+    [signals, mode, scope, dateRange],
   )
 
   const isDrilldownActive = hasActiveDrilldown(activeDrilldown)
 
-  // Scoped signals matching current heatmap scope filter (all / trust_safety / high_risk_only)
+  // Scoped signals matching current heatmap date range + scope filter (all / trust_safety / high_risk_only)
   const scopedSignals = useMemo(() => {
-    return signals.filter(sig => {
+    const dateFiltered = filterSignalsByDateRange(signals, dateRange, matrix.dateWindow)
+    return dateFiltered.filter(sig => {
       if (scope === 'trust_safety') return sig.sourceDesk === 'trust_safety'
       if (scope === 'high_risk_only') return sig.isHighRisk
       return true
     })
-  }, [signals, scope])
+  }, [signals, dateRange, matrix.dateWindow, scope])
 
   // Determine the highest-risk cell for default preview when no drilldown filter is active
   const previewCell: HeatmapCellDatum | null = useMemo(() => {
@@ -615,14 +621,14 @@ export function AdminComplianceHeatmap({
       .attr('stroke', cellBorderColor)
       .attr('stroke-width', 1)
 
-    // 30d Trend column header
+    // Dynamic Trend column header reflecting active date range window
     g.append('text')
       .attr('x', innerWidth + 58)
       .attr('y', -14)
       .attr('fill', mutedTextColor)
       .attr('font-size', '11px')
       .attr('font-weight', '600')
-      .text('30d Trend')
+      .text(`${matrix.dateWindow.shortLabel} Trend`)
 
     // Regional Total Risk values on the right (clickable to filter region)
     g.selectAll('.chm-row-total')
@@ -647,7 +653,7 @@ export function AdminComplianceHeatmap({
       .on('click', (_event: MouseEvent, d) => handleToggleRegionDrilldown(d.key))
       .text(d => (d.totalRisk > 0 ? String(d.totalRisk) : '0'))
 
-    // D3 30-Day Trend Sparklines & Directional Deltas for Each Region
+    // D3 Dynamic Date-Window Trend Sparklines & Directional Deltas for Each Region
     const trendUpStroke = isDark ? '#f87171' : '#dc2626'
     const trendDownStroke = isDark ? '#34d399' : '#059669'
     const trendStableStroke = isDark ? '#64748b' : '#94a3b8'
@@ -671,7 +677,8 @@ export function AdminComplianceHeatmap({
 
     const sparkXStart = 4
     const sparkWidth = 76
-    const sparkXScale = d3.scaleLinear().domain([0, 29]).range([sparkXStart, sparkXStart + sparkWidth])
+    const maxPointIndex = Math.max(1, (matrix.rows[0]?.trend30d?.points.length ?? 30) - 1)
+    const sparkXScale = d3.scaleLinear().domain([0, maxPointIndex]).range([sparkXStart, sparkXStart + sparkWidth])
     const trendRowHeight = yScale.bandwidth()
     const sparkTop = 9
     const sparkBottom = trendRowHeight - 9
@@ -1108,7 +1115,7 @@ export function AdminComplianceHeatmap({
               <>
                 <span aria-hidden="true">·</span>
                 <span data-testid="heatmap-trend-summary">
-                  30d trend:{' '}
+                  {matrix.dateWindow.shortLabel} trend:{' '}
                   {trendSummary.rising > 0 && (
                     <strong className="chm-meta-rising">{trendSummary.rising} rising</strong>
                   )}
@@ -1119,6 +1126,10 @@ export function AdminComplianceHeatmap({
                 </span>
               </>
             )}
+            <span aria-hidden="true">·</span>
+            <span data-testid="heatmap-window-badge">
+              Scope: <strong>{matrix.dateWindow.label}</strong>
+            </span>
           </p>
         </div>
 
@@ -1234,7 +1245,7 @@ export function AdminComplianceHeatmap({
               role="tooltip"
             >
               <div className="chm-tooltip-title">
-                {hoveredTrend.row.label} · 30-Day Risk Trend
+                {hoveredTrend.row.label} · {matrix.dateWindow.label} Risk Trend
               </div>
               <div className="chm-tooltip-metrics">
                 <span>
@@ -1253,7 +1264,7 @@ export function AdminComplianceHeatmap({
                   )
                 </span>
                 <span>
-                  30d Start: <strong>{hoveredTrend.trend.startScore}</strong> → Current:{' '}
+                  {matrix.dateWindow.shortLabel} Start: <strong>{hoveredTrend.trend.startScore}</strong> → Current:{' '}
                   <strong>{hoveredTrend.trend.currentScore}</strong> · Peak:{' '}
                   <strong>{hoveredTrend.trend.peakScore}</strong>
                 </span>
@@ -1320,6 +1331,7 @@ export function AdminComplianceHeatmap({
               {inspectorRegionRow?.trend30d && (
                 <Inspector30DayMiniChart
                   regionLabel={inspectorRegionRow.label}
+                  windowLabel={matrix.dateWindow.label}
                   trend={inspectorRegionRow.trend30d}
                   isDark={isDark}
                 />
@@ -1381,12 +1393,14 @@ export function AdminComplianceHeatmap({
 
 interface Inspector30DayMiniChartProps {
   regionLabel: string
+  windowLabel: string
   trend: Region30DayTrend
   isDark: boolean
 }
 
 function Inspector30DayMiniChart({
   regionLabel,
+  windowLabel,
   trend,
   isDark,
 }: Inspector30DayMiniChartProps) {
@@ -1396,7 +1410,8 @@ function Inspector30DayMiniChart({
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
 
-  const xScale = d3.scaleLinear().domain([0, 29]).range([pad.left, pad.left + innerW])
+  const maxIdx = Math.max(1, trend.points.length - 1)
+  const xScale = d3.scaleLinear().domain([0, maxIdx]).range([pad.left, pad.left + innerW])
   const yMax = Math.max(trend.peakScore, 20)
   const yScale = d3.scaleLinear().domain([0, yMax]).range([pad.top + innerH, pad.top])
 
@@ -1442,7 +1457,7 @@ function Inspector30DayMiniChart({
       data-trend-direction={trend.direction}
     >
       <div className="chm-inspector-trend-head">
-        <span className="chm-inspector-trend-title">{regionLabel} · 30-Day Trend</span>
+        <span className="chm-inspector-trend-title">{regionLabel} · {windowLabel}</span>
         <span className={`chm-inspector-trend-delta dir-${trend.direction}`}>
           {formatTrendDeltaLabel(trend)}
           {trend.deltaPct !== null ? ` (${trend.deltaPct > 0 ? '+' : ''}${trend.deltaPct}%)` : ''}

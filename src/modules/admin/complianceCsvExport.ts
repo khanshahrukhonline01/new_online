@@ -8,11 +8,13 @@
 
 import {
   classifyComplianceRiskTier,
+  filterSignalsByDateRange,
   formatRiskTierLabel,
   getIncidentTypeLabel,
   getPartnerCategoryLabel,
   hasActiveDrilldown,
   matchesSignalDrilldown,
+  type ComplianceDateRange,
   type ComplianceHeatmapMatrix,
   type ComplianceSignalRecord,
   type HeatmapAxisItem,
@@ -21,6 +23,7 @@ import {
   type HeatmapMatrixMode,
   type HeatmapSignalScope,
   type InvestigableEntityRow,
+  type ResolvedComplianceDateWindow,
 } from './complianceHeatmapData'
 
 export type ComplianceCsvExportKind =
@@ -135,6 +138,7 @@ export function buildComplianceCsvFilename(params: {
   kind: ComplianceCsvExportKind
   scope: HeatmapSignalScope
   drilldown: HeatmapDrilldownFilter
+  dateWindow?: ResolvedComplianceDateWindow
   exportedAt?: Date
 }): string {
   const dateStamp = (params.exportedAt ?? new Date()).toISOString().slice(0, 10)
@@ -151,6 +155,13 @@ export function buildComplianceCsvFilename(params: {
   if (params.drilldown.incidentType) tokens.push(slugifyToken(params.drilldown.incidentType))
   if (params.scope === 'trust_safety') tokens.push('trust-safety')
   else if (params.scope === 'high_risk_only') tokens.push('high-risk')
+  if (params.dateWindow && params.dateWindow.preset !== '30d') {
+    tokens.push(
+      params.dateWindow.preset === 'custom'
+        ? `${params.dateWindow.startDateIso}-to-${params.dateWindow.endDateIso}`
+        : slugifyToken(params.dateWindow.shortLabel),
+    )
+  }
 
   const scopeSegment = tokens.length > 0 ? tokens.join('-') : 'all'
   return `${prefix}-${scopeSegment}-${dateStamp}.csv`
@@ -164,14 +175,21 @@ export interface FilteredHeatmapProjection {
 }
 
 /**
- * Projects the Compliance Heatmap matrix and signals onto the active scope & drilldown filter.
+ * Projects the Compliance Heatmap matrix and signals onto the active date window, scope & drilldown filter.
  */
 export function projectFilteredHeatmapForExport(
   matrix: ComplianceHeatmapMatrix,
   allSignals: ComplianceSignalRecord[],
   drilldown: HeatmapDrilldownFilter,
 ): FilteredHeatmapProjection {
-  const scopedSignals = allSignals.filter(sig => {
+  const range: ComplianceDateRange = {
+    preset: matrix.dateWindow.preset,
+    startDate: matrix.dateWindow.startDateIso,
+    endDate: matrix.dateWindow.endDateIso,
+  }
+  const dateScopedSignals = filterSignalsByDateRange(allSignals, range, matrix.dateWindow)
+
+  const scopedSignals = dateScopedSignals.filter(sig => {
     if (matrix.scope === 'trust_safety') return sig.sourceDesk === 'trust_safety'
     if (matrix.scope === 'high_risk_only') return sig.isHighRisk
     return true
@@ -395,6 +413,7 @@ export function buildComplianceCsvExport(
     kind: input.kind,
     scope: input.matrix.scope,
     drilldown: input.drilldown,
+    dateWindow: input.matrix.dateWindow,
     exportedAt,
   })
 
@@ -405,10 +424,14 @@ export function buildComplianceCsvExport(
   } else if (input.kind === 'drilldown_entities') {
     lines = buildEntitiesTableLines(input.entities)
   } else {
-    // Combined report: Metadata summary + Filtered Heatmap Matrix & 30d Trends + Entities + Signals
+    // Combined report: Metadata summary + Filtered Heatmap Matrix & Trends + Entities + Signals
     const summaryLines = [
       formatCsvRow(['SECTION', 'KHELGRID COMPLIANCE HEATMAP & DRILLDOWN EXPORT']),
       formatCsvRow(['Exported At (UTC)', exportedAt.toISOString()]),
+      formatCsvRow([
+        'Date Scope',
+        `${input.matrix.dateWindow.label} (${input.matrix.dateWindow.startDateIso} to ${input.matrix.dateWindow.endDateIso})`,
+      ]),
       formatCsvRow(['Matrix Dimension', getModeLabel(input.matrix.mode)]),
       formatCsvRow(['Signal Scope', getScopeLabel(input.matrix.scope)]),
       formatCsvRow(['Region Filter', input.drilldown.region ?? 'All Regions']),

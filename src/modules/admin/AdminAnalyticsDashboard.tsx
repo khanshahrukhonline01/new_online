@@ -15,10 +15,13 @@ import { signInWithEmail } from '../../integrations/supabase/auth-client'
 import { getSupabaseClient } from '../../integrations/supabase/realtime-client'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { AdminComplianceHeatmap } from './AdminComplianceHeatmap'
+import { AdminDateRangePicker } from './AdminDateRangePicker'
+import { AdminDataFreshnessIndicator } from './AdminDataFreshnessIndicator'
 import {
   buildComplianceHeatmapMatrix,
   buildComplianceSignals,
   buildInvestigableEntityRows,
+  DEFAULT_COMPLIANCE_DATE_RANGE,
   EMPTY_DRILLDOWN_FILTER,
   filterEntityRowsByDrilldown,
   filterModerationRecordsByDrilldown,
@@ -28,6 +31,7 @@ import {
   hasActiveDrilldown,
   normalizeComplianceRegion,
   normalizePartnerCategory,
+  type ComplianceDateRange,
   type ComplianceSignalRecord,
   type HeatmapDrilldownFilter,
   type HeatmapMatrixMode,
@@ -177,9 +181,10 @@ export function AdminAnalyticsDashboard({
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [showPublishModal, setShowPublishModal] = useState(false)
 
-  // Heatmap Dimension, Scope, Drilldown & Investigable Entities State
+  // Heatmap Dimension, Scope, Date Range, Drilldown & Investigable Entities State
   const [heatmapMode, setHeatmapMode] = useState<HeatmapMatrixMode>('partner_category')
   const [heatmapScope, setHeatmapScope] = useState<HeatmapSignalScope>('all')
+  const [dateRange, setDateRange] = useState<ComplianceDateRange>(DEFAULT_COMPLIANCE_DATE_RANGE)
   const [drilldown, setDrilldown] = useState<HeatmapDrilldownFilter>(EMPTY_DRILLDOWN_FILTER)
   const [complianceSignals, setComplianceSignals] = useState<ComplianceSignalRecord[]>([])
   const [entityRows, setEntityRows] = useState<InvestigableEntityRow[]>([])
@@ -274,6 +279,7 @@ export function AdminAnalyticsDashboard({
         setSummary(buildLocalFallbackSummary())
         setActivity(buildLocalFallbackActivity())
         setQueueItems(buildLocalFallbackQueue())
+        setLastRefreshedAt(new Date())
       }
     })
   }, [loadEntityRoster, shellAuthorized])
@@ -395,8 +401,8 @@ export function AdminAnalyticsDashboard({
 
   // Synchronized Compliance Heatmap Matrix & Filtered Export Projection
   const heatmapMatrix = useMemo(
-    () => buildComplianceHeatmapMatrix(complianceSignals, heatmapMode, heatmapScope),
-    [complianceSignals, heatmapMode, heatmapScope],
+    () => buildComplianceHeatmapMatrix(complianceSignals, heatmapMode, heatmapScope, dateRange),
+    [complianceSignals, heatmapMode, heatmapScope, dateRange],
   )
 
   const exportProjection = useMemo(
@@ -405,7 +411,10 @@ export function AdminAnalyticsDashboard({
   )
 
   const hasAnyComplianceFilter =
-    drilldownActive || heatmapScope !== 'all' || Boolean(entitySearch.trim())
+    drilldownActive ||
+    heatmapScope !== 'all' ||
+    dateRange.preset !== '30d' ||
+    Boolean(entitySearch.trim())
 
   const handleExportComplianceCsv = useCallback(
     (kind: ComplianceCsvExportKind = 'combined') => {
@@ -612,6 +621,12 @@ export function AdminAnalyticsDashboard({
             <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: '#64748b' }}>
               Real-time pipeline metrics, live sport segmentation, moderation activity audit feed, and batch actions.
             </p>
+            <AdminDataFreshnessIndicator
+              lastRefreshedAt={lastRefreshedAt}
+              isRefreshing={loading}
+              autoRefreshEnabled={autoRefresh}
+              onRefreshNow={() => void loadData()}
+            />
           </div>
 
           <div className="admin-analytics-controls">
@@ -623,6 +638,12 @@ export function AdminAnalyticsDashboard({
               />
               Auto-refresh (30s)
             </label>
+
+            <AdminDateRangePicker
+              value={dateRange}
+              resolvedWindow={heatmapMatrix.dateWindow}
+              onChange={setDateRange}
+            />
 
             <div className="admin-csv-export-split" ref={exportMenuRef}>
               <button
@@ -728,17 +749,6 @@ export function AdminAnalyticsDashboard({
                 </div>
               )}
             </div>
-
-            <button
-              type="button"
-              className="admin-analytics-btn admin-analytics-btn-secondary"
-              onClick={() => void loadData()}
-              disabled={loading}
-              title={`Last refreshed at ${lastRefreshedAt.toLocaleTimeString('en-IN')}`}
-            >
-              <SiteIcon name="refresh" size={14} />
-              <span>{loading ? 'Refreshing…' : 'Refresh Telemetry'}</span>
-            </button>
           </div>
         </div>
 
@@ -830,6 +840,7 @@ export function AdminAnalyticsDashboard({
         onModeChange={setHeatmapMode}
         scope={heatmapScope}
         onScopeChange={setHeatmapScope}
+        dateRange={dateRange}
       />
 
       {/* 2B. REGULATED ENTITIES INVESTIGATION TABLE (FILTERED LIVE BY HEATMAP DRILLDOWN) */}
