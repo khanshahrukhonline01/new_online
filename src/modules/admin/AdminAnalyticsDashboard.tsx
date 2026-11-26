@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import {
   getOperationsKpiSummary,
   getRecentModerationActivity,
@@ -14,17 +14,144 @@ import {
 import { signInWithEmail } from '../../integrations/supabase/auth-client'
 import { getSupabaseClient } from '../../integrations/supabase/realtime-client'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { AdminComplianceHeatmap } from './AdminComplianceHeatmap'
+import {
+  buildComplianceHeatmapMatrix,
+  buildComplianceSignals,
+  buildInvestigableEntityRows,
+  EMPTY_DRILLDOWN_FILTER,
+  filterEntityRowsByDrilldown,
+  filterModerationRecordsByDrilldown,
+  formatRiskTierLabel,
+  getIncidentTypeLabel,
+  getPartnerCategoryLabel,
+  hasActiveDrilldown,
+  normalizeComplianceRegion,
+  normalizePartnerCategory,
+  type ComplianceSignalRecord,
+  type HeatmapDrilldownFilter,
+  type HeatmapMatrixMode,
+  type HeatmapSignalScope,
+  type InvestigableEntityRow,
+} from './complianceHeatmapData'
+import {
+  buildComplianceCsvExport,
+  projectFilteredHeatmapForExport,
+  triggerCsvDownload,
+  type ComplianceCsvExportKind,
+} from './complianceCsvExport'
+import { getAdminTenants } from '../../../apps/admin/src/services/adminTenantService'
+import { getAdminVerifications } from '../../../apps/admin/src/services/adminVerificationService'
+import { getAdminTrustSafetyCases } from '../../../apps/admin/src/services/adminTrustSafetyService'
+import { subscribeRegulatoryState } from '../../shared/governance/regulatoryBridge'
 import './AdminAnalyticsDashboard.css'
 
 export interface AdminAnalyticsDashboardProps {
   initialSummary?: OperationsKpiSummary | null
+  shellAuthorized?: boolean
 }
 
-export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashboardProps) {
+function buildLocalFallbackSummary(): OperationsKpiSummary {
+  const tenants = getAdminTenants()
+  const verifications = getAdminVerifications()
+  const sportsBreakdown: Record<string, number> = {}
+  const cityBreakdown: Record<string, number> = {}
+  const categoryBreakdown: Record<string, number> = {}
+
+  for (const t of tenants) {
+    if (t.sport) sportsBreakdown[t.sport] = (sportsBreakdown[t.sport] || 0) + 1
+    if (t.city) cityBreakdown[t.city] = (cityBreakdown[t.city] || 0) + 1
+    const cat = t.tenantType || 'academy'
+    categoryBreakdown[cat] = (categoryBreakdown[cat] || 0) + 1
+  }
+
+  const activeTenantsCount = tenants.filter(t => t.status === 'active').length
+  return {
+    totalPublished: activeTenantsCount,
+    totalSubmissions: verifications.length,
+    pendingCount: verifications.filter(v => v.status === 'pending_review').length,
+    underReviewCount: verifications.filter(v => v.status === 'in_review').length,
+    changesRequestedCount: verifications.filter(v => v.status === 'action_required').length,
+    approvedCount: verifications.filter(v => v.status === 'verified').length,
+    publishedCount: activeTenantsCount,
+    rejectedCount: verifications.filter(
+      v => v.status === 'rejected' || v.status === 'revoked',
+    ).length,
+    unpublishedCount: tenants.filter(t => t.status !== 'active').length,
+    sportsBreakdown,
+    categoryBreakdown,
+    cityBreakdown,
+  }
+}
+
+function buildLocalFallbackQueue(): ModeratorQueueItem[] {
+  const verifications = getAdminVerifications()
+  return verifications.map(v => {
+    const mappedStatus =
+      v.status === 'verified'
+        ? 'published'
+        : v.status === 'in_review'
+          ? 'under_review'
+          : v.status === 'action_required'
+            ? 'approved'
+            : 'pending_review'
+    return {
+      id: v.id,
+      reference_number: v.referenceCode,
+      listing_type: v.entityType,
+      title: v.entityName,
+      city: v.city,
+      source_url: null,
+      details: v.sport ? `${v.sport} · ${v.state}` : v.state,
+      status: mappedStatus,
+      version: 1,
+      created_at: v.submittedAt || new Date().toISOString(),
+      updated_at: v.lastAuditedAt || v.submittedAt || new Date().toISOString(),
+    }
+  })
+}
+
+function buildLocalFallbackActivity(): GlobalModeratorActivityItem[] {
+  const verifications = getAdminVerifications()
+  const items: GlobalModeratorActivityItem[] = []
+  for (const v of verifications) {
+    const actionMap: Record<string, string> = {
+      verified: 'verification_approved',
+      rejected: 'rejected',
+      revoked: 'rejected',
+      action_required: 'corrections_requested',
+      in_review: 'review_started',
+      pending_review: 'review_started',
+      expired: 'corrections_requested',
+    }
+    items.push({
+      id: `local-act-${v.id}`,
+      submission_id: v.id,
+      reference_number: v.referenceCode,
+      listing_title: v.entityName,
+      listing_type: v.entityType,
+      city: v.city,
+      action: actionMap[v.status] || 'review_started',
+      actor_id: v.assignedReviewer || 'compliance.desk@khelgrid.in',
+      from_status: 'submitted',
+      to_status: v.status,
+      notes: v.rejectionReason || v.actionRequiredNotes || `${v.entityType} dossier audit (${v.state})`,
+      created_at: v.lastAuditedAt || v.submittedAt || new Date().toISOString(),
+    })
+  }
+  return items.sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  )
+}
+
+export function AdminAnalyticsDashboard({
+  initialSummary,
+  shellAuthorized = false,
+}: AdminAnalyticsDashboardProps) {
   const [summary, setSummary] = useState<OperationsKpiSummary | null>(initialSummary || null)
   const [activity, setActivity] = useState<GlobalModeratorActivityItem[]>([])
   const [queueItems, setQueueItems] = useState<ModeratorQueueItem[]>([])
-  const [isAuthorized, setIsAuthorized] = useState(Boolean(initialSummary))
+  const [isAuthorized, setIsAuthorized] = useState(Boolean(initialSummary || shellAuthorized))
   const [loading, setLoading] = useState(!initialSummary)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -50,12 +177,65 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [showPublishModal, setShowPublishModal] = useState(false)
 
+  // Heatmap Dimension, Scope, Drilldown & Investigable Entities State
+  const [heatmapMode, setHeatmapMode] = useState<HeatmapMatrixMode>('partner_category')
+  const [heatmapScope, setHeatmapScope] = useState<HeatmapSignalScope>('all')
+  const [drilldown, setDrilldown] = useState<HeatmapDrilldownFilter>(EMPTY_DRILLDOWN_FILTER)
+  const [complianceSignals, setComplianceSignals] = useState<ComplianceSignalRecord[]>([])
+  const [entityRows, setEntityRows] = useState<InvestigableEntityRow[]>([])
+  const [entitySearch, setEntitySearch] = useState('')
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const exportMenuRef = useRef<HTMLDivElement | null>(null)
+
+  const handleDrilldownChange = useCallback((next: HeatmapDrilldownFilter) => {
+    setDrilldown(next)
+    setSelectedIds(new Set())
+  }, [])
+
+  const loadEntityRoster = useCallback(async () => {
+    const [tsResult, verifications, tenants] = await Promise.all([
+      getAdminTrustSafetyCases().catch(() => ({ cases: [] })),
+      Promise.resolve(getAdminVerifications()),
+      Promise.resolve(getAdminTenants()),
+    ])
+    const payload = {
+      incidents: tsResult.cases,
+      verifications,
+      tenants,
+    }
+    setComplianceSignals(buildComplianceSignals(payload))
+    setEntityRows(buildInvestigableEntityRows(payload))
+  }, [])
+
+  useEffect(() => {
+    if (!showExportMenu) return
+    const handlePointerDown = (event: MouseEvent) => {
+      if (
+        exportMenuRef.current &&
+        event.target instanceof Node &&
+        !exportMenuRef.current.contains(event.target)
+      ) {
+        setShowExportMenu(false)
+      }
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowExportMenu(false)
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showExportMenu])
+
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date())
 
   const loadData = useCallback(async () => {
     setLoading(true)
     setError('')
+    void loadEntityRoster()
     try {
       const [sumRes, actRes, qRes] = await Promise.all([
         getOperationsKpiSummary(),
@@ -68,15 +248,35 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
       setIsAuthorized(true)
       setLastRefreshedAt(new Date())
     } catch (err) {
-      setIsAuthorized(false)
-      setSummary(null)
-      setActivity([])
-      setQueueItems([])
-      setError(err instanceof Error ? err.message : 'Could not verify operations analytics authorization.')
+      if (shellAuthorized) {
+        setSummary(buildLocalFallbackSummary())
+        setActivity(buildLocalFallbackActivity())
+        setQueueItems(buildLocalFallbackQueue())
+        setIsAuthorized(true)
+        setLastRefreshedAt(new Date())
+      } else {
+        setIsAuthorized(false)
+        setSummary(null)
+        setActivity([])
+        setQueueItems([])
+        setError(err instanceof Error ? err.message : 'Could not verify operations analytics authorization.')
+      }
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [shellAuthorized, loadEntityRoster])
+
+  useEffect(() => {
+    void loadEntityRoster()
+    return subscribeRegulatoryState(() => {
+      void loadEntityRoster()
+      if (shellAuthorized) {
+        setSummary(buildLocalFallbackSummary())
+        setActivity(buildLocalFallbackActivity())
+        setQueueItems(buildLocalFallbackQueue())
+      }
+    })
+  }, [loadEntityRoster, shellAuthorized])
 
   useEffect(() => {
     if (!initialSummary) {
@@ -136,9 +336,27 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
     }
   }
 
-  // Filtered Activity Feed
+  const drilldownActive = hasActiveDrilldown(drilldown)
+
+  // Filtered Regulated Entities Roster (directly driven by heatmap drilldown + search)
+  const filteredEntityRows = useMemo(() => {
+    const byDrilldown = filterEntityRowsByDrilldown(entityRows, drilldown)
+    if (!entitySearch.trim()) return byDrilldown
+    const q = entitySearch.trim().toLowerCase()
+    return byDrilldown.filter(
+      row =>
+        row.entityName.toLowerCase().includes(q) ||
+        row.referenceCode.toLowerCase().includes(q) ||
+        row.city.toLowerCase().includes(q) ||
+        row.region.toLowerCase().includes(q) ||
+        row.latestIssueSummary.toLowerCase().includes(q),
+    )
+  }, [entityRows, drilldown, entitySearch])
+
+  // Filtered Activity Feed (synchronized with heatmap region/category drilldown)
   const filteredActivity = useMemo(() => {
-    return activity.filter(item => {
+    const drilldownScoped = filterModerationRecordsByDrilldown(activity, drilldown)
+    return drilldownScoped.filter(item => {
       if (activityFilter === 'published' && item.action !== 'published') return false
       if (activityFilter === 'approved' && item.action !== 'approved') return false
       if (activityFilter === 'evidence' && !item.action.includes('evidence') && !item.action.includes('verification')) return false
@@ -155,15 +373,65 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
       }
       return true
     })
-  }, [activity, activityFilter, activitySearch])
+  }, [activity, drilldown, activityFilter, activitySearch])
 
-  // Filtered Queue for Bulk Actions
+  // Filtered Queue for Bulk Actions (synchronized with heatmap region/category drilldown)
   const filteredQueue = useMemo(() => {
-    return queueItems.filter(item => {
+    const drilldownScoped = filterModerationRecordsByDrilldown(queueItems, drilldown)
+    return drilldownScoped.filter(item => {
       if (bulkStatusFilter !== 'all' && item.status !== bulkStatusFilter) return false
       return true
     })
-  }, [queueItems, bulkStatusFilter])
+  }, [queueItems, drilldown, bulkStatusFilter])
+
+  const handleOpenEntityDesk = (workspace: InvestigableEntityRow['targetWorkspace']) => {
+    if (typeof window === 'undefined') return
+    window.dispatchEvent(
+      new CustomEvent('khelgrid-admin-switch-workspace', {
+        detail: { workspace },
+      }),
+    )
+  }
+
+  // Synchronized Compliance Heatmap Matrix & Filtered Export Projection
+  const heatmapMatrix = useMemo(
+    () => buildComplianceHeatmapMatrix(complianceSignals, heatmapMode, heatmapScope),
+    [complianceSignals, heatmapMode, heatmapScope],
+  )
+
+  const exportProjection = useMemo(
+    () => projectFilteredHeatmapForExport(heatmapMatrix, complianceSignals, drilldown),
+    [heatmapMatrix, complianceSignals, drilldown],
+  )
+
+  const hasAnyComplianceFilter =
+    drilldownActive || heatmapScope !== 'all' || Boolean(entitySearch.trim())
+
+  const handleExportComplianceCsv = useCallback(
+    (kind: ComplianceCsvExportKind = 'combined') => {
+      const result = buildComplianceCsvExport({
+        kind,
+        matrix: heatmapMatrix,
+        allSignals: complianceSignals,
+        drilldown,
+        entities: filteredEntityRows,
+        entitySearch,
+      })
+
+      triggerCsvDownload(result.filename, result.csv)
+      setShowExportMenu(false)
+
+      const summaryDetail =
+        kind === 'heatmap_matrix'
+          ? `${result.regionCount} ${result.regionCount === 1 ? 'region' : 'regions'}`
+          : kind === 'drilldown_entities'
+            ? `${result.entityCount} ${result.entityCount === 1 ? 'entity' : 'entities'}`
+            : `${result.regionCount} ${result.regionCount === 1 ? 'region' : 'regions'}, ${result.entityCount} ${result.entityCount === 1 ? 'entity' : 'entities'}, ${result.signalCount} ${result.signalCount === 1 ? 'signal' : 'signals'}`
+
+      setNotice(`Exported "${result.filename}" (${summaryDetail}).`)
+    },
+    [heatmapMatrix, complianceSignals, drilldown, filteredEntityRows, entitySearch],
+  )
 
   // Bulk Selection Helpers
   const toggleSelectAll = () => {
@@ -356,6 +624,111 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
               Auto-refresh (30s)
             </label>
 
+            <div className="admin-csv-export-split" ref={exportMenuRef}>
+              <button
+                type="button"
+                className={`admin-analytics-btn admin-analytics-btn-secondary admin-csv-export-main ${hasAnyComplianceFilter ? 'is-filtered' : ''}`}
+                onClick={() => handleExportComplianceCsv('combined')}
+                data-testid="export-compliance-csv-btn"
+                title={
+                  hasAnyComplianceFilter
+                    ? 'Export filtered compliance heatmap, 30-day trends, and drill-down entities as CSV'
+                    : 'Export full compliance heatmap, 30-day trends, and entity roster as CSV'
+                }
+              >
+                <SiteIcon name="download" size={14} />
+                <span>Export CSV</span>
+                {hasAnyComplianceFilter && (
+                  <span
+                    className="admin-csv-filter-indicator"
+                    data-testid="export-csv-filtered-indicator"
+                    aria-label="Active filters applied to export"
+                  >
+                    Filtered
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                className={`admin-analytics-btn admin-analytics-btn-secondary admin-csv-export-caret ${hasAnyComplianceFilter ? 'is-filtered' : ''}`}
+                onClick={() => setShowExportMenu(prev => !prev)}
+                aria-label="Choose CSV export format"
+                aria-haspopup="menu"
+                aria-expanded={showExportMenu}
+                data-testid="export-csv-menu-toggle"
+              >
+                <SiteIcon name="chevron-down" size={14} />
+              </button>
+
+              {showExportMenu && (
+                <div
+                  className="admin-csv-export-menu"
+                  role="menu"
+                  aria-label="Compliance CSV export formats"
+                  data-testid="export-csv-menu"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="admin-csv-export-option"
+                    onClick={() => handleExportComplianceCsv('combined')}
+                    data-testid="export-csv-option-combined"
+                  >
+                    <span className="admin-csv-option-title">
+                      Combined Compliance Report (.csv)
+                    </span>
+                    <span className="admin-csv-option-desc">
+                      Heatmap &amp; 30d trends ({exportProjection.rows.length}{' '}
+                      {exportProjection.rows.length === 1 ? 'region' : 'regions'}),{' '}
+                      {filteredEntityRows.length}{' '}
+                      {filteredEntityRows.length === 1 ? 'entity' : 'entities'},{' '}
+                      {exportProjection.filteredSignals.length}{' '}
+                      {exportProjection.filteredSignals.length === 1 ? 'signal' : 'signals'}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="admin-csv-export-option"
+                    onClick={() => handleExportComplianceCsv('heatmap_matrix')}
+                    data-testid="export-csv-option-matrix"
+                  >
+                    <span className="admin-csv-option-title">
+                      Heatmap Matrix &amp; 30d Trends (.csv)
+                    </span>
+                    <span className="admin-csv-option-desc">
+                      Flat tabular matrix ({exportProjection.rows.length}{' '}
+                      {exportProjection.rows.length === 1 ? 'region' : 'regions'} ×{' '}
+                      {exportProjection.columns.length}{' '}
+                      {heatmapMode === 'partner_category'
+                        ? exportProjection.columns.length === 1
+                          ? 'category'
+                          : 'categories'
+                        : exportProjection.columns.length === 1
+                          ? 'incident type'
+                          : 'incident types'}
+                      )
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="admin-csv-export-option"
+                    onClick={() => handleExportComplianceCsv('drilldown_entities')}
+                    data-testid="export-csv-option-entities"
+                  >
+                    <span className="admin-csv-option-title">
+                      Drilldown Entities Roster (.csv)
+                    </span>
+                    <span className="admin-csv-option-desc">
+                      Filtered partner table ({filteredEntityRows.length}{' '}
+                      {filteredEntityRows.length === 1 ? 'entity' : 'entities'})
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button
               type="button"
               className="admin-analytics-btn admin-analytics-btn-secondary"
@@ -370,9 +743,20 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
         </div>
 
         {notice && (
-          <div role="status" style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '8px', color: '#10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div
+            role="status"
+            data-testid="analytics-status-notice"
+            className="admin-analytics-status-notice"
+          >
             <span>✓ {notice}</span>
-            <button type="button" onClick={() => setNotice('')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>×</button>
+            <button
+              type="button"
+              onClick={() => setNotice('')}
+              aria-label="Dismiss notification"
+              className="admin-analytics-notice-dismiss"
+            >
+              ×
+            </button>
           </div>
         )}
 
@@ -437,7 +821,254 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
         </div>
       </section>
 
-      {/* 2. DUAL METRICS: SPORTS DISTRIBUTION & ACTIVE CITIES */}
+      {/* 2. D3 COMPLIANCE RISK HEATMAP (REGIONS × PARTNER CATEGORIES / INCIDENT TYPES) */}
+      <AdminComplianceHeatmap
+        refreshKey={lastRefreshedAt.getTime()}
+        drilldown={drilldown}
+        onDrilldownChange={handleDrilldownChange}
+        mode={heatmapMode}
+        onModeChange={setHeatmapMode}
+        scope={heatmapScope}
+        onScopeChange={setHeatmapScope}
+      />
+
+      {/* 2B. REGULATED ENTITIES INVESTIGATION TABLE (FILTERED LIVE BY HEATMAP DRILLDOWN) */}
+      <section
+        className="admin-analytics-card admin-drilldown-entities-section"
+        data-testid="drilldown-entities-section"
+        aria-label="Regulated Entities Compliance Roster"
+      >
+        <div className="admin-analytics-card-header admin-drilldown-header-wrap">
+          <div>
+            <h3>Regulated Entities &amp; Incident Roster</h3>
+            <p className="admin-drilldown-subtitle">
+              {drilldownActive
+                ? `Filtered live from Compliance Risk Heatmap · showing ${filteredEntityRows.length} of ${entityRows.length} entities.`
+                : `All ${entityRows.length} monitored partner entities ranked by severity-weighted compliance exposure. Click any region, category, or cell above to drill down.`}
+            </p>
+          </div>
+
+          <div className="admin-drilldown-tools">
+            <input
+              type="search"
+              placeholder="Search entity, ref, city, issue…"
+              value={entitySearch}
+              onChange={e => setEntitySearch(e.target.value)}
+              className="admin-drilldown-search"
+              data-testid="drilldown-entity-search"
+              aria-label="Search regulated entities"
+            />
+            <button
+              type="button"
+              className="admin-drilldown-export-btn"
+              onClick={() => handleExportComplianceCsv('combined')}
+              data-testid="export-drilldown-csv-btn"
+              title="Download filtered heatmap and drill-down entity data as CSV"
+            >
+              <SiteIcon name="download" size={13} />
+              <span>Export CSV</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Active Heatmap Drilldown Scope Bar */}
+        {drilldownActive && (
+          <div
+            className="admin-drilldown-scope-bar"
+            data-testid="analytics-drilldown-bar"
+            role="status"
+          >
+            <div className="admin-drilldown-tokens">
+              <span className="admin-drilldown-scope-label">Active Drilldown:</span>
+
+              {drilldown.region && (
+                <button
+                  type="button"
+                  className="admin-drilldown-token"
+                  data-testid="drilldown-token-region"
+                  onClick={() =>
+                    handleDrilldownChange({ ...drilldown, region: null })
+                  }
+                  title="Remove region filter"
+                >
+                  <span>Region: <strong>{drilldown.region}</strong></span>
+                  <span aria-hidden="true" className="admin-drilldown-token-x">×</span>
+                </button>
+              )}
+
+              {drilldown.partnerCategory && (
+                <button
+                  type="button"
+                  className="admin-drilldown-token"
+                  data-testid="drilldown-token-category"
+                  onClick={() =>
+                    handleDrilldownChange({ ...drilldown, partnerCategory: null })
+                  }
+                  title="Remove partner category filter"
+                >
+                  <span>
+                    Category: <strong>{getPartnerCategoryLabel(drilldown.partnerCategory)}</strong>
+                  </span>
+                  <span aria-hidden="true" className="admin-drilldown-token-x">×</span>
+                </button>
+              )}
+
+              {drilldown.incidentType && (
+                <button
+                  type="button"
+                  className="admin-drilldown-token"
+                  data-testid="drilldown-token-incident"
+                  onClick={() =>
+                    handleDrilldownChange({ ...drilldown, incidentType: null })
+                  }
+                  title="Remove incident type filter"
+                >
+                  <span>
+                    Incident: <strong>{getIncidentTypeLabel(drilldown.incidentType)}</strong>
+                  </span>
+                  <span aria-hidden="true" className="admin-drilldown-token-x">×</span>
+                </button>
+              )}
+            </div>
+
+            <div className="admin-drilldown-scope-right">
+              <span className="admin-drilldown-match-count" data-testid="drilldown-match-count">
+                {filteredEntityRows.length}{' '}
+                {filteredEntityRows.length === 1 ? 'entity' : 'entities'} ·{' '}
+                {filteredQueue.length} queue · {filteredActivity.length} activity
+              </span>
+              <button
+                type="button"
+                className="admin-drilldown-clear-btn"
+                data-testid="clear-drilldown-btn"
+                onClick={() => handleDrilldownChange(EMPTY_DRILLDOWN_FILTER)}
+              >
+                Clear All Filters
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div style={{ overflowX: 'auto' }}>
+          <table className="admin-bulk-table admin-entities-table" data-testid="drilldown-entities-table">
+            <thead>
+              <tr>
+                <th>Entity &amp; Reference</th>
+                <th>Partner Category</th>
+                <th>Region / City</th>
+                <th>Risk Score</th>
+                <th>Signals</th>
+                <th>Latest Compliance Issue</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredEntityRows.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="admin-table-empty-cell">
+                    No regulated entities match the current drilldown filter.{' '}
+                    {drilldownActive && (
+                      <button
+                        type="button"
+                        className="admin-inline-reset-btn"
+                        onClick={() => handleDrilldownChange(EMPTY_DRILLDOWN_FILTER)}
+                      >
+                        Reset heatmap filter
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ) : (
+                filteredEntityRows.map(row => (
+                  <tr
+                    key={row.id}
+                    data-testid="drilldown-entity-row"
+                    data-entity-region={row.region}
+                    data-entity-category={row.partnerCategory}
+                  >
+                    <td>
+                      <div className="admin-entity-name">{row.entityName}</div>
+                      <div className="admin-entity-sub">
+                        <span className="admin-entity-ref">{row.referenceCode}</span>
+                        <span>·</span>
+                        <span>{row.sport}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="admin-table-filter-trigger"
+                        onClick={() =>
+                          handleDrilldownChange({
+                            region: drilldown.region,
+                            partnerCategory: row.partnerCategory,
+                            incidentType: null,
+                          })
+                        }
+                        title={`Filter by ${row.partnerCategoryLabel}`}
+                      >
+                        {row.partnerCategoryLabel}
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="admin-table-filter-trigger"
+                        onClick={() =>
+                          handleDrilldownChange({
+                            region: row.region,
+                            partnerCategory: drilldown.partnerCategory,
+                            incidentType: drilldown.incidentType,
+                          })
+                        }
+                        title={`Filter by ${row.region}`}
+                      >
+                        <strong>{row.region}</strong>
+                      </button>
+                      <div className="admin-entity-sub">{row.city}</div>
+                    </td>
+                    <td>
+                      <span className={`admin-risk-readout tier-${row.riskTier}`}>
+                        <strong>{row.riskScore}</strong>
+                        <span>{formatRiskTierLabel(row.riskTier)}</span>
+                      </span>
+                    </td>
+                    <td className="admin-tabular-cell">
+                      {row.signalCount > 0 ? (
+                        <>
+                          <strong>{row.signalCount}</strong>
+                          {row.highRiskCount > 0 && (
+                            <span className="admin-high-risk-note"> ({row.highRiskCount} high)</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="admin-muted-val">0</span>
+                      )}
+                    </td>
+                    <td>
+                      <div className="admin-issue-summary">{row.latestIssueSummary}</div>
+                      <div className="admin-entity-sub" style={{ textTransform: 'capitalize' }}>
+                        Status: {row.lifecycleStatus}
+                      </div>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="admin-entity-desk-btn"
+                        onClick={() => handleOpenEntityDesk(row.targetWorkspace)}
+                      >
+                        Investigate →
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* 3. DUAL METRICS: SPORTS DISTRIBUTION & ACTIVE CITIES */}
       <div className="admin-analytics-dual-section">
         {/* Sports Segmentation Meter */}
         <section className="admin-analytics-card" aria-label="Sports Distribution">
@@ -477,40 +1108,83 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
 
           <div style={{ marginBottom: '1.25rem' }}>
             <span style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: '0.5rem' }}>
-              Active Cities
+              Active Cities (click to filter region)
             </span>
             <div className="admin-city-badge-grid">
-              {summary?.cityBreakdown && Object.entries(summary.cityBreakdown).map(([city, count]) => (
-                <span key={city} className="admin-city-badge">
-                  <SiteIcon name="map-pin" size={11} />
-                  <span>{city}</span>
-                  <span className="admin-city-count">{count}</span>
-                </span>
-              ))}
+              {summary?.cityBreakdown && Object.entries(summary.cityBreakdown).map(([city, count]) => {
+                const cityRegion = normalizeComplianceRegion(city)
+                const isSelected = drilldown.region === cityRegion
+                return (
+                  <button
+                    key={city}
+                    type="button"
+                    className={`admin-city-badge admin-city-badge-btn ${isSelected ? 'is-drilldown-active' : ''}`}
+                    onClick={() =>
+                      handleDrilldownChange({
+                        region: isSelected ? null : cityRegion,
+                        partnerCategory: drilldown.partnerCategory,
+                        incidentType: drilldown.incidentType,
+                      })
+                    }
+                  >
+                    <SiteIcon name="map-pin" size={11} />
+                    <span>{city}</span>
+                    <span className="admin-city-count">{count}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
 
           <div>
             <span style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: '0.5rem' }}>
-              Category Breakdown
+              Category Breakdown (click to filter category)
             </span>
             <div className="admin-city-badge-grid">
-              {summary?.categoryBreakdown && Object.entries(summary.categoryBreakdown).map(([cat, count]) => (
-                <span key={cat} className="admin-city-badge" style={{ textTransform: 'capitalize' }}>
-                  <span>{cat.replace(/_/g, ' ')}</span>
-                  <span className="admin-city-count">{count}</span>
-                </span>
-              ))}
+              {summary?.categoryBreakdown && Object.entries(summary.categoryBreakdown).map(([cat, count]) => {
+                const normalizedCat = normalizePartnerCategory(cat)
+                const isSelected = drilldown.partnerCategory === normalizedCat
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={`admin-city-badge admin-city-badge-btn ${isSelected ? 'is-drilldown-active' : ''}`}
+                    style={{ textTransform: 'capitalize' }}
+                    onClick={() =>
+                      handleDrilldownChange({
+                        region: drilldown.region,
+                        partnerCategory: isSelected ? null : normalizedCat,
+                        incidentType: null,
+                      })
+                    }
+                  >
+                    <span>{cat.replace(/_/g, ' ')}</span>
+                    <span className="admin-city-count">{count}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
         </section>
       </div>
 
       {/* 3. MODERATOR ACTIVITY FEED */}
-      <section className="admin-analytics-card" style={{ marginBottom: '2rem' }} aria-label="Moderator Activity Feed">
+      <section
+        className="admin-analytics-card"
+        style={{ marginBottom: '2rem' }}
+        aria-label="Moderator Activity Feed"
+        data-testid="analytics-activity-section"
+      >
         <div className="admin-analytics-card-header">
           <div>
-            <h3>Moderator Activity Feed</h3>
+            <div className="admin-section-title-inline">
+              <h3>Moderator Activity Feed</h3>
+              {(drilldown.region || drilldown.partnerCategory) && (
+                <span className="admin-drilldown-sync-tag" data-testid="activity-drilldown-badge">
+                  Heatmap filter active ({filteredActivity.length})
+                </span>
+              )}
+            </div>
             <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#64748b' }}>
               Real-time chronological audit trail of publications, approvals, verifications, and decisions.
             </p>
@@ -590,10 +1264,21 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
       </section>
 
       {/* 4. BULK MODERATION & QUICK-ACTION CONSOLE */}
-      <section className="admin-bulk-section" aria-label="Bulk Moderation Console">
+      <section
+        className="admin-bulk-section"
+        aria-label="Bulk Moderation Console"
+        data-testid="analytics-bulk-section"
+      >
         <div className="admin-analytics-card-header">
           <div>
-            <h3>Bulk Moderation Actions &amp; Fast Tagging</h3>
+            <div className="admin-section-title-inline">
+              <h3>Bulk Moderation Actions &amp; Fast Tagging</h3>
+              {(drilldown.region || drilldown.partnerCategory) && (
+                <span className="admin-drilldown-sync-tag" data-testid="bulk-drilldown-badge">
+                  Heatmap filter active ({filteredQueue.length})
+                </span>
+              )}
+            </div>
             <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#64748b' }}>
               Quick-tag sports and cities, bulk approve high-volume tournament submissions, and publish in batch.
             </p>
@@ -709,38 +1394,59 @@ export function AdminAnalyticsDashboard({ initialSummary }: AdminAnalyticsDashbo
               </tr>
             </thead>
             <tbody>
-              {filteredQueue.map(item => {
-                const isSelected = selectedIds.has(item.id)
-                return (
-                  <tr key={item.id} style={{ background: isSelected ? 'rgba(56, 189, 248, 0.08)' : undefined }}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelectItem(item.id)}
-                      />
-                    </td>
-                    <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0284c7' }}>
-                      {item.reference_number}
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: 4, background: 'rgba(148, 163, 184, 0.15)', textTransform: 'capitalize' }}>
-                        {item.listing_type.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    <td style={{ fontWeight: 650 }}>{item.title}</td>
-                    <td>{item.city || 'Delhi'}</td>
-                    <td>
-                      <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: 4, fontWeight: 700, textTransform: 'uppercase', background: item.status === 'published' ? 'rgba(16, 185, 129, 0.15)' : item.status === 'approved' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(245, 158, 11, 0.15)', color: item.status === 'published' ? '#10b981' : item.status === 'approved' ? '#38bdf8' : '#f59e0b' }}>
-                        {item.status.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    <td style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
-                      {new Date(item.created_at).toLocaleDateString('en-IN')}
-                    </td>
-                  </tr>
-                )
-              })}
+              {filteredQueue.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="admin-table-empty-cell">
+                    No moderation submissions match the active filters.{' '}
+                    {(drilldown.region || drilldown.partnerCategory) && (
+                      <button
+                        type="button"
+                        className="admin-inline-reset-btn"
+                        onClick={() => handleDrilldownChange(EMPTY_DRILLDOWN_FILTER)}
+                      >
+                        Reset heatmap filter
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ) : (
+                filteredQueue.map(item => {
+                  const isSelected = selectedIds.has(item.id)
+                  return (
+                    <tr
+                      key={item.id}
+                      data-testid="bulk-queue-row"
+                      style={{ background: isSelected ? 'rgba(56, 189, 248, 0.08)' : undefined }}
+                    >
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectItem(item.id)}
+                        />
+                      </td>
+                      <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0284c7' }}>
+                        {item.reference_number}
+                      </td>
+                      <td>
+                        <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: 4, background: 'rgba(148, 163, 184, 0.15)', textTransform: 'capitalize' }}>
+                          {item.listing_type.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 650 }}>{item.title}</td>
+                      <td>{item.city || 'Delhi'}</td>
+                      <td>
+                        <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem', borderRadius: 4, fontWeight: 700, textTransform: 'uppercase', background: item.status === 'published' ? 'rgba(16, 185, 129, 0.15)' : item.status === 'approved' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(245, 158, 11, 0.15)', color: item.status === 'published' ? '#10b981' : item.status === 'approved' ? '#38bdf8' : '#f59e0b' }}>
+                          {item.status.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      <td style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                        {new Date(item.created_at).toLocaleDateString('en-IN')}
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>

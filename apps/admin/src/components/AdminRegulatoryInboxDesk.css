@@ -1,0 +1,748 @@
+/* ==========================================================================
+   KhelGrid Admin — Phase 2: Unified Regulatory Inbox & SLA Command
+   Dual-theme (Light & Dark) hairline enterprise styling via --adm-* tokens.
+   ========================================================================== */
+
+.admin-inbox-root {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  max-width: 1440px;
+  margin: 0 auto;
+  color: var(--adm-text);
+}
+
+.admin-inbox-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-inbox-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--adm-accent);
+  margin-bottom: 0.35rem;
+}
+
+.admin-inbox-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--adm-text);
+}
+
+.admin-inbox-subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--adm-text-muted);
+  max-width: 780px;
+  line-height: 1.5;
+}
+
+.admin-inbox-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* KPI Ribbon */
+.admin-inbox-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
+}
+
+@media (max-width: 1024px) {
+  .admin-inbox-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-inbox-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-inbox-kpi-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem 1.1rem;
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: 10px;
+  box-shadow: var(--adm-shadow-sm);
+}
+
+.admin-inbox-kpi-card.is-breached {
+  border-left: 3px solid var(--adm-danger);
+}
+
+.admin-inbox-kpi-card.is-at-risk {
+  border-left: 3px solid var(--adm-warning);
+}
+
+.admin-inbox-kpi-card.is-notices {
+  border-left: 3px solid var(--adm-info);
+}
+
+.admin-inbox-kpi-card.is-total {
+  border-left: 3px solid var(--adm-accent);
+}
+
+.admin-inbox-kpi-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--adm-surface-subtle);
+  color: var(--adm-text-secondary);
+}
+
+.admin-inbox-kpi-card.is-breached .admin-inbox-kpi-icon {
+  background: var(--adm-danger-soft);
+  color: var(--adm-danger);
+}
+
+.admin-inbox-kpi-card.is-at-risk .admin-inbox-kpi-icon {
+  background: var(--adm-warning-soft);
+  color: var(--adm-warning);
+}
+
+.admin-inbox-kpi-card.is-notices .admin-inbox-kpi-icon {
+  background: var(--adm-info-soft);
+  color: var(--adm-info);
+}
+
+.admin-inbox-kpi-card.is-total .admin-inbox-kpi-icon {
+  background: var(--adm-accent-soft);
+  color: var(--adm-accent);
+}
+
+.admin-inbox-kpi-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.admin-inbox-kpi-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--adm-text);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-inbox-kpi-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--adm-text-muted);
+}
+
+/* Filter Toolbar */
+.admin-inbox-filters-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 1.2rem;
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: 10px;
+}
+
+.admin-inbox-filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-inbox-filter-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--adm-text-muted);
+  margin-right: 0.25rem;
+}
+
+.admin-inbox-tab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-surface-subtle);
+  color: var(--adm-text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.admin-inbox-tab-chip:hover {
+  border-color: var(--adm-border-strong);
+  color: var(--adm-text);
+}
+
+.admin-inbox-tab-chip.is-active {
+  background: var(--adm-accent-soft);
+  border-color: var(--adm-accent);
+  color: var(--adm-accent);
+}
+
+.admin-inbox-chip-count {
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.admin-inbox-controls-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.admin-inbox-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+
+.admin-inbox-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--adm-text-muted);
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+}
+
+.admin-inbox-search-input {
+  width: 100%;
+  padding: 0.52rem 0.75rem 0.52rem 2.2rem;
+  border-radius: 8px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-canvas);
+  color: var(--adm-text);
+  font-size: 0.82rem;
+  outline: none;
+}
+
+.admin-inbox-search-input:focus {
+  border-color: var(--adm-accent);
+}
+
+.admin-inbox-select {
+  padding: 0.52rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-canvas);
+  color: var(--adm-text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  min-width: 145px;
+}
+
+.admin-inbox-select:focus {
+  outline: none;
+  border-color: var(--adm-accent);
+}
+
+/* Buttons */
+.admin-inbox-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.46rem 0.8rem;
+  border-radius: 7px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-surface-subtle);
+  color: var(--adm-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.admin-inbox-btn:hover {
+  border-color: var(--adm-border-strong);
+  background: var(--adm-surface-hover);
+}
+
+.admin-inbox-btn-primary {
+  background: var(--adm-accent);
+  border-color: var(--adm-accent);
+  color: var(--adm-accent-ink);
+  font-weight: 700;
+}
+
+.admin-inbox-btn-primary:hover {
+  background: var(--adm-accent-hover);
+  border-color: var(--adm-accent-hover);
+  color: var(--adm-accent-ink);
+}
+
+.admin-inbox-btn-warning {
+  background: var(--adm-warning-soft);
+  border-color: var(--adm-warning);
+  color: var(--adm-warning);
+}
+
+.admin-inbox-btn-warning:hover {
+  background: var(--adm-warning);
+  color: #0b1120;
+}
+
+.admin-inbox-btn-success {
+  background: var(--adm-success-soft);
+  border-color: var(--adm-success);
+  color: var(--adm-success);
+}
+
+.admin-inbox-btn-success:hover {
+  background: var(--adm-success);
+  color: #042f2e;
+}
+
+/* Queue Table */
+.admin-inbox-table-card {
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--adm-shadow-sm);
+}
+
+.admin-inbox-table-head-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.85rem 1.15rem;
+  border-bottom: 1px solid var(--adm-border);
+  background: var(--adm-surface-subtle);
+}
+
+.admin-inbox-section-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--adm-text);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.admin-inbox-section-meta {
+  font-size: 0.76rem;
+  color: var(--adm-text-muted);
+}
+
+.admin-inbox-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-inbox-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.82rem;
+}
+
+.admin-inbox-table th {
+  padding: 0.72rem 1rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--adm-text-muted);
+  border-bottom: 1px solid var(--adm-border);
+  background: var(--adm-surface);
+  white-space: nowrap;
+}
+
+.admin-inbox-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--adm-border);
+  vertical-align: top;
+}
+
+.admin-inbox-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-inbox-table tbody tr:hover td {
+  background: var(--adm-surface-hover);
+}
+
+.admin-inbox-ref-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.admin-inbox-ref-code {
+  font-family: var(--adm-font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--adm-info);
+}
+
+.admin-inbox-desk-tag {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.14rem 0.45rem;
+  border-radius: 4px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-surface-subtle);
+  color: var(--adm-text-secondary);
+}
+
+.admin-inbox-entity-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.admin-inbox-entity-title {
+  font-weight: 700;
+  color: var(--adm-text);
+  font-size: 0.86rem;
+}
+
+.admin-inbox-entity-sub {
+  font-size: 0.74rem;
+  color: var(--adm-text-muted);
+}
+
+.admin-inbox-summary-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-width: 390px;
+}
+
+.admin-inbox-status-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--adm-text-secondary);
+}
+
+.admin-inbox-summary-text {
+  font-size: 0.78rem;
+  color: var(--adm-text-muted);
+  line-height: 1.45;
+}
+
+.admin-inbox-notice-active-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  width: fit-content;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--adm-info);
+  background: var(--adm-info-soft);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+/* SLA Badges */
+.admin-inbox-sla-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.26rem 0.55rem;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-inbox-sla-badge.is-breached {
+  background: var(--adm-danger-soft);
+  color: var(--adm-danger);
+  border: 1px solid var(--adm-danger);
+}
+
+.admin-inbox-sla-badge.is-at_risk {
+  background: var(--adm-warning-soft);
+  color: var(--adm-warning);
+  border: 1px solid var(--adm-warning);
+}
+
+.admin-inbox-sla-badge.is-on_track {
+  background: var(--adm-success-soft);
+  color: var(--adm-success);
+  border: 1px solid var(--adm-success);
+}
+
+.admin-inbox-sla-target {
+  display: block;
+  margin-top: 0.28rem;
+  font-size: 0.7rem;
+  color: var(--adm-text-muted);
+}
+
+.admin-inbox-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  flex-wrap: nowrap;
+}
+
+.admin-inbox-actions .admin-inbox-btn {
+  padding: 0.38rem 0.65rem;
+  font-size: 0.74rem;
+}
+
+/* Active Partner Compliance Notices Panel */
+.admin-inbox-notices-panel {
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--adm-shadow-sm);
+}
+
+.admin-inbox-notices-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-inbox-notice-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 1.15rem;
+  border-bottom: 1px solid var(--adm-border);
+  flex-wrap: wrap;
+}
+
+.admin-inbox-notice-row:last-child {
+  border-bottom: none;
+}
+
+.admin-inbox-notice-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-width: 820px;
+}
+
+.admin-inbox-notice-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  font-size: 0.72rem;
+  color: var(--adm-text-muted);
+}
+
+.admin-inbox-sev-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.14rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-inbox-sev-tag.is-action_required {
+  background: var(--adm-danger-soft);
+  color: var(--adm-danger);
+}
+
+.admin-inbox-sev-tag.is-expiring_soon,
+.admin-inbox-sev-tag.is-warning {
+  background: var(--adm-warning-soft);
+  color: var(--adm-warning);
+}
+
+.admin-inbox-notice-headline {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--adm-text);
+}
+
+.admin-inbox-notice-msg {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--adm-text-secondary);
+  line-height: 1.45;
+}
+
+.admin-inbox-empty {
+  padding: 2rem 1.2rem;
+  text-align: center;
+  font-size: 0.84rem;
+  color: var(--adm-text-muted);
+}
+
+/* Modal */
+.admin-inbox-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(4px);
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.admin-inbox-modal {
+  width: 100%;
+  max-width: 540px;
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border-strong);
+  border-radius: 12px;
+  box-shadow: var(--adm-shadow-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-inbox-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--adm-border);
+  background: var(--adm-surface-subtle);
+}
+
+.admin-inbox-modal-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--adm-text);
+}
+
+.admin-inbox-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--adm-text-muted);
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+}
+
+.admin-inbox-modal-close:hover {
+  background: var(--adm-surface-hover);
+  color: var(--adm-text);
+}
+
+.admin-inbox-modal-body {
+  padding: 1.2rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.admin-inbox-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.admin-inbox-field label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--adm-text-secondary);
+}
+
+.admin-inbox-input,
+.admin-inbox-textarea,
+.admin-inbox-modal-select {
+  width: 100%;
+  padding: 0.58rem 0.75rem;
+  border-radius: 7px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-canvas);
+  color: var(--adm-text);
+  font-size: 0.83rem;
+  font-family: inherit;
+}
+
+.admin-inbox-input:focus,
+.admin-inbox-textarea:focus,
+.admin-inbox-modal-select:focus {
+  outline: none;
+  border-color: var(--adm-accent);
+}
+
+.admin-inbox-modal-context {
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--adm-border);
+  background: var(--adm-surface-subtle);
+  font-size: 0.78rem;
+  color: var(--adm-text-secondary);
+  line-height: 1.45;
+}
+
+.admin-inbox-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 0.95rem 1.25rem;
+  border-top: 1px solid var(--adm-border);
+  background: var(--adm-surface-subtle);
+}
+
+.admin-inbox-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 1200;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.1rem;
+  border-radius: 8px;
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-accent);
+  color: var(--adm-accent);
+  font-size: 0.82rem;
+  font-weight: 600;
+  box-shadow: var(--adm-shadow-md);
+}

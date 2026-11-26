@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, type FormEvent, type MouseEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent, type MouseEvent } from 'react'
 import {
   resendVerificationEmail,
   sendPasswordReset,
@@ -9,101 +9,16 @@ import {
   verifyEmailOtpCode,
   type AuthAgeBand,
   type AuthUserProfile,
-  type UserRole,
 } from '../../../integrations/supabase/auth-client'
-import { useFormState } from '../../hooks/useFormState'
 import {
-  resolvePostAuthTarget,
+  isMinorAgeBand,
+  type AuthConsumerRole,
   type AuthModalTab,
-  type OnboardingStep,
+  type AuthOnboardingStep,
+  type AuthPartnerRole,
 } from './authModalTypes'
 
-export interface AuthModalFields extends Record<string, unknown> {
-  email: string
-  password: string
-  newPassword: string
-  confirmPassword: string
-  otpCode: string
-  fullName: string
-  role: Extract<UserRole, 'athlete' | 'parent' | 'scout'>
-  city: string
-  phone: string
-  ageBand: AuthAgeBand
-  guardianEmail: string
-  guardianConsentAccepted: boolean
-}
-
-export interface AuthUiState {
-  tab: AuthModalTab
-  onboardingStep: OnboardingStep
-  showPassword: boolean
-  submitting: boolean
-  errorMsg: string
-  successMsg: string
-  emailVerificationPending: boolean
-}
-
-type AuthUiAction =
-  | { type: 'SYNC_OPEN'; tab: AuthModalTab; errorMsg: string }
-  | { type: 'SWITCH_TAB'; tab: AuthModalTab }
-  | { type: 'SET_STEP'; step: OnboardingStep }
-  | { type: 'TOGGLE_PASSWORD' }
-  | { type: 'START_SUBMIT' }
-  | { type: 'FINISH_SUBMIT' }
-  | { type: 'SET_ERROR'; message: string }
-  | { type: 'SET_SUCCESS'; message: string; pendingVerification?: boolean }
-  | { type: 'SET_PENDING_VERIFICATION'; pending: boolean }
-
-function authUiReducer(state: AuthUiState, action: AuthUiAction): AuthUiState {
-  switch (action.type) {
-    case 'SYNC_OPEN':
-      return {
-        ...state,
-        tab: action.tab,
-        onboardingStep: 'identity',
-        errorMsg: action.errorMsg,
-        successMsg: '',
-        emailVerificationPending: false,
-      }
-    case 'SWITCH_TAB':
-      return {
-        ...state,
-        tab: action.tab,
-        onboardingStep: 'identity',
-        emailVerificationPending: false,
-        errorMsg: '',
-        successMsg: '',
-      }
-    case 'SET_STEP':
-      return { ...state, onboardingStep: action.step, errorMsg: '' }
-    case 'TOGGLE_PASSWORD':
-      return { ...state, showPassword: !state.showPassword }
-    case 'START_SUBMIT':
-      return { ...state, submitting: true, errorMsg: '', successMsg: '' }
-    case 'FINISH_SUBMIT':
-      return { ...state, submitting: false }
-    case 'SET_ERROR':
-      return { ...state, submitting: false, errorMsg: action.message }
-    case 'SET_SUCCESS':
-      return {
-        ...state,
-        submitting: false,
-        successMsg: action.message,
-        emailVerificationPending:
-          action.pendingVerification ?? state.emailVerificationPending,
-      }
-    case 'SET_PENDING_VERIFICATION':
-      return {
-        ...state,
-        emailVerificationPending: action.pending,
-        errorMsg: '',
-      }
-    default:
-      return state
-  }
-}
-
-interface UseAuthModalControllerParams {
+export interface UseAuthModalControllerParams {
   isOpen: boolean
   initialTab: AuthModalTab
   initialError?: string
@@ -114,10 +29,36 @@ interface UseAuthModalControllerParams {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
-/**
- * Coordinates reduced AuthModal UI state, typed form fields via `useFormState`,
- * Supabase auth actions, 6-digit OTP verification, Google OAuth, and return-path navigation.
- */
+export interface AuthFormFields {
+  email: string
+  password: string
+  otpCode: string
+  newPassword: string
+  confirmPassword: string
+  role: AuthConsumerRole
+  fullName: string
+  city: string
+  phone: string
+  ageBand: AuthAgeBand
+  guardianEmail: string
+  guardianConsentAccepted: boolean
+}
+
+const DEFAULT_FIELDS: AuthFormFields = {
+  email: '',
+  password: '',
+  otpCode: '',
+  newPassword: '',
+  confirmPassword: '',
+  role: 'athlete',
+  fullName: '',
+  city: '',
+  phone: '',
+  ageBand: 'adult',
+  guardianEmail: '',
+  guardianConsentAccepted: false,
+}
+
 export function useAuthModalController({
   isOpen,
   initialTab,
@@ -128,341 +69,317 @@ export function useAuthModalController({
   onSuccess,
   onNavigate,
 }: UseAuthModalControllerParams) {
-  const [ui, dispatch] = useReducer(authUiReducer, {
-    tab: initialTab,
-    onboardingStep: 'identity',
-    showPassword: false,
-    submitting: false,
-    errorMsg: initialError || '',
-    successMsg: '',
-    emailVerificationPending: false,
-  })
-
-  const form = useFormState<AuthModalFields>({
+  const [tab, setTab] = useState<AuthModalTab>(initialTab)
+  const [onboardingStep, setOnboardingStep] = useState<AuthOnboardingStep>('identity')
+  const [emailVerificationPending, setEmailVerificationPending] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(initialError || null)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [fields, setFields] = useState<AuthFormFields>(() => ({
+    ...DEFAULT_FIELDS,
     email: initialEmail || '',
-    password: '',
-    newPassword: '',
-    confirmPassword: '',
-    otpCode: '',
-    fullName: '',
-    role: 'athlete',
-    city: 'Delhi NCR',
-    phone: '',
-    ageBand: 'adult',
-    guardianEmail: '',
-    guardianConsentAccepted: false,
-  })
+  }))
 
   useEffect(() => {
-    dispatch({
-      type: 'SYNC_OPEN',
-      tab: initialTab,
-      errorMsg: initialError || '',
-    })
+    if (!isOpen) return
+    setTab(initialTab)
+    setOnboardingStep('identity')
+    setEmailVerificationPending(false)
+    setErrorMsg(initialError || null)
+    setSuccessMsg(null)
     if (initialEmail) {
-      form.setField('email', initialEmail)
+      setFields(prev => ({ ...prev, email: initialEmail }))
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialTab, initialError, initialEmail, isOpen])
+  }, [isOpen, initialTab, initialError, initialEmail])
 
-  const finishAuthNavigation = useCallback(
-    (user: AuthUserProfile) => {
-      const target = resolvePostAuthTarget(user, redirectTo)
-      onSuccess?.(user, { skipRedirect: Boolean(target) })
-      setTimeout(() => {
-        onClose()
-        if (target) {
-          onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, target)
-        }
-      }, 500)
+  const setField = useCallback(
+    <K extends keyof AuthFormFields>(key: K, value: AuthFormFields[K]) => {
+      setFields(prev => ({ ...prev, [key]: value }))
     },
-    [onClose, onNavigate, onSuccess, redirectTo]
+    [],
   )
 
-  const handleLoginSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    dispatch({ type: 'START_SUBMIT' })
-    try {
-      const res = await signInWithEmail({
-        email: form.fields.email,
-        password: form.fields.password,
-        redirectTo,
-      })
-      if (res.success && res.user) {
-        dispatch({ type: 'SET_SUCCESS', message: `Welcome back, ${res.user.fullName}!` })
-        finishAuthNavigation(res.user)
-      } else if (res.requiresEmailVerification) {
-        dispatch({
-          type: 'SET_SUCCESS',
-          message: `Magic login link and 6-digit code sent to ${form.fields.email}.`,
-          pendingVerification: true,
-        })
-      } else {
-        dispatch({
-          type: 'SET_ERROR',
-          message: res.message || 'Login failed. Please check your credentials.',
-        })
-      }
-    } catch {
-      dispatch({
-        type: 'SET_ERROR',
-        message: 'An unexpected connection error occurred. Please try again.',
-      })
-    } finally {
-      dispatch({ type: 'FINISH_SUBMIT' })
-    }
-  }
+  const switchTab = useCallback((nextTab: AuthModalTab) => {
+    setTab(nextTab)
+    setOnboardingStep('identity')
+    setEmailVerificationPending(false)
+    setErrorMsg(null)
+    setSuccessMsg(null)
+  }, [])
 
-  const handleMagicLinkSubmit = async () => {
-    if (!form.fields.email.trim() || !form.fields.email.includes('@')) {
-      dispatch({
-        type: 'SET_ERROR',
-        message: 'Please enter a valid email address first to receive a magic link.',
-      })
+  const toggleShowPassword = useCallback(() => {
+    setShowPassword(prev => !prev)
+  }, [])
+
+  const setPendingVerification = useCallback((pending: boolean) => {
+    setEmailVerificationPending(pending)
+    setErrorMsg(null)
+  }, [])
+
+  const handlePartnerRoute = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>, role: AuthPartnerRole, mode: 'signup' | 'login' = 'signup') => {
+      const target = `/partner-signup?role=${role}&mode=${mode}`
+      onClose()
+      if (onNavigate) {
+        onNavigate(event, target)
+      }
+    },
+    [onClose, onNavigate],
+  )
+
+  const handleLoginSubmit = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault()
+      setErrorMsg(null)
+      setSuccessMsg(null)
+      if (!fields.email.trim() || !fields.password) {
+        setErrorMsg('Please enter both your email address and password.')
+        return
+      }
+      setSubmitting(true)
+      try {
+        const res = await signInWithEmail({
+          email: fields.email.trim(),
+          password: fields.password,
+        })
+        if (res.success && res.user) {
+          onSuccess?.(res.user)
+          onClose()
+        } else {
+          setErrorMsg(res.message || 'Sign in failed. Please check your credentials.')
+        }
+      } finally {
+        setSubmitting(false)
+      }
+    },
+    [fields.email, fields.password, onClose, onSuccess],
+  )
+
+  const handleMagicLinkSubmit = useCallback(async () => {
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    if (!fields.email.trim()) {
+      setErrorMsg('Enter your email address first to receive a 1-click sign-in link or 6-digit code.')
       return
     }
-    dispatch({ type: 'START_SUBMIT' })
+    setSubmitting(true)
     try {
-      const res = await signInWithEmail({
-        email: form.fields.email,
-        useMagicLink: true,
-        redirectTo,
-      })
+      const res = await resendVerificationEmail(fields.email.trim())
       if (res.success) {
-        dispatch({
-          type: 'SET_SUCCESS',
-          message: `Magic sign-in link and code sent to ${form.fields.email.trim()}.`,
-          pendingVerification: true,
-        })
+        setSuccessMsg(res.message || 'Verification code sent to your inbox.')
+        setEmailVerificationPending(true)
       } else {
-        dispatch({ type: 'SET_ERROR', message: res.message || 'Could not send magic link.' })
+        setErrorMsg(res.message || 'Could not send login code right now.')
       }
-    } catch {
-      dispatch({ type: 'SET_ERROR', message: 'Failed to send magic link.' })
     } finally {
-      dispatch({ type: 'FINISH_SUBMIT' })
+      setSubmitting(false)
     }
-  }
+  }, [fields.email])
 
-  const handleGoogleSignIn = async () => {
-    dispatch({ type: 'START_SUBMIT' })
+  const handleGoogleSignIn = useCallback(async () => {
+    setErrorMsg(null)
+    setSubmitting(true)
     try {
       const res = await signInWithGoogleOAuth(redirectTo)
       if (!res.success) {
-        dispatch({
-          type: 'SET_ERROR',
-          message: res.message || 'Google Sign-In could not be started.',
-        })
+        setErrorMsg(res.message || 'Google sign-in is currently unavailable.')
       }
     } finally {
-      dispatch({ type: 'FINISH_SUBMIT' })
+      setSubmitting(false)
     }
-  }
+  }, [redirectTo])
 
-  const handleAdvanceSignupStep = (e: FormEvent) => {
-    e.preventDefault()
-    if (!form.fields.email.trim() || !form.fields.email.includes('@')) {
-      dispatch({ type: 'SET_ERROR', message: 'Please enter a valid email address.' })
-      return
-    }
-    if (!form.fields.password || form.fields.password.length < 6) {
-      dispatch({
-        type: 'SET_ERROR',
-        message: 'Password must be at least 6 characters long.',
-      })
-      return
-    }
-    dispatch({ type: 'SET_STEP', step: 'profile' })
-  }
+  const handleAdvanceSignupStep = useCallback(
+    (e: FormEvent) => {
+      e.preventDefault()
+      setErrorMsg(null)
+      if (!fields.email.trim() || !fields.email.includes('@')) {
+        setErrorMsg('Please enter a valid email address.')
+        return
+      }
+      if (fields.password.length < 8) {
+        setErrorMsg('Password must be at least 8 characters long.')
+        return
+      }
+      setOnboardingStep('profile')
+    },
+    [fields.email, fields.password],
+  )
 
-  const handleSignUpSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    const isMinorAthlete =
-      form.fields.role === 'athlete' &&
-      (form.fields.ageBand === 'u14' ||
-        form.fields.ageBand === 'u16' ||
-        form.fields.ageBand === 'u18')
-
-    if (
-      isMinorAthlete &&
-      (!form.fields.guardianEmail.trim() || !form.fields.guardianConsentAccepted)
-    ) {
-      dispatch({
-        type: 'SET_ERROR',
-        message: 'Under-18 athlete accounts require a parent/guardian email and DPDP consent confirmation.',
-      })
-      return
-    }
-
-    dispatch({ type: 'START_SUBMIT' })
-    try {
-      const derivedName =
-        form.fields.fullName.trim() ||
-        form.fields.email.split('@')[0] ||
-        'KhelGrid Athlete'
-      const res = await signUpWithEmail({
-        email: form.fields.email,
-        password: form.fields.password,
-        fullName: derivedName,
-        role: form.fields.role,
-        city: form.fields.city || 'Delhi NCR',
-        phone: form.fields.phone,
-        ageBand: form.fields.role === 'athlete' ? form.fields.ageBand : undefined,
-        guardianEmail: isMinorAthlete ? form.fields.guardianEmail : undefined,
-        redirectTo,
-      })
-      if (res.success) {
-        if (res.requiresEmailVerification) {
-          dispatch({
-            type: 'SET_SUCCESS',
-            message: `Verification link & 6-digit code sent to ${form.fields.email}.`,
-            pendingVerification: true,
-          })
-        } else if (res.user) {
-          dispatch({
-            type: 'SET_SUCCESS',
-            message: `Account created! Welcome, ${res.user.fullName}.`,
-          })
-          finishAuthNavigation(res.user)
+  const handleSignUpSubmit = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault()
+      setErrorMsg(null)
+      setSuccessMsg(null)
+      if (!fields.fullName.trim()) {
+        setErrorMsg('Please enter your full name.')
+        return
+      }
+      const minor = fields.role === 'athlete' && isMinorAgeBand(fields.ageBand)
+      if (minor) {
+        if (!fields.guardianEmail.trim() || !fields.guardianEmail.includes('@')) {
+          setErrorMsg('Parent / Legal Guardian email is required under DPDP Act 2023 for athletes under 18.')
+          return
         }
-      } else {
-        dispatch({
-          type: 'SET_ERROR',
-          message: res.message || 'Registration could not be completed.',
-        })
+        if (!fields.guardianConsentAccepted) {
+          setErrorMsg('Please confirm parental or legal guardian consent to continue.')
+          return
+        }
       }
-    } catch {
-      dispatch({
-        type: 'SET_ERROR',
-        message: 'Could not register account. Please try again.',
-      })
-    } finally {
-      dispatch({ type: 'FINISH_SUBMIT' })
-    }
-  }
-
-  const handleVerifyOtpSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    dispatch({ type: 'START_SUBMIT' })
-    try {
-      const res = await verifyEmailOtpCode({
-        email: form.fields.email,
-        token: form.fields.otpCode,
-        type: 'email',
-      })
-      if (res.success && res.user) {
-        dispatch({
-          type: 'SET_SUCCESS',
-          message: `Verified! Welcome, ${res.user.fullName}.`,
-          pendingVerification: false,
+      setSubmitting(true)
+      try {
+        const res = await signUpWithEmail({
+          email: fields.email.trim(),
+          password: fields.password,
+          fullName: fields.fullName.trim(),
+          role: fields.role,
+          city: fields.city.trim() || undefined,
+          phone: fields.phone.trim() || undefined,
+          ageBand: fields.ageBand,
+          guardianEmail: minor ? fields.guardianEmail.trim() : undefined,
         })
-        finishAuthNavigation(res.user)
-      } else {
-        dispatch({ type: 'SET_ERROR', message: res.message || 'Could not verify code.' })
+        if (res.success && res.user) {
+          if (res.requiresEmailVerification) {
+            setSuccessMsg(res.message || 'Check your inbox for your 6-digit verification code.')
+            setEmailVerificationPending(true)
+          } else {
+            onSuccess?.(res.user)
+            onClose()
+          }
+        } else {
+          setErrorMsg(res.message || 'Could not complete registration.')
+        }
+      } finally {
+        setSubmitting(false)
       }
-    } finally {
-      dispatch({ type: 'FINISH_SUBMIT' })
-    }
-  }
+    },
+    [fields, onClose, onSuccess],
+  )
 
-  const handleForgotPasswordSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    dispatch({ type: 'START_SUBMIT' })
-    try {
-      const res = await sendPasswordReset(form.fields.email, redirectTo)
-      if (res.success) {
-        dispatch({ type: 'SET_SUCCESS', message: res.message })
-      } else {
-        dispatch({ type: 'SET_ERROR', message: res.message })
+  const handleVerifyOtpSubmit = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault()
+      setErrorMsg(null)
+      if (!fields.email.trim() || fields.otpCode.trim().length < 6) {
+        setErrorMsg('Enter the 6-digit verification code sent to your email.')
+        return
       }
-    } finally {
-      dispatch({ type: 'FINISH_SUBMIT' })
-    }
-  }
-
-  const handleSetNewPasswordSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    if (form.fields.newPassword.length < 6) {
-      dispatch({
-        type: 'SET_ERROR',
-        message: 'Password must be at least 6 characters long.',
-      })
-      return
-    }
-    if (form.fields.newPassword !== form.fields.confirmPassword) {
-      dispatch({
-        type: 'SET_ERROR',
-        message: 'Passwords do not match. Please verify and try again.',
-      })
-      return
-    }
-    dispatch({ type: 'START_SUBMIT' })
-    try {
-      const res = await updatePassword(form.fields.newPassword)
-      if (res.success) {
-        dispatch({
-          type: 'SET_SUCCESS',
-          message: res.message || 'Password updated successfully! You can now sign in.',
+      setSubmitting(true)
+      try {
+        const res = await verifyEmailOtpCode({
+          email: fields.email.trim(),
+          token: fields.otpCode.trim(),
         })
-        setTimeout(() => {
-          dispatch({ type: 'SWITCH_TAB', tab: 'login' })
-          form.setField('password', '')
-          form.setField('newPassword', '')
-          form.setField('confirmPassword', '')
-        }, 1200)
-      } else {
-        dispatch({
-          type: 'SET_ERROR',
-          message: res.message || 'Could not update password.',
-        })
+        if (res.success && res.user) {
+          onSuccess?.(res.user)
+          onClose()
+        } else {
+          setErrorMsg(res.message || 'Invalid or expired 6-digit verification code.')
+        }
+      } finally {
+        setSubmitting(false)
       }
-    } finally {
-      dispatch({ type: 'FINISH_SUBMIT' })
-    }
-  }
+    },
+    [fields.email, fields.otpCode, onClose, onSuccess],
+  )
 
-  const handleResendVerification = async (e?: FormEvent) => {
-    if (e) e.preventDefault()
-    if (!form.fields.email.trim() || !form.fields.email.includes('@')) {
-      dispatch({
-        type: 'SET_ERROR',
-        message: 'Please enter your email address to receive a fresh verification link.',
-      })
-      return
-    }
-    dispatch({ type: 'START_SUBMIT' })
-    try {
-      const res = await resendVerificationEmail(form.fields.email.trim())
-      if (res.success) {
-        dispatch({
-          type: 'SET_SUCCESS',
-          message: res.message,
-          pendingVerification: true,
-        })
-      } else {
-        dispatch({ type: 'SET_ERROR', message: res.message })
+  const handleForgotPasswordSubmit = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault()
+      setErrorMsg(null)
+      setSuccessMsg(null)
+      if (!fields.email.trim()) {
+        setErrorMsg('Please enter the email associated with your account.')
+        return
       }
-    } finally {
-      dispatch({ type: 'FINISH_SUBMIT' })
-    }
-  }
+      setSubmitting(true)
+      try {
+        const res = await sendPasswordReset(fields.email.trim())
+        if (res.success) {
+          setSuccessMsg(res.message || 'Password reset instructions have been sent to your email.')
+        } else {
+          setErrorMsg(res.message || 'Unable to send password reset instructions.')
+        }
+      } finally {
+        setSubmitting(false)
+      }
+    },
+    [fields.email],
+  )
 
-  const handlePartnerRoute = (
-    partnerRole: 'academy' | 'coach' | 'venue' | 'tournament',
-    e: MouseEvent<HTMLAnchorElement>
-  ) => {
-    onClose()
-    onNavigate?.(e, `/partner-signup?role=${partnerRole}&mode=signup`)
-  }
+  const handleResendVerification = useCallback(
+    async (e?: FormEvent) => {
+      e?.preventDefault()
+      setErrorMsg(null)
+      setSuccessMsg(null)
+      if (!fields.email.trim()) {
+        setErrorMsg('Please enter your email address first.')
+        return
+      }
+      setSubmitting(true)
+      try {
+        const res = await resendVerificationEmail(fields.email.trim())
+        if (res.success) {
+          setSuccessMsg(res.message || 'Fresh verification email sent.')
+        } else {
+          setErrorMsg(res.message || 'Could not resend verification email.')
+        }
+      } finally {
+        setSubmitting(false)
+      }
+    },
+    [fields.email],
+  )
+
+  const handleSetNewPasswordSubmit = useCallback(
+    async (e: FormEvent) => {
+      e.preventDefault()
+      setErrorMsg(null)
+      setSuccessMsg(null)
+      if (fields.newPassword.length < 8) {
+        setErrorMsg('New password must be at least 8 characters long.')
+        return
+      }
+      if (fields.newPassword !== fields.confirmPassword) {
+        setErrorMsg('Passwords do not match.')
+        return
+      }
+      setSubmitting(true)
+      try {
+        const res = await updatePassword(fields.newPassword)
+        if (res.success) {
+          setSuccessMsg('Password updated successfully. You can now sign in.')
+          setTab('login')
+        } else {
+          setErrorMsg(res.message || 'Unable to update password.')
+        }
+      } finally {
+        setSubmitting(false)
+      }
+    },
+    [fields.confirmPassword, fields.newPassword],
+  )
 
   return {
-    ui,
-    form,
-    switchTab: (tab: AuthModalTab) => dispatch({ type: 'SWITCH_TAB', tab }),
-    setOnboardingStep: (step: OnboardingStep) => dispatch({ type: 'SET_STEP', step }),
-    toggleShowPassword: () => dispatch({ type: 'TOGGLE_PASSWORD' }),
-    setPendingVerification: (pending: boolean) =>
-      dispatch({ type: 'SET_PENDING_VERIFICATION', pending }),
+    ui: {
+      tab,
+      onboardingStep,
+      emailVerificationPending,
+      showPassword,
+      submitting,
+      errorMsg,
+      successMsg,
+    },
+    form: {
+      fields,
+      setField,
+    },
+    switchTab,
+    setOnboardingStep,
+    setPendingVerification,
+    toggleShowPassword,
+    handlePartnerRoute,
     handleLoginSubmit,
     handleMagicLinkSubmit,
     handleGoogleSignIn,
@@ -470,8 +387,7 @@ export function useAuthModalController({
     handleSignUpSubmit,
     handleVerifyOtpSubmit,
     handleForgotPasswordSubmit,
-    handleSetNewPasswordSubmit,
     handleResendVerification,
-    handlePartnerRoute,
+    handleSetNewPasswordSubmit,
   }
 }

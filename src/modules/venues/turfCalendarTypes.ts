@@ -1,36 +1,39 @@
 export type TurfShellSection = 'calendar' | 'utilization' | 'maintenance'
 
 export type TurfActiveDrawer =
-  | null
   | 'booking'
   | 'voucher'
-  | 'settings'
   | 'pricing'
-  | 'walkin'
   | 'recurring'
+  | 'settings'
+  | 'walkin'
+  | null
 
-export interface CuratedTurfVenue {
+export interface CuratedTurfVenueMeta {
   slug: string
   name: string
   city: string
-  sport: string
 }
 
-export const CURATED_TURF_VENUES: readonly CuratedTurfVenue[] = [
-  { slug: 'sree-kanteerava-stadium', name: 'Sree Kanteerava Stadium', city: 'Bengaluru', sport: 'Football, Box Cricket & Badminton' },
-  { slug: 'talkatora-indoor-stadium', name: 'Talkatora Indoor Stadium', city: 'Delhi', sport: 'Badminton & Table Tennis' },
-  { slug: 'andheri-sports-complex', name: 'Andheri Sports Complex', city: 'Mumbai', sport: 'Football Turf & Cricket Nets' },
-  { slug: 'decathlon-anubhava-turf', name: 'Decathlon Anubhava Turf Arena', city: 'Bengaluru', sport: '5v5 AstroTurf & Basketball' },
-]
+export const CURATED_TURF_VENUES: readonly CuratedTurfVenueMeta[] = [
+  { slug: 'sree-kanteerava-stadium', name: 'Sree Kanteerava Stadium', city: 'Bengaluru' },
+  { slug: 'jawaharlal-nehru-stadium-delhi', name: 'Jawaharlal Nehru Stadium', city: 'New Delhi' },
+  { slug: 'cooperage-football-ground', name: 'Cooperage Football Ground', city: 'Mumbai' },
+  { slug: 'gachibowli-athletic-complex', name: 'Gachibowli Athletic Complex', city: 'Hyderabad' },
+  { slug: 'balewadi-sports-complex', name: 'Shree Shiv Chhatrapati Sports Complex', city: 'Pune' },
+] as const
 
-/** Resolves curated facility metadata or safe fallback for a dynamic venue slug. */
-export function resolveTurfVenueMeta(venueSlug: string): CuratedTurfVenue {
-  return (
-    CURATED_TURF_VENUES.find(v => v.slug === venueSlug) || {
-      slug: venueSlug,
-      name: 'Grassroots Sports Complex',
-      city: 'India',
-      sport: 'Multi-Sport Turf',
-    }
-  )
+export function resolveTurfVenueMeta(slug: string): CuratedTurfVenueMeta {
+  const match = CURATED_TURF_VENUES.find(v => v.slug === slug)
+  if (match) return match
+  const formattedName = slug
+    .split('-')
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+  return {
+    slug,
+    name: formattedName || 'KhelGrid Sports Facility',
+    city: 'India',
+  }
 }

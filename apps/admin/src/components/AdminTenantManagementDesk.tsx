@@ -9,6 +9,11 @@ import {
   exportTenantsToCsv,
   type AdminTenantDetail,
 } from '../services/adminTenantService'
+import {
+  mapTenantTypeToInspectionTarget,
+  startReadOnlyWorkspaceInspection,
+} from '../../../../src/shared/governance/regulatoryBridge'
+import { proposeMakerCheckerAction } from '../services/adminGovernanceEscalationService'
 import './AdminTenantManagementDesk.css'
 
 export interface AdminTenantManagementDeskProps {
@@ -35,7 +40,7 @@ export function AdminTenantManagementDesk({
   const [actionModal, setActionModal] = useState<{
     tenantId: string
     tenantName: string
-    type: 'verify' | 'suspend' | 'reactivate' | 'note'
+    type: 'verify' | 'restrict' | 'suspend' | 'reactivate' | 'note'
   } | null>(null)
   const [actionNote, setActionNote] = useState('')
   const [accreditationBody, setAccreditationBody] = useState('')
@@ -132,6 +137,16 @@ export function AdminTenantManagementDesk({
       if (res.success) {
         showToast(`Tenant "${tenantName}" granted Verified Sports Organisation seal.`)
       }
+    } else if (type === 'restrict') {
+      const res = updateTenantLifecycleStatus(
+        tenantId,
+        'restricted',
+        operatorEmail,
+        actionNote.trim() || 'Placed under read-only compliance restriction pending document verification.'
+      )
+      if (res.success) {
+        showToast(`Tenant "${tenantName}" placed in Restricted (Read-Only) mode.`)
+      }
     } else if (type === 'suspend') {
       const res = updateTenantLifecycleStatus(
         tenantId,
@@ -164,6 +179,68 @@ export function AdminTenantManagementDesk({
     setActionNote('')
     setAccreditationBody('')
     triggerRefresh()
+  }
+
+  const handleProposeSuspendDualControl = () => {
+    if (!actionModal || actionModal.type !== 'suspend') return
+    const targetTenant = allTenants.find(t => t.id === actionModal.tenantId)
+    const target = mapTenantTypeToInspectionTarget(targetTenant?.tenantType || 'academy')
+    const justification =
+      actionNote.trim() ||
+      'Proposed administrative suspension for platform policy compliance review.'
+
+    const proposal = proposeMakerCheckerAction({
+      actionType: 'tenant_suspension',
+      sourceDesk: 'tenant_governance',
+      targetEntityId: actionModal.tenantId,
+      targetEntityName: actionModal.tenantName,
+      targetEntitySlug: targetTenant?.slug,
+      targetPersona: target.persona,
+      title: `Compliance Suspension · ${actionModal.tenantName}`,
+      justification,
+      impactSummary: [
+        'Updates Tenant Lifecycle status to SUSPENDED across all branches.',
+        `Locks front-end ${target.workspaceLabel} with a live compliance notice until remediated.`,
+      ],
+      payload: {
+        tenantId: actionModal.tenantId,
+        newStatus: 'suspended',
+      },
+      makerEmail: operatorEmail,
+    })
+
+    addTenantAdminNote(
+      actionModal.tenantId,
+      operatorEmail,
+      `Submitted suspension proposal ${proposal.referenceCode} for dual-control approval: ${justification}`,
+    )
+
+    setActionModal(null)
+    setActionNote('')
+    triggerRefresh()
+    showToast(
+      `Queued ${proposal.referenceCode} in Dual-Control Approvals awaiting second administrator sign-off.`,
+    )
+  }
+
+  const handleInspectLiveWorkspace = (tenant: AdminTenantDetail) => {
+    const session = startReadOnlyWorkspaceInspection({
+      tenantId: tenant.id,
+      tenantSlug: tenant.slug,
+      tenantName: tenant.name,
+      tenantType: tenant.tenantType,
+      adminEmail: operatorEmail,
+      durationMinutes: 30,
+    })
+    addTenantAdminNote(
+      tenant.id,
+      operatorEmail,
+      `Launched 30-minute Read-Only Workspace Inspection (${session.workspaceLabel} at ${session.routePath}).`,
+    )
+    triggerRefresh()
+    if (typeof window !== 'undefined') {
+      window.location.assign(session.routePath)
+    }
   }
 
   return (
@@ -349,6 +426,7 @@ export function AdminTenantManagementDesk({
           >
             <option value="all">All Lifecycle Statuses</option>
             <option value="active">Active Only</option>
+            <option value="restricted">Restricted (Read-Only)</option>
             <option value="pending_verification">Pending Verification</option>
             <option value="suspended">Suspended Only</option>
             <option value="archived">Archived</option>
@@ -535,15 +613,21 @@ export function AdminTenantManagementDesk({
                           className={`admin-tenant-status-dot ${
                             tenant.status === 'active'
                               ? 'dot-active'
-                              : tenant.status === 'suspended'
-                                ? 'dot-suspended'
-                                : tenant.status === 'pending_verification'
-                                  ? 'dot-pending'
-                                  : 'dot-archived'
+                              : tenant.status === 'restricted'
+                                ? 'dot-restricted'
+                                : tenant.status === 'suspended'
+                                  ? 'dot-suspended'
+                                  : tenant.status === 'pending_verification'
+                                    ? 'dot-pending'
+                                    : 'dot-archived'
                           }`}
                         />
                         <span style={{ textTransform: 'capitalize' }}>
-                          {tenant.status === 'pending_verification' ? 'Pending Audit' : tenant.status}
+                          {tenant.status === 'pending_verification'
+                            ? 'Pending Audit'
+                            : tenant.status === 'restricted'
+                              ? 'Restricted (Read-Only)'
+                              : tenant.status}
                         </span>
                       </span>
                     </td>
@@ -598,7 +682,7 @@ export function AdminTenantManagementDesk({
                     </span>
                   )}
                   <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
-                    Status: <strong style={{ textTransform: 'capitalize', color: activeTenantDetail.status === 'active' ? '#10b981' : '#f87171' }}>{activeTenantDetail.status}</strong>
+                    Status: <strong style={{ textTransform: 'capitalize', color: activeTenantDetail.status === 'active' ? '#10b981' : activeTenantDetail.status === 'restricted' ? '#f59e0b' : '#f87171' }}>{activeTenantDetail.status}</strong>
                   </span>
                 </div>
               </div>
@@ -672,17 +756,55 @@ export function AdminTenantManagementDesk({
                       )}
 
                       {activeTenantDetail.status === 'active' ? (
-                        <button
-                          type="button"
-                          className="admin-btn admin-btn-sm admin-btn-suspend-action"
-                          onClick={() => setActionModal({
-                            tenantId: activeTenantDetail.id,
-                            tenantName: activeTenantDetail.name,
-                            type: 'suspend',
-                          })}
-                        >
-                          <SiteIcon name="close" size={14} /> Suspend Organisation
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="admin-btn admin-btn-sm admin-btn-restrict-action"
+                            onClick={() => setActionModal({
+                              tenantId: activeTenantDetail.id,
+                              tenantName: activeTenantDetail.name,
+                              type: 'restrict',
+                            })}
+                          >
+                            <SiteIcon name="alert-triangle" size={14} /> Restrict (Read-Only)
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-btn admin-btn-sm admin-btn-suspend-action"
+                            onClick={() => setActionModal({
+                              tenantId: activeTenantDetail.id,
+                              tenantName: activeTenantDetail.name,
+                              type: 'suspend',
+                            })}
+                          >
+                            <SiteIcon name="close" size={14} /> Suspend Organisation
+                          </button>
+                        </>
+                      ) : activeTenantDetail.status === 'restricted' ? (
+                        <>
+                          <button
+                            type="button"
+                            className="admin-btn admin-btn-sm admin-btn-reactivate-action"
+                            onClick={() => setActionModal({
+                              tenantId: activeTenantDetail.id,
+                              tenantName: activeTenantDetail.name,
+                              type: 'reactivate',
+                            })}
+                          >
+                            <SiteIcon name="check" size={14} /> Reinstate to Active
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-btn admin-btn-sm admin-btn-suspend-action"
+                            onClick={() => setActionModal({
+                              tenantId: activeTenantDetail.id,
+                              tenantName: activeTenantDetail.name,
+                              type: 'suspend',
+                            })}
+                          >
+                            <SiteIcon name="close" size={14} /> Escalate to Suspend
+                          </button>
+                        </>
                       ) : (
                         <button
                           type="button"
@@ -696,6 +818,16 @@ export function AdminTenantManagementDesk({
                           <SiteIcon name="check" size={14} /> Reinstate to Active
                         </button>
                       )}
+
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-primary admin-btn-sm"
+                        data-testid="inspect-workspace-readonly-btn"
+                        onClick={() => handleInspectLiveWorkspace(activeTenantDetail)}
+                        title="Open this partner's front-end dashboard in an audit-logged, read-only inspection session"
+                      >
+                        <SiteIcon name="eye" size={14} /> Inspect Live Workspace (Read-Only)
+                      </button>
 
                       <button
                         type="button"
@@ -888,10 +1020,11 @@ export function AdminTenantManagementDesk({
           >
             <div className="admin-tenant-modal-header">
               <h3 id="admin-action-modal-title">
-                {actionModal.type === 'verify' && '🛡️ Grant Verified Organization Seal'}
-                {actionModal.type === 'suspend' && '🚨 Suspend Tenant Organisation'}
-                {actionModal.type === 'reactivate' && '✅ Reinstate Tenant to Active'}
-                {actionModal.type === 'note' && '📝 Record Administrative Internal Note'}
+                {actionModal.type === 'verify' && 'Grant Verified Organization Seal'}
+                {actionModal.type === 'restrict' && 'Restrict Organisation (Read-Only Mode)'}
+                {actionModal.type === 'suspend' && 'Suspend Tenant Organisation'}
+                {actionModal.type === 'reactivate' && 'Reinstate Tenant to Active'}
+                {actionModal.type === 'note' && 'Record Administrative Internal Note'}
               </h3>
               <button
                 type="button"
@@ -932,6 +1065,19 @@ export function AdminTenantManagementDesk({
                     />
                   </label>
                 </>
+              )}
+
+              {actionModal.type === 'restrict' && (
+                <label style={{ fontSize: '0.78rem', fontWeight: 650, color: '#f59e0b' }}>
+                  Compliance Restriction Notice (Displayed in Partner Dashboard):
+                  <textarea
+                    className="admin-tenant-textarea"
+                    placeholder="Specify what documents or corrective actions are required before lifting read-only mode…"
+                    value={actionNote}
+                    onChange={e => setActionNote(e.target.value)}
+                    style={{ marginTop: '0.35rem' }}
+                  />
+                </label>
               )}
 
               {actionModal.type === 'suspend' && (
@@ -982,18 +1128,31 @@ export function AdminTenantManagementDesk({
               >
                 Cancel
               </button>
+              {actionModal.type === 'suspend' && (
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-secondary"
+                  data-testid="propose-tenant-suspend-mc-btn"
+                  onClick={handleProposeSuspendDualControl}
+                >
+                  <SiteIcon name="shield-check" size={14} /> Submit for Dual-Control Approval
+                </button>
+              )}
               <button
                 type="button"
                 className={`admin-btn ${
                   actionModal.type === 'suspend'
                     ? 'admin-btn-reject'
-                    : actionModal.type === 'verify'
-                      ? 'admin-btn-verify-action'
-                      : 'admin-btn-primary'
+                    : actionModal.type === 'restrict'
+                      ? 'admin-btn-restrict-action'
+                      : actionModal.type === 'verify'
+                        ? 'admin-btn-verify-action'
+                        : 'admin-btn-primary'
                 }`}
                 onClick={handleExecuteAction}
               >
                 {actionModal.type === 'verify' && 'Confirm Verification'}
+                {actionModal.type === 'restrict' && 'Confirm Restriction'}
                 {actionModal.type === 'suspend' && 'Confirm Suspension'}
                 {actionModal.type === 'reactivate' && 'Confirm Reinstatement'}
                 {actionModal.type === 'note' && 'Save Internal Note'}

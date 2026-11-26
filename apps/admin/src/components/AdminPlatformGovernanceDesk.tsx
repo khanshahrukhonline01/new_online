@@ -23,7 +23,11 @@ import {
   type CityLaunchTier,
   type AuditSourceModule,
   type AuditSeverity,
+  type BannerAudienceScope,
 } from '../services/adminPlatformGovernanceService'
+import { BANNER_AUDIENCE_LABELS, subscribeRegulatoryState } from '../../../../src/shared/governance/regulatoryBridge'
+import { getMakerCheckerProposals } from '../services/adminGovernanceEscalationService'
+import { AdminMakerCheckerPanel } from './AdminMakerCheckerPanel'
 import './AdminPlatformGovernanceDesk.css'
 
 export type GovernanceSubDesk =
@@ -32,6 +36,7 @@ export type GovernanceSubDesk =
   | 'taxonomies'
   | 'operator_rbac'
   | 'audit_explorer'
+  | 'maker_checker'
 
 export interface AdminPlatformGovernanceDeskProps {
   operatorEmail?: string
@@ -71,6 +76,9 @@ export const AdminPlatformGovernanceDesk: FC<AdminPlatformGovernanceDeskProps> =
 
   const [subDesk, setSubDesk] = useState<GovernanceSubDesk>('feature_flags')
   const [snapshot, setSnapshot] = useState<PlatformGovernanceSnapshot | null>(null)
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(() =>
+    getMakerCheckerProposals().filter(p => p.status === 'pending_approval').length,
+  )
   const [isLoading, setIsLoading] = useState(true)
   const [toast, setToast] = useState<{ text: string; isError?: boolean } | null>(null)
 
@@ -87,6 +95,7 @@ export const AdminPlatformGovernanceDesk: FC<AdminPlatformGovernanceDeskProps> =
   const [editingBannerId, setEditingBannerId] = useState<string | undefined>(undefined)
   const [bannerSlug, setBannerSlug] = useState('')
   const [bannerTone, setBannerTone] = useState<BannerTone>('emerald')
+  const [bannerAudience, setBannerAudience] = useState<BannerAudienceScope>('all')
   const [bannerBadgeEn, setBannerBadgeEn] = useState('Platform Alert')
   const [bannerBadgeHi, setBannerBadgeHi] = useState('प्लेटफ़ॉर्म अलर्ट')
   const [bannerTitleEn, setBannerTitleEn] = useState('')
@@ -141,6 +150,26 @@ export const AdminPlatformGovernanceDesk: FC<AdminPlatformGovernanceDeskProps> =
 
   useEffect(() => {
     void loadSnapshot()
+    const syncApprovals = () => {
+      setPendingApprovalsCount(
+        getMakerCheckerProposals().filter(p => p.status === 'pending_approval').length,
+      )
+    }
+    const handleOpenMakerChecker = () => {
+      syncApprovals()
+      setSubDesk('maker_checker')
+    }
+    syncApprovals()
+    const unsub = subscribeRegulatoryState(syncApprovals)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('khelgrid-admin-open-maker-checker', handleOpenMakerChecker)
+    }
+    return () => {
+      unsub()
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('khelgrid-admin-open-maker-checker', handleOpenMakerChecker)
+      }
+    }
   }, [loadSnapshot])
 
   const filteredSports = useMemo(() => {
@@ -206,6 +235,7 @@ export const AdminPlatformGovernanceDesk: FC<AdminPlatformGovernanceDeskProps> =
     setEditingBannerId(banner?.id)
     setBannerSlug(banner?.slug || `announcement-${Date.now().toString(36)}`)
     setBannerTone(banner?.tone || 'emerald')
+    setBannerAudience(banner?.targetAudience || 'all')
     setBannerBadgeEn(banner?.badgeEn || 'Platform Update')
     setBannerBadgeHi(banner?.badgeHi || 'खेलग्रिड सूचना')
     setBannerTitleEn(banner?.titleEn || '')
@@ -226,6 +256,7 @@ export const AdminPlatformGovernanceDesk: FC<AdminPlatformGovernanceDeskProps> =
           slug: bannerSlug,
           tone: bannerTone,
           targetLocale: 'both',
+          targetAudience: bannerAudience,
           badgeEn: bannerBadgeEn,
           badgeHi: bannerBadgeHi,
           titleEn: bannerTitleEn,
@@ -241,7 +272,7 @@ export const AdminPlatformGovernanceDesk: FC<AdminPlatformGovernanceDeskProps> =
         actor,
       )
       setBannerModalOpen(false)
-      showToast('Bilingual Hindi/English CMS banner saved & published.')
+      showToast(`Bilingual CMS banner published to ${BANNER_AUDIENCE_LABELS[bannerAudience]}.`)
       await loadSnapshot()
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not save banner.', true)
@@ -573,7 +604,29 @@ export const AdminPlatformGovernanceDesk: FC<AdminPlatformGovernanceDeskProps> =
           <span>Immutable Audit Explorer</span>
           <span className="gov-tab-count">{snapshot?.auditEvents.length ?? '—'}</span>
         </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={subDesk === 'maker_checker'}
+          className={`gov-tab-btn ${subDesk === 'maker_checker' ? 'is-active' : ''}`}
+          onClick={() => setSubDesk('maker_checker')}
+          data-testid="tab-maker-checker"
+        >
+          <SiteIcon name="lock" size={14} />
+          <span>Dual-Control Approvals</span>
+          <span className="gov-tab-count">{pendingApprovalsCount}</span>
+        </button>
       </nav>
+
+      {subDesk === 'maker_checker' && (
+        <section className="gov-panel-section" aria-label="Dual-Control Maker-Checker Approvals">
+          <AdminMakerCheckerPanel
+            operatorEmail={operatorEmail}
+            onNotify={(msg, isError) => showToast(msg, isError)}
+          />
+        </section>
+      )}
 
       {/* TAB 1: FEATURE FLAGS & KILL SWITCHES */}
       {subDesk === 'feature_flags' && (
@@ -586,8 +639,11 @@ export const AdminPlatformGovernanceDesk: FC<AdminPlatformGovernanceDeskProps> =
             >
               <div className="gov-flag-header">
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                     <span className={`gov-badge gov-badge-${flag.riskLevel}`}>{flag.riskLevel}</span>
+                    {flag.category === 'workspace_controls' && (
+                      <span className="gov-badge gov-badge-active">Live Front-End Control</span>
+                    )}
                     <code style={{ fontSize: '0.74rem', color: '#93c5fd' }}>{flag.key}</code>
                   </div>
                   <h3 style={{ margin: 0, fontSize: '1.02rem', color: '#f8fafc' }}>{flag.name}</h3>
@@ -655,9 +711,12 @@ export const AdminPlatformGovernanceDesk: FC<AdminPlatformGovernanceDeskProps> =
             {(snapshot?.banners || []).map(banner => (
               <article key={banner.id} className="gov-banner-card" data-testid={`banner-card-${banner.slug}`}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
                     <span className={`gov-badge ${banner.isActive ? 'gov-badge-active' : 'gov-badge-inactive'}`}>
                       {banner.isActive ? 'LIVE' : 'PAUSED'}
+                    </span>
+                    <span className="gov-badge gov-badge-standard">
+                      Target: {BANNER_AUDIENCE_LABELS[banner.targetAudience || 'all']}
                     </span>
                     <code style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{banner.slug}</code>
                   </div>
@@ -1148,6 +1207,19 @@ export const AdminPlatformGovernanceDesk: FC<AdminPlatformGovernanceDeskProps> =
                   </select>
                 </label>
               </div>
+              <label className="gov-form-field">
+                Target Audience (Front-End Delivery Scope)
+                <select
+                  className="gov-select"
+                  value={bannerAudience}
+                  onChange={e => setBannerAudience(e.target.value as BannerAudienceScope)}
+                  data-testid="banner-audience-select"
+                >
+                  {(Object.entries(BANNER_AUDIENCE_LABELS) as [BannerAudienceScope, string][]).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+              </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <label className="gov-form-field">
                   Badge (English)

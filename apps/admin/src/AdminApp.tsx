@@ -14,6 +14,9 @@ import { AdminListingModerationDesk } from './components/AdminListingModerationD
 import { AdminChronicleEditorialDesk } from './components/AdminChronicleEditorialDesk'
 import { AdminTrustSafetyDesk } from './components/AdminTrustSafetyDesk'
 import { AdminPlatformGovernanceDesk } from './components/AdminPlatformGovernanceDesk'
+import { AdminRegulatoryInboxDesk } from './components/AdminRegulatoryInboxDesk'
+import { loadUnifiedRegulatoryInbox } from './services/adminRegulatoryInboxService'
+import { subscribeRegulatoryState } from '../../../src/shared/governance/regulatoryBridge'
 import {
   AdminAuthGate,
   useAdminAuth,
@@ -38,6 +41,7 @@ export interface AdminAppProps {
 
 const KEY_CHORD_WORKSPACES: Record<string, AdminWorkspaceTab> = {
   c: 'command',
+  i: 'regulatory_inbox',
   m: 'moderation_desk',
   a: 'analytics',
   r: 'chronicle_desk',
@@ -64,6 +68,8 @@ function AuthenticatedAdminShell({
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [pendingListingsCount, setPendingListingsCount] = useState(0)
   const [pendingManuscriptsCount, setPendingManuscriptsCount] = useState(0)
+  const [inboxActionableCount, setInboxActionableCount] = useState(0)
+  const [inboxBreachedCount, setInboxBreachedCount] = useState(0)
   const [toastNotification, setToastNotification] = useState<string | null>(null)
   const [dbLatencyMs, setDbLatencyMs] = useState<number | null>(null)
   const [isRefreshingCounts, setIsRefreshingCounts] = useState(false)
@@ -135,9 +141,10 @@ function AuthenticatedAdminShell({
     setIsRefreshingCounts(true)
     const start = Date.now()
     try {
-      const [queueRes, chronicleRes] = await Promise.all([
+      const [queueRes, chronicleRes, inboxSnapshot] = await Promise.all([
         getAdminModerationQueue({ limit: 50 }).catch(() => null),
         getChronicleModerationQueue().catch(() => null),
+        loadUnifiedRegulatoryInbox().catch(() => null),
       ])
       setDbLatencyMs(Math.max(1, Date.now() - start))
       if (queueRes?.pendingSubmissions) {
@@ -145,6 +152,10 @@ function AuthenticatedAdminShell({
       }
       if (chronicleRes?.submissions) {
         setPendingManuscriptsCount(chronicleRes.submissions.length)
+      }
+      if (inboxSnapshot) {
+        setInboxActionableCount(inboxSnapshot.metrics.totalActionable)
+        setInboxBreachedCount(inboxSnapshot.metrics.breachedCount)
       }
     } catch {
       setDbLatencyMs(null)
@@ -155,6 +166,9 @@ function AuthenticatedAdminShell({
 
   useEffect(() => {
     void loadCounts()
+    return subscribeRegulatoryState(() => {
+      void loadCounts()
+    })
   }, [loadCounts])
 
   // Global keyboard navigation chords (G + workspace key), suppressed inside inputs or open dialogs
@@ -246,6 +260,20 @@ function AuthenticatedAdminShell({
         onSelect: () => setActiveWorkspace('command'),
       },
       {
+        id: 'cmd-regulatory-inbox',
+        title: 'Open Unified Regulatory Inbox & SLA Queue',
+        section: 'Operations',
+        icon: 'bell',
+        badge:
+          inboxBreachedCount > 0
+            ? `${inboxBreachedCount} SLA Breached`
+            : inboxActionableCount > 0
+              ? `${inboxActionableCount} Open`
+              : undefined,
+        shortcut: 'G I',
+        onSelect: () => setActiveWorkspace('regulatory_inbox'),
+      },
+      {
         id: 'cmd-moderation',
         title: 'Open Listing Moderation Queue',
         section: 'Operations',
@@ -293,6 +321,18 @@ function AuthenticatedAdminShell({
         icon: 'settings',
         shortcut: 'G P',
         onSelect: () => setActiveWorkspace('platform_governance'),
+      },
+      {
+        id: 'cmd-maker-checker',
+        title: 'Open Dual-Control Approvals (Maker-Checker Queue)',
+        section: 'Governance & Trust',
+        icon: 'shield-check',
+        onSelect: () => {
+          setActiveWorkspace('platform_governance')
+          window.setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('khelgrid-admin-open-maker-checker'))
+          }, 0)
+        },
       },
       {
         id: 'cmd-chronicle',
@@ -385,11 +425,21 @@ function AuthenticatedAdminShell({
         },
       },
     ],
-    [pendingListingsCount, pendingManuscriptsCount, handleThemeChange, openPasswordReset, revalidate, signOut],
+    [
+      inboxActionableCount,
+      inboxBreachedCount,
+      pendingListingsCount,
+      pendingManuscriptsCount,
+      handleThemeChange,
+      openPasswordReset,
+      revalidate,
+      signOut,
+    ],
   )
 
   const workspaceDetails: Record<AdminWorkspaceTab, { title: string; section: string }> = {
     command: { title: 'Command Centre', section: 'Operations' },
+    regulatory_inbox: { title: 'Unified Regulatory Inbox', section: 'Operations' },
     moderation_desk: { title: 'Listing Moderation Queue', section: 'Operations' },
     analytics: { title: 'Operations & KPI Analytics', section: 'Operations' },
     tenant_governance: { title: 'Tenant & Org Governance', section: 'Governance & Trust' },
@@ -416,6 +466,7 @@ function AuthenticatedAdminShell({
           onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
           isMobileOpen={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          regulatoryInboxCount={inboxActionableCount}
           pendingSubmissionsCount={pendingListingsCount}
           pendingManuscriptsCount={pendingManuscriptsCount}
           moderatorEmail={identity.email}
@@ -445,6 +496,22 @@ function AuthenticatedAdminShell({
           {/* Compact Actionable Triage Strip */}
           <div className="admin-triage-strip" role="region" aria-label="Quick queue jump bar">
             <div className="admin-triage-items">
+              <button
+                type="button"
+                className={`admin-triage-link ${activeWorkspace === 'regulatory_inbox' ? 'is-active' : ''}`}
+                onClick={() => setActiveWorkspace('regulatory_inbox')}
+                data-testid="triage-regulatory-inbox"
+              >
+                <span>Regulatory Inbox</span>
+                <span
+                  className={`admin-triage-count ${inboxBreachedCount > 0 || inboxActionableCount > 0 ? 'is-pending' : ''}`}
+                >
+                  {inboxBreachedCount > 0
+                    ? `${inboxBreachedCount} SLA`
+                    : inboxActionableCount}
+                </span>
+              </button>
+              <span className="admin-triage-sep" aria-hidden="true">·</span>
               <button
                 type="button"
                 className={`admin-triage-link ${activeWorkspace === 'moderation_desk' ? 'is-active' : ''}`}
@@ -519,6 +586,11 @@ function AuthenticatedAdminShell({
           <div className="admin-shell-content">
             {activeWorkspace === 'command' ? (
               <AdminControlPanelPage />
+            ) : activeWorkspace === 'regulatory_inbox' ? (
+              <AdminRegulatoryInboxDesk
+                operatorEmail={identity.email}
+                onJumpToWorkspace={tab => setActiveWorkspace(tab)}
+              />
             ) : activeWorkspace === 'moderation_desk' ? (
               <AdminListingModerationDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'chronicle_desk' ? (
@@ -533,7 +605,7 @@ function AuthenticatedAdminShell({
             ) : activeWorkspace === 'verification_vault' ? (
               <AdminVerificationVaultDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'analytics' ? (
-              <AdminAnalyticsDashboard />
+              <AdminAnalyticsDashboard shellAuthorized />
             ) : activeWorkspace === 'creator_campaigns' ? (
               <AdminCampaignMarketplaceDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'fraud_disputes' ? (

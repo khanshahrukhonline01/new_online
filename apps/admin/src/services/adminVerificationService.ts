@@ -10,6 +10,13 @@
  * - Athletes (Federation UID, age/municipal records, merit certificates)
  */
 
+import {
+  notifyRegulatoryStateChanged,
+  publishPartnerComplianceAdvisory,
+  resolvePartnerComplianceAdvisory,
+  type RegulatoryWorkspaceKey,
+} from '../../../../src/shared/governance/regulatoryBridge'
+
 export type VerificationEntityType = 'coach' | 'academy' | 'venue' | 'organiser' | 'athlete'
 
 export type VerificationStatus =
@@ -102,7 +109,246 @@ export interface AdminVerificationItem {
   expiresAt?: string
   rejectionReason?: string
   actionRequiredNotes?: string
+  manualChecklistOverrides?: Record<string, boolean>
   auditTrail: VerificationAuditEntry[]
+}
+
+export interface VerificationChecklistCriterion {
+  id: string
+  label: string
+  description: string
+  mandatory: boolean
+  matchedCategories: DocumentCategory[]
+}
+
+export interface EvaluatedChecklistItem extends VerificationChecklistCriterion {
+  passed: boolean
+  source: 'document' | 'manual' | 'missing'
+  matchedDocumentTitle?: string
+}
+
+export interface ChecklistEvaluationResult {
+  items: EvaluatedChecklistItem[]
+  passedCount: number
+  totalCount: number
+  mandatoryMissing: EvaluatedChecklistItem[]
+  isReadyToApprove: boolean
+}
+
+export const ROLE_VERIFICATION_CHECKLISTS: Record<
+  VerificationEntityType,
+  readonly VerificationChecklistCriterion[]
+> = {
+  academy: [
+    {
+      id: 'acad_legal_reg',
+      label: 'Legal Entity / State Affiliation',
+      description: 'Society, Trust, Section-8 registration or recognized State Sports Association affiliation letter.',
+      mandatory: true,
+      matchedCategories: ['government_registration', 'federation_license'],
+    },
+    {
+      id: 'acad_head_coach',
+      label: 'Accredited Head Coach Credential',
+      description: 'Verified NIS Patiala Diploma, SAI badge, or federation coaching license on staff roster.',
+      mandatory: true,
+      matchedCategories: ['nis_diploma', 'coaching_badge'],
+    },
+    {
+      id: 'acad_fire_safety',
+      label: 'Facility Fire & Safety NOC',
+      description: 'Valid municipal Fire Safety NOC and first-aid standby compliance for training grounds.',
+      mandatory: true,
+      matchedCategories: ['safety_fire_noc'],
+    },
+    {
+      id: 'acad_child_safeguarding',
+      label: 'Child Safeguarding & POSH Undertaking',
+      description: 'Signed anti-harassment and minor athlete safeguarding declaration.',
+      mandatory: false,
+      matchedCategories: ['identity_age_proof', 'government_registration'],
+    },
+  ],
+  coach: [
+    {
+      id: 'coach_license',
+      label: 'NIS / Federation Coaching License',
+      description: 'Authentic NIS Patiala diploma, SAI accreditation, or AFC/BCCI/BWF/BFI coaching license.',
+      mandatory: true,
+      matchedCategories: ['coaching_badge', 'nis_diploma', 'federation_license'],
+    },
+    {
+      id: 'coach_identity',
+      label: 'Identity & Anti-Impersonation Proof',
+      description: 'Masked government photo ID cross-matched against license holder name.',
+      mandatory: true,
+      matchedCategories: ['identity_age_proof', 'government_registration'],
+    },
+    {
+      id: 'coach_safeguarding',
+      label: 'Background & Youth Safety Clearance',
+      description: 'No active Trust & Safety flags; POSH/minor mentoring compliance signed.',
+      mandatory: true,
+      matchedCategories: ['safety_fire_noc'],
+    },
+    {
+      id: 'coach_merit',
+      label: 'Playing / Coaching Track Record',
+      description: 'Optional state/national representation or federation commendation certificate.',
+      mandatory: false,
+      matchedCategories: ['merit_certificate'],
+    },
+  ],
+  venue: [
+    {
+      id: 'venue_trade_lease',
+      label: 'Municipal Trade License / Ground Lease',
+      description: 'Commercial ground lease, municipal stadium allotment, or local trade permit.',
+      mandatory: true,
+      matchedCategories: ['government_registration'],
+    },
+    {
+      id: 'venue_fire_noc',
+      label: 'Fire NOC & Emergency Access',
+      description: 'Active Fire Safety NOC, floodlight electrical clearance, and first-aid kit verification.',
+      mandatory: true,
+      matchedCategories: ['safety_fire_noc'],
+    },
+    {
+      id: 'venue_turf_standard',
+      label: 'Playing Surface & Court Specification',
+      description: 'Turf quality certificate (FIFA/FIH/ITF) or geotagged facility boundary inspection.',
+      mandatory: true,
+      matchedCategories: ['federation_license', 'merit_certificate'],
+    },
+    {
+      id: 'venue_operator_id',
+      label: 'Authorized Venue Steward Contact',
+      description: 'Verified operator phone and QR gate check-in desk authorization.',
+      mandatory: false,
+      matchedCategories: ['identity_age_proof'],
+    },
+  ],
+  organiser: [
+    {
+      id: 'org_sanction',
+      label: 'Federation / Association Event Sanction',
+      description: 'Official circular or sanction letter from District, State, or National sports body.',
+      mandatory: true,
+      matchedCategories: ['event_sanction', 'federation_license'],
+    },
+    {
+      id: 'org_registration',
+      label: 'Organising Committee Legal Status',
+      description: 'Registered sports society, trust, or institutional promoter verification.',
+      mandatory: true,
+      matchedCategories: ['government_registration'],
+    },
+    {
+      id: 'org_medical_safety',
+      label: 'Medical Standby & Safety Indemnity',
+      description: 'On-ground paramedic/ambulance arrangement and venue safety NOC.',
+      mandatory: true,
+      matchedCategories: ['safety_fire_noc'],
+    },
+    {
+      id: 'org_age_integrity',
+      label: 'Anti-Age-Fraud Protocol Pledge',
+      description: 'Commitment to transparent age verification and zero unauthorized middleman fees.',
+      mandatory: false,
+      matchedCategories: ['identity_age_proof'],
+    },
+  ],
+  athlete: [
+    {
+      id: 'ath_age_proof',
+      label: 'Municipal Birth / Age Proof',
+      description: 'Verified municipal birth certificate, Aadhaar/Passport masked record, or TW3 scan.',
+      mandatory: true,
+      matchedCategories: ['identity_age_proof', 'government_registration'],
+    },
+    {
+      id: 'ath_fed_uid',
+      label: 'Federation Athlete UID',
+      description: 'Recognized national/state federation athlete registration ID.',
+      mandatory: true,
+      matchedCategories: ['federation_license'],
+    },
+    {
+      id: 'ath_merit',
+      label: 'Official Competition Merit Certificate',
+      description: 'Authenticated podium/participation record from state, national, or SGFI/AIU meet.',
+      mandatory: false,
+      matchedCategories: ['merit_certificate'],
+    },
+  ],
+}
+
+export function mapVerificationEntityToWorkspacePersona(
+  entityType: VerificationEntityType,
+): RegulatoryWorkspaceKey {
+  switch (entityType) {
+    case 'academy':
+      return 'academy'
+    case 'coach':
+      return 'coach'
+    case 'venue':
+      return 'turf'
+    case 'organiser':
+      return 'tournament'
+    case 'athlete':
+    default:
+      return 'athlete'
+  }
+}
+
+export function evaluateVerificationChecklist(
+  item: AdminVerificationItem,
+): ChecklistEvaluationResult {
+  const criteria = ROLE_VERIFICATION_CHECKLISTS[item.entityType] || []
+  const overrides = item.manualChecklistOverrides || {}
+
+  const items: EvaluatedChecklistItem[] = criteria.map(criterion => {
+    const manualValue = overrides[criterion.id]
+    const matchedDoc = item.documents.find(doc =>
+      criterion.matchedCategories.includes(doc.category),
+    )
+
+    if (typeof manualValue === 'boolean') {
+      return {
+        ...criterion,
+        passed: manualValue,
+        source: manualValue ? 'manual' : 'missing',
+        matchedDocumentTitle: matchedDoc?.title,
+      }
+    }
+
+    if (matchedDoc) {
+      return {
+        ...criterion,
+        passed: true,
+        source: 'document',
+        matchedDocumentTitle: matchedDoc.title,
+      }
+    }
+
+    return {
+      ...criterion,
+      passed: false,
+      source: 'missing',
+    }
+  })
+
+  const passedCount = items.filter(i => i.passed).length
+  const mandatoryMissing = items.filter(i => i.mandatory && !i.passed)
+
+  return {
+    items,
+    passedCount,
+    totalCount: items.length,
+    mandatoryMissing,
+    isReadyToApprove: mandatoryMissing.length === 0,
+  }
 }
 
 export interface ExpiryCalculationResult {
@@ -944,6 +1190,7 @@ function writeStoredVerifications(items: AdminVerificationItem[]): void {
   } catch (err) {
     console.warn('[adminVerificationService] Failed writing stored verifications', err)
   }
+  notifyRegulatoryStateChanged()
 }
 
 export function getAdminVerifications(): AdminVerificationItem[] {
@@ -953,6 +1200,50 @@ export function getAdminVerifications(): AdminVerificationItem[] {
 export function getAdminVerificationDetails(id: string): AdminVerificationItem | null {
   const all = readStoredVerifications()
   return all.find(item => item.id === id || item.referenceCode === id) ?? null
+}
+
+export function toggleVerificationChecklistItem(
+  id: string,
+  criterionId: string,
+  passed: boolean,
+  operatorEmail: string,
+): AdminVerificationItem {
+  const all = readStoredVerifications()
+  const idx = all.findIndex(item => item.id === id)
+  if (idx === -1) {
+    throw new Error(`Verification record with id "${id}" not found.`)
+  }
+
+  const existing = all[idx]
+  const now = new Date().toISOString()
+  const nextOverrides = {
+    ...(existing.manualChecklistOverrides || {}),
+    [criterionId]: passed,
+  }
+
+  const criterionLabel =
+    ROLE_VERIFICATION_CHECKLISTS[existing.entityType]?.find(c => c.id === criterionId)?.label ||
+    criterionId
+
+  const newAudit: VerificationAuditEntry = {
+    id: `aud-${Date.now()}`,
+    timestamp: now,
+    actorEmail: operatorEmail,
+    action: 'note_added',
+    summary: `Checklist item "${criterionLabel}" marked as ${passed ? 'VERIFIED' : 'MISSING'}.`,
+  }
+
+  const updated: AdminVerificationItem = {
+    ...existing,
+    manualChecklistOverrides: nextOverrides,
+    lastAuditedAt: now,
+    assignedReviewer: operatorEmail,
+    auditTrail: [newAudit, ...existing.auditTrail],
+  }
+
+  all[idx] = updated
+  writeStoredVerifications(all)
+  return updated
 }
 
 export function approveVerification(
@@ -999,6 +1290,7 @@ export function approveVerification(
 
   all[idx] = updated
   writeStoredVerifications(all)
+  resolvePartnerComplianceAdvisory(existing.referenceCode, operatorEmail)
   return updated
 }
 
@@ -1038,6 +1330,23 @@ export function requestVerificationCorrections(
 
   all[idx] = updated
   writeStoredVerifications(all)
+
+  const checklist = evaluateVerificationChecklist(updated)
+  const dueDate = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+  publishPartnerComplianceAdvisory({
+    referenceCode: updated.referenceCode,
+    sourceDesk: 'verification_vault',
+    targetPersona: mapVerificationEntityToWorkspacePersona(updated.entityType),
+    entityName: updated.organizationName || updated.entityName,
+    severity: 'action_required',
+    headline: `Verification Evidence Needed (${updated.referenceCode})`,
+    message: notes,
+    missingItems: checklist.mandatoryMissing.map(m => m.label),
+    dueAt: dueDate,
+    issuedBy: operatorEmail,
+    actionUrl: `/workspace/${mapVerificationEntityToWorkspacePersona(updated.entityType)}/overview`,
+  })
+
   return updated
 }
 
@@ -1117,6 +1426,17 @@ export function revokeVerification(
 
   all[idx] = updated
   writeStoredVerifications(all)
+  publishPartnerComplianceAdvisory({
+    referenceCode: updated.referenceCode,
+    sourceDesk: 'verification_vault',
+    targetPersona: mapVerificationEntityToWorkspacePersona(updated.entityType),
+    entityName: updated.organizationName || updated.entityName,
+    severity: 'warning',
+    headline: `Verified Seal Revoked (${updated.referenceCode})`,
+    message: reason,
+    issuedBy: operatorEmail,
+    actionUrl: '/help-feedback',
+  })
   return updated
 }
 

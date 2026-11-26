@@ -28,6 +28,12 @@ import { getAdminChronicleManuscripts } from './adminChronicleService'
 import { getAdminTrustSafetyCases } from './adminTrustSafetyService'
 import { getAdminCreatorCampaignDashboard } from './adminCreatorCampaignService'
 import { getAllGroundOperationsAuditEvents } from './adminGroundOperationsService'
+import {
+  notifyRegulatoryStateChanged,
+  type BannerAudienceScope,
+} from '../../../../src/shared/governance/regulatoryBridge'
+
+export type { BannerAudienceScope }
 
 export interface GovernanceOperatorActor {
   name: string
@@ -38,6 +44,7 @@ export interface GovernanceOperatorActor {
 
 export type FeatureFlagCategory =
   | 'payments_lockdown'
+  | 'workspace_controls'
   | 'moderation_safety'
   | 'creator_economy'
   | 'discovery_seo'
@@ -67,6 +74,7 @@ export interface PlatformBilingualBanner {
   slug: string
   tone: BannerTone
   targetLocale: BannerLocaleScope
+  targetAudience?: BannerAudienceScope
   badgeEn: string
   badgeHi: string
   titleEn: string
@@ -220,6 +228,14 @@ function saveGovData<T>(key: string, data: T): void {
   } catch {
     // Ignore storage quota / sandbox restrictions
   }
+  notifyRegulatoryStateChanged()
+}
+
+function loadFeatureFlagsWithDefaults(): PlatformFeatureFlag[] {
+  const stored = loadGovData<PlatformFeatureFlag[]>(GOV_STORAGE_KEYS.FLAGS, INITIAL_FEATURE_FLAGS)
+  const existingKeys = new Set(stored.map(f => f.key))
+  const missingDefaults = INITIAL_FEATURE_FLAGS.filter(f => !existingKeys.has(f.key))
+  return missingDefaults.length > 0 ? [...stored, ...missingDefaults] : stored
 }
 
 function assertSuperAdmin(actor: GovernanceOperatorActor, actionLabel: string): void {
@@ -331,6 +347,78 @@ const INITIAL_FEATURE_FLAGS: PlatformFeatureFlag[] = [
     updatedAt: '2026-11-20T10:15:00Z',
     updatedBy: 'platform.ops@khelgrid.com',
   },
+  {
+    key: 'platform_maintenance_mode',
+    name: 'Global Platform Maintenance Mode',
+    description:
+      'Places all front-end athlete and partner dashboards into scheduled maintenance hold while keeping the Admin Control Plane fully operational.',
+    category: 'workspace_controls',
+    riskLevel: 'critical',
+    enabled: false,
+    environment: 'all',
+    updatedAt: '2026-11-24T09:30:00Z',
+    updatedBy: 'founder@khelgrid.com',
+  },
+  {
+    key: 'workspace_academy_enabled',
+    name: 'Academy & Organisation Hub Access',
+    description:
+      'Controls live front-end access to the Academy Hub and Organisation Workspace for managing batches, staff rosters, and fee schedules.',
+    category: 'workspace_controls',
+    riskLevel: 'high',
+    enabled: true,
+    environment: 'all',
+    updatedAt: '2026-11-24T09:30:00Z',
+    updatedBy: 'founder@khelgrid.com',
+  },
+  {
+    key: 'workspace_coach_enabled',
+    name: 'Coach Dashboard Workspace Access',
+    description:
+      'Controls live front-end access to the Coach Dashboard for athlete mentorship schedules, feedback logs, and session updates.',
+    category: 'workspace_controls',
+    riskLevel: 'high',
+    enabled: true,
+    environment: 'all',
+    updatedAt: '2026-11-24T09:30:00Z',
+    updatedBy: 'founder@khelgrid.com',
+  },
+  {
+    key: 'workspace_turf_enabled',
+    name: 'Venue & Turf Slot Calendar Access',
+    description:
+      'Controls live front-end access to the Venue/Turf Slot Calendar and Partner Host dashboard for managing court slots and bookings.',
+    category: 'workspace_controls',
+    riskLevel: 'high',
+    enabled: true,
+    environment: 'all',
+    updatedAt: '2026-11-24T09:30:00Z',
+    updatedBy: 'founder@khelgrid.com',
+  },
+  {
+    key: 'workspace_tournament_enabled',
+    name: 'Tournament Operations Hub Access',
+    description:
+      'Controls live front-end access to the Tournament Operations desk for brackets, match fixtures, and live scoring.',
+    category: 'workspace_controls',
+    riskLevel: 'high',
+    enabled: true,
+    environment: 'all',
+    updatedAt: '2026-11-24T09:30:00Z',
+    updatedBy: 'founder@khelgrid.com',
+  },
+  {
+    key: 'workspace_creator_enabled',
+    name: 'Creator Studio & Campaign Hub Access',
+    description:
+      'Controls live front-end access to the Creator Studio for campaign short-links and attribution metrics.',
+    category: 'workspace_controls',
+    riskLevel: 'standard',
+    enabled: true,
+    environment: 'all',
+    updatedAt: '2026-11-24T09:30:00Z',
+    updatedBy: 'founder@khelgrid.com',
+  },
 ]
 
 const HINDI_TRANSLATIONS_BY_SLUG: Record<string, {
@@ -353,6 +441,7 @@ const INITIAL_BANNERS: PlatformBilingualBanner[] = [
     slug: 'zero-middleman-verified-trials-advisory',
     tone: 'emerald',
     targetLocale: 'both',
+    targetAudience: 'all',
     badgeEn: 'Safety Advisory',
     badgeHi: 'सुरक्षा सूचना',
     titleEn: 'Verified Grassroots Trials on KhelGrid Require Zero Agent Fees',
@@ -374,6 +463,7 @@ const INITIAL_BANNERS: PlatformBilingualBanner[] = [
       slug: ann.slug,
       tone: ann.tone,
       targetLocale: 'both' as BannerLocaleScope,
+      targetAudience: 'all' as BannerAudienceScope,
       badgeEn: ann.badge,
       badgeHi: hi?.badgeHi || 'खेलग्रिड अपडेट',
       titleEn: ann.title,
@@ -544,7 +634,7 @@ function recordGovernanceAudit(entry: {
 // =========================================================================
 
 export async function getPlatformGovernanceSnapshot(): Promise<PlatformGovernanceSnapshot> {
-  const featureFlags = loadGovData<PlatformFeatureFlag[]>(GOV_STORAGE_KEYS.FLAGS, INITIAL_FEATURE_FLAGS)
+  const featureFlags = loadFeatureFlagsWithDefaults()
   const banners = loadGovData<PlatformBilingualBanner[]>(GOV_STORAGE_KEYS.BANNERS, INITIAL_BANNERS)
   const sports = loadGovData<SportTaxonomyItem[]>(GOV_STORAGE_KEYS.SPORTS, INITIAL_SPORTS_TAXONOMY)
   const cities = loadGovData<CityTaxonomyItem[]>(GOV_STORAGE_KEYS.CITIES, INITIAL_CITIES_TAXONOMY)
@@ -786,7 +876,7 @@ export function togglePlatformFeatureFlag(
 ): PlatformFeatureFlag {
   assertSuperAdmin(actor, `toggle feature flag "${flagKey}"`)
 
-  const flags = loadGovData<PlatformFeatureFlag[]>(GOV_STORAGE_KEYS.FLAGS, INITIAL_FEATURE_FLAGS)
+  const flags = loadFeatureFlagsWithDefaults()
   const idx = flags.findIndex(f => f.key === flagKey)
   if (idx === -1) {
     throw new Error(`Feature flag "${flagKey}" not found.`)
@@ -814,7 +904,7 @@ export function togglePlatformFeatureFlag(
     actor: actor.email,
     targetEntity: `flag:${flagKey}`,
     summary: `Set ${flagKey} to ${nextState ? 'ENABLED' : 'DISABLED'}. Note: ${justification.trim() || 'Super-Admin configuration update.'}`,
-    severity: target.riskLevel === 'high' ? 'warning' : 'info',
+    severity: target.riskLevel === 'critical' ? 'critical' : target.riskLevel === 'high' ? 'warning' : 'info',
   })
 
   return flags[idx]
@@ -832,6 +922,7 @@ export function saveBilingualBanner(
 
   const banners = loadGovData<PlatformBilingualBanner[]>(GOV_STORAGE_KEYS.BANNERS, INITIAL_BANNERS)
   const now = new Date().toISOString()
+  const targetAudience: BannerAudienceScope = input.targetAudience || 'all'
 
   if (input.id) {
     const idx = banners.findIndex(b => b.id === input.id)
@@ -839,6 +930,7 @@ export function saveBilingualBanner(
       banners[idx] = {
         ...banners[idx],
         ...input,
+        targetAudience,
         id: input.id,
         updatedAt: now,
         updatedBy: actor.email,
@@ -849,7 +941,7 @@ export function saveBilingualBanner(
         action: 'BILINGUAL_BANNER_UPDATED',
         actor: actor.email,
         targetEntity: `banner:${banners[idx].slug}`,
-        summary: `Updated Hindi/English banner "${input.titleEn}" (active: ${input.isActive}).`,
+        summary: `Updated Hindi/English banner "${input.titleEn}" (audience: ${targetAudience}, active: ${input.isActive}).`,
         severity: 'info',
       })
       return banners[idx]
@@ -858,6 +950,7 @@ export function saveBilingualBanner(
 
   const created: PlatformBilingualBanner = {
     ...input,
+    targetAudience,
     id: `gov-banner-${Date.now()}`,
     updatedAt: now,
     updatedBy: actor.email,
@@ -868,7 +961,7 @@ export function saveBilingualBanner(
     action: 'BILINGUAL_BANNER_PUBLISHED',
     actor: actor.email,
     targetEntity: `banner:${created.slug}`,
-    summary: `Published bilingual banner "${created.titleEn}" / "${created.titleHi}".`,
+    summary: `Published bilingual banner "${created.titleEn}" / "${created.titleHi}" (audience: ${targetAudience}).`,
     severity: 'info',
   })
   return created
@@ -1103,4 +1196,5 @@ export function resetPlatformGovernanceForTesting(): void {
       // ignore
     }
   }
+  notifyRegulatoryStateChanged()
 }

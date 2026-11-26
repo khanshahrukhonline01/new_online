@@ -22,9 +22,14 @@ html.dark .admin-analytics-root {
 .admin-analytics-title-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 0.85rem;
+}
+
+.admin-analytics-title-row > div:first-child {
+  flex: 1 1 420px;
+  min-width: 0;
 }
 
 .admin-analytics-title-row h1 {
@@ -37,8 +42,10 @@ html.dark .admin-analytics-root {
 .admin-analytics-controls {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
   flex-wrap: wrap;
+  flex-shrink: 0;
+  margin-top: 0.35rem;
 }
 
 .admin-analytics-btn {
@@ -502,4 +509,608 @@ html[data-admin-theme="cosmic"] .admin-bulk-bar {
   background: rgba(115, 92, 255, 0.15);
   border-color: rgba(115, 92, 255, 0.35);
 }
+
+/* ==========================================================================
+   Compliance Heatmap Drilldown Scope Bar & Regulated Entities Roster Table
+   ========================================================================== */
+
+.admin-drilldown-entities-section {
+  margin-bottom: 2rem;
+}
+
+:root[data-admin-theme='dark'] .admin-analytics-card,
+:root[data-admin-theme='dark'] .admin-bulk-section {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.16);
+  color: #f1f5f9;
+}
+
+.admin-drilldown-header-wrap {
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.admin-drilldown-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+:root[data-admin-theme='dark'] .admin-drilldown-subtitle,
+:root[data-theme='dark'] .admin-drilldown-subtitle,
+html.dark .admin-drilldown-subtitle {
+  color: #94a3b8;
+}
+
+.admin-drilldown-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-drilldown-search {
+  min-width: 240px;
+  padding: 0.42rem 0.72rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: #ffffff;
+  color: #0f172a;
+}
+
+:root[data-admin-theme='dark'] .admin-drilldown-search,
+:root[data-theme='dark'] .admin-drilldown-search,
+html.dark .admin-drilldown-search {
+  background: #090f1d;
+  border-color: rgba(148, 163, 184, 0.24);
+  color: #f8fafc;
+}
+
+/* Active Drilldown Scope Bar */
+.admin-drilldown-scope-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.7rem 0.95rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
+:root[data-admin-theme='dark'] .admin-drilldown-scope-bar,
+:root[data-theme='dark'] .admin-drilldown-scope-bar,
+html.dark .admin-drilldown-scope-bar {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.32);
+}
+
+.admin-drilldown-tokens {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-drilldown-scope-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #0369a1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+:root[data-admin-theme='dark'] .admin-drilldown-scope-label,
+:root[data-theme='dark'] .admin-drilldown-scope-label,
+html.dark .admin-drilldown-scope-label {
+  color: #38bdf8;
+}
+
+.admin-drilldown-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.26rem 0.58rem;
+  border-radius: 6px;
+  border: 1px solid rgba(2, 132, 199, 0.35);
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.admin-drilldown-token:hover {
+  border-color: #0284c7;
+  background: #f0f9ff;
+}
+
+:root[data-admin-theme='dark'] .admin-drilldown-token,
+:root[data-theme='dark'] .admin-drilldown-token,
+html.dark .admin-drilldown-token {
+  background: #0f172a;
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #f1f5f9;
+}
+
+:root[data-admin-theme='dark'] .admin-drilldown-token:hover,
+:root[data-theme='dark'] .admin-drilldown-token:hover,
+html.dark .admin-drilldown-token:hover {
+  background: #1e293b;
+  border-color: #38bdf8;
+}
+
+.admin-drilldown-token-x {
+  font-size: 0.95rem;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.admin-drilldown-scope-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.admin-drilldown-match-count {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-admin-theme='dark'] .admin-drilldown-match-count,
+:root[data-theme='dark'] .admin-drilldown-match-count,
+html.dark .admin-drilldown-match-count {
+  color: #cbd5e1;
+}
+
+.admin-drilldown-clear-btn {
+  padding: 0.32rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: transparent;
+  color: inherit;
+  font-size: 0.76rem;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-drilldown-clear-btn:hover {
+  background: rgba(148, 163, 184, 0.16);
+}
+
+/* Regulated Entities Table Cells */
+.admin-entities-table td {
+  vertical-align: top;
+}
+
+.admin-entity-name {
+  font-weight: 650;
+  color: inherit;
+  line-height: 1.3;
+}
+
+.admin-entity-sub {
+  margin-top: 0.2rem;
+  font-size: 0.73rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+:root[data-admin-theme='dark'] .admin-entity-sub,
+:root[data-theme='dark'] .admin-entity-sub,
+html.dark .admin-entity-sub {
+  color: #94a3b8;
+}
+
+.admin-entity-ref {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 650;
+  color: #0284c7;
+}
+
+:root[data-admin-theme='dark'] .admin-entity-ref,
+:root[data-theme='dark'] .admin-entity-ref,
+html.dark .admin-entity-ref {
+  color: #38bdf8;
+}
+
+.admin-table-filter-trigger {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-table-filter-trigger:hover {
+  color: #0284c7;
+  text-decoration: underline;
+}
+
+:root[data-admin-theme='dark'] .admin-table-filter-trigger:hover,
+:root[data-theme='dark'] .admin-table-filter-trigger:hover,
+html.dark .admin-table-filter-trigger:hover {
+  color: #38bdf8;
+}
+
+.admin-risk-readout {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.admin-risk-readout strong {
+  font-size: 0.92rem;
+  font-weight: 750;
+}
+
+.admin-risk-readout span {
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.admin-risk-readout.tier-critical { color: #dc2626; }
+.admin-risk-readout.tier-high { color: #ea580c; }
+.admin-risk-readout.tier-elevated { color: #d97706; }
+.admin-risk-readout.tier-low { color: #0284c7; }
+.admin-risk-readout.tier-clear { color: #16a34a; }
+
+:root[data-admin-theme='dark'] .admin-risk-readout.tier-critical,
+html.dark .admin-risk-readout.tier-critical { color: #f87171; }
+:root[data-admin-theme='dark'] .admin-risk-readout.tier-high,
+html.dark .admin-risk-readout.tier-high { color: #fb923c; }
+:root[data-admin-theme='dark'] .admin-risk-readout.tier-elevated,
+html.dark .admin-risk-readout.tier-elevated { color: #fbbf24; }
+:root[data-admin-theme='dark'] .admin-risk-readout.tier-low,
+html.dark .admin-risk-readout.tier-low { color: #38bdf8; }
+:root[data-admin-theme='dark'] .admin-risk-readout.tier-clear,
+html.dark .admin-risk-readout.tier-clear { color: #4ade80; }
+
+.admin-tabular-cell {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.admin-high-risk-note {
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: #dc2626;
+}
+
+:root[data-admin-theme='dark'] .admin-high-risk-note,
+html.dark .admin-high-risk-note {
+  color: #fca5a5;
+}
+
+.admin-muted-val {
+  color: #64748b;
+}
+
+.admin-issue-summary {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  max-width: 340px;
+}
+
+.admin-entity-desk-btn {
+  background: none;
+  border: 1px solid rgba(14, 165, 233, 0.32);
+  border-radius: 6px;
+  padding: 0.28rem 0.6rem;
+  font-size: 0.74rem;
+  font-weight: 650;
+  color: #0284c7;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-entity-desk-btn:hover {
+  background: rgba(14, 165, 233, 0.1);
+}
+
+:root[data-admin-theme='dark'] .admin-entity-desk-btn,
+:root[data-theme='dark'] .admin-entity-desk-btn,
+html.dark .admin-entity-desk-btn {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.admin-table-empty-cell {
+  text-align: center !important;
+  padding: 1.75rem 1rem !important;
+  color: #64748b;
+}
+
+.admin-inline-reset-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #0284c7;
+  font-weight: 650;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+:root[data-admin-theme='dark'] .admin-inline-reset-btn,
+html.dark .admin-inline-reset-btn {
+  color: #38bdf8;
+}
+
+/* Synchronized Section Header Tag */
+.admin-section-title-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.admin-drilldown-sync-tag {
+  font-size: 0.72rem;
+  font-weight: 650;
+  padding: 0.18rem 0.5rem;
+  border-radius: 5px;
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.32);
+  color: #0369a1;
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-admin-theme='dark'] .admin-drilldown-sync-tag,
+:root[data-theme='dark'] .admin-drilldown-sync-tag,
+html.dark .admin-drilldown-sync-tag {
+  background: rgba(56, 189, 248, 0.14);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+}
+
+/* Interactive Geographic & Category Badges */
+.admin-city-badge-btn {
+  border: 1px solid transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.admin-city-badge-btn:hover {
+  border-color: rgba(14, 165, 233, 0.45);
+}
+
+.admin-city-badge-btn.is-drilldown-active {
+  border-color: #0284c7;
+  background: rgba(14, 165, 233, 0.15);
+}
+
+:root[data-admin-theme='dark'] .admin-city-badge-btn.is-drilldown-active,
+:root[data-theme='dark'] .admin-city-badge-btn.is-drilldown-active,
+html.dark .admin-city-badge-btn.is-drilldown-active {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.18);
+}
+
+/* ==========================================================================
+   Compliance CSV Export Split Button, Format Menu & Toolbar Button
+   ========================================================================== */
+
+.admin-csv-export-split {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.admin-csv-export-main {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+  white-space: nowrap;
+}
+
+.admin-csv-export-caret {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  padding: 0.45rem 0.5rem;
+  border-left: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.admin-csv-export-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  width: 300px;
+  padding: 0.35rem;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+:root[data-admin-theme='dark'] .admin-csv-export-menu,
+:root[data-theme='dark'] .admin-csv-export-menu,
+html.dark .admin-csv-export-menu {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.24);
+  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.55);
+}
+
+html.cosmic .admin-csv-export-menu,
+html[data-admin-theme='cosmic'] .admin-csv-export-menu {
+  background: #1b1b38;
+  border-color: rgba(115, 92, 255, 0.35);
+}
+
+.admin-csv-export-option {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  color: #0f172a;
+  transition: background-color 0.12s ease;
+}
+
+.admin-csv-export-option:hover,
+.admin-csv-export-option:focus-visible {
+  background: rgba(14, 165, 233, 0.1);
+  outline: none;
+}
+
+:root[data-admin-theme='dark'] .admin-csv-export-option,
+:root[data-theme='dark'] .admin-csv-export-option,
+html.dark .admin-csv-export-option {
+  color: #f1f5f9;
+}
+
+:root[data-admin-theme='dark'] .admin-csv-export-option:hover,
+:root[data-admin-theme='dark'] .admin-csv-export-option:focus-visible,
+:root[data-theme='dark'] .admin-csv-export-option:hover,
+html.dark .admin-csv-export-option:hover {
+  background: rgba(56, 189, 248, 0.14);
+}
+
+.admin-csv-option-title {
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.admin-csv-option-desc {
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-admin-theme='dark'] .admin-csv-option-desc,
+:root[data-theme='dark'] .admin-csv-option-desc,
+html.dark .admin-csv-option-desc {
+  color: #94a3b8;
+}
+
+.admin-drilldown-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  padding: 0.42rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.admin-drilldown-export-btn:hover {
+  border-color: #0284c7;
+  background: #f0f9ff;
+  color: #0369a1;
+}
+
+:root[data-admin-theme='dark'] .admin-drilldown-export-btn,
+:root[data-theme='dark'] .admin-drilldown-export-btn,
+html.dark .admin-drilldown-export-btn {
+  background: #090f1d;
+  border-color: rgba(148, 163, 184, 0.28);
+  color: #f1f5f9;
+}
+
+:root[data-admin-theme='dark'] .admin-drilldown-export-btn:hover,
+:root[data-theme='dark'] .admin-drilldown-export-btn:hover,
+html.dark .admin-drilldown-export-btn:hover {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+}
+
+.admin-csv-export-main.is-filtered,
+.admin-csv-export-caret.is-filtered {
+  border-color: rgba(14, 165, 233, 0.45);
+}
+
+:root[data-admin-theme='dark'] .admin-csv-export-main.is-filtered,
+:root[data-admin-theme='dark'] .admin-csv-export-caret.is-filtered,
+html.dark .admin-csv-export-main.is-filtered,
+html.dark .admin-csv-export-caret.is-filtered {
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+.admin-csv-filter-indicator {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #0284c7;
+  padding-left: 0.35rem;
+  border-left: 1px solid rgba(14, 165, 233, 0.35);
+}
+
+:root[data-admin-theme='dark'] .admin-csv-filter-indicator,
+:root[data-theme='dark'] .admin-csv-filter-indicator,
+html.dark .admin-csv-filter-indicator {
+  color: #38bdf8;
+  border-left-color: rgba(56, 189, 248, 0.35);
+}
+
+/* Dual-theme Status Notice Banner */
+.admin-analytics-status-notice {
+  margin-top: 1rem;
+  padding: 0.72rem 1rem;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(5, 150, 105, 0.35);
+  border-radius: 8px;
+  color: #047857;
+  font-size: 0.84rem;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+:root[data-admin-theme='dark'] .admin-analytics-status-notice,
+:root[data-theme='dark'] .admin-analytics-status-notice,
+html.dark .admin-analytics-status-notice {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(52, 211, 153, 0.38);
+  color: #34d399;
+}
+
+.admin-analytics-notice-dismiss {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.1rem 0.25rem;
+  opacity: 0.8;
+}
+
+.admin-analytics-notice-dismiss:hover {
+  opacity: 1;
+}
+
+
+
 

@@ -4,6 +4,7 @@ import type { AdminPlatformRole } from '../auth/adminSecurityPolicy'
 
 export type AdminWorkspaceTab =
   | 'command'
+  | 'regulatory_inbox'
   | 'moderation_desk'
   | 'analytics'
   | 'chronicle_desk'
@@ -23,6 +24,7 @@ export interface AdminSidebarProps {
   onToggleCollapse: () => void
   isMobileOpen?: boolean
   onCloseMobile?: () => void
+  regulatoryInboxCount?: number
   pendingSubmissionsCount?: number
   pendingManuscriptsCount?: number
   moderatorEmail: string
@@ -50,6 +52,7 @@ export function AdminSidebar({
   onToggleCollapse,
   isMobileOpen = false,
   onCloseMobile,
+  regulatoryInboxCount = 0,
   pendingSubmissionsCount = 0,
   pendingManuscriptsCount = 0,
   moderatorEmail,
@@ -65,6 +68,13 @@ export function AdminSidebar({
         label: 'Command Centre',
         section: 'Operations',
         icon: 'activity',
+      },
+      {
+        id: 'regulatory_inbox',
+        label: 'Regulatory Inbox',
+        section: 'Operations',
+        icon: 'bell',
+        count: regulatoryInboxCount > 0 ? regulatoryInboxCount : undefined,
       },
       {
         id: 'moderation_desk',
@@ -135,7 +145,7 @@ export function AdminSidebar({
         icon: 'building',
       },
     ],
-    [pendingSubmissionsCount, pendingManuscriptsCount],
+    [regulatoryInboxCount, pendingSubmissionsCount, pendingManuscriptsCount],
   )
 
   const filteredItems = useMemo(() => {

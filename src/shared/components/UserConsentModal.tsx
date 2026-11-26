@@ -12,6 +12,7 @@ import {
   SPORTS_PASS_DISCIPLINES,
   SPORTS_PASS_CITIES,
 } from './userConsentTypes'
+import { getActiveReadOnlyInspection } from '../governance/regulatoryBridge'
 import './UserConsentModal.css'
 
 export {
@@ -68,6 +69,12 @@ export default function UserConsentModal({
     }
 
     if (typeof window === 'undefined') return
+
+    // Do not interrupt an active Admin Read-Only Workspace Inspection session with consumer onboarding
+    if (getActiveReadOnlyInspection()) {
+      setInternalOpen(false)
+      return
+    }
 
     try {
       // Check stored sports pass

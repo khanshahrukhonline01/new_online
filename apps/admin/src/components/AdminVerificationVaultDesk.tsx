@@ -11,6 +11,8 @@ import {
   addVerificationAuditNote,
   exportVerificationsToCsv,
   calculateExpiryStatus,
+  evaluateVerificationChecklist,
+  toggleVerificationChecklistItem,
   type AdminVerificationItem,
   type VerificationBadgeTier,
 } from '../services/adminVerificationService'
@@ -184,6 +186,11 @@ export function AdminVerificationVaultDesk({
     if (!selectedId) return null
     return getAdminVerificationDetails(selectedId)
   }, [selectedId, refreshTick])
+
+  const selectedChecklist = useMemo(() => {
+    if (!selectedItem) return null
+    return evaluateVerificationChecklist(selectedItem)
+  }, [selectedItem])
 
   // Handlers for governance actions
   const handleCopyId = (code: string) => {
@@ -790,6 +797,109 @@ export function AdminVerificationVaultDesk({
                       </div>
                     )}
                   </div>
+
+                  {selectedChecklist && (
+                    <div
+                      className="admin-verif-detail-box admin-verif-checklist-box"
+                      data-testid="verification-role-checklist"
+                    >
+                      <div className="admin-verif-checklist-header">
+                        <div>
+                          <h3 className="admin-verif-detail-title">
+                            <SiteIcon name="shield-check" size={14} />
+                            <span>
+                              Role-Specific Compliance Checklist ({selectedItem.entityType.toUpperCase()})
+                            </span>
+                          </h3>
+                          <span className="admin-verif-checklist-progress">
+                            {selectedChecklist.passedCount}/{selectedChecklist.totalCount} Checks Passed
+                            {' · '}
+                            {selectedChecklist.items.filter(i => i.mandatory && i.passed).length}/
+                            {selectedChecklist.items.filter(i => i.mandatory).length} Mandatory
+                          </span>
+                        </div>
+
+                        <div className="admin-verif-checklist-header-actions">
+                          <span
+                            className={`admin-verif-checklist-readiness ${
+                              selectedChecklist.isReadyToApprove ? 'is-ready' : 'is-missing'
+                            }`}
+                          >
+                            {selectedChecklist.isReadyToApprove
+                              ? 'Ready to Approve'
+                              : `${selectedChecklist.mandatoryMissing.length} Mandatory Missing`}
+                          </span>
+
+                          {selectedChecklist.mandatoryMissing.length > 0 && (
+                            <button
+                              type="button"
+                              className="admin-verif-btn admin-verif-btn-warning admin-verif-checklist-cta"
+                              data-testid="request-missing-checklist-btn"
+                              onClick={() => {
+                                setCorrectionsText(
+                                  `Please upload the following mandatory ${selectedItem.entityType} compliance items: ${selectedChecklist.mandatoryMissing
+                                    .map(m => m.label)
+                                    .join('; ')}.`,
+                                )
+                                setActionModal({ type: 'corrections', item: selectedItem })
+                              }}
+                            >
+                              <SiteIcon name="alert-triangle" size={12} />
+                              <span>Request Missing Items</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="admin-verif-checklist-items">
+                        {selectedChecklist.items.map(check => (
+                          <label
+                            key={check.id}
+                            className={`admin-verif-checklist-row ${check.passed ? 'is-passed' : 'is-missing'}`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="admin-verif-checklist-checkbox"
+                              checked={check.passed}
+                              aria-label={`${check.label} (${check.mandatory ? 'Mandatory' : 'Optional'})`}
+                              onChange={e => {
+                                toggleVerificationChecklistItem(
+                                  selectedItem.id,
+                                  check.id,
+                                  e.target.checked,
+                                  operatorEmail,
+                                )
+                                triggerRefresh()
+                                showToast(
+                                  `${check.label} marked ${e.target.checked ? 'Verified' : 'Unverified'}.`,
+                                )
+                              }}
+                            />
+                            <div className="admin-verif-checklist-info">
+                              <div className="admin-verif-checklist-top">
+                                <span className="admin-verif-checklist-label">{check.label}</span>
+                                <span
+                                  className={`admin-verif-checklist-req ${
+                                    check.mandatory ? 'is-mandatory' : 'is-optional'
+                                  }`}
+                                >
+                                  {check.mandatory ? 'Mandatory' : 'Optional'}
+                                </span>
+                              </div>
+                              <span className="admin-verif-checklist-desc">{check.description}</span>
+                              <span className="admin-verif-checklist-source">
+                                {check.source === 'document' && check.matchedDocumentTitle
+                                  ? `Auto-matched: ${check.matchedDocumentTitle}`
+                                  : check.source === 'manual'
+                                    ? 'Manually verified by compliance officer'
+                                    : 'Missing — no matching evidence uploaded yet'}
+                              </span>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="admin-verif-detail-box">
                     <h3 className="admin-verif-detail-title">

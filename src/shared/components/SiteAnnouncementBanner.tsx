@@ -1,20 +1,44 @@
-import { useState, useEffect, type MouseEvent } from 'react'
+import { useState, useEffect, useCallback, type MouseEvent } from 'react'
 import { SiteIcon } from './SiteIcon'
 import {
   BASELINE_ANNOUNCEMENTS,
   type DatabaseAnnouncement,
 } from '../../integrations/supabase/public-client'
 import { getCachedAnnouncements } from '../cache/catalogueQueryCache'
+import {
+  getLiveAdminBannersForAudience,
+  isPlatformMaintenanceActive,
+  subscribeRegulatoryState,
+  type BannerAudienceScope,
+} from '../governance/regulatoryBridge'
 import './SiteAnnouncementBanner.css'
 
 export interface SiteAnnouncementBannerProps {
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
   className?: string
+  audience?: BannerAudienceScope
+  locale?: 'en' | 'hi'
+}
+
+const MAINTENANCE_NOTICE_ITEM: DatabaseAnnouncement = {
+  id: 'kg-maintenance-mode-live',
+  slug: 'khelgrid-maintenance-mode-live',
+  badge: 'Maintenance Hold',
+  title: 'Partner & Athlete Workspaces Are Temporarily in Scheduled Maintenance',
+  subtitle: 'Public sports discovery remains available while KhelGrid completes administrative updates.',
+  cta_label: 'Support Desk',
+  cta_url: '/help-feedback',
+  tone: 'amber',
+  priority: 999,
+  is_active: true,
+  starts_at: '2026-11-25T00:00:00Z',
 }
 
 export default function SiteAnnouncementBanner({
   onNavigate,
   className = '',
+  audience = 'all',
+  locale = 'en',
 }: SiteAnnouncementBannerProps) {
   const [announcements, setAnnouncements] = useState<DatabaseAnnouncement[]>(BASELINE_ANNOUNCEMENTS)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -33,17 +57,42 @@ export default function SiteAnnouncementBanner({
     return set
   })
 
+  const syncFromRegulatoryState = useCallback((fallbackList: DatabaseAnnouncement[]) => {
+    const adminBanners = getLiveAdminBannersForAudience(audience, locale)
+    const baseList: DatabaseAnnouncement[] =
+      adminBanners !== null ? adminBanners : fallbackList
+
+    if (isPlatformMaintenanceActive()) {
+      setAnnouncements([MAINTENANCE_NOTICE_ITEM, ...baseList])
+    } else {
+      setAnnouncements(baseList)
+    }
+  }, [audience, locale])
+
   useEffect(() => {
     let active = true
+    let cachedFallback = BASELINE_ANNOUNCEMENTS
+
+    syncFromRegulatoryState(cachedFallback)
+
     getCachedAnnouncements().then(res => {
       if (active && res.status === 'ready' && res.data.length > 0) {
-        setAnnouncements(res.data)
+        cachedFallback = res.data
+        syncFromRegulatoryState(cachedFallback)
       }
     })
+
+    const unsubscribe = subscribeRegulatoryState(() => {
+      if (active) {
+        syncFromRegulatoryState(cachedFallback)
+      }
+    })
+
     return () => {
       active = false
+      unsubscribe()
     }
-  }, [])
+  }, [syncFromRegulatoryState])
 
   // Auto-cycle if there are multiple active announcements
   useEffect(() => {

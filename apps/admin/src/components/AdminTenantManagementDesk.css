@@ -475,8 +475,24 @@
   background: #f59e0b;
 }
 
+.admin-tenant-status-dot.dot-restricted {
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.75);
+}
+
 .admin-tenant-status-dot.dot-archived {
   background: #64748b;
+}
+
+.admin-btn-restrict-action {
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+}
+
+.admin-btn-restrict-action:hover {
+  background: rgba(245, 158, 11, 0.26);
+  color: #fef3c7;
 }
 
 /* Inspection Drawer */

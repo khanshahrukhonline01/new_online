@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, useCallback, type FC } from 'react'
 import {
   getAdminTrustSafetyCases,
   startCaseInvestigation,
-  levySanctionOnEntity,
   adjudicateBanAppeal,
   closeTrustSafetyCase,
   addInvestigationNote,
@@ -18,6 +17,10 @@ import {
   type SanctionType,
   type TrustSafetyMicroKpiMetrics,
 } from '../services/adminTrustSafetyService'
+import {
+  computeEscalationImpactPreview,
+  escalateDisputeToSanction,
+} from '../services/adminGovernanceEscalationService'
 import './AdminTrustSafetyDesk.css'
 
 export interface AdminTrustSafetyDeskProps {
@@ -123,10 +126,22 @@ export const AdminTrustSafetyDesk: FC<AdminTrustSafetyDeskProps> = ({
     }
   }
 
+  const escalationPreview = useMemo(
+    () =>
+      computeEscalationImpactPreview({
+        sanctionType,
+        revokeVerifiedBadge: sanctionRevokeBadge,
+        suspendAccess: sanctionSuspendAccess,
+        durationDays: sanctionDurationDays || undefined,
+      }),
+    [sanctionType, sanctionRevokeBadge, sanctionSuspendAccess, sanctionDurationDays],
+  )
+
   const handleLevySanction = async () => {
     if (!selectedCaseId || !sanctionReason.trim()) return
     try {
-      await levySanctionOnEntity(selectedCaseId, {
+      const receipt = await escalateDisputeToSanction({
+        caseId: selectedCaseId,
         officer: currentOfficer,
         sanctionType,
         durationDays: sanctionDurationDays || undefined,
@@ -134,14 +149,39 @@ export const AdminTrustSafetyDesk: FC<AdminTrustSafetyDeskProps> = ({
         publicAdvisoryText: sanctionPublicAdvisory || undefined,
         revokeVerifiedBadge: sanctionRevokeBadge,
         suspendAccess: sanctionSuspendAccess,
+        executionMode: 'execute_direct',
       })
-      showToast(`Sanction levied: ${sanctionType.replace(/_/g, ' ').toUpperCase()}`)
+      showToast(receipt.summary)
       setSanctionModalOpen(false)
       setSanctionReason('')
       setSanctionPublicAdvisory('')
       await loadData()
     } catch {
       showToast('Failed to levy sanction.')
+    }
+  }
+
+  const handleProposeSanctionDualControl = async () => {
+    if (!selectedCaseId || !sanctionReason.trim()) return
+    try {
+      const receipt = await escalateDisputeToSanction({
+        caseId: selectedCaseId,
+        officer: currentOfficer,
+        sanctionType,
+        durationDays: sanctionDurationDays || undefined,
+        reason: sanctionReason,
+        publicAdvisoryText: sanctionPublicAdvisory || undefined,
+        revokeVerifiedBadge: sanctionRevokeBadge,
+        suspendAccess: sanctionSuspendAccess,
+        executionMode: 'propose_dual_control',
+      })
+      showToast(receipt.summary)
+      setSanctionModalOpen(false)
+      setSanctionReason('')
+      setSanctionPublicAdvisory('')
+      await loadData()
+    } catch {
+      showToast('Failed to queue dual-control sanction proposal.')
     }
   }
 
@@ -1036,6 +1076,25 @@ export const AdminTrustSafetyDesk: FC<AdminTrustSafetyDeskProps> = ({
                   Suspend Public Bookings &amp; Listing Visibility
                 </label>
               </div>
+
+              <div
+                className="trust-escalation-preview"
+                data-testid="sanction-escalation-preview"
+              >
+                <div className="trust-escalation-preview-header">
+                  <span>Cross-Desk Escalation Impact Preview</span>
+                  {escalationPreview.requiresDualControl && (
+                    <span className="trust-escalation-dual-badge">
+                      Four-Eyes Dual-Control Recommended
+                    </span>
+                  )}
+                </div>
+                <ul className="trust-escalation-preview-list">
+                  {escalationPreview.summaryLines.map((line, index) => (
+                    <li key={index}>{line}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
             <footer className="trust-modal-footer">
               <button
@@ -1047,7 +1106,18 @@ export const AdminTrustSafetyDesk: FC<AdminTrustSafetyDeskProps> = ({
               </button>
               <button
                 type="button"
+                className="trust-btn trust-btn-secondary"
+                data-testid="propose-sanction-mc-btn"
+                onClick={handleProposeSanctionDualControl}
+                disabled={!sanctionReason.trim()}
+                title="Queue this disciplinary escalation for mandatory secondary administrator approval"
+              >
+                Submit for Dual-Control Approval
+              </button>
+              <button
+                type="button"
                 className="trust-btn trust-btn-danger"
+                data-testid="enforce-sanction-direct-btn"
                 onClick={handleLevySanction}
               >
                 Enforce Sanctions

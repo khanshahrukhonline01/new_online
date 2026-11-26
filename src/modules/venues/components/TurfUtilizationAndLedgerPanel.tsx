@@ -1,5 +1,3 @@
-import { DataTable, type DataTableColumn } from '../../../shared/components/ui/DataTable'
-import { EmptyState } from '../../../shared/components/ui/EmptyState'
 import { SiteIcon } from '../../../shared/components/SiteIcon'
 import type {
   RecurringSlotSubscription,
@@ -7,7 +5,7 @@ import type {
   TurfPricingConfig,
 } from '../turfSlotManager'
 
-interface TurfUtilizationAndLedgerPanelProps {
+export interface TurfUtilizationAndLedgerPanelProps {
   bookings: TurfBookingRecord[]
   subscriptions: RecurringSlotSubscription[]
   pricingConfig: TurfPricingConfig
@@ -17,9 +15,8 @@ interface TurfUtilizationAndLedgerPanelProps {
   onViewVoucher: (record: TurfBookingRecord) => void
 }
 
-/**
- * Utilization, booking ledger table, dynamic pricing overview, and recurring subscription summary.
- */
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
 export function TurfUtilizationAndLedgerPanel({
   bookings,
   subscriptions,
@@ -29,114 +26,114 @@ export function TurfUtilizationAndLedgerPanel({
   onOpenRecurringDrawer,
   onViewVoucher,
 }: TurfUtilizationAndLedgerPanelProps) {
-  const columns: DataTableColumn<TurfBookingRecord>[] = [
-    {
-      key: 'bookingId',
-      header: 'Booking Ref',
-      render: row => (
-        <div>
-          <strong>#{row.bookingId}</strong>
-          <div style={{ fontSize: '0.76rem', color: 'var(--muted)' }}>
-            {row.slotDate} · {row.slotTime}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'courtName',
-      header: 'Court / Pitch',
-      render: row => (
-        <div>
-          <span>{row.courtName}</span>
-          <div style={{ fontSize: '0.76rem', color: 'var(--muted)' }}>{row.sport}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'customerName',
-      header: 'Team / Captain',
-      render: row => (
-        <div>
-          <span>{row.customerName}</span>
-          <div style={{ fontSize: '0.76rem', color: 'var(--muted)' }}>+91 {row.customerPhone}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'paidAmount',
-      header: 'Direct Settlement',
-      render: row => (
-        <div>
-          <strong>₹{row.paidAmount.toLocaleString('en-IN')}</strong>
-          <div style={{ fontSize: '0.76rem', color: 'var(--muted)' }}>
-            of ₹{row.totalAmount.toLocaleString('en-IN')} ({row.paymentStatus.replace(/_/g, ' ')})
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'actions',
-      header: 'Voucher',
-      render: row => (
-        <button
-          type="button"
-          className="turf-mini-btn"
-          onClick={() => onViewVoucher(row)}
-        >
-          <SiteIcon name="file-text" size={13} />
-          <span>View QR</span>
-        </button>
-      ),
-    },
-  ]
-
   return (
-    <section aria-label="Turf Utilization and Booking Ledger" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      <div className="turf-controls-bar" style={{ marginBottom: 0 }}>
-        <div className="turf-venue-selector-row" style={{ marginBottom: 0 }}>
+    <section className="turf-utilization-section" aria-label="Facility Utilization and Ledger">
+      <div className="turf-panel-card">
+        <div className="turf-section-header">
           <div>
-            <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.15rem' }}>
-              Dynamic Yield &amp; Recurring Subscriptions
-            </h2>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--muted)' }}>
-              Peak pricing is currently{' '}
-              <strong>{pricingConfig.isDynamicPricingEnabled ? `Active (${pricingConfig.peakMultiplier}x floodlight / ${pricingConfig.weekendMultiplier}x weekend)` : 'Disabled'}</strong>
-              {' '}· {subscriptions.length} recurring team subscription(s).
+            <h2>Dynamic Yield &amp; Recurring Subscriptions</h2>
+            <p>
+              Peak multiplier: <strong>{pricingConfig.peakMultiplier}×</strong> ({pricingConfig.peakStartHour}:00–
+              {pricingConfig.peakEndHour}:00) · Weekend: <strong>{pricingConfig.weekendMultiplier}×</strong> ·{' '}
+              {pricingConfig.isDynamicPricingEnabled ? 'Active' : 'Standard flat pricing'}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div className="turf-header-actions">
             <button type="button" className="turf-btn turf-btn-outline" onClick={onOpenPricingDrawer}>
-              <SiteIcon name="wallet" size={15} />
-              <span>Edit Pricing Rules</span>
+              Configure Peak Pricing
             </button>
-            <button type="button" className="turf-btn turf-btn-outline" onClick={onOpenRecurringDrawer}>
-              <SiteIcon name="calendar" size={15} />
-              <span>Manage Subscriptions</span>
-            </button>
-            <button type="button" className="turf-btn turf-btn-primary" onClick={onExportCsv}>
-              <SiteIcon name="download" size={15} />
-              <span>Export Ledger (CSV)</span>
+            <button type="button" className="turf-btn turf-btn-primary" onClick={onOpenRecurringDrawer}>
+              New Subscription
             </button>
           </div>
         </div>
+
+        {subscriptions.length === 0 ? (
+          <p className="turf-empty-copy">No recurring academy or corporate league subscriptions scheduled yet.</p>
+        ) : (
+          <div className="kg-data-table-scroll">
+            <table className="kg-data-table">
+              <thead>
+                <tr>
+                  <th>Subscriber</th>
+                  <th>Court &amp; Slot</th>
+                  <th>Schedule</th>
+                  <th>Total Fee</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subscriptions.map(sub => (
+                  <tr key={sub.subscriptionId}>
+                    <td>
+                      <strong>{sub.customerName}</strong>
+                      <div>{sub.customerPhone}</div>
+                    </td>
+                    <td>{sub.courtName} · {sub.timeSlot}</td>
+                    <td>{DAY_LABELS[sub.dayOfWeek] || 'Weekly'} × {sub.weeksCount} wks</td>
+                    <td>₹{sub.totalFee.toLocaleString('en-IN')}</td>
+                    <td>{sub.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      <div className="turf-controls-bar" style={{ marginBottom: 0 }}>
-        <h3 style={{ margin: '0 0 0.85rem', fontSize: '1.05rem' }}>
-          Facility Booking Ledger ({bookings.length})
-        </h3>
-        <DataTable
-          columns={columns}
-          rows={bookings}
-          rowKey={row => row.bookingId}
-          empty={
-            <EmptyState
-              icon={<SiteIcon name="calendar-check" size={26} />}
-              title="No confirmed bookings yet"
-              description="Confirmed hourly slot bookings and phone walk-ins will appear in this audit ledger for direct UPI tracking."
-            />
-          }
-        />
+      <div className="turf-panel-card">
+        <div className="turf-section-header">
+          <div>
+            <h2>Facility Booking Ledger</h2>
+            <p>{bookings.length} recorded slot reservations for this venue</p>
+          </div>
+          <button type="button" className="turf-btn turf-btn-outline" onClick={onExportCsv}>
+            <SiteIcon name="download" size={15} />
+            <span>Export CSV</span>
+          </button>
+        </div>
+
+        {bookings.length === 0 ? (
+          <p className="turf-empty-copy">No bookings recorded yet. Reserve any open slot from the calendar grid.</p>
+        ) : (
+          <div className="kg-data-table-scroll">
+            <table className="kg-data-table">
+              <thead>
+                <tr>
+                  <th>Ref</th>
+                  <th>Customer</th>
+                  <th>Court &amp; Time</th>
+                  <th>Amount</th>
+                  <th>Payment</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.map(record => (
+                  <tr key={record.bookingId}>
+                    <td><code>{record.bookingId}</code></td>
+                    <td>
+                      <strong>{record.customerName}</strong>
+                      <div>{record.customerPhone}</div>
+                    </td>
+                    <td>{record.courtName} · {record.slotDate} · {record.slotTime}</td>
+                    <td>₹{record.totalAmount.toLocaleString('en-IN')}</td>
+                    <td>{record.paymentStatus.replace(/_/g, ' ')}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="turf-btn turf-btn-outline"
+                        onClick={() => onViewVoucher(record)}
+                      >
+                        View Voucher
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </section>
   )

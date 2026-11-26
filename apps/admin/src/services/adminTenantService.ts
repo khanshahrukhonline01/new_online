@@ -13,9 +13,11 @@
  *   tenant lifecycle or verification statuses.
  */
 
+import { notifyRegulatoryStateChanged } from '../../../../src/shared/governance/regulatoryBridge'
+
 export type TenantType = 'academy' | 'venue' | 'coach' | 'tournament' | 'university' | 'club'
 
-export type TenantLifecycleStatus = 'active' | 'pending_verification' | 'suspended' | 'archived'
+export type TenantLifecycleStatus = 'active' | 'restricted' | 'pending_verification' | 'suspended' | 'archived'
 
 export type TenantVerificationStatus = 'verified' | 'pending_review' | 'unverified'
 
@@ -729,12 +731,14 @@ function persistTenants(tenants: AdminTenantDetail[]) {
       // Ignore quota errors in storage
     }
   }
+  notifyRegulatoryStateChanged()
 }
 
 export function resetAdminTenantsForTesting(): void {
   if (typeof window !== 'undefined') {
     window.localStorage.removeItem(STORAGE_KEY)
   }
+  notifyRegulatoryStateChanged()
 }
 
 export function getAdminTenants(filter?: AdminTenantFilter): AdminTenantSummary[] {

@@ -12,6 +12,7 @@ import {
   type PartnerModerationStatus,
   type PartnerVerificationPersona,
 } from '../partnerVerificationService'
+import { subscribeRegulatoryState } from '../../../shared/governance/regulatoryBridge'
 import './PartnerVerificationStatusTracker.css'
 
 export interface PartnerVerificationStatusTrackerProps {
@@ -60,7 +61,11 @@ export function PartnerVerificationStatusTracker({
     if (typeof window === 'undefined') return
     const handleUpdate = () => setRefreshTick(t => t + 1)
     window.addEventListener('khelgrid:verification-changed', handleUpdate)
-    return () => window.removeEventListener('khelgrid:verification-changed', handleUpdate)
+    const unsubscribeReg = subscribeRegulatoryState(handleUpdate)
+    return () => {
+      window.removeEventListener('khelgrid:verification-changed', handleUpdate)
+      unsubscribeReg()
+    }
   }, [])
 
   void refreshTick
