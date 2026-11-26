@@ -1,5 +1,4 @@
 import {
-  getStoredAuthUser,
   mapToUserProfile,
   signInWithEmail,
   signUpWithEmail,
