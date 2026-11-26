@@ -1,5 +1,6 @@
 import { useId, type FormEvent } from 'react'
 import { SiteIcon } from '../SiteIcon'
+import { AuthCaptchaWidget } from './AuthCaptchaWidget'
 import { evaluatePasswordStrength } from './authModalTypes'
 
 interface AuthRecoveryAndOtpPanelProps {
@@ -10,6 +11,7 @@ interface AuthRecoveryAndOtpPanelProps {
   confirmPassword: string
   showPassword: boolean
   submitting: boolean
+  captchaResetKey?: number
   onEmailChange: (val: string) => void
   onOtpCodeChange: (val: string) => void
   onNewPasswordChange: (val: string) => void
@@ -22,6 +24,7 @@ interface AuthRecoveryAndOtpPanelProps {
   onBackToLogin: () => void
   onSwitchToSignup: () => void
   onSwitchToOtpEntry: () => void
+  onCaptchaTokenChange?: (token: string) => void
 }
 
 /**
@@ -36,6 +39,7 @@ export function AuthRecoveryAndOtpPanel({
   confirmPassword,
   showPassword,
   submitting,
+  captchaResetKey = 0,
   onEmailChange,
   onOtpCodeChange,
   onNewPasswordChange,
@@ -48,6 +52,7 @@ export function AuthRecoveryAndOtpPanel({
   onBackToLogin,
   onSwitchToSignup,
   onSwitchToOtpEntry,
+  onCaptchaTokenChange,
 }: AuthRecoveryAndOtpPanelProps) {
   const emailId = useId()
   const otpId = useId()
@@ -133,6 +138,10 @@ export function AuthRecoveryAndOtpPanel({
             />
           </div>
         </div>
+
+        {onCaptchaTokenChange && (
+          <AuthCaptchaWidget resetKey={captchaResetKey} onTokenChange={onCaptchaTokenChange} />
+        )}
 
         <button type="submit" className="kg-auth-submit-btn kg-touch-target" disabled={submitting}>
           {submitting ? 'Sending Instructions…' : 'Send Reset Instructions'}
@@ -247,6 +256,10 @@ export function AuthRecoveryAndOtpPanel({
           />
         </div>
       </div>
+
+      {onCaptchaTokenChange && (
+        <AuthCaptchaWidget resetKey={captchaResetKey} onTokenChange={onCaptchaTokenChange} />
+      )}
 
       <button type="submit" className="kg-auth-submit-btn kg-touch-target" disabled={submitting}>
         {submitting ? 'Sending Fresh Link…' : 'Resend Verification Email'}

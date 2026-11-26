@@ -1,5 +1,6 @@
 import { useId, type FormEvent, type MouseEvent } from 'react'
 import { SiteIcon } from '../SiteIcon'
+import { AuthCaptchaWidget } from './AuthCaptchaWidget'
 import { evaluatePasswordStrength, PARTNER_HANDOFF_OPTIONS, type PartnerHandoffRole } from './authModalTypes'
 
 interface AuthStepIdentityPanelProps {
@@ -9,6 +10,7 @@ interface AuthStepIdentityPanelProps {
   showPassword: boolean
   submitting: boolean
   errorMsg: string
+  captchaResetKey?: number
   onEmailChange: (value: string) => void
   onPasswordChange: (value: string) => void
   onTogglePassword: () => void
@@ -19,6 +21,7 @@ interface AuthStepIdentityPanelProps {
   onGoToForgotPassword: () => void
   onGoToExpiredLink: () => void
   onNavigatePartner: (role: PartnerHandoffRole, e: MouseEvent<HTMLAnchorElement>, mode?: 'signup' | 'login') => void
+  onCaptchaTokenChange?: (token: string) => void
 }
 
 /**
@@ -32,6 +35,7 @@ export function AuthStepIdentityPanel({
   showPassword,
   submitting,
   errorMsg,
+  captchaResetKey = 0,
   onEmailChange,
   onPasswordChange,
   onTogglePassword,
@@ -42,6 +46,7 @@ export function AuthStepIdentityPanel({
   onGoToForgotPassword,
   onGoToExpiredLink,
   onNavigatePartner,
+  onCaptchaTokenChange,
 }: AuthStepIdentityPanelProps) {
   const emailId = useId()
   const passwordId = useId()
@@ -154,6 +159,10 @@ export function AuthStepIdentityPanel({
               </button>
             </div>
           )}
+
+        {isLogin && onCaptchaTokenChange && (
+          <AuthCaptchaWidget resetKey={captchaResetKey} onTokenChange={onCaptchaTokenChange} />
+        )}
 
         <button type="submit" className="kg-auth-submit-btn kg-touch-target" disabled={submitting}>
           {isLogin

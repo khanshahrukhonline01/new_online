@@ -217,6 +217,7 @@ export default function AuthModal({
             confirmPassword={form.fields.confirmPassword}
             showPassword={ui.showPassword}
             submitting={ui.submitting}
+            captchaResetKey={ui.captchaResetKey}
             onEmailChange={v => form.setField('email', v)}
             onOtpCodeChange={v => form.setField('otpCode', v)}
             onNewPasswordChange={v => form.setField('newPassword', v)}
@@ -229,6 +230,7 @@ export default function AuthModal({
             onBackToLogin={() => controller.switchTab('login')}
             onSwitchToSignup={() => controller.switchTab('signup')}
             onSwitchToOtpEntry={() => controller.setPendingVerification(true)}
+            onCaptchaTokenChange={t => form.setField('captchaToken', t)}
           />
         )}
 
@@ -247,6 +249,7 @@ export default function AuthModal({
             showPassword={ui.showPassword}
             submitting={ui.submitting}
             errorMsg={ui.errorMsg}
+            captchaResetKey={ui.captchaResetKey}
             onEmailChange={v => form.setField('email', v)}
             onPasswordChange={v => form.setField('password', v)}
             onTogglePassword={controller.toggleShowPassword}
@@ -257,6 +260,7 @@ export default function AuthModal({
             onGoToForgotPassword={() => controller.switchTab('forgot_password')}
             onGoToExpiredLink={() => controller.switchTab('expired_link')}
             onNavigatePartner={controller.handlePartnerRoute}
+            onCaptchaTokenChange={t => form.setField('captchaToken', t)}
           />
         )}
 
@@ -271,6 +275,7 @@ export default function AuthModal({
             guardianEmail={form.fields.guardianEmail}
             guardianConsentAccepted={form.fields.guardianConsentAccepted}
             submitting={ui.submitting}
+            captchaResetKey={ui.captchaResetKey}
             onRoleChange={r => form.setField('role', r)}
             onFullNameChange={v => form.setField('fullName', v)}
             onCityChange={v => form.setField('city', v)}
@@ -281,6 +286,7 @@ export default function AuthModal({
             onBackStep={() => controller.setOnboardingStep('identity')}
             onSubmitSignUp={controller.handleSignUpSubmit}
             onNavigatePartner={controller.handlePartnerRoute}
+            onCaptchaTokenChange={t => form.setField('captchaToken', t)}
           />
         )}
       </div>

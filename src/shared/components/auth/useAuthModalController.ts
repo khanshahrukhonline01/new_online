@@ -39,6 +39,7 @@ export interface AuthModalFields extends Record<string, unknown> {
   ageBand: AuthAgeBand
   guardianEmail: string
   guardianConsentAccepted: boolean
+  captchaToken: string
 }
 
 export interface AuthUiState {
@@ -49,6 +50,7 @@ export interface AuthUiState {
   errorMsg: string
   successMsg: string
   emailVerificationPending: boolean
+  captchaResetKey: number
   resolvedUser: AuthUserProfile | null
   resolvedMemberships: DbTenantMembership[]
   pendingInvitations: DbTenantMembership[]
@@ -82,6 +84,7 @@ function authUiReducer(state: AuthUiState, action: AuthUiAction): AuthUiState {
         errorMsg: action.errorMsg,
         successMsg: '',
         emailVerificationPending: false,
+        captchaResetKey: state.captchaResetKey + 1,
         resolvedUser: null,
         resolvedMemberships: [],
         pendingInvitations: [],
@@ -94,6 +97,7 @@ function authUiReducer(state: AuthUiState, action: AuthUiAction): AuthUiState {
         emailVerificationPending: false,
         errorMsg: '',
         successMsg: '',
+        captchaResetKey: state.captchaResetKey + 1,
         resolvedUser: null,
         resolvedMemberships: [],
         pendingInvitations: [],
@@ -107,12 +111,13 @@ function authUiReducer(state: AuthUiState, action: AuthUiAction): AuthUiState {
     case 'FINISH_SUBMIT':
       return { ...state, submitting: false }
     case 'SET_ERROR':
-      return { ...state, submitting: false, errorMsg: action.message }
+      return { ...state, submitting: false, errorMsg: action.message, captchaResetKey: state.captchaResetKey + 1 }
     case 'SET_SUCCESS':
       return {
         ...state,
         submitting: false,
         successMsg: action.message,
+        captchaResetKey: state.captchaResetKey + 1,
         emailVerificationPending:
           action.pendingVerification ?? state.emailVerificationPending,
       }
@@ -172,6 +177,7 @@ export function useAuthModalController({
     errorMsg: initialError || '',
     successMsg: '',
     emailVerificationPending: false,
+    captchaResetKey: 0,
     resolvedUser: null,
     resolvedMemberships: [],
     pendingInvitations: [],
@@ -190,6 +196,7 @@ export function useAuthModalController({
     ageBand: 'adult',
     guardianEmail: '',
     guardianConsentAccepted: false,
+    captchaToken: '',
   })
 
   useEffect(() => {
@@ -252,6 +259,7 @@ export function useAuthModalController({
         email: form.fields.email,
         password: form.fields.password,
         redirectTo,
+        captchaToken: form.fields.captchaToken || undefined,
       })
       if (res.success && res.user) {
         await completeSignInWithMemberships(res.user, `Welcome back, ${res.user.fullName}!`)
@@ -291,6 +299,7 @@ export function useAuthModalController({
         email: form.fields.email,
         useMagicLink: true,
         redirectTo,
+        captchaToken: form.fields.captchaToken || undefined,
       })
       if (res.success) {
         dispatch({
@@ -374,6 +383,7 @@ export function useAuthModalController({
         ageBand: form.fields.role === 'athlete' ? form.fields.ageBand : undefined,
         guardianEmail: isMinorAthlete ? form.fields.guardianEmail : undefined,
         redirectTo,
+        captchaToken: form.fields.captchaToken || undefined,
       })
       if (res.success) {
         if (res.requiresEmailVerification) {
@@ -428,7 +438,11 @@ export function useAuthModalController({
     e.preventDefault()
     dispatch({ type: 'START_SUBMIT' })
     try {
-      const res = await sendPasswordReset(form.fields.email, redirectTo)
+      const res = await sendPasswordReset(
+        form.fields.email,
+        redirectTo,
+        form.fields.captchaToken || undefined
+      )
       if (res.success) {
         dispatch({ type: 'SET_SUCCESS', message: res.message })
       } else {
@@ -491,7 +505,10 @@ export function useAuthModalController({
     }
     dispatch({ type: 'START_SUBMIT' })
     try {
-      const res = await resendVerificationEmail(form.fields.email.trim())
+      const res = await resendVerificationEmail(
+        form.fields.email.trim(),
+        form.fields.captchaToken || undefined
+      )
       if (res.success) {
         dispatch({
           type: 'SET_SUCCESS',

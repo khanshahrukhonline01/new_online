@@ -270,6 +270,7 @@ export interface PartnerSignupInput {
   upiVpa?: string
   certification?: string
   useMagicLink?: boolean
+  captchaToken?: string
 }
 
 export interface PartnerOnboardingOutcome {
@@ -368,6 +369,7 @@ export async function onboardPartnerOrganization(
       city: cleanCity,
       phone: cleanPhone,
       useMagicLink: input.useMagicLink,
+      ...(input.captchaToken ? { captchaToken: input.captchaToken } : {}),
     })
 
     if (!authResult.success) {
@@ -456,6 +458,7 @@ export async function signInPartnerAccount(input: {
   email: string
   password?: string
   useMagicLink?: boolean
+  captchaToken?: string
 }): Promise<PartnerOnboardingOutcome> {
   const cleanEmail = input.email.trim().toLowerCase()
   if (!cleanEmail || !cleanEmail.includes('@')) {
@@ -470,6 +473,7 @@ export async function signInPartnerAccount(input: {
     email: cleanEmail,
     password: input.password,
     useMagicLink: input.useMagicLink,
+    ...(input.captchaToken ? { captchaToken: input.captchaToken } : {}),
   })
 
   if (!authRes.success) {

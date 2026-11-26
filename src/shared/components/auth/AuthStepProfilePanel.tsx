@@ -1,5 +1,6 @@
 import { useId, type FormEvent, type MouseEvent } from 'react'
 import { SiteIcon } from '../SiteIcon'
+import { AuthCaptchaWidget } from './AuthCaptchaWidget'
 import type { AuthAgeBand } from '../../../integrations/supabase/auth-client'
 import {
   AGE_BAND_OPTIONS,
@@ -19,6 +20,7 @@ interface AuthStepProfilePanelProps {
   guardianEmail: string
   guardianConsentAccepted: boolean
   submitting: boolean
+  captchaResetKey?: number
   onRoleChange: (role: ConsumerRole) => void
   onFullNameChange: (val: string) => void
   onCityChange: (val: string) => void
@@ -29,6 +31,7 @@ interface AuthStepProfilePanelProps {
   onBackStep: () => void
   onSubmitSignUp: (e: FormEvent) => void
   onNavigatePartner: (role: PartnerHandoffRole, e: MouseEvent<HTMLAnchorElement>) => void
+  onCaptchaTokenChange?: (token: string) => void
 }
 
 /**
@@ -45,6 +48,7 @@ export function AuthStepProfilePanel({
   guardianEmail,
   guardianConsentAccepted,
   submitting,
+  captchaResetKey = 0,
   onRoleChange,
   onFullNameChange,
   onCityChange,
@@ -55,6 +59,7 @@ export function AuthStepProfilePanel({
   onBackStep,
   onSubmitSignUp,
   onNavigatePartner,
+  onCaptchaTokenChange,
 }: AuthStepProfilePanelProps) {
   const nameId = useId()
   const cityId = useId()
@@ -210,6 +215,10 @@ export function AuthStepProfilePanel({
             </div>
           )}
         </div>
+      )}
+
+      {onCaptchaTokenChange && (
+        <AuthCaptchaWidget resetKey={captchaResetKey} onTokenChange={onCaptchaTokenChange} />
       )}
 
       <button type="submit" className="kg-auth-submit-btn kg-touch-target" disabled={submitting}>

@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { AuthCaptchaWidget } from '../../shared/components/auth/AuthCaptchaWidget'
 import { useFormState } from '../../shared/hooks/useFormState'
 import {
   getStoredAuthUser,
@@ -64,6 +65,8 @@ export default function PartnerOnboardingPage({
   const [mode, setMode] = useState<'signup' | 'login'>(initialMode)
   const [selectedRole, setSelectedRole] = useState<PartnerRole>(() => normalizePartnerRole(initialRole))
   const [statusMessage, setStatusMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null)
+  const [captchaToken, setCaptchaToken] = useState('')
+  const [captchaResetKey, setCaptchaResetKey] = useState(0)
   const [postLoginWorkspaces, setPostLoginWorkspaces] = useState<{
     memberships: DbTenantMembership[]
     pendingInvitations: DbTenantMembership[]
@@ -112,9 +115,11 @@ export default function PartnerOnboardingPage({
         upiVpa: form.fields.upiVpa,
         certification: form.fields.certification,
         useMagicLink,
+        captchaToken: captchaToken || undefined,
       })
 
       if (!outcome.success) {
+        setCaptchaResetKey(k => k + 1)
         setStatusMessage({ kind: 'error', text: outcome.message })
         return
       }
@@ -123,11 +128,13 @@ export default function PartnerOnboardingPage({
         onAuthSuccess?.(outcome.user)
       }
 
+      setCaptchaResetKey(k => k + 1)
       setStatusMessage({ kind: 'success', text: outcome.message })
       if (!outcome.requiresEmailVerification && outcome.workspacePath) {
         navigateToWorkspace(outcome.workspacePath)
       }
     } catch (err) {
+      setCaptchaResetKey(k => k + 1)
       setStatusMessage({
         kind: 'error',
         text: err instanceof Error ? err.message : 'Partner onboarding could not be completed.',
@@ -151,9 +158,11 @@ export default function PartnerOnboardingPage({
         email: form.fields.loginEmail,
         password: form.fields.loginPassword,
         useMagicLink,
+        captchaToken: captchaToken || undefined,
       })
 
       if (!outcome.success) {
+        setCaptchaResetKey(k => k + 1)
         setStatusMessage({ kind: 'error', text: outcome.message })
         return
       }
@@ -162,6 +171,7 @@ export default function PartnerOnboardingPage({
         onAuthSuccess?.(outcome.user)
       }
 
+      setCaptchaResetKey(k => k + 1)
       setStatusMessage({ kind: 'success', text: outcome.message })
       if (!outcome.requiresEmailVerification && outcome.workspacePath) {
         setPostLoginWorkspaces(null)
@@ -173,6 +183,7 @@ export default function PartnerOnboardingPage({
         })
       }
     } catch (err) {
+      setCaptchaResetKey(k => k + 1)
       setStatusMessage({
         kind: 'error',
         text: err instanceof Error ? err.message : 'Sign-in could not be completed.',
@@ -213,6 +224,7 @@ export default function PartnerOnboardingPage({
   const handleModeSwitch = (nextMode: 'signup' | 'login') => {
     setMode(nextMode)
     setStatusMessage(null)
+    setCaptchaResetKey(k => k + 1)
   }
 
   return (
@@ -449,6 +461,10 @@ export default function PartnerOnboardingPage({
               🛡️ <strong>Zero Platform Commission Guarantee:</strong> All student fees and court booking deposits flow directly into your own UPI VPA bank account with zero platform commission deductions.
             </div>
 
+            {!existingUser && (
+              <AuthCaptchaWidget resetKey={captchaResetKey} onTokenChange={setCaptchaToken} />
+            )}
+
             <button
               type="submit"
               disabled={form.submitting}
@@ -512,6 +528,8 @@ export default function PartnerOnboardingPage({
                 />
               </div>
             </div>
+
+            <AuthCaptchaWidget resetKey={captchaResetKey} onTokenChange={setCaptchaToken} />
 
             <button
               type="submit"

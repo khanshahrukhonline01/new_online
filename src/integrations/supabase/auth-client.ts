@@ -1,6 +1,7 @@
 import { getSupabaseClient } from './realtime-client'
 import type { KhelGridUser } from './public-client'
 import { recordUserConsent } from '../../shared/privacy/privacyService'
+import { formatCaptchaAuthError, isCaptchaErrorMessage } from '../../shared/auth/captchaConfig'
 export type { KhelGridUser }
 export { getStoredUser } from './public-client'
 
@@ -49,6 +50,7 @@ export interface SignUpInput {
   ageBand?: AuthAgeBand
   guardianEmail?: string
   redirectTo?: string
+  captchaToken?: string
 }
 
 export interface SignInInput {
@@ -56,6 +58,7 @@ export interface SignInInput {
   password?: string
   useMagicLink?: boolean
   redirectTo?: string
+  captchaToken?: string
 }
 
 export interface AuthResult {
@@ -302,9 +305,15 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
             guardian_email: isMinorAgeBand ? cleanGuardianEmail : null,
           },
           emailRedirectTo: redirectTarget,
+          ...(input.captchaToken ? { captchaToken: input.captchaToken } : {}),
         },
       })
-      if (error) return { success: false, message: error.message }
+      if (error) {
+        if (isCaptchaErrorMessage(error.message)) {
+          return { success: false, message: formatCaptchaAuthError(error.message) }
+        }
+        return { success: false, message: error.message }
+      }
       return { success: true, requiresEmailVerification: true }
     }
 
@@ -313,6 +322,7 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
       password: input.password,
       options: {
         emailRedirectTo: redirectTarget,
+        ...(input.captchaToken ? { captchaToken: input.captchaToken } : {}),
         data: {
           full_name: cleanName,
           name: cleanName,
@@ -327,6 +337,9 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
     })
 
     if (error) {
+      if (isCaptchaErrorMessage(error.message)) {
+        return { success: false, message: formatCaptchaAuthError(error.message) }
+      }
       if (error.message?.toLowerCase().includes('rate limit')) {
         return {
           success: false,
@@ -416,18 +429,28 @@ export async function signInWithEmail(input: SignInInput): Promise<AuthResult> {
         email: cleanEmail,
         options: {
           emailRedirectTo: resolveEmailRedirectUrl(input.redirectTo),
+          ...(input.captchaToken ? { captchaToken: input.captchaToken } : {}),
         },
       })
-      if (error) return { success: false, message: error.message }
+      if (error) {
+        if (isCaptchaErrorMessage(error.message)) {
+          return { success: false, message: formatCaptchaAuthError(error.message) }
+        }
+        return { success: false, message: error.message }
+      }
       return { success: true, requiresEmailVerification: true }
     }
 
     const { data, error } = await client.auth.signInWithPassword({
       email: cleanEmail,
       password: input.password,
+      ...(input.captchaToken ? { options: { captchaToken: input.captchaToken } } : {}),
     })
 
     if (error) {
+      if (isCaptchaErrorMessage(error.message)) {
+        return { success: false, message: formatCaptchaAuthError(error.message) }
+      }
       if (error.message?.toLowerCase().includes('rate limit')) {
         return {
           success: false,
@@ -474,7 +497,8 @@ export async function signInWithEmail(input: SignInInput): Promise<AuthResult> {
  */
 export async function sendPasswordReset(
   email: string,
-  redirectToOverride?: string
+  redirectToOverride?: string,
+  captchaToken?: string
 ): Promise<{ success: boolean; message: string }> {
   const cleanEmail = email ? email.trim().toLowerCase() : ''
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
@@ -517,9 +541,16 @@ export async function sendPasswordReset(
 
     const { error } = await client.auth.resetPasswordForEmail(cleanEmail, {
       redirectTo: redirectUrl,
+      ...(captchaToken ? { captchaToken } : {}),
     })
 
     if (error) {
+      if (isCaptchaErrorMessage(error.message)) {
+        return {
+          success: false,
+          message: formatCaptchaAuthError(error.message),
+        }
+      }
       if (error.message?.toLowerCase().includes('rate limit')) {
         return {
           success: false,
@@ -545,7 +576,10 @@ export async function sendPasswordReset(
 /**
  * Resends an email verification/confirmation link to the given email address.
  */
-export async function resendVerificationEmail(email: string): Promise<{ success: boolean; message: string }> {
+export async function resendVerificationEmail(
+  email: string,
+  captchaToken?: string
+): Promise<{ success: boolean; message: string }> {
   const cleanEmail = email ? email.trim().toLowerCase() : ''
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
   if (!cleanEmail || !emailRegex.test(cleanEmail)) {
@@ -566,10 +600,17 @@ export async function resendVerificationEmail(email: string): Promise<{ success:
       email: cleanEmail,
       options: {
         emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        ...(captchaToken ? { captchaToken } : {}),
       },
     })
 
     if (error) {
+      if (isCaptchaErrorMessage(error.message)) {
+        return {
+          success: false,
+          message: formatCaptchaAuthError(error.message),
+        }
+      }
       if (error.message?.toLowerCase().includes('rate limit') || error.status === 429) {
         return {
           success: false,
