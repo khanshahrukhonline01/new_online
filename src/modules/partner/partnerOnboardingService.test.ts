@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const {
   mockGetStoredAuthUser,
+  mockGetSupabaseClient,
   mockSignUpWithEmail,
   mockSignInWithEmail,
   mockProvisionInitialTenantOwner,
@@ -13,6 +14,7 @@ const {
   mockSaveTurfVenueSettings,
 } = vi.hoisted(() => ({
   mockGetStoredAuthUser: vi.fn(),
+  mockGetSupabaseClient: vi.fn(),
   mockSignUpWithEmail: vi.fn(),
   mockSignInWithEmail: vi.fn(),
   mockProvisionInitialTenantOwner: vi.fn(),
@@ -22,6 +24,10 @@ const {
   mockRegisterCustomAcademy: vi.fn(),
   mockRegisterCustomCoach: vi.fn(),
   mockSaveTurfVenueSettings: vi.fn(),
+}))
+
+vi.mock('../../integrations/supabase/realtime-client', () => ({
+  getSupabaseClient: mockGetSupabaseClient,
 }))
 
 vi.mock('../../integrations/supabase/auth-client', () => ({
@@ -63,6 +69,7 @@ describe('partnerOnboardingService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetStoredAuthUser.mockReturnValue(null)
+    mockGetSupabaseClient.mockReturnValue(null)
     mockTryFetchUserTenantMemberships.mockResolvedValue([])
     mockGetPendingTenantMemberships.mockResolvedValue([])
     mockRegisterCustomAcademy.mockImplementation((params: { name: string }) => ({
@@ -219,6 +226,19 @@ describe('partnerOnboardingService', () => {
       role: 'academy',
       isVerified: true,
       createdAt: '2026-11-20T00:00:00Z',
+    })
+    mockGetSupabaseClient.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: {
+            id: 'existing-user-1',
+            email: 'owner@khelgrid.com',
+            email_confirmed_at: '2026-11-20T00:00:00Z',
+            user_metadata: { full_name: 'Existing Owner' },
+          } },
+          error: null,
+        }),
+      },
     })
     mockProvisionInitialTenantOwner.mockResolvedValue({
       success: true,
