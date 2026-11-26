@@ -158,6 +158,25 @@ export default function WorkspaceShell(props: WorkspaceShellProps) {
   )
 }
 
+const ORG_TENANT_TYPES = new Set([
+  'organization',
+  'club',
+  'school',
+  'college',
+  'university',
+  'federation',
+  'association',
+  'corporate',
+  'training_org',
+  'service_provider',
+  'research_org',
+  'media_org',
+  'enterprise',
+  'other',
+])
+
+const TOURNAMENT_TENANT_TYPES = new Set(['tournament', 'event_organizer'])
+
 function WorkspaceShellInner({
   persona,
   section,
@@ -172,21 +191,38 @@ function WorkspaceShellInner({
       case 'coach': return memberships.filter(m => m.tenant?.tenant_type === 'coach' || (m.tenant?.tenant_type === 'academy' && ['coach', 'head_coach'].includes(m.role)))
       case 'turf':
       case 'host': return memberships.filter(m => m.tenant?.tenant_type === 'venue')
-      case 'tournament': return memberships.filter(m => m.tenant?.tenant_type === 'tournament')
+      case 'tournament': return memberships.filter(m => TOURNAMENT_TENANT_TYPES.has(m.tenant?.tenant_type || ''))
+      case 'organization': return memberships.filter(m => ORG_TENANT_TYPES.has(m.tenant?.tenant_type || '') || ['owner', 'org_admin', 'director', 'admin', 'manager'].includes(m.role))
+      case 'creator': return memberships.filter(m => m.tenant?.tenant_type === 'media_org' || m.role === 'content_manager')
+      case 'parent': return memberships.filter(m => m.role === 'parent')
       default: return []
     }
   }, [persona, memberships])
   const availablePersonas = useMemo(() => {
     const available = new Set<WorkspacePersona>(['athlete'])
-    if ((authUser?.role as string) === 'creator') available.add('creator')
-    if ((authUser?.role as string) === 'parent') available.add('parent')
+    const roleStr = authUser?.role as string | undefined
+    if (roleStr === 'creator') available.add('creator')
+    if (roleStr === 'parent') available.add('parent')
+    if (roleStr === 'organization') available.add('organization')
+    if (roleStr === 'tournament') available.add('tournament')
+    if (roleStr === 'venue_owner' || roleStr === 'host') {
+      available.add('turf')
+      available.add('host')
+    }
     for (const membership of memberships) {
       const type = membership.tenant?.tenant_type as string | undefined
       if (type === 'academy') available.add('academy')
       if (type === 'coach' || (type === 'academy' && ['coach', 'head_coach'].includes(membership.role))) available.add('coach')
-      if (type === 'venue') available.add('host')
-      if (type === 'tournament') available.add('tournament')
-      if (type === 'organization' || ['owner', 'director', 'admin'].includes(membership.role)) available.add('organization')
+      if (type === 'venue') {
+        available.add('turf')
+        available.add('host')
+      }
+      if (type && TOURNAMENT_TENANT_TYPES.has(type)) available.add('tournament')
+      if (type === 'media_org' || membership.role === 'content_manager') available.add('creator')
+      if (membership.role === 'parent') available.add('parent')
+      if ((type && ORG_TENANT_TYPES.has(type)) || ['owner', 'org_admin', 'director', 'admin', 'manager'].includes(membership.role)) {
+        available.add('organization')
+      }
     }
     return (Object.keys(PERSONAS) as WorkspacePersona[]).filter(key => available.has(key))
   }, [memberships, authUser?.role])
@@ -406,49 +442,49 @@ function PersonaContent({ persona, section, onOpenAuth, onNavigate }: {
       return <LazyDashboard workspaceSection={section} onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
     case 'academy':
       return (
-        <RequireTenantMember personaLabel="Academy" onboardingRole="academy" requiredTenantTypes={['academy']} allowedRoles={['owner', 'director', 'admin', 'head_coach', 'coach', 'staff']} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Academy" onboardingRole="academy" requiredTenantTypes={['academy']} allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'finance_manager', 'content_manager', 'listing_manager', 'verification_coordinator', 'head_coach', 'coach', 'accountant', 'front_desk', 'staff', 'readonly_member']} onNavigate={handleStrictNav}>
           <LazyAcademyHub workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'coach':
       return (
-        <RequireTenantMember personaLabel="Coach" onboardingRole="coach" requiredTenantTypes={['coach', 'academy']} allowedRoles={['owner', 'director', 'admin', 'head_coach', 'coach']} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Coach" onboardingRole="coach" requiredTenantTypes={['coach', 'academy']} allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'head_coach', 'coach']} onNavigate={handleStrictNav}>
           <LazyCoachDashboard workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'turf':
       return (
-        <RequireTenantMember personaLabel="Venue / Turf" onboardingRole="venue" requiredTenantTypes={['venue']} allowedRoles={['owner', 'director', 'admin', 'front_desk', 'staff']} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Venue / Turf" onboardingRole="venue" requiredTenantTypes={['venue']} allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'listing_manager', 'finance_manager', 'accountant', 'front_desk', 'staff', 'readonly_member']} onNavigate={handleStrictNav}>
           <LazyTurfCalendar workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'host':
       return (
-        <RequireTenantMember personaLabel="Venue / Host" onboardingRole="venue" requiredTenantTypes={['venue']} allowedRoles={['owner', 'director', 'admin', 'front_desk', 'staff']} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Venue / Host" onboardingRole="venue" requiredTenantTypes={['venue']} allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'listing_manager', 'finance_manager', 'accountant', 'front_desk', 'staff', 'readonly_member']} onNavigate={handleStrictNav}>
           <LazyHostDashboard workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'tournament':
       return (
-        <RequireTenantMember personaLabel="Tournament" onboardingRole="tournament" requiredTenantTypes={['tournament']} allowedRoles={['owner', 'director', 'admin', 'staff']} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Tournament" onboardingRole="tournament" requiredTenantTypes={['tournament', 'event_organizer']} allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'finance_manager', 'content_manager', 'verification_coordinator', 'accountant', 'staff', 'readonly_member']} onNavigate={handleStrictNav}>
           <LazyTournamentOps workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'organization':
       return (
-        <RequireTenantMember personaLabel="Organisation" requireTenantMembership={false} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Organisation" onboardingRole="organization" requireTenantMembership={false} onNavigate={handleStrictNav}>
           <LazyOrganizations workspaceSection={section} onNavigate={onNavigate} />
         </RequireTenantMember>
       )
     case 'creator':
       return (
-        <RequireTenantMember personaLabel="Creator" requireTenantMembership={false} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Creator" onboardingRole="creator" requireTenantMembership={false} onNavigate={handleStrictNav}>
           <LazyCreatorHub workspaceSection={section} onNavigate={onNavigate} />
         </RequireTenantMember>
       )
     case 'parent':
       return (
-        <RequireTenantMember personaLabel="Parent" requireTenantMembership={false} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Parent" onboardingRole="parent" requireTenantMembership={false} onNavigate={handleStrictNav}>
           <LazyParentPortal workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )

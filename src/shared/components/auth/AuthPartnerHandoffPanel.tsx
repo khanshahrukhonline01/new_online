@@ -1,9 +1,9 @@
 import type { MouseEvent } from 'react'
 import { SiteIcon } from '../SiteIcon'
-import { PARTNER_HANDOFF_OPTIONS } from './authModalTypes'
+import { PARTNER_HANDOFF_OPTIONS, type PartnerHandoffRole } from './authModalTypes'
 
 interface AuthPartnerHandoffPanelProps {
-  onSelectPartnerRole: (role: 'academy' | 'coach' | 'venue' | 'tournament', e: MouseEvent<HTMLAnchorElement>) => void
+  onSelectPartnerRole: (role: PartnerHandoffRole, e: MouseEvent<HTMLAnchorElement>, mode?: 'signup' | 'login') => void
   onSwitchToLogin: () => void
 }
 

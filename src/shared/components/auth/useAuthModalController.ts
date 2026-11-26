@@ -9,13 +9,21 @@ import {
   verifyEmailOtpCode,
   type AuthAgeBand,
   type AuthUserProfile,
-  type UserRole,
 } from '../../../integrations/supabase/auth-client'
+import {
+  acceptTenantInvitation,
+  getPendingTenantMemberships,
+  resolveTenantWorkspacePath,
+  tryFetchUserTenantMemberships,
+  type DbTenantMembership,
+} from '../../../integrations/supabase/tenant-client'
 import { useFormState } from '../../hooks/useFormState'
 import {
   resolvePostAuthTarget,
   type AuthModalTab,
+  type ConsumerRole,
   type OnboardingStep,
+  type PartnerHandoffRole,
 } from './authModalTypes'
 
 export interface AuthModalFields extends Record<string, unknown> {
@@ -25,7 +33,7 @@ export interface AuthModalFields extends Record<string, unknown> {
   confirmPassword: string
   otpCode: string
   fullName: string
-  role: Extract<UserRole, 'athlete' | 'parent' | 'scout'>
+  role: ConsumerRole
   city: string
   phone: string
   ageBand: AuthAgeBand
@@ -41,6 +49,9 @@ export interface AuthUiState {
   errorMsg: string
   successMsg: string
   emailVerificationPending: boolean
+  resolvedUser: AuthUserProfile | null
+  resolvedMemberships: DbTenantMembership[]
+  pendingInvitations: DbTenantMembership[]
 }
 
 type AuthUiAction =
@@ -53,6 +64,13 @@ type AuthUiAction =
   | { type: 'SET_ERROR'; message: string }
   | { type: 'SET_SUCCESS'; message: string; pendingVerification?: boolean }
   | { type: 'SET_PENDING_VERIFICATION'; pending: boolean }
+  | {
+      type: 'SET_TENANT_PICKER'
+      user: AuthUserProfile
+      memberships: DbTenantMembership[]
+      pendingInvitations: DbTenantMembership[]
+      message: string
+    }
 
 function authUiReducer(state: AuthUiState, action: AuthUiAction): AuthUiState {
   switch (action.type) {
@@ -64,6 +82,9 @@ function authUiReducer(state: AuthUiState, action: AuthUiAction): AuthUiState {
         errorMsg: action.errorMsg,
         successMsg: '',
         emailVerificationPending: false,
+        resolvedUser: null,
+        resolvedMemberships: [],
+        pendingInvitations: [],
       }
     case 'SWITCH_TAB':
       return {
@@ -73,6 +94,9 @@ function authUiReducer(state: AuthUiState, action: AuthUiAction): AuthUiState {
         emailVerificationPending: false,
         errorMsg: '',
         successMsg: '',
+        resolvedUser: null,
+        resolvedMemberships: [],
+        pendingInvitations: [],
       }
     case 'SET_STEP':
       return { ...state, onboardingStep: action.step, errorMsg: '' }
@@ -97,6 +121,18 @@ function authUiReducer(state: AuthUiState, action: AuthUiAction): AuthUiState {
         ...state,
         emailVerificationPending: action.pending,
         errorMsg: '',
+      }
+    case 'SET_TENANT_PICKER':
+      return {
+        ...state,
+        submitting: false,
+        onboardingStep: 'tenant_picker',
+        emailVerificationPending: false,
+        errorMsg: '',
+        successMsg: action.message,
+        resolvedUser: action.user,
+        resolvedMemberships: action.memberships,
+        pendingInvitations: action.pendingInvitations,
       }
     default:
       return state
@@ -136,6 +172,9 @@ export function useAuthModalController({
     errorMsg: initialError || '',
     successMsg: '',
     emailVerificationPending: false,
+    resolvedUser: null,
+    resolvedMemberships: [],
+    pendingInvitations: [],
   })
 
   const form = useFormState<AuthModalFields>({
@@ -166,8 +205,8 @@ export function useAuthModalController({
   }, [initialTab, initialError, initialEmail, isOpen])
 
   const finishAuthNavigation = useCallback(
-    (user: AuthUserProfile) => {
-      const target = resolvePostAuthTarget(user, redirectTo)
+    (user: AuthUserProfile, explicitTarget?: string | null) => {
+      const target = explicitTarget ?? resolvePostAuthTarget(user, redirectTo)
       onSuccess?.(user, { skipRedirect: Boolean(target) })
       setTimeout(() => {
         onClose()
@@ -177,6 +216,32 @@ export function useAuthModalController({
       }, 500)
     },
     [onClose, onNavigate, onSuccess, redirectTo]
+  )
+
+  const completeSignInWithMemberships = useCallback(
+    async (user: AuthUserProfile, welcomeMessage: string) => {
+      const [memberships, pendingInvites] = await Promise.all([
+        tryFetchUserTenantMemberships(user.id),
+        getPendingTenantMemberships(user.id),
+      ])
+
+      if (!redirectTo && (memberships.length > 1 || pendingInvites.length > 0)) {
+        onSuccess?.(user, { skipRedirect: true })
+        dispatch({
+          type: 'SET_TENANT_PICKER',
+          user,
+          memberships,
+          pendingInvitations: pendingInvites,
+          message: welcomeMessage,
+        })
+        return
+      }
+
+      const target = resolvePostAuthTarget(user, redirectTo, memberships)
+      dispatch({ type: 'SET_SUCCESS', message: welcomeMessage, pendingVerification: false })
+      finishAuthNavigation(user, target)
+    },
+    [finishAuthNavigation, onSuccess, redirectTo]
   )
 
   const handleLoginSubmit = async (e: FormEvent) => {
@@ -189,8 +254,7 @@ export function useAuthModalController({
         redirectTo,
       })
       if (res.success && res.user) {
-        dispatch({ type: 'SET_SUCCESS', message: `Welcome back, ${res.user.fullName}!` })
-        finishAuthNavigation(res.user)
+        await completeSignInWithMemberships(res.user, `Welcome back, ${res.user.fullName}!`)
       } else if (res.requiresEmailVerification) {
         dispatch({
           type: 'SET_SUCCESS',
@@ -351,12 +415,7 @@ export function useAuthModalController({
         type: 'email',
       })
       if (res.success && res.user) {
-        dispatch({
-          type: 'SET_SUCCESS',
-          message: `Verified! Welcome, ${res.user.fullName}.`,
-          pendingVerification: false,
-        })
-        finishAuthNavigation(res.user)
+        await completeSignInWithMemberships(res.user, `Verified! Welcome, ${res.user.fullName}.`)
       } else {
         dispatch({ type: 'SET_ERROR', message: res.message || 'Could not verify code.' })
       }
@@ -447,12 +506,47 @@ export function useAuthModalController({
     }
   }
 
+  const handleSelectTenantTarget = (target: string, e?: MouseEvent<HTMLAnchorElement>) => {
+    onClose()
+    onNavigate?.((e || undefined) as unknown as MouseEvent<HTMLAnchorElement>, target)
+  }
+
+  const handleAcceptModalInvitation = async (invite: DbTenantMembership) => {
+    dispatch({ type: 'START_SUBMIT' })
+    try {
+      const res = await acceptTenantInvitation(invite.id)
+      if (!res.success) {
+        dispatch({ type: 'SET_ERROR', message: res.message })
+        return
+      }
+      const nextTarget = resolveTenantWorkspacePath(invite)
+      if (ui.resolvedUser) {
+        const [memberships, pendingInvites] = await Promise.all([
+          tryFetchUserTenantMemberships(ui.resolvedUser.id),
+          getPendingTenantMemberships(ui.resolvedUser.id),
+        ])
+        dispatch({
+          type: 'SET_TENANT_PICKER',
+          user: ui.resolvedUser,
+          memberships,
+          pendingInvitations: pendingInvites,
+          message: `Joined ${invite.tenant?.name || 'workspace'}!`,
+        })
+      }
+      onClose()
+      onNavigate?.(undefined as unknown as MouseEvent<HTMLAnchorElement>, nextTarget)
+    } finally {
+      dispatch({ type: 'FINISH_SUBMIT' })
+    }
+  }
+
   const handlePartnerRoute = (
-    partnerRole: 'academy' | 'coach' | 'venue' | 'tournament',
-    e: MouseEvent<HTMLAnchorElement>
+    partnerRole: PartnerHandoffRole,
+    e: MouseEvent<HTMLAnchorElement>,
+    mode: 'signup' | 'login' = 'signup'
   ) => {
     onClose()
-    onNavigate?.(e, `/partner-signup?role=${partnerRole}&mode=signup`)
+    onNavigate?.(e, `/partner-signup?role=${partnerRole}&mode=${mode}`)
   }
 
   return {
@@ -473,5 +567,7 @@ export function useAuthModalController({
     handleSetNewPasswordSubmit,
     handleResendVerification,
     handlePartnerRoute,
+    handleSelectTenantTarget,
+    handleAcceptModalInvitation,
   }
 }

@@ -36,11 +36,29 @@ export interface DbTenant {
   updated_at: string
 }
 
+export type DbTenantMemberRole =
+  | 'owner'
+  | 'org_admin'
+  | 'director'
+  | 'admin'
+  | 'manager'
+  | 'finance_manager'
+  | 'content_manager'
+  | 'listing_manager'
+  | 'verification_coordinator'
+  | 'head_coach'
+  | 'coach'
+  | 'accountant'
+  | 'front_desk'
+  | 'staff'
+  | 'readonly_member'
+  | 'parent'
+
 export interface DbTenantMembership {
   id: string
   tenant_id: string
   user_id: string
-  role: 'owner' | 'director' | 'admin' | 'head_coach' | 'coach' | 'accountant' | 'front_desk' | 'staff' | 'parent'
+  role: DbTenantMemberRole
   status: 'active' | 'invited' | 'suspended' | 'revoked'
   invited_email?: string
   invited_by?: string
@@ -550,6 +568,90 @@ export async function getUserTenantMemberships(userId: string): Promise<DbTenant
       membership.status === 'active' &&
       membership.tenant?.status === 'active'
   )
+}
+
+/**
+ * Best-effort tenant membership lookup used post-login to route users to their active dashboard.
+ * Never throws when Supabase is unconfigured or user has zero tenant memberships.
+ */
+export async function tryFetchUserTenantMemberships(userId: string): Promise<DbTenantMembership[]> {
+  if (!userId) return []
+  try {
+    return await getUserTenantMemberships(userId)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Fetch pending tenant invitations linked to the authenticated user.
+ * Fails cleanly to [] when Supabase is unconfigured or offline.
+ */
+export async function getPendingTenantMemberships(userId: string): Promise<DbTenantMembership[]> {
+  const client = getSupabaseClient()
+  if (!client || !userId) return []
+
+  try {
+    const { data, error } = await client
+      .from('tenant_memberships')
+      .select('*, tenant:tenants(*)')
+      .eq('user_id', userId)
+      .eq('status', 'invited')
+      .order('created_at', { ascending: false })
+
+    if (error) return []
+    return ((data || []) as DbTenantMembership[]).filter(
+      membership =>
+        membership.user_id === userId &&
+        membership.status === 'invited' &&
+        membership.tenant?.status === 'active'
+    )
+  } catch {
+    return []
+  }
+}
+
+export type ResolvedTenantPersona = 'academy' | 'coach' | 'turf' | 'tournament' | 'organization' | 'parent'
+
+/** Maps any of the 18 PostgreSQL tenant_type categories + member role to a WorkspaceShell persona. */
+export function mapTenantTypeToPersona(
+  tenantType?: string | null,
+  memberRole?: string | null
+): ResolvedTenantPersona {
+  if (memberRole === 'parent') return 'parent'
+  switch (tenantType) {
+    case 'academy':
+      return memberRole === 'coach' || memberRole === 'head_coach' ? 'coach' : 'academy'
+    case 'coach':
+      return 'coach'
+    case 'venue':
+      return 'turf'
+    case 'tournament':
+    case 'event_organizer':
+      return 'tournament'
+    default:
+      return 'organization'
+  }
+}
+
+/** Builds the canonical dashboard URL for a verified tenant membership. */
+export function resolveTenantWorkspacePath(membership: DbTenantMembership): string {
+  const persona = mapTenantTypeToPersona(membership.tenant?.tenant_type, membership.role)
+  const slug = membership.tenant?.slug
+  const basePath =
+    persona === 'academy'
+      ? '/workspace/academy/overview'
+      : persona === 'coach'
+        ? '/workspace/coach/overview'
+        : persona === 'turf'
+          ? '/workspace/turf/calendar'
+          : persona === 'tournament'
+            ? '/workspace/tournament/overview'
+            : persona === 'parent'
+              ? '/workspace/parent/attendance'
+              : '/workspace/organization/overview'
+
+  return slug ? `${basePath}?tenant=${encodeURIComponent(slug)}` : basePath
 }
 /**
  * Update tenant profile settings (Restricted to owner & director)

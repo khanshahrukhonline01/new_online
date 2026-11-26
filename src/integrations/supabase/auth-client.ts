@@ -7,11 +7,14 @@ export { getStoredUser } from './public-client'
 export type UserRole =
   | 'athlete'
   | 'parent'
+  | 'creator'
   | 'coach'
   | 'scout'
   | 'academy'
   | 'host'
   | 'venue_owner'
+  | 'tournament'
+  | 'organization'
   | 'submitter'
   | 'moderator'
   | 'admin'
@@ -887,6 +890,30 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'trial:submit',
     'academy:inquire',
     'venue:book',
+  ],
+  creator: [
+    'profile:view',
+    'profile:edit',
+    'campaign:apply',
+    'deliverable:submit',
+    'reward:view',
+  ],
+  tournament: [
+    'profile:view',
+    'profile:edit',
+    'tournament:manage',
+    'match:create',
+    'match:score',
+    'trial:publish',
+  ],
+  organization: [
+    'profile:view',
+    'profile:edit',
+    'org:manage',
+    'org:team',
+    'venue:manage',
+    'academy:manage_enquiries',
+    'tournament:manage',
   ],
   host: [
     'profile:view',

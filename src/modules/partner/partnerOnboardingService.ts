@@ -5,13 +5,36 @@ import {
   type AuthUserProfile,
   type UserRole,
 } from '../../integrations/supabase/auth-client'
-import { provisionInitialTenantOwner } from '../../integrations/supabase/tenant-client'
+import {
+  acceptTenantInvitation,
+  getPendingTenantMemberships,
+  provisionInitialTenantOwner,
+  resolveTenantWorkspacePath,
+  tryFetchUserTenantMemberships,
+  type DbTenantMembership,
+} from '../../integrations/supabase/tenant-client'
 import type { OrganizationType } from '../../shared/saas/saasTypes'
 import { registerCustomAcademy } from '../academies/academySaaSClient'
 import { registerCustomCoach } from '../coaches/coachSaaSClient'
 import { saveTurfVenueSettings } from '../venues/turfSlotManager'
 
-export type PartnerRole = 'academy' | 'coach' | 'venue' | 'tournament'
+export type PartnerRole = 'academy' | 'coach' | 'venue' | 'tournament' | 'organization'
+
+export const ORGANIZATION_SUBTYPE_OPTIONS: readonly { value: OrganizationType; label: string }[] = [
+  { value: 'club', label: 'Sports Club' },
+  { value: 'school', label: 'School Sports Program' },
+  { value: 'college', label: 'College Athletic Department' },
+  { value: 'university', label: 'University Sports Board' },
+  { value: 'federation', label: 'National / State Sports Federation' },
+  { value: 'association', label: 'District / State Association' },
+  { value: 'corporate', label: 'Corporate Sports & Wellness' },
+  { value: 'training_org', label: 'High-Performance Training Org' },
+  { value: 'service_provider', label: 'Sports Tech / Service Provider' },
+  { value: 'research_org', label: 'Sports Science & Research Org' },
+  { value: 'media_org', label: 'Sports Media / Broadcast Org' },
+  { value: 'enterprise', label: 'Enterprise Multi-Branch Group' },
+  { value: 'other', label: 'Other Sports Organisation' },
+]
 
 export interface PartnerRoleDefinition {
   role: PartnerRole
@@ -90,6 +113,21 @@ export const PARTNER_ROLE_CONFIG: Record<PartnerRole, PartnerRoleDefinition> = {
     accentBg: 'rgba(147, 51, 234, 0.1)',
     accentColor: '#9333ea',
   },
+  organization: {
+    role: 'organization',
+    label: 'Club / Federation / Org',
+    description: 'Branches, governance RBAC, compliance & institutional ops',
+    tenantType: 'club',
+    authRole: 'organization',
+    workspacePath: '/workspace/organization/overview',
+    entityLabel: 'Organisation / Federation / Club Name',
+    entityPlaceholder: 'e.g. Delhi State Athletics Association',
+    directorLabel: 'Authorized Administrator / Secretary Name',
+    directorPlaceholder: 'e.g. Ananya Deshmukh',
+    defaultContactTitle: 'Organisation Admin',
+    accentBg: 'rgba(13, 148, 136, 0.1)',
+    accentColor: '#0d9488',
+  },
 }
 
 export const PARTNER_ROLES_ORDERED: readonly PartnerRoleDefinition[] = [
@@ -97,14 +135,35 @@ export const PARTNER_ROLES_ORDERED: readonly PartnerRoleDefinition[] = [
   PARTNER_ROLE_CONFIG.coach,
   PARTNER_ROLE_CONFIG.venue,
   PARTNER_ROLE_CONFIG.tournament,
+  PARTNER_ROLE_CONFIG.organization,
 ]
 
-/** Normalizes query parameter or legacy alias values ('host', 'turf') to a canonical PartnerRole. */
+const ORG_ROLE_ALIASES = new Set([
+  'organization',
+  'organisation',
+  'org',
+  'club',
+  'school',
+  'college',
+  'university',
+  'federation',
+  'association',
+  'corporate',
+  'training_org',
+  'service_provider',
+  'research_org',
+  'media_org',
+  'enterprise',
+  'other',
+])
+
+/** Normalizes query parameter or legacy alias values ('host', 'turf', org subtypes) to a canonical PartnerRole. */
 export function normalizePartnerRole(raw?: string | null): PartnerRole {
   const value = (raw || '').trim().toLowerCase()
   if (value === 'coach') return 'coach'
   if (value === 'venue' || value === 'turf' || value === 'host' || value === 'venue_owner') return 'venue'
-  if (value === 'tournament') return 'tournament'
+  if (value === 'tournament' || value === 'event_organizer') return 'tournament'
+  if (ORG_ROLE_ALIASES.has(value)) return 'organization'
   return 'academy'
 }
 
@@ -113,7 +172,8 @@ export function resolvePartnerWorkspacePath(selectedRole: PartnerRole, userRole?
   if (selectedRole) return PARTNER_ROLE_CONFIG[selectedRole].workspacePath
   if (userRole === 'coach') return PARTNER_ROLE_CONFIG.coach.workspacePath
   if (userRole === 'venue_owner') return PARTNER_ROLE_CONFIG.venue.workspacePath
-  if (userRole === 'host') return PARTNER_ROLE_CONFIG.tournament.workspacePath
+  if (userRole === 'host' || userRole === 'tournament') return PARTNER_ROLE_CONFIG.tournament.workspacePath
+  if (userRole === 'organization') return PARTNER_ROLE_CONFIG.organization.workspacePath
   return PARTNER_ROLE_CONFIG.academy.workspacePath
 }
 
@@ -188,11 +248,18 @@ function initializeVerticalRecord(params: {
         displayName: cleanName,
       }
     }
+    case 'organization': {
+      return {
+        slug: slugifyEntityName(cleanName, 'org'),
+        displayName: cleanName,
+      }
+    }
   }
 }
 
 export interface PartnerSignupInput {
   role: PartnerRole
+  organizationType?: OrganizationType
   entityName: string
   directorName?: string
   sport: string
@@ -214,6 +281,8 @@ export interface PartnerOnboardingOutcome {
   requiresEmailVerification?: boolean
   user?: AuthUserProfile
   provisioningWarning?: string
+  memberships?: DbTenantMembership[]
+  pendingInvitations?: DbTenantMembership[]
 }
 
 async function provisionTenantWithCollisionRetry(params: {
@@ -335,10 +404,15 @@ export async function onboardPartnerOrganization(
     certification: input.certification,
   })
 
+  const resolvedTenantType =
+    input.role === 'organization' && input.organizationType
+      ? input.organizationType
+      : config.tenantType
+
   const { result: provisionRes, slug: provisionedSlug } = await provisionTenantWithCollisionRetry({
     slug: vertical.slug,
     name: cleanEntityName,
-    tenantType: config.tenantType,
+    tenantType: resolvedTenantType,
     city: cleanCity,
     sport: input.sport,
     contactPhone: cleanPhone,
@@ -346,6 +420,7 @@ export async function onboardPartnerOrganization(
     metadata: {
       source: 'unified_partner_onboarding',
       partnerRole: input.role,
+      organizationType: resolvedTenantType,
       upiVpa: input.upiVpa?.trim() || null,
       directorName: cleanDirectorName,
       certification: input.certification?.trim() || null,
@@ -412,11 +487,44 @@ export async function signInPartnerAccount(input: {
     }
   }
 
-  const workspacePath = PARTNER_ROLE_CONFIG[input.role].workspacePath
+  const resolvedUser = authRes.user
+  const [memberships, pendingInvitations] = resolvedUser
+    ? await Promise.all([
+        tryFetchUserTenantMemberships(resolvedUser.id),
+        getPendingTenantMemberships(resolvedUser.id),
+      ])
+    : [[], []]
+
+  const activeMemberships = memberships.filter(
+    m => m.status === 'active' && m.tenant?.status === 'active'
+  )
+
+  if (activeMemberships.length > 1 || pendingInvitations.length > 0) {
+    return {
+      success: true,
+      user: resolvedUser,
+      memberships: activeMemberships,
+      pendingInvitations,
+      message: `Signed in! Choose a tenant workspace or accept a pending team invitation below.`,
+    }
+  }
+
+  const preferredMembership =
+    activeMemberships.find(m => m.tenant?.tenant_type === PARTNER_ROLE_CONFIG[input.role].tenantType) ||
+    activeMemberships[0]
+
+  const workspacePath = preferredMembership
+    ? resolveTenantWorkspacePath(preferredMembership)
+    : PARTNER_ROLE_CONFIG[input.role].workspacePath
+
   return {
     success: true,
-    user: authRes.user,
+    user: resolvedUser,
+    memberships: activeMemberships,
+    pendingInvitations,
     workspacePath,
-    message: `Signed in! Opening ${PARTNER_ROLE_CONFIG[input.role].label} workspace...`,
+    message: `Signed in! Opening ${preferredMembership?.tenant?.name || PARTNER_ROLE_CONFIG[input.role].label} workspace...`,
   }
 }
+
+export { acceptTenantInvitation }

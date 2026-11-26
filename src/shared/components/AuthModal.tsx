@@ -5,7 +5,11 @@ import { AuthPartnerHandoffPanel } from './auth/AuthPartnerHandoffPanel'
 import { AuthRecoveryAndOtpPanel } from './auth/AuthRecoveryAndOtpPanel'
 import { AuthStepIdentityPanel } from './auth/AuthStepIdentityPanel'
 import { AuthStepProfilePanel } from './auth/AuthStepProfilePanel'
-import { type AuthModalTab } from './auth/authModalTypes'
+import { AuthTenantPickerPanel } from './auth/AuthTenantPickerPanel'
+import {
+  resolvePostAuthTarget,
+  type AuthModalTab,
+} from './auth/authModalTypes'
 import { useAuthModalController } from './auth/useAuthModalController'
 import './AuthModal.css'
 
@@ -103,11 +107,16 @@ export default function AuthModal({
   if (!isOpen) return null
 
   const { ui, form } = controller
+  const showTenantPicker = ui.onboardingStep === 'tenant_picker' && Boolean(ui.resolvedUser)
   const recoveryView = ui.emailVerificationPending
     ? 'otp_pending'
     : ui.tab === 'forgot_password' || ui.tab === 'expired_link' || ui.tab === 'set_new_password'
       ? ui.tab
       : null
+
+  const personalFallbackPath = ui.resolvedUser
+    ? resolvePostAuthTarget(ui.resolvedUser, undefined, []) || '/workspace/athlete/overview'
+    : '/workspace/athlete/overview'
 
   return (
     <div className="kg-auth-modal-backdrop" role="presentation" onClick={onClose}>
@@ -187,7 +196,19 @@ export default function AuthModal({
           </div>
         )}
 
-        {recoveryView && (
+        {showTenantPicker && ui.resolvedUser && (
+          <AuthTenantPickerPanel
+            user={ui.resolvedUser}
+            memberships={ui.resolvedMemberships}
+            pendingInvitations={ui.pendingInvitations}
+            personalFallbackPath={personalFallbackPath}
+            submitting={ui.submitting}
+            onSelectTarget={controller.handleSelectTenantTarget}
+            onAcceptInvitation={invite => void controller.handleAcceptModalInvitation(invite)}
+          />
+        )}
+
+        {!showTenantPicker && recoveryView && (
           <AuthRecoveryAndOtpPanel
             view={recoveryView}
             email={form.fields.email}
@@ -211,14 +232,14 @@ export default function AuthModal({
           />
         )}
 
-        {!recoveryView && ui.tab === 'partner' && (
+        {!showTenantPicker && !recoveryView && ui.tab === 'partner' && (
           <AuthPartnerHandoffPanel
             onSelectPartnerRole={controller.handlePartnerRoute}
             onSwitchToLogin={() => controller.switchTab('login')}
           />
         )}
 
-        {!recoveryView && (ui.tab === 'login' || (ui.tab === 'signup' && ui.onboardingStep === 'identity')) && (
+        {!showTenantPicker && !recoveryView && (ui.tab === 'login' || (ui.tab === 'signup' && ui.onboardingStep === 'identity')) && (
           <AuthStepIdentityPanel
             mode={ui.tab === 'signup' ? 'signup' : 'login'}
             email={form.fields.email}
@@ -239,7 +260,7 @@ export default function AuthModal({
           />
         )}
 
-        {!recoveryView && ui.tab === 'signup' && ui.onboardingStep === 'profile' && (
+        {!showTenantPicker && !recoveryView && ui.tab === 'signup' && ui.onboardingStep === 'profile' && (
           <AuthStepProfilePanel
             email={form.fields.email}
             role={form.fields.role}

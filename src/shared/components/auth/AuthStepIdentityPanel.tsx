@@ -1,6 +1,6 @@
 import { useId, type FormEvent, type MouseEvent } from 'react'
 import { SiteIcon } from '../SiteIcon'
-import { evaluatePasswordStrength, PARTNER_HANDOFF_OPTIONS } from './authModalTypes'
+import { evaluatePasswordStrength, PARTNER_HANDOFF_OPTIONS, type PartnerHandoffRole } from './authModalTypes'
 
 interface AuthStepIdentityPanelProps {
   mode: 'login' | 'signup'
@@ -18,7 +18,7 @@ interface AuthStepIdentityPanelProps {
   onAdvanceSignupStep: (e: FormEvent) => void
   onGoToForgotPassword: () => void
   onGoToExpiredLink: () => void
-  onNavigatePartner: (role: 'academy' | 'coach' | 'venue' | 'tournament', e: MouseEvent<HTMLAnchorElement>) => void
+  onNavigatePartner: (role: PartnerHandoffRole, e: MouseEvent<HTMLAnchorElement>, mode?: 'signup' | 'login') => void
 }
 
 /**
@@ -180,8 +180,8 @@ export function AuthStepIdentityPanel({
         <div className="kg-auth-partner-handoff-head">
           <SiteIcon name="building" size={15} />
           <div>
-            <strong>Registering an Academy, Venue, Coach Profile, or Tournament?</strong>
-            <span>Launch our dedicated multi-tenant workspace provisioning wizard.</span>
+            <strong>Managing an Academy, Venue, Coach, Tournament, or Organization?</strong>
+            <span>Launch onboarding or sign in to a dedicated multi-tenant dashboard.</span>
           </div>
         </div>
         <div className="kg-auth-partner-pills">
@@ -196,6 +196,15 @@ export function AuthStepIdentityPanel({
               <span>{opt.title}</span>
             </a>
           ))}
+        </div>
+        <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
+          <a
+            href="/partner-signup?role=academy&mode=login"
+            className="kg-text-link kg-text-link--bold"
+            onClick={e => onNavigatePartner('academy', e, 'login')}
+          >
+            Partner / Organization Sign In →
+          </a>
         </div>
       </div>
     </div>

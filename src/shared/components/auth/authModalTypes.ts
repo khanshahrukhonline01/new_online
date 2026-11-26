@@ -4,6 +4,10 @@ import {
   type AuthUserProfile,
   type UserRole,
 } from '../../../integrations/supabase/auth-client'
+import {
+  resolveTenantWorkspacePath,
+  type DbTenantMembership,
+} from '../../../integrations/supabase/tenant-client'
 
 export type AuthModalTab =
   | 'login'
@@ -13,7 +17,10 @@ export type AuthModalTab =
   | 'expired_link'
   | 'set_new_password'
 
-export type OnboardingStep = 'identity' | 'profile'
+export type OnboardingStep = 'identity' | 'profile' | 'tenant_picker'
+
+export type ConsumerRole = Extract<UserRole, 'athlete' | 'parent' | 'scout' | 'creator'>
+export type PartnerHandoffRole = 'academy' | 'coach' | 'venue' | 'tournament' | 'organization'
 
 export interface AuthOpenOptions {
   tab?: AuthModalTab
@@ -27,14 +34,14 @@ export interface AuthOpenOptions {
 export type AuthOpenInput = 'login' | 'signup' | AuthOpenOptions
 
 export interface ConsumerRoleOption {
-  role: Extract<UserRole, 'athlete' | 'parent' | 'scout'>
+  role: ConsumerRole
   title: string
   subtitle: string
-  icon: 'user-round' | 'users' | 'search'
+  icon: 'user-round' | 'users' | 'search' | 'sparkles'
 }
 
 export interface PartnerHandoffOption {
-  role: 'academy' | 'coach' | 'venue' | 'tournament'
+  role: PartnerHandoffRole
   title: string
   subtitle: string
   icon: 'building' | 'award' | 'venues' | 'sparkles'
@@ -58,6 +65,12 @@ export const CONSUMER_ROLE_OPTIONS: readonly ConsumerRoleOption[] = [
     title: 'Talent Scout',
     subtitle: 'Evaluate normative combines & prospect CVs',
     icon: 'search',
+  },
+  {
+    role: 'creator',
+    title: 'Sports Creator',
+    subtitle: 'Live scoring streams, media & creator studio',
+    icon: 'sparkles',
   },
 ]
 
@@ -85,6 +98,12 @@ export const PARTNER_HANDOFF_OPTIONS: readonly PartnerHandoffOption[] = [
     title: 'Tournament Ops',
     subtitle: 'Brackets, age audit & live scorer',
     icon: 'sparkles',
+  },
+  {
+    role: 'organization',
+    title: 'Club / Federation / Org',
+    subtitle: 'Clubs, schools, universities & sports bodies',
+    icon: 'building',
   },
 ]
 
@@ -139,10 +158,24 @@ export function normalizeAuthOpenInput(input?: AuthOpenInput): AuthOpenOptions {
  * Resolves post-authentication route, prioritizing explicit pending workflow `redirectTo`
  * before falling back to role-based workspace routing.
  */
-export function resolvePostAuthTarget(user: AuthUserProfile, redirectTo?: string): string | null {
+export function resolvePostAuthTarget(
+  user: AuthUserProfile,
+  redirectTo?: string,
+  memberships?: DbTenantMembership[]
+): string | null {
   if (redirectTo) {
     const safe = getSafeRedirectUrl(redirectTo, '')
     if (safe) return safe
+  }
+
+  const activeMemberships = (memberships || []).filter(
+    m => m.status === 'active' && m.tenant?.status === 'active'
+  )
+  if (activeMemberships.length === 1) {
+    return resolveTenantWorkspacePath(activeMemberships[0])
+  }
+  if (activeMemberships.length > 1) {
+    return '/workspace'
   }
 
   switch (user.role) {
@@ -154,8 +187,17 @@ export function resolvePostAuthTarget(user: AuthUserProfile, redirectTo?: string
       return '/workspace/host/overview'
     case 'coach':
       return '/workspace/coach/overview'
-    case 'athlete':
+    case 'tournament':
+      return '/workspace/tournament/overview'
+    case 'organization':
+      return '/workspace/organization/overview'
+    case 'creator':
+      return '/workspace/creator/overview'
     case 'parent':
+      return '/workspace/parent/attendance'
+    case 'scout':
+      return '/scout-portal'
+    case 'athlete':
       return '/workspace/athlete/overview'
     default:
       return null

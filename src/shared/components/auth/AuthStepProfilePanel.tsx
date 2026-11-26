@@ -1,15 +1,17 @@
 import { useId, type FormEvent, type MouseEvent } from 'react'
 import { SiteIcon } from '../SiteIcon'
-import type { AuthAgeBand, UserRole } from '../../../integrations/supabase/auth-client'
+import type { AuthAgeBand } from '../../../integrations/supabase/auth-client'
 import {
   AGE_BAND_OPTIONS,
   CONSUMER_ROLE_OPTIONS,
   MAJOR_CITIES,
+  type ConsumerRole,
+  type PartnerHandoffRole,
 } from './authModalTypes'
 
 interface AuthStepProfilePanelProps {
   email: string
-  role: Extract<UserRole, 'athlete' | 'parent' | 'scout'>
+  role: ConsumerRole
   fullName: string
   city: string
   phone: string
@@ -17,7 +19,7 @@ interface AuthStepProfilePanelProps {
   guardianEmail: string
   guardianConsentAccepted: boolean
   submitting: boolean
-  onRoleChange: (role: Extract<UserRole, 'athlete' | 'parent' | 'scout'>) => void
+  onRoleChange: (role: ConsumerRole) => void
   onFullNameChange: (val: string) => void
   onCityChange: (val: string) => void
   onPhoneChange: (val: string) => void
@@ -26,7 +28,7 @@ interface AuthStepProfilePanelProps {
   onGuardianConsentChange: (checked: boolean) => void
   onBackStep: () => void
   onSubmitSignUp: (e: FormEvent) => void
-  onNavigatePartner: (role: 'academy', e: MouseEvent<HTMLAnchorElement>) => void
+  onNavigatePartner: (role: PartnerHandoffRole, e: MouseEvent<HTMLAnchorElement>) => void
 }
 
 /**
