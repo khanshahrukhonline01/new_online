@@ -64,6 +64,7 @@ const SportsToolsPage = lazy(() => import('./modules/tools/SportsToolsPage'))
 const PricingPage = lazy(() => import('./modules/pricing/PricingPage'))
 const PartnerPage = lazy(() => import('./modules/partner/PartnerPage'))
 const PartnerOnboardingPage = lazy(() => import('./modules/partner/PartnerOnboardingPage'))
+const PartnerEmailVerificationPage = lazy(() => import('./modules/partner/PartnerEmailVerificationPage'))
 const ParentPortalPage = lazy(() => import('./modules/parent/ParentPortalPage'))
 const SavedPage = lazy(() => import('./modules/saved/SavedPage'))
 const CoachesPage = lazy(() => import('./modules/coaches/CoachesPage'))
@@ -390,6 +391,7 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
           />
         )
       }
+      else if (match.canonicalPath === '/partner/verify') page = <PartnerEmailVerificationPage />
       else if (match.canonicalPath === '/partner-signup' || match.canonicalPath === '/partner-login' || match.canonicalPath === '/partner/signup' || match.canonicalPath === '/partner/login') {
         const searchParams = new URLSearchParams(locationSearch)
         const modeParam = searchParams.get('mode') === 'login' || path === '/partner-login' || path === '/partner/login' ? 'login' : 'signup'
