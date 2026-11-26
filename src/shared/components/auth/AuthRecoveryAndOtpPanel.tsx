@@ -1,7 +1,8 @@
-import type { FormEvent } from 'react'
+import { useId, type FormEvent } from 'react'
 import { SiteIcon } from '../SiteIcon'
+import { evaluatePasswordStrength } from './authModalTypes'
 
-export interface AuthRecoveryAndOtpPanelProps {
+interface AuthRecoveryAndOtpPanelProps {
   view: 'otp_pending' | 'forgot_password' | 'expired_link' | 'set_new_password'
   email: string
   otpCode: string
@@ -9,20 +10,24 @@ export interface AuthRecoveryAndOtpPanelProps {
   confirmPassword: string
   showPassword: boolean
   submitting: boolean
-  onEmailChange: (value: string) => void
-  onOtpCodeChange: (value: string) => void
-  onNewPasswordChange: (value: string) => void
-  onConfirmPasswordChange: (value: string) => void
+  onEmailChange: (val: string) => void
+  onOtpCodeChange: (val: string) => void
+  onNewPasswordChange: (val: string) => void
+  onConfirmPasswordChange: (val: string) => void
   onTogglePassword: () => void
   onVerifyOtpSubmit: (e: FormEvent) => void
   onForgotSubmit: (e: FormEvent) => void
-  onResendSubmit: (e?: FormEvent) => void
+  onResendSubmit: (e: FormEvent) => void
   onSetNewPasswordSubmit: (e: FormEvent) => void
   onBackToLogin: () => void
   onSwitchToSignup: () => void
   onSwitchToOtpEntry: () => void
 }
 
+/**
+ * Handles in-modal 6-digit email OTP confirmation, password recovery, expired-link recovery,
+ * and setting a new password with live strength guidance.
+ */
 export function AuthRecoveryAndOtpPanel({
   view,
   email,
@@ -44,51 +49,58 @@ export function AuthRecoveryAndOtpPanel({
   onSwitchToSignup,
   onSwitchToOtpEntry,
 }: AuthRecoveryAndOtpPanelProps) {
+  const emailId = useId()
+  const otpId = useId()
+  const newPassId = useId()
+  const confirmPassId = useId()
+  const strength = evaluatePasswordStrength(newPassword)
+
   if (view === 'otp_pending') {
     return (
       <form className="kg-auth-form" onSubmit={onVerifyOtpSubmit}>
-        <h2 id="kg-auth-title" className="kg-auth-title">
-          6-Digit Email Verification Code
-        </h2>
-        <p className="kg-auth-subtitle">
-          Enter the 6-digit code sent to <strong>{email || 'your email'}</strong> to verify your account.
-        </p>
-
-        <div className="kg-auth-field">
-          <label htmlFor="kg-auth-otp-email">Email Address</label>
-          <input
-            id="kg-auth-otp-email"
-            type="email"
-            value={email}
-            onChange={e => onEmailChange(e.target.value)}
-            required
-          />
+        <div className="kg-auth-verification-box">
+          <SiteIcon name="sparkles" size={20} className="kg-verify-icon" />
+          <div>
+            <strong>Verify Your Email Address</strong>
+            <p>
+              We sent a sign-in link and 6-digit code to <strong>{email}</strong>. Click the email link or enter the 6-digit code below.
+            </p>
+          </div>
         </div>
 
         <div className="kg-auth-field">
-          <label htmlFor="kg-auth-otp-code">6-Digit Code</label>
-          <input
-            id="kg-auth-otp-code"
-            type="text"
-            inputMode="numeric"
-            maxLength={6}
-            placeholder="000000"
-            value={otpCode}
-            onChange={e => onOtpCodeChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            required
-          />
+          <label htmlFor={otpId}>6-Digit Email Verification Code</label>
+          <div className="kg-auth-input-wrap">
+            <SiteIcon name="shield-check" size={16} className="kg-input-icon" />
+            <input
+              id={otpId}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              placeholder="e.g. 482910"
+              value={otpCode}
+              onChange={e => onOtpCodeChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              required
+            />
+          </div>
         </div>
 
-        <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
-          {submitting ? 'Verifying…' : 'Verify 6-Digit Code & Continue'}
+        <button type="submit" className="kg-auth-submit-btn kg-touch-target" disabled={submitting}>
+          {submitting ? 'Verifying Code…' : 'Verify 6-Digit Code & Continue'}
         </button>
 
-        <div className="kg-auth-footer-links">
-          <button type="button" className="kg-auth-link-btn" onClick={() => onResendSubmit()}>
-            Resend Verification Email
+        <div className="kg-auth-otp-footer">
+          <button
+            type="button"
+            className="kg-text-link"
+            onClick={e => onResendSubmit(e as unknown as FormEvent)}
+            disabled={submitting}
+          >
+            Resend Email / Code
           </button>
-          <button type="button" className="kg-auth-link-btn" onClick={onBackToLogin}>
-            Back to Sign In
+          <button type="button" className="kg-text-link" onClick={onBackToLogin}>
+            ← Back to Sign In
           </button>
         </div>
       </form>
@@ -102,66 +114,104 @@ export function AuthRecoveryAndOtpPanel({
           Reset Your Password
         </h2>
         <p className="kg-auth-subtitle">
-          Enter your registered email address and we will send secure password reset instructions.
+          Enter the email address registered with your KhelGrid account. We will email you
+          instructions to reset your password.
         </p>
 
         <div className="kg-auth-field">
-          <label htmlFor="kg-auth-forgot-email">Email Address</label>
-          <input
-            id="kg-auth-forgot-email"
-            type="email"
-            placeholder="athlete@example.com"
-            value={email}
-            onChange={e => onEmailChange(e.target.value)}
-            required
-          />
+          <label htmlFor={emailId}>Registered Email Address</label>
+          <div className="kg-auth-input-wrap">
+            <SiteIcon name="mail" size={16} className="kg-input-icon" />
+            <input
+              id={emailId}
+              type="email"
+              required
+              placeholder="name@example.com"
+              value={email}
+              onChange={e => onEmailChange(e.target.value)}
+              autoComplete="email"
+            />
+          </div>
         </div>
 
-        <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
-          {submitting ? 'Sending…' : 'Send Reset Instructions'}
+        <button type="submit" className="kg-auth-submit-btn kg-touch-target" disabled={submitting}>
+          {submitting ? 'Sending Instructions…' : 'Send Reset Instructions'}
         </button>
 
-        <div className="kg-auth-footer-links">
-          <button type="button" className="kg-auth-link-btn" onClick={onBackToLogin}>
-            Back to Sign In
+        <div className="kg-auth-center-footer">
+          <button type="button" className="kg-text-link" onClick={onBackToLogin}>
+            ← Back to Sign In
           </button>
         </div>
       </form>
     )
   }
 
-  if (view === 'expired_link') {
+  if (view === 'set_new_password') {
     return (
-      <form className="kg-auth-form" onSubmit={onResendSubmit}>
+      <form className="kg-auth-form" onSubmit={onSetNewPasswordSubmit}>
         <h2 id="kg-auth-title" className="kg-auth-title">
-          Verification Link Expired
+          Create a New Password
         </h2>
         <p className="kg-auth-subtitle">
-          Request a fresh verification link or verify directly with your 6-digit email code.
+          Enter and confirm your new secure password below (minimum 6 characters) to update your KhelGrid account.
         </p>
 
         <div className="kg-auth-field">
-          <label htmlFor="kg-auth-expired-email">Email Address</label>
-          <input
-            id="kg-auth-expired-email"
-            type="email"
-            placeholder="athlete@example.com"
-            value={email}
-            onChange={e => onEmailChange(e.target.value)}
-            required
-          />
+          <label htmlFor={newPassId}>New Password</label>
+          <div className="kg-auth-input-wrap">
+            <SiteIcon name="shield-check" size={16} className="kg-input-icon" />
+            <input
+              id={newPassId}
+              type={showPassword ? 'text' : 'password'}
+              required
+              minLength={6}
+              placeholder="At least 6 characters"
+              value={newPassword}
+              onChange={e => onNewPasswordChange(e.target.value)}
+              autoComplete="new-password"
+            />
+            <button
+              type="button"
+              className="kg-password-toggle"
+              onClick={onTogglePassword}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              <SiteIcon name={showPassword ? 'eye-off' : 'eye'} size={15} />
+            </button>
+          </div>
+          {newPassword.length > 0 && (
+            <div className={`kg-password-strength is-score-${strength.score}`} aria-live="polite">
+              <span className="kg-strength-bar" />
+              <span className="kg-strength-label">Password strength: {strength.label}</span>
+            </div>
+          )}
         </div>
 
-        <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
-          {submitting ? 'Sending…' : 'Resend Verification Email'}
+        <div className="kg-auth-field">
+          <label htmlFor={confirmPassId}>Confirm New Password</label>
+          <div className="kg-auth-input-wrap">
+            <SiteIcon name="shield-check" size={16} className="kg-input-icon" />
+            <input
+              id={confirmPassId}
+              type={showPassword ? 'text' : 'password'}
+              required
+              minLength={6}
+              placeholder="Re-type new password"
+              value={confirmPassword}
+              onChange={e => onConfirmPasswordChange(e.target.value)}
+              autoComplete="new-password"
+            />
+          </div>
+        </div>
+
+        <button type="submit" className="kg-auth-submit-btn kg-touch-target" disabled={submitting}>
+          {submitting ? 'Updating Password…' : 'Save New Password & Sign In'}
         </button>
 
-        <div className="kg-auth-footer-links">
-          <button type="button" className="kg-auth-link-btn" onClick={onSwitchToOtpEntry}>
-            Have a 6-digit email code? Verify directly
-          </button>
-          <button type="button" className="kg-auth-link-btn" onClick={onSwitchToSignup}>
-            Create a new account
+        <div className="kg-auth-center-footer">
+          <button type="button" className="kg-text-link" onClick={onBackToLogin}>
+            ← Back to Sign In
           </button>
         </div>
       </form>
@@ -169,51 +219,50 @@ export function AuthRecoveryAndOtpPanel({
   }
 
   return (
-    <form className="kg-auth-form" onSubmit={onSetNewPasswordSubmit}>
-      <h2 id="kg-auth-title" className="kg-auth-title">
-        Create a New Password
+    <form className="kg-auth-form" onSubmit={onResendSubmit}>
+      <div className="kg-auth-expired-header">
+        <span className="kg-auth-expired-badge" aria-hidden="true">
+          <SiteIcon name="alert-circle" size={28} />
+        </span>
+      </div>
+      <h2 id="kg-auth-title" className="kg-auth-title is-centered">
+        Verification Link Expired
       </h2>
-      <p className="kg-auth-subtitle">
-        Choose a strong password of at least 8 characters to secure your KhelGrid account.
+      <p className="kg-auth-subtitle is-centered">
+        Email links expire after 1 hour or when pre-scanned by email security filters. Request a fresh link or enter your 6-digit email code.
       </p>
 
       <div className="kg-auth-field">
-        <label htmlFor="kg-auth-new-password">New Password</label>
-        <div className="kg-auth-password-wrap">
+        <label htmlFor={emailId}>Your Registered Email</label>
+        <div className="kg-auth-input-wrap">
+          <SiteIcon name="mail" size={16} className="kg-input-icon" />
           <input
-            id="kg-auth-new-password"
-            type={showPassword ? 'text' : 'password'}
-            minLength={8}
-            value={newPassword}
-            onChange={e => onNewPasswordChange(e.target.value)}
+            id={emailId}
+            type="email"
             required
+            placeholder="name@example.com"
+            value={email}
+            onChange={e => onEmailChange(e.target.value)}
+            autoComplete="email"
           />
-          <button
-            type="button"
-            className="kg-auth-toggle-pw"
-            onClick={onTogglePassword}
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
-          >
-            <SiteIcon name={showPassword ? 'eye-off' : 'eye'} size={16} />
-          </button>
         </div>
       </div>
 
-      <div className="kg-auth-field">
-        <label htmlFor="kg-auth-confirm-password">Confirm New Password</label>
-        <input
-          id="kg-auth-confirm-password"
-          type={showPassword ? 'text' : 'password'}
-          minLength={8}
-          value={confirmPassword}
-          onChange={e => onConfirmPasswordChange(e.target.value)}
-          required
-        />
-      </div>
-
-      <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
-        {submitting ? 'Saving…' : 'Save New Password & Sign In'}
+      <button type="submit" className="kg-auth-submit-btn kg-touch-target" disabled={submitting}>
+        {submitting ? 'Sending Fresh Link…' : 'Resend Verification Email'}
       </button>
+
+      <div className="kg-auth-expired-links">
+        <button type="button" className="kg-text-link" onClick={onSwitchToOtpEntry}>
+          Have a 6-digit email code? Verify directly →
+        </button>
+        <button type="button" className="kg-text-link" onClick={onBackToLogin}>
+          Already verified? Sign in with password
+        </button>
+        <button type="button" className="kg-text-link" onClick={onSwitchToSignup}>
+          Need to create a new account? Register here
+        </button>
+      </div>
     </form>
   )
 }

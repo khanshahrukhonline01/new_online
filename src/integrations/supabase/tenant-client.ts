@@ -12,7 +12,6 @@
  */
 
 import { getSupabaseClient } from './realtime-client'
-import { getStoredAuthUser } from './auth-client'
 import type { OrganizationType } from '../../shared/saas/saasTypes'
 
 export interface DbTenant {

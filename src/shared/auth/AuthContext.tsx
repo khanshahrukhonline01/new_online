@@ -1,41 +1,37 @@
-import {
-  createContext,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   clearAuthUrlHash,
   getStoredAuthUser,
   onAuthChange,
   parseAuthUrlCallback,
-  signOut as supabaseSignOut,
+  signOut as performSignOut,
   type AuthUserProfile,
 } from '../../integrations/supabase/auth-client'
 import {
   normalizeAuthOpenInput,
-  type AuthIntentState,
   type AuthOpenInput,
+  type AuthOpenOptions,
 } from '../components/auth/authModalTypes'
+import { AuthContext, type AuthContextValue } from './useAuth'
 
-export interface AuthContextValue {
-  user: AuthUserProfile | null
-  modalOpen: boolean
-  intent: AuthIntentState
-  openAuth: (input?: AuthOpenInput) => void
-  closeAuth: () => void
-  setAuthenticatedUser: (user: AuthUserProfile | null) => void
-  signOut: () => Promise<void>
+interface AuthProviderProps {
+  children: ReactNode
 }
 
-export const AuthContext = createContext<AuthContextValue | undefined>(undefined)
-
-export function AuthProvider({ children }: { children: ReactNode }) {
+/**
+ * Centralized authentication provider capturing intent context (why & where auth was requested),
+ * managing modal visibility/deep-link callbacks, and synchronizing Supabase + cross-tab state.
+ */
+export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUserProfile | null>(() => getStoredAuthUser())
   const [modalOpen, setModalOpen] = useState(false)
-  const [intent, setIntent] = useState<AuthIntentState>({ tab: 'login' })
+  const [intent, setIntent] = useState<AuthOpenOptions>({ tab: 'login' })
+
+  useEffect(() => {
+    return onAuthChange(nextUser => {
+      setUser(nextUser)
+    })
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -47,14 +43,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIntent({
         tab: isOtpExpired ? 'expired_link' : 'login',
         error: isOtpExpired
-          ? 'Email verification link is invalid or has expired. Enter your email below to receive a fresh verification link.'
-          : (callbackInfo.errorDescription ||
-            'Authentication could not be completed. Please sign in with your credentials.'),
+          ? 'Email verification link is invalid or has expired. Enter your email or 6-digit verification code below.'
+          : (callbackInfo.errorDescription || 'Authentication could not be completed. Please sign in with your credentials.'),
       })
       setModalOpen(true)
       clearAuthUrlHash()
     } else if (callbackInfo.type === 'recovery') {
-      setIntent({ tab: 'set_new_password', error: '' })
+      setIntent({ tab: 'set_new_password' })
       setModalOpen(true)
       clearAuthUrlHash()
     } else if (callbackInfo.type === 'signup_confirmed') {
@@ -62,41 +57,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  useEffect(() => {
-    return onAuthChange(nextUser => {
-      setUser(nextUser)
-    })
-  }, [])
-
   const openAuth = useCallback((input?: AuthOpenInput) => {
-    setIntent(normalizeAuthOpenInput(input))
+    const normalized = normalizeAuthOpenInput(input)
+    setIntent(normalized)
     setModalOpen(true)
   }, [])
 
   const closeAuth = useCallback(() => {
     setModalOpen(false)
+    setIntent(prev => ({ ...prev, error: undefined }))
   }, [])
 
-  const setAuthenticatedUser = useCallback((nextUser: AuthUserProfile | null) => {
-    setUser(nextUser)
+  const clearIntent = useCallback(() => {
+    setIntent({ tab: 'login' })
   }, [])
 
-  const signOut = useCallback(async () => {
-    await supabaseSignOut()
+  const handleSignOut = useCallback(async () => {
+    await performSignOut()
     setUser(null)
   }, [])
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
+      isAuthenticated: Boolean(user),
       modalOpen,
       intent,
       openAuth,
       closeAuth,
-      setAuthenticatedUser,
-      signOut,
+      setAuthenticatedUser: setUser,
+      signOut: handleSignOut,
+      clearIntent,
     }),
-    [user, modalOpen, intent, openAuth, closeAuth, setAuthenticatedUser, signOut],
+    [user, modalOpen, intent, openAuth, closeAuth, handleSignOut, clearIntent]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

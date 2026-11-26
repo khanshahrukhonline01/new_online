@@ -1,14 +1,14 @@
-import type { FormEvent, MouseEvent } from 'react'
+import { useId, type FormEvent, type MouseEvent } from 'react'
 import { SiteIcon } from '../SiteIcon'
-import type { AuthPartnerRole } from './authModalTypes'
+import { evaluatePasswordStrength, PARTNER_HANDOFF_OPTIONS } from './authModalTypes'
 
-export interface AuthStepIdentityPanelProps {
+interface AuthStepIdentityPanelProps {
   mode: 'login' | 'signup'
   email: string
   password: string
   showPassword: boolean
   submitting: boolean
-  errorMsg: string | null
+  errorMsg: string
   onEmailChange: (value: string) => void
   onPasswordChange: (value: string) => void
   onTogglePassword: () => void
@@ -18,19 +18,20 @@ export interface AuthStepIdentityPanelProps {
   onAdvanceSignupStep: (e: FormEvent) => void
   onGoToForgotPassword: () => void
   onGoToExpiredLink: () => void
-  onNavigatePartner: (
-    event: MouseEvent<HTMLAnchorElement>,
-    role: AuthPartnerRole,
-    mode?: 'signup' | 'login',
-  ) => void
+  onNavigatePartner: (role: 'academy' | 'coach' | 'venue' | 'tournament', e: MouseEvent<HTMLAnchorElement>) => void
 }
 
+/**
+ * Step 1 (Identity): Clean email/password sign-in, 1-click magic link/code, Google OAuth trigger,
+ * or 2-field consumer signup start + guided handoff to multi-tenant Partner Onboarding.
+ */
 export function AuthStepIdentityPanel({
   mode,
   email,
   password,
   showPassword,
   submitting,
+  errorMsg,
   onEmailChange,
   onPasswordChange,
   onTogglePassword,
@@ -42,26 +43,32 @@ export function AuthStepIdentityPanel({
   onGoToExpiredLink,
   onNavigatePartner,
 }: AuthStepIdentityPanelProps) {
-  const isSignup = mode === 'signup'
+  const emailId = useId()
+  const passwordId = useId()
+  const strength = evaluatePasswordStrength(password)
+
+  const isLogin = mode === 'login'
 
   return (
-    <div className="kg-auth-body">
-      {isSignup ? (
-        <>
-          <p className="kg-auth-step-badge">Step 1 of 2 · Fast Account Setup</p>
-          <h2 id="kg-auth-title" className="kg-auth-title">
-            Start with your email &amp; password
-          </h2>
-        </>
-      ) : (
-        <h2 id="kg-auth-title" className="kg-auth-title">
-          Sign in to your KhelGrid profile
-        </h2>
-      )}
+    <div className="kg-auth-form">
+      <div className="kg-auth-step-header">
+        <span className="kg-auth-step-pill">
+          {isLogin ? 'Step 1 of 1 · Verify Identity' : 'Step 1 of 2 · Fast Account Setup'}
+        </span>
+      </div>
+
+      <h2 id="kg-auth-title" className="kg-auth-title">
+        {isLogin ? 'Sign in to your KhelGrid profile' : 'Start with your email & password'}
+      </h2>
+      <p className="kg-auth-subtitle">
+        {isLogin
+          ? 'Continue to your saved trials, bookings, Athlete CV, or partner workspace.'
+          : 'Takes under 15 seconds — customize your athlete, parent, or scout role in the next step.'}
+      </p>
 
       <button
         type="button"
-        className="kg-auth-google-btn"
+        className="kg-auth-oauth-btn kg-touch-target"
         onClick={onGoogleSignIn}
         disabled={submitting}
       >
@@ -69,117 +76,126 @@ export function AuthStepIdentityPanel({
         <span>Continue with Google</span>
       </button>
 
-      <div className="kg-auth-divider" aria-hidden="true">
-        <span>or continue with email</span>
+      <div className="kg-auth-divider">
+        <span>OR WITH EMAIL</span>
       </div>
 
-      <form
-        className="kg-auth-form"
-        onSubmit={isSignup ? onAdvanceSignupStep : onLoginSubmit}
-      >
+      <form onSubmit={isLogin ? onLoginSubmit : onAdvanceSignupStep} className="kg-auth-form-inner">
         <div className="kg-auth-field">
-          <label htmlFor="kg-auth-identity-email">Email Address</label>
-          <input
-            id="kg-auth-identity-email"
-            type="email"
-            autoComplete="email"
-            placeholder="athlete@example.com"
-            value={email}
-            onChange={e => onEmailChange(e.target.value)}
-            required
-          />
+          <label htmlFor={emailId}>Email Address</label>
+          <div className="kg-auth-input-wrap">
+            <SiteIcon name="mail" size={16} className="kg-input-icon" />
+            <input
+              id={emailId}
+              type="email"
+              required
+              placeholder="name@example.com"
+              value={email}
+              onChange={e => onEmailChange(e.target.value)}
+              autoComplete="email"
+            />
+          </div>
         </div>
 
         <div className="kg-auth-field">
-          <div className="kg-auth-label-row">
-            <label htmlFor="kg-auth-identity-password">Password</label>
-            {!isSignup && (
+          <div className="kg-field-header">
+            <label htmlFor={passwordId}>
+              {isLogin ? 'Password' : 'Create Password (min 6 characters)'}
+            </label>
+            {isLogin && (
               <button
                 type="button"
-                className="kg-auth-link-btn"
+                className="kg-text-link"
                 onClick={onGoToForgotPassword}
               >
                 Forgot password?
               </button>
             )}
           </div>
-          <div className="kg-auth-password-wrap">
+          <div className="kg-auth-input-wrap">
+            <SiteIcon name="shield-check" size={16} className="kg-input-icon" />
             <input
-              id="kg-auth-identity-password"
+              id={passwordId}
               type={showPassword ? 'text' : 'password'}
-              autoComplete={isSignup ? 'new-password' : 'current-password'}
-              placeholder={isSignup ? 'Minimum 8 characters' : 'Enter your password'}
+              required
+              minLength={isLogin ? undefined : 6}
+              placeholder={isLogin ? '••••••••' : 'At least 6 characters'}
               value={password}
               onChange={e => onPasswordChange(e.target.value)}
-              required
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
             />
             <button
               type="button"
-              className="kg-auth-toggle-pw"
+              className="kg-password-toggle"
               onClick={onTogglePassword}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
-              <SiteIcon name={showPassword ? 'eye-off' : 'eye'} size={16} />
+              <SiteIcon name={showPassword ? 'eye-off' : 'eye'} size={15} />
             </button>
           </div>
+          {!isLogin && password.length > 0 && (
+            <div className={`kg-password-strength is-score-${strength.score}`} aria-live="polite">
+              <span className="kg-strength-bar" />
+              <span className="kg-strength-label">Password strength: {strength.label}</span>
+            </div>
+          )}
         </div>
 
-        <button type="submit" className="kg-auth-submit-btn" disabled={submitting}>
-          {isSignup
-            ? 'Continue to Profile & Safety Check'
-            : submitting
+        {isLogin &&
+          errorMsg &&
+          (errorMsg.toLowerCase().includes('confirm') || errorMsg.toLowerCase().includes('expired')) && (
+            <div className="kg-auth-inline-action">
+              <button
+                type="button"
+                className="kg-text-link kg-text-link--bold"
+                onClick={onGoToExpiredLink}
+              >
+                ✉️ Need a fresh link or enter 6-digit code? →
+              </button>
+            </div>
+          )}
+
+        <button type="submit" className="kg-auth-submit-btn kg-touch-target" disabled={submitting}>
+          {isLogin
+            ? submitting
               ? 'Signing in…'
-              : 'Sign In'}
+              : 'Sign In with Password'
+            : 'Continue to Profile & Safety Check →'}
         </button>
 
-        {!isSignup && (
+        {isLogin && (
           <button
             type="button"
-            className="kg-auth-secondary-btn"
+            className="kg-auth-magic-btn kg-touch-target"
             onClick={onMagicLinkSubmit}
             disabled={submitting}
           >
-            <SiteIcon name="mail" size={15} />
+            <SiteIcon name="sparkles" size={15} />
             <span>Send 1-Click Magic Link / Code</span>
           </button>
         )}
       </form>
 
-      {!isSignup && (
-        <div className="kg-auth-footer-links">
-          <button type="button" className="kg-auth-link-btn" onClick={onGoToExpiredLink}>
-            Verification link expired?
-          </button>
+      <div className="kg-auth-partner-handoff">
+        <div className="kg-auth-partner-handoff-head">
+          <SiteIcon name="building" size={15} />
+          <div>
+            <strong>Registering an Academy, Venue, Coach Profile, or Tournament?</strong>
+            <span>Launch our dedicated multi-tenant workspace provisioning wizard.</span>
+          </div>
         </div>
-      )}
-
-      <div className="kg-auth-partner-strip">
-        <p className="kg-auth-partner-strip-title">Running a sports organization or facility?</p>
-        <div className="kg-auth-partner-links">
-          <a
-            href="/partner-signup?role=academy"
-            onClick={e => onNavigatePartner(e, 'academy', 'signup')}
-          >
-            Academy
-          </a>
-          <a
-            href="/partner-signup?role=coach"
-            onClick={e => onNavigatePartner(e, 'coach', 'signup')}
-          >
-            Coach
-          </a>
-          <a
-            href="/partner-signup?role=venue"
-            onClick={e => onNavigatePartner(e, 'venue', 'signup')}
-          >
-            Venue / Turf
-          </a>
-          <a
-            href="/partner-signup?role=tournament"
-            onClick={e => onNavigatePartner(e, 'tournament', 'signup')}
-          >
-            Tournament
-          </a>
+        <div className="kg-auth-partner-pills">
+          {PARTNER_HANDOFF_OPTIONS.map(opt => (
+            <a
+              key={opt.role}
+              href={`/partner-signup?role=${opt.role}`}
+              className="kg-auth-partner-chip"
+              onClick={e => onNavigatePartner(opt.role, e)}
+            >
+              <SiteIcon name={opt.icon} size={13} />
+              <span>{opt.title}</span>
+            </a>
+          ))}
         </div>
       </div>
     </div>
