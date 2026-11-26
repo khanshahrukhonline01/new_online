@@ -1,95 +1,237 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { AuthContext, type AuthContextValue } from '../../shared/auth/useAuth'
+import { TenantContext, type TenantContextValue } from '../../shared/context/tenantContextCore'
+import { RequireTenantMember } from '../../shared/components/RequireTenantMember'
+import type { AuthUserProfile } from '../../integrations/supabase/auth-client'
+import type { DbTenant, DbTenantMembership } from '../../integrations/supabase/tenant-client'
 import AcademyHubPage from './AcademyHubPage'
-import { clearAcademySaaSMemoryStore } from './academySaaSClient'
 
-describe('AcademyHubPage SaaS Workspace Suite', () => {
-  beforeEach(() => {
-    clearAcademySaaSMemoryStore()
-  })
+function makeAuthValue(user: AuthUserProfile | null): AuthContextValue {
+  return {
+    user,
+    isAuthenticated: Boolean(user),
+    modalOpen: false,
+    intent: { tab: 'login' },
+    openAuth: vi.fn(),
+    closeAuth: vi.fn(),
+    setAuthenticatedUser: vi.fn(),
+    signOut: vi.fn(async () => {}),
+    clearIntent: vi.fn(),
+  }
+}
 
-  it('renders 100% Free Grassroots Launch Access banner with ₹3,499/mo Pro unlocked value', () => {
-    const html = renderToStaticMarkup(<AcademyHubPage initialAcademySlug="bengaluru-fc-academy" />)
+const sampleAcademyTenant: DbTenant = {
+  id: 'tenant-acad-101',
+  slug: 'elite-strike-academy',
+  name: 'Elite Strike Football Academy',
+  tenant_type: 'academy',
+  status: 'active',
+  verification_status: 'unverified',
+  city: 'Bengaluru',
+  state: 'Karnataka',
+  sport: 'Football',
+  upi_vpa: 'elitestrike@oksbi',
+  created_at: '2026-11-26T00:00:00Z',
+  updated_at: '2026-11-26T00:00:00Z',
+}
 
-    expect(html).toContain('100% Free Grassroots Launch Access')
-    expect(html).toContain('Academy Pro Hub (₹3,499/mo Value) Unlocked Without Charges')
-    expect(html).toContain('KhelGrid is empowering grassroots sports academies across India')
-    expect(html).toContain('View Public Academy Page')
-  })
+const secondAcademyTenant: DbTenant = {
+  id: 'tenant-acad-202',
+  slug: 'chennai-racquet-club',
+  name: 'Chennai Racquet Academy',
+  tenant_type: 'academy',
+  status: 'active',
+  verification_status: 'verified',
+  city: 'Chennai',
+  state: 'Tamil Nadu',
+  sport: 'Badminton',
+  created_at: '2026-11-26T00:00:00Z',
+  updated_at: '2026-11-26T00:00:00Z',
+}
 
-  it('renders top KPI metrics strip (Leads, Enrolled Students, Fee Collection, Trial Passes)', () => {
-    const html = renderToStaticMarkup(<AcademyHubPage initialAcademySlug="bengaluru-fc-academy" />)
+function makeMembership(tenant: DbTenant, role: DbTenantMembership['role'], userId = 'usr-owner-1'): DbTenantMembership {
+  return {
+    id: `mem-${tenant.id}`,
+    tenant_id: tenant.id,
+    user_id: userId,
+    role,
+    status: 'active',
+    created_at: '2026-11-26T00:00:00Z',
+    updated_at: '2026-11-26T00:00:00Z',
+    tenant,
+  }
+}
 
-    expect(html).toContain('Inbound Leads')
-    expect(html).toContain('Enrolled Students')
-    expect(html).toContain('Fee Collection')
-    expect(html).toContain('Trial Passes Issued')
-    expect(html).toContain('new parent enquiries awaiting contact')
-  })
+function makeUser(role: AuthUserProfile['role'] = 'academy', id = 'usr-owner-1'): AuthUserProfile {
+  return {
+    id,
+    name: 'Academy Lead',
+    fullName: 'Academy Lead',
+    email: 'lead@academy.in',
+    role,
+    isVerified: true,
+    createdAt: '2026-11-26T00:00:00Z',
+  }
+}
 
-  it('renders all operational workspaces in navigation tabs including daily attendance', () => {
-    const html = renderToStaticMarkup(<AcademyHubPage initialAcademySlug="bengaluru-fc-academy" />)
+function makeTenantContext(overrides: Partial<TenantContextValue> = {}): TenantContextValue {
+  const mem1 = makeMembership(sampleAcademyTenant, 'owner')
+  return {
+    userId: 'usr-owner-1',
+    isAuthenticated: true,
+    currentTenant: sampleAcademyTenant,
+    currentMembership: mem1,
+    userRole: 'owner',
+    memberships: [mem1],
+    pendingInvitations: [],
+    isLoading: false,
+    error: null,
+    refreshTenant: vi.fn(async () => {}),
+    switchTenant: vi.fn(async () => true),
+    switchTenantBySlug: vi.fn(async () => true),
+    ...overrides,
+  }
+}
 
-    expect(html).toContain('Admissions CRM &amp; Leads')
-    expect(html).toContain('Batch Schedules')
-    expect(html).toContain('Student Fees &amp; UPI')
-    expect(html).toContain('Cash &amp; UPI Ledger')
-    expect(html).toContain('Daily Attendance')
-    expect(html).toContain('Staff &amp; Coaches')
-    expect(html).toContain('Trial Passes')
-    expect(html).toContain('WhatsApp &amp; UPI Setup')
-  })
-
-  it('renders default leads with 1-click WhatsApp parent action and token badge', () => {
-    const html = renderToStaticMarkup(<AcademyHubPage initialAcademySlug="bengaluru-fc-academy" />)
-
-    expect(html).toContain('Aarav Sundaram')
-    expect(html).toContain('Ramesh Sundaram')
-    expect(html).toContain('ENQ-FTB')
-    expect(html).toContain('https://wa.me/919845012345?text=')
-  })
-
-  it('renders academy switcher with registered academies and setup new academy trigger', () => {
-    const html = renderToStaticMarkup(<AcademyHubPage initialAcademySlug="bengaluru-fc-academy" />)
-
-    expect(html).toContain('Switch Academy Management Workspace:')
-    expect(html).toContain('+ Setup New Academy')
-    expect(html).toContain('Share WhatsApp Card')
-    expect(html).toContain('Bengaluru FC Residential Academy')
-    expect(html).toContain('Pullela Gopichand Badminton Academy')
-  })
-
-  it('renders role selector, DPDP minor shield toggle, and support concierge', () => {
-    const html = renderToStaticMarkup(<AcademyHubPage initialAcademySlug="bengaluru-fc-academy" />)
-
-    expect(html).toContain('Role:')
-    expect(html).toContain('DPDP Minor Shield: ON (Masked)')
-    expect(html).toContain('Support Concierge')
-    expect(html).toContain('https://wa.me/919876543210?text=')
-  })
-
-  it('renders 5-step pre-launch onboarding checklist banner', () => {
-    const html = renderToStaticMarkup(<AcademyHubPage initialAcademySlug="bengaluru-fc-academy" />)
-
-    expect(html).toContain('Pre-Launch Readiness Checklist')
-    expect(html).toContain('Configure Direct Bank UPI VPA')
-    expect(html).toContain('Create Your First Training Batch')
-    expect(html).toContain('Import or Enroll Student Trainees')
-    expect(html).toContain('Execute Pitch-Side Ground Roll-Call')
-    expect(html).toContain('Assign Coaching Staff &amp; POCSO Officer')
-  })
-
-  it('wires WorkspaceShell workspaceSection prop directly to the corresponding sub-panel', () => {
-    const batchesHtml = renderToStaticMarkup(
-      <AcademyHubPage initialAcademySlug="bengaluru-fc-academy" workspaceSection="batches" />
+describe('AcademyHubPage Multi-Tenant SaaS Workspace Suite', () => {
+  it('fails closed when unauthenticated — exposes zero curated demo academies or fake KPIs', () => {
+    const html = renderToStaticMarkup(
+      <AuthContext.Provider value={makeAuthValue(null)}>
+        <TenantContext.Provider
+          value={makeTenantContext({
+            userId: null,
+            isAuthenticated: false,
+            currentTenant: null,
+            currentMembership: null,
+            memberships: [],
+          })}
+        >
+          <RequireTenantMember personaLabel="Academy" onboardingRole="academy" requiredTenantTypes={['academy']}>
+            <AcademyHubPage />
+          </RequireTenantMember>
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
     )
-    expect(batchesHtml).toContain('Coaching Batches &amp; Timings')
-    expect(batchesHtml).toContain('Create Coaching Batch')
+
+    expect(html).not.toContain('Bengaluru FC Residential Academy')
+    expect(html).not.toContain('Pullela Gopichand')
+    expect(html).not.toContain('+12.4% MoM')
+    expect(html).not.toContain('Aarav Sundaram')
+    expect(html).toContain('Sign in required')
+    expect(html).toContain('Sign in to access the private academy workspace')
+  })
+
+  it('rejects non-academy memberships safely on Academy routes', () => {
+    const coachOnlyTenant: DbTenant = {
+      ...sampleAcademyTenant,
+      id: 'tenant-coach-only',
+      slug: 'solo-coach',
+      name: 'Solo Coach Hub',
+      tenant_type: 'coach',
+    }
+    const html = renderToStaticMarkup(
+      <AuthContext.Provider value={makeAuthValue(makeUser('coach', 'usr-coach-1'))}>
+        <TenantContext.Provider
+          value={makeTenantContext({
+            userId: 'usr-coach-1',
+            currentTenant: coachOnlyTenant,
+            currentMembership: makeMembership(coachOnlyTenant, 'owner', 'usr-coach-1'),
+            memberships: [makeMembership(coachOnlyTenant, 'owner', 'usr-coach-1')],
+          })}
+        >
+          <RequireTenantMember personaLabel="Academy" onboardingRole="academy" requiredTenantTypes={['academy']}>
+            <AcademyHubPage />
+          </RequireTenantMember>
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
+    )
+
+    expect(html).toContain('No active Academy membership')
+    expect(html).not.toContain('Solo Coach Hub')
+  })
+
+  it('renders authorized multi-tenant academy overview with genuine 0-record metrics for fresh tenants', () => {
+    const mem1 = makeMembership(sampleAcademyTenant, 'owner')
+    const mem2 = makeMembership(secondAcademyTenant, 'org_admin')
+    const html = renderToStaticMarkup(
+      <AuthContext.Provider value={makeAuthValue(makeUser())}>
+        <TenantContext.Provider
+          value={makeTenantContext({
+            memberships: [mem1, mem2],
+          })}
+        >
+          <AcademyHubPage />
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
+    )
+
+    expect(html).toContain('Elite Strike Football Academy')
+    expect(html).toContain('Academy Owner')
+    expect(html).toContain('Chennai Racquet Academy')
+    expect(html).not.toContain('Bengaluru FC Residential Academy')
+    expect(html).not.toContain('+12.4% MoM')
+    expect(html).not.toContain('id="academy-role-select"')
+    expect(html).toContain('Active / Total Athletes')
+    expect(html).toContain('0 / 0')
+  })
+
+  it('enforces 7-role RBAC UI boundaries between Coach, Finance Manager, Admissions Manager, and Owner', () => {
+    const coachMem = makeMembership(sampleAcademyTenant, 'coach', 'usr-coach-2')
+    const coachHtml = renderToStaticMarkup(
+      <AuthContext.Provider value={makeAuthValue(makeUser('coach', 'usr-coach-2'))}>
+        <TenantContext.Provider
+          value={makeTenantContext({
+            userId: 'usr-coach-2',
+            currentMembership: coachMem,
+            memberships: [coachMem],
+          })}
+        >
+          <AcademyHubPage initialTab="fees" />
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
+    )
+    expect(coachHtml).toContain('Coach / Training Staff')
+    expect(coachHtml).toContain('Section Restricted by Academy Role')
+    expect(coachHtml).not.toContain('Staff &amp; Roles')
+    expect(coachHtml).not.toContain('Fee Ledger (UPI)')
+
+    const financeMem = makeMembership(sampleAcademyTenant, 'finance_manager', 'usr-fin-1')
+    const financeHtml = renderToStaticMarkup(
+      <AuthContext.Provider value={makeAuthValue(makeUser('academy', 'usr-fin-1'))}>
+        <TenantContext.Provider
+          value={makeTenantContext({
+            userId: 'usr-fin-1',
+            currentMembership: financeMem,
+            memberships: [financeMem],
+          })}
+        >
+          <AcademyHubPage initialTab="fees" />
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
+    )
+    expect(financeHtml).toContain('Finance Manager')
+    expect(financeHtml).toContain('Fee Tracking &amp; Direct UPI Ledger')
+    expect(financeHtml).toContain('Payment Collection Paused')
+  })
+
+  it('wires WorkspaceShell workspaceSection prop directly onto Batches & Coaches modules', () => {
+    const batchesHtml = renderToStaticMarkup(
+      <AuthContext.Provider value={makeAuthValue(makeUser())}>
+        <TenantContext.Provider value={makeTenantContext()}>
+          <AcademyHubPage workspaceSection="batches" />
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
+    )
+    expect(batchesHtml).toContain('Training Programmes, Batches &amp; Calendar')
 
     const coachesHtml = renderToStaticMarkup(
-      <AcademyHubPage initialAcademySlug="bengaluru-fc-academy" workspaceSection="coaches" />
+      <AuthContext.Provider value={makeAuthValue(makeUser())}>
+        <TenantContext.Provider value={makeTenantContext()}>
+          <AcademyHubPage workspaceSection="coaches" />
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
     )
-    expect(coachesHtml).toContain('Coaching Staff &amp; Operational Roles')
-    expect(coachesHtml).toContain('Add Staff Member')
+    expect(coachesHtml).toContain('Coaches &amp; Instruction Team')
   })
 })

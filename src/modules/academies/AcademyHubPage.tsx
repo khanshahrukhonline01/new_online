@@ -1,900 +1,597 @@
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { EmptyState } from '../../shared/components/ui/EmptyState'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { getStoredAuthUser } from '../../integrations/supabase/auth-client'
-import { PartnerVerificationStatusTracker } from '../partner/components/PartnerVerificationStatusTracker'
-import { CURATED_ACADEMIES } from '../../shared/data/curatedEntitiesData'
+import { useAuth } from '../../shared/auth/useAuth'
 import { useTenant } from '../../shared/context/useTenant'
+import { getTenantAuditLogs } from '../../integrations/supabase/tenant-client'
 import {
-  type AcademyUserRole,
-  canRoleAccessTab,
-  getAcademyPreLaunchChecklist,
-  generateSupportConciergeWhatsAppUrl,
-  reconcileAcademyFeeLedger,
-} from '../../shared/saas/saasLaunchReadinessService'
-import { generateWhatsAppShareProfileUrl } from '../../shared/saas/saasSharedOperations'
-import { getAvailableTournaments } from '../events/tournamentOpsEngine'
-import {
-  getAcademyEquipment,
-  getAcademyKitDistributions,
-  getAcademySafetyIncidents,
-  getAcademyStaffSafeguarding,
-} from './academyInventoryService'
-import {
-  confirmAndVerifyAcademy,
-  getAcademyBatches,
-  getAcademyFeeTransactions,
-  getAcademyLeads,
-  getAcademyLedgerSummary,
-  getAcademySaaSSummary,
-  getAcademySettings,
-  getAcademyStaff,
-  getAcademyStudents,
-  getAcademyTrialPasses,
-  getRegisteredAcademies,
-  hasCompletedOnboarding,
-  revokeAcademyVerification,
-  updateLeadStatus,
-  type AcademyBatch,
-  type AcademyLead,
-  type AcademyStudent,
-  type AcademyTrialPass,
-  type RegisteredAcademy,
-} from './academySaaSClient'
-import {
-  ACADEMY_HUB_TABS,
-  resolveAcademyTabForSection,
-  type AcademyHubTab,
+  ACADEMY_WORKSPACE_NAV_ITEMS,
+  canAccessAcademySection,
+  getAcademyRoleCapabilities,
+  resolveAcademyRouteTarget,
+  type AcademyWorkspaceSectionId,
 } from './academyHubTypes'
-import { AcademyAdmissionsAndPassesPanel } from './components/AcademyAdmissionsAndPassesPanel'
-import { AcademyBatchesAndAttendancePanel } from './components/AcademyBatchesAndAttendancePanel'
-import { AcademyFeesAndLedgerPanel } from './components/AcademyFeesAndLedgerPanel'
-import { AcademyComplianceAndSettingsPanel } from './components/AcademyComplianceAndSettingsPanel'
-import { AcademyOnboardingModal } from './components/AcademyOnboardingModal'
-import { AcademyEnrollmentModals } from './components/AcademyEnrollmentModals'
-import { AcademyOpsAndBillingModals } from './components/AcademyOpsAndBillingModals'
+import {
+  listAcademyAnnouncements,
+  listAcademyAthletes,
+  listAcademyBatches,
+  listAcademyBranches,
+  listAcademyCoaches,
+  listAcademyEquipment,
+  listAcademyFacilities,
+  listAcademyFeeLedger,
+  listAcademyStaffMembers,
+  listAdmissionEnquiries,
+  listTrainingSessions,
+  listTrialPostings,
+  loadAcademyDashboardOverview,
+  loadOrInitializeAcademyProfile,
+  type AcademyAnnouncementRecord,
+  type AcademyAthleteRecord,
+  type AcademyBatchRecord,
+  type AcademyBranchRecord,
+  type AcademyCoachRecord,
+  type AcademyEnquiryRecord,
+  type AcademyEquipmentRecord,
+  type AcademyFacilityRecord,
+  type AcademyFeeTransactionRecord,
+  type AcademyOverviewPayload,
+  type AcademyProfileRecord,
+  type AcademySessionRecord,
+  type AcademyStaffMemberRecord,
+  type AcademyTrialPostingRecord,
+} from './academyWorkspaceClient'
+import { AcademyOverviewAndProfilePanel } from './components/workspace/AcademyOverviewAndProfilePanel'
+import { AcademyBranchesAndPeoplePanel } from './components/workspace/AcademyBranchesAndPeoplePanel'
+import { AcademyTrainingAndAttendancePanel } from './components/workspace/AcademyTrainingAndAttendancePanel'
+import { AcademyAdmissionsAndFacilitiesPanel } from './components/workspace/AcademyAdmissionsAndFacilitiesPanel'
+import { AcademyGovernanceAndCommsPanel } from './components/workspace/AcademyGovernanceAndCommsPanel'
 import './AcademyHubPage.css'
 
 export interface AcademyHubPageProps {
-  initialAcademySlug?: string
-  initialTab?: AcademyHubTab
   workspaceSection?: string
-  onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
+  currentPath?: string
+  initialTab?: AcademyWorkspaceSectionId
+  onNavigate?: (event?: MouseEvent<HTMLAnchorElement>, target?: string) => void
 }
 
+const ALLOWED_ACADEMY_TENANT_TYPES = new Set([
+  'academy',
+  'club',
+  'school',
+  'college',
+  'university',
+  'training_org',
+])
+
+const NAV_GROUPS: readonly { id: 'operations' | 'people' | 'growth' | 'governance'; label: string }[] = [
+  { id: 'operations', label: 'Academy Foundation' },
+  { id: 'people', label: 'People & Schedule' },
+  { id: 'growth', label: 'Admissions & Venues' },
+  { id: 'governance', label: 'Reports, Team & Security' },
+]
+
+/**
+ * KhelGrid Multi-Tenant SaaS Academy Dashboard.
+ *
+ * Security & correctness invariants:
+ * - Fail-closed against unauthenticated or unassigned callers; never falls back to
+ *   static/curated demo academies or fabricated statistics.
+ * - Enforces active tenant membership + server-verified role + optional branch scoping.
+ * - Zero client-side role switcher dropdowns or self-verification overrides.
+ */
 export default function AcademyHubPage({
-  initialAcademySlug,
-  initialTab,
   workspaceSection,
+  currentPath,
+  initialTab,
   onNavigate,
 }: AcademyHubPageProps) {
+  const { user: authUser, openAuth } = useAuth()
   const {
+    userId,
+    isAuthenticated,
     currentTenant,
-    userRole: verifiedRole,
+    currentMembership,
     memberships,
+    isLoading: tenantLoading,
     switchTenant,
-    refreshTenant,
   } = useTenant()
 
-  const [selectedSlug, setSelectedSlug] = useState<string>(() => {
-    if (initialAcademySlug) return initialAcademySlug
-    if (typeof window !== 'undefined') {
-      const q = new URLSearchParams(window.location.search).get('academy')
-      if (q) return q
-    }
-    return currentTenant?.slug || 'bengaluru-fc-academy'
-  })
+  const effectivePath =
+    currentPath ?? (typeof window !== 'undefined' ? window.location.pathname : '')
+
+  const routeTarget = useMemo(
+    () => resolveAcademyRouteTarget(effectivePath, workspaceSection),
+    [effectivePath, workspaceSection],
+  )
+
+  const [activeSection, setActiveSection] = useState<AcademyWorkspaceSectionId>(
+    initialTab ?? routeTarget.section,
+  )
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
+  const [dpdpMaskEnabled, setDpdpMaskEnabled] = useState(true)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const [overview, setOverview] = useState<AcademyOverviewPayload | null>(null)
+  const [profile, setProfile] = useState<AcademyProfileRecord | null>(null)
+  const [branches, setBranches] = useState<AcademyBranchRecord[]>([])
+  const [athletes, setAthletes] = useState<AcademyAthleteRecord[]>([])
+  const [coaches, setCoaches] = useState<AcademyCoachRecord[]>([])
+  const [batches, setBatches] = useState<AcademyBatchRecord[]>([])
+  const [sessions, setSessions] = useState<AcademySessionRecord[]>([])
+  const [enquiries, setEnquiries] = useState<AcademyEnquiryRecord[]>([])
+  const [trialPostings, setTrialPostings] = useState<AcademyTrialPostingRecord[]>([])
+  const [facilities, setFacilities] = useState<AcademyFacilityRecord[]>([])
+  const [equipment, setEquipment] = useState<AcademyEquipmentRecord[]>([])
+  const [announcements, setAnnouncements] = useState<AcademyAnnouncementRecord[]>([])
+  const [staffMembers, setStaffMembers] = useState<AcademyStaffMemberRecord[]>([])
+  const [feeTransactions, setFeeTransactions] = useState<AcademyFeeTransactionRecord[]>([])
+  const [auditLogs, setAuditLogs] = useState<
+    { id: string; action: string; entity_type: string; details: Record<string, unknown>; created_at: string }[]
+  >([])
 
   useEffect(() => {
-    if (currentTenant?.slug && !initialAcademySlug) {
-      setSelectedSlug(currentTenant.slug)
+    setActiveSection(initialTab ?? routeTarget.section)
+  }, [initialTab, routeTarget.section])
+
+  const academyMemberships = useMemo(
+    () =>
+      memberships.filter(
+        m =>
+          m.status === 'active' &&
+          m.tenant &&
+          m.tenant.status === 'active' &&
+          ALLOWED_ACADEMY_TENANT_TYPES.has(m.tenant.tenant_type),
+      ),
+    [memberships],
+  )
+
+  const activeAcademyMembership = useMemo(() => {
+    if (
+      currentMembership &&
+      currentTenant &&
+      ALLOWED_ACADEMY_TENANT_TYPES.has(currentTenant.tenant_type)
+    ) {
+      return currentMembership
     }
-  }, [currentTenant?.slug, initialAcademySlug])
+    return academyMemberships[0] || null
+  }, [currentMembership, currentTenant, academyMemberships])
 
-  const registeredAcademies = getRegisteredAcademies()
-  const activeMemberships = (memberships || []).filter(m => m.status === 'active')
+  const activeTenant = activeAcademyMembership?.tenant || (
+    currentTenant && ALLOWED_ACADEMY_TENANT_TYPES.has(currentTenant.tenant_type)
+      ? currentTenant
+      : null
+  )
 
-  const fallbackCurated = CURATED_ACADEMIES.find(a => a.slug === selectedSlug)
-  const currentAcademy: RegisteredAcademy =
-    currentTenant && (currentTenant.slug === selectedSlug || !registeredAcademies.some(a => a.slug === selectedSlug))
-      ? {
-          id: currentTenant.id,
-          slug: currentTenant.slug,
-          name: currentTenant.name,
-          city: currentTenant.city || 'Bengaluru',
-          state: currentTenant.state || '',
-          sport: currentTenant.sport || 'Multi-Sport',
-          verificationStatus:
-            currentTenant.verification_status === 'verified'
-              ? 'verified'
-              : currentTenant.status === 'active'
-                ? 'verified'
-                : 'pending_review',
-          isCustom: true,
-        }
-      : registeredAcademies.find(a => a.slug === selectedSlug) ||
-        (fallbackCurated
-          ? {
-              id: fallbackCurated.slug,
-              slug: fallbackCurated.slug,
-              name: fallbackCurated.name,
-              city: fallbackCurated.city,
-              state: fallbackCurated.state || '',
-              sport: fallbackCurated.sport,
-              verificationStatus: 'verified',
-              isCustom: false,
-            }
-          : {
-              id: 'custom-academy',
-              slug: selectedSlug,
-              name: 'National Sports Academy',
-              city: 'Bengaluru',
-              state: 'Karnataka',
-              sport: 'Football',
-              verificationStatus: 'pending_review',
-              isCustom: true,
-            })
+  const verifiedRole = activeAcademyMembership?.role || null
+  const capabilities = useMemo(() => getAcademyRoleCapabilities(verifiedRole), [verifiedRole])
 
-  const leads = getAcademyLeads(selectedSlug)
-  const batches = getAcademyBatches(selectedSlug)
-  const students = getAcademyStudents(selectedSlug)
-  const passes = getAcademyTrialPasses(selectedSlug)
-  const settings = getAcademySettings(selectedSlug, currentAcademy.name)
-  const summary = getAcademySaaSSummary(selectedSlug)
-  const staff = getAcademyStaff(selectedSlug)
-  const feeTransactions = getAcademyFeeTransactions(selectedSlug)
-  const ledgerSummary = getAcademyLedgerSummary(selectedSlug)
+  const visibleNavItems = useMemo(
+    () => ACADEMY_WORKSPACE_NAV_ITEMS.filter(item => canAccessAcademySection(verifiedRole, item.id)),
+    [verifiedRole],
+  )
 
-  const kits = getAcademyKitDistributions(selectedSlug)
-  const equipment = getAcademyEquipment(selectedSlug)
-  const safeguardingStaff = getAcademyStaffSafeguarding(selectedSlug)
-  const safetyIncidents = getAcademySafetyIncidents(selectedSlug)
-  const availableTournaments = getAvailableTournaments()
+  const loadWorkspaceData = useCallback(async () => {
+    if (!isAuthenticated || !userId || !activeTenant?.id || !verifiedRole) {
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    setError(null)
+    try {
+      const tid = activeTenant.id
+      const caps = getAcademyRoleCapabilities(verifiedRole)
 
-  const [activeTab, setActiveTab] = useState<AcademyHubTab>(() => {
-    const fromSection = resolveAcademyTabForSection(workspaceSection)
-    if (fromSection) return fromSection
-    if (initialTab) return initialTab
-    if (typeof window !== 'undefined') {
-      const q = new URLSearchParams(window.location.search).get('tab')
-      if (q && (ACADEMY_HUB_TABS as readonly string[]).includes(q)) {
-        return q as AcademyHubTab
+      const [
+        ovRes,
+        profRes,
+        brList,
+        athList,
+        chList,
+        batList,
+        sessList,
+        enqList,
+        trialList,
+        facList,
+        eqList,
+        annList,
+        staffList,
+        feeList,
+        auditList,
+      ] = await Promise.all([
+        loadAcademyDashboardOverview(tid, selectedBranchId),
+        loadOrInitializeAcademyProfile(tid),
+        listAcademyBranches(tid),
+        listAcademyAthletes(tid, selectedBranchId),
+        listAcademyCoaches(tid),
+        listAcademyBatches(tid, selectedBranchId),
+        listTrainingSessions(tid, selectedBranchId),
+        listAdmissionEnquiries(tid, selectedBranchId),
+        listTrialPostings(tid),
+        listAcademyFacilities(tid),
+        listAcademyEquipment(tid),
+        listAcademyAnnouncements(tid),
+        listAcademyStaffMembers(tid),
+        caps.canViewFinance ? listAcademyFeeLedger(tid) : Promise.resolve([]),
+        caps.canManageSettings ? getTenantAuditLogs(tid) : Promise.resolve([]),
+      ])
+
+      if (ovRes.error) setError(ovRes.error)
+      setOverview(ovRes.overview)
+      if (profRes.data) setProfile(profRes.data)
+      setBranches(brList)
+      setAthletes(athList)
+      setCoaches(chList)
+      setBatches(batList)
+      setSessions(sessList)
+      setEnquiries(enqList)
+      setTrialPostings(trialList)
+      setFacilities(facList)
+      setEquipment(eqList)
+      setAnnouncements(annList)
+      setStaffMembers(staffList)
+      setFeeTransactions(feeList)
+      setAuditLogs(
+        auditList.map(l => ({
+          id: l.id,
+          action: l.action,
+          entity_type: l.entity_type,
+          details: l.details || {},
+          created_at: l.created_at,
+        })),
+      )
+
+      const tenantRecord = activeTenant as unknown as { settings?: Record<string, unknown> }
+      const tenantSettings = tenantRecord.settings || {}
+      if (typeof tenantSettings.dpdpMaskMinorsDefault === 'boolean') {
+        setDpdpMaskEnabled(tenantSettings.dpdpMaskMinorsDefault)
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to sync academy workspace data.')
+    } finally {
+      setLoading(false)
     }
-    return 'leads'
-  })
+  }, [isAuthenticated, userId, activeTenant, verifiedRole, selectedBranchId])
 
   useEffect(() => {
-    const mapped = resolveAcademyTabForSection(workspaceSection)
-    if (mapped) {
-      setActiveTab(mapped)
-    }
-  }, [workspaceSection])
+    void loadWorkspaceData()
+  }, [loadWorkspaceData])
 
-  const [userRole, setUserRole] = useState<AcademyUserRole>(() => {
-    if (verifiedRole === 'coach' || verifiedRole === 'head_coach') return 'head_coach'
-    if (verifiedRole === 'staff' || verifiedRole === 'front_desk') return 'front_desk'
-    return 'director'
-  })
-
-  useEffect(() => {
-    if (verifiedRole) {
-      if (verifiedRole === 'coach' || verifiedRole === 'head_coach') {
-        setUserRole('head_coach')
-      } else if (verifiedRole === 'staff' || verifiedRole === 'front_desk') {
-        setUserRole('front_desk')
-      } else {
-        setUserRole('director')
+  const handleSelectSection = useCallback(
+    (section: AcademyWorkspaceSectionId) => {
+      setActiveSection(section)
+      setFeedback(null)
+      if (onNavigate && effectivePath.startsWith('/academy-hub')) {
+        const navItem = ACADEMY_WORKSPACE_NAV_ITEMS.find(i => i.id === section)
+        const target = navItem?.pathSegment ? `/academy-hub/${navItem.pathSegment}` : '/academy-hub'
+        onNavigate(undefined, target)
       }
-    }
-  }, [verifiedRole])
+    },
+    [effectivePath, onNavigate],
+  )
 
-  const [dpdpSafeMode, setDpdpSafeMode] = useState(true)
-  const [showOnboardingChecklist, setShowOnboardingChecklist] = useState(true)
-  const [bilingualMode, setBilingualMode] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
-  const triggerRefresh = () => setRefreshKey(k => k + 1)
-
-  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const q = new URLSearchParams(window.location.search).get('onboarding')
-      if (q === 'true') return true
-      return !hasCompletedOnboarding() && registeredAcademies.every(a => !a.isCustom)
-    }
-    return false
-  })
-
-  // Operational Modal / Drawer Triggers
-  const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false)
-  const [isAddBatchModalOpen, setIsAddBatchModalOpen] = useState(false)
-  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false)
-  const [isTrialPassModalOpen, setIsTrialPassModalOpen] = useState(false)
-  const [isImportCsvModalOpen, setIsImportCsvModalOpen] = useState(false)
-  const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false)
-  const [isRecordPaymentModalOpen, setIsRecordPaymentModalOpen] = useState(false)
-  const [prefilledTrialLead, setPrefilledTrialLead] = useState<{ studentName: string; parentPhone: string } | null>(null)
-  const [activeTrialPassView, setActiveTrialPassView] = useState<AcademyTrialPass | null>(null)
-  const [activeUpiQrStudent, setActiveUpiQrStudent] = useState<AcademyStudent | null>(null)
-  const [activeReceiptStudent, setActiveReceiptStudent] = useState<AcademyStudent | null>(null)
-  const [activeAttendanceBatch, setActiveAttendanceBatch] = useState<AcademyBatch | null>(null)
-  const [activeBroadcastBatch, setActiveBroadcastBatch] = useState<AcademyBatch | null>(null)
-  const [activeEvaluationStudent, setActiveEvaluationStudent] = useState<AcademyStudent | null>(null)
-  const [activeTournamentBatch, setActiveTournamentBatch] = useState<AcademyBatch | null>(null)
-  const [cancellationModalStudent, setCancellationModalStudent] = useState<AcademyStudent | null>(null)
-
-  const preLaunchChecklist = getAcademyPreLaunchChecklist({
-    hasUpiVpa: Boolean((currentTenant?.upi_vpa || settings.upiVpa) && (currentTenant?.upi_vpa || settings.upiVpa)?.includes('@')),
-    hasBatches: batches.length > 0,
-    hasStudents: students.length > 0,
-    hasTakenAttendance: students.some(s => s.feeStatus === 'paid'),
-    hasConfiguredStaff: staff.length > 0,
-  })
-
-  const feeReconciliation = reconcileAcademyFeeLedger({
-    students,
-    transactions: feeTransactions,
-  })
-
-  const shareWhatsAppCardUrl = generateWhatsAppShareProfileUrl({
-    entityType: 'academy',
-    entityName: currentAcademy.name,
-    slug: currentAcademy.slug,
-    sport: currentAcademy.sport || 'Sports',
-    city: currentAcademy.city,
-    isVerified: currentAcademy.verificationStatus === 'verified',
-  })
-
-  const handleScheduleTrialForLead = (lead: AcademyLead) => {
-    setPrefilledTrialLead({ studentName: lead.studentName, parentPhone: lead.parentPhone })
-    updateLeadStatus(lead.id, 'trial_scheduled', 'Scheduled trial via Hub')
-    setIsTrialPassModalOpen(true)
+  // Fail-closed authenticating gate (also keeps VIEWER (AUTHENTICATING) contract intact)
+  if (tenantLoading) {
+    return (
+      <div className="kg-acad-root" data-testid="academy-workspace-authenticating">
+        <div className="kg-acad-header">
+          <div>
+            <div className="kg-acad-eyebrow-row">
+              <span className="kg-acad-eyebrow">KhelGrid SaaS Academy Workspace</span>
+              <span className="kg-acad-pill is-info" data-testid="academy-role-badge">
+                VIEWER (AUTHENTICATING)
+              </span>
+            </div>
+            <h1>Verifying Academy Workspace Access</h1>
+          </div>
+        </div>
+        <EmptyState
+          title="Verifying authenticated academy membership"
+          description="Checking your encrypted Supabase session and authorized tenant roles."
+        />
+      </div>
+    )
   }
 
-  const publicAcademyUrl = `/academies/${selectedSlug}`
-
-  return (
-    <section className="academy-hub-root" data-testid="academy-hub-page" key={refreshKey}>
-      <div className="academy-hub-launch-banner" data-testid="academy-hub-launch-banner">
-        <div className="academy-hub-banner-content">
-          <div className="academy-hub-banner-icon" aria-hidden="true">
-            <SiteIcon name="award" size={26} />
-          </div>
+  // Fail-closed unauthenticated or unassigned gate (ZERO demo academies / hardcoded records)
+  if (!isAuthenticated || !userId || !activeTenant || !verifiedRole) {
+    return (
+      <div className="kg-acad-root" data-testid="academy-workspace-blocked">
+        <div className="kg-acad-header">
           <div>
-            <span className="academy-hub-banner-badge">100% Free Grassroots Launch Access</span>
-            <h4>Academy Pro Hub (₹3,499/mo Value) Unlocked Without Charges</h4>
-            <p>
-              KhelGrid is empowering grassroots sports academies across India with full admissions CRM, batch scheduling, automated UPI fee collection, and trial passes completely free during our launch phase.
-            </p>
+            <div className="kg-acad-eyebrow-row">
+              <span className="kg-acad-eyebrow">KhelGrid SaaS Academy Workspace</span>
+              <span className="kg-acad-pill is-warning" data-testid="academy-role-badge">
+                RESTRICTED ACCESS
+              </span>
+            </div>
+            <h1>Authorized Academy Membership Required</h1>
           </div>
         </div>
-
-        <div className="academy-hub-banner-actions">
-          <a
-            href={publicAcademyUrl}
-            className="academy-hub-public-page-btn"
-            onClick={e => onNavigate?.(e, publicAcademyUrl)}
-          >
-            <SiteIcon name="external-link" size={16} /> View Public Academy Page
-          </a>
-        </div>
-      </div>
-
-      <div className="academy-hub-header-row">
-        <div className="academy-hub-title">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
-            <p className="eyebrow" style={{ color: '#059669', fontWeight: 800, margin: 0 }}>
-              KHELGRID · B2B ACADEMY HUB
-            </p>
-            {currentAcademy.verificationStatus === 'verified' ? (
-              <span className="academy-verified-pill verified">
-                <SiteIcon name="shield-check" size={13} /> KhelGrid Verified Academy
-              </span>
+        <EmptyState
+          title={isAuthenticated ? 'No active Academy workspace assigned' : 'Sign in to access your Academy Workspace'}
+          description={
+            isAuthenticated
+              ? 'Your account does not hold an active role for an academy or training centre tenant. Register an academy or accept a staff invitation to continue.'
+              : 'Private athlete rosters, guardian contacts, attendance records, and admissions pipelines require authenticated KhelGrid access.'
+          }
+          action={
+            isAuthenticated ? (
+              <a
+                href="/partner-signup?role=academy"
+                className="kg-acad-btn-primary"
+                onClick={e => onNavigate?.(e, '/partner-signup?role=academy')}
+              >
+                Register Sports Academy
+              </a>
             ) : (
-              <span className="academy-verified-pill pending">
-                <SiteIcon name="alert-triangle" size={13} /> Pending Admin Verification
-              </span>
-            )}
-          </div>
-          <h1>{currentAcademy.name}</h1>
-          <p style={{ color: '#64748b', margin: 0 }}>
-            {currentAcademy.city}{currentAcademy.state ? `, ${currentAcademy.state}` : ''} · {currentAcademy.sport || 'Multi-Sport'} Academy Operations
-          </p>
-        </div>
-
-        <div className="academy-hub-switcher">
-          <label htmlFor="academy-hub-select">Switch Academy Management Workspace:</label>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <select
-              id="academy-hub-select"
-              className="academy-hub-select"
-              value={currentTenant?.slug || selectedSlug}
-              onChange={async e => {
-                const targetVal = e.target.value
-                const membership = activeMemberships.find(
-                  m => m.tenant_id === targetVal || m.tenant?.slug === targetVal
-                )
-                if (membership) {
-                  await switchTenant(membership.tenant_id)
-                  if (membership.tenant?.slug) {
-                    setSelectedSlug(membership.tenant.slug)
-                  }
-                } else {
-                  setSelectedSlug(targetVal)
-                }
-              }}
-            >
-              {activeMemberships.length > 0 && (
-                <optgroup label="Your Authorized Workspaces (PostgreSQL)">
-                  {activeMemberships.map(m => (
-                    <option key={m.id} value={m.tenant?.slug || m.tenant_id}>
-                      {m.tenant?.name || `Academy (${m.tenant_id.slice(0, 8)})`} ({m.tenant?.city || 'India'} · {m.tenant?.sport || 'Sports'}) — Role: {m.role}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {activeMemberships.length > 0 ? (
-                <optgroup label="Registered &amp; Demo Academies">
-                  {registeredAcademies.map(a => (
-                    <option key={a.slug} value={a.slug}>
-                      {a.name} ({a.city} · {a.sport}) {a.isCustom ? '★ Your Academy' : ''}
-                    </option>
-                  ))}
-                </optgroup>
-              ) : (
-                registeredAcademies.map(a => (
-                  <option key={a.slug} value={a.slug}>
-                    {a.name} ({a.city} · {a.sport}) {a.isCustom ? '★ Your Academy' : ''}
-                  </option>
-                ))
-              )}
-            </select>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>Role:</span>
-              {verifiedRole ? (
-                <span
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: '6px',
-                    background: '#ecfdf5',
-                    border: '1px solid #a7f3d0',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    color: '#065f46',
-                  }}
-                  title="Role authorized by PostgreSQL tenant_memberships"
-                >
-                  ✓ {verifiedRole.toUpperCase()}
-                </span>
-              ) : (
-                <span
-                  style={{
-                    fontSize: '11px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    padding: '3px 8px',
-                    background: '#f1f5f9',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '6px',
-                    fontWeight: 700,
-                    color: '#64748b',
-                  }}
-                  title="Authoritative role is determined by PostgreSQL tenant memberships."
-                >
-                  VIEWER (AUTHENTICATING)
-                </span>
-              )}
-            </div>
-
-            <button
-              type="button"
-              className="academy-hub-btn-outline"
-              onClick={() => setBilingualMode(v => !v)}
-              style={{
-                padding: '7px 11px',
-                fontSize: '12px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                background: bilingualMode ? '#eff6ff' : '#ffffff',
-                borderColor: bilingualMode ? '#3b82f6' : '#cbd5e1',
-                color: bilingualMode ? '#1d4ed8' : '#475569',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-              title="Toggle Hindi/English bilingual mode for pitch-side coaching and parent interactions"
-            >
-              <span>🌐 {bilingualMode ? 'English UI' : 'हिंदी / द्विभाषी'}</span>
-            </button>
-
-            <button
-              type="button"
-              className="academy-hub-btn-outline"
-              onClick={() => setDpdpSafeMode(v => !v)}
-              style={{
-                padding: '7px 11px',
-                fontSize: '12px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                background: dpdpSafeMode ? '#ecfdf5' : '#ffffff',
-                borderColor: dpdpSafeMode ? '#10b981' : '#cbd5e1',
-                color: dpdpSafeMode ? '#047857' : '#475569',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-              title="DPDP Act 2023 Minor Privacy Safe Mode (masks phone & emails by default)"
-            >
-              <SiteIcon name="shield-check" size={14} />
-              <span>DPDP Minor Shield: {dpdpSafeMode ? 'ON (Masked)' : 'OFF (Admin Visible)'}</span>
-            </button>
-
-            <a
-              href={generateSupportConciergeWhatsAppUrl({
-                academyName: currentAcademy.name,
-                directorName: settings.directorName || 'Director',
-                queryType: 'onboarding',
-              })}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="academy-hub-btn-outline"
-              style={{
-                padding: '7px 11px',
-                fontSize: '12px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                textDecoration: 'none',
-                color: '#15803d',
-                borderColor: '#86efac',
-                background: '#f0fdf4',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-              title="KhelGrid Onboarding & Support Concierge on WhatsApp"
-            >
-              <SiteIcon name="message" size={14} />
-              <span>Support Concierge</span>
-            </a>
-
-            <button
-              type="button"
-              className="academy-hub-btn-outline"
-              onClick={() => setIsOnboardingModalOpen(true)}
-              style={{ padding: '8px 12px', fontSize: '13px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-            >
-              <SiteIcon name="sparkles" size={14} />
-              <span>+ Setup New Academy</span>
-            </button>
-
-            <a
-              href={shareWhatsAppCardUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="academy-hub-btn-outline"
-              style={{
-                padding: '8px 12px',
-                fontSize: '13px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                textDecoration: 'none',
-                color: '#047857',
-                borderColor: '#10b981',
-                cursor: 'pointer',
-              }}
-              title="Broadcast your academy profile and trial admissions on WhatsApp"
-            >
-              <SiteIcon name="share" size={14} />
-              <span>Share WhatsApp Card</span>
-            </a>
-          </div>
-        </div>
-      </div>
-
-      {(() => {
-        const authUser = getStoredAuthUser()
-        const isPlatformModerator = authUser?.role === 'admin' || authUser?.role === 'moderator'
-
-        if (currentAcademy.verificationStatus !== 'verified') {
-          return (
-            <>
-              {!workspaceSection && (
-                <PartnerVerificationStatusTracker
-                  persona="academy"
-                  tenant={currentTenant}
-                  authUser={authUser}
-                  entitySlug={currentAcademy.slug}
-                  entityName={currentAcademy.name}
-                  localVerificationStatus={currentAcademy.verificationStatus}
-                />
-              )}
-              {isPlatformModerator && (
-                <div className="academy-verification-status-banner pending">
-                  <div className="academy-verification-status-text">
-                    <SiteIcon name="alert-triangle" size={20} className="status-banner-icon pending" />
-                    <div>
-                      <strong>Verification Tag Pending · Moderator Override Available</strong>
-                      <p>
-                        Internal SaaS operations are active. Grant the official public <strong>&quot;KhelGrid Verified&quot;</strong> badge once registry evidence is confirmed.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="academy-hub-verify-now-btn"
-                    onClick={() => {
-                      confirmAndVerifyAcademy(currentAcademy.slug)
-                      triggerRefresh()
-                    }}
-                    title="Moderator / Admin Action: Confirm credentials and grant verified badge"
-                  >
-                    <SiteIcon name="shield-check" size={14} />
-                    <span>Confirm &amp; Grant Verified Tag (Admin)</span>
-                  </button>
-                </div>
-              )}
-            </>
-          )
-        }
-
-        return (
-          <div className="academy-verification-status-banner verified">
-            <div className="academy-verification-status-text">
-              <SiteIcon name="shield-check" size={20} className="status-banner-icon verified" />
-              <div>
-                <strong style={{ color: '#065f46' }}>Official KhelGrid Verified Partner</strong>
-                <p style={{ color: '#047857', margin: 0, fontSize: '0.84rem' }}>
-                  Credentials and facility verified by KhelGrid Admin Desk. Your public listing displays the official verified badge across search and player trial discovery.
-                </p>
-              </div>
-            </div>
-            {currentAcademy.isCustom && isPlatformModerator && (
               <button
                 type="button"
-                className="academy-hub-btn-outline"
-                style={{ fontSize: '0.75rem', padding: '4px 8px' }}
-                onClick={() => {
-                  revokeAcademyVerification(currentAcademy.slug)
-                  triggerRefresh()
-                }}
-                title="Admin Action: Revert to pending review"
+                className="kg-acad-btn-primary"
+                onClick={() => openAuth({ tab: 'login' })}
               >
-                Revoke Tag (Admin)
+                Sign In to Continue
               </button>
-            )}
-          </div>
-        )
-      })()}
-
-      {showOnboardingChecklist && (
-        <div
-          data-testid="pre-launch-checklist"
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderLeft: preLaunchChecklist.isReadyForLaunch ? '4px solid #10b981' : '4px solid #f59e0b',
-            borderRadius: '10px',
-            padding: '16px 20px',
-            marginBottom: '1.25rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <SiteIcon name={preLaunchChecklist.isReadyForLaunch ? 'check-circle' : 'sparkles'} size={18} />
-              <strong style={{ fontSize: '15px', color: '#0f172a' }}>
-                Pre-Launch Readiness Checklist ({preLaunchChecklist.steps.filter(s => s.isCompleted).length}/{preLaunchChecklist.steps.length} Complete · {preLaunchChecklist.progressPercentage}%)
-              </strong>
-              {preLaunchChecklist.isReadyForLaunch ? (
-                <span style={{ fontSize: '12px', background: '#ecfdf5', color: '#047857', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
-                  Ready to Launch
-                </span>
-              ) : (
-                <span style={{ fontSize: '12px', background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
-                  Setup In Progress
-                </span>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowOnboardingChecklist(false)}
-              style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', cursor: 'pointer', padding: '4px' }}
-              title="Dismiss checklist"
-            >
-              ✕ Dismiss
-            </button>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
-            {preLaunchChecklist.steps.map(step => (
-              <div
-                key={step.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '8px',
-                  padding: '8px 10px',
-                  background: step.isCompleted ? '#f0fdf4' : '#f8fafc',
-                  border: step.isCompleted ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                }}
-              >
-                <SiteIcon name={step.isCompleted ? 'check-circle' : 'sparkles'} size={16} />
-                <div>
-                  <div style={{ fontWeight: 600, color: step.isCompleted ? '#166534' : '#334155' }}>
-                    {step.title}
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>
-                    {step.description}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="academy-hub-kpi-grid">
-        <div className="academy-hub-kpi-card">
-          <div className="academy-hub-kpi-header">
-            <span>Inbound Leads</span>
-            <SiteIcon name="user" size={18} />
-          </div>
-          <div className="academy-hub-kpi-value">{summary.totalLeads}</div>
-          <p className="academy-hub-kpi-sub success">
-            <span className="coach-trend-pill positive">+{summary.newLeadsCount} this week</span> {summary.newLeadsCount} new parent enquiries awaiting contact
-          </p>
-        </div>
-
-        <div className="academy-hub-kpi-card">
-          <div className="academy-hub-kpi-header">
-            <span>Enrolled Students</span>
-            <SiteIcon name="badge-check" size={18} />
-          </div>
-          <div className="academy-hub-kpi-value">{summary.totalStudents}</div>
-          <p className="academy-hub-kpi-sub">
-            <span className="coach-trend-pill positive">+12.4% MoM</span> Across {summary.totalBatches} active coaching batches
-          </p>
-        </div>
-
-        <div className="academy-hub-kpi-card">
-          <div className="academy-hub-kpi-header">
-            <span>Fee Collection</span>
-            <SiteIcon name="calendar-check" size={18} />
-          </div>
-          <div className="academy-hub-kpi-value">₹{summary.totalRevenue.toLocaleString('en-IN')}</div>
-          <p className="academy-hub-kpi-sub success">
-            <span className="coach-trend-pill positive">{summary.collectionRate}% collected</span> {summary.collectionRate}% collected · ₹{summary.pendingRevenue.toLocaleString('en-IN')} pending
-          </p>
-        </div>
-
-        <div className="academy-hub-kpi-card">
-          <div className="academy-hub-kpi-header">
-            <span>Trial Passes Issued</span>
-            <SiteIcon name="check-circle" size={18} />
-          </div>
-          <div className="academy-hub-kpi-value">{summary.trialPassesCount}</div>
-          <p className="academy-hub-kpi-sub">
-            <span className="coach-trend-pill neutral">Active Gate Passes</span> Digital passes with verifiable QR
-          </p>
-        </div>
+            )
+          }
+        />
       </div>
+    )
+  }
 
-      <nav className="academy-hub-nav-tabs" aria-label="Academy Hub Workspaces">
-        {canRoleAccessTab(userRole, 'leads') && (
-          <button type="button" className={`academy-hub-tab-btn ${activeTab === 'leads' ? 'active' : ''}`} onClick={() => setActiveTab('leads')}>
-            <SiteIcon name="mail" size={18} /> Admissions CRM &amp; Leads
-            {summary.newLeadsCount > 0 && <span className="academy-hub-tab-badge">+{summary.newLeadsCount}</span>}
-          </button>
-        )}
+  const actorName = authUser?.fullName || authUser?.name || authUser?.email || 'Academy Staff'
+  const sectionPermitted = canAccessAcademySection(verifiedRole, activeSection)
 
-        {canRoleAccessTab(userRole, 'batches') && (
-          <button type="button" className={`academy-hub-tab-btn ${activeTab === 'batches' ? 'active' : ''}`} onClick={() => setActiveTab('batches')}>
-            <SiteIcon name="calendar" size={18} /> Batch Schedules ({batches.length})
-          </button>
-        )}
+  return (
+    <div className="kg-acad-root" data-testid="academy-workspace-root">
+      {/* Header: Tenant Switcher, Verified Role Badge & Branch Filter */}
+      <header className="kg-acad-header">
+        <div>
+          <div className="kg-acad-eyebrow-row">
+            <span className="kg-acad-eyebrow">Academy SaaS Workspace</span>
+            <span className="kg-acad-pill is-emerald" data-testid="academy-role-badge">
+              {capabilities.label}
+            </span>
+            <span
+              className={`kg-acad-verif-pill ${
+                activeTenant.verification_status === 'verified' ? 'is-verified' : 'is-pending'
+              }`}
+            >
+              {activeTenant.verification_status === 'verified' ? 'Verified Academy' : activeTenant.verification_status || 'unverified'}
+            </span>
+          </div>
+          <h1>{activeTenant.name}</h1>
+          <p className="kg-acad-muted">
+            {[activeTenant.city, activeTenant.state, activeTenant.sport].filter(Boolean).join(' · ') || 'Sports Training Workspace'}
+          </p>
+        </div>
 
-        {canRoleAccessTab(userRole, 'fees') && (
-          <button type="button" className={`academy-hub-tab-btn ${activeTab === 'fees' ? 'active' : ''}`} onClick={() => setActiveTab('fees')}>
-            <SiteIcon name="award" size={18} /> Student Fees &amp; UPI
-          </button>
-        )}
+        <div className="kg-acad-controls">
+          {academyMemberships.length > 1 && (
+            <select
+              aria-label="Switch active academy tenant"
+              className="kg-acad-select"
+              value={activeTenant.id}
+              onChange={e => void switchTenant(e.target.value)}
+            >
+              {academyMemberships.map(m => (
+                <option key={m.tenant_id} value={m.tenant_id}>
+                  {m.tenant?.name || m.tenant_id}
+                </option>
+              ))}
+            </select>
+          )}
 
-        {canRoleAccessTab(userRole, 'ledger') && (
-          <button type="button" className={`academy-hub-tab-btn ${activeTab === 'ledger' ? 'active' : ''}`} onClick={() => setActiveTab('ledger')}>
-            <SiteIcon name="wallet" size={18} /> Cash &amp; UPI Ledger
-            {ledgerSummary.cashInHand > 0 && <span className="academy-hub-tab-badge" style={{ background: '#f59e0b' }}>₹{ledgerSummary.cashInHand}</span>}
-          </button>
-        )}
+          {branches.length > 0 && (
+            <select
+              aria-label="Filter academy branch"
+              className="kg-acad-select"
+              value={selectedBranchId || ''}
+              onChange={e => setSelectedBranchId(e.target.value || null)}
+            >
+              <option value="">All Authorized Branches ({branches.length})</option>
+              {branches.map(b => (
+                <option key={b.id} value={b.id}>
+                  Branch: {b.name}
+                </option>
+              ))}
+            </select>
+          )}
 
-        {canRoleAccessTab(userRole, 'attendance') && (
-          <button type="button" className={`academy-hub-tab-btn ${activeTab === 'attendance' ? 'active' : ''}`} onClick={() => setActiveTab('attendance')}>
-            <SiteIcon name="check-circle" size={18} /> Daily Attendance
+          <button
+            type="button"
+            className="kg-acad-btn-outline"
+            onClick={() => setDpdpMaskEnabled(v => !v)}
+          >
+            DPDP Mask: {dpdpMaskEnabled ? 'ON' : 'OFF'}
           </button>
-        )}
 
-        {canRoleAccessTab(userRole, 'staff') && (
-          <button type="button" className={`academy-hub-tab-btn ${activeTab === 'staff' ? 'active' : ''}`} onClick={() => setActiveTab('staff')}>
-            <SiteIcon name="users" size={18} /> Staff &amp; Coaches ({staff.length})
-          </button>
-        )}
+          <a
+            href={`/academies/${activeTenant.slug}`}
+            className="kg-acad-btn-outline"
+            onClick={e => onNavigate?.(e, `/academies/${activeTenant.slug}`)}
+          >
+            <SiteIcon name="external-link" size={14} /> Public Listing
+          </a>
+        </div>
+      </header>
 
-        {canRoleAccessTab(userRole, 'trial_passes') && (
-          <button type="button" className={`academy-hub-tab-btn ${activeTab === 'trial_passes' ? 'active' : ''}`} onClick={() => setActiveTab('trial_passes')}>
-            <SiteIcon name="shield-check" size={18} /> Trial Passes ({passes.length})
+      {/* Mobile Horizontal Quick Nav */}
+      <nav className="kg-acad-mobile-nav" aria-label="Academy sections mobile">
+        {visibleNavItems.map(item => (
+          <button
+            key={item.id}
+            type="button"
+            className={`kg-acad-mobile-pill ${activeSection === item.id ? 'is-active' : ''}`}
+            onClick={() => handleSelectSection(item.id)}
+          >
+            {item.label}
           </button>
-        )}
-
-        {canRoleAccessTab(userRole, 'kits') && (
-          <button type="button" className={`academy-hub-tab-btn ${activeTab === 'kits' ? 'active' : ''}`} onClick={() => setActiveTab('kits')}>
-            <SiteIcon name="award" size={18} /> Kit &amp; Gear Locker ({kits.length})
-          </button>
-        )}
-
-        {canRoleAccessTab(userRole, 'safeguarding') && (
-          <button type="button" className={`academy-hub-tab-btn ${activeTab === 'safeguarding' ? 'active' : ''}`} onClick={() => setActiveTab('safeguarding')}>
-            <SiteIcon name="shield-check" size={18} /> POCSO &amp; Safeguarding ({safeguardingStaff.length})
-          </button>
-        )}
-
-        {canRoleAccessTab(userRole, 'settings') && (
-          <button type="button" className={`academy-hub-tab-btn ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
-            <SiteIcon name="share" size={18} /> WhatsApp &amp; UPI Setup
-          </button>
-        )}
-
-        {canRoleAccessTab(userRole, 'audit_logs') && (
-          <button type="button" className={`academy-hub-tab-btn ${activeTab === 'audit_logs' ? 'active' : ''}`} onClick={() => setActiveTab('audit_logs')}>
-            <SiteIcon name="shield-check" size={18} /> {bilingualMode ? 'सुरक्षा ऑडिट लॉग (Audit Log)' : 'Security Audit Log'}
-          </button>
-        )}
+        ))}
       </nav>
 
-      {(activeTab === 'leads' || activeTab === 'trial_passes') && (
-        <AcademyAdmissionsAndPassesPanel
-          activeTab={activeTab}
-          currentTenant={currentTenant}
-          currentAcademy={currentAcademy}
-          leads={leads}
-          batches={batches}
-          passes={passes}
-          activeTrialPassView={activeTrialPassView}
-          onSelectTrialPassView={setActiveTrialPassView}
-          onOpenAddLead={() => setIsAddLeadModalOpen(true)}
-          onScheduleTrialForLead={handleScheduleTrialForLead}
-          onOpenTrialPassModal={() => setIsTrialPassModalOpen(true)}
-          onNavigate={onNavigate}
-          onRefresh={triggerRefresh}
-        />
-      )}
+      {/* 2-Column Responsive Layout */}
+      <div className="kg-acad-layout">
+        <aside className="kg-acad-sidebar" aria-label="Academy Workspace Navigation">
+          {NAV_GROUPS.map(group => {
+            const items = visibleNavItems.filter(i => i.group === group.id)
+            if (items.length === 0) return null
+            return (
+              <div key={group.id}>
+                <div className="kg-acad-nav-group-label">{group.label}</div>
+                {items.map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-current={activeSection === item.id ? 'page' : undefined}
+                    className={`kg-acad-nav-item ${activeSection === item.id ? 'is-active' : ''}`}
+                    onClick={() => handleSelectSection(item.id)}
+                  >
+                    <SiteIcon name={item.icon} size={15} />
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )
+          })}
+        </aside>
 
-      {(activeTab === 'batches' || activeTab === 'attendance') && (
-        <AcademyBatchesAndAttendancePanel
-          activeTab={activeTab}
-          selectedSlug={selectedSlug}
-          currentTenant={currentTenant}
-          currentAcademy={currentAcademy}
-          batches={batches}
-          students={students}
-          dpdpSafeMode={dpdpSafeMode}
-          onOpenAddBatch={() => setIsAddBatchModalOpen(true)}
-          onOpenAttendanceSheet={setActiveAttendanceBatch}
-          onOpenBroadcast={setActiveBroadcastBatch}
-          onOpenTournamentSquad={setActiveTournamentBatch}
-          onRefresh={triggerRefresh}
-        />
-      )}
+        <main className="kg-acad-main">
+          {feedback && (
+            <div
+              className={`kg-acad-alert ${feedback.type === 'success' ? 'is-success' : 'is-danger'}`}
+              role="status"
+              style={{ marginBottom: '1rem' }}
+            >
+              <span>{feedback.message}</span>
+              <button type="button" className="kg-acad-link-btn" onClick={() => setFeedback(null)}>
+                Dismiss
+              </button>
+            </div>
+          )}
 
-      {(activeTab === 'fees' || activeTab === 'ledger') && (
-        <AcademyFeesAndLedgerPanel
-          activeTab={activeTab}
-          currentAcademy={currentAcademy}
-          settings={settings}
-          students={students}
-          feeTransactions={feeTransactions}
-          ledgerSummary={ledgerSummary}
-          feeReconciliation={feeReconciliation}
-          dpdpSafeMode={dpdpSafeMode}
-          onOpenImportCsv={() => setIsImportCsvModalOpen(true)}
-          onOpenAddStudent={() => setIsAddStudentModalOpen(true)}
-          onOpenRecordPayment={() => setIsRecordPaymentModalOpen(true)}
-          onSelectUpiQrStudent={setActiveUpiQrStudent}
-          onSelectReceiptStudent={setActiveReceiptStudent}
-          onSelectEvaluationStudent={setActiveEvaluationStudent}
-          onSelectCancellationStudent={setCancellationModalStudent}
-          onNavigate={onNavigate}
-          onRefresh={triggerRefresh}
-        />
-      )}
+          {!sectionPermitted ? (
+            <EmptyState
+              title="Section Restricted by Academy Role"
+              description={`Your assigned role (${capabilities.label}) does not grant permission to access this module.`}
+              action={
+                <button type="button" className="kg-acad-btn-primary" onClick={() => handleSelectSection('overview')}>
+                  Return to Overview
+                </button>
+              }
+            />
+          ) : (
+            <>
+              {(activeSection === 'overview' || activeSection === 'profile') && (
+                <AcademyOverviewAndProfilePanel
+                  mode={activeSection}
+                  tenantId={activeTenant.id}
+                  tenantName={activeTenant.name}
+                  capabilities={capabilities}
+                  profile={profile}
+                  overview={overview}
+                  selectedBranchId={selectedBranchId}
+                  loading={loading}
+                  error={error}
+                  onSelectSection={handleSelectSection}
+                  onRefresh={loadWorkspaceData}
+                  onNavigate={onNavigate}
+                  onFeedback={setFeedback}
+                />
+              )}
 
-      {(activeTab === 'staff' ||
-        activeTab === 'kits' ||
-        activeTab === 'safeguarding' ||
-        activeTab === 'settings' ||
-        activeTab === 'audit_logs') && (
-        <AcademyComplianceAndSettingsPanel
-          activeTab={activeTab}
-          selectedSlug={selectedSlug}
-          currentTenant={currentTenant}
-          currentAcademy={currentAcademy}
-          verifiedRole={verifiedRole}
-          userRole={userRole}
-          bilingualMode={bilingualMode}
-          batches={batches}
-          students={students}
-          leads={leads}
-          passes={passes}
-          staff={staff}
-          feeTransactions={feeTransactions}
-          settings={settings}
-          kits={kits}
-          equipment={equipment}
-          safeguardingStaff={safeguardingStaff}
-          safetyIncidents={safetyIncidents}
-          onOpenAddStaff={() => setIsAddStaffModalOpen(true)}
-          onRefreshTenant={refreshTenant}
-          onRefresh={triggerRefresh}
-        />
-      )}
+              {(activeSection === 'branches' || activeSection === 'athletes' || activeSection === 'coaches') && (
+                <AcademyBranchesAndPeoplePanel
+                  mode={activeSection}
+                  tenantId={activeTenant.id}
+                  academyName={activeTenant.name}
+                  actorName={actorName}
+                  capabilities={capabilities}
+                  branches={branches}
+                  athletes={athletes}
+                  batches={batches}
+                  coaches={coaches}
+                  selectedBranchId={selectedBranchId}
+                  initialDetailId={routeTarget.section === 'athletes' ? routeTarget.detailId : null}
+                  dpdpMaskEnabled={dpdpMaskEnabled}
+                  onSelectBranchFilter={setSelectedBranchId}
+                  onRefresh={loadWorkspaceData}
+                  onFeedback={setFeedback}
+                />
+              )}
 
-      <AcademyOnboardingModal
-        open={isOnboardingModalOpen}
-        onClose={() => setIsOnboardingModalOpen(false)}
-        onAcademyCreated={newAcad => {
-          setSelectedSlug(newAcad.slug)
-          triggerRefresh()
-        }}
-        onNavigate={onNavigate}
-      />
+              {(activeSection === 'training' || activeSection === 'attendance') && (
+                <AcademyTrainingAndAttendancePanel
+                  mode={activeSection}
+                  tenantId={activeTenant.id}
+                  academyName={activeTenant.name}
+                  capabilities={capabilities}
+                  branches={branches}
+                  coaches={coaches}
+                  facilities={facilities}
+                  batches={batches}
+                  sessions={sessions}
+                  athletes={athletes}
+                  selectedBranchId={selectedBranchId}
+                  onRefresh={loadWorkspaceData}
+                  onFeedback={setFeedback}
+                />
+              )}
 
-      <AcademyEnrollmentModals
-        selectedSlug={selectedSlug}
-        currentTenant={currentTenant}
-        currentAcademy={currentAcademy}
-        batches={batches}
-        isAddLeadModalOpen={isAddLeadModalOpen}
-        isAddBatchModalOpen={isAddBatchModalOpen}
-        isAddStudentModalOpen={isAddStudentModalOpen}
-        isTrialPassModalOpen={isTrialPassModalOpen}
-        isImportCsvModalOpen={isImportCsvModalOpen}
-        prefilledTrialLead={prefilledTrialLead}
-        onCloseAddLead={() => setIsAddLeadModalOpen(false)}
-        onCloseAddBatch={() => setIsAddBatchModalOpen(false)}
-        onCloseAddStudent={() => setIsAddStudentModalOpen(false)}
-        onCloseTrialPass={() => setIsTrialPassModalOpen(false)}
-        onCloseImportCsv={() => setIsImportCsvModalOpen(false)}
-        onTrialPassIssued={setActiveTrialPassView}
-        onRefresh={triggerRefresh}
-      />
+              {(activeSection === 'admissions' || activeSection === 'facilities') && (
+                <AcademyAdmissionsAndFacilitiesPanel
+                  mode={activeSection}
+                  tenantId={activeTenant.id}
+                  academyName={activeTenant.name}
+                  actorName={actorName}
+                  capabilities={capabilities}
+                  branches={branches}
+                  batches={batches}
+                  enquiries={enquiries}
+                  trialPostings={trialPostings}
+                  facilities={facilities}
+                  equipment={equipment}
+                  selectedBranchId={selectedBranchId}
+                  dpdpMaskEnabled={dpdpMaskEnabled}
+                  onRefresh={loadWorkspaceData}
+                  onFeedback={setFeedback}
+                />
+              )}
 
-      <AcademyOpsAndBillingModals
-        selectedSlug={selectedSlug}
-        currentTenant={currentTenant}
-        currentAcademy={currentAcademy}
-        settings={settings}
-        batches={batches}
-        students={students}
-        availableTournaments={availableTournaments}
-        activeTournamentBatch={activeTournamentBatch}
-        activeUpiQrStudent={activeUpiQrStudent}
-        activeReceiptStudent={activeReceiptStudent}
-        activeAttendanceBatch={activeAttendanceBatch}
-        activeBroadcastBatch={activeBroadcastBatch}
-        activeEvaluationStudent={activeEvaluationStudent}
-        cancellationModalStudent={cancellationModalStudent}
-        isAddStaffModalOpen={isAddStaffModalOpen}
-        isRecordPaymentModalOpen={isRecordPaymentModalOpen}
-        onCloseTournamentModal={() => setActiveTournamentBatch(null)}
-        onCloseUpiQr={() => setActiveUpiQrStudent(null)}
-        onCloseReceipt={() => setActiveReceiptStudent(null)}
-        onCloseAttendanceSheet={() => setActiveAttendanceBatch(null)}
-        onCloseBroadcast={() => setActiveBroadcastBatch(null)}
-        onCloseEvaluation={() => setActiveEvaluationStudent(null)}
-        onCloseCancellation={() => setCancellationModalStudent(null)}
-        onCloseAddStaff={() => setIsAddStaffModalOpen(false)}
-        onCloseRecordPayment={() => setIsRecordPaymentModalOpen(false)}
-        onRefresh={triggerRefresh}
-      />
-    </section>
+              {(activeSection === 'notifications' ||
+                activeSection === 'reports' ||
+                activeSection === 'fees' ||
+                activeSection === 'staff' ||
+                activeSection === 'settings') && (
+                <AcademyGovernanceAndCommsPanel
+                  mode={activeSection}
+                  tenantId={activeTenant.id}
+                  academyName={activeTenant.name}
+                  actorName={actorName}
+                  actorUserId={userId}
+                  initialUpiVpa={activeTenant.upi_vpa || ''}
+                  dpdpMaskEnabled={dpdpMaskEnabled}
+                  onToggleDpdpMask={() => setDpdpMaskEnabled(v => !v)}
+                  capabilities={capabilities}
+                  overview={overview}
+                  branches={branches}
+                  batches={batches}
+                  athletes={athletes}
+                  enquiries={enquiries}
+                  announcements={announcements}
+                  staffMembers={staffMembers}
+                  feeTransactions={feeTransactions}
+                  auditLogs={auditLogs}
+                  onRefresh={loadWorkspaceData}
+                  onFeedback={setFeedback}
+                />
+              )}
+            </>
+          )}
+        </main>
+      </div>
+    </div>
   )
 }

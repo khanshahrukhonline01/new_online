@@ -446,7 +446,7 @@ function PersonaContent({ persona, section, onOpenAuth, onNavigate }: {
       return <LazyDashboard workspaceSection={section} onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
     case 'academy':
       return (
-        <RequireTenantMember personaLabel="Academy" onboardingRole="academy" requiredTenantTypes={['academy']} allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'finance_manager', 'content_manager', 'listing_manager', 'verification_coordinator', 'head_coach', 'coach', 'accountant', 'front_desk', 'staff', 'readonly_member']} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Academy" onboardingRole="academy" requiredTenantTypes={['academy', 'club', 'school', 'college', 'university', 'training_org']} allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'admissions_manager', 'finance_manager', 'content_manager', 'listing_manager', 'verification_coordinator', 'head_coach', 'coach', 'accountant', 'front_desk', 'staff', 'readonly_member']} onNavigate={handleStrictNav}>
           <LazyAcademyHub workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
