@@ -186,6 +186,37 @@ describe('partnerOnboardingService', () => {
     }
   )
 
+  it('does not treat a cached local profile as an authenticated partner session', async () => {
+    mockGetStoredAuthUser.mockReturnValue({
+      id: 'cached-user',
+      email: 'cached@khelgrid.com',
+      fullName: 'Cached User',
+      name: 'Cached User',
+      role: 'academy',
+      isVerified: true,
+      createdAt: '2026-11-20T00:00:00Z',
+    })
+    mockSignUpWithEmail.mockResolvedValue({
+      success: true,
+      requiresEmailVerification: true,
+      message: 'Verification email sent',
+    })
+
+    const outcome = await onboardPartnerOrganization({
+      role: 'academy',
+      entityName: 'Cached Academy',
+      sport: 'Football',
+      city: 'Delhi NCR',
+      phone: '9876543210',
+      email: 'cached@khelgrid.com',
+      password: 'password123',
+    })
+
+    expect(mockSignUpWithEmail).toHaveBeenCalled()
+    expect(outcome.requiresEmailVerification).toBe(true)
+    expect(mockProvisionInitialTenantOwner).not.toHaveBeenCalled()
+  })
+
   it('halts provisioning and returns verification status when email confirmation is required', async () => {
     mockSignUpWithEmail.mockResolvedValue({
       success: true,
