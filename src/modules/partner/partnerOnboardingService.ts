@@ -344,8 +344,24 @@ export async function onboardPartnerOrganization(
   const cleanDirectorName = (input.directorName || '').trim() || cleanEntityName || config.defaultContactTitle
   const cleanPhone = input.phone.trim()
   const cleanCity = input.city.trim() || 'Delhi NCR'
-  const existingUser = getStoredAuthUser()
-  const resolvedEmail = (input.email.trim() || existingUser?.email || '').toLowerCase()
+  // localStorage profile data is display-only, never proof of an authenticated session.
+  const authClient = getSupabaseClient()
+  let activeUser: AuthUserProfile | undefined
+  if (authClient) {
+    const { data: sessionData, error: sessionError } = await authClient.auth.getUser()
+    if (!sessionError && sessionData.user?.email_confirmed_at) {
+      activeUser = mapToUserProfile({
+        ...sessionData.user.user_metadata,
+        id: sessionData.user.id,
+        email: sessionData.user.email || '',
+        email_confirmed_at: sessionData.user.email_confirmed_at,
+      }, sessionData.user.email || '', config.authRole)
+      activeUser.id = sessionData.user.id
+      activeUser.role = config.authRole
+      activeUser.isVerified = true
+    }
+  }
+  const resolvedEmail = (input.email.trim() || activeUser?.email || '').toLowerCase()
 
   if (!cleanEntityName) {
     return { success: false, message: `Please enter your ${config.entityLabel}.` }
@@ -356,8 +372,6 @@ export async function onboardPartnerOrganization(
   if (!resolvedEmail || !resolvedEmail.includes('@')) {
     return { success: false, message: 'Please enter a valid official email address.' }
   }
-
-  let activeUser: AuthUserProfile | undefined = existingUser || undefined
 
   if (!activeUser) {
     if (!input.useMagicLink && (!input.password || input.password.length < 6)) {
