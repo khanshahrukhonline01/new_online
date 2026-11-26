@@ -102,4 +102,23 @@ describe('WorkspaceHeader', () => {
     expect(html).toContain('wh-notif-badge')
     expect(html).toContain('>9+<')
   })
+
+  it('preserves single-row desktop flex/grid rules for header-zone-right, search icon button, brand, and primary CTA', async () => {
+    // @ts-expect-error - node built-in
+    const fs = await import('node:fs')
+    // @ts-expect-error - node built-in
+    const path = await import('node:path')
+
+    const workspaceHeaderCss = fs.readFileSync(path.resolve('src/shared/components/WorkspaceHeader.css'), 'utf-8')
+    const discoveryCss = fs.readFileSync(path.resolve('src/styles/discovery.css'), 'utf-8')
+
+    expect(workspaceHeaderCss).toContain('.site-header.kg-workspace-header .header-zone-right')
+    expect(workspaceHeaderCss).toContain('flex-wrap: nowrap')
+    expect(workspaceHeaderCss).toContain('.site-header.kg-workspace-header .header-search-icon-only')
+    expect(workspaceHeaderCss).toContain('width: 38px')
+    expect(discoveryCss).toContain('.site-header .brand')
+    expect(discoveryCss).toContain('text-decoration: none')
+    expect(discoveryCss).toContain('.site-header .header-submit-direct')
+    expect(discoveryCss).toContain('.header-utility-cluster')
+  })
 })

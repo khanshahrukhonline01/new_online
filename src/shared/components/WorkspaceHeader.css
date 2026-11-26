@@ -397,7 +397,27 @@ html.dark .wh-kpi-value {
   color: var(--text, #f1f5f9);
 }
 
-/* ── Zone 3: Notification badge & Account dropdown ── */
+/* ── Zone 3: Right Flex Discipline, Search Icon & Notification badge ── */
+.foundation-v1 .site-header.kg-workspace-header .header-zone-right {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.foundation-v1 .site-header.kg-workspace-header .header-search-icon-only {
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+  justify-content: center;
+  flex: 0 0 38px;
+}
+
 .wh-notif-btn {
   position: relative;
 }
