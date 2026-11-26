@@ -50,6 +50,8 @@ export interface SignUpInput {
   ageBand?: AuthAgeBand
   guardianEmail?: string
   redirectTo?: string
+  /** Non-authoritative partner intake data retained until email verification completes. */
+  partnerOnboarding?: Record<string, unknown>
   captchaToken?: string
 }
 
@@ -303,6 +305,7 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
             phone: input.phone || null,
             age_band: input.ageBand || null,
             guardian_email: isMinorAgeBand ? cleanGuardianEmail : null,
+            ...(input.partnerOnboarding ? { khelgrid_partner_onboarding: input.partnerOnboarding } : {}),
           },
           emailRedirectTo: redirectTarget,
           ...(input.captchaToken ? { captchaToken: input.captchaToken } : {}),
@@ -339,6 +342,7 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
           preferred_sports: input.preferredSports || [],
           age_band: input.ageBand || null,
           guardian_email: isMinorAgeBand ? cleanGuardianEmail : null,
+          ...(input.partnerOnboarding ? { khelgrid_partner_onboarding: input.partnerOnboarding } : {}),
         },
       },
     })
