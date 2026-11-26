@@ -5,6 +5,8 @@
 -- NOTE: Unapplied Phase 2 Migration Script (Preserves Safe Local Staging)
 -- ============================================================================
 
+BEGIN;
+
 -- 1. CAMPAIGN ORGANISATIONS (Advertisers / Academies / Brands / Venues)
 CREATE TABLE IF NOT EXISTS public.campaign_organisations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -239,7 +241,10 @@ CREATE TABLE IF NOT EXISTS public.campaign_audit_events (
 -- Prevents creator commitments from exceeding the advertiser's total funded budget
 -- ============================================================================
 CREATE OR REPLACE FUNCTION public.check_campaign_escrow_budget_limit()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_total_budget BIGINT;
     v_total_committed BIGINT;
@@ -260,7 +265,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS trg_enforce_campaign_escrow_limit ON public.campaign_assignments;
 CREATE TRIGGER trg_enforce_campaign_escrow_limit
@@ -269,7 +274,7 @@ CREATE TRIGGER trg_enforce_campaign_escrow_limit
     EXECUTE FUNCTION public.check_campaign_escrow_budget_limit();
 
 -- ============================================================================
--- ROW LEVEL SECURITY (RLS) POLICIES
+-- ROW LEVEL SECURITY (RLS) & LEAST-PRIVILEGE GRANTS
 -- ============================================================================
 ALTER TABLE public.campaign_organisations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.creator_profiles ENABLE ROW LEVEL SECURITY;
@@ -283,75 +288,127 @@ ALTER TABLE public.creator_reward_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.campaign_disputes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.campaign_audit_events ENABLE ROW LEVEL SECURITY;
 
+REVOKE ALL ON public.campaign_organisations FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.creator_profiles FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.creator_channels FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.campaigns FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.campaign_deliverable_specs FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.campaign_applications FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.campaign_assignments FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.content_submissions FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.creator_reward_ledger FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.campaign_disputes FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.campaign_audit_events FROM PUBLIC, anon, authenticated;
+
+GRANT SELECT ON public.campaigns TO anon, authenticated;
+GRANT SELECT ON public.campaign_deliverable_specs TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.campaign_organisations TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.creator_profiles TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.creator_channels TO authenticated;
+GRANT INSERT, UPDATE ON public.campaigns TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.campaign_deliverable_specs TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.campaign_applications TO authenticated;
+GRANT SELECT ON public.campaign_assignments TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.content_submissions TO authenticated;
+GRANT SELECT, INSERT ON public.creator_reward_ledger TO authenticated;
+
 -- 1. Public Read for Published Campaigns
+DROP POLICY IF EXISTS "Public read published campaigns" ON public.campaigns;
 CREATE POLICY "Public read published campaigns"
-    ON public.campaigns FOR SELECT
+    ON public.campaigns FOR SELECT TO anon, authenticated
     USING (status = 'published');
 
 -- 2. Public Read for Deliverable Specs of Published Campaigns
+DROP POLICY IF EXISTS "Public read deliverable specs for published campaigns" ON public.campaign_deliverable_specs;
 CREATE POLICY "Public read deliverable specs for published campaigns"
-    ON public.campaign_deliverable_specs FOR SELECT
+    ON public.campaign_deliverable_specs FOR SELECT TO anon, authenticated
     USING (EXISTS (
         SELECT 1 FROM public.campaigns c
         WHERE c.id = campaign_deliverable_specs.campaign_id AND c.status = 'published'
     ));
 
 -- 3. Creators Read/Manage Own Profile & Channels
+DROP POLICY IF EXISTS "Creators manage own profile" ON public.creator_profiles;
 CREATE POLICY "Creators manage own profile"
-    ON public.creator_profiles FOR ALL
+    ON public.creator_profiles FOR ALL TO authenticated
     USING (user_id = auth.uid())
     WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Creators manage own channels" ON public.creator_channels;
 CREATE POLICY "Creators manage own channels"
-    ON public.creator_channels FOR ALL
+    ON public.creator_channels FOR ALL TO authenticated
     USING (EXISTS (
+        SELECT 1 FROM public.creator_profiles cp
+        WHERE cp.id = creator_channels.creator_id AND cp.user_id = auth.uid()
+    ))
+    WITH CHECK (EXISTS (
         SELECT 1 FROM public.creator_profiles cp
         WHERE cp.id = creator_channels.creator_id AND cp.user_id = auth.uid()
     ));
 
 -- 4. Creators View and Submit Applications
+DROP POLICY IF EXISTS "Creators manage own applications" ON public.campaign_applications;
 CREATE POLICY "Creators manage own applications"
-    ON public.campaign_applications FOR ALL
+    ON public.campaign_applications FOR ALL TO authenticated
     USING (EXISTS (
+        SELECT 1 FROM public.creator_profiles cp
+        WHERE cp.id = campaign_applications.creator_id AND cp.user_id = auth.uid()
+    ))
+    WITH CHECK (EXISTS (
         SELECT 1 FROM public.creator_profiles cp
         WHERE cp.id = campaign_applications.creator_id AND cp.user_id = auth.uid()
     ));
 
 -- 5. Creators View Own Assignments & Submissions
+DROP POLICY IF EXISTS "Creators view own assignments" ON public.campaign_assignments;
 CREATE POLICY "Creators view own assignments"
-    ON public.campaign_assignments FOR SELECT
+    ON public.campaign_assignments FOR SELECT TO authenticated
     USING (EXISTS (
         SELECT 1 FROM public.creator_profiles cp
         WHERE cp.id = campaign_assignments.creator_id AND cp.user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Creators manage own submissions" ON public.content_submissions;
 CREATE POLICY "Creators manage own submissions"
-    ON public.content_submissions FOR ALL
+    ON public.content_submissions FOR ALL TO authenticated
     USING (EXISTS (
+        SELECT 1 FROM public.creator_profiles cp
+        WHERE cp.id = content_submissions.creator_id AND cp.user_id = auth.uid()
+    ))
+    WITH CHECK (EXISTS (
         SELECT 1 FROM public.creator_profiles cp
         WHERE cp.id = content_submissions.creator_id AND cp.user_id = auth.uid()
     ));
 
 -- 6. Creators View Own Reward Ledger Entries
+DROP POLICY IF EXISTS "Creators view own reward ledger" ON public.creator_reward_ledger;
 CREATE POLICY "Creators view own reward ledger"
-    ON public.creator_reward_ledger FOR SELECT
+    ON public.creator_reward_ledger FOR SELECT TO authenticated
     USING (EXISTS (
         SELECT 1 FROM public.creator_profiles cp
         WHERE cp.id = creator_reward_ledger.creator_id AND cp.user_id = auth.uid()
     ));
 
 -- 7. Advertisers Manage Own Campaigns & Deliverable Specs
+DROP POLICY IF EXISTS "Advertisers manage own campaigns" ON public.campaigns;
 CREATE POLICY "Advertisers manage own campaigns"
-    ON public.campaigns FOR ALL
+    ON public.campaigns FOR ALL TO authenticated
     USING (EXISTS (
+        SELECT 1 FROM public.campaign_organisations co
+        WHERE co.id = campaigns.organisation_id AND co.authorised_user_id = auth.uid()
+    ))
+    WITH CHECK (EXISTS (
         SELECT 1 FROM public.campaign_organisations co
         WHERE co.id = campaigns.organisation_id AND co.authorised_user_id = auth.uid()
     ));
 
+DROP POLICY IF EXISTS "Advertisers view applications to their campaigns" ON public.campaign_applications;
 CREATE POLICY "Advertisers view applications to their campaigns"
-    ON public.campaign_applications FOR SELECT
+    ON public.campaign_applications FOR SELECT TO authenticated
     USING (EXISTS (
         SELECT 1 FROM public.campaigns c
         JOIN public.campaign_organisations co ON co.id = c.organisation_id
         WHERE c.id = campaign_applications.campaign_id AND co.authorised_user_id = auth.uid()
     ));
+
+COMMIT;

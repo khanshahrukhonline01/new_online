@@ -326,8 +326,60 @@ CREATE TABLE IF NOT EXISTS public.tenant_invitations (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Normalize legacy tenant_invitations schemas that used column "email" instead of "invited_email".
+DO $$
+DECLARE
+  v_conname text;
+BEGIN
+  IF to_regclass('public.tenant_invitations') IS NOT NULL THEN
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'tenant_invitations' AND column_name = 'email'
+    ) AND NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'tenant_invitations' AND column_name = 'invited_email'
+    ) THEN
+      ALTER TABLE public.tenant_invitations RENAME COLUMN email TO invited_email;
+    END IF;
+
+    ALTER TABLE public.tenant_invitations
+      ADD COLUMN IF NOT EXISTS invited_email text,
+      ADD COLUMN IF NOT EXISTS accepted_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS accepted_at timestamptz,
+      ADD COLUMN IF NOT EXISTS revoked_at timestamptz;
+
+    FOR v_conname IN
+      SELECT c.conname
+      FROM pg_constraint c
+      JOIN pg_class r ON r.oid = c.conrelid
+      JOIN pg_namespace n ON n.oid = r.relnamespace
+      WHERE n.nspname = 'public'
+        AND r.relname = 'tenant_invitations'
+        AND c.contype = 'c'
+        AND (pg_get_constraintdef(c.oid) ILIKE '%role%' OR pg_get_constraintdef(c.oid) ILIKE '%status%')
+    LOOP
+      EXECUTE format('ALTER TABLE public.tenant_invitations DROP CONSTRAINT IF EXISTS %I', v_conname);
+    END LOOP;
+
+    ALTER TABLE public.tenant_invitations
+      ADD CONSTRAINT tenant_invitations_role_check CHECK (role IN (
+        'org_admin', 'director', 'admin', 'manager', 'finance_manager',
+        'content_manager', 'listing_manager', 'verification_coordinator',
+        'head_coach', 'coach', 'accountant', 'front_desk', 'staff',
+        'readonly_member', 'parent'
+      )),
+      ADD CONSTRAINT tenant_invitations_status_check CHECK (status IN (
+        'pending', 'accepted', 'declined', 'revoked', 'expired'
+      ));
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_tenant_invitations_tenant ON public.tenant_invitations(tenant_id, status);
 CREATE INDEX IF NOT EXISTS idx_tenant_invitations_email ON public.tenant_invitations(lower(invited_email), status);
+
+-- Drop legacy draft invitation RPCs with incompatible signatures/return types before replacing.
+DROP FUNCTION IF EXISTS public.create_tenant_invitation(uuid, text, text, text);
+DROP FUNCTION IF EXISTS public.accept_tenant_invitation(text);
 
 CREATE OR REPLACE FUNCTION public.accept_tenant_invitation(p_token_hash text)
 RETURNS uuid

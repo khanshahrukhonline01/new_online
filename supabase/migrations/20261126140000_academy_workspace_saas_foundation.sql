@@ -356,20 +356,33 @@ CREATE INDEX IF NOT EXISTS idx_asba_tenant_unit
 
 CREATE OR REPLACE FUNCTION public.is_academy_moderator()
 RETURNS boolean
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
-  SELECT
-    public.is_admin()
-    OR public.has_platform_role(ARRAY[
-      'admin',
-      'platform_super_admin',
-      'platform_admin',
-      'moderator',
-      'verification_admin'
-    ]);
+DECLARE
+  v_is_legacy_admin boolean := false;
+BEGIN
+  IF public.has_platform_role(ARRAY[
+    'admin',
+    'platform_super_admin',
+    'platform_admin',
+    'moderator',
+    'verification_admin'
+  ]) THEN
+    RETURN true;
+  END IF;
+
+  IF to_regprocedure('public.is_admin()') IS NOT NULL THEN
+    EXECUTE 'SELECT public.is_admin()' INTO v_is_legacy_admin;
+    IF COALESCE(v_is_legacy_admin, false) THEN
+      RETURN true;
+    END IF;
+  END IF;
+
+  RETURN false;
+END;
 $$;
 
 REVOKE ALL ON FUNCTION public.is_academy_moderator() FROM PUBLIC;
