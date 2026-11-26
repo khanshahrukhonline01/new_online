@@ -12,6 +12,7 @@ import {
   provisionInitialTenantOwner,
   resolveTenantWorkspacePath,
   tryFetchUserTenantMemberships,
+  getUserTenantMemberships,
   type DbTenantMembership,
 } from '../../integrations/supabase/tenant-client'
 import type { OrganizationType } from '../../shared/saas/saasTypes'
@@ -505,8 +506,13 @@ export async function completePartnerEmailVerification(): Promise<PartnerOnboard
   }
 
   const baseSlug = slugifyEntityName(entityName, role)
-  const memberships = await tryFetchUserTenantMemberships(authUser.id)
-  const existing = memberships.find(m => m.tenant?.slug === baseSlug && m.role === 'owner')
+  // Fail closed if membership verification fails; never provision against an unknown state.
+  const memberships = await getUserTenantMemberships(authUser.id)
+  const existing = memberships.find(m =>
+    m.role === 'owner' && m.tenant?.name === entityName &&
+    m.tenant?.metadata?.source === 'verified_partner_email_onboarding' &&
+    m.tenant?.metadata?.partnerRole === role
+  ) || memberships.find(m => m.role === 'owner' && m.tenant?.slug === baseSlug)
   if (existing?.tenant) {
     const path = resolveTenantWorkspacePath(existing)
     return { success: true, user: mapToUserProfile({ ...authUser.user_metadata, id: authUser.id, email, email_confirmed_at: authUser.email_confirmed_at }, email, config.authRole), tenantId: existing.tenant_id, entitySlug: existing.tenant.slug, workspacePath: path, message: 'Your verified partner workspace is ready.' }
