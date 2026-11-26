@@ -278,6 +278,19 @@ describe('partnerOnboardingService', () => {
       isVerified: true,
       createdAt: '2026-11-20T00:00:00Z',
     })
+    mockGetSupabaseClient.mockReturnValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: {
+            id: 'existing-user-1',
+            email: 'owner@khelgrid.com',
+            email_confirmed_at: '2026-11-20T00:00:00Z',
+            user_metadata: { full_name: 'Existing Owner' },
+          } },
+          error: null,
+        }),
+      },
+    })
     mockProvisionInitialTenantOwner
       .mockResolvedValueOnce({ success: false, message: 'duplicate key value violates unique constraint (23505)' })
       .mockResolvedValueOnce({ success: true, tenantId: 'tenant-tour-retry', message: 'Provisioned' })
