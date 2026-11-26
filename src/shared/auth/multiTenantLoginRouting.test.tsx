@@ -298,4 +298,15 @@ describe('Multi-tenant & All-Persona Frontend Login Routing', () => {
 
     expect(resolvePostAuthTarget(makeUser('academy'), '/admin')).toBe('/workspace/academy/overview')
   })
+
+  it('guards legacy operational routes (/turf-calendar, /tournament-ops, /organizations, /parent-portal, /host) fail-closed', () => {
+    for (const guardedPath of ['/turf-calendar', '/tournament-ops', '/organizations', '/parent-portal', '/host']) {
+      const html = renderToStaticMarkup(<App initialPath={guardedPath} />)
+      expect(html).toContain('Verifying your secure workspace access')
+      expect(html).not.toContain('Bengaluru Youth FC')
+      expect(html).not.toContain('NCR Elite Cricket')
+      expect(html).not.toContain('INV-2026-NOV-042')
+      expect(html).not.toContain('Turf &amp; Facility Slot Booking Calendar')
+    }
+  })
 })

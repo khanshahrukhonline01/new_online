@@ -15,6 +15,7 @@ import { AuthProvider } from './shared/auth/AuthContext'
 import { useAuth } from './shared/auth/useAuth'
 import { TenantProvider } from './shared/context/TenantContext'
 import { RequireTenantMember } from './shared/components/RequireTenantMember'
+import { TENANT_ROUTE_POLICIES } from './integrations/supabase/tenant-client'
 import { RegulatoryWorkspaceGuard } from './shared/components/RegulatoryWorkspaceGuard'
 import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAndShare'
 import { normalizePartnerRole } from './modules/partner/partnerOnboardingService'
@@ -366,7 +367,9 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       } else if (match.canonicalPath === '/host' || match.canonicalPath === '/partner-dashboard') {
         page = (
           <RegulatoryWorkspaceGuard persona="host" onNavigate={navigate}>
-            <HostDashboardPage onNavigate={navigate} onOpenIntake={openListingSubmission} />
+            <RequireTenantMember {...TENANT_ROUTE_POLICIES.host} onNavigate={navigate}>
+              <HostDashboardPage onNavigate={navigate} onOpenIntake={openListingSubmission} />
+            </RequireTenantMember>
           </RegulatoryWorkspaceGuard>
         )
       }
@@ -395,7 +398,9 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       else if (match.canonicalPath === '/train') page = <AcademiesPage onOpenIntake={() => openListingSubmission('academy')} onNavigate={navigate} />
       else if (match.canonicalPath === '/organizations' || match.canonicalPath === '/workspaces') page = (
         <RegulatoryWorkspaceGuard persona="organization" onNavigate={navigate}>
-          <OrganizationsWorkspacePage onNavigate={navigate} />
+          <RequireTenantMember {...TENANT_ROUTE_POLICIES.organization} onNavigate={navigate}>
+            <OrganizationsWorkspacePage onNavigate={navigate} />
+          </RequireTenantMember>
         </RegulatoryWorkspaceGuard>
       )
       else if (match.canonicalPath === '/login' || match.canonicalPath === '/signup' || match.canonicalPath === '/forgot-password') {
@@ -424,58 +429,39 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       }
       else if (match.canonicalPath === '/academy-hub' || match.canonicalPath === '/academies/manage') page = (
         <RegulatoryWorkspaceGuard persona="academy" onNavigate={navigate}>
-          <RequireTenantMember
-            personaLabel="Academy"
-            onboardingRole="academy"
-            requiredTenantTypes={['academy', 'club', 'school', 'college', 'university', 'training_org']}
-            allowedRoles={[
-              'owner',
-              'org_admin',
-              'director',
-              'admin',
-              'manager',
-              'admissions_manager',
-              'front_desk',
-              'head_coach',
-              'coach',
-              'finance_manager',
-              'accountant',
-              'content_manager',
-              'listing_manager',
-              'verification_coordinator',
-              'staff',
-              'readonly_member',
-            ]}
-            onNavigate={navigate}
-          >
+          <RequireTenantMember {...TENANT_ROUTE_POLICIES.academy} onNavigate={navigate}>
             <AcademyHubPage currentPath={path} onNavigate={navigate} />
           </RequireTenantMember>
         </RegulatoryWorkspaceGuard>
       )
       else if (match.canonicalPath === '/coach-dashboard' || match.canonicalPath === '/coach/hub' || match.canonicalPath === '/coach/manage') page = (
         <RegulatoryWorkspaceGuard persona="coach" onNavigate={navigate}>
-          <RequireTenantMember
-            personaLabel="Coach"
-            onboardingRole="coach"
-            requiredTenantTypes={['coach', 'academy']}
-            allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'head_coach', 'coach']}
-            onNavigate={navigate}
-          >
+          <RequireTenantMember {...TENANT_ROUTE_POLICIES.coach} onNavigate={navigate}>
             <CoachDashboardPage currentPath={path} onNavigate={navigate} />
           </RequireTenantMember>
         </RegulatoryWorkspaceGuard>
       )
       else if (match.canonicalPath === '/turf-calendar' || match.canonicalPath === '/venues/manage' || match.canonicalPath === '/turf') page = (
         <RegulatoryWorkspaceGuard persona="turf" onNavigate={navigate}>
-          <TurfSlotCalendarPage onNavigate={navigate} />
+          <RequireTenantMember {...TENANT_ROUTE_POLICIES.turf} onNavigate={navigate}>
+            <TurfSlotCalendarPage onNavigate={navigate} />
+          </RequireTenantMember>
         </RegulatoryWorkspaceGuard>
       )
       else if (match.canonicalPath === '/tournament-ops' || match.canonicalPath === '/tournaments/manage' || match.canonicalPath === '/tournament-management') page = (
         <RegulatoryWorkspaceGuard persona="tournament" onNavigate={navigate}>
-          <TournamentOpsPage onNavigate={navigate} />
+          <RequireTenantMember {...TENANT_ROUTE_POLICIES.tournament} onNavigate={navigate}>
+            <TournamentOpsPage onNavigate={navigate} />
+          </RequireTenantMember>
         </RegulatoryWorkspaceGuard>
       )
-      else if (match.canonicalPath === '/parent-portal' || match.canonicalPath === '/parent' || match.canonicalPath === '/passbook') page = <ParentPortalPage onNavigate={navigate} />
+      else if (match.canonicalPath === '/parent-portal' || match.canonicalPath === '/parent' || match.canonicalPath === '/passbook') page = (
+        <RegulatoryWorkspaceGuard persona="parent" onNavigate={navigate}>
+          <RequireTenantMember personaLabel="Parent" onboardingRole="parent" requireTenantMembership={false} onNavigate={navigate}>
+            <ParentPortalPage onNavigate={navigate} />
+          </RequireTenantMember>
+        </RegulatoryWorkspaceGuard>
+      )
       else if (match.canonicalPath === '/verify-pass' || match.canonicalPath === '/gate-checkin') page = <GateCheckInPage onNavigate={navigate} />
       else if (match.canonicalPath === '/my-passes' || match.canonicalPath === '/passes') page = <MyPassesVaultPage onNavigate={navigate} />
       else if (match.canonicalPath === '/notifications') page = (
@@ -508,7 +494,9 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       else if (match.canonicalPath === '/campaigns/manage') page = <AdvertiserCampaignManagePage onNavigate={navigate} />
       else if (match.canonicalPath === '/creator' || match.canonicalPath === '/creator-hub') page = (
         <RegulatoryWorkspaceGuard persona="creator" onNavigate={navigate}>
-          <CreatorHubPage onNavigate={navigate} />
+          <RequireTenantMember personaLabel="Creator" onboardingRole="creator" requireTenantMembership={false} onNavigate={navigate}>
+            <CreatorHubPage onNavigate={navigate} />
+          </RequireTenantMember>
         </RegulatoryWorkspaceGuard>
       )
       else if (match.canonicalPath === '/for-you') page = <ForYouPage onNavigate={navigate} onOpenAuth={openAuth} />

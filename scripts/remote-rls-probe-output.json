@@ -1,51 +1,135 @@
 [
   {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.profiles",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table profiles",
+    "passed": true
+  },
+  {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenants",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenants",
     "passed": true
   },
   {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_memberships",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenant_memberships",
     "passed": true
   },
   {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_batches",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenant_batches",
     "passed": true
   },
   {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_students",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenant_students",
     "passed": true
   },
   {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_enquiries",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenant_enquiries",
     "passed": true
   },
   {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_fee_invoices",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenant_fee_invoices",
     "passed": true
   },
   {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_fee_transactions",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenant_fee_transactions",
     "passed": true
   },
   {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_attendance_events",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenant_attendance_events",
     "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_units",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "PGRST205: Could not find the table 'public.tenant_units' in the schema cache",
+    "passed": false
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.saas_audit_logs",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "PGRST205: Could not find the table 'public.saas_audit_logs' in the schema cache",
+    "passed": false
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.subscriptions",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "PGRST205: Could not find the table 'public.subscriptions' in the schema cache",
+    "passed": false
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.creator_campaigns",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "PGRST205: Could not find the table 'public.creator_campaigns' in the schema cache",
+    "passed": false
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_profiles",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "PGRST205: Could not find the table 'public.coach_profiles' in the schema cache",
+    "passed": false
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_verification_submissions",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "PGRST205: Could not find the table 'public.coach_verification_submissions' in the schema cache",
+    "passed": false
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_academy_links",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "PGRST205: Could not find the table 'public.coach_academy_links' in the schema cache",
+    "passed": false
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.academy_profiles",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "PGRST205: Could not find the table 'public.academy_profiles' in the schema cache",
+    "passed": false
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.academy_branches",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "PGRST205: Could not find the table 'public.academy_branches' in the schema cache",
+    "passed": false
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.academy_batches",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "PGRST205: Could not find the table 'public.academy_batches' in the schema cache",
+    "passed": false
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.academy_athletes",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "PGRST205: Could not find the table 'public.academy_athletes' in the schema cache",
+    "passed": false
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.academy_staff_members",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "PGRST205: Could not find the table 'public.academy_staff_members' in the schema cache",
+    "passed": false
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.academy_fee_invoices",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "PGRST205: Could not find the table 'public.academy_fee_invoices' in the schema cache",
+    "passed": false
   },
   {
     "test": "SEC-PROBE-02: Anonymous EXECUTE on public.is_tenant_member",

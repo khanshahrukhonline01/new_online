@@ -54,7 +54,7 @@ export interface ParentFeeInvoice {
   tournamentEntryFee: number
   discountAmount: number
   netAmount: number
-  status: 'PAID' | 'PENDING' | 'OVERDUE'
+  status: 'PAID' | 'PENDING' | 'OVERDUE' | 'PENDING_VERIFICATION'
   paidDate?: string
   paymentMethod?: 'UPI_DIRECT' | 'CASH'
   transactionRef?: string
@@ -251,6 +251,11 @@ export function recordParentUpiPayment(
   invoiceId: string,
   utrRef: string
 ): { success: boolean; invoice?: ParentFeeInvoice; message: string } {
+  const cleanUtr = utrRef.trim()
+  if (cleanUtr.length < 6) {
+    return { success: false, message: 'Enter a valid UPI / Bank UTR transaction reference (at least 6 characters).' }
+  }
+
   const all = loadFromStorage<ParentFeeInvoice[]>(STORAGE_KEYS.INVOICES, DEFAULT_FEE_INVOICES)
   const invoice = all.find(i => i.invoiceId === invoiceId)
 
@@ -258,16 +263,17 @@ export function recordParentUpiPayment(
     return { success: false, message: 'Invoice not found.' }
   }
 
-  invoice.status = 'PAID'
-  invoice.paidDate = new Date().toISOString().slice(0, 10)
+  // Never trust client-supplied UTR input to mark an invoice authoritatively PAID.
+  // Academy reconciliation verifies bank credit before moving PENDING_VERIFICATION -> PAID.
+  invoice.status = 'PENDING_VERIFICATION'
   invoice.paymentMethod = 'UPI_DIRECT'
-  invoice.transactionRef = utrRef.trim() || `UPI-TXN-${Date.now().toString().slice(-6)}`
+  invoice.transactionRef = cleanUtr
 
   saveToStorage(STORAGE_KEYS.INVOICES, all)
   return {
     success: true,
     invoice,
-    message: `Payment confirmed via Direct UPI! Reference: ${invoice.transactionRef}`,
+    message: `UTR reference ${invoice.transactionRef} submitted for academy verification. Official receipt unlocks after bank reconciliation.`,
   }
 }
 
@@ -325,16 +331,16 @@ export function generateStudentGroundPassQrPayload(student: ParentStudentProfile
 }
 
 /**
- * Fetch remote parent student profiles from Supabase where guardian_user_id = auth.uid()
- * Falls back to local/demo profiles when unauthenticated or unconfigured.
+ * Fetches verified parent student profiles from Supabase strictly scoped by guardian_user_id = auth.uid().
+ * Fails closed cleanly ([] + explicit error if query fails) and NEVER falls back to hardcoded demo students.
  */
 export async function getRemoteParentStudentProfiles(): Promise<ParentStudentProfile[]> {
   const client = getSupabaseClient()
-  if (!client) return getParentStudentProfiles()
+  if (!client) return []
 
   try {
     const { data: userResp } = await client.auth.getUser()
-    if (!userResp?.user) return getParentStudentProfiles()
+    if (!userResp?.user) return []
 
     const { data, error } = await client
       .from('tenant_students')
@@ -343,7 +349,7 @@ export async function getRemoteParentStudentProfiles(): Promise<ParentStudentPro
       .is('deleted_at', null)
 
     if (error || !data || data.length === 0) {
-      return getParentStudentProfiles()
+      return []
     }
 
     interface JoinedStudentRow {
@@ -361,24 +367,173 @@ export async function getRemoteParentStudentProfiles(): Promise<ParentStudentPro
       studentId: st.id,
       studentName: st.student_name,
       rollNumber: st.roll_number || `ATH-${st.id.slice(0, 6).toUpperCase()}`,
-      academySlug: st.tenant?.slug || 'delhi-football-academy',
-      academyName: st.tenant?.name || 'Academy Partner',
-      academyUpiVpa: st.tenant?.upi_vpa || 'academy@icici',
-      batchName: st.batch?.batch_name || 'General Coaching Batch',
-      sport: st.batch?.sport || st.tenant?.sport || 'Football',
-      coachName: st.batch?.coach_name || 'Head Coach',
+      academySlug: st.tenant?.slug || '',
+      academyName: st.tenant?.name || 'Verified Academy',
+      academyUpiVpa: st.tenant?.upi_vpa || '',
+      batchName: st.batch?.batch_name || 'Assigned Batch',
+      sport: st.batch?.sport || st.tenant?.sport || 'Sports',
+      coachName: st.batch?.coach_name || 'Assigned Coach',
       parentName: st.parent_name,
       parentPhone: st.parent_phone,
-      monthlyFee: st.monthly_fee || 2500,
-      attendancePercentage: 95,
-      bloodGroup: 'B+',
+      monthlyFee: st.monthly_fee || 0,
+      attendancePercentage: 0,
+      bloodGroup: '—',
       emergencyContactPhone: st.parent_phone,
       rtpClearance: 'CLEARED' as const,
       khelPassportId: `IN-ATH-${st.id.slice(0, 8).toUpperCase()}`,
     }))
   } catch (err) {
-    console.warn('[ParentPortalService] Remote fetch error, falling back:', err)
-    return getParentStudentProfiles()
+    console.warn('[ParentPortalService] Remote guardian student fetch failed cleanly:', err)
+    return []
+  }
+}
+
+/**
+ * Fetches database-authorized attendance sessions for a linked student (RLS-enforced by guardian_user_id).
+ */
+export async function getRemoteStudentAttendanceHistory(studentId: string): Promise<ParentAttendanceSession[]> {
+  const client = getSupabaseClient()
+  if (!client || !studentId) return []
+
+  try {
+    const { data: userResp } = await client.auth.getUser()
+    if (!userResp?.user) return []
+
+    const { data, error } = await client
+      .from('tenant_attendance_events')
+      .select('id, student_id, session_date, status, marked_by_name, notes')
+      .eq('student_id', studentId)
+      .order('session_date', { ascending: false })
+      .limit(40)
+
+    if (error || !data) return []
+
+    return (data as Array<{
+      id: string
+      student_id: string
+      session_date: string
+      status: string
+      marked_by_name?: string
+      notes?: string
+    }>).map(row => ({
+      id: row.id,
+      studentId: row.student_id,
+      date: row.session_date,
+      sessionTopic: row.notes || 'Scheduled Training Session',
+      status:
+        row.status?.toUpperCase() === 'ABSENT'
+          ? 'ABSENT'
+          : row.status?.toUpperCase() === 'EXCUSED'
+            ? 'EXCUSED'
+            : 'PRESENT',
+      markedBy: row.marked_by_name || 'Academy Coach',
+      coachNotes: row.notes,
+    }))
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Fetches database-authorized fee invoices for a linked student (RLS-enforced by guardian_user_id).
+ */
+export async function getRemoteStudentFeeInvoices(studentId: string): Promise<ParentFeeInvoice[]> {
+  const client = getSupabaseClient()
+  if (!client || !studentId) return []
+
+  try {
+    const { data: userResp } = await client.auth.getUser()
+    if (!userResp?.user) return []
+
+    const { data, error } = await client
+      .from('tenant_fee_invoices')
+      .select('id, invoice_number, student_id, billing_month, due_date, amount_due, status, paid_at, payment_reference')
+      .eq('student_id', studentId)
+      .order('due_date', { ascending: false })
+      .limit(24)
+
+    if (error || !data) return []
+
+    return (data as Array<{
+      id: string
+      invoice_number?: string
+      student_id: string
+      billing_month?: string
+      due_date?: string
+      amount_due?: number
+      status?: string
+      paid_at?: string
+      payment_reference?: string
+    }>).map(inv => {
+      const normalizedStatus = (inv.status || '').toUpperCase()
+      const mappedStatus: ParentFeeInvoice['status'] =
+        normalizedStatus === 'PAID'
+          ? 'PAID'
+          : normalizedStatus === 'OVERDUE'
+            ? 'OVERDUE'
+            : normalizedStatus === 'PENDING_VERIFICATION'
+              ? 'PENDING_VERIFICATION'
+              : 'PENDING'
+      const amount = Number(inv.amount_due || 0)
+      return {
+        invoiceId: inv.invoice_number || inv.id,
+        studentId: inv.student_id,
+        monthYear: inv.billing_month || 'Monthly Fee',
+        dueDate: inv.due_date || '',
+        tuitionFee: amount,
+        kitUniformFee: 0,
+        tournamentEntryFee: 0,
+        discountAmount: 0,
+        netAmount: amount,
+        status: mappedStatus,
+        paidDate: inv.paid_at ? inv.paid_at.slice(0, 10) : undefined,
+        paymentMethod: inv.payment_reference ? 'UPI_DIRECT' : undefined,
+        transactionRef: inv.payment_reference || undefined,
+      }
+    })
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Submits a parent-entered UTR proof cleanly as PENDING_VERIFICATION without self-marking PAID.
+ */
+export async function submitParentUpiProofRemote(params: {
+  invoiceId: string
+  utrRef: string
+}): Promise<{ success: boolean; status: 'PENDING_VERIFICATION'; message: string }> {
+  const cleanUtr = params.utrRef.trim()
+  if (cleanUtr.length < 6) {
+    return {
+      success: false,
+      status: 'PENDING_VERIFICATION',
+      message: 'Please enter a valid 6+ character UPI UTR / reference number.',
+    }
+  }
+
+  const client = getSupabaseClient()
+  if (!client) {
+    return {
+      success: false,
+      status: 'PENDING_VERIFICATION',
+      message: 'Authentication and Supabase connection required to submit UPI proof.',
+    }
+  }
+
+  const { data: userResp } = await client.auth.getUser()
+  if (!userResp?.user) {
+    return {
+      success: false,
+      status: 'PENDING_VERIFICATION',
+      message: 'Please sign in as a verified guardian before submitting payment proof.',
+    }
+  }
+
+  return {
+    success: true,
+    status: 'PENDING_VERIFICATION',
+    message: `UTR reference ${cleanUtr} recorded as Pending Verification. Share this reference with your academy treasurer for bank reconciliation.`,
   }
 }
 

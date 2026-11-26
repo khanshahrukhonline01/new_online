@@ -98,4 +98,22 @@ test.describe('KhelGrid Academy SaaS Workspace — Security & Responsive E2E Acc
     await expect(page.locator('body')).toContainText(/PARTNER ACCOUNT VERIFICATION/i, { timeout: 15000 })
     expect(pageErrors).toHaveLength(0)
   })
+
+  test('5. legacy operational routes (/turf-calendar, /tournament-ops, /organizations, /parent-portal, /workspace/organization/overview) fail closed when unauthenticated', async ({ page }) => {
+    const pageErrors: string[] = []
+    page.on('pageerror', err => pageErrors.push(err.message))
+
+    for (const target of ['/turf-calendar', '/tournament-ops', '/organizations', '/parent-portal']) {
+      await page.goto(target)
+      await expect(page.locator('body')).toContainText(/Sign in required/i, { timeout: 15000 })
+      const bodyText = await page.locator('body').innerText()
+      expect(bodyText).not.toContain('INV-2026-NOV-042')
+      expect(bodyText).not.toContain('NCR Elite Cricket')
+      expect(bodyText).not.toContain('Bengaluru Youth FC')
+    }
+
+    await page.goto('/workspace/organization/overview')
+    await expect(page.locator('body')).toContainText(/Your workspace is waiting|Sign in/i, { timeout: 15000 })
+    expect(pageErrors).toHaveLength(0)
+  })
 })

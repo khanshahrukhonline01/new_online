@@ -190,24 +190,140 @@ export async function getPublicTenantBySlug(slug: string): Promise<DbPublicTenan
   }
 }
 
+export const INSTITUTIONAL_TENANT_TYPES: readonly OrganizationType[] = [
+  'academy',
+  'club',
+  'school',
+  'college',
+  'university',
+  'federation',
+  'association',
+  'corporate',
+  'training_org',
+  'service_provider',
+  'research_org',
+  'media_org',
+  'enterprise',
+  'other',
+  'venue',
+  'tournament',
+  'event_organizer',
+] as const
+
+export interface TenantRoutePolicy {
+  personaLabel: string
+  onboardingRole: 'academy' | 'coach' | 'venue' | 'tournament' | 'organization'
+  requiredTenantTypes: OrganizationType[]
+  allowedRoles: string[]
+}
+
+const VENUE_ALLOWED_ROLES = [
+  'owner',
+  'org_admin',
+  'director',
+  'admin',
+  'manager',
+  'listing_manager',
+  'finance_manager',
+  'accountant',
+  'front_desk',
+  'staff',
+  'readonly_member',
+]
+
+/** Single authoritative membership policy per operational persona (shared by App.tsx and WorkspaceShell.tsx). */
+export const TENANT_ROUTE_POLICIES: Record<
+  'academy' | 'coach' | 'turf' | 'host' | 'tournament' | 'organization',
+  TenantRoutePolicy
+> = {
+  academy: {
+    personaLabel: 'Academy',
+    onboardingRole: 'academy',
+    requiredTenantTypes: ['academy', 'club', 'school', 'college', 'university', 'training_org'],
+    allowedRoles: [
+      'owner',
+      'org_admin',
+      'director',
+      'admin',
+      'manager',
+      'admissions_manager',
+      'front_desk',
+      'head_coach',
+      'coach',
+      'finance_manager',
+      'accountant',
+      'content_manager',
+      'listing_manager',
+      'verification_coordinator',
+      'staff',
+      'readonly_member',
+    ],
+  },
+  coach: {
+    personaLabel: 'Coach',
+    onboardingRole: 'coach',
+    requiredTenantTypes: ['coach', 'academy'],
+    allowedRoles: ['owner', 'org_admin', 'director', 'admin', 'manager', 'head_coach', 'coach'],
+  },
+  turf: {
+    personaLabel: 'Venue / Turf',
+    onboardingRole: 'venue',
+    requiredTenantTypes: ['venue'],
+    allowedRoles: VENUE_ALLOWED_ROLES,
+  },
+  host: {
+    personaLabel: 'Venue / Host',
+    onboardingRole: 'venue',
+    requiredTenantTypes: ['venue'],
+    allowedRoles: VENUE_ALLOWED_ROLES,
+  },
+  tournament: {
+    personaLabel: 'Tournament',
+    onboardingRole: 'tournament',
+    requiredTenantTypes: ['tournament', 'event_organizer'],
+    allowedRoles: [
+      'owner',
+      'org_admin',
+      'director',
+      'admin',
+      'manager',
+      'finance_manager',
+      'content_manager',
+      'verification_coordinator',
+      'accountant',
+      'staff',
+      'readonly_member',
+    ],
+  },
+  organization: {
+    personaLabel: 'Organisation',
+    onboardingRole: 'organization',
+    requiredTenantTypes: [...INSTITUTIONAL_TENANT_TYPES],
+    allowedRoles: [
+      'owner',
+      'org_admin',
+      'director',
+      'admin',
+      'manager',
+      'finance_manager',
+      'content_manager',
+      'listing_manager',
+      'verification_coordinator',
+      'accountant',
+      'front_desk',
+      'staff',
+      'readonly_member',
+    ],
+  },
+}
+
 /**
  * Fetch tenant profile by slug (for authorized tenant member / owner)
  */
 export async function getTenantBySlug(slug: string): Promise<DbTenant | null> {
   const client = getSupabaseClient()
   if (!client) {
-    return {
-      id: `local-tenant-${slug}`,
-      name: slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      slug,
-      tenant_type: 'academy',
-      status: 'active',
-      city: 'Delhi NCR',
-      state: 'Delhi',
-      sport: 'Cricket',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
+    return null
   }
 
   try {
@@ -397,9 +513,8 @@ export async function provisionInitialTenantOwner(params: {
   const client = getSupabaseClient()
   if (!client) {
     return {
-      success: true,
-      tenantId: `tenant-${params.slug}`,
-      message: 'Successfully provisioned tenant and initial owner membership (local)',
+      success: false,
+      message: 'Authentication and Supabase configuration are required to provision a workspace.',
     }
   }
 
@@ -449,10 +564,8 @@ export async function submitTenantEnquiry(enquiry: {
   const client = getSupabaseClient()
   if (!client) {
     return {
-      success: true,
-      enquiryId: `local-enq-${Date.now()}`,
-      enquiryToken: enquiry.enquiryToken || `ENQ-LOCAL-${Date.now()}`,
-      message: 'Locally recorded parent enquiry (offline)',
+      success: false,
+      message: 'Supabase configuration is required to submit enquiries.',
     }
   }
 
@@ -760,9 +873,8 @@ export async function createTenantInvitation(params: {
   const client = getSupabaseClient()
   if (!client) {
     return {
-      success: true,
-      membershipId: `invite-${Date.now()}`,
-      message: 'Invitation issued successfully (local)',
+      success: false,
+      message: 'Authentication and Supabase configuration are required to issue workspace invitations.',
     }
   }
 
@@ -789,8 +901,8 @@ export async function acceptTenantInvitation(
   const client = getSupabaseClient()
   if (!client) {
     return {
-      success: true,
-      message: 'Invitation accepted successfully (local)',
+      success: false,
+      message: 'Authentication and Supabase configuration are required to accept workspace invitations.',
     }
   }
 
