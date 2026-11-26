@@ -1,13 +1,14 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { ConfirmDialog } from '../../../../shared/components/ui/ConfirmDialog'
 import { EmptyState } from '../../../../shared/components/ui/EmptyState'
 import { SiteIcon } from '../../../../shared/components/SiteIcon'
 import { generateQrSvgString } from '../../../../shared/utils/qrCodeGenerator'
 import { maskPhone } from '../../../../shared/saas/saasLaunchReadinessService'
-import { generateUpiPayLink } from '../../academySaaSClient'
 import { downloadBlobFile } from '../../academyExportUtils'
 import type { AcademyRoleCapabilities } from '../../academyHubTypes'
 import {
+  createAcademyFeeInvoice,
+  generateAcademyUpiPayLink,
   inviteAcademyStaff,
   recordAcademyFeeReceipt,
   saveAcademySecuritySettings,
@@ -19,6 +20,7 @@ import {
   type AcademyBatchRecord,
   type AcademyBranchRecord,
   type AcademyEnquiryRecord,
+  type AcademyFeeInvoiceRecord,
   type AcademyFeeTransactionRecord,
   type AcademyOverviewPayload,
   type AcademyStaffMemberRecord,
@@ -31,6 +33,9 @@ export interface AcademyGovernanceAndCommsPanelProps {
   actorName: string
   actorUserId: string
   initialUpiVpa: string
+  initialHotline?: string
+  initialPocsoOfficer?: string
+  tenantSettings?: Record<string, unknown>
   dpdpMaskEnabled: boolean
   onToggleDpdpMask: () => void
   capabilities: AcademyRoleCapabilities
@@ -41,6 +46,7 @@ export interface AcademyGovernanceAndCommsPanelProps {
   enquiries: AcademyEnquiryRecord[]
   announcements: AcademyAnnouncementRecord[]
   staffMembers: AcademyStaffMemberRecord[]
+  feeInvoices?: AcademyFeeInvoiceRecord[]
   feeTransactions: AcademyFeeTransactionRecord[]
   auditLogs: { id: string; action: string; entity_type: string; details: Record<string, unknown>; created_at: string }[]
   onRefresh: () => Promise<void>
@@ -64,6 +70,9 @@ export function AcademyGovernanceAndCommsPanel({
   actorName,
   actorUserId,
   initialUpiVpa,
+  initialHotline = '',
+  initialPocsoOfficer = '',
+  tenantSettings,
   dpdpMaskEnabled,
   onToggleDpdpMask,
   capabilities,
@@ -74,6 +83,7 @@ export function AcademyGovernanceAndCommsPanel({
   enquiries,
   announcements,
   staffMembers,
+  feeInvoices = [],
   feeTransactions,
   auditLogs,
   onRefresh,
@@ -93,18 +103,33 @@ export function AcademyGovernanceAndCommsPanel({
 
   // Fees (Direct UPI & Cash — Payment Gateway Paused)
   const [feeStudentId, setFeeStudentId] = useState(athletes[0]?.id || '')
+  const [feeInvoiceId, setFeeInvoiceId] = useState('')
   const [feeAmount, setFeeAmount] = useState('2500')
   const [feeMode, setFeeMode] = useState<AcademyFeeTransactionRecord['paymentMode']>('direct_upi')
   const [feeMonth, setFeeMonth] = useState(() => new Date().toISOString().slice(0, 7))
+  const [feeDueDate, setFeeDueDate] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10))
   const [feeNotes, setFeeNotes] = useState('')
   const [qrStudentId, setQrStudentId] = useState<string | null>(null)
 
   // Settings & Ownership Transfer
   const [upiVpa, setUpiVpa] = useState(initialUpiVpa)
-  const [hotline, setHotline] = useState('')
-  const [pocsoOfficer, setPocsoOfficer] = useState('')
+  const [hotline, setHotline] = useState(initialHotline)
+  const [pocsoOfficer, setPocsoOfficer] = useState(initialPocsoOfficer)
   const [transferTargetId, setTransferTargetId] = useState('')
   const [confirmTransferOpen, setConfirmTransferOpen] = useState(false)
+
+  useEffect(() => {
+    if (!feeStudentId && athletes[0]?.id) {
+      setFeeStudentId(athletes[0].id)
+      if (athletes[0].monthlyFee > 0) setFeeAmount(String(athletes[0].monthlyFee))
+    }
+  }, [feeStudentId, athletes])
+
+  useEffect(() => {
+    setUpiVpa(initialUpiVpa)
+    setHotline(initialHotline)
+    setPocsoOfficer(initialPocsoOfficer)
+  }, [tenantId, initialUpiVpa, initialHotline, initialPocsoOfficer])
 
   // =========================================================================
   // 1. NOTIFICATIONS & ANNOUNCEMENTS
@@ -330,6 +355,7 @@ export function AcademyGovernanceAndCommsPanel({
       const res = await recordAcademyFeeReceipt({
         tenantId,
         studentId: feeStudentId,
+        invoiceId: feeInvoiceId || null,
         amount: Number(feeAmount || 0),
         paymentMode: feeMode,
         collectedByName: actorName,
@@ -339,14 +365,27 @@ export function AcademyGovernanceAndCommsPanel({
       onFeedback({ type: res.success ? 'success' : 'error', message: res.message })
       if (res.success) {
         setFeeNotes('')
+        setFeeInvoiceId('')
         await onRefresh()
       }
+    }
+
+    const handleIssueInvoice = async () => {
+      const res = await createAcademyFeeInvoice({
+        tenantId,
+        studentId: feeStudentId,
+        amount: Number(feeAmount || 0),
+        billingMonth: feeMonth,
+        dueDate: feeDueDate,
+      })
+      onFeedback({ type: res.success ? 'success' : 'error', message: res.message })
+      if (res.success) await onRefresh()
     }
 
     const qrStudent = qrStudentId ? athletes.find(a => a.id === qrStudentId) : null
     const qrSvg = qrStudent && initialUpiVpa
       ? generateQrSvgString(
-          generateUpiPayLink({
+          generateAcademyUpiPayLink({
             vpa: initialUpiVpa,
             name: academyName,
             amount: qrStudent.monthlyFee || Number(feeAmount || 0),
@@ -362,7 +401,7 @@ export function AcademyGovernanceAndCommsPanel({
           <div>
             <h2>Fee Tracking &amp; Direct UPI Ledger</h2>
             <p className="kg-acad-muted">
-              Record offline cash, bank transfer, or direct academy UPI receipts. Online payment gateway collection remains paused (0% commission).
+              Issue invoices and record offline cash, bank transfer, or direct academy UPI receipts. Online payment gateway collection remains paused (0% commission).
             </p>
           </div>
           <span className="kg-acad-pill is-info">Payment Collection Paused · Zero Commission Direct UPI</span>
@@ -370,11 +409,20 @@ export function AcademyGovernanceAndCommsPanel({
 
         {capabilities.canManageFinance && (
           <form className="kg-acad-card kg-acad-form" onSubmit={e => void handleRecordReceipt(e)}>
-            <h3>Record Fee Receipt</h3>
+            <h3>Issue Invoice or Record Fee Receipt</h3>
             <div className="kg-acad-form-grid">
               <label className="kg-acad-field">
                 <span>Athlete *</span>
-                <select required value={feeStudentId} onChange={e => setFeeStudentId(e.target.value)}>
+                <select
+                  required
+                  value={feeStudentId}
+                  onChange={e => {
+                    const id = e.target.value
+                    setFeeStudentId(id)
+                    const st = athletes.find(a => a.id === id)
+                    if (st && st.monthlyFee > 0) setFeeAmount(String(st.monthlyFee))
+                  }}
+                >
                   <option value="">Select athlete</option>
                   {athletes.map(a => <option key={a.id} value={a.id}>{a.studentName} (₹{a.monthlyFee})</option>)}
                 </select>
@@ -396,10 +444,21 @@ export function AcademyGovernanceAndCommsPanel({
                 <span>Billing Month *</span>
                 <input type="month" required value={feeMonth} onChange={e => setFeeMonth(e.target.value)} />
               </label>
+              <label className="kg-acad-field">
+                <span>Invoice Due Date</span>
+                <input type="date" value={feeDueDate} onChange={e => setFeeDueDate(e.target.value)} />
+              </label>
+              <label className="kg-acad-field">
+                <span>Reference / UTR Note</span>
+                <input type="text" placeholder="UTR / Receipt Note" value={feeNotes} onChange={e => setFeeNotes(e.target.value)} />
+              </label>
             </div>
             <div className="kg-acad-btn-row" style={{ marginTop: '0.85rem' }}>
               <button type="submit" className="kg-acad-btn-primary" disabled={!feeStudentId}>
                 Record Official Receipt
+              </button>
+              <button type="button" className="kg-acad-btn-outline" disabled={!feeStudentId} onClick={() => void handleIssueInvoice()}>
+                Issue Fee Invoice
               </button>
               {feeStudentId && initialUpiVpa && (
                 <button type="button" className="kg-acad-btn-outline" onClick={() => setQrStudentId(feeStudentId)}>
@@ -419,6 +478,68 @@ export function AcademyGovernanceAndCommsPanel({
             <div dangerouslySetInnerHTML={{ __html: qrSvg }} />
           </section>
         )}
+
+        <section className="kg-acad-card">
+          <h3>Student Fee Invoices ({feeInvoices.length})</h3>
+          {feeInvoices.length === 0 ? (
+            <EmptyState title="No fee invoices issued yet" description="Issue monthly fee invoices above or settle direct UPI receipts." />
+          ) : (
+            <div className="kg-acad-table-wrap">
+              <table className="kg-acad-table">
+                <thead>
+                  <tr>
+                    <th>Invoice #</th>
+                    <th>Athlete</th>
+                    <th>Amount</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    {capabilities.canManageFinance && <th>Action</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {feeInvoices.map(inv => {
+                    const name = athletes.find(a => a.id === inv.studentId)?.studentName || inv.studentId.slice(0, 8)
+                    return (
+                      <tr key={inv.id}>
+                        <td><code>{inv.invoiceNumber}</code></td>
+                        <td>{name}</td>
+                        <td><strong>₹{inv.amount.toLocaleString('en-IN')}</strong></td>
+                        <td>{inv.dueDate}</td>
+                        <td><span className={`kg-acad-pill ${inv.status === 'paid' ? 'is-emerald' : 'is-warning'}`}>{inv.status.replace('_', ' ')}</span></td>
+                        {capabilities.canManageFinance && (
+                          <td>
+                            {inv.status !== 'paid' && inv.status !== 'cancelled' && (
+                              <button
+                                type="button"
+                                className="kg-acad-btn-outline"
+                                onClick={async () => {
+                                  const res = await recordAcademyFeeReceipt({
+                                    tenantId,
+                                    studentId: inv.studentId,
+                                    invoiceId: inv.id,
+                                    amount: inv.amount,
+                                    paymentMode: 'direct_upi',
+                                    collectedByName: actorName,
+                                    billingMonth: inv.billingMonth,
+                                    notes: `Settled invoice ${inv.invoiceNumber}`,
+                                  })
+                                  onFeedback({ type: res.success ? 'success' : 'error', message: res.message })
+                                  if (res.success) await onRefresh()
+                                }}
+                              >
+                                Settle Invoice
+                              </button>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
 
         <section className="kg-acad-card">
           <h3>Recorded Fee Receipts ({feeTransactions.length})</h3>
@@ -632,6 +753,7 @@ export function AcademyGovernanceAndCommsPanel({
             dpdpMaskMinorsDefault: dpdpMaskEnabled,
             emergencyHotline: hotline,
             pocsoOfficerName: pocsoOfficer,
+            existingSettings: tenantSettings,
           })
           onFeedback({ type: res.success ? 'success' : 'error', message: res.message })
           if (res.success) await onRefresh()

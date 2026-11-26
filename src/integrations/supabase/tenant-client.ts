@@ -42,6 +42,7 @@ export type DbTenantMemberRole =
   | 'director'
   | 'admin'
   | 'manager'
+  | 'admissions_manager'
   | 'finance_manager'
   | 'content_manager'
   | 'listing_manager'
@@ -572,7 +573,7 @@ export async function submitTenantEnquiry(enquiry: {
   const token = enquiry.enquiryToken || `ENQ-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`
 
   try {
-    const { data, error } = await client
+    const { error } = await client
       .from('tenant_enquiries')
       .insert({
         tenant_id: enquiry.tenantId,
@@ -587,8 +588,6 @@ export async function submitTenantEnquiry(enquiry: {
         notes: enquiry.notes || null,
         status: 'new',
       })
-      .select('id, enquiry_token')
-      .single()
 
     if (error) {
       return { success: false, message: error.message }
@@ -596,8 +595,7 @@ export async function submitTenantEnquiry(enquiry: {
 
     return {
       success: true,
-      enquiryId: data.id,
-      enquiryToken: data.enquiry_token,
+      enquiryToken: token,
       message: 'Enquiry submitted successfully',
     }
   } catch (err) {

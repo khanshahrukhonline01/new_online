@@ -90,6 +90,40 @@ export function AcademyTrainingAndAttendancePanel({
   const visibleSessions = selectedBranchId ? sessions.filter(s => s.unitId === selectedBranchId) : sessions
 
   useEffect(() => {
+    const defaultBranch = selectedBranchId || branches[0]?.id || ''
+    if (defaultBranch && (!batchBranchId || (selectedBranchId && batchBranchId !== selectedBranchId))) {
+      setBatchBranchId(defaultBranch)
+    }
+    if (defaultBranch && (!sessBranchId || (selectedBranchId && sessBranchId !== selectedBranchId))) {
+      setSessBranchId(defaultBranch)
+    }
+    if (!sessBatchId && visibleBatches[0]?.id) {
+      setSessBatchId(visibleBatches[0].id)
+    }
+    if (!batchCoachId && coaches[0]?.id) {
+      setBatchCoachId(coaches[0].id)
+    }
+    if (!sessCoachId && coaches[0]?.id) {
+      setSessCoachId(coaches[0].id)
+    }
+    if (!sessFacilityId && facilities[0]?.id) {
+      setSessFacilityId(facilities[0].id)
+    }
+  }, [
+    selectedBranchId,
+    branches,
+    visibleBatches,
+    coaches,
+    facilities,
+    batchBranchId,
+    sessBranchId,
+    sessBatchId,
+    batchCoachId,
+    sessCoachId,
+    sessFacilityId,
+  ])
+
+  useEffect(() => {
     if (!attBatchId && visibleBatches[0]?.id) {
       setAttBatchId(visibleBatches[0].id)
     }

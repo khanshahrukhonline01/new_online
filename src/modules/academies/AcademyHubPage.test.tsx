@@ -212,7 +212,63 @@ describe('AcademyHubPage Multi-Tenant SaaS Workspace Suite', () => {
     )
     expect(financeHtml).toContain('Finance Manager')
     expect(financeHtml).toContain('Fee Tracking &amp; Direct UPI Ledger')
+    expect(financeHtml).toContain('Student Fee Invoices (0)')
+    expect(financeHtml).toContain('Issue Fee Invoice')
     expect(financeHtml).toContain('Payment Collection Paused')
+
+    const roleMatrix: Array<{ role: DbTenantMembership['role']; badge: string; tab: 'staff' | 'admissions' | 'athletes' | 'fees' | 'settings'; expectedText: string }> = [
+      { role: 'org_admin', badge: 'Academy Administrator', tab: 'staff', expectedText: 'Invite Academy Team Member' },
+      { role: 'manager', badge: 'Academy Manager', tab: 'fees', expectedText: 'Section Restricted by Academy Role' },
+      { role: 'admissions_manager', badge: 'Admissions Manager', tab: 'admissions', expectedText: 'Trials &amp; 8-Stage Admissions CRM' },
+      { role: 'readonly_member', badge: 'Read-Only Staff', tab: 'settings', expectedText: 'Section Restricted by Academy Role' },
+    ]
+
+    for (const entry of roleMatrix) {
+      const mem = makeMembership(sampleAcademyTenant, entry.role, `usr-${entry.role}`)
+      const roleHtml = renderToStaticMarkup(
+        <AuthContext.Provider value={makeAuthValue(makeUser('academy', `usr-${entry.role}`))}>
+          <TenantContext.Provider
+            value={makeTenantContext({
+              userId: `usr-${entry.role}`,
+              currentMembership: mem,
+              memberships: [mem],
+            })}
+          >
+            <AcademyHubPage initialTab={entry.tab} />
+          </TenantContext.Provider>
+        </AuthContext.Provider>,
+      )
+      expect(roleHtml).toContain(entry.badge)
+      expect(roleHtml).toContain(entry.expectedText)
+    }
+  })
+
+  it('hydrates tenant security settings values into the Academy Settings tab cleanly', () => {
+    const tenantWithSettings = {
+      ...sampleAcademyTenant,
+      settings: {
+        dpdpMaskMinorsDefault: true,
+        emergencyHotline: '+91-98800-11223',
+        pocsoOfficerName: 'Dr. Kavita Menon',
+      },
+    } as unknown as DbTenant
+    const mem = makeMembership(tenantWithSettings, 'owner')
+    const html = renderToStaticMarkup(
+      <AuthContext.Provider value={makeAuthValue(makeUser())}>
+        <TenantContext.Provider
+          value={makeTenantContext({
+            currentTenant: tenantWithSettings,
+            currentMembership: mem,
+            memberships: [mem],
+          })}
+        >
+          <AcademyHubPage initialTab="settings" />
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
+    )
+    expect(html).toContain('+91-98800-11223')
+    expect(html).toContain('Dr. Kavita Menon')
+    expect(html).toContain('elitestrike@oksbi')
   })
 
   it('wires WorkspaceShell workspaceSection prop directly onto Batches & Coaches modules', () => {

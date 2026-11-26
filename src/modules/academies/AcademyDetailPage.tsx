@@ -11,6 +11,7 @@ import VerificationClaimModal from '../../shared/components/VerificationClaimMod
 import { CommunityReviewsSection } from '../../shared/components/CommunityReviewsSection'
 import { AcademyEnquiryModal } from './AcademyEnquiryModal'
 import { isAcademyEnquirySubmitted } from '../../integrations/supabase/athlete-profile-client'
+import { getPublicTenantBySlug, submitTenantEnquiry } from '../../integrations/supabase/tenant-client'
 import { getAcademyBatches, createTrialPass, addAcademyLead, type AcademyBatch, type AcademyTrialPass } from './academySaaSClient'
 import { generateQrSvgString } from '../../shared/utils/qrCodeGenerator'
 import './AcademyDetailPage.css'
@@ -116,7 +117,7 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
     }
   }, [slug, academy?.rating, academy?.review_count])
 
-  function handleTrialBookingSubmit(e: React.FormEvent) {
+  async function handleTrialBookingSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!academy) return
     if (trialParentName.trim().length < 2) {
@@ -144,19 +145,39 @@ export default function AcademyDetailPage({ slug, onNavigate, initialEnrolOpen }
       reportingInstructions: 'Report 15 minutes before batch time with sports shoes and hydration kit.',
     })
 
-    addAcademyLead({
-      academySlug: slug,
-      parentName: trialParentName.trim(),
-      parentPhone: trialParentPhone.trim(),
-      studentName: trialStudentName.trim(),
-      studentAge: trialStudentAge,
-      sport: trialBatch?.sport || academy.sport || 'Sports',
-      batchType: 'free_trial',
-      batchName: trialBatch?.batchName || 'General Trial',
-      requestType: 'free_trial',
-      status: 'trial_scheduled',
-      notes: `Booked public free trial for ${trialDate}. Pass #${pass.passNumber}`,
-    })
+    const liveTenant = await getPublicTenantBySlug(slug)
+    if (liveTenant?.id) {
+      const parsedAge = Number(trialStudentAge)
+      const remoteRes = await submitTenantEnquiry({
+        tenantId: liveTenant.id,
+        enquiryToken: pass.passNumber,
+        parentName: trialParentName.trim(),
+        parentPhone: trialParentPhone.trim(),
+        studentName: trialStudentName.trim(),
+        studentAge: Number.isFinite(parsedAge) && parsedAge > 0 ? parsedAge : undefined,
+        sport: trialBatch?.sport || academy.sport || 'Sports',
+        requestType: 'free_trial',
+        notes: `Booked public free trial for ${trialDate}. Pass #${pass.passNumber}`,
+      })
+      if (!remoteRes.success) {
+        setTrialError(remoteRes.message || 'Unable to submit free trial booking to this academy.')
+        return
+      }
+    } else {
+      addAcademyLead({
+        academySlug: slug,
+        parentName: trialParentName.trim(),
+        parentPhone: trialParentPhone.trim(),
+        studentName: trialStudentName.trim(),
+        studentAge: trialStudentAge,
+        sport: trialBatch?.sport || academy.sport || 'Sports',
+        batchType: 'free_trial',
+        batchName: trialBatch?.batchName || 'General Trial',
+        requestType: 'free_trial',
+        status: 'trial_scheduled',
+        notes: `Booked public free trial for ${trialDate}. Pass #${pass.passNumber}`,
+      })
+    }
 
     setCreatedTrialPass(pass)
     setTrialError('')

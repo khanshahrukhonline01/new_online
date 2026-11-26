@@ -37,6 +37,7 @@ PREREQUISITE_MIGRATIONS = [
     "20261126000000_expand_profiles_role_check.sql",
     "20261126120000_coach_workspace_phase1_foundation.sql",
     "20261126140000_academy_workspace_saas_foundation.sql",
+    "20261127000000_phase2_academy_finance_ledger_hardening.sql",
 ]
 
 
@@ -76,6 +77,8 @@ INSERT INTO auth.users (id, email) VALUES
   ('aaaa3333-3333-3333-3333-333333333333', 'coach-a@khelgrid-test.local'),
   ('aaaa4444-4444-4444-4444-444444444444', 'admissions-a@khelgrid-test.local'),
   ('aaaa5555-5555-5555-5555-555555555555', 'readonly-a@khelgrid-test.local'),
+  ('aaaa6666-6666-6666-6666-666666666666', 'org-admin-a@khelgrid-test.local'),
+  ('aaaa7777-7777-7777-7777-777777777777', 'finance-a@khelgrid-test.local'),
   ('bbbb1111-1111-1111-1111-111111111111', 'owner-b@khelgrid-test.local')
 ON CONFLICT (id) DO NOTHING;
 
@@ -91,11 +94,14 @@ DECLARE
   v_mem_coach uuid;
   v_mem_adm uuid;
   v_mem_ro uuid;
+  v_mem_org_admin uuid;
+  v_mem_fin uuid;
   v_coach_a uuid;
   v_batch_a1 uuid;
   v_batch_a2 uuid;
   v_student_a1 uuid;
   v_student_a2 uuid;
+  v_inv_a1 uuid;
   v_fac_a1 uuid;
   v_sess_a1 uuid;
   v_enq_a1 uuid;
@@ -136,6 +142,14 @@ BEGIN
   INSERT INTO public.tenant_memberships (tenant_id, user_id, role, status)
   VALUES (v_tenant_a, 'aaaa5555-5555-5555-5555-555555555555', 'readonly_member', 'active')
   RETURNING id INTO v_mem_ro;
+
+  INSERT INTO public.tenant_memberships (tenant_id, user_id, role, status)
+  VALUES (v_tenant_a, 'aaaa6666-6666-6666-6666-666666666666', 'org_admin', 'active')
+  RETURNING id INTO v_mem_org_admin;
+
+  INSERT INTO public.tenant_memberships (tenant_id, user_id, role, status)
+  VALUES (v_tenant_a, 'aaaa7777-7777-7777-7777-777777777777', 'finance_manager', 'active')
+  RETURNING id INTO v_mem_fin;
 
   -- Seed coach, facilities, batches, students across Branch 1 & Branch 2 of Academy A
   INSERT INTO public.academy_coaches (tenant_id, user_id, membership_id, primary_unit_id, full_name, role_title)
@@ -385,8 +399,93 @@ BEGIN
     NULL;
   END;
 
+  -- VECTOR 8: Academy Administrator (org_admin) manages all branches & invites coaches, but cannot elevate to owner or transfer ownership
   RESET ROLE;
-  RAISE NOTICE 'ALL ACADEMY POSTGRES 16 SECURITY & WORKFLOW ASSERTIONS PASSED (7/7 VECTORS + CONFLICTS + AUDIT)';
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claim.sub', 'aaaa6666-6666-6666-6666-666666666666', true);
+  PERFORM set_config('request.jwt.claims', '{"sub":"aaaa6666-6666-6666-6666-666666666666","role":"authenticated"}', true);
+
+  SELECT count(*) INTO v_cnt FROM public.tenant_students WHERE tenant_id = v_tenant_a;
+  IF v_cnt < 3 THEN
+    RAISE EXCEPTION 'ASSERT FAILED: Academy Administrator should see all branches students (>=3), got %', v_cnt;
+  END IF;
+
+  PERFORM public.invite_academy_staff_member(v_tenant_a, 'new-coach@khelgrid-test.local', 'coach', ARRAY[v_unit_a1]);
+
+  v_err_caught := false;
+  BEGIN
+    PERFORM public.invite_academy_staff_member(v_tenant_a, 'rogue-dir@khelgrid-test.local', 'director', NULL);
+  EXCEPTION WHEN OTHERS THEN
+    v_err_caught := true;
+  END;
+  IF NOT v_err_caught THEN
+    RAISE EXCEPTION 'ASSERT FAILED: org_admin was allowed to invite top-level director';
+  END IF;
+
+  v_err_caught := false;
+  BEGIN
+    PERFORM public.transfer_tenant_ownership(v_tenant_a, 'aaaa6666-6666-6666-6666-666666666666');
+  EXCEPTION WHEN OTHERS THEN
+    v_err_caught := true;
+  END;
+  IF NOT v_err_caught THEN
+    RAISE EXCEPTION 'ASSERT FAILED: Non-owner org_admin transferred ownership';
+  END IF;
+
+  -- VECTOR 9: Finance Manager (finance_manager) issues invoices & records receipts, sees financial KPIs, but cannot delete receipts or manage staff/profiles
+  PERFORM set_config('request.jwt.claim.sub', 'aaaa7777-7777-7777-7777-777777777777', true);
+  PERFORM set_config('request.jwt.claims', '{"sub":"aaaa7777-7777-7777-7777-777777777777","role":"authenticated"}', true);
+
+  INSERT INTO public.tenant_fee_invoices (tenant_id, student_id, invoice_number, amount, billing_month, due_date, status)
+  VALUES (v_tenant_a, v_student_a1, 'INV-RLS-9001', 2500, '2026-12', CURRENT_DATE + 7, 'issued')
+  RETURNING id INTO v_inv_a1;
+
+  INSERT INTO public.tenant_fee_transactions (tenant_id, invoice_id, student_id, receipt_number, amount, payment_mode, collected_by_name, billing_month, status)
+  VALUES (v_tenant_a, v_inv_a1, v_student_a1, 'RCPT-RLS-9002', 2500, 'direct_upi', 'Finance Manager', '2026-12', 'settled');
+
+  v_overview := public.get_academy_dashboard_overview(v_tenant_a, NULL);
+  IF NOT ((v_overview->'stats'->>'canViewFinance')::boolean) OR (v_overview->'stats'->>'totalFeeCollectedInr')::integer < 5000 THEN
+    RAISE EXCEPTION 'ASSERT FAILED: Finance Manager did not receive authorized fee KPIs: %', v_overview->'stats';
+  END IF;
+
+  v_err_caught := false;
+  BEGIN
+    DELETE FROM public.tenant_fee_transactions WHERE tenant_id = v_tenant_a AND receipt_number = 'RCPT-RLS-9002';
+  EXCEPTION WHEN insufficient_privilege THEN
+    v_err_caught := true;
+  END;
+  IF NOT v_err_caught THEN
+    RAISE EXCEPTION 'ASSERT FAILED: Finance Manager deleted immutable fee transaction (expected insufficient_privilege)';
+  END IF;
+
+  v_err_caught := false;
+  BEGIN
+    DELETE FROM public.tenant_fee_invoices WHERE tenant_id = v_tenant_a AND invoice_number = 'INV-RLS-9001';
+  EXCEPTION WHEN insufficient_privilege THEN
+    v_err_caught := true;
+  END;
+  IF NOT v_err_caught THEN
+    RAISE EXCEPTION 'ASSERT FAILED: Finance Manager deleted immutable fee invoice (expected insufficient_privilege)';
+  END IF;
+
+  UPDATE public.academy_profiles SET tagline = 'Tampered By Finance' WHERE tenant_id = v_tenant_a;
+  GET DIAGNOSTICS v_cnt = ROW_COUNT;
+  IF v_cnt <> 0 THEN
+    RAISE EXCEPTION 'ASSERT FAILED: Finance Manager mutated academy_profiles';
+  END IF;
+
+  v_err_caught := false;
+  BEGIN
+    PERFORM public.invite_academy_staff_member(v_tenant_a, 'fin-escalate@khelgrid-test.local', 'coach', NULL);
+  EXCEPTION WHEN OTHERS THEN
+    v_err_caught := true;
+  END;
+  IF NOT v_err_caught THEN
+    RAISE EXCEPTION 'ASSERT FAILED: Finance Manager invited staff without staff permissions';
+  END IF;
+
+  RESET ROLE;
+  RAISE NOTICE 'ALL ACADEMY POSTGRES 16 SECURITY & WORKFLOW ASSERTIONS PASSED (9/9 VECTORS + ALL 7 ROLES + BRANCH ISOLATION + CONFLICTS + AUDIT)';
 END $$;
 """
 

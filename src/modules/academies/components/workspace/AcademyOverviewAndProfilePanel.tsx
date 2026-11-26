@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type MouseEvent } from 'react'
+import { useEffect, useState, type FormEvent, type MouseEvent } from 'react'
 import { EmptyState } from '../../../../shared/components/ui/EmptyState'
 import { KpiStrip, type KpiItem } from '../../../../shared/components/ui/KpiStrip'
 import { SiteIcon, type SiteIconName } from '../../../../shared/components/SiteIcon'
@@ -80,6 +80,28 @@ export function AcademyOverviewAndProfilePanel({
   const [docType, setDocType] = useState('affiliation_certificate')
   const [proofDetails, setProofDetails] = useState('')
   const [docUrl, setDocUrl] = useState('')
+
+  useEffect(() => {
+    setDisplayName(profile?.displayName || tenantName)
+    setTagline(profile?.tagline || '')
+    setDescription(profile?.description || '')
+    setSportsText((profile?.sportsOffered || []).join(', '))
+    setAgeGroupsText((profile?.ageGroups || []).join(', '))
+    setFacilitiesText((profile?.facilitiesSummary || []).join(', '))
+    setFoundedYear(profile?.foundedYear ? String(profile.foundedYear) : '')
+    setOperatingHours(profile?.operatingHours || '')
+    setTrainingMethodology(profile?.trainingMethodology || '')
+    setCity(profile?.city || '')
+    setStateName(profile?.state || '')
+    setContactPhone(profile?.contactPhone || '')
+    setContactEmail(profile?.contactEmail || '')
+    setWebsiteUrl(profile?.websiteUrl || '')
+    setIsPubliclyListed(Boolean(profile?.isPubliclyListed))
+    setSeoTitle(profile?.seoTitle || '')
+    setSeoDescription(profile?.seoDescription || '')
+    setAffiliations(profile?.affiliations || [])
+    setFeeStructure(profile?.feeStructure || [])
+  }, [profile, tenantId, tenantName])
 
   if (mode === 'overview') {
     const stats = overview?.stats

@@ -124,6 +124,22 @@ export function AcademyAdmissionsAndFacilitiesPanel({
   const [eqCondition, setEqCondition] = useState<AcademyEquipmentRecord['conditionStatus']>('good')
 
   useEffect(() => {
+    const defaultBranch = selectedBranchId || branches[0]?.id || ''
+    if (defaultBranch && (!leadBranchId || (selectedBranchId && leadBranchId !== selectedBranchId))) {
+      setLeadBranchId(defaultBranch)
+    }
+    if (defaultBranch && (!facBranchId || (selectedBranchId && facBranchId !== selectedBranchId))) {
+      setFacBranchId(defaultBranch)
+    }
+    if (defaultBranch && (!eqBranchId || (selectedBranchId && eqBranchId !== selectedBranchId))) {
+      setEqBranchId(defaultBranch)
+    }
+    if (!convertBatchId && batches[0]?.id) {
+      setConvertBatchId(batches[0].id)
+    }
+  }, [selectedBranchId, branches, batches, leadBranchId, facBranchId, eqBranchId, convertBatchId])
+
+  useEffect(() => {
     if (mode === 'admissions' && selectedEnquiryId) {
       void listAdmissionInternalNotes(tenantId, selectedEnquiryId).then(setInternalNotes)
     }

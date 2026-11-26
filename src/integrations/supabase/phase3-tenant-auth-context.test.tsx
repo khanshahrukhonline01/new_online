@@ -211,4 +211,27 @@ describe('KhelGrid SaaS Platform — Phase 3 Tenant Auth & Context', () => {
     const acceptRes = await acceptTenantInvitation('inv-1')
     expect(acceptRes.success).toBe(false)
   })
+
+  it('submits public tenant_enquiries via insert without select() so anon INSERT-only grants succeed', async () => {
+    const insertSpy = vi.fn().mockResolvedValue({ error: null })
+    vi.spyOn(realtimeModule, 'getSupabaseClient').mockReturnValue({
+      from: vi.fn().mockImplementation((table: string) => {
+        expect(table).toBe('tenant_enquiries')
+        return { insert: insertSpy }
+      }),
+    } as unknown as ReturnType<typeof realtimeModule.getSupabaseClient>)
+
+    const res = await submitTenantEnquiry({
+      tenantId: 'tenant-acad-99',
+      parentName: 'Ananya Rao',
+      parentPhone: '9876543210',
+      studentName: 'Kabir Rao',
+      sport: 'Badminton',
+      requestType: 'free_trial',
+    })
+
+    expect(res.success).toBe(true)
+    expect(res.enquiryToken).toMatch(/^ENQ-/)
+    expect(insertSpy).toHaveBeenCalledTimes(1)
+  })
 })

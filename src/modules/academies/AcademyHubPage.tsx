@@ -19,6 +19,7 @@ import {
   listAcademyCoaches,
   listAcademyEquipment,
   listAcademyFacilities,
+  listAcademyFeeInvoices,
   listAcademyFeeLedger,
   listAcademyStaffMembers,
   listAdmissionEnquiries,
@@ -34,6 +35,7 @@ import {
   type AcademyEnquiryRecord,
   type AcademyEquipmentRecord,
   type AcademyFacilityRecord,
+  type AcademyFeeInvoiceRecord,
   type AcademyFeeTransactionRecord,
   type AcademyOverviewPayload,
   type AcademyProfileRecord,
@@ -127,6 +129,7 @@ export default function AcademyHubPage({
   const [equipment, setEquipment] = useState<AcademyEquipmentRecord[]>([])
   const [announcements, setAnnouncements] = useState<AcademyAnnouncementRecord[]>([])
   const [staffMembers, setStaffMembers] = useState<AcademyStaffMemberRecord[]>([])
+  const [feeInvoices, setFeeInvoices] = useState<AcademyFeeInvoiceRecord[]>([])
   const [feeTransactions, setFeeTransactions] = useState<AcademyFeeTransactionRecord[]>([])
   const [auditLogs, setAuditLogs] = useState<
     { id: string; action: string; entity_type: string; details: Record<string, unknown>; created_at: string }[]
@@ -165,6 +168,10 @@ export default function AcademyHubPage({
       : null
   )
 
+  useEffect(() => {
+    setSelectedBranchId(null)
+  }, [activeTenant?.id])
+
   const verifiedRole = activeAcademyMembership?.role || null
   const capabilities = useMemo(() => getAcademyRoleCapabilities(verifiedRole), [verifiedRole])
 
@@ -198,6 +205,7 @@ export default function AcademyHubPage({
         eqList,
         annList,
         staffList,
+        invList,
         feeList,
         auditList,
       ] = await Promise.all([
@@ -214,6 +222,7 @@ export default function AcademyHubPage({
         listAcademyEquipment(tid),
         listAcademyAnnouncements(tid),
         listAcademyStaffMembers(tid),
+        caps.canViewFinance ? listAcademyFeeInvoices(tid) : Promise.resolve([]),
         caps.canViewFinance ? listAcademyFeeLedger(tid) : Promise.resolve([]),
         caps.canManageSettings ? getTenantAuditLogs(tid) : Promise.resolve([]),
       ])
@@ -232,6 +241,7 @@ export default function AcademyHubPage({
       setEquipment(eqList)
       setAnnouncements(annList)
       setStaffMembers(staffList)
+      setFeeInvoices(invList)
       setFeeTransactions(feeList)
       setAuditLogs(
         auditList.map(l => ({
@@ -343,6 +353,9 @@ export default function AcademyHubPage({
 
   const actorName = authUser?.fullName || authUser?.name || authUser?.email || 'Academy Staff'
   const sectionPermitted = canAccessAcademySection(verifiedRole, activeSection)
+  const activeTenantSettings = ((activeTenant as unknown as { settings?: Record<string, unknown> }).settings) || {}
+  const initialHotline = typeof activeTenantSettings.emergencyHotline === 'string' ? activeTenantSettings.emergencyHotline : ''
+  const initialPocsoOfficer = typeof activeTenantSettings.pocsoOfficerName === 'string' ? activeTenantSettings.pocsoOfficerName : ''
 
   return (
     <div className="kg-acad-root" data-testid="academy-workspace-root">
@@ -572,6 +585,9 @@ export default function AcademyHubPage({
                   actorName={actorName}
                   actorUserId={userId}
                   initialUpiVpa={activeTenant.upi_vpa || ''}
+                  initialHotline={initialHotline}
+                  initialPocsoOfficer={initialPocsoOfficer}
+                  tenantSettings={activeTenantSettings}
                   dpdpMaskEnabled={dpdpMaskEnabled}
                   onToggleDpdpMask={() => setDpdpMaskEnabled(v => !v)}
                   capabilities={capabilities}
@@ -582,6 +598,7 @@ export default function AcademyHubPage({
                   enquiries={enquiries}
                   announcements={announcements}
                   staffMembers={staffMembers}
+                  feeInvoices={feeInvoices}
                   feeTransactions={feeTransactions}
                   auditLogs={auditLogs}
                   onRefresh={loadWorkspaceData}

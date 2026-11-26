@@ -109,6 +109,19 @@ export function AcademyBranchesAndPeoplePanel({
   }, [initialDetailId])
 
   useEffect(() => {
+    const defaultBranch = selectedBranchId || branches[0]?.id || ''
+    if (!studentBranchId || (selectedBranchId && studentBranchId !== selectedBranchId)) {
+      if (defaultBranch) setStudentBranchId(defaultBranch)
+    }
+    if (!coachBranchId || (selectedBranchId && coachBranchId !== selectedBranchId)) {
+      if (defaultBranch) setCoachBranchId(defaultBranch)
+    }
+    if (!studentBatchId && batches[0]?.id) {
+      setStudentBatchId(batches[0].id)
+    }
+  }, [selectedBranchId, branches, batches, studentBranchId, coachBranchId, studentBatchId])
+
+  useEffect(() => {
     if (mode === 'athletes' && activeAthleteId) {
       void listAthletePrivateNotes(tenantId, activeAthleteId).then(setPrivateNotes)
     }
