@@ -406,8 +406,31 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       }
       else if (match.canonicalPath === '/academy-hub' || match.canonicalPath === '/academies/manage') page = (
         <RegulatoryWorkspaceGuard persona="academy" onNavigate={navigate}>
-          <RequireTenantMember onNavigate={navigate}>
-            <AcademyHubPage onNavigate={navigate} />
+          <RequireTenantMember
+            personaLabel="Academy"
+            onboardingRole="academy"
+            requiredTenantTypes={['academy', 'club', 'school', 'college', 'university', 'training_org']}
+            allowedRoles={[
+              'owner',
+              'org_admin',
+              'director',
+              'admin',
+              'manager',
+              'admissions_manager',
+              'front_desk',
+              'head_coach',
+              'coach',
+              'finance_manager',
+              'accountant',
+              'content_manager',
+              'listing_manager',
+              'verification_coordinator',
+              'staff',
+              'readonly_member',
+            ]}
+            onNavigate={navigate}
+          >
+            <AcademyHubPage currentPath={path} onNavigate={navigate} />
           </RequireTenantMember>
         </RegulatoryWorkspaceGuard>
       )

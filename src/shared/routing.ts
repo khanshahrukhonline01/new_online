@@ -126,6 +126,41 @@ function isCoachWorkspaceSubpath(path: string): boolean {
   return section === 'athletes' || section === 'programmes' || section === 'sessions'
 }
 
+const ACADEMY_WORKSPACE_SUBROUTES = new Set([
+  'overview',
+  'profile',
+  'branches',
+  'athletes',
+  'students',
+  'coaches',
+  'training',
+  'batches',
+  'sessions',
+  'attendance',
+  'admissions',
+  'trials',
+  'leads',
+  'facilities',
+  'equipment',
+  'notifications',
+  'reports',
+  'staff',
+  'fees',
+  'ledger',
+  'settings',
+  'audit-logs',
+])
+
+function isAcademyWorkspaceSubpath(path: string): boolean {
+  if (!path.startsWith('/academy-hub/')) return false
+  const parts = path.slice('/academy-hub/'.length).split('/').filter(Boolean)
+  if (parts.length === 0 || parts.length > 2) return false
+  const [section, detail] = parts
+  if (!ACADEMY_WORKSPACE_SUBROUTES.has(section)) return false
+  if (!detail) return true
+  return section === 'athletes' || section === 'branches' || section === 'admissions' || section === 'training'
+}
+
 function normalizePath(pathname: string): string {
   if (!pathname || pathname === '/') return '/'
   return pathname.replace(/\/+$/, '') || '/'
@@ -192,7 +227,7 @@ export function resolveRoute(pathname: string): RouteMatch {
       }
     }
   }
-  if (path === '/academy-hub' || path === '/academies/manage') {
+  if (path === '/academy-hub' || path === '/academies/manage' || isAcademyWorkspaceSubpath(path)) {
     return { name: 'feature', canonicalPath: '/academy-hub', slug: 'Academy Admissions & Operations Hub' }
   }
   if (
