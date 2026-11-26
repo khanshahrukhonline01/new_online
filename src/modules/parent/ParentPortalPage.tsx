@@ -1,4 +1,4 @@
-import { useState, useId, type MouseEvent } from 'react'
+import { useState, useEffect, useId, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { WorkspaceDetailDrawer } from '../../shared/components/ui/WorkspaceDetailDrawer'
 import { FeeReceiptDrawerContent } from '../../shared/components/workflows/FeeReceiptDrawerContent'
@@ -17,12 +17,29 @@ import './ParentPortalPage.css'
 export interface ParentPortalPageProps {
   initialStudentId?: string
   initialTab?: 'attendance' | 'fees' | 'health'
+  workspaceSection?: string
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
+}
+
+function resolveParentTabForSection(section?: string): 'attendance' | 'fees' | 'health' | null {
+  if (!section) return null
+  switch (section) {
+    case 'fees':
+    case 'invoices': return 'fees'
+    case 'health':
+    case 'passes':
+    case 'qr': return 'health'
+    case 'attendance':
+    case 'wards':
+    case 'overview': return 'attendance'
+    default: return null
+  }
 }
 
 export default function ParentPortalPage({
   initialStudentId = 'st-01',
   initialTab = 'attendance',
+  workspaceSection,
 }: ParentPortalPageProps) {
   const students = getParentStudentProfiles()
   const [selectedStudentId, setSelectedStudentId] = useState<string>(() => {
@@ -33,12 +50,19 @@ export default function ParentPortalPage({
     return initialStudentId
   })
   const [activeTab, setActiveTab] = useState<'attendance' | 'fees' | 'health'>(() => {
+    const mapped = resolveParentTabForSection(workspaceSection)
+    if (mapped) return mapped
     if (typeof window !== 'undefined') {
       const tabParam = new URLSearchParams(window.location.search).get('tab')
       if (tabParam === 'fees' || tabParam === 'health' || tabParam === 'attendance') return tabParam
     }
     return initialTab
   })
+
+  useEffect(() => {
+    const mapped = resolveParentTabForSection(workspaceSection)
+    if (mapped) setActiveTab(mapped)
+  }, [workspaceSection])
 
   // Share link state
   const [copiedLink, setCopiedLink] = useState(false)

@@ -93,4 +93,39 @@ describe('UserDashboardPage', () => {
     expect(html).not.toContain('href="/admin/control"')
   })
 
+  it('navigates to goals tab when workspaceSection="goals" and renders goals CRUD panel', () => {
+    vi.spyOn(authClient, 'getStoredAuthUser').mockReturnValue({
+      id: 'usr-athlete-1',
+      name: 'Aarav Sharma',
+      fullName: 'Aarav Sharma',
+      email: 'aarav@khelgrid.com',
+      role: 'athlete',
+      city: 'Delhi NCR',
+      isVerified: true,
+      createdAt: '2026-11-01T00:00:00Z',
+    })
+
+    const html = renderToStaticMarkup(<UserDashboardPage workspaceSection="goals" />)
+    expect(html).toContain('Set New Athlete Training Goal')
+    expect(html).toContain('Goal Title *')
+    expect(html).toContain('Active Goals &amp; Combine Targets')
+    expect(html).toContain('Manage Sports CV')
+  })
+
+  it('navigates to trials tab when workspaceSection="trials" and displays trial and enquiry modules', () => {
+    vi.spyOn(authClient, 'getStoredAuthUser').mockReturnValue({
+      id: 'usr-athlete-1',
+      name: 'Aarav Sharma',
+      fullName: 'Aarav Sharma',
+      email: 'aarav@khelgrid.com',
+      role: 'athlete',
+      city: 'Delhi NCR',
+      isVerified: true,
+      createdAt: '2026-11-01T00:00:00Z',
+    })
+
+    const html = renderToStaticMarkup(<UserDashboardPage workspaceSection="trials" />)
+    expect(html).toContain('My Selection Trial Applications')
+    expect(html).toContain('My Academy Enquiries')
+  })
 })

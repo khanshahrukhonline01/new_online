@@ -10,9 +10,10 @@ export type WorkspacePersona =
   | 'host'
   | 'tournament'
   | 'creator'
+  | 'parent'
 
 const WORKSPACE_PERSONAS = new Set<string>([
-  'athlete', 'organization', 'academy', 'coach', 'turf', 'host', 'tournament', 'creator',
+  'athlete', 'organization', 'academy', 'coach', 'turf', 'host', 'tournament', 'creator', 'parent',
 ])
 
 // ---------------------------------------------------------------------------

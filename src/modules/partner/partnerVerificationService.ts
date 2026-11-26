@@ -146,7 +146,7 @@ const PERSONA_TO_CLAIM_ENTITY: Record<PartnerVerificationPersona, VerificationPr
 export function isPartnerVerificationPersona(
   persona: WorkspacePersona
 ): persona is PartnerVerificationPersona {
-  return persona !== 'athlete' && persona !== 'creator'
+  return persona !== 'athlete' && persona !== 'creator' && persona !== 'parent'
 }
 
 /** Maps a workspace persona to the Supabase `verification_claims.entity_type` check constraint. */

@@ -68,4 +68,62 @@ describe('WorkspaceShell', () => {
     expect(html).toContain('kg-kpi-strip')
     expect(html).toContain('Verifying workspace access')
   })
+
+  it('renders Organisation workspace shell metadata and sections for organisation persona', () => {
+    const html = renderToStaticMarkup(
+      <Suspense fallback={<div>Loading…</div>}>
+        <WorkspaceShell
+          persona="organization"
+          section="overview"
+          authUser={mockAuthUser}
+          onOpenAuth={noop}
+          onNavigate={noop}
+        />
+      </Suspense>,
+    )
+
+    expect(html).toContain('Organisation Workspace')
+    expect(html).toContain('Overview')
+    expect(html).toContain('Members')
+    expect(html).toContain('Branches')
+  })
+
+  it('renders Creator workspace shell metadata and sections for creator persona', () => {
+    const html = renderToStaticMarkup(
+      <Suspense fallback={<div>Loading…</div>}>
+        <WorkspaceShell
+          persona="creator"
+          section="campaigns"
+          authUser={mockAuthUser}
+          onOpenAuth={noop}
+          onNavigate={noop}
+        />
+      </Suspense>,
+    )
+
+    expect(html).toContain('Creator Workspace')
+    expect(html).toContain('Overview')
+    expect(html).toContain('Campaigns')
+    expect(html).toContain('Analytics')
+  })
+
+  it('renders Parent workspace shell metadata and sections for parent persona', async () => {
+    await import('../parent/ParentPortalPage')
+    const html = renderToStaticMarkup(
+      <Suspense fallback={<div>Loading…</div>}>
+        <WorkspaceShell
+          persona="parent"
+          section="attendance"
+          authUser={mockAuthUser}
+          onOpenAuth={noop}
+          onNavigate={noop}
+        />
+      </Suspense>,
+    )
+
+    expect(html).toContain('Parent Workspace')
+    expect(html).toContain('Attendance')
+    expect(html).toContain('Fees &amp; Invoices')
+    expect(html).toContain('Health &amp; QR Pass')
+  })
 })

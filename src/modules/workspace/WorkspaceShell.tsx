@@ -115,6 +115,16 @@ const PERSONAS: Record<WorkspacePersona, PersonaMeta> = {
       { id: 'analytics', label: 'Analytics' },
     ],
   },
+  parent: {
+    label: 'Parent',
+    icon: 'user-round',
+    legacyHref: '/parent-portal',
+    sections: [
+      { id: 'attendance', label: 'Attendance' },
+      { id: 'fees', label: 'Fees & Invoices' },
+      { id: 'health', label: 'Health & QR Pass' },
+    ],
+  },
 }
 
 // Lazy-load domain pages (matching exact export styles)
@@ -124,6 +134,9 @@ const LazyCoachDashboard = lazy(() => import('../coaches/CoachDashboardPage'))
 const LazyTurfCalendar = lazy(() => import('../venues/TurfSlotCalendarPage'))
 const LazyHostDashboard = lazy(() => import('../host/HostDashboardPage'))
 const LazyTournamentOps = lazy(() => import('../events/TournamentOpsPage'))
+const LazyOrganizations = lazy(() => import('../organizations/OrganizationsWorkspacePage'))
+const LazyCreatorHub = lazy(() => import('../campaigns/CreatorHubPage').then(m => ({ default: m.CreatorHubPage })))
+const LazyParentPortal = lazy(() => import('../parent/ParentPortalPage'))
 
 interface WorkspaceShellProps {
   persona: WorkspacePersona
@@ -165,15 +178,18 @@ function WorkspaceShellInner({
   }, [persona, memberships])
   const availablePersonas = useMemo(() => {
     const available = new Set<WorkspacePersona>(['athlete'])
+    if ((authUser?.role as string) === 'creator') available.add('creator')
+    if ((authUser?.role as string) === 'parent') available.add('parent')
     for (const membership of memberships) {
-      const type = membership.tenant?.tenant_type
+      const type = membership.tenant?.tenant_type as string | undefined
       if (type === 'academy') available.add('academy')
       if (type === 'coach' || (type === 'academy' && ['coach', 'head_coach'].includes(membership.role))) available.add('coach')
       if (type === 'venue') available.add('host')
       if (type === 'tournament') available.add('tournament')
+      if (type === 'organization' || ['owner', 'director', 'admin'].includes(membership.role)) available.add('organization')
     }
     return (Object.keys(PERSONAS) as WorkspacePersona[]).filter(key => available.has(key))
-  }, [memberships])
+  }, [memberships, authUser?.role])
   const meta = PERSONAS[persona] ?? PERSONAS.athlete
   const resolvedSection = meta.sections.find(s => s.id === section)?.id ?? meta.sections[0].id
   const [activeSectionId, setActiveSectionId] = useState(resolvedSection)
@@ -387,7 +403,7 @@ function PersonaContent({ persona, section, onOpenAuth, onNavigate }: {
 
   switch (persona) {
     case 'athlete':
-      return <LazyDashboard onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
+      return <LazyDashboard workspaceSection={section} onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
     case 'academy':
       return (
         <RequireTenantMember personaLabel="Academy" onboardingRole="academy" requiredTenantTypes={['academy']} allowedRoles={['owner', 'director', 'admin', 'head_coach', 'coach', 'staff']} onNavigate={handleStrictNav}>
@@ -419,10 +435,24 @@ function PersonaContent({ persona, section, onOpenAuth, onNavigate }: {
         </RequireTenantMember>
       )
     case 'organization':
-      return <div className="kg-shell-access-error" role="status">Organisation workspace is not enabled until an authoritative organisation tenant type and membership contract are available.</div>
+      return (
+        <RequireTenantMember personaLabel="Organisation" requireTenantMembership={false} onNavigate={handleStrictNav}>
+          <LazyOrganizations workspaceSection={section} onNavigate={onNavigate} />
+        </RequireTenantMember>
+      )
     case 'creator':
-      return <div className="kg-shell-access-error" role="status">Creator workspace is not enabled until creator membership and data permissions are available.</div>
+      return (
+        <RequireTenantMember personaLabel="Creator" requireTenantMembership={false} onNavigate={handleStrictNav}>
+          <LazyCreatorHub workspaceSection={section} onNavigate={onNavigate} />
+        </RequireTenantMember>
+      )
+    case 'parent':
+      return (
+        <RequireTenantMember personaLabel="Parent" requireTenantMembership={false} onNavigate={handleStrictNav}>
+          <LazyParentPortal workspaceSection={section} onNavigate={handleStrictNav} />
+        </RequireTenantMember>
+      )
     default:
-      return <LazyDashboard onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
+      return <LazyDashboard workspaceSection={section} onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
   }
 }

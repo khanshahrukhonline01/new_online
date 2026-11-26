@@ -46,6 +46,7 @@ export type RegulatoryWorkspaceKey =
   | 'host'
   | 'tournament'
   | 'creator'
+  | 'parent'
 
 export type TenantRegulatoryStatus =
   | 'active'
@@ -196,6 +197,7 @@ export const WORKSPACE_AUDIENCE_BY_PERSONA: Record<RegulatoryWorkspaceKey, Banne
   host: 'venue',
   tournament: 'tournament',
   creator: 'creator',
+  parent: 'athlete',
 }
 
 const WORKSPACE_DISPLAY_LABELS: Record<RegulatoryWorkspaceKey, string> = {
@@ -207,6 +209,7 @@ const WORKSPACE_DISPLAY_LABELS: Record<RegulatoryWorkspaceKey, string> = {
   host: 'Venue Partner Dashboard',
   tournament: 'Tournament Operations Hub',
   creator: 'Creator Studio',
+  parent: 'Parent & Athlete Passbook',
 }
 
 function readLocalStorageJson<T>(key: string): T | null {

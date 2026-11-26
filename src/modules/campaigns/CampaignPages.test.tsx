@@ -195,5 +195,38 @@ describe('KhelGrid Sports Creator Campaign Marketplace — User Frontend UI Page
       expect(html).toContain('Verified Sports Campaigns Open for Pitch')
       expect(html).toContain('Delhi Cricket Academy — High Performance Summer Trials 2026')
     })
+
+    it('wires workspaceSection="deliverables" to open the deliverable submission panel', async () => {
+      const { saveCreatorProfile } = await import('./campaignClient')
+      vi.spyOn(authClient, 'getStoredAuthUser').mockReturnValue({
+        id: 'usr-creator-1',
+        name: 'Vikram Creator',
+        fullName: 'Vikram Creator',
+        email: 'vikram@khelgrid.test',
+        role: 'athlete',
+        isVerified: true,
+        createdAt: '2026-11-01T00:00:00Z',
+      })
+      saveCreatorProfile({
+        id: 'creator-usr-creator-1',
+        userId: 'usr-creator-1',
+        displayName: 'Vikram Pitch Lab',
+        handle: '@vikram_pitch_lab',
+        bio: 'Cricket biomechanics & trial coverage.',
+        primarySport: 'Cricket',
+        platforms: [],
+        locationCity: 'Mumbai',
+        languages: ['English', 'Hindi'],
+        isVerifiedCreator: true,
+        totalEarningsPaise: 0,
+        completedDeliverablesCount: 0,
+        joinedAt: '2026-11-01T00:00:00Z',
+      })
+
+      const html = renderToStaticMarkup(<CreatorHubPage workspaceSection="deliverables" />)
+      expect(html).toContain('Submit Completed Deliverable')
+      expect(html).toContain('#Ad #Sponsored')
+      expect(html).toContain('Submit Deliverable for Review')
+    })
   })
 })
