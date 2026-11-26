@@ -155,6 +155,14 @@ describe('partnerOnboardingService', () => {
           role: expectedAuthRole,
           city: 'Bengaluru',
           phone: '9876543210',
+          redirectTo: '/partner/verify',
+          partnerOnboarding: expect.objectContaining({
+            version: 1,
+            role,
+            entityName,
+            city: 'Bengaluru',
+            phone: '9876543210',
+          }),
         })
       )
       expect(mockProvisionInitialTenantOwner).toHaveBeenCalledWith(
