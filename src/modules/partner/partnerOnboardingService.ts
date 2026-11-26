@@ -501,7 +501,7 @@ export async function completePartnerEmailVerification(): Promise<PartnerOnboard
   const phone = typeof pending.phone === 'string' ? pending.phone.trim() : ''
   const email = (authUser.email || '').trim().toLowerCase()
   const directorName = typeof pending.directorName === 'string' ? pending.directorName.trim() : ''
-  if (!entityName || !city || !sport || phone.replace(/\\D/g, '').length < 10 || !email) {
+  if (!entityName || !city || !sport || phone.replace(/\D/g, '').length < 10 || !email) {
     return { success: false, message: 'Your saved registration details are incomplete. Please contact KhelGrid support.' }
   }
 
