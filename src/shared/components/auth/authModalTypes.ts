@@ -1,5 +1,6 @@
 import {
   getSafeRedirectUrl,
+  isRestrictedAdminPath,
   type AuthAgeBand,
   type AuthUserProfile,
   type UserRole,
@@ -165,7 +166,7 @@ export function resolvePostAuthTarget(
 ): string | null {
   if (redirectTo) {
     const safe = getSafeRedirectUrl(redirectTo, '')
-    if (safe) return safe
+    if (safe && !isRestrictedAdminPath(safe)) return safe
   }
 
   const activeMemberships = (memberships || []).filter(

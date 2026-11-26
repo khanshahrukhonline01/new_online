@@ -140,6 +140,21 @@ export function setStoredAuthUser(user: AuthUserProfile | null): void {
 }
 
 /**
+ * Returns true if a path targets the internal operator Admin surface
+ * (which must never be used as a consumer or tenant redirect destination).
+ */
+export function isRestrictedAdminPath(rawPath?: string | null): boolean {
+  if (!rawPath || typeof rawPath !== 'string') return false
+  const normalized = rawPath.trim().split(/[?#]/)[0].replace(/\/+$/, '').toLowerCase()
+  return (
+    normalized === '/admin' ||
+    normalized === '/admin-panel' ||
+    normalized.startsWith('/admin/') ||
+    normalized.startsWith('/admin-panel/')
+  )
+}
+
+/**
  * Validates a potential redirect URL against open-redirect attacks.
  * Strictly permits only relative paths beginning with a single '/' and rejects protocols/schemes.
  */
@@ -153,12 +168,13 @@ export function getSafeRedirectUrl(targetUrl?: string | null, fallback = '/'): s
   return fallback
 }
 
-function resolveEmailRedirectUrl(redirectTo?: string): string | undefined {
+export function resolveEmailRedirectUrl(redirectTo?: string): string | undefined {
   if (typeof window === 'undefined') return undefined
   const origin = window.location?.origin
   if (!origin) return undefined
   if (!redirectTo) return origin
   const safePath = getSafeRedirectUrl(redirectTo, '/')
+  if (isRestrictedAdminPath(safePath)) return origin
   return safePath === '/' ? origin : `${origin}${safePath}`
 }
 
@@ -596,7 +612,8 @@ export async function sendPasswordReset(
  */
 export async function resendVerificationEmail(
   email: string,
-  captchaToken?: string
+  captchaToken?: string,
+  redirectTo?: string
 ): Promise<{ success: boolean; message: string }> {
   const cleanEmail = email ? email.trim().toLowerCase() : ''
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
@@ -617,7 +634,7 @@ export async function resendVerificationEmail(
       type: 'signup',
       email: cleanEmail,
       options: {
-        emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        emailRedirectTo: resolveEmailRedirectUrl(redirectTo),
         ...(captchaToken ? { captchaToken } : {}),
       },
     })
@@ -656,10 +673,30 @@ export interface AuthUrlCallbackInfo {
   errorCode?: string
   errorDescription?: string
   accessToken?: string
+  code?: string
+  tokenHash?: string
+  otpType?: string
 }
 
+const AUTH_CALLBACK_QUERY_KEYS = [
+  'code',
+  'token_hash',
+  'type',
+  'error',
+  'error_code',
+  'error_description',
+  'access_token',
+  'refresh_token',
+  'expires_at',
+  'expires_in',
+  'token_type',
+  'provider_token',
+  'provider_refresh_token',
+]
+
 /**
- * Parses authentication errors and callback tokens from URL hash or query parameters.
+ * Parses authentication errors and callback tokens from URL hash or query parameters
+ * across implicit hash, PKCE (?code=), and OTP (?token_hash=) flows.
  */
 export function parseAuthUrlCallback(
   rawUrl?: string,
@@ -688,25 +725,58 @@ export function parseAuthUrlCallback(
 
   const type = params.get('type')
   const accessToken = params.get('access_token')
+  const code = params.get('code')
+  const tokenHash = params.get('token_hash')
 
   if (type === 'recovery') {
-    return { type: 'recovery', accessToken: accessToken || undefined }
+    return {
+      type: 'recovery',
+      accessToken: accessToken || undefined,
+      code: code || undefined,
+      tokenHash: tokenHash || undefined,
+      otpType: type,
+    }
   }
 
-  if (type === 'signup' || accessToken) {
-    return { type: 'signup_confirmed', accessToken: accessToken || undefined }
+  if (
+    type === 'signup' ||
+    type === 'magiclink' ||
+    type === 'email' ||
+    type === 'invite' ||
+    accessToken ||
+    code ||
+    tokenHash
+  ) {
+    return {
+      type: 'signup_confirmed',
+      accessToken: accessToken || undefined,
+      code: code || undefined,
+      tokenHash: tokenHash || undefined,
+      otpType: type || undefined,
+    }
   }
 
   return { type: null }
 }
 
 /**
- * Safely removes authentication hash fragments and error query params from the browser address bar.
+ * Safely removes authentication hash fragments and callback query params from the browser address bar
+ * while preserving non-auth query parameters such as ?tenant= or ?role=.
  */
 export function clearAuthUrlHash(): void {
   if (typeof window === 'undefined') return
-  const cleanUrl = window.location?.pathname || '/'
-  window.history?.replaceState?.(null, '', cleanUrl)
+  const pathname = window.location?.pathname || '/'
+  const search = window.location?.search || ''
+  let cleanSearch = ''
+  if (search) {
+    const params = new URLSearchParams(search)
+    for (const key of AUTH_CALLBACK_QUERY_KEYS) {
+      params.delete(key)
+    }
+    const serialized = params.toString()
+    if (serialized) cleanSearch = `?${serialized}`
+  }
+  window.history?.replaceState?.(null, '', `${pathname}${cleanSearch}`)
 }
 
 /**

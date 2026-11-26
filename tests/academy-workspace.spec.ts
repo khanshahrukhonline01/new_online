@@ -81,4 +81,21 @@ test.describe('KhelGrid Academy SaaS Workspace — Security & Responsive E2E Acc
     await expect(page.locator('body')).toContainText(/Sign in required/i, { timeout: 15000 })
     expect(pageErrors).toHaveLength(0)
   })
+
+  test('4. tenant /admin isolation and verification callback forwarding work without exposing Admin UI', async ({ page }) => {
+    const pageErrors: string[] = []
+    page.on('pageerror', err => pageErrors.push(err.message))
+
+    await page.goto('/')
+    await expect(page.locator('a[href="/admin"]')).toHaveCount(0)
+
+    await page.goto('/admin')
+    await expect(page.locator('body')).toContainText(/This page isn’t here yet|Page not available/i, { timeout: 15000 })
+    await expect(page.locator('body')).not.toContainText(/Authorized Operator Sign In|Admin Control Center/i)
+
+    await page.goto('/admin?code=pkce-demo-123&type=signup')
+    await expect(page).toHaveURL(/\/partner\/verify/, { timeout: 15000 })
+    await expect(page.locator('body')).toContainText(/PARTNER ACCOUNT VERIFICATION/i, { timeout: 15000 })
+    expect(pageErrors).toHaveLength(0)
+  })
 })

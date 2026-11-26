@@ -3,9 +3,12 @@ import {
   APPROVED_DEVELOPMENT_SUPABASE_ORIGIN,
   evaluateAdminAccessGate,
   getGovernanceCapabilities,
+  isPartnerOrTenantAccountMetadata,
   isSyntheticOrUnsafeEvidenceUrl,
   isValidAdminAnonKey,
   isWorkspaceAuthorized,
+  resolvePublicAppCallbackUrl,
+  resolvePublicKhelGridOrigin,
   validateAdminSupabaseOrigin,
   validateSafeAdminRedirectUrl,
 } from './adminSecurityPolicy'
@@ -198,6 +201,27 @@ describe('Phase 1 Admin Security Policy', () => {
       expect(saCaps.canPublishBanners).toBe(true)
       expect(saCaps.canEditTaxonomies).toBe(true)
       expect(saCaps.canManageOperatorRbac).toBe(true)
+    })
+  })
+
+  describe('non-admin partner & tenant isolation redirects', () => {
+    it('identifies partner/tenant metadata and resolves public verification callback URLs', () => {
+      expect(isPartnerOrTenantAccountMetadata({ khelgrid_partner_onboarding: { role: 'academy' } })).toBe(true)
+      expect(isPartnerOrTenantAccountMetadata({ role: 'academy' })).toBe(true)
+      expect(isPartnerOrTenantAccountMetadata({ role: 'super_admin' })).toBe(false)
+      expect(isPartnerOrTenantAccountMetadata(null)).toBe(false)
+
+      expect(resolvePublicKhelGridOrigin(undefined, 'https://admin.khelgrid.com')).toBe('https://khelgrid.com')
+      expect(resolvePublicKhelGridOrigin('https://dev.khelgrid.com', 'https://admin.khelgrid.com')).toBe('https://dev.khelgrid.com')
+
+      expect(
+        resolvePublicAppCallbackUrl({
+          targetPath: '/partner/verify',
+          configuredPublicOrigin: 'https://khelgrid-platform.vercel.app',
+          search: '?code=pkce-1',
+          hash: '#type=signup',
+        }),
+      ).toBe('https://khelgrid-platform.vercel.app/partner/verify?code=pkce-1#type=signup')
     })
   })
 })

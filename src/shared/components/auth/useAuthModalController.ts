@@ -515,7 +515,8 @@ export function useAuthModalController({
           })
         : await resendVerificationEmail(
             form.fields.email.trim(),
-            form.fields.captchaToken || undefined
+            form.fields.captchaToken || undefined,
+            redirectTo,
           )
       if (res.success) {
         dispatch({

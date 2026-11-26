@@ -7,6 +7,8 @@ import {
   updatePassword,
   signOut,
   resendVerificationEmail,
+  resolveEmailRedirectUrl,
+  isRestrictedAdminPath,
   parseAuthUrlCallback,
   clearAuthUrlHash,
   getStoredAuthUser,
@@ -484,6 +486,42 @@ describe('Supabase Auth Client Architecture & Session Security', () => {
 
     it('clearAuthUrlHash operates without crashing', () => {
       expect(() => clearAuthUrlHash()).not.toThrow()
+    })
+
+    it('rejects /admin targets in resolveEmailRedirectUrl and preserves /partner/verify during resendVerificationEmail', async () => {
+      expect(isRestrictedAdminPath('/admin')).toBe(true)
+      expect(isRestrictedAdminPath('/admin-panel/users')).toBe(true)
+      expect(isRestrictedAdminPath('/partner/verify')).toBe(false)
+
+      expect(resolveEmailRedirectUrl('/partner/verify')).toBe('https://khelgrid.com/partner/verify')
+      expect(resolveEmailRedirectUrl('/admin')).toBe('https://khelgrid.com')
+      expect(resolveEmailRedirectUrl('/admin/control')).toBe('https://khelgrid.com')
+
+      const resend = vi.fn().mockResolvedValue({ data: {}, error: null })
+      vi.spyOn(realtimeModule, 'getSupabaseClient').mockReturnValue({
+        auth: { resend },
+      } as unknown as ReturnType<typeof realtimeModule.getSupabaseClient>)
+
+      const res = await resendVerificationEmail('academy@example.com', undefined, '/partner/verify')
+      expect(res.success).toBe(true)
+      expect(resend).toHaveBeenCalledWith({
+        type: 'signup',
+        email: 'academy@example.com',
+        options: {
+          emailRedirectTo: 'https://khelgrid.com/partner/verify',
+        },
+      })
+    })
+
+    it('parseAuthUrlCallback detects PKCE code and OTP token_hash confirmation URLs', () => {
+      const pkce = parseAuthUrlCallback('?code=pkce-code-123&type=signup')
+      expect(pkce.type).toBe('signup_confirmed')
+      expect(pkce.code).toBe('pkce-code-123')
+
+      const otpHash = parseAuthUrlCallback('?token_hash=hash-999&type=signup')
+      expect(otpHash.type).toBe('signup_confirmed')
+      expect(otpHash.tokenHash).toBe('hash-999')
+      expect(otpHash.otpType).toBe('signup')
     })
   })
 

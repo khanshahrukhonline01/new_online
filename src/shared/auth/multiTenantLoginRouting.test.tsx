@@ -281,4 +281,21 @@ describe('Multi-tenant & All-Persona Frontend Login Routing', () => {
     expect(html).toContain('Sign in')
     expect(html).toContain('Partner / Staff Login')
   })
+
+  it('keeps Admin Panel isolated out of the public & tenant application routes and footers', () => {
+    const homeHtml = renderToStaticMarkup(<App initialPath="/" />)
+    expect(homeHtml).not.toContain('href="/admin"')
+    expect(homeHtml).not.toContain('Admin Panel')
+
+    const academyWorkspaceHtml = renderToStaticMarkup(<App initialPath="/workspace/academy/overview" />)
+    expect(academyWorkspaceHtml).not.toContain('href="/admin"')
+    expect(academyWorkspaceHtml).not.toContain('Admin Panel')
+
+    const adminRouteHtml = renderToStaticMarkup(<App initialPath="/admin" />)
+    expect(adminRouteHtml).not.toContain('AdminPreviewPortal')
+    expect(adminRouteHtml).not.toContain('Authorized Operator Sign In')
+    expect(adminRouteHtml).toContain('This page isn’t here yet.')
+
+    expect(resolvePostAuthTarget(makeUser('academy'), '/admin')).toBe('/workspace/academy/overview')
+  })
 })

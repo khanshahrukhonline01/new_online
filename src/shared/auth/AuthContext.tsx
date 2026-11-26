@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import {
   clearAuthUrlHash,
   getStoredAuthUser,
+  isRestrictedAdminPath,
   onAuthChange,
   parseAuthUrlCallback,
   signOut as performSignOut,
   type AuthUserProfile,
 } from '../../integrations/supabase/auth-client'
+import { getSupabaseClient } from '../../integrations/supabase/realtime-client'
 import {
   normalizeAuthOpenInput,
   type AuthOpenInput,
@@ -16,6 +18,11 @@ import { AuthContext, type AuthContextValue } from './useAuth'
 
 interface AuthProviderProps {
   children: ReactNode
+}
+
+function isPartnerVerifyRoute(pathname: string): boolean {
+  const normalized = pathname.replace(/\/+$/, '').toLowerCase() || '/'
+  return normalized === '/partner/verify'
 }
 
 /**
@@ -35,7 +42,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    const pathname = window.location?.pathname || '/'
     const callbackInfo = parseAuthUrlCallback()
+    if (callbackInfo.type === null) return
+
+    // Never leave verification links on /admin* or consume URL params before /partner/verify mounts.
+    if (isRestrictedAdminPath(pathname)) {
+      if (callbackInfo.type === 'signup_confirmed' || callbackInfo.type === 'error') {
+        const search = window.location.search || ''
+        const hash = window.location.hash || ''
+        window.location.replace(`/partner/verify${search}${hash}`)
+      }
+      return
+    }
+
+    if (isPartnerVerifyRoute(pathname)) {
+      return
+    }
+
     if (callbackInfo.type === 'error') {
       const isOtpExpired =
         callbackInfo.errorCode === 'otp_expired' ||
@@ -48,12 +72,44 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
       setModalOpen(true)
       clearAuthUrlHash()
-    } else if (callbackInfo.type === 'recovery') {
+      return
+    }
+
+    if (callbackInfo.type === 'recovery') {
       setIntent({ tab: 'set_new_password' })
       setModalOpen(true)
       clearAuthUrlHash()
-    } else if (callbackInfo.type === 'signup_confirmed') {
-      clearAuthUrlHash()
+      return
+    }
+
+    if (callbackInfo.type === 'signup_confirmed') {
+      const client = getSupabaseClient()
+      if (!client) {
+        clearAuthUrlHash()
+        return
+      }
+      let active = true
+      const routeConfirmedPartnerOrClear = async () => {
+        try {
+          const { data } = await client.auth.getSession()
+          if (!active) return
+          const sessionUser = data.session?.user
+          const meta = sessionUser?.user_metadata as Record<string, unknown> | undefined
+          if (sessionUser?.email_confirmed_at && meta?.khelgrid_partner_onboarding) {
+            window.location.replace('/partner/verify')
+            return
+          }
+          if (sessionUser || (!callbackInfo.code && !callbackInfo.tokenHash)) {
+            clearAuthUrlHash()
+          }
+        } catch {
+          if (active) clearAuthUrlHash()
+        }
+      }
+      void routeConfirmedPartnerOrClear()
+      return () => {
+        active = false
+      }
     }
   }, [])
 

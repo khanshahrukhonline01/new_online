@@ -10,6 +10,7 @@ import FrequentlyAskedQuestions from './shared/components/FrequentlyAskedQuestio
 import SiteAnnouncementBanner from './shared/components/SiteAnnouncementBanner'
 import WorkspaceHeader from './shared/components/WorkspaceHeader'
 import type { CanonicalWorkspaceId } from './shared/components/workspaceHeaderEngine'
+import { isRestrictedAdminPath, parseAuthUrlCallback } from './integrations/supabase/auth-client'
 import { AuthProvider } from './shared/auth/AuthContext'
 import { useAuth } from './shared/auth/useAuth'
 import { TenantProvider } from './shared/context/TenantContext'
@@ -82,7 +83,6 @@ const CampaignCreationPage = lazy(() => import('./modules/campaigns/CampaignCrea
 const AdvertiserCampaignManagePage = lazy(() => import('./modules/campaigns/AdvertiserCampaignManagePage').then(m => ({ default: m.AdvertiserCampaignManagePage })))
 const CreatorHubPage = lazy(() => import('./modules/campaigns/CreatorHubPage').then(m => ({ default: m.CreatorHubPage })))
 const TenantDemoShowcasePage = lazy(() => import('./modules/demo/TenantDemoShowcasePage'))
-const AdminPreviewPortal = lazy(() => import('./modules/admin/AdminPreviewPortal'))
 
 // Code-split heavyweight modal dialogs
 const NotificationCenterDrawer = lazy(() => import('./shared/components/NotificationCenterDrawer'))
@@ -167,12 +167,10 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
     setUserMenuOpen(false)
   }, [path])
 
-  const isAdminPreviewRoute =
-    path === '/admin' || path === '/admin-panel' || path.startsWith('/admin/')
+  const isRestrictedAdminRoute = isRestrictedAdminPath(path)
 
   useEffect(() => {
     function handleGlobalKeyDown(event: globalThis.KeyboardEvent) {
-      if (isAdminPreviewRoute) return
       if ((event.metaKey || event.ctrlKey) && (event.key === 'k' || event.key === 'K')) {
         event.preventDefault()
         setSearchModalOpen(open => !open)
@@ -180,7 +178,25 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
     }
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [isAdminPreviewRoute])
+  }, [])
+
+  useEffect(() => {
+    if (!isRestrictedAdminRoute || typeof window === 'undefined') return
+    const callbackInfo = parseAuthUrlCallback()
+    if (callbackInfo.type === 'signup_confirmed' || callbackInfo.type === 'error') {
+      const search = window.location.search || ''
+      const hash = window.location.hash || ''
+      window.location.replace(`/partner/verify${search}${hash}`)
+      return
+    }
+    if (authUser) {
+      const tenantWorkspace = resolvePostAuthTarget(authUser) || '/workspace'
+      window.history.replaceState({}, '', tenantWorkspace)
+      const [nextPath, rawQuery = ''] = tenantWorkspace.split('?')
+      setPath(nextPath.replace(/\/$/, '') || '/')
+      setLocationSearch(rawQuery ? `?${rawQuery}` : '')
+    }
+  }, [authUser, isRestrictedAdminRoute])
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 700px)')
@@ -514,14 +530,6 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
       page = <section className="content-page"><p className="eyebrow">PAGE NOT AVAILABLE</p><h1>This page isn’t here yet.</h1><p className="page-intro">This route has not been implemented. Return to a published section to continue exploring.</p><a className="primary-link" href="/" onClick={event => navigate(event, '/')}>Back home <SiteIcon name="arrow-up-right" size={16} /></a></section>
   }
 
-  if (isAdminPreviewRoute) {
-    return (
-      <Suspense fallback={<PageFallbackLoader />}>
-        <AdminPreviewPortal onNavigate={navigate} />
-      </Suspense>
-    )
-  }
-
   const isOperational = isOperationalRoutePath(path)
   const activeTenantSlug = new URLSearchParams(locationSearch).get('tenant') || undefined
 
@@ -596,7 +604,6 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
           <div className="compact-operational-footer-links">
             <a href="/" onClick={event => navigate(event, '/')}>Discovery Home</a>
             <a href="/workspace" onClick={event => navigate(event, '/workspace')}>All Workspaces</a>
-            <a href="/admin" onClick={event => navigate(event, '/admin')}>Admin Panel</a>
             <a href="/help-feedback" onClick={event => navigate(event, '/help-feedback')}>Support</a>
             <a href="/privacy" onClick={event => navigate(event, '/privacy')}>Privacy</a>
             <a href="/terms" onClick={event => navigate(event, '/terms')}>Terms</a>
@@ -736,7 +743,6 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
         <a href="/correction-policy" onClick={event => navigate(event, '/correction-policy')}>Corrections</a>
         <a href="/open-science-policy" onClick={event => navigate(event, '/open-science-policy')}>Open Science</a>
         <a href="/khelchronicle" onClick={event => navigate(event, '/khelchronicle')}>KhelChronicle</a>
-        <a href="/admin" onClick={event => navigate(event, '/admin')}>Admin Panel</a>
         <a href="https://www.khelgrid.com/sitemap.xml" target="_blank" rel="noopener noreferrer">Sitemap</a>
         <a
           href="#sports-pass"

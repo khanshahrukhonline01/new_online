@@ -4,6 +4,7 @@ import { AuthCaptchaWidget } from '../../shared/components/auth/AuthCaptchaWidge
 import { useFormState } from '../../shared/hooks/useFormState'
 import {
   getStoredAuthUser,
+  resendVerificationEmail,
   type AuthUserProfile,
 } from '../../integrations/supabase/auth-client'
 import {
@@ -65,6 +66,8 @@ export default function PartnerOnboardingPage({
   const [mode, setMode] = useState<'signup' | 'login'>(initialMode)
   const [selectedRole, setSelectedRole] = useState<PartnerRole>(() => normalizePartnerRole(initialRole))
   const [statusMessage, setStatusMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null)
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null)
+  const [resendingVerification, setResendingVerification] = useState(false)
   const [captchaToken, setCaptchaToken] = useState('')
   const [captchaResetKey, setCaptchaResetKey] = useState(0)
   const [postLoginWorkspaces, setPostLoginWorkspaces] = useState<{
@@ -130,6 +133,11 @@ export default function PartnerOnboardingPage({
 
       setCaptchaResetKey(k => k + 1)
       setStatusMessage({ kind: 'success', text: outcome.message })
+      if (outcome.requiresEmailVerification) {
+        setPendingVerificationEmail(form.fields.email.trim().toLowerCase())
+      } else {
+        setPendingVerificationEmail(null)
+      }
       if (!outcome.requiresEmailVerification && outcome.workspacePath) {
         navigateToWorkspace(outcome.workspacePath)
       }
@@ -224,7 +232,27 @@ export default function PartnerOnboardingPage({
   const handleModeSwitch = (nextMode: 'signup' | 'login') => {
     setMode(nextMode)
     setStatusMessage(null)
+    setPendingVerificationEmail(null)
     setCaptchaResetKey(k => k + 1)
+  }
+
+  const handleResendVerificationLink = async () => {
+    if (!pendingVerificationEmail || resendingVerification) return
+    setResendingVerification(true)
+    try {
+      const res = await resendVerificationEmail(
+        pendingVerificationEmail,
+        captchaToken || undefined,
+        '/partner/verify',
+      )
+      setCaptchaResetKey(k => k + 1)
+      setStatusMessage({
+        kind: res.success ? 'success' : 'error',
+        text: res.message,
+      })
+    } finally {
+      setResendingVerification(false)
+    }
   }
 
   return (
@@ -306,7 +334,19 @@ export default function PartnerOnboardingPage({
             aria-live="polite"
             className={`partner-status-banner ${statusMessage.kind === 'error' ? 'is-error' : 'is-success'}`}
           >
-            {statusMessage.text}
+            <span>{statusMessage.text}</span>
+            {pendingVerificationEmail && mode === 'signup' && (
+              <div style={{ marginTop: 10 }}>
+                <button
+                  type="button"
+                  className="partner-link-btn"
+                  disabled={resendingVerification}
+                  onClick={() => void handleResendVerificationLink()}
+                >
+                  {resendingVerification ? 'Sending fresh verification link...' : 'Resend verification email →'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
