@@ -1,5 +1,5 @@
 import {
-  getStoredAuthUser,
+  mapToUserProfile,
   signInWithEmail,
   signUpWithEmail,
   type AuthUserProfile,
@@ -11,12 +11,14 @@ import {
   provisionInitialTenantOwner,
   resolveTenantWorkspacePath,
   tryFetchUserTenantMemberships,
+  getUserTenantMemberships,
   type DbTenantMembership,
 } from '../../integrations/supabase/tenant-client'
 import type { OrganizationType } from '../../shared/saas/saasTypes'
 import { registerCustomAcademy } from '../academies/academySaaSClient'
 import { registerCustomCoach } from '../coaches/coachSaaSClient'
 import { saveTurfVenueSettings } from '../venues/turfSlotManager'
+import { getSupabaseClient } from '../../integrations/supabase/realtime-client'
 
 export type PartnerRole = 'academy' | 'coach' | 'venue' | 'tournament' | 'organization'
 
@@ -341,8 +343,24 @@ export async function onboardPartnerOrganization(
   const cleanDirectorName = (input.directorName || '').trim() || cleanEntityName || config.defaultContactTitle
   const cleanPhone = input.phone.trim()
   const cleanCity = input.city.trim() || 'Delhi NCR'
-  const existingUser = getStoredAuthUser()
-  const resolvedEmail = (input.email.trim() || existingUser?.email || '').toLowerCase()
+  // localStorage profile data is display-only, never proof of an authenticated session.
+  const authClient = getSupabaseClient()
+  let activeUser: AuthUserProfile | undefined
+  if (authClient) {
+    const { data: sessionData, error: sessionError } = await authClient.auth.getUser()
+    if (!sessionError && sessionData.user?.email_confirmed_at) {
+      activeUser = mapToUserProfile({
+        ...sessionData.user.user_metadata,
+        id: sessionData.user.id,
+        email: sessionData.user.email || '',
+        email_confirmed_at: sessionData.user.email_confirmed_at,
+      }, sessionData.user.email || '', config.authRole)
+      activeUser.id = sessionData.user.id
+      activeUser.role = config.authRole
+      activeUser.isVerified = true
+    }
+  }
+  const resolvedEmail = (input.email.trim() || activeUser?.email || '').toLowerCase()
 
   if (!cleanEntityName) {
     return { success: false, message: `Please enter your ${config.entityLabel}.` }
@@ -353,8 +371,6 @@ export async function onboardPartnerOrganization(
   if (!resolvedEmail || !resolvedEmail.includes('@')) {
     return { success: false, message: 'Please enter a valid official email address.' }
   }
-
-  let activeUser: AuthUserProfile | undefined = existingUser || undefined
 
   if (!activeUser) {
     if (!input.useMagicLink && (!input.password || input.password.length < 6)) {
@@ -369,6 +385,20 @@ export async function onboardPartnerOrganization(
       city: cleanCity,
       phone: cleanPhone,
       useMagicLink: input.useMagicLink,
+      redirectTo: '/partner/verify',
+      partnerOnboarding: {
+        version: 1,
+        role: input.role,
+        organizationType: input.role === 'organization' ? input.organizationType || config.tenantType : config.tenantType,
+        entityName: cleanEntityName,
+        directorName: cleanDirectorName,
+        sport: input.sport,
+        city: cleanCity,
+        phone: cleanPhone,
+        email: resolvedEmail,
+        upiVpa: input.upiVpa?.trim() || '',
+        certification: input.certification?.trim() || '',
+      },
       ...(input.captchaToken ? { captchaToken: input.captchaToken } : {}),
     })
 
@@ -449,6 +479,99 @@ export async function onboardPartnerOrganization(
     entitySlug: provisionedSlug,
     workspacePath,
     message: `${vertical.displayName} workspace provisioned. Opening ${config.label} console...`,
+  }
+}
+
+/**
+ * Completes partner onboarding only after Supabase confirms the current user's email.
+ * The intake payload is treated as untrusted metadata: it is validated and used only
+ * as descriptive tenant input. Ownership always comes from auth.uid() inside the RPC.
+ */
+export async function completePartnerEmailVerification(): Promise<PartnerOnboardingOutcome> {
+  const client = getSupabaseClient()
+  if (!client) return { success: false, message: 'Authentication service is not configured.' }
+
+  const { data: authData, error: authError } = await client.auth.getUser()
+  const authUser = authData.user
+  if (authError || !authUser || !authUser.email_confirmed_at) {
+    return { success: false, message: 'Please open the verification link again after confirming your email.' }
+  }
+
+  const raw = authUser.user_metadata?.khelgrid_partner_onboarding
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { success: false, message: 'Email verified. No pending partner registration was found. Please sign in or contact KhelGrid support.' }
+  }
+  const pending = raw as Record<string, unknown>
+  const role = pending.role
+  if (pending.version !== 1 || typeof role !== 'string' || !['academy', 'coach', 'venue', 'tournament', 'organization'].includes(role)) {
+    return { success: false, message: 'The pending partner registration is invalid. Please contact KhelGrid support.' }
+  }
+
+  const config = PARTNER_ROLE_CONFIG[role as PartnerRole]
+  const entityName = typeof pending.entityName === 'string' ? pending.entityName.trim() : ''
+  const city = typeof pending.city === 'string' ? pending.city.trim() : ''
+  const sport = typeof pending.sport === 'string' ? pending.sport.trim() : ''
+  const phone = typeof pending.phone === 'string' ? pending.phone.trim() : ''
+  const email = (authUser.email || '').trim().toLowerCase()
+  const directorName = typeof pending.directorName === 'string' ? pending.directorName.trim() : ''
+  if (!entityName || !city || !sport || phone.replace(/\D/g, '').length < 10 || !email) {
+    return { success: false, message: 'Your saved registration details are incomplete. Please contact KhelGrid support.' }
+  }
+
+  const baseSlug = slugifyEntityName(entityName, role)
+  // Fail closed if membership verification fails; never provision against an unknown state.
+  const memberships = await getUserTenantMemberships(authUser.id)
+  const existing = memberships.find(m =>
+    m.role === 'owner' && m.tenant?.name === entityName &&
+    m.tenant?.metadata?.source === 'verified_partner_email_onboarding' &&
+    m.tenant?.metadata?.partnerRole === role
+  ) || memberships.find(m => m.role === 'owner' && m.tenant?.slug === baseSlug)
+  if (existing?.tenant) {
+    const path = resolveTenantWorkspacePath(existing)
+    return { success: true, user: mapToUserProfile({ ...authUser.user_metadata, id: authUser.id, email, email_confirmed_at: authUser.email_confirmed_at }, email, config.authRole), tenantId: existing.tenant_id, entitySlug: existing.tenant.slug, workspacePath: path, message: 'Your verified partner workspace is ready.' }
+  }
+
+  const organizationType = role === 'organization' && typeof pending.organizationType === 'string'
+    ? pending.organizationType as OrganizationType
+    : config.tenantType
+  const provisioned = await provisionTenantWithCollisionRetry({
+    slug: baseSlug,
+    name: entityName,
+    tenantType: organizationType,
+    city,
+    sport,
+    contactPhone: phone,
+    contactEmail: email,
+    metadata: {
+      source: 'verified_partner_email_onboarding',
+      partnerRole: role,
+      organizationType,
+      directorName,
+      upiVpa: typeof pending.upiVpa === 'string' ? pending.upiVpa : null,
+      certification: typeof pending.certification === 'string' ? pending.certification : null,
+    },
+  })
+  if (!provisioned.result.success || !provisioned.result.tenantId) {
+    return { success: false, message: provisioned.result.message || 'Your email is verified, but workspace setup could not be completed. Please retry or contact support.' }
+  }
+
+  const profile = mapToUserProfile({
+    ...authUser.user_metadata,
+    id: authUser.id,
+    email,
+    email_confirmed_at: authUser.email_confirmed_at,
+  }, email, config.authRole)
+  profile.id = authUser.id
+  profile.role = config.authRole
+  profile.isVerified = true
+  const workspacePath = `${config.workspacePath}?tenant=${encodeURIComponent(provisioned.slug)}`
+  return {
+    success: true,
+    user: profile,
+    tenantId: provisioned.result.tenantId,
+    entitySlug: provisioned.slug,
+    workspacePath,
+    message: `${entityName} is verified. Opening your ${config.label} workspace...`,
   }
 }
 

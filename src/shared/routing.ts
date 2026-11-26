@@ -65,6 +65,7 @@ const featurePages: Record<string, string> = {
   '/calendar': 'Sports Calendar', '/for-you': 'For You', '/trust': 'Trust Center',
   '/pricing': 'Pricing & Memberships', '/mobile-app': 'KhelGrid Mobile App', '/careers': 'Careers',
   '/academy-hub': 'Academy Admissions & Operations Hub', '/academies/manage': 'Academy Admissions & Operations Hub',
+  '/partner/verify': 'Partner Email Verification',
   '/partner-signup': 'Partner Onboarding Wizard', '/partner-login': 'Partner Onboarding Wizard', '/partner/signup': 'Partner Onboarding Wizard', '/partner/login': 'Partner Onboarding Wizard', '/partner/onboarding': 'Partner Onboarding Wizard', '/academy/signup': 'Partner Onboarding Wizard',
   '/demo': 'Interactive Dashboard Demo Showcase', '/preview': 'Interactive Dashboard Demo Showcase', '/partner/preview': 'Interactive Dashboard Demo Showcase',
   '/workspace': 'KhelGrid Workspace',
