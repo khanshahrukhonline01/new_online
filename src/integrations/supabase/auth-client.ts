@@ -312,6 +312,13 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
         if (isCaptchaErrorMessage(error.message)) {
           return { success: false, message: formatCaptchaAuthError(error.message) }
         }
+        if (error.message?.toLowerCase().includes('rate limit') || error.status === 429) {
+          return {
+            success: false,
+            message:
+              'Email sending rate limit reached (~2/hr on Supabase built-in mail). Configure Custom SMTP in Supabase Authentication Settings or sign in with password.',
+          }
+        }
         return { success: false, message: error.message }
       }
       return { success: true, requiresEmailVerification: true }
@@ -435,6 +442,13 @@ export async function signInWithEmail(input: SignInInput): Promise<AuthResult> {
       if (error) {
         if (isCaptchaErrorMessage(error.message)) {
           return { success: false, message: formatCaptchaAuthError(error.message) }
+        }
+        if (error.message?.toLowerCase().includes('rate limit') || error.status === 429) {
+          return {
+            success: false,
+            message:
+              'Email sending rate limit reached (~2/hr on Supabase built-in mail). Configure Custom SMTP in Supabase Authentication Settings or sign in with password.',
+          }
         }
         return { success: false, message: error.message }
       }
@@ -775,11 +789,26 @@ export async function verifyEmailOtpCode(params: {
   }
 
   try {
-    const { data, error } = await client.auth.verifyOtp({
+    const requestedType = params.type || 'email'
+    let { data, error } = await client.auth.verifyOtp({
       email: cleanEmail,
       token: cleanToken,
-      type: params.type || 'email',
+      type: requestedType,
     })
+
+    // Confirm-signup OTPs use type 'signup' whereas magic-link OTPs use type 'email'.
+    if ((error || !data.user) && (requestedType === 'email' || requestedType === 'signup')) {
+      const fallbackType = requestedType === 'email' ? 'signup' : 'email'
+      const fallbackRes = await client.auth.verifyOtp({
+        email: cleanEmail,
+        token: cleanToken,
+        type: fallbackType,
+      })
+      if (!fallbackRes.error && fallbackRes.data.user) {
+        data = fallbackRes.data
+        error = null
+      }
+    }
 
     if (error || !data.user) {
       return {

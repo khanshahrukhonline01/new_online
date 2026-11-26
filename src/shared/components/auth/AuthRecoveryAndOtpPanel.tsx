@@ -68,7 +68,10 @@ export function AuthRecoveryAndOtpPanel({
           <div>
             <strong>Verify Your Email Address</strong>
             <p>
-              We sent a sign-in link and 6-digit code to <strong>{email}</strong>. Click the email link or enter the 6-digit code below.
+              We sent an authentication email to <strong>{email}</strong>. Open the link inside (check Inbox, Spam &amp; Promotions), or enter the 6-digit code if displayed.
+            </p>
+            <p style={{ marginTop: '6px', fontSize: '0.82rem', color: 'var(--muted, #64748b)' }}>
+              Not seeing a 6-digit code or email? Supabase&apos;s default mailer limits free projects to ~2 emails/hr and only shows a link unless <code>{'{{ .Token }}'}</code> &amp; Custom SMTP are enabled in Supabase Auth Settings.
             </p>
           </div>
         </div>

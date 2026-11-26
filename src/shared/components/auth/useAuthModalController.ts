@@ -266,7 +266,7 @@ export function useAuthModalController({
       } else if (res.requiresEmailVerification) {
         dispatch({
           type: 'SET_SUCCESS',
-          message: `Magic login link and 6-digit code sent to ${form.fields.email}.`,
+          message: `Sign-in email sent to ${form.fields.email}. Check Inbox/Spam for the link (or 6-digit code if configured).`,
           pendingVerification: true,
         })
       } else {
@@ -304,7 +304,7 @@ export function useAuthModalController({
       if (res.success) {
         dispatch({
           type: 'SET_SUCCESS',
-          message: `Magic sign-in link and code sent to ${form.fields.email.trim()}.`,
+          message: `Sign-in email sent to ${form.fields.email.trim()}. Check Inbox/Spam for the link (or 6-digit code if configured).`,
           pendingVerification: true,
         })
       } else {
@@ -389,7 +389,7 @@ export function useAuthModalController({
         if (res.requiresEmailVerification) {
           dispatch({
             type: 'SET_SUCCESS',
-            message: `Verification link & 6-digit code sent to ${form.fields.email}.`,
+            message: `Verification email sent to ${form.fields.email}. Check Inbox/Spam for the confirmation link (or 6-digit code if configured).`,
             pendingVerification: true,
           })
         } else if (res.user) {
@@ -422,7 +422,7 @@ export function useAuthModalController({
       const res = await verifyEmailOtpCode({
         email: form.fields.email,
         token: form.fields.otpCode,
-        type: 'email',
+        type: ui.tab === 'signup' ? 'signup' : 'email',
       })
       if (res.success && res.user) {
         await completeSignInWithMemberships(res.user, `Verified! Welcome, ${res.user.fullName}.`)
@@ -505,18 +505,28 @@ export function useAuthModalController({
     }
     dispatch({ type: 'START_SUBMIT' })
     try {
-      const res = await resendVerificationEmail(
-        form.fields.email.trim(),
-        form.fields.captchaToken || undefined
-      )
+      const useMagicResend = ui.tab === 'login'
+      const res = useMagicResend
+        ? await signInWithEmail({
+            email: form.fields.email.trim(),
+            useMagicLink: true,
+            redirectTo,
+            captchaToken: form.fields.captchaToken || undefined,
+          })
+        : await resendVerificationEmail(
+            form.fields.email.trim(),
+            form.fields.captchaToken || undefined
+          )
       if (res.success) {
         dispatch({
           type: 'SET_SUCCESS',
-          message: res.message,
+          message: useMagicResend
+            ? `Fresh sign-in email sent to ${form.fields.email.trim()}. Check Inbox & Spam.`
+            : res.message || `Verification link resent to ${form.fields.email.trim()}.`,
           pendingVerification: true,
         })
       } else {
-        dispatch({ type: 'SET_ERROR', message: res.message })
+        dispatch({ type: 'SET_ERROR', message: res.message || 'Could not resend verification email.' })
       }
     } finally {
       dispatch({ type: 'FINISH_SUBMIT' })
