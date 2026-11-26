@@ -5,6 +5,7 @@ import { PARTNER_HANDOFF_OPTIONS, type PartnerHandoffRole } from './authModalTyp
 interface AuthPartnerHandoffPanelProps {
   onSelectPartnerRole: (role: PartnerHandoffRole, e: MouseEvent<HTMLAnchorElement>, mode?: 'signup' | 'login') => void
   onSwitchToLogin: () => void
+  onPreviewDemo?: (e: MouseEvent<HTMLAnchorElement>) => void
 }
 
 /**
@@ -14,6 +15,7 @@ interface AuthPartnerHandoffPanelProps {
 export function AuthPartnerHandoffPanel({
   onSelectPartnerRole,
   onSwitchToLogin,
+  onPreviewDemo,
 }: AuthPartnerHandoffPanelProps) {
   return (
     <div className="kg-auth-form">
@@ -59,6 +61,14 @@ export function AuthPartnerHandoffPanel({
           Sign In here →
         </button>
       </p>
+      {onPreviewDemo && (
+        <p className="kg-auth-switch-note" style={{ marginTop: '6px' }}>
+          Want to see the dashboard layout first?{' '}
+          <a href="/demo" className="kg-text-link" onClick={e => onPreviewDemo(e)}>
+            Explore Interactive Dashboard Demo →
+          </a>
+        </p>
+      )}
     </div>
   )
 }

@@ -235,7 +235,15 @@ export default function PartnerOnboardingPage({
         </p>
         <h1>India&apos;s National Sports Operations Infrastructure</h1>
         <p>
-          Empowering sports academies, certified coaches, turf venues, and tournament directors with 0% commission B2B management tools.
+          Empowering sports academies, certified coaches, turf venues, and tournament directors with 0% commission B2B management tools.{' '}
+          <a
+            href="/demo"
+            className="partner-link-btn"
+            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', marginTop: '8px' }}
+            onClick={e => onNavigate?.(e, '/demo')}
+          >
+            Preview all 8 dashboards before registering →
+          </a>
         </p>
       </header>
 

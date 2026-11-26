@@ -238,6 +238,7 @@ export default function AuthModal({
           <AuthPartnerHandoffPanel
             onSelectPartnerRole={controller.handlePartnerRoute}
             onSwitchToLogin={() => controller.switchTab('login')}
+            onPreviewDemo={e => controller.handleSelectTenantTarget('/demo', e)}
           />
         )}
 

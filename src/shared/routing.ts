@@ -66,6 +66,7 @@ const featurePages: Record<string, string> = {
   '/pricing': 'Pricing & Memberships', '/mobile-app': 'KhelGrid Mobile App', '/careers': 'Careers',
   '/academy-hub': 'Academy Admissions & Operations Hub', '/academies/manage': 'Academy Admissions & Operations Hub',
   '/partner-signup': 'Partner Onboarding Wizard', '/partner-login': 'Partner Onboarding Wizard', '/partner/signup': 'Partner Onboarding Wizard', '/partner/login': 'Partner Onboarding Wizard', '/partner/onboarding': 'Partner Onboarding Wizard', '/academy/signup': 'Partner Onboarding Wizard',
+  '/demo': 'Interactive Dashboard Demo Showcase', '/preview': 'Interactive Dashboard Demo Showcase', '/partner/preview': 'Interactive Dashboard Demo Showcase',
   '/workspace': 'KhelGrid Workspace',
   '/organizations': 'Organizations & Partner Workspaces', '/workspaces': 'Organizations & Partner Workspaces',
   '/parent-portal': 'Parent & Athlete Passbook', '/parent': 'Parent & Athlete Passbook', '/passbook': 'Parent & Athlete Passbook',

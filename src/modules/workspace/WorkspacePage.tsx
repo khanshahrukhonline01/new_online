@@ -104,6 +104,13 @@ export default function WorkspacePage({ authUser, onOpenAuth, onNavigate }: Work
               >
                 Partner / Staff Login <SiteIcon name="building" size={16} />
               </a>
+              <a
+                href="/demo"
+                className="kg-workspace-secondary"
+                onClick={event => handleLink(event, '/demo')}
+              >
+                Preview All 8 Dashboards (Demo) <SiteIcon name="sparkles" size={16} />
+              </a>
             </div>
           )}
         </div>

@@ -17,6 +17,7 @@ import { RequireTenantMember } from './shared/components/RequireTenantMember'
 import { RegulatoryWorkspaceGuard } from './shared/components/RegulatoryWorkspaceGuard'
 import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAndShare'
 import { normalizePartnerRole } from './modules/partner/partnerOnboardingService'
+import type { DemoDashboardId } from './modules/demo/tenantDemoData'
 import WorkspacePage from './modules/workspace/WorkspacePage'
 
 // Code-split route components via React.lazy()
@@ -79,6 +80,7 @@ const CampaignMarketplacePage = lazy(() => import('./modules/campaigns/CampaignM
 const CampaignCreationPage = lazy(() => import('./modules/campaigns/CampaignCreationPage').then(m => ({ default: m.CampaignCreationPage })))
 const AdvertiserCampaignManagePage = lazy(() => import('./modules/campaigns/AdvertiserCampaignManagePage').then(m => ({ default: m.AdvertiserCampaignManagePage })))
 const CreatorHubPage = lazy(() => import('./modules/campaigns/CreatorHubPage').then(m => ({ default: m.CreatorHubPage })))
+const TenantDemoShowcasePage = lazy(() => import('./modules/demo/TenantDemoShowcasePage'))
 const AdminPreviewPortal = lazy(() => import('./modules/admin/AdminPreviewPortal'))
 
 // Code-split heavyweight modal dialogs
@@ -461,6 +463,16 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
         </RegulatoryWorkspaceGuard>
       )
       else if (match.canonicalPath === '/for-you') page = <ForYouPage onNavigate={navigate} onOpenAuth={openAuth} />
+      else if (match.canonicalPath === '/demo' || match.canonicalPath === '/preview' || match.canonicalPath === '/partner/preview') {
+        const personaParam = (new URLSearchParams(locationSearch).get('persona') || 'academy') as DemoDashboardId
+        page = (
+          <TenantDemoShowcasePage
+            initialDashboard={personaParam}
+            onNavigate={navigate}
+            onOpenAuth={openAuth}
+          />
+        )
+      }
       else if (match.canonicalPath === '/partner' || match.canonicalPath === '/partners') page = <PartnerPage onNavigate={navigate} onOpenIntake={openListingSubmission} />
       else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy','/open-science-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
