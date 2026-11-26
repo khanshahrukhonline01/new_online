@@ -51,11 +51,14 @@ export function RequireTenantMember({
     )
   }
 
+  // Personal workspaces require a verified sign-in, not an organisation membership.
+  // Do not let an unrelated tenant-membership lookup outage block an authenticated
+  // athlete/parent account area.
+  if (!requireTenantMembership) return <>{children}</>
+
   if (error) {
     return <section className="kg-tenant-guard-card" role="alert"><h2>Workspace access could not be verified</h2><p>{error}</p></section>
   }
-
-  if (!requireTenantMembership) return <>{children}</>
 
   if (!currentTenant || !currentMembership || currentMembership.user_id !== userId || currentMembership.status !== 'active' || (requiredTenantTypes?.length && !matchingMembership)) {
     if (fallback) return <>{fallback}</>
