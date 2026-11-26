@@ -289,11 +289,10 @@ async function upsertProfileBestEffort(adminClient, userId, account) {
   }
 }
 
-async function ensureUserTenants(adminClient, supabaseUrl, anonKey, account, userId, password) {
+async function ensureUserTenants(adminClient, account, userId) {
   if (!account.tenants.length) return []
 
   const provisioned = []
-  let authedClient = null
 
   for (const tenant of account.tenants) {
     const { data: existingTenant } = await adminClient
@@ -316,44 +315,82 @@ async function ensureUserTenants(adminClient, supabaseUrl, anonKey, account, use
       continue
     }
 
-    if (!authedClient) {
-      const tempClient = createClient(supabaseUrl, anonKey, { auth: { persistSession: false } })
-      const { data: signInData, error: signInErr } = await tempClient.auth.signInWithPassword({
-        email: account.email,
-        password,
+    const { data: createdTenant, error: tenantErr } = await adminClient
+      .from('tenants')
+      .insert({
+        slug: tenant.slug,
+        name: tenant.name,
+        tenant_type: tenant.tenantType,
+        status: 'active',
+        verification_status: 'unverified',
+        owner_id: userId,
+        city: tenant.city,
+        state: tenant.state,
+        sport: tenant.sport,
+        contact_phone: tenant.phone,
+        contact_email: account.email,
+        metadata: { source: 'qa_dashboard_test_seed' },
       })
-      if (signInErr || !signInData.session) {
-        throw new Error(`Unable to sign in newly created tenant owner ${account.email}: ${signInErr?.message || 'no session'}`)
-      }
-      authedClient = tempClient
+      .select('id, slug')
+      .single()
+
+    if (tenantErr || !createdTenant) {
+      throw new Error(`Failed creating tenant ${tenant.slug}: ${tenantErr?.message || 'no row returned'}`)
     }
 
-    const { error: rpcError } = await authedClient.rpc('provision_initial_tenant_owner', {
-      p_slug: tenant.slug,
-      p_name: tenant.name,
-      p_tenant_type: tenant.tenantType,
-      p_city: tenant.city,
-      p_state: tenant.state,
-      p_sport: tenant.sport,
-      p_contact_phone: tenant.phone,
-      p_contact_email: account.email,
-      p_metadata: { source: 'qa_dashboard_test_seed' },
-    })
-
-    if (rpcError) {
-      throw new Error(`provision_initial_tenant_owner failed for ${tenant.slug}: ${rpcError.message}`)
+    const { error: memberErr } = await adminClient.from('tenant_memberships').upsert(
+      {
+        tenant_id: createdTenant.id,
+        user_id: userId,
+        role: 'owner',
+        status: 'active',
+      },
+      { onConflict: 'tenant_id,user_id' }
+    )
+    if (memberErr) {
+      throw new Error(`Failed creating owner membership for ${tenant.slug}: ${memberErr.message}`)
     }
+
+    await adminClient.from('saas_subscriptions').insert({
+      subject_type: 'tenant',
+      subject_id: createdTenant.id,
+      plan_code: 'org_free',
+      status: 'free_active',
+      billing_cycle: 'none',
+      payment_collection_enabled: false,
+    }).then(() => {}, () => {})
+
+    await adminClient.from('saas_audit_logs').insert({
+      tenant_id: createdTenant.id,
+      actor_user_id: userId,
+      action: 'organization.provisioned',
+      resource_type: 'tenant',
+      resource_id: createdTenant.id,
+      details: { slug: tenant.slug, tenant_type: tenant.tenantType, source: 'qa_dashboard_test_seed' },
+    }).then(() => {}, () => {})
+
     provisioned.push({ slug: tenant.slug, action: 'provisioned' })
   }
 
   return provisioned
 }
 
+export function isPlaceholderServiceRoleKey(key = '') {
+  const clean = key.trim()
+  if (!clean || clean.length < 30) return true
+  const upper = clean.toUpperCase()
+  return (
+    upper.includes('REPLACE_WITH') ||
+    upper.includes('PASTE-YOUR') ||
+    upper.includes('YOUR_ACTUAL') ||
+    upper.includes('EXAMPLE')
+  )
+}
+
 export async function runProvisioning(argv = process.argv.slice(2)) {
   const opts = parseCliArgs(argv)
   const fileEnv = parseEnvFile('.env')
   const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || fileEnv.VITE_SUPABASE_URL || '').trim()
-  const anonKey = (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || fileEnv.VITE_SUPABASE_ANON_KEY || '').trim()
   const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || fileEnv.SUPABASE_SERVICE_ROLE_KEY || '').trim()
 
   const accounts = buildTestAccountMatrix({ plusEmail: opts.plusEmail, domain: opts.domain })
@@ -366,12 +403,12 @@ export async function runProvisioning(argv = process.argv.slice(2)) {
     return { dryRun: true, accounts }
   }
 
-  if (!supabaseUrl || !anonKey) {
-    throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in .env or environment.')
+  if (!supabaseUrl) {
+    throw new Error('Missing VITE_SUPABASE_URL in .env or environment.')
   }
-  if (!serviceRoleKey) {
+  if (!serviceRoleKey || isPlaceholderServiceRoleKey(serviceRoleKey)) {
     throw new Error(
-      'Missing SUPABASE_SERVICE_ROLE_KEY. Copy the service_role key from Supabase Dashboard -> Project Settings -> API, set $env:SUPABASE_SERVICE_ROLE_KEY="...", and re-run.'
+      'Invalid or placeholder SUPABASE_SERVICE_ROLE_KEY. Copy the real Secret / service_role key (starts with eyJ... or sb_secret_...) from Supabase Dashboard -> Project Settings -> API Keys.'
     )
   }
   if (!opts.generatePasswords && (!opts.password || opts.password.length < 8)) {
@@ -391,7 +428,7 @@ export async function runProvisioning(argv = process.argv.slice(2)) {
       : opts.password
     const { user, status } = await ensureAuthUser(adminClient, acc, accountPassword)
     await upsertProfileBestEffort(adminClient, user.id, acc)
-    const tenants = await ensureUserTenants(adminClient, supabaseUrl, anonKey, acc, user.id, accountPassword)
+    const tenants = await ensureUserTenants(adminClient, acc, user.id)
     results.push({
       dashboard: acc.dashboard,
       email: acc.email,
@@ -411,6 +448,6 @@ export async function runProvisioning(argv = process.argv.slice(2)) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   runProvisioning().catch(err => {
     console.error('\n[create-dashboard-test-accounts] Error:', err instanceof Error ? err.message : err)
-    process.exit(1)
+    process.exitCode = 1
   })
 }

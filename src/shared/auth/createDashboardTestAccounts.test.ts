@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 // @ts-expect-error - Node CLI provisioning script without generated .d.ts
-import { buildTestAccountMatrix, parseCliArgs, runProvisioning } from '../../../scripts/create-dashboard-test-accounts.mjs'
+import { buildTestAccountMatrix, isPlaceholderServiceRoleKey, parseCliArgs, runProvisioning } from '../../../scripts/create-dashboard-test-accounts.mjs'
 
 interface TestAccountMatrixEntry {
   key: string
@@ -68,5 +68,8 @@ describe('create-dashboard-test-accounts CLI script', () => {
     const dry = await runProvisioning(['--dry-run', '--plus-email=khelgrid@gmail.com'])
     expect(dry.dryRun).toBe(true)
     expect(dry.accounts).toHaveLength(10)
+
+    expect(isPlaceholderServiceRoleKey('REPLACE_WITH_YOUR_ACTUAL_SUPABASE_SERVICE_ROLE_KEY')).toBe(true)
+    expect(isPlaceholderServiceRoleKey('paste-your-service-role-key')).toBe(true)
   })
 })
