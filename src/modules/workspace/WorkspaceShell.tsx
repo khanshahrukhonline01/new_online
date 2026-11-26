@@ -25,6 +25,7 @@ import { PartnerVerificationStatusTracker } from '../partner/components/PartnerV
 import { isPartnerVerificationPersona } from '../partner/partnerVerificationService'
 import { RegulatoryWorkspaceGuard } from '../../shared/components/RegulatoryWorkspaceGuard'
 import type { AuthOpenInput } from '../../shared/components/auth/authModalTypes'
+import { isCoachWorkspaceSection } from '../coaches/coachDashboardTypes'
 import './WorkspaceShell.css'
 
 interface PersonaMeta {
@@ -227,7 +228,10 @@ function WorkspaceShellInner({
     return (Object.keys(PERSONAS) as WorkspacePersona[]).filter(key => available.has(key))
   }, [memberships, authUser?.role])
   const meta = PERSONAS[persona] ?? PERSONAS.athlete
-  const resolvedSection = meta.sections.find(s => s.id === section)?.id ?? meta.sections[0].id
+  const resolvedSection =
+    persona === 'coach' && isCoachWorkspaceSection(section)
+      ? section
+      : (meta.sections.find(s => s.id === section)?.id ?? meta.sections[0].id)
   const [activeSectionId, setActiveSectionId] = useState(resolvedSection)
 
   useEffect(() => {
@@ -433,7 +437,7 @@ function PersonaContent({ persona, section, onOpenAuth, onNavigate }: {
   onOpenAuth: (input?: AuthOpenInput) => void
   onNavigate: (event?: MouseEvent<HTMLAnchorElement>, target?: string) => void
 }) {
-  const handleStrictNav = useCallback((e: MouseEvent<HTMLAnchorElement>, target: string) => {
+  const handleStrictNav = useCallback((e?: MouseEvent<HTMLAnchorElement>, target?: string) => {
     onNavigate(e, target)
   }, [onNavigate])
 
