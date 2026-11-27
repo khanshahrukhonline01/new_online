@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { SiteIcon } from '../../../../src/shared/components/SiteIcon'
 import {
   getAdminTenants,
@@ -14,14 +14,17 @@ import {
   startReadOnlyWorkspaceInspection,
 } from '../../../../src/shared/governance/regulatoryBridge'
 import { proposeMakerCheckerAction } from '../services/adminGovernanceEscalationService'
+import type { AdminDeskDeepLink } from '../services/adminGlobalSearchService'
 import './AdminTenantManagementDesk.css'
 
 export interface AdminTenantManagementDeskProps {
   operatorEmail?: string
+  deepLink?: AdminDeskDeepLink | null
 }
 
 export function AdminTenantManagementDesk({
   operatorEmail = 'admin@khelgrid.com',
+  deepLink = null,
 }: AdminTenantManagementDeskProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
@@ -53,6 +56,29 @@ export function AdminTenantManagementDesk({
     setToastMessage(msg)
     window.setTimeout(() => setToastMessage(null), 3500)
   }
+
+  useEffect(() => {
+    if (!deepLink || deepLink.workspace !== 'tenant_governance') return
+    setTypeFilter('all')
+    setStatusFilter('all')
+    setVerificationFilter('all')
+    setSportFilter('all')
+    setCityFilter('all')
+    setSearchQuery(deepLink.query ?? '')
+    if (deepLink.recordId) {
+      setSelectedTenantId(deepLink.recordId)
+    }
+    if (
+      deepLink.tab === 'overview' ||
+      deepLink.tab === 'members' ||
+      deepLink.tab === 'units' ||
+      deepLink.tab === 'audit'
+    ) {
+      setInspectionTab(deepLink.tab)
+    } else {
+      setInspectionTab('overview')
+    }
+  }, [deepLink])
 
   // Load all tenants according to filters
   const filteredTenants = useMemo(() => {

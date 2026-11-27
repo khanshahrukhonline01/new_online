@@ -21,14 +21,17 @@ import {
   computeEscalationImpactPreview,
   escalateDisputeToSanction,
 } from '../services/adminGovernanceEscalationService'
+import type { AdminDeskDeepLink } from '../services/adminGlobalSearchService'
 import './AdminTrustSafetyDesk.css'
 
 export interface AdminTrustSafetyDeskProps {
   operatorEmail?: string
+  deepLink?: AdminDeskDeepLink | null
 }
 
 export const AdminTrustSafetyDesk: FC<AdminTrustSafetyDeskProps> = ({
   operatorEmail = 'trust.safety@khelgrid.com',
+  deepLink = null,
 }) => {
   const currentOfficer = useMemo(
     () => ({
@@ -85,6 +88,19 @@ export const AdminTrustSafetyDesk: FC<AdminTrustSafetyDeskProps> = ({
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3500)
   }
+
+  useEffect(() => {
+    if (!deepLink || deepLink.workspace !== 'fraud_disputes') return
+    setStatusFilter('all')
+    setSeverityFilter('all')
+    setCategoryFilter('all')
+    setEntityFilter('all')
+    setSearchQuery(deepLink.query ?? '')
+    if (deepLink.recordId) {
+      setSelectedCaseId(deepLink.recordId)
+      setActiveDrawerTab('narrative')
+    }
+  }, [deepLink])
 
   const loadData = useCallback(async () => {
     setIsLoading(true)

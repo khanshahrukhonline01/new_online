@@ -16,6 +16,7 @@ import { getSupabaseClient } from '../../integrations/supabase/realtime-client'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { AdminComplianceHeatmap } from './AdminComplianceHeatmap'
 import { AdminDateRangePicker } from './AdminDateRangePicker'
+import { AdminDataFreshnessIndicator } from './AdminDataFreshnessIndicator'
 import {
   buildComplianceHeatmapMatrix,
   buildComplianceSignals,
@@ -278,6 +279,7 @@ export function AdminAnalyticsDashboard({
         setSummary(buildLocalFallbackSummary())
         setActivity(buildLocalFallbackActivity())
         setQueueItems(buildLocalFallbackQueue())
+        setLastRefreshedAt(new Date())
       }
     })
   }, [loadEntityRoster, shellAuthorized])
@@ -619,6 +621,12 @@ export function AdminAnalyticsDashboard({
             <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: '#64748b' }}>
               Real-time pipeline metrics, live sport segmentation, moderation activity audit feed, and batch actions.
             </p>
+            <AdminDataFreshnessIndicator
+              lastRefreshedAt={lastRefreshedAt}
+              isRefreshing={loading}
+              autoRefreshEnabled={autoRefresh}
+              onRefreshNow={() => void loadData()}
+            />
           </div>
 
           <div className="admin-analytics-controls">
@@ -741,17 +749,6 @@ export function AdminAnalyticsDashboard({
                 </div>
               )}
             </div>
-
-            <button
-              type="button"
-              className="admin-analytics-btn admin-analytics-btn-secondary"
-              onClick={() => void loadData()}
-              disabled={loading}
-              title={`Last refreshed at ${lastRefreshedAt.toLocaleTimeString('en-IN')}`}
-            >
-              <SiteIcon name="refresh" size={14} />
-              <span>{loading ? 'Refreshing…' : 'Refresh Telemetry'}</span>
-            </button>
           </div>
         </div>
 

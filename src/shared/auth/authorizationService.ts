@@ -17,11 +17,14 @@ export type AppRole =
   | 'visitor'
   | 'athlete'
   | 'parent'
+  | 'creator'
   | 'coach'
   | 'scout'
   | 'academy'
   | 'host'
   | 'venue_owner'
+  | 'tournament'
+  | 'organization'
   | 'submitter'
   | 'moderator'
   | 'admin'
@@ -146,6 +149,40 @@ export const ROLE_PERMISSIONS_MATRIX: Record<AppRole, readonly AppPermission[]> 
     'listing:view_own',
     'listing:edit_own',
     'venue:manage_own',
+    'payment:view_own',
+  ],
+  creator: [
+    'catalogue:browse',
+    'profile:view',
+    'profile:edit',
+    'match:score',
+    'payment:view_own',
+  ],
+  tournament: [
+    'catalogue:browse',
+    'profile:view',
+    'profile:edit',
+    'listing:submit',
+    'listing:view_own',
+    'listing:edit_own',
+    'application:read_scoped',
+    'application:manage',
+    'match:create',
+    'match:score',
+    'payment:view_own',
+  ],
+  organization: [
+    'catalogue:browse',
+    'profile:view',
+    'profile:edit',
+    'listing:submit',
+    'listing:view_own',
+    'listing:edit_own',
+    'application:read_scoped',
+    'application:manage',
+    'venue:manage_own',
+    'match:create',
+    'match:score',
     'payment:view_own',
   ],
   submitter: [

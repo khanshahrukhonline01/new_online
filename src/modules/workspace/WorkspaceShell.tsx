@@ -15,6 +15,7 @@ import { useCallback, useContext, useEffect, useMemo, useState, Suspense, lazy }
 import type { MouseEvent } from 'react'
 import type { AuthUserProfile } from '../../integrations/supabase/auth-client'
 import type { WorkspacePersona } from '../../shared/routing'
+import { TENANT_ROUTE_POLICIES } from '../../integrations/supabase/tenant-client'
 import { TenantProvider } from '../../shared/context/TenantContext'
 import { TenantContext } from '../../shared/context/tenantContextCore'
 import { useTenant } from '../../shared/context/useTenant'
@@ -25,6 +26,7 @@ import { PartnerVerificationStatusTracker } from '../partner/components/PartnerV
 import { isPartnerVerificationPersona } from '../partner/partnerVerificationService'
 import { RegulatoryWorkspaceGuard } from '../../shared/components/RegulatoryWorkspaceGuard'
 import type { AuthOpenInput } from '../../shared/components/auth/authModalTypes'
+import { isCoachWorkspaceSection } from '../coaches/coachDashboardTypes'
 import './WorkspaceShell.css'
 
 interface PersonaMeta {
@@ -115,6 +117,16 @@ const PERSONAS: Record<WorkspacePersona, PersonaMeta> = {
       { id: 'analytics', label: 'Analytics' },
     ],
   },
+  parent: {
+    label: 'Parent',
+    icon: 'user-round',
+    legacyHref: '/parent-portal',
+    sections: [
+      { id: 'attendance', label: 'Attendance' },
+      { id: 'fees', label: 'Fees & Invoices' },
+      { id: 'health', label: 'Health & QR Pass' },
+    ],
+  },
 }
 
 // Lazy-load domain pages (matching exact export styles)
@@ -126,6 +138,7 @@ const LazyHostDashboard = lazy(() => import('../host/HostDashboardPage'))
 const LazyTournamentOps = lazy(() => import('../events/TournamentOpsPage'))
 const LazyOrganizations = lazy(() => import('../organizations/OrganizationsWorkspacePage'))
 const LazyCreatorHub = lazy(() => import('../campaigns/CreatorHubPage').then(m => ({ default: m.CreatorHubPage })))
+const LazyParentPortal = lazy(() => import('../parent/ParentPortalPage'))
 
 interface WorkspaceShellProps {
   persona: WorkspacePersona
@@ -147,6 +160,25 @@ export default function WorkspaceShell(props: WorkspaceShellProps) {
   )
 }
 
+const ORG_TENANT_TYPES = new Set([
+  'organization',
+  'club',
+  'school',
+  'college',
+  'university',
+  'federation',
+  'association',
+  'corporate',
+  'training_org',
+  'service_provider',
+  'research_org',
+  'media_org',
+  'enterprise',
+  'other',
+])
+
+const TOURNAMENT_TENANT_TYPES = new Set(['tournament', 'event_organizer'])
+
 function WorkspaceShellInner({
   persona,
   section,
@@ -154,9 +186,53 @@ function WorkspaceShellInner({
   onOpenAuth,
   onNavigate,
 }: WorkspaceShellProps) {
-  const { currentTenant, memberships, userRole, switchTenant } = useTenant()
+  const { currentTenant, memberships, userRole, isLoading: membershipLoading, error: membershipError, switchTenant } = useTenant()
+  const personaMemberships = useMemo(() => {
+    switch (persona) {
+      case 'academy': return memberships.filter(m => m.tenant?.tenant_type === 'academy')
+      case 'coach': return memberships.filter(m => m.tenant?.tenant_type === 'coach' || (m.tenant?.tenant_type === 'academy' && ['coach', 'head_coach'].includes(m.role)))
+      case 'turf':
+      case 'host': return memberships.filter(m => m.tenant?.tenant_type === 'venue')
+      case 'tournament': return memberships.filter(m => TOURNAMENT_TENANT_TYPES.has(m.tenant?.tenant_type || ''))
+      case 'organization': return memberships.filter(m => ORG_TENANT_TYPES.has(m.tenant?.tenant_type || '') || ['owner', 'org_admin', 'director', 'admin', 'manager'].includes(m.role))
+      case 'creator': return memberships.filter(m => m.tenant?.tenant_type === 'media_org' || m.role === 'content_manager')
+      case 'parent': return memberships.filter(m => m.role === 'parent')
+      default: return []
+    }
+  }, [persona, memberships])
+  const availablePersonas = useMemo(() => {
+    const available = new Set<WorkspacePersona>(['athlete'])
+    const roleStr = authUser?.role as string | undefined
+    if (roleStr === 'creator') available.add('creator')
+    if (roleStr === 'parent') available.add('parent')
+    if (roleStr === 'organization') available.add('organization')
+    if (roleStr === 'tournament') available.add('tournament')
+    if (roleStr === 'venue_owner' || roleStr === 'host') {
+      available.add('turf')
+      available.add('host')
+    }
+    for (const membership of memberships) {
+      const type = membership.tenant?.tenant_type as string | undefined
+      if (type === 'academy') available.add('academy')
+      if (type === 'coach' || (type === 'academy' && ['coach', 'head_coach'].includes(membership.role))) available.add('coach')
+      if (type === 'venue') {
+        available.add('turf')
+        available.add('host')
+      }
+      if (type && TOURNAMENT_TENANT_TYPES.has(type)) available.add('tournament')
+      if (type === 'media_org' || membership.role === 'content_manager') available.add('creator')
+      if (membership.role === 'parent') available.add('parent')
+      if ((type && ORG_TENANT_TYPES.has(type)) || ['owner', 'org_admin', 'director', 'admin', 'manager'].includes(membership.role)) {
+        available.add('organization')
+      }
+    }
+    return (Object.keys(PERSONAS) as WorkspacePersona[]).filter(key => available.has(key))
+  }, [memberships, authUser?.role])
   const meta = PERSONAS[persona] ?? PERSONAS.athlete
-  const resolvedSection = meta.sections.find(s => s.id === section)?.id ?? meta.sections[0].id
+  const resolvedSection =
+    persona === 'coach' && isCoachWorkspaceSection(section)
+      ? section
+      : (meta.sections.find(s => s.id === section)?.id ?? meta.sections[0].id)
   const [activeSectionId, setActiveSectionId] = useState(resolvedSection)
 
   useEffect(() => {
@@ -164,9 +240,10 @@ function WorkspaceShellInner({
   }, [resolvedSection])
 
   const handlePersonaSwitch = useCallback((target: WorkspacePersona) => {
+    if (!availablePersonas.includes(target)) return
     const targetMeta = PERSONAS[target]
     onNavigate(undefined, `/workspace/${target}/${targetMeta.sections[0].id}`)
-  }, [onNavigate])
+  }, [availablePersonas, onNavigate])
 
   const handleSectionSwitch = useCallback((sectionId: string) => {
     setActiveSectionId(sectionId)
@@ -180,7 +257,6 @@ function WorkspaceShellInner({
         label: 'Active Workspace',
         value: meta.label,
         sub: `Section: ${meta.sections.find(s => s.id === activeSectionId)?.label ?? activeSectionId}`,
-        trend: 'up',
       },
       {
         id: 'entity',
@@ -192,13 +268,7 @@ function WorkspaceShellInner({
         id: 'role',
         label: 'Access Scope',
         value: (userRole || authUser?.role || 'guest').replace(/_/g, ' '),
-        sub: authUser?.isVerified ? 'Verified identity' : 'Standard account',
-      },
-      {
-        id: 'modules',
-        label: 'Ecosystem Links',
-        value: 8,
-        sub: 'Consolidated partner & athlete tools',
+        sub: authUser?.isVerified ? 'Email confirmed' : 'Email not confirmed',
       },
     ]
   }, [meta, activeSectionId, currentTenant?.name, memberships.length, userRole, authUser?.role, authUser?.isVerified])
@@ -247,7 +317,7 @@ function WorkspaceShellInner({
     <section className="kg-workspace-shell" aria-label={`${meta.label} workspace`}>
       {/* ── Persona Switcher ── */}
       <nav className="kg-persona-switcher" role="tablist" aria-label="Workspace persona">
-        {(Object.entries(PERSONAS) as [WorkspacePersona, PersonaMeta][]).map(([key, p]) => (
+        {availablePersonas.map(key => { const p = PERSONAS[key]; return (
           <button
             key={key}
             type="button"
@@ -259,7 +329,7 @@ function WorkspaceShellInner({
             <SiteIcon name={p.icon} size={15} />
             <span>{p.label}</span>
           </button>
-        ))}
+        )})}
       </nav>
 
       {/* ── Shell header ── */}
@@ -275,30 +345,28 @@ function WorkspaceShellInner({
         {/* Entity/Branch Switcher */}
         <div className="kg-entity-switcher">
           <label htmlFor="kg-shell-entity-select" className="skip-link">Select organisation or branch</label>
-          {memberships.length > 0 ? (
+          {personaMemberships.length > 0 ? (
             <select
               id="kg-shell-entity-select"
               className="kg-entity-btn kg-touch-target"
-              value={currentTenant?.id ?? ''}
+              value={personaMemberships.some(m => m.tenant_id === currentTenant?.id) ? (currentTenant?.id ?? '') : (personaMemberships[0]?.tenant_id ?? '')}
               onChange={e => {
                 if (e.target.value) void switchTenant(e.target.value)
               }}
               aria-label="Entity or branch switcher"
             >
-              {memberships.map(m => (
+              {personaMemberships.map(m => (
                 <option key={m.tenant_id} value={m.tenant_id}>
                   {m.tenant?.name || m.tenant_id} ({m.role})
                 </option>
               ))}
             </select>
+          ) : persona === 'athlete' ? (
+            <span className="kg-entity-btn" aria-label="Personal account">Personal account</span>
           ) : (
-            <a
-              href="/organizations"
-              onClick={e => onNavigate(e, '/organizations')}
-              className="kg-entity-btn kg-touch-target"
-            >
+            <a href="/partner-signup" onClick={e => onNavigate(e, '/partner-signup')} className="kg-entity-btn kg-touch-target">
               <SiteIcon name="building" size={14} />
-              <span>Personal / Setup Org</span>
+              <span>Register or join a workspace</span>
             </a>
           )}
         </div>
@@ -334,16 +402,29 @@ function WorkspaceShellInner({
         />
       )}
 
+      {membershipError && <div className="kg-shell-access-error" role="alert">{membershipError}</div>}
+      {!membershipLoading && persona !== 'athlete' && personaMemberships.length === 0 && (
+        <div className="kg-shell-access-error" role="status">
+          <strong>Workspace access not available</strong>
+          <span>This account has no active membership for the {meta.label.toLowerCase()} workspace. Register or join an organisation to unlock it.</span>
+          <a href="/partner-signup" onClick={e => onNavigate(e, '/partner-signup')}>Register / join a workspace</a>
+        </div>
+      )}
+
       {/* ── Domain Content (Live Regulated by Admin Control Plane) ── */}
       <div className="kg-shell-content" role="tabpanel">
         <RegulatoryWorkspaceGuard persona={persona} onNavigate={onNavigate}>
           <Suspense fallback={<div className="kg-shell-loading" role="status" aria-label="Loading workspace">Loading…</div>}>
-            <PersonaContent
-              persona={persona}
-              section={activeSectionId}
-              onOpenAuth={onOpenAuth}
-              onNavigate={onNavigate}
-            />
+            {membershipLoading ? (
+              <div className="kg-shell-loading" role="status">Verifying workspace access…</div>
+            ) : persona !== 'athlete' && personaMemberships.length === 0 ? null : (
+              <PersonaContent
+                persona={persona}
+                section={activeSectionId}
+                onOpenAuth={onOpenAuth}
+                onNavigate={onNavigate}
+              />
+            )}
           </Suspense>
         </RegulatoryWorkspaceGuard>
       </div>
@@ -357,44 +438,62 @@ function PersonaContent({ persona, section, onOpenAuth, onNavigate }: {
   onOpenAuth: (input?: AuthOpenInput) => void
   onNavigate: (event?: MouseEvent<HTMLAnchorElement>, target?: string) => void
 }) {
-  const handleStrictNav = useCallback((e: MouseEvent<HTMLAnchorElement>, target: string) => {
+  const handleStrictNav = useCallback((e?: MouseEvent<HTMLAnchorElement>, target?: string) => {
     onNavigate(e, target)
   }, [onNavigate])
 
   switch (persona) {
     case 'athlete':
-      return <LazyDashboard onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
+      return <LazyDashboard workspaceSection={section} onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
     case 'academy':
       return (
-        <RequireTenantMember personaLabel="Academy" onboardingRole="academy" onNavigate={handleStrictNav}>
+        <RequireTenantMember {...TENANT_ROUTE_POLICIES.academy} onNavigate={handleStrictNav}>
           <LazyAcademyHub workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'coach':
-      return <LazyCoachDashboard workspaceSection={section} onNavigate={handleStrictNav} />
+      return (
+        <RequireTenantMember {...TENANT_ROUTE_POLICIES.coach} onNavigate={handleStrictNav}>
+          <LazyCoachDashboard workspaceSection={section} onNavigate={handleStrictNav} />
+        </RequireTenantMember>
+      )
     case 'turf':
       return (
-        <RequireTenantMember personaLabel="Venue / Turf" onboardingRole="venue" onNavigate={handleStrictNav}>
+        <RequireTenantMember {...TENANT_ROUTE_POLICIES.turf} onNavigate={handleStrictNav}>
           <LazyTurfCalendar workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'host':
-      return <LazyHostDashboard workspaceSection={section} onNavigate={handleStrictNav} />
+      return (
+        <RequireTenantMember {...TENANT_ROUTE_POLICIES.host} onNavigate={handleStrictNav}>
+          <LazyHostDashboard workspaceSection={section} onNavigate={handleStrictNav} />
+        </RequireTenantMember>
+      )
     case 'tournament':
       return (
-        <RequireTenantMember personaLabel="Tournament" onboardingRole="tournament" onNavigate={handleStrictNav}>
+        <RequireTenantMember {...TENANT_ROUTE_POLICIES.tournament} onNavigate={handleStrictNav}>
           <LazyTournamentOps workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'organization':
       return (
-        <RequireTenantMember personaLabel="Organisation" onboardingRole="academy" onNavigate={handleStrictNav}>
+        <RequireTenantMember {...TENANT_ROUTE_POLICIES.organization} onNavigate={handleStrictNav}>
           <LazyOrganizations workspaceSection={section} onNavigate={onNavigate} />
         </RequireTenantMember>
       )
     case 'creator':
-      return <LazyCreatorHub onNavigate={onNavigate} />
+      return (
+        <RequireTenantMember personaLabel="Creator" onboardingRole="creator" requireTenantMembership={false} onNavigate={handleStrictNav}>
+          <LazyCreatorHub workspaceSection={section} onNavigate={onNavigate} />
+        </RequireTenantMember>
+      )
+    case 'parent':
+      return (
+        <RequireTenantMember personaLabel="Parent" onboardingRole="parent" requireTenantMembership={false} onNavigate={handleStrictNav}>
+          <LazyParentPortal workspaceSection={section} onNavigate={handleStrictNav} />
+        </RequireTenantMember>
+      )
     default:
-      return <LazyDashboard onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
+      return <LazyDashboard workspaceSection={section} onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
   }
 }

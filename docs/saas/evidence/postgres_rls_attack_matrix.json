@@ -6,6 +6,9 @@
   "passed": 49,
   "failed": 0,
   "success_rate": "100.0%",
+  "supplemental_checks": {
+    "projection_trigger_acl_and_lifecycle": true
+  },
   "results": [
     {
       "id": "ANON-SEL-TENANTS-PRIV",

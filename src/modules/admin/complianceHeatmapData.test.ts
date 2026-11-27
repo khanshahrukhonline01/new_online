@@ -4,13 +4,16 @@ import {
   buildComplianceSignals,
   buildInvestigableEntityRows,
   buildRegion30DayTrend,
+  buildRegionTrendForWindow,
   classifyComplianceRiskTier,
   EMPTY_DRILLDOWN_FILTER,
   filterEntityRowsByDrilldown,
   filterModerationRecordsByDrilldown,
+  filterSignalsByDateRange,
   formatTrendDeltaLabel,
   normalizeComplianceRegion,
   normalizePartnerCategory,
+  resolveComplianceDateWindow,
 } from './complianceHeatmapData'
 
 describe('Admin Compliance Heatmap Data Engine', () => {
@@ -351,6 +354,93 @@ describe('Admin Compliance Heatmap Data Engine', () => {
       expect(row.trend30d?.points.length).toBe(30)
       expect(row.trend30d?.currentScore).toBe(row.totalRisk)
     }
+  })
+
+  it('resolves 7d, 90d, all-time, and custom date windows and filters signals & sparkline trends accordingly', () => {
+    const signals = buildComplianceSignals({
+      incidents: [
+        {
+          id: 'inc-old',
+          incidentNumber: 'TS-2026-010',
+          title: 'Older August incident',
+          category: 'booking_dispute',
+          severity: 'medium_p2',
+          status: 'case_closed',
+          reportedEntityType: 'venue',
+          reportedEntityName: 'Old Turf',
+          city: 'Hyderabad',
+          state: 'Telangana',
+          createdAt: '2026-08-10T10:00:00Z',
+          updatedAt: '2026-08-15T10:00:00Z',
+        },
+        {
+          id: 'inc-mid',
+          incidentNumber: 'TS-2026-081',
+          title: 'Mid-November P0 turf safety hazard',
+          category: 'safety_hazard',
+          severity: 'critical_p0',
+          status: 'sanction_issued',
+          reportedEntityType: 'venue',
+          reportedEntityName: 'PlayArena Turf',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          createdAt: '2026-11-12T10:00:00Z',
+          updatedAt: '2026-11-14T10:00:00Z',
+        },
+        {
+          id: 'inc-recent',
+          incidentNumber: 'TS-2026-099',
+          title: 'Very recent P1 complaint',
+          category: 'abuse_harassment',
+          severity: 'high_p1',
+          status: 'under_investigation',
+          reportedEntityType: 'coach',
+          reportedEntityName: 'Coach K',
+          city: 'New Delhi',
+          state: 'Delhi',
+          createdAt: '2026-11-23T10:00:00Z',
+          updatedAt: '2026-11-25T10:00:00Z',
+        },
+      ],
+      verifications: [],
+      tenants: [],
+    })
+
+    // 7d window anchored on latest signal (2026-11-25) excludes older August & Nov 14 signals
+    const win7d = resolveComplianceDateWindow(signals, { preset: '7d', startDate: null, endDate: null })
+    expect(win7d.dayCount).toBe(7)
+    expect(win7d.shortLabel).toBe('7d')
+    const filtered7d = filterSignalsByDateRange(signals, { preset: '7d', startDate: null, endDate: null }, win7d)
+    expect(filtered7d.map(s => s.referenceCode)).toEqual(['TS-2026-099'])
+
+    // Custom date range (2026-11-01 to 2026-11-15) isolates only the Mid-November signal
+    const customRange = { preset: 'custom' as const, startDate: '2026-11-01', endDate: '2026-11-15' }
+    const winCustom = resolveComplianceDateWindow(signals, customRange)
+    expect(winCustom.dayCount).toBe(15)
+    expect(winCustom.shortLabel).toBe('15d')
+    const filteredCustom = filterSignalsByDateRange(signals, customRange, winCustom)
+    expect(filteredCustom.map(s => s.referenceCode)).toEqual(['TS-2026-081'])
+
+    const customMatrix = buildComplianceHeatmapMatrix(signals, 'partner_category', 'all', customRange)
+    expect(customMatrix.dateWindow.shortLabel).toBe('15d')
+    expect(customMatrix.totalSignals).toBe(1)
+    expect(customMatrix.rows[0]?.key).toBe('Maharashtra')
+    expect(customMatrix.rows[0]?.trend30d?.points.length).toBe(15)
+
+    // 90d window samples cleanly within 60 points for crisp SVG sparklines
+    const win90d = resolveComplianceDateWindow(signals, { preset: '90d', startDate: null, endDate: null })
+    expect(win90d.dayCount).toBe(90)
+    const trend90d = buildRegionTrendForWindow(
+      signals.filter(s => s.region === 'Maharashtra'),
+      win90d.startMs,
+      win90d.endMs,
+    )
+    expect(trend90d.points.length).toBeLessThanOrEqual(60)
+    expect(trend90d.points.length).toBeGreaterThanOrEqual(2)
+
+    // All-time window returns all signals
+    const allFiltered = filterSignalsByDateRange(signals, { preset: 'all', startDate: null, endDate: null })
+    expect(allFiltered.length).toBe(3)
   })
 })
 

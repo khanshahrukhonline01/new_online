@@ -16,6 +16,11 @@ import { AdminTrustSafetyDesk } from './components/AdminTrustSafetyDesk'
 import { AdminPlatformGovernanceDesk } from './components/AdminPlatformGovernanceDesk'
 import { AdminRegulatoryInboxDesk } from './components/AdminRegulatoryInboxDesk'
 import { loadUnifiedRegulatoryInbox } from './services/adminRegulatoryInboxService'
+import {
+  loadGlobalAdminSearchIndex,
+  type AdminDeskDeepLink,
+  type GlobalSearchEntityItem,
+} from './services/adminGlobalSearchService'
 import { subscribeRegulatoryState } from '../../../src/shared/governance/regulatoryBridge'
 import {
   AdminAuthGate,
@@ -73,6 +78,9 @@ function AuthenticatedAdminShell({
   const [toastNotification, setToastNotification] = useState<string | null>(null)
   const [dbLatencyMs, setDbLatencyMs] = useState<number | null>(null)
   const [isRefreshingCounts, setIsRefreshingCounts] = useState(false)
+  const [globalSearchItems, setGlobalSearchItems] = useState<GlobalSearchEntityItem[]>([])
+  const [isLoadingSearchIndex, setIsLoadingSearchIndex] = useState(false)
+  const [deskDeepLink, setDeskDeepLink] = useState<AdminDeskDeepLink | null>(null)
   const lastGKeyTimeRef = useRef<number>(0)
 
   const [adminTheme, setAdminTheme] = useState<AdminThemeMode>(() => {
@@ -164,12 +172,45 @@ function AuthenticatedAdminShell({
     }
   }, [])
 
+  const refreshGlobalSearchIndex = useCallback(async () => {
+    setIsLoadingSearchIndex(true)
+    try {
+      const items = await loadGlobalAdminSearchIndex()
+      setGlobalSearchItems(items)
+    } catch {
+      // keep prior search index if transient error
+    } finally {
+      setIsLoadingSearchIndex(false)
+    }
+  }, [])
+
   useEffect(() => {
     void loadCounts()
+    void refreshGlobalSearchIndex()
     return subscribeRegulatoryState(() => {
       void loadCounts()
+      void refreshGlobalSearchIndex()
     })
-  }, [loadCounts])
+  }, [loadCounts, refreshGlobalSearchIndex])
+
+  useEffect(() => {
+    if (isCommandPaletteOpen) {
+      void refreshGlobalSearchIndex()
+    }
+  }, [isCommandPaletteOpen, refreshGlobalSearchIndex])
+
+  const handleSelectSearchEntity = useCallback((item: GlobalSearchEntityItem) => {
+    setActiveWorkspace(item.targetWorkspace)
+    setDeskDeepLink({
+      workspace: item.targetWorkspace,
+      recordId: item.focusRecordId,
+      query: item.focusQuery,
+      tab: item.focusTab,
+      nonce: Date.now(),
+    })
+    setToastNotification(`Jumped to ${item.title} in ${item.targetDeskLabel}.`)
+    window.setTimeout(() => setToastNotification(null), 3200)
+  }, [])
 
   // Global keyboard navigation chords (G + workspace key), suppressed inside inputs or open dialogs
   useEffect(() => {
@@ -592,7 +633,10 @@ function AuthenticatedAdminShell({
                 onJumpToWorkspace={tab => setActiveWorkspace(tab)}
               />
             ) : activeWorkspace === 'moderation_desk' ? (
-              <AdminListingModerationDesk operatorEmail={identity.email} />
+              <AdminListingModerationDesk
+                operatorEmail={identity.email}
+                deepLink={deskDeepLink?.workspace === 'moderation_desk' ? deskDeepLink : null}
+              />
             ) : activeWorkspace === 'chronicle_desk' ? (
               <AdminChronicleEditorialDesk
                 currentUser={{
@@ -601,20 +645,30 @@ function AuthenticatedAdminShell({
                 }}
               />
             ) : activeWorkspace === 'tenant_governance' ? (
-              <AdminTenantManagementDesk operatorEmail={identity.email} />
+              <AdminTenantManagementDesk
+                operatorEmail={identity.email}
+                deepLink={deskDeepLink?.workspace === 'tenant_governance' ? deskDeepLink : null}
+              />
             ) : activeWorkspace === 'verification_vault' ? (
-              <AdminVerificationVaultDesk operatorEmail={identity.email} />
+              <AdminVerificationVaultDesk
+                operatorEmail={identity.email}
+                deepLink={deskDeepLink?.workspace === 'verification_vault' ? deskDeepLink : null}
+              />
             ) : activeWorkspace === 'analytics' ? (
               <AdminAnalyticsDashboard shellAuthorized />
             ) : activeWorkspace === 'creator_campaigns' ? (
               <AdminCampaignMarketplaceDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'fraud_disputes' ? (
-              <AdminTrustSafetyDesk operatorEmail={identity.email} />
+              <AdminTrustSafetyDesk
+                operatorEmail={identity.email}
+                deepLink={deskDeepLink?.workspace === 'fraud_disputes' ? deskDeepLink : null}
+              />
             ) : activeWorkspace === 'platform_governance' ? (
               <AdminPlatformGovernanceDesk
                 operatorEmail={identity.email}
                 operatorRole={identity.role}
                 operatorUserId={identity.userId}
+                deepLink={deskDeepLink?.workspace === 'platform_governance' ? deskDeepLink : null}
               />
             ) : (activeWorkspace === 'gate_desk' ||
                 activeWorkspace === 'turf_oversight' ||
@@ -641,6 +695,9 @@ function AuthenticatedAdminShell({
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         actions={commandActions}
+        searchItems={globalSearchItems}
+        onSelectEntity={handleSelectSearchEntity}
+        isLoadingEntities={isLoadingSearchIndex}
       />
     </main>
   )

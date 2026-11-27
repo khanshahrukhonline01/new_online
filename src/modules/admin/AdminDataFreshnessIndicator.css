@@ -1,0 +1,310 @@
+/* Admin Analytics Data Freshness Indicator & Interactive Tooltip */
+
+.admin-freshness-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+  padding: 0.24rem 0.35rem 0.24rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(248, 250, 252, 0.9);
+  width: fit-content;
+  max-width: 100%;
+}
+
+:root[data-admin-theme='dark'] .admin-freshness-bar,
+:root[data-theme='dark'] .admin-freshness-bar,
+html.dark .admin-freshness-bar {
+  background: rgba(15, 23, 42, 0.72);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.admin-freshness-anchor {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.admin-freshness-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.16rem 0.28rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #475569;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease;
+}
+
+.admin-freshness-indicator:hover,
+.admin-freshness-indicator:focus-visible {
+  background: rgba(148, 163, 184, 0.14);
+  color: #0f172a;
+  outline: none;
+}
+
+:root[data-admin-theme='dark'] .admin-freshness-indicator,
+:root[data-theme='dark'] .admin-freshness-indicator,
+html.dark .admin-freshness-indicator {
+  color: #94a3b8;
+}
+
+:root[data-admin-theme='dark'] .admin-freshness-indicator:hover,
+:root[data-admin-theme='dark'] .admin-freshness-indicator:focus-visible,
+:root[data-theme='dark'] .admin-freshness-indicator:hover,
+:root[data-theme='dark'] .admin-freshness-indicator:focus-visible,
+html.dark .admin-freshness-indicator:hover,
+html.dark .admin-freshness-indicator:focus-visible {
+  background: rgba(148, 163, 184, 0.12);
+  color: #f1f5f9;
+}
+
+.admin-freshness-text strong {
+  font-weight: 650;
+  color: #0f172a;
+}
+
+:root[data-admin-theme='dark'] .admin-freshness-text strong,
+:root[data-theme='dark'] .admin-freshness-text strong,
+html.dark .admin-freshness-text strong {
+  color: #e2e8f0;
+}
+
+.admin-freshness-info-icon {
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+
+.admin-freshness-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.22);
+}
+
+.admin-freshness-indicator.is-aging .admin-freshness-dot,
+.admin-freshness-status-badge.is-aging .admin-freshness-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.24);
+}
+
+.admin-freshness-indicator.is-stale .admin-freshness-dot,
+.admin-freshness-status-badge.is-stale .admin-freshness-dot {
+  background: #94a3b8;
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.22);
+}
+
+.admin-freshness-divider {
+  width: 1px;
+  height: 14px;
+  background: rgba(148, 163, 184, 0.3);
+  flex-shrink: 0;
+}
+
+.admin-freshness-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0.22rem 0.58rem;
+  border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  font-size: 0.74rem;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+.admin-freshness-refresh-btn:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(5, 150, 105, 0.52);
+  color: #065f46;
+}
+
+.admin-freshness-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+:root[data-admin-theme='dark'] .admin-freshness-refresh-btn,
+:root[data-theme='dark'] .admin-freshness-refresh-btn,
+html.dark .admin-freshness-refresh-btn {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(52, 211, 153, 0.32);
+  color: #34d399;
+}
+
+:root[data-admin-theme='dark'] .admin-freshness-refresh-btn:hover:not(:disabled),
+:root[data-theme='dark'] .admin-freshness-refresh-btn:hover:not(:disabled),
+html.dark .admin-freshness-refresh-btn:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: rgba(52, 211, 153, 0.55);
+  color: #6ee7b7;
+}
+
+/* Interactive Tooltip Popover */
+.admin-freshness-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 65;
+  width: 280px;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
+  color: #0f172a;
+}
+
+:root[data-admin-theme='dark'] .admin-freshness-tooltip,
+:root[data-theme='dark'] .admin-freshness-tooltip,
+html.dark .admin-freshness-tooltip {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.25);
+  box-shadow: 0 18px 36px rgba(2, 6, 23, 0.55);
+  color: #f1f5f9;
+}
+
+.admin-freshness-tooltip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-bottom: 0.55rem;
+  margin-bottom: 0.55rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.admin-freshness-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #047857;
+}
+
+.admin-freshness-status-badge.is-aging {
+  color: #b45309;
+}
+
+.admin-freshness-status-badge.is-stale {
+  color: #475569;
+}
+
+:root[data-admin-theme='dark'] .admin-freshness-status-badge,
+:root[data-theme='dark'] .admin-freshness-status-badge,
+html.dark .admin-freshness-status-badge {
+  color: #34d399;
+}
+
+:root[data-admin-theme='dark'] .admin-freshness-status-badge.is-aging,
+:root[data-theme='dark'] .admin-freshness-status-badge.is-aging,
+html.dark .admin-freshness-status-badge.is-aging {
+  color: #fbbf24;
+}
+
+:root[data-admin-theme='dark'] .admin-freshness-status-badge.is-stale,
+:root[data-theme='dark'] .admin-freshness-status-badge.is-stale,
+html.dark .admin-freshness-status-badge.is-stale {
+  color: #cbd5e1;
+}
+
+.admin-freshness-cadence {
+  font-size: 0.69rem;
+  font-weight: 600;
+  color: #64748b;
+  padding: 0.1rem 0.42rem;
+  border-radius: 5px;
+  background: rgba(148, 163, 184, 0.14);
+}
+
+:root[data-admin-theme='dark'] .admin-freshness-cadence,
+:root[data-theme='dark'] .admin-freshness-cadence,
+html.dark .admin-freshness-cadence {
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.admin-freshness-meta-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.admin-freshness-meta-list > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: 0.74rem;
+}
+
+.admin-freshness-meta-list dt {
+  color: #64748b;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.admin-freshness-meta-list dd {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 600;
+  text-align: right;
+}
+
+:root[data-admin-theme='dark'] .admin-freshness-meta-list dt,
+:root[data-theme='dark'] .admin-freshness-meta-list dt,
+html.dark .admin-freshness-meta-list dt {
+  color: #94a3b8;
+}
+
+:root[data-admin-theme='dark'] .admin-freshness-meta-list dd,
+:root[data-theme='dark'] .admin-freshness-meta-list dd,
+html.dark .admin-freshness-meta-list dd {
+  color: #e2e8f0;
+}
+
+.admin-freshness-tooltip-footer {
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.admin-freshness-tooltip-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.32rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: #10b981;
+  color: #042f2e;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease;
+}
+
+.admin-freshness-tooltip-action:hover:not(:disabled) {
+  background: #059669;
+  color: #ffffff;
+}
+
+.admin-freshness-tooltip-action:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}

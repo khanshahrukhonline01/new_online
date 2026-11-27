@@ -5,7 +5,7 @@ import {
   type CoachInquiryData,
 } from './coachesData'
 import { submitCoachInquiry } from '../../integrations/supabase/public-client'
-import { addCoachInquiry } from './coachSaaSClient'
+import { getPublicTenantBySlug, submitTenantEnquiry } from '../../integrations/supabase/tenant-client'
 
 export interface CoachInquiryModalProps {
   coach: VerifiedCoach | null
@@ -101,19 +101,23 @@ export function CoachInquiryModal({ coach, isOpen, onClose }: CoachInquiryModalP
         referenceId: res.inquiryToken || res.referenceId,
       }
 
-      // Sync into Coach Operations SaaS Hub in real-time
-      addCoachInquiry({
-        coachSlug: coach.id,
-        athleteName: athleteName.trim(),
-        parentName: parentName.trim() || undefined,
-        phone: cleanPhone,
-        sport: coach.sport || 'Sports',
-        ageCategory,
-        skillLevel,
-        preferredBatch,
-        objective,
-        referenceId: record.referenceId,
-      })
+      // Forward inquiry cleanly to PostgreSQL tenant CRM when the coach has a verified tenant
+      if (coach.slug) {
+        const publicTenant = await getPublicTenantBySlug(coach.slug)
+        if (publicTenant?.id) {
+          await submitTenantEnquiry({
+            tenantId: publicTenant.id,
+            enquiryToken: record.referenceId,
+            parentName: parentName.trim() || athleteName.trim(),
+            parentPhone: cleanPhone,
+            parentEmail: email.trim() || undefined,
+            studentName: athleteName.trim(),
+            sport: coach.sport || 'Multi-Sport',
+            requestType: 'free_trial',
+            notes: [ageCategory, skillLevel, objective, preferredBatch, notes.trim()].filter(Boolean).join(' · '),
+          })
+        }
+      }
 
       setConfirmedInquiry(record)
     } catch {

@@ -1,13 +1,24 @@
 import { useState, type FormEvent, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
+import { AuthCaptchaWidget } from '../../shared/components/auth/AuthCaptchaWidget'
 import { useFormState } from '../../shared/hooks/useFormState'
 import {
   getStoredAuthUser,
+  resendVerificationEmail,
   type AuthUserProfile,
 } from '../../integrations/supabase/auth-client'
 import {
+  resolveTenantWorkspacePath,
+  tryFetchUserTenantMemberships,
+  getPendingTenantMemberships,
+  type DbTenantMembership,
+} from '../../integrations/supabase/tenant-client'
+import type { OrganizationType } from '../../shared/saas/saasTypes'
+import {
+  acceptTenantInvitation,
   normalizePartnerRole,
   onboardPartnerOrganization,
+  ORGANIZATION_SUBTYPE_OPTIONS,
   PARTNER_ROLE_CONFIG,
   PARTNER_ROLES_ORDERED,
   signInPartnerAccount,
@@ -27,11 +38,13 @@ const ROLE_ICON: Record<PartnerRole, 'building' | 'award' | 'calendar' | 'sparkl
   coach: 'award',
   venue: 'calendar',
   tournament: 'sparkles',
+  organization: 'building',
 }
 
 interface OnboardingFormFields extends Record<string, unknown> {
   entityName: string
   directorName: string
+  organizationType: OrganizationType
   sport: string
   city: string
   phone: string
@@ -53,10 +66,19 @@ export default function PartnerOnboardingPage({
   const [mode, setMode] = useState<'signup' | 'login'>(initialMode)
   const [selectedRole, setSelectedRole] = useState<PartnerRole>(() => normalizePartnerRole(initialRole))
   const [statusMessage, setStatusMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null)
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null)
+  const [resendingVerification, setResendingVerification] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState('')
+  const [captchaResetKey, setCaptchaResetKey] = useState(0)
+  const [postLoginWorkspaces, setPostLoginWorkspaces] = useState<{
+    memberships: DbTenantMembership[]
+    pendingInvitations: DbTenantMembership[]
+  } | null>(null)
 
   const form = useFormState<OnboardingFormFields>({
     entityName: '',
     directorName: existingUser?.fullName || '',
+    organizationType: 'club',
     sport: 'Cricket',
     city: existingUser?.city || 'Delhi NCR',
     phone: existingUser?.phone || '',
@@ -85,6 +107,7 @@ export default function PartnerOnboardingPage({
     try {
       const outcome = await onboardPartnerOrganization({
         role: selectedRole,
+        organizationType: selectedRole === 'organization' ? form.fields.organizationType : undefined,
         entityName: form.fields.entityName,
         directorName: form.fields.directorName,
         sport: form.fields.sport,
@@ -95,9 +118,11 @@ export default function PartnerOnboardingPage({
         upiVpa: form.fields.upiVpa,
         certification: form.fields.certification,
         useMagicLink,
+        captchaToken: captchaToken || undefined,
       })
 
       if (!outcome.success) {
+        setCaptchaResetKey(k => k + 1)
         setStatusMessage({ kind: 'error', text: outcome.message })
         return
       }
@@ -106,11 +131,18 @@ export default function PartnerOnboardingPage({
         onAuthSuccess?.(outcome.user)
       }
 
+      setCaptchaResetKey(k => k + 1)
       setStatusMessage({ kind: 'success', text: outcome.message })
+      if (outcome.requiresEmailVerification) {
+        setPendingVerificationEmail(form.fields.email.trim().toLowerCase())
+      } else {
+        setPendingVerificationEmail(null)
+      }
       if (!outcome.requiresEmailVerification && outcome.workspacePath) {
         navigateToWorkspace(outcome.workspacePath)
       }
     } catch (err) {
+      setCaptchaResetKey(k => k + 1)
       setStatusMessage({
         kind: 'error',
         text: err instanceof Error ? err.message : 'Partner onboarding could not be completed.',
@@ -134,9 +166,11 @@ export default function PartnerOnboardingPage({
         email: form.fields.loginEmail,
         password: form.fields.loginPassword,
         useMagicLink,
+        captchaToken: captchaToken || undefined,
       })
 
       if (!outcome.success) {
+        setCaptchaResetKey(k => k + 1)
         setStatusMessage({ kind: 'error', text: outcome.message })
         return
       }
@@ -145,15 +179,46 @@ export default function PartnerOnboardingPage({
         onAuthSuccess?.(outcome.user)
       }
 
+      setCaptchaResetKey(k => k + 1)
       setStatusMessage({ kind: 'success', text: outcome.message })
       if (!outcome.requiresEmailVerification && outcome.workspacePath) {
+        setPostLoginWorkspaces(null)
         navigateToWorkspace(outcome.workspacePath)
+      } else if (!outcome.requiresEmailVerification && ((outcome.memberships?.length || 0) > 0 || (outcome.pendingInvitations?.length || 0) > 0)) {
+        setPostLoginWorkspaces({
+          memberships: outcome.memberships || [],
+          pendingInvitations: outcome.pendingInvitations || [],
+        })
       }
     } catch (err) {
+      setCaptchaResetKey(k => k + 1)
       setStatusMessage({
         kind: 'error',
         text: err instanceof Error ? err.message : 'Sign-in could not be completed.',
       })
+    } finally {
+      form.endSubmit()
+    }
+  }
+
+  const handleAcceptPartnerInvite = async (invite: DbTenantMembership) => {
+    setStatusMessage(null)
+    form.beginSubmit()
+    try {
+      const res = await acceptTenantInvitation(invite.id)
+      if (!res.success) {
+        setStatusMessage({ kind: 'error', text: res.message })
+        return
+      }
+      if (existingUser) {
+        const [memberships, pendingInvitations] = await Promise.all([
+          tryFetchUserTenantMemberships(existingUser.id),
+          getPendingTenantMemberships(existingUser.id),
+        ])
+        setPostLoginWorkspaces({ memberships, pendingInvitations })
+      }
+      setStatusMessage({ kind: 'success', text: `Joined ${invite.tenant?.name || 'workspace'}! Opening dashboard...` })
+      navigateToWorkspace(resolveTenantWorkspacePath(invite))
     } finally {
       form.endSubmit()
     }
@@ -167,6 +232,27 @@ export default function PartnerOnboardingPage({
   const handleModeSwitch = (nextMode: 'signup' | 'login') => {
     setMode(nextMode)
     setStatusMessage(null)
+    setPendingVerificationEmail(null)
+    setCaptchaResetKey(k => k + 1)
+  }
+
+  const handleResendVerificationLink = async () => {
+    if (!pendingVerificationEmail || resendingVerification) return
+    setResendingVerification(true)
+    try {
+      const res = await resendVerificationEmail(
+        pendingVerificationEmail,
+        captchaToken || undefined,
+        '/partner/verify',
+      )
+      setCaptchaResetKey(k => k + 1)
+      setStatusMessage({
+        kind: res.success ? 'success' : 'error',
+        text: res.message,
+      })
+    } finally {
+      setResendingVerification(false)
+    }
   }
 
   return (
@@ -177,7 +263,15 @@ export default function PartnerOnboardingPage({
         </p>
         <h1>India&apos;s National Sports Operations Infrastructure</h1>
         <p>
-          Empowering sports academies, certified coaches, turf venues, and tournament directors with 0% commission B2B management tools.
+          Empowering sports academies, certified coaches, turf venues, and tournament directors with 0% commission B2B management tools.{' '}
+          <a
+            href="/demo"
+            className="partner-link-btn"
+            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', marginTop: '8px' }}
+            onClick={e => onNavigate?.(e, '/demo')}
+          >
+            Preview all 8 dashboards before registering →
+          </a>
         </p>
       </header>
 
@@ -240,7 +334,19 @@ export default function PartnerOnboardingPage({
             aria-live="polite"
             className={`partner-status-banner ${statusMessage.kind === 'error' ? 'is-error' : 'is-success'}`}
           >
-            {statusMessage.text}
+            <span>{statusMessage.text}</span>
+            {pendingVerificationEmail && mode === 'signup' && (
+              <div style={{ marginTop: 10 }}>
+                <button
+                  type="button"
+                  className="partner-link-btn"
+                  disabled={resendingVerification}
+                  onClick={() => void handleResendVerificationLink()}
+                >
+                  {resendingVerification ? 'Sending fresh verification link...' : 'Resend verification email →'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -338,6 +444,23 @@ export default function PartnerOnboardingPage({
               </div>
             </div>
 
+            {selectedRole === 'organization' && (
+              <div className="partner-form-field">
+                <label htmlFor="partner-org-subtype">Organisation Subtype</label>
+                <select
+                  id="partner-org-subtype"
+                  value={form.fields.organizationType}
+                  onChange={e => form.setField('organizationType', e.target.value as OrganizationType)}
+                >
+                  {ORGANIZATION_SUBTYPE_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {selectedRole === 'coach' && (
               <div className="partner-form-field">
                 <label htmlFor="partner-certification">Coaching Certification / Accreditation</label>
@@ -385,6 +508,10 @@ export default function PartnerOnboardingPage({
             <div className="partner-guarantee-banner">
               🛡️ <strong>Zero Platform Commission Guarantee:</strong> All student fees and court booking deposits flow directly into your own UPI VPA bank account with zero platform commission deductions.
             </div>
+
+            {!existingUser && (
+              <AuthCaptchaWidget resetKey={captchaResetKey} onTokenChange={setCaptchaToken} />
+            )}
 
             <button
               type="submit"
@@ -450,6 +577,8 @@ export default function PartnerOnboardingPage({
               </div>
             </div>
 
+            <AuthCaptchaWidget resetKey={captchaResetKey} onTokenChange={setCaptchaToken} />
+
             <button
               type="submit"
               disabled={form.submitting}
@@ -480,6 +609,52 @@ export default function PartnerOnboardingPage({
                 New Partner? Provision Free Workspace
               </button>
             </div>
+
+            {postLoginWorkspaces && (
+              <div className="partner-session-banner" role="region" aria-label="Select tenant workspace" style={{ display: 'grid', gap: '10px', marginTop: '14px' }}>
+                {postLoginWorkspaces.memberships.length > 0 && (
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    <strong>Your Active Tenant Dashboards</strong>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {postLoginWorkspaces.memberships.map(m => {
+                        const target = resolveTenantWorkspacePath(m)
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            className="coach-primary-btn"
+                            onClick={() => navigateToWorkspace(target)}
+                          >
+                            {m.tenant?.name || 'Workspace'} ({m.role.replace(/_/g, ' ')}) →
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {postLoginWorkspaces.pendingInvitations.length > 0 && (
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    <strong>Pending Team Invitations</strong>
+                    {postLoginWorkspaces.pendingInvitations.map(invite => (
+                      <div key={invite.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                        <span>
+                          {invite.tenant?.name || 'Workspace'} — invited as <strong>{invite.role.replace(/_/g, ' ')}</strong>
+                        </span>
+                        <button
+                          type="button"
+                          className="coach-primary-btn"
+                          disabled={form.submitting}
+                          onClick={() => void handleAcceptPartnerInvite(invite)}
+                        >
+                          Accept &amp; Open →
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </form>
         )}
       </div>

@@ -8,11 +8,13 @@ export interface TenantContextValue {
   currentMembership: DbTenantMembership | null
   userRole: string | null
   memberships: DbTenantMembership[]
+  pendingInvitations?: DbTenantMembership[]
   isLoading: boolean
   error: string | null
   refreshTenant: () => Promise<void>
   switchTenant: (tenantId: string) => Promise<boolean>
   switchTenantBySlug: (slug: string) => Promise<boolean>
+  acceptInvitation?: (membershipId: string) => Promise<{ success: boolean; message: string }>
 }
 
 export const TenantContext = createContext<TenantContextValue | undefined>(undefined)

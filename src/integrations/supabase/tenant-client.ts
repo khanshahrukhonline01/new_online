@@ -12,7 +12,6 @@
  */
 
 import { getSupabaseClient } from './realtime-client'
-import { getStoredAuthUser } from './auth-client'
 import type { OrganizationType } from '../../shared/saas/saasTypes'
 
 export interface DbTenant {
@@ -37,11 +36,30 @@ export interface DbTenant {
   updated_at: string
 }
 
+export type DbTenantMemberRole =
+  | 'owner'
+  | 'org_admin'
+  | 'director'
+  | 'admin'
+  | 'manager'
+  | 'admissions_manager'
+  | 'finance_manager'
+  | 'content_manager'
+  | 'listing_manager'
+  | 'verification_coordinator'
+  | 'head_coach'
+  | 'coach'
+  | 'accountant'
+  | 'front_desk'
+  | 'staff'
+  | 'readonly_member'
+  | 'parent'
+
 export interface DbTenantMembership {
   id: string
   tenant_id: string
   user_id: string
-  role: 'owner' | 'director' | 'admin' | 'head_coach' | 'coach' | 'accountant' | 'front_desk' | 'staff' | 'parent'
+  role: DbTenantMemberRole
   status: 'active' | 'invited' | 'suspended' | 'revoked'
   invited_email?: string
   invited_by?: string
@@ -173,24 +191,140 @@ export async function getPublicTenantBySlug(slug: string): Promise<DbPublicTenan
   }
 }
 
+export const INSTITUTIONAL_TENANT_TYPES: readonly OrganizationType[] = [
+  'academy',
+  'club',
+  'school',
+  'college',
+  'university',
+  'federation',
+  'association',
+  'corporate',
+  'training_org',
+  'service_provider',
+  'research_org',
+  'media_org',
+  'enterprise',
+  'other',
+  'venue',
+  'tournament',
+  'event_organizer',
+] as const
+
+export interface TenantRoutePolicy {
+  personaLabel: string
+  onboardingRole: 'academy' | 'coach' | 'venue' | 'tournament' | 'organization'
+  requiredTenantTypes: OrganizationType[]
+  allowedRoles: string[]
+}
+
+const VENUE_ALLOWED_ROLES = [
+  'owner',
+  'org_admin',
+  'director',
+  'admin',
+  'manager',
+  'listing_manager',
+  'finance_manager',
+  'accountant',
+  'front_desk',
+  'staff',
+  'readonly_member',
+]
+
+/** Single authoritative membership policy per operational persona (shared by App.tsx and WorkspaceShell.tsx). */
+export const TENANT_ROUTE_POLICIES: Record<
+  'academy' | 'coach' | 'turf' | 'host' | 'tournament' | 'organization',
+  TenantRoutePolicy
+> = {
+  academy: {
+    personaLabel: 'Academy',
+    onboardingRole: 'academy',
+    requiredTenantTypes: ['academy', 'club', 'school', 'college', 'university', 'training_org'],
+    allowedRoles: [
+      'owner',
+      'org_admin',
+      'director',
+      'admin',
+      'manager',
+      'admissions_manager',
+      'front_desk',
+      'head_coach',
+      'coach',
+      'finance_manager',
+      'accountant',
+      'content_manager',
+      'listing_manager',
+      'verification_coordinator',
+      'staff',
+      'readonly_member',
+    ],
+  },
+  coach: {
+    personaLabel: 'Coach',
+    onboardingRole: 'coach',
+    requiredTenantTypes: ['coach', 'academy'],
+    allowedRoles: ['owner', 'org_admin', 'director', 'admin', 'manager', 'head_coach', 'coach'],
+  },
+  turf: {
+    personaLabel: 'Venue / Turf',
+    onboardingRole: 'venue',
+    requiredTenantTypes: ['venue'],
+    allowedRoles: VENUE_ALLOWED_ROLES,
+  },
+  host: {
+    personaLabel: 'Venue / Host',
+    onboardingRole: 'venue',
+    requiredTenantTypes: ['venue'],
+    allowedRoles: VENUE_ALLOWED_ROLES,
+  },
+  tournament: {
+    personaLabel: 'Tournament',
+    onboardingRole: 'tournament',
+    requiredTenantTypes: ['tournament', 'event_organizer'],
+    allowedRoles: [
+      'owner',
+      'org_admin',
+      'director',
+      'admin',
+      'manager',
+      'finance_manager',
+      'content_manager',
+      'verification_coordinator',
+      'accountant',
+      'staff',
+      'readonly_member',
+    ],
+  },
+  organization: {
+    personaLabel: 'Organisation',
+    onboardingRole: 'organization',
+    requiredTenantTypes: [...INSTITUTIONAL_TENANT_TYPES],
+    allowedRoles: [
+      'owner',
+      'org_admin',
+      'director',
+      'admin',
+      'manager',
+      'finance_manager',
+      'content_manager',
+      'listing_manager',
+      'verification_coordinator',
+      'accountant',
+      'front_desk',
+      'staff',
+      'readonly_member',
+    ],
+  },
+}
+
 /**
  * Fetch tenant profile by slug (for authorized tenant member / owner)
  */
 export async function getTenantBySlug(slug: string): Promise<DbTenant | null> {
   const client = getSupabaseClient()
   if (!client) {
-    return {
-      id: `local-tenant-${slug}`,
-      name: slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      slug,
-      tenant_type: 'academy',
-      status: 'active',
-      city: 'Delhi NCR',
-      state: 'Delhi',
-      sport: 'Cricket',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
+    return null
   }
 
   try {
@@ -380,9 +514,8 @@ export async function provisionInitialTenantOwner(params: {
   const client = getSupabaseClient()
   if (!client) {
     return {
-      success: true,
-      tenantId: `tenant-${params.slug}`,
-      message: 'Successfully provisioned tenant and initial owner membership (local)',
+      success: false,
+      message: 'Authentication and Supabase configuration are required to provision a workspace.',
     }
   }
 
@@ -432,17 +565,15 @@ export async function submitTenantEnquiry(enquiry: {
   const client = getSupabaseClient()
   if (!client) {
     return {
-      success: true,
-      enquiryId: `local-enq-${Date.now()}`,
-      enquiryToken: enquiry.enquiryToken || `ENQ-LOCAL-${Date.now()}`,
-      message: 'Locally recorded parent enquiry (offline)',
+      success: false,
+      message: 'Supabase configuration is required to submit enquiries.',
     }
   }
 
   const token = enquiry.enquiryToken || `ENQ-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`
 
   try {
-    const { data, error } = await client
+    const { error } = await client
       .from('tenant_enquiries')
       .insert({
         tenant_id: enquiry.tenantId,
@@ -457,8 +588,6 @@ export async function submitTenantEnquiry(enquiry: {
         notes: enquiry.notes || null,
         status: 'new',
       })
-      .select('id, enquiry_token')
-      .single()
 
     if (error) {
       return { success: false, message: error.message }
@@ -466,8 +595,7 @@ export async function submitTenantEnquiry(enquiry: {
 
     return {
       success: true,
-      enquiryId: data.id,
-      enquiryToken: data.enquiry_token,
+      enquiryToken: token,
       message: 'Enquiry submitted successfully',
     }
   } catch (err) {
@@ -551,6 +679,90 @@ export async function getUserTenantMemberships(userId: string): Promise<DbTenant
       membership.status === 'active' &&
       membership.tenant?.status === 'active'
   )
+}
+
+/**
+ * Best-effort tenant membership lookup used post-login to route users to their active dashboard.
+ * Never throws when Supabase is unconfigured or user has zero tenant memberships.
+ */
+export async function tryFetchUserTenantMemberships(userId: string): Promise<DbTenantMembership[]> {
+  if (!userId) return []
+  try {
+    return await getUserTenantMemberships(userId)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Fetch pending tenant invitations linked to the authenticated user.
+ * Fails cleanly to [] when Supabase is unconfigured or offline.
+ */
+export async function getPendingTenantMemberships(userId: string): Promise<DbTenantMembership[]> {
+  const client = getSupabaseClient()
+  if (!client || !userId) return []
+
+  try {
+    const { data, error } = await client
+      .from('tenant_memberships')
+      .select('*, tenant:tenants(*)')
+      .eq('user_id', userId)
+      .eq('status', 'invited')
+      .order('created_at', { ascending: false })
+
+    if (error) return []
+    return ((data || []) as DbTenantMembership[]).filter(
+      membership =>
+        membership.user_id === userId &&
+        membership.status === 'invited' &&
+        membership.tenant?.status === 'active'
+    )
+  } catch {
+    return []
+  }
+}
+
+export type ResolvedTenantPersona = 'academy' | 'coach' | 'turf' | 'tournament' | 'organization' | 'parent'
+
+/** Maps any of the 18 PostgreSQL tenant_type categories + member role to a WorkspaceShell persona. */
+export function mapTenantTypeToPersona(
+  tenantType?: string | null,
+  memberRole?: string | null
+): ResolvedTenantPersona {
+  if (memberRole === 'parent') return 'parent'
+  switch (tenantType) {
+    case 'academy':
+      return memberRole === 'coach' || memberRole === 'head_coach' ? 'coach' : 'academy'
+    case 'coach':
+      return 'coach'
+    case 'venue':
+      return 'turf'
+    case 'tournament':
+    case 'event_organizer':
+      return 'tournament'
+    default:
+      return 'organization'
+  }
+}
+
+/** Builds the canonical dashboard URL for a verified tenant membership. */
+export function resolveTenantWorkspacePath(membership: DbTenantMembership): string {
+  const persona = mapTenantTypeToPersona(membership.tenant?.tenant_type, membership.role)
+  const slug = membership.tenant?.slug
+  const basePath =
+    persona === 'academy'
+      ? '/workspace/academy/overview'
+      : persona === 'coach'
+        ? '/workspace/coach/overview'
+        : persona === 'turf'
+          ? '/workspace/turf/calendar'
+          : persona === 'tournament'
+            ? '/workspace/tournament/overview'
+            : persona === 'parent'
+              ? '/workspace/parent/attendance'
+              : '/workspace/organization/overview'
+
+  return slug ? `${basePath}?tenant=${encodeURIComponent(slug)}` : basePath
 }
 /**
  * Update tenant profile settings (Restricted to owner & director)
@@ -659,9 +871,8 @@ export async function createTenantInvitation(params: {
   const client = getSupabaseClient()
   if (!client) {
     return {
-      success: true,
-      membershipId: `invite-${Date.now()}`,
-      message: 'Invitation issued successfully (local)',
+      success: false,
+      message: 'Authentication and Supabase configuration are required to issue workspace invitations.',
     }
   }
 
@@ -688,8 +899,8 @@ export async function acceptTenantInvitation(
   const client = getSupabaseClient()
   if (!client) {
     return {
-      success: true,
-      message: 'Invitation accepted successfully (local)',
+      success: false,
+      message: 'Authentication and Supabase configuration are required to accept workspace invitations.',
     }
   }
 

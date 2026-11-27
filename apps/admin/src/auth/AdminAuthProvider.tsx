@@ -17,6 +17,7 @@ import {
   signOut as performSupabaseSignOut,
   updatePassword,
 } from '../../../../src/integrations/supabase/auth-client'
+import { AuthCaptchaWidget } from '../../../../src/shared/components/auth/AuthCaptchaWidget'
 import { getSupabaseClient } from '../../../../src/integrations/supabase/realtime-client'
 import {
   getModerationAccessProfile,
@@ -25,7 +26,9 @@ import {
 import {
   ADMIN_MIN_PASSWORD_LENGTH,
   evaluateAdminAccessGate,
+  isPartnerOrTenantAccountMetadata,
   isValidAdminAnonKey,
+  resolvePublicAppCallbackUrl,
   validateAdminSupabaseOrigin,
   validateSafeAdminRedirectUrl,
   type AdminGateDecision,
@@ -94,6 +97,9 @@ export function AdminAuthGate({ children, initialAuthOverride }: AdminAuthGatePr
   const [formBusy, setFormBusy] = useState(false)
   const [formError, setFormError] = useState('')
   const [formNotice, setFormNotice] = useState('')
+  const [captchaToken, setCaptchaToken] = useState('')
+  const [captchaResetKey, setCaptchaResetKey] = useState(0)
+  const [publicWorkspaceRedirectUrl, setPublicWorkspaceRedirectUrl] = useState<string | null>(null)
 
   const hadActiveSessionRef = useRef(Boolean(initialAuthOverride))
 
@@ -103,6 +109,7 @@ export function AdminAuthGate({ children, initialAuthOverride }: AdminAuthGatePr
     setSessionEmail('')
     setLookupError(null)
     setSessionExpired(markExpired)
+    setPublicWorkspaceRedirectUrl(null)
     hadActiveSessionRef.current = false
   }, [])
 
@@ -149,6 +156,21 @@ export function AdminAuthGate({ children, initialAuthOverride }: AdminAuthGatePr
 
       const serverProfile = await getModerationAccessProfile()
       setProfile(serverProfile)
+
+      const isAuthorizedOperator =
+        serverProfile?.is_active === true &&
+        (serverProfile.role === 'moderator' || serverProfile.role === 'super_admin')
+      const userMeta = userData.user.user_metadata as Record<string, unknown> | undefined
+      if (!isAuthorizedOperator && isPartnerOrTenantAccountMetadata(userMeta) && typeof window !== 'undefined') {
+        const targetPath = userMeta?.khelgrid_partner_onboarding ? '/partner/verify' : '/workspace'
+        const redirectTarget = resolvePublicAppCallbackUrl({
+          targetPath,
+          configuredPublicOrigin: import.meta.env.VITE_PUBLIC_APP_URL as string | undefined,
+          currentOrigin: window.location.origin,
+        })
+        setPublicWorkspaceRedirectUrl(redirectTarget)
+        window.location.replace(redirectTarget)
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Authorization lookup failed.'
       if (message.toLowerCase().includes('sign in') || message.toLowerCase().includes('jwt') || message.toLowerCase().includes('session')) {
@@ -167,13 +189,24 @@ export function AdminAuthGate({ children, initialAuthOverride }: AdminAuthGatePr
     void revalidate()
   }, [configApproved, initialAuthOverride, revalidate])
 
-  // Handle password recovery callback links & custom reset events
+  // Handle password recovery callback links, non-admin verification forwarding, & custom reset events
   useEffect(() => {
     if (typeof window === 'undefined') return
     const callbackInfo = parseAuthUrlCallback()
     if (callbackInfo.type === 'recovery') {
       setAuthMode('set_new_password')
       setFormNotice('Set a new password of at least 12 characters for your authorized account.')
+    } else if (callbackInfo.type === 'signup_confirmed') {
+      const redirectTarget = resolvePublicAppCallbackUrl({
+        targetPath: '/partner/verify',
+        configuredPublicOrigin: import.meta.env.VITE_PUBLIC_APP_URL as string | undefined,
+        currentOrigin: window.location.origin,
+        search: window.location.search,
+        hash: window.location.hash,
+      })
+      setPublicWorkspaceRedirectUrl(redirectTarget)
+      window.location.replace(redirectTarget)
+      return
     }
 
     const handleOpenReset = () => {
@@ -251,14 +284,21 @@ export function AdminAuthGate({ children, initialAuthOverride }: AdminAuthGatePr
     setFormNotice('')
     setSessionExpired(false)
     try {
-      const result = await signInWithEmail({ email: email.trim(), password })
+      const result = await signInWithEmail({
+        email: email.trim(),
+        password,
+        ...(captchaToken ? { captchaToken } : {}),
+      })
       if (!result.success) {
+        setCaptchaResetKey(k => k + 1)
         setFormError(result.message || 'Invalid email or password.')
         return
       }
       setPassword('')
+      setCaptchaResetKey(k => k + 1)
       await revalidate()
     } catch (err) {
+      setCaptchaResetKey(k => k + 1)
       setFormError(err instanceof Error ? err.message : 'Sign-in failed.')
     } finally {
       setFormBusy(false)
@@ -276,13 +316,15 @@ export function AdminAuthGate({ children, initialAuthOverride }: AdminAuthGatePr
         typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : '/',
         origin,
       )
-      const res = await sendPasswordReset(email.trim(), safeRedirect)
+      const res = await sendPasswordReset(email.trim(), safeRedirect, captchaToken || undefined)
+      setCaptchaResetKey(k => k + 1)
       if (!res.success) {
         setFormError(res.message)
       } else {
         setFormNotice(res.message)
       }
     } catch (err) {
+      setCaptchaResetKey(k => k + 1)
       setFormError(err instanceof Error ? err.message : 'Could not send reset instructions.')
     } finally {
       setFormBusy(false)
@@ -468,6 +510,7 @@ export function AdminAuthGate({ children, initialAuthOverride }: AdminAuthGatePr
                 required
               />
             </label>
+            <AuthCaptchaWidget resetKey={captchaResetKey} onTokenChange={setCaptchaToken} />
             <div className="admin-gate-actions">
               <button type="submit" className="admin-gate-btn-primary" disabled={formBusy}>
                 {formBusy ? 'Sending…' : 'Send reset link'}
@@ -510,7 +553,18 @@ export function AdminAuthGate({ children, initialAuthOverride }: AdminAuthGatePr
               Signed in as <strong>{sessionEmail}</strong>. Public registration and ordinary user accounts do not grant access to KhelGrid Admin Operations.
             </p>
           )}
+          {publicWorkspaceRedirectUrl && (
+            <p className="admin-gate-notice">
+              Partner and Academy workspaces live on KhelGrid (not Admin Operations).{' '}
+              <a href={publicWorkspaceRedirectUrl}>Continue to your KhelGrid Workspace →</a>
+            </p>
+          )}
           <div className="admin-gate-actions">
+            {publicWorkspaceRedirectUrl && (
+              <a className="admin-gate-btn-primary" href={publicWorkspaceRedirectUrl} style={{ textDecoration: 'none' }}>
+                Open KhelGrid Workspace →
+              </a>
+            )}
             <button type="button" className="admin-gate-btn-primary" onClick={() => void handleSignOut()} disabled={formBusy}>
               {formBusy ? 'Signing out…' : 'Sign out'}
             </button>
@@ -592,6 +646,7 @@ export function AdminAuthGate({ children, initialAuthOverride }: AdminAuthGatePr
                 required
               />
             </label>
+            <AuthCaptchaWidget resetKey={captchaResetKey} onTokenChange={setCaptchaToken} />
             <div className="admin-gate-actions">
               <button type="submit" className="admin-gate-btn-primary" disabled={formBusy}>
                 {formBusy ? 'Verifying…' : 'Sign in securely'}

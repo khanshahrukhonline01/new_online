@@ -4,9 +4,55 @@
  * UTF-8 BOM ensures seamless opening in Microsoft Excel without character corruption.
  */
 
-import type { AcademyStudent, AcademyBatch, AcademyFeeTransaction } from './academySaaSClient'
+export interface ExportableAcademyStudent {
+  id: string
+  academySlug?: string
+  studentName: string
+  parentName: string
+  parentPhone: string
+  sport: string
+  batchId?: string
+  batchName: string
+  monthlyFee: number
+  feeStatus: string
+  lastPaymentDate?: string | null
+  nextDueDate: string
+}
 
-export function exportStudentsToCsv(students: AcademyStudent[], academyName: string): string {
+export interface ExportableAcademyBatch {
+  id: string
+  academySlug?: string
+  batchName: string
+  sport: string
+  coachName: string
+  timings: string
+  days: string
+  ageGroup?: string
+  monthlyFee?: number
+  maxCapacity?: number
+  enrolledCount?: number
+  isActive?: boolean
+}
+
+export interface ExportableAcademyFeeTransaction {
+  id?: string
+  academySlug?: string
+  studentId?: string
+  batchId?: string
+  receiptNumber: string
+  studentName: string
+  parentName: string
+  parentPhone: string
+  batchName: string
+  amount: number
+  paymentMode: string
+  billingMonth: string
+  collectedByStaffName: string
+  collectedDate: string
+  status: string
+}
+
+export function exportStudentsToCsv(students: ExportableAcademyStudent[], academyName: string): string {
   const headers = [
     'Student Name',
     'Parent Name',
@@ -60,7 +106,7 @@ export function exportAttendanceToCsv(
 }
 
 export function exportTransactionsToCsv(
-  transactions: AcademyFeeTransaction[],
+  transactions: ExportableAcademyFeeTransaction[],
   academyName: string
 ): string {
   const headers = [
@@ -99,7 +145,7 @@ export function exportTransactionsToCsv(
   ].join('\n')
 }
 
-export function generateBatchAttendanceRoster(batch: AcademyBatch, students: AcademyStudent[]) {
+export function generateBatchAttendanceRoster(batch: ExportableAcademyBatch, students: ExportableAcademyStudent[]) {
   const batchStudents = students.filter(s => s.batchId === batch.id || s.batchName === batch.batchName)
   return {
     batchName: batch.batchName,

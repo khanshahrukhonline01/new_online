@@ -1,50 +1,200 @@
 [
   {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.profiles",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table profiles",
+    "passed": true
+  },
+  {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenants",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenants",
     "passed": true
   },
   {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_memberships",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenant_memberships",
     "passed": true
   },
   {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_batches",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenant_batches",
     "passed": true
   },
   {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_students",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenant_students",
     "passed": true
   },
   {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_enquiries",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenant_enquiries",
     "passed": true
   },
   {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_fee_invoices",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenant_fee_invoices",
     "passed": true
   },
   {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_fee_transactions",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenant_fee_transactions",
     "passed": true
   },
   {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_attendance_events",
-    "expected": "42501 permission denied",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table tenant_attendance_events",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_units",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table tenant_units",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_invitations",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table tenant_invitations",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.saas_audit_logs",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table saas_audit_logs",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.saas_subscriptions",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table saas_subscriptions",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.tenant_audit_logs",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table tenant_audit_logs",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.creator_profiles",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table creator_profiles",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.creator_reward_ledger",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table creator_reward_ledger",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.campaign_organisations",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table campaign_organisations",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_profiles",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_profiles",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_verification_submissions",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_verification_submissions",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_athletes",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_athletes",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_athlete_notes",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_athlete_notes",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_training_programmes",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_training_programmes",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_programme_assignments",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_programme_assignments",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_training_sessions",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_training_sessions",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_session_attendance",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_session_attendance",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_athlete_assessments",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_athlete_assessments",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.academy_profiles",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table academy_profiles",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.academy_coaches",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table academy_coaches",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.academy_staff_branch_assignments",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table academy_staff_branch_assignments",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.academy_training_sessions",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table academy_training_sessions",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.academy_facilities",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table academy_facilities",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.academy_trial_postings",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table academy_trial_postings",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.academy_announcements",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table academy_announcements",
     "passed": true
   },
   {

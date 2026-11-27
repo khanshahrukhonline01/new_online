@@ -22,17 +22,41 @@ import { SiteIcon } from '../../shared/components/SiteIcon'
 import { useRouter } from '../../shared/routing/useRouter'
 import './CreatorHubPage.css'
 
-interface CreatorHubPageProps {
+export interface CreatorHubPageProps {
   onNavigate?: (event?: React.MouseEvent<HTMLAnchorElement>, target?: string) => void
+  workspaceSection?: string
 }
 
-type CreatorHubTab = 'opportunities' | 'kanban_pipeline' | 'applications' | 'submit_deliverable' | 'channels' | 'ledger'
+export type CreatorHubTab = 'opportunities' | 'kanban_pipeline' | 'applications' | 'submit_deliverable' | 'channels' | 'ledger'
 
-export function CreatorHubPage({ onNavigate }: CreatorHubPageProps) {
+export function resolveCreatorTabForSection(section?: string): CreatorHubTab | null {
+  if (!section) return null
+  switch (section) {
+    case 'overview':
+    case 'opportunities': return 'opportunities'
+    case 'campaigns':
+    case 'pipeline': return 'kanban_pipeline'
+    case 'applications': return 'applications'
+    case 'deliverables':
+    case 'submissions': return 'submit_deliverable'
+    case 'channels': return 'channels'
+    case 'analytics':
+    case 'rewards':
+    case 'ledger': return 'ledger'
+    default: return null
+  }
+}
+
+export function CreatorHubPage({ onNavigate, workspaceSection }: CreatorHubPageProps) {
   const { navigate } = useRouter()
   const authUser = getStoredAuthUser()
-  const [activeTab, setActiveTab] = useState<CreatorHubTab>('opportunities')
+  const [activeTab, setActiveTab] = useState<CreatorHubTab>(() => resolveCreatorTabForSection(workspaceSection) ?? 'opportunities')
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+
+  React.useEffect(() => {
+    const mapped = resolveCreatorTabForSection(workspaceSection)
+    if (mapped) setActiveTab(mapped)
+  }, [workspaceSection])
 
   // Creator profile state (requires authenticated user or explicit registration — no fabricated demo profile)
   const [profile, setProfile] = useState<CreatorProfile | null>(() =>

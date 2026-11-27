@@ -1,6 +1,8 @@
-import { useEffect, useState, useCallback, type ReactNode } from 'react'
+import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
 import { getSupabaseClient } from '../../integrations/supabase/realtime-client'
 import {
+  acceptTenantInvitation,
+  getPendingTenantMemberships,
   getUserTenantMemberships,
   type DbTenant,
   type DbTenantMembership,
@@ -11,6 +13,7 @@ export type { TenantContextValue } from './tenantContextCore'
 export interface TenantProviderProps {
   children: ReactNode
   initialTenantSlug?: string
+  activeTenantSlug?: string
   initialLoading?: boolean
 }
 
@@ -19,17 +22,21 @@ export interface TenantProviderProps {
  * tenant_memberships rows. Browser profile/localStorage values are never used
  * as proof of identity or membership.
  */
-export function TenantProvider({ children, initialTenantSlug }: TenantProviderProps) {
+export function TenantProvider({ children, initialTenantSlug, activeTenantSlug }: TenantProviderProps) {
   const [userId, setUserId] = useState<string | null>(null)
   const [currentTenant, setCurrentTenant] = useState<DbTenant | null>(null)
   const [currentMembership, setCurrentMembership] = useState<DbTenantMembership | null>(null)
   const [memberships, setMemberships] = useState<DbTenantMembership[]>([])
+  const [pendingInvitations, setPendingInvitations] = useState<DbTenantMembership[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+  const activeTenantSlugRef = useRef(activeTenantSlug)
+  activeTenantSlugRef.current = activeTenantSlug
 
   const clearMemberships = useCallback(() => {
     setUserId(null)
     setMemberships([])
+    setPendingInvitations([])
     setCurrentTenant(null)
     setCurrentMembership(null)
     setError(null)
@@ -46,21 +53,32 @@ export function TenantProvider({ children, initialTenantSlug }: TenantProviderPr
     setError(null)
     setUserId(nextUserId)
     try {
-      const rows = await getUserTenantMemberships(nextUserId)
+      const [rows, pendingRows] = await Promise.all([
+        getUserTenantMemberships(nextUserId),
+        getPendingTenantMemberships(nextUserId),
+      ])
       const safeRows = rows.filter(row =>
         row.user_id === nextUserId &&
         row.status === 'active' &&
         row.tenant?.status === 'active'
       )
       setMemberships(safeRows)
+      setPendingInvitations(pendingRows)
 
-      const selected = (initialTenantSlug
-        ? safeRows.find(row => row.tenant?.slug === initialTenantSlug)
+      const urlTenantSlug =
+        typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('tenant')
+          : null
+      const preferredSlug = activeTenantSlugRef.current || initialTenantSlug || urlTenantSlug || undefined
+
+      const selected = (preferredSlug
+        ? safeRows.find(row => row.tenant?.slug === preferredSlug)
         : undefined) || safeRows[0] || null
       setCurrentMembership(selected)
       setCurrentTenant(selected?.tenant || null)
     } catch (err) {
       setMemberships([])
+      setPendingInvitations([])
       setCurrentMembership(null)
       setCurrentTenant(null)
       setError(err instanceof Error ? err.message : 'Workspace membership could not be verified.')
@@ -151,6 +169,33 @@ export function TenantProvider({ children, initialTenantSlug }: TenantProviderPr
     return true
   }, [memberships, userId])
 
+  useEffect(() => {
+    if (!activeTenantSlug || isLoading || memberships.length === 0) return
+    if (currentTenant?.slug === activeTenantSlug) return
+    const target = memberships.find(row =>
+      row.tenant?.slug === activeTenantSlug &&
+      row.user_id === userId &&
+      row.status === 'active' &&
+      row.tenant?.status === 'active'
+    )
+    if (target) {
+      setError(null)
+      setCurrentMembership(target)
+      setCurrentTenant(target.tenant || null)
+    }
+  }, [activeTenantSlug, currentTenant?.slug, isLoading, memberships, userId])
+
+  const acceptInvitation = useCallback(async (membershipId: string) => {
+    const result = await acceptTenantInvitation(membershipId)
+    if (result.success) {
+      setError(null)
+      await refreshTenant()
+    } else {
+      setError(result.message)
+    }
+    return result
+  }, [refreshTenant])
+
   return (
     <TenantContext.Provider
       value={{
@@ -160,11 +205,13 @@ export function TenantProvider({ children, initialTenantSlug }: TenantProviderPr
         currentMembership,
         userRole: currentMembership?.role || null,
         memberships,
+        pendingInvitations,
         isLoading,
         error,
         refreshTenant,
         switchTenant,
         switchTenantBySlug,
+        acceptInvitation,
       }}
     >
       {children}

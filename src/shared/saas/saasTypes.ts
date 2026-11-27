@@ -97,6 +97,7 @@ export type OrganizationRole =
   | 'director'
   | 'admin'
   | 'manager'
+  | 'admissions_manager'
   | 'finance_manager'
   | 'content_manager'
   | 'listing_manager'

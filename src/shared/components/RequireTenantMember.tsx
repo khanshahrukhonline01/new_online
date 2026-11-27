@@ -8,7 +8,7 @@ export interface RequireTenantMemberProps {
   requireTenantMembership?: boolean
   fallback?: ReactNode
   personaLabel?: string
-  onboardingRole?: 'academy' | 'coach' | 'venue' | 'tournament'
+  onboardingRole?: 'academy' | 'coach' | 'venue' | 'tournament' | 'organization' | 'creator' | 'parent'
   onNavigate?: (e: React.MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
@@ -22,18 +22,24 @@ export function RequireTenantMember({
   onboardingRole = 'academy',
   onNavigate,
 }: RequireTenantMemberProps) {
-  const { isAuthenticated, userId, currentTenant, currentMembership, memberships, isLoading, error, switchTenant } = useTenant()
+  const { isAuthenticated, userId, currentTenant, currentMembership, memberships, pendingInvitations = [], isLoading, error, switchTenant, acceptInvitation } = useTenant()
   const matchingMembership = requiredTenantTypes?.length
     ? memberships.find(m => m.user_id === userId && m.status === 'active' && requiredTenantTypes.includes(m.tenant?.tenant_type || '') && m.tenant?.status === 'active' && (!allowedRoles?.length || allowedRoles.includes(m.role)))
     : null
+  const matchingPendingInvites = pendingInvitations.filter(inv =>
+    inv.user_id === userId &&
+    inv.status === 'invited' &&
+    (!requiredTenantTypes?.length || requiredTenantTypes.includes(inv.tenant?.tenant_type || ''))
+  )
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && matchingMembership && currentMembership?.id !== matchingMembership.id) {
       void switchTenant(matchingMembership.tenant_id)
     }
   }, [isLoading, isAuthenticated, matchingMembership, currentMembership?.id, switchTenant])
-  const loginHref = `/partner-signup?mode=login&role=${onboardingRole}`
-  const signupHref = `/partner-signup?mode=signup&role=${onboardingRole}`
+  const isPartnerRole = onboardingRole !== 'creator' && onboardingRole !== 'parent'
+  const loginHref = isPartnerRole ? `/partner-signup?mode=login&role=${onboardingRole}` : '/login'
+  const signupHref = isPartnerRole ? `/partner-signup?mode=signup&role=${onboardingRole}` : '/signup'
 
   if (isLoading || (matchingMembership && currentMembership?.id !== matchingMembership.id)) {
     return <div className="kg-tenant-guard-loading" role="status"><p>Verifying your secure workspace access…</p></div>
@@ -51,11 +57,14 @@ export function RequireTenantMember({
     )
   }
 
+  // Personal workspaces require a verified sign-in, not an organisation membership.
+  // Do not let an unrelated tenant-membership lookup outage block an authenticated
+  // athlete/parent account area.
+  if (!requireTenantMembership) return <>{children}</>
+
   if (error) {
     return <section className="kg-tenant-guard-card" role="alert"><h2>Workspace access could not be verified</h2><p>{error}</p></section>
   }
-
-  if (!requireTenantMembership) return <>{children}</>
 
   if (!currentTenant || !currentMembership || currentMembership.user_id !== userId || currentMembership.status !== 'active' || (requiredTenantTypes?.length && !matchingMembership)) {
     if (fallback) return <>{fallback}</>
@@ -64,7 +73,28 @@ export function RequireTenantMember({
         <div className="kg-tenant-guard-icon" aria-hidden="true">🏟️</div>
         <h2 id="kg-tenant-membership-title" className="kg-tenant-guard-title">No active {personaLabel} membership</h2>
         <p className="kg-tenant-guard-desc">This account has no verified active membership for this workspace. Join or register an organisation to continue.</p>
-        <a href={signupHref} onClick={e => onNavigate?.(e, signupHref)} className="kg-btn kg-btn-primary">Register / join {personaLabel}</a>
+        {matchingPendingInvites.length > 0 && acceptInvitation && (
+          <div className="kg-tenant-guard-invites" style={{ display: 'grid', gap: '8px', marginBottom: '12px', textAlign: 'left' }}>
+            {matchingPendingInvites.map(invite => (
+              <div key={invite.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--line, #e2e8f0)' }}>
+                <span>
+                  <strong>{invite.tenant?.name || 'Workspace'}</strong> ({invite.role})
+                </span>
+                <button
+                  type="button"
+                  className="kg-btn kg-btn-primary"
+                  onClick={() => void acceptInvitation(invite.id)}
+                >
+                  Accept invitation
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
+          <a href={signupHref} onClick={e => onNavigate?.(e, signupHref)} className="kg-btn kg-btn-primary">Register / join {personaLabel}</a>
+          <a href="/workspace" onClick={e => onNavigate?.(e, '/workspace')} className="kg-btn kg-btn-secondary">Switch / view active workspaces</a>
+        </div>
       </section>
     )
   }
@@ -72,6 +102,28 @@ export function RequireTenantMember({
   if (currentTenant.status !== 'active' ||
       (requiredTenantTypes?.length && !requiredTenantTypes.includes(currentTenant.tenant_type)) ||
       (allowedRoles?.length && !allowedRoles.includes(currentMembership.role))) {
+    if (matchingMembership && matchingMembership.tenant_id !== currentTenant.id) {
+      return (
+        <section className="kg-tenant-guard-card" aria-labelledby="kg-tenant-switch-title">
+          <div className="kg-tenant-guard-icon" aria-hidden="true">🔄</div>
+          <h2 id="kg-tenant-switch-title" className="kg-tenant-guard-title">Switch active workspace</h2>
+          <p className="kg-tenant-guard-desc">
+            You are currently viewing <strong>{currentTenant.name}</strong> ({currentTenant.tenant_type}). Switch to{' '}
+            <strong>{matchingMembership.tenant?.name || personaLabel}</strong> to open this {personaLabel.toLowerCase()} workspace.
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
+            <button
+              type="button"
+              className="kg-btn kg-btn-primary"
+              onClick={() => switchTenant(matchingMembership.tenant_id)}
+            >
+              Switch to {matchingMembership.tenant?.name || personaLabel}
+            </button>
+            <a href="/workspace" onClick={e => onNavigate?.(e, '/workspace')} className="kg-btn kg-btn-secondary">All workspaces</a>
+          </div>
+        </section>
+      )
+    }
     return (
       <section className="kg-tenant-guard-card" role="alert">
         <div className="kg-tenant-guard-icon" aria-hidden="true">⛔</div>

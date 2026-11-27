@@ -16,14 +16,17 @@ import {
   MODERATION_APPROVAL_PRESETS,
   type AdminModerationListing,
 } from '../services/adminModerationService'
+import type { AdminDeskDeepLink } from '../services/adminGlobalSearchService'
 import './AdminListingModerationDesk.css'
 
 export interface AdminListingModerationDeskProps {
   operatorEmail?: string
+  deepLink?: AdminDeskDeepLink | null
 }
 
 export function AdminListingModerationDesk({
   operatorEmail = 'moderator@khelgrid.com',
+  deepLink = null,
 }: AdminListingModerationDeskProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -66,6 +69,19 @@ export function AdminListingModerationDesk({
       setToastMessage(null)
     }, 3500)
   }, [])
+
+  useEffect(() => {
+    if (!deepLink || deepLink.workspace !== 'moderation_desk') return
+    setCategoryFilter('all')
+    setStatusFilter('all')
+    setSportFilter('all')
+    setCityFilter('all')
+    setSearchQuery(deepLink.query ?? '')
+    if (deepLink.recordId) {
+      setSelectedId(deepLink.recordId)
+      setDrawerTab('preview')
+    }
+  }, [deepLink])
 
   // All listings
   const allListings = useMemo(() => {

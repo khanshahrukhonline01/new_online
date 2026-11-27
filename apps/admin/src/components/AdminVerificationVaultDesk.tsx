@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { SiteIcon } from '../../../../src/shared/components/SiteIcon'
 import {
   getAdminVerifications,
@@ -16,14 +16,17 @@ import {
   type AdminVerificationItem,
   type VerificationBadgeTier,
 } from '../services/adminVerificationService'
+import type { AdminDeskDeepLink } from '../services/adminGlobalSearchService'
 import './AdminVerificationVaultDesk.css'
 
 export interface AdminVerificationVaultDeskProps {
   operatorEmail?: string
+  deepLink?: AdminDeskDeepLink | null
 }
 
 export function AdminVerificationVaultDesk({
   operatorEmail = 'admin@khelgrid.com',
+  deepLink = null,
 }: AdminVerificationVaultDeskProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [entityFilter, setEntityFilter] = useState<string>('all')
@@ -62,6 +65,20 @@ export function AdminVerificationVaultDesk({
       setToastMessage(null)
     }, 3500)
   }, [])
+
+  useEffect(() => {
+    if (!deepLink || deepLink.workspace !== 'verification_vault') return
+    setEntityFilter('all')
+    setStatusFilter('all')
+    setExpiryFilter('all')
+    setSportFilter('all')
+    setCityFilter('all')
+    setSearchQuery(deepLink.query ?? '')
+    if (deepLink.recordId) {
+      setSelectedId(deepLink.recordId)
+      setDrawerTab('overview')
+    }
+  }, [deepLink])
 
   // All verification records
   const allVerifications = useMemo(() => {

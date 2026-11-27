@@ -104,10 +104,12 @@ export function AdminHeader({
           type="button"
           className="admin-topbar-command-trigger"
           onClick={onOpenCommandPalette}
-          title="Open Command Palette (Ctrl+K)"
+          title="Global Search & Command Palette (Ctrl+K)"
+          aria-label="Global search for users, listings, venues, or IDs (Ctrl+K)"
+          data-testid="admin-global-search-trigger"
         >
           <SiteIcon name="search" size={14} />
-          <span className="admin-topbar-search-text">Search desks &amp; actions…</span>
+          <span className="admin-topbar-search-text">Search users, listings, venues, IDs…</span>
           <kbd className="admin-topbar-kbd">Ctrl+K</kbd>
         </button>
 
