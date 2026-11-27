@@ -525,58 +525,33 @@ export async function createTenantStudent(
 /**
  * Fetch all active tenant memberships for the authenticated user
  */
-export async function getUserTenantMemberships(): Promise<DbTenantMembership[]> {
+export async function getUserTenantMemberships(userId: string): Promise<DbTenantMembership[]> {
   const client = getSupabaseClient()
   if (!client) {
-    const user = getStoredAuthUser()
-    if (!user) return []
-    return [
-      {
-        id: `local-mem-${user.id}`,
-        tenant_id: 'delhi-cricket-academy',
-        user_id: user.id,
-        role: (user.role === 'coach' ? 'coach' : 'owner') as 'owner' | 'coach',
-        status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        tenant: {
-          id: 'delhi-cricket-academy',
-          name: 'Delhi Cricket Academy',
-          slug: 'delhi-cricket-academy',
-          tenant_type: 'academy',
-          status: 'active',
-          city: 'Delhi NCR',
-          state: 'Delhi',
-          sport: 'Cricket',
-          contact_phone: '9876543210',
-          contact_email: user.email || 'director@delhicricketacademy.com',
-          upi_vpa: 'delhicricket@upi',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      },
-    ]
+    throw new Error('Supabase is not configured. Tenant access cannot be verified.')
+  }
+  if (!userId) {
+    throw new Error('An authenticated user ID is required to resolve tenant memberships.')
   }
 
-  try {
-    const { data, error } = await client
-      .from('tenant_memberships')
-      .select('*, tenant:tenants(*)')
-      .eq('status', 'active')
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
+  const { data, error } = await client
+    .from('tenant_memberships')
+    .select('*, tenant:tenants(*)')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
 
-    if (error) {
-      console.warn('[TenantClient] getUserTenantMemberships error:', error.message)
-      return []
-    }
-    return (data || []) as DbTenantMembership[]
-  } catch (err) {
-    console.warn('[TenantClient] Failed to fetch memberships:', err)
-    return []
+  if (error) {
+    console.error('[TenantClient] getUserTenantMemberships failed:', error.message)
+    throw new Error('Could not verify workspace memberships. Please retry.')
   }
+
+  return ((data || []) as DbTenantMembership[]).filter(
+    membership => membership.user_id === userId &&
+      membership.status === 'active' &&
+      membership.tenant?.status === 'active'
+  )
 }
-
 /**
  * Update tenant profile settings (Restricted to owner & director)
  */

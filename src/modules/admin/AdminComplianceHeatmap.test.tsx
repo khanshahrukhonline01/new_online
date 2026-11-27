@@ -24,10 +24,13 @@ describe('AdminComplianceHeatmap & Analytics Integration (SSR smoke)', () => {
     expect(html).toContain('data-testid="heatmap-cell-inspector"')
   })
 
-  it('mounts the Compliance Risk Heatmap inside AdminAnalyticsDashboard when shellAuthorized', () => {
+  it('mounts the Compliance Risk Heatmap and CSV Export controls inside AdminAnalyticsDashboard when shellAuthorized', () => {
     const html = renderToStaticMarkup(<AdminAnalyticsDashboard shellAuthorized />)
     expect(html).toContain('Operations Analytics')
     expect(html).toContain('Compliance Risk Heatmap')
     expect(html).toContain('data-testid="compliance-risk-heatmap"')
+    expect(html).toContain('data-testid="export-compliance-csv-btn"')
+    expect(html).toContain('data-testid="export-csv-menu-toggle"')
+    expect(html).toContain('data-testid="export-drilldown-csv-btn"')
   })
 })

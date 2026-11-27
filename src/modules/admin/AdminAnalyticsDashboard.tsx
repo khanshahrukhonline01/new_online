@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import {
   getOperationsKpiSummary,
   getRecentModerationActivity,
@@ -15,8 +15,12 @@ import { signInWithEmail } from '../../integrations/supabase/auth-client'
 import { getSupabaseClient } from '../../integrations/supabase/realtime-client'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { AdminComplianceHeatmap } from './AdminComplianceHeatmap'
+import { AdminDateRangePicker } from './AdminDateRangePicker'
 import {
+  buildComplianceHeatmapMatrix,
+  buildComplianceSignals,
   buildInvestigableEntityRows,
+  DEFAULT_COMPLIANCE_DATE_RANGE,
   EMPTY_DRILLDOWN_FILTER,
   filterEntityRowsByDrilldown,
   filterModerationRecordsByDrilldown,
@@ -26,9 +30,19 @@ import {
   hasActiveDrilldown,
   normalizeComplianceRegion,
   normalizePartnerCategory,
+  type ComplianceDateRange,
+  type ComplianceSignalRecord,
   type HeatmapDrilldownFilter,
+  type HeatmapMatrixMode,
+  type HeatmapSignalScope,
   type InvestigableEntityRow,
 } from './complianceHeatmapData'
+import {
+  buildComplianceCsvExport,
+  projectFilteredHeatmapForExport,
+  triggerCsvDownload,
+  type ComplianceCsvExportKind,
+} from './complianceCsvExport'
 import { getAdminTenants } from '../../../apps/admin/src/services/adminTenantService'
 import { getAdminVerifications } from '../../../apps/admin/src/services/adminVerificationService'
 import { getAdminTrustSafetyCases } from '../../../apps/admin/src/services/adminTrustSafetyService'
@@ -166,10 +180,16 @@ export function AdminAnalyticsDashboard({
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [showPublishModal, setShowPublishModal] = useState(false)
 
-  // Heatmap Drilldown & Investigable Entities State
+  // Heatmap Dimension, Scope, Date Range, Drilldown & Investigable Entities State
+  const [heatmapMode, setHeatmapMode] = useState<HeatmapMatrixMode>('partner_category')
+  const [heatmapScope, setHeatmapScope] = useState<HeatmapSignalScope>('all')
+  const [dateRange, setDateRange] = useState<ComplianceDateRange>(DEFAULT_COMPLIANCE_DATE_RANGE)
   const [drilldown, setDrilldown] = useState<HeatmapDrilldownFilter>(EMPTY_DRILLDOWN_FILTER)
+  const [complianceSignals, setComplianceSignals] = useState<ComplianceSignalRecord[]>([])
   const [entityRows, setEntityRows] = useState<InvestigableEntityRow[]>([])
   const [entitySearch, setEntitySearch] = useState('')
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const exportMenuRef = useRef<HTMLDivElement | null>(null)
 
   const handleDrilldownChange = useCallback((next: HeatmapDrilldownFilter) => {
     setDrilldown(next)
@@ -182,14 +202,36 @@ export function AdminAnalyticsDashboard({
       Promise.resolve(getAdminVerifications()),
       Promise.resolve(getAdminTenants()),
     ])
-    setEntityRows(
-      buildInvestigableEntityRows({
-        incidents: tsResult.cases,
-        verifications,
-        tenants,
-      }),
-    )
+    const payload = {
+      incidents: tsResult.cases,
+      verifications,
+      tenants,
+    }
+    setComplianceSignals(buildComplianceSignals(payload))
+    setEntityRows(buildInvestigableEntityRows(payload))
   }, [])
+
+  useEffect(() => {
+    if (!showExportMenu) return
+    const handlePointerDown = (event: MouseEvent) => {
+      if (
+        exportMenuRef.current &&
+        event.target instanceof Node &&
+        !exportMenuRef.current.contains(event.target)
+      ) {
+        setShowExportMenu(false)
+      }
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowExportMenu(false)
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showExportMenu])
 
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date())
@@ -354,6 +396,49 @@ export function AdminAnalyticsDashboard({
       }),
     )
   }
+
+  // Synchronized Compliance Heatmap Matrix & Filtered Export Projection
+  const heatmapMatrix = useMemo(
+    () => buildComplianceHeatmapMatrix(complianceSignals, heatmapMode, heatmapScope, dateRange),
+    [complianceSignals, heatmapMode, heatmapScope, dateRange],
+  )
+
+  const exportProjection = useMemo(
+    () => projectFilteredHeatmapForExport(heatmapMatrix, complianceSignals, drilldown),
+    [heatmapMatrix, complianceSignals, drilldown],
+  )
+
+  const hasAnyComplianceFilter =
+    drilldownActive ||
+    heatmapScope !== 'all' ||
+    dateRange.preset !== '30d' ||
+    Boolean(entitySearch.trim())
+
+  const handleExportComplianceCsv = useCallback(
+    (kind: ComplianceCsvExportKind = 'combined') => {
+      const result = buildComplianceCsvExport({
+        kind,
+        matrix: heatmapMatrix,
+        allSignals: complianceSignals,
+        drilldown,
+        entities: filteredEntityRows,
+        entitySearch,
+      })
+
+      triggerCsvDownload(result.filename, result.csv)
+      setShowExportMenu(false)
+
+      const summaryDetail =
+        kind === 'heatmap_matrix'
+          ? `${result.regionCount} ${result.regionCount === 1 ? 'region' : 'regions'}`
+          : kind === 'drilldown_entities'
+            ? `${result.entityCount} ${result.entityCount === 1 ? 'entity' : 'entities'}`
+            : `${result.regionCount} ${result.regionCount === 1 ? 'region' : 'regions'}, ${result.entityCount} ${result.entityCount === 1 ? 'entity' : 'entities'}, ${result.signalCount} ${result.signalCount === 1 ? 'signal' : 'signals'}`
+
+      setNotice(`Exported "${result.filename}" (${summaryDetail}).`)
+    },
+    [heatmapMatrix, complianceSignals, drilldown, filteredEntityRows, entitySearch],
+  )
 
   // Bulk Selection Helpers
   const toggleSelectAll = () => {
@@ -546,6 +631,117 @@ export function AdminAnalyticsDashboard({
               Auto-refresh (30s)
             </label>
 
+            <AdminDateRangePicker
+              value={dateRange}
+              resolvedWindow={heatmapMatrix.dateWindow}
+              onChange={setDateRange}
+            />
+
+            <div className="admin-csv-export-split" ref={exportMenuRef}>
+              <button
+                type="button"
+                className={`admin-analytics-btn admin-analytics-btn-secondary admin-csv-export-main ${hasAnyComplianceFilter ? 'is-filtered' : ''}`}
+                onClick={() => handleExportComplianceCsv('combined')}
+                data-testid="export-compliance-csv-btn"
+                title={
+                  hasAnyComplianceFilter
+                    ? 'Export filtered compliance heatmap, 30-day trends, and drill-down entities as CSV'
+                    : 'Export full compliance heatmap, 30-day trends, and entity roster as CSV'
+                }
+              >
+                <SiteIcon name="download" size={14} />
+                <span>Export CSV</span>
+                {hasAnyComplianceFilter && (
+                  <span
+                    className="admin-csv-filter-indicator"
+                    data-testid="export-csv-filtered-indicator"
+                    aria-label="Active filters applied to export"
+                  >
+                    Filtered
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                className={`admin-analytics-btn admin-analytics-btn-secondary admin-csv-export-caret ${hasAnyComplianceFilter ? 'is-filtered' : ''}`}
+                onClick={() => setShowExportMenu(prev => !prev)}
+                aria-label="Choose CSV export format"
+                aria-haspopup="menu"
+                aria-expanded={showExportMenu}
+                data-testid="export-csv-menu-toggle"
+              >
+                <SiteIcon name="chevron-down" size={14} />
+              </button>
+
+              {showExportMenu && (
+                <div
+                  className="admin-csv-export-menu"
+                  role="menu"
+                  aria-label="Compliance CSV export formats"
+                  data-testid="export-csv-menu"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="admin-csv-export-option"
+                    onClick={() => handleExportComplianceCsv('combined')}
+                    data-testid="export-csv-option-combined"
+                  >
+                    <span className="admin-csv-option-title">
+                      Combined Compliance Report (.csv)
+                    </span>
+                    <span className="admin-csv-option-desc">
+                      Heatmap &amp; 30d trends ({exportProjection.rows.length}{' '}
+                      {exportProjection.rows.length === 1 ? 'region' : 'regions'}),{' '}
+                      {filteredEntityRows.length}{' '}
+                      {filteredEntityRows.length === 1 ? 'entity' : 'entities'},{' '}
+                      {exportProjection.filteredSignals.length}{' '}
+                      {exportProjection.filteredSignals.length === 1 ? 'signal' : 'signals'}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="admin-csv-export-option"
+                    onClick={() => handleExportComplianceCsv('heatmap_matrix')}
+                    data-testid="export-csv-option-matrix"
+                  >
+                    <span className="admin-csv-option-title">
+                      Heatmap Matrix &amp; 30d Trends (.csv)
+                    </span>
+                    <span className="admin-csv-option-desc">
+                      Flat tabular matrix ({exportProjection.rows.length}{' '}
+                      {exportProjection.rows.length === 1 ? 'region' : 'regions'} ×{' '}
+                      {exportProjection.columns.length}{' '}
+                      {heatmapMode === 'partner_category'
+                        ? exportProjection.columns.length === 1
+                          ? 'category'
+                          : 'categories'
+                        : exportProjection.columns.length === 1
+                          ? 'incident type'
+                          : 'incident types'}
+                      )
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="admin-csv-export-option"
+                    onClick={() => handleExportComplianceCsv('drilldown_entities')}
+                    data-testid="export-csv-option-entities"
+                  >
+                    <span className="admin-csv-option-title">
+                      Drilldown Entities Roster (.csv)
+                    </span>
+                    <span className="admin-csv-option-desc">
+                      Filtered partner table ({filteredEntityRows.length}{' '}
+                      {filteredEntityRows.length === 1 ? 'entity' : 'entities'})
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button
               type="button"
               className="admin-analytics-btn admin-analytics-btn-secondary"
@@ -560,9 +756,20 @@ export function AdminAnalyticsDashboard({
         </div>
 
         {notice && (
-          <div role="status" style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '8px', color: '#10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div
+            role="status"
+            data-testid="analytics-status-notice"
+            className="admin-analytics-status-notice"
+          >
             <span>✓ {notice}</span>
-            <button type="button" onClick={() => setNotice('')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>×</button>
+            <button
+              type="button"
+              onClick={() => setNotice('')}
+              aria-label="Dismiss notification"
+              className="admin-analytics-notice-dismiss"
+            >
+              ×
+            </button>
           </div>
         )}
 
@@ -632,6 +839,11 @@ export function AdminAnalyticsDashboard({
         refreshKey={lastRefreshedAt.getTime()}
         drilldown={drilldown}
         onDrilldownChange={handleDrilldownChange}
+        mode={heatmapMode}
+        onModeChange={setHeatmapMode}
+        scope={heatmapScope}
+        onScopeChange={setHeatmapScope}
+        dateRange={dateRange}
       />
 
       {/* 2B. REGULATED ENTITIES INVESTIGATION TABLE (FILTERED LIVE BY HEATMAP DRILLDOWN) */}
@@ -658,7 +870,18 @@ export function AdminAnalyticsDashboard({
               onChange={e => setEntitySearch(e.target.value)}
               className="admin-drilldown-search"
               data-testid="drilldown-entity-search"
+              aria-label="Search regulated entities"
             />
+            <button
+              type="button"
+              className="admin-drilldown-export-btn"
+              onClick={() => handleExportComplianceCsv('combined')}
+              data-testid="export-drilldown-csv-btn"
+              title="Download filtered heatmap and drill-down entity data as CSV"
+            >
+              <SiteIcon name="download" size={13} />
+              <span>Export CSV</span>
+            </button>
           </div>
         </div>
 

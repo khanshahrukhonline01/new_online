@@ -9,20 +9,26 @@ import {
   buildComplianceHeatmapMatrix,
   buildComplianceSignals,
   classifyComplianceRiskTier,
+  DEFAULT_COMPLIANCE_DATE_RANGE,
   EMPTY_DRILLDOWN_FILTER,
+  filterSignalsByDateRange,
   formatRiskTierLabel,
+  formatTrendDeltaLabel,
   getIncidentTypeLabel,
   getPartnerCategoryLabel,
   hasActiveDrilldown,
   matchesSignalDrilldown,
+  type ComplianceDateRange,
   type ComplianceRiskTier,
   type ComplianceSignalRecord,
+  type HeatmapAxisItem,
   type HeatmapCellDatum,
   type HeatmapDrilldownFilter,
   type HeatmapMatrixMode,
   type HeatmapSignalScope,
   type IncidentTypeKey,
   type PartnerCategoryKey,
+  type Region30DayTrend,
 } from './complianceHeatmapData'
 import './AdminComplianceHeatmap.css'
 
@@ -30,6 +36,11 @@ export interface AdminComplianceHeatmapProps {
   refreshKey?: number
   drilldown?: HeatmapDrilldownFilter
   onDrilldownChange?: (next: HeatmapDrilldownFilter) => void
+  mode?: HeatmapMatrixMode
+  onModeChange?: (next: HeatmapMatrixMode) => void
+  scope?: HeatmapSignalScope
+  onScopeChange?: (next: HeatmapSignalScope) => void
+  dateRange?: ComplianceDateRange
 }
 
 function readIsDarkTheme(): boolean {
@@ -57,11 +68,16 @@ export function AdminComplianceHeatmap({
   refreshKey = 0,
   drilldown,
   onDrilldownChange,
+  mode: controlledMode,
+  onModeChange,
+  scope: controlledScope,
+  onScopeChange,
+  dateRange = DEFAULT_COMPLIANCE_DATE_RANGE,
 }: AdminComplianceHeatmapProps) {
   const [signals, setSignals] = useState<ComplianceSignalRecord[]>([])
   const [loading, setLoading] = useState(true)
-  const [mode, setMode] = useState<HeatmapMatrixMode>('partner_category')
-  const [scope, setScope] = useState<HeatmapSignalScope>('all')
+  const [internalMode, setInternalMode] = useState<HeatmapMatrixMode>('partner_category')
+  const [internalScope, setInternalScope] = useState<HeatmapSignalScope>('all')
   const [internalDrilldown, setInternalDrilldown] = useState<HeatmapDrilldownFilter>(
     EMPTY_DRILLDOWN_FILTER,
   )
@@ -70,8 +86,39 @@ export function AdminComplianceHeatmap({
     x: number
     y: number
   } | null>(null)
+  const [hoveredTrend, setHoveredTrend] = useState<{
+    row: HeatmapAxisItem
+    trend: Region30DayTrend
+    x: number
+    y: number
+  } | null>(null)
   const [isDark, setIsDark] = useState<boolean>(readIsDarkTheme)
-  const [containerWidth, setContainerWidth] = useState<number>(760)
+  const [containerWidth, setContainerWidth] = useState<number>(820)
+
+  const mode = controlledMode ?? internalMode
+  const scope = controlledScope ?? internalScope
+
+  const setMode = useCallback(
+    (next: HeatmapMatrixMode) => {
+      if (onModeChange) {
+        onModeChange(next)
+      } else {
+        setInternalMode(next)
+      }
+    },
+    [onModeChange],
+  )
+
+  const setScope = useCallback(
+    (next: HeatmapSignalScope) => {
+      if (onScopeChange) {
+        onScopeChange(next)
+      } else {
+        setInternalScope(next)
+      }
+    },
+    [onScopeChange],
+  )
 
   const activeDrilldown = drilldown ?? internalDrilldown
   const setDrilldown = useCallback(
@@ -134,7 +181,7 @@ export function AdminComplianceHeatmap({
     const el = chartWrapRef.current
     if (!el) return
     const updateWidth = () => {
-      const next = Math.max(540, Math.floor(el.getBoundingClientRect().width))
+      const next = Math.max(660, Math.floor(el.getBoundingClientRect().width))
       setContainerWidth(next)
     }
     updateWidth()
@@ -145,20 +192,21 @@ export function AdminComplianceHeatmap({
   }, [])
 
   const matrix = useMemo(
-    () => buildComplianceHeatmapMatrix(signals, mode, scope),
-    [signals, mode, scope],
+    () => buildComplianceHeatmapMatrix(signals, mode, scope, dateRange),
+    [signals, mode, scope, dateRange],
   )
 
   const isDrilldownActive = hasActiveDrilldown(activeDrilldown)
 
-  // Scoped signals matching current heatmap scope filter (all / trust_safety / high_risk_only)
+  // Scoped signals matching current heatmap date range + scope filter (all / trust_safety / high_risk_only)
   const scopedSignals = useMemo(() => {
-    return signals.filter(sig => {
+    const dateFiltered = filterSignalsByDateRange(signals, dateRange, matrix.dateWindow)
+    return dateFiltered.filter(sig => {
       if (scope === 'trust_safety') return sig.sourceDesk === 'trust_safety'
       if (scope === 'high_risk_only') return sig.isHighRisk
       return true
     })
-  }, [signals, scope])
+  }, [signals, dateRange, matrix.dateWindow, scope])
 
   // Determine the highest-risk cell for default preview when no drilldown filter is active
   const previewCell: HeatmapCellDatum | null = useMemo(() => {
@@ -309,6 +357,24 @@ export function AdminComplianceHeatmap({
     }
   }, [isDrilldownActive, scopedSignals, activeDrilldown, previewCell])
 
+  // Count how many regions are rising or improving over the 30-day window
+  const trendSummary = useMemo(() => {
+    let rising = 0
+    let improving = 0
+    for (const row of matrix.rows) {
+      if (row.trend30d?.direction === 'increasing') rising += 1
+      else if (row.trend30d?.direction === 'decreasing') improving += 1
+    }
+    return { rising, improving }
+  }, [matrix.rows])
+
+  // Resolve the active region row to display its 30-day trajectory inside the right-hand inspector
+  const inspectorRegionRow = useMemo<HeatmapAxisItem | null>(() => {
+    const targetRegionKey = activeDrilldown.region ?? previewCell?.rowKey ?? null
+    if (!targetRegionKey) return null
+    return matrix.rows.find(r => r.key === targetRegionKey) ?? null
+  }, [activeDrilldown.region, previewCell, matrix.rows])
+
   // D3 SVG rendering
   useEffect(() => {
     const svgEl = svgRef.current
@@ -317,9 +383,9 @@ export function AdminComplianceHeatmap({
     const svg = d3.select(svgEl)
     svg.selectAll('*').remove()
 
-    const margin = { top: 52, right: 54, bottom: 52, left: 102 }
+    const margin = { top: 52, right: 196, bottom: 52, left: 102 }
     const rowHeight = 54
-    const innerWidth = Math.max(420, containerWidth - margin.left - margin.right)
+    const innerWidth = Math.max(410, containerWidth - margin.left - margin.right)
     const innerHeight = matrix.rows.length * rowHeight
     const totalWidth = innerWidth + margin.left + margin.right
     const totalHeight = innerHeight + margin.top + margin.bottom
@@ -329,6 +395,7 @@ export function AdminComplianceHeatmap({
       .attr('width', '100%')
       .attr('height', totalHeight)
 
+    const defs = svg.append('defs')
     const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`)
 
     const xScale = d3
@@ -537,21 +604,41 @@ export function AdminComplianceHeatmap({
 
     // Right column header: Regional Total Risk
     g.append('text')
-      .attr('x', innerWidth + 12)
+      .attr('x', innerWidth + 24)
       .attr('y', -14)
+      .attr('text-anchor', 'middle')
       .attr('fill', mutedTextColor)
       .attr('font-size', '11px')
       .attr('font-weight', '600')
       .text('Total')
 
-    // Regional Total Risk values on the right (also clickable to filter region)
+    // Subtle divider between Total and 30d Trend sparkline column
+    g.append('line')
+      .attr('x1', innerWidth + 48)
+      .attr('x2', innerWidth + 48)
+      .attr('y1', -26)
+      .attr('y2', innerHeight)
+      .attr('stroke', cellBorderColor)
+      .attr('stroke-width', 1)
+
+    // Dynamic Trend column header reflecting active date range window
+    g.append('text')
+      .attr('x', innerWidth + 58)
+      .attr('y', -14)
+      .attr('fill', mutedTextColor)
+      .attr('font-size', '11px')
+      .attr('font-weight', '600')
+      .text(`${matrix.dateWindow.shortLabel} Trend`)
+
+    // Regional Total Risk values on the right (clickable to filter region)
     g.selectAll('.chm-row-total')
       .data(matrix.rows)
       .enter()
       .append('text')
       .attr('class', 'chm-row-total')
-      .attr('x', innerWidth + 12)
+      .attr('x', innerWidth + 24)
       .attr('y', d => (yScale(d.key) ?? 0) + yScale.bandwidth() / 2 + 4)
+      .attr('text-anchor', 'middle')
       .attr('fill', d => {
         if (activeDrilldown.region === d.key) return axisActiveColor
         return d.totalRisk >= 60 ? (isDark ? '#fca5a5' : '#b91c1c') : axisTextColor
@@ -565,6 +652,228 @@ export function AdminComplianceHeatmap({
       )
       .on('click', (_event: MouseEvent, d) => handleToggleRegionDrilldown(d.key))
       .text(d => (d.totalRisk > 0 ? String(d.totalRisk) : '0'))
+
+    // D3 Dynamic Date-Window Trend Sparklines & Directional Deltas for Each Region
+    const trendUpStroke = isDark ? '#f87171' : '#dc2626'
+    const trendDownStroke = isDark ? '#34d399' : '#059669'
+    const trendStableStroke = isDark ? '#64748b' : '#94a3b8'
+
+    const trendGradients: { id: string; color: string }[] = [
+      { id: isDark ? 'chm-spark-up-dark' : 'chm-spark-up-light', color: trendUpStroke },
+      { id: isDark ? 'chm-spark-down-dark' : 'chm-spark-down-light', color: trendDownStroke },
+      { id: isDark ? 'chm-spark-flat-dark' : 'chm-spark-flat-light', color: trendStableStroke },
+    ]
+    trendGradients.forEach(({ id, color }) => {
+      const grad = defs
+        .append('linearGradient')
+        .attr('id', id)
+        .attr('x1', '0%')
+        .attr('y1', '0%')
+        .attr('x2', '0%')
+        .attr('y2', '100%')
+      grad.append('stop').attr('offset', '0%').attr('stop-color', color).attr('stop-opacity', isDark ? 0.28 : 0.22)
+      grad.append('stop').attr('offset', '100%').attr('stop-color', color).attr('stop-opacity', 0.02)
+    })
+
+    const sparkXStart = 4
+    const sparkWidth = 76
+    const maxPointIndex = Math.max(1, (matrix.rows[0]?.trend30d?.points.length ?? 30) - 1)
+    const sparkXScale = d3.scaleLinear().domain([0, maxPointIndex]).range([sparkXStart, sparkXStart + sparkWidth])
+    const trendRowHeight = yScale.bandwidth()
+    const sparkTop = 9
+    const sparkBottom = trendRowHeight - 9
+
+    const trendGroups = g
+      .selectAll<SVGGElement, HeatmapAxisItem>('.chm-row-trend-group')
+      .data(matrix.rows, d => d.key)
+      .enter()
+      .append('g')
+      .attr('class', d =>
+        `chm-row-trend-group ${activeDrilldown.region === d.key ? 'is-trend-selected' : ''}`,
+      )
+      .attr('transform', d => `translate(${innerWidth + 54}, ${yScale(d.key) ?? 0})`)
+      .attr('role', 'button')
+      .attr('tabindex', 0)
+      .attr('data-testid', d => `heatmap-trend-${d.key.toLowerCase().replace(/\s+/g, '-')}`)
+      .attr('data-trend-direction', d => d.trend30d?.direction ?? 'stable')
+      .attr(
+        'aria-label',
+        d =>
+          `${d.label} 30-day trend: ${d.trend30d?.direction ?? 'stable'}, ${formatTrendDeltaLabel(d.trend30d)}`,
+      )
+      .style('cursor', 'pointer')
+      .style('opacity', d =>
+        activeDrilldown.region && activeDrilldown.region !== d.key ? 0.35 : 1,
+      )
+
+    // Hit-target backing plate for crisp hover/click feel
+    trendGroups
+      .append('rect')
+      .attr('class', 'chm-trend-hit')
+      .attr('x', 0)
+      .attr('y', 2)
+      .attr('width', 136)
+      .attr('height', Math.max(24, trendRowHeight - 4))
+      .attr('rx', 6)
+      .attr('fill', d =>
+        activeDrilldown.region === d.key
+          ? isDark
+            ? 'rgba(56, 189, 248, 0.12)'
+            : 'rgba(14, 165, 233, 0.08)'
+          : 'transparent',
+      )
+      .attr('stroke', d =>
+        activeDrilldown.region === d.key
+          ? isDark
+            ? 'rgba(56, 189, 248, 0.45)'
+            : 'rgba(2, 132, 199, 0.38)'
+          : 'transparent',
+      )
+
+    trendGroups.each(function (row) {
+      const grp = d3.select(this)
+      const trend = row.trend30d
+      if (!trend || trend.points.length === 0) return
+
+      const isHighRiskRegion = row.totalRisk >= 42 || (row.highRiskCount ?? 0) > 0
+      const strokeColor =
+        trend.direction === 'increasing'
+          ? trendUpStroke
+          : trend.direction === 'decreasing'
+            ? trendDownStroke
+            : trendStableStroke
+      const gradId =
+        trend.direction === 'increasing'
+          ? isDark
+            ? 'chm-spark-up-dark'
+            : 'chm-spark-up-light'
+          : trend.direction === 'decreasing'
+            ? isDark
+              ? 'chm-spark-down-dark'
+              : 'chm-spark-down-light'
+            : isDark
+              ? 'chm-spark-flat-dark'
+              : 'chm-spark-flat-light'
+
+      const yMax = Math.max(trend.peakScore, 20)
+      const sparkYScale = d3.scaleLinear().domain([0, yMax]).range([sparkBottom, sparkTop])
+
+      // Subtle baseline
+      grp
+        .append('line')
+        .attr('x1', sparkXStart)
+        .attr('x2', sparkXStart + sparkWidth)
+        .attr('y1', sparkBottom)
+        .attr('y2', sparkBottom)
+        .attr('stroke', cellBorderColor)
+        .attr('stroke-dasharray', '2,2')
+        .style('pointer-events', 'none')
+
+      // Area fill under the 30-day curve
+      if (trend.peakScore > 0) {
+        const areaGen = d3
+          .area<(typeof trend.points)[number]>()
+          .x(p => sparkXScale(p.dayIndex))
+          .y0(sparkBottom)
+          .y1(p => sparkYScale(p.score))
+          .curve(d3.curveMonotoneX)
+
+        grp
+          .append('path')
+          .datum(trend.points)
+          .attr('d', areaGen)
+          .attr('fill', `url(#${gradId})`)
+          .style('pointer-events', 'none')
+      }
+
+      // Main 30-day trend line
+      const lineGen = d3
+        .line<(typeof trend.points)[number]>()
+        .x(p => sparkXScale(p.dayIndex))
+        .y(p => sparkYScale(p.score))
+        .curve(d3.curveMonotoneX)
+
+      grp
+        .append('path')
+        .datum(trend.points)
+        .attr('class', 'chm-sparkline-path')
+        .attr('d', lineGen)
+        .attr('fill', 'none')
+        .attr('stroke', strokeColor)
+        .attr('stroke-width', isHighRiskRegion ? 2 : 1.5)
+        .attr('stroke-linecap', 'round')
+        .style('pointer-events', 'none')
+
+      // Endpoint dot highlighting current day score
+      const lastPt = trend.points[trend.points.length - 1]
+      if (lastPt && trend.peakScore > 0) {
+        grp
+          .append('circle')
+          .attr('cx', sparkXScale(lastPt.dayIndex))
+          .attr('cy', sparkYScale(lastPt.score))
+          .attr('r', isHighRiskRegion ? 3 : 2.3)
+          .attr('fill', strokeColor)
+          .style('pointer-events', 'none')
+      }
+
+      // Directional numeric delta label right of sparkline
+      grp
+        .append('text')
+        .attr('x', 132)
+        .attr('y', trendRowHeight / 2 + 4)
+        .attr('text-anchor', 'end')
+        .attr('fill', strokeColor)
+        .attr('font-size', '11px')
+        .attr('font-weight', trend.direction !== 'stable' ? '700' : '500')
+        .style('font-variant-numeric', 'tabular-nums')
+        .style('pointer-events', 'none')
+        .text(formatTrendDeltaLabel(trend))
+    })
+
+    // Trend hover tooltip & click-to-drilldown handlers
+    trendGroups
+      .on('mouseenter', function (event: MouseEvent, row: HeatmapAxisItem) {
+        if (!row.trend30d) return
+        d3.select(this).style('opacity', 1)
+        const wrapRect = chartWrapRef.current?.getBoundingClientRect()
+        if (wrapRect) {
+          setHoveredCell(null)
+          setHoveredTrend({
+            row,
+            trend: row.trend30d,
+            x: event.clientX - wrapRect.left,
+            y: event.clientY - wrapRect.top,
+          })
+        }
+      })
+      .on('mousemove', function (event: MouseEvent, row: HeatmapAxisItem) {
+        if (!row.trend30d) return
+        const wrapRect = chartWrapRef.current?.getBoundingClientRect()
+        if (wrapRect) {
+          setHoveredTrend({
+            row,
+            trend: row.trend30d,
+            x: event.clientX - wrapRect.left,
+            y: event.clientY - wrapRect.top,
+          })
+        }
+      })
+      .on('mouseleave', function (_event: MouseEvent, row: HeatmapAxisItem) {
+        d3.select(this).style(
+          'opacity',
+          activeDrilldown.region && activeDrilldown.region !== row.key ? 0.35 : 1,
+        )
+        setHoveredTrend(null)
+      })
+      .on('click', (_event: MouseEvent, row: HeatmapAxisItem) => {
+        handleToggleRegionDrilldown(row.key)
+      })
+      .on('keydown', (event: KeyboardEvent, row: HeatmapAxisItem) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          handleToggleRegionDrilldown(row.key)
+        }
+      })
 
     // Heatmap Cells
     const cellGroups = g
@@ -693,7 +1002,6 @@ export function AdminComplianceHeatmap({
     const legendY = innerHeight + 24
     const gradientId = isDark ? 'chm-legend-grad-dark' : 'chm-legend-grad-light'
 
-    const defs = svg.append('defs')
     const linearGrad = defs
       .append('linearGradient')
       .attr('id', gradientId)
@@ -803,6 +1111,25 @@ export function AdminComplianceHeatmap({
                 </span>
               </>
             )}
+            {(trendSummary.rising > 0 || trendSummary.improving > 0) && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span data-testid="heatmap-trend-summary">
+                  {matrix.dateWindow.shortLabel} trend:{' '}
+                  {trendSummary.rising > 0 && (
+                    <strong className="chm-meta-rising">{trendSummary.rising} rising</strong>
+                  )}
+                  {trendSummary.rising > 0 && trendSummary.improving > 0 && ', '}
+                  {trendSummary.improving > 0 && (
+                    <strong className="chm-meta-improving">{trendSummary.improving} improving</strong>
+                  )}
+                </span>
+              </>
+            )}
+            <span aria-hidden="true">·</span>
+            <span data-testid="heatmap-window-badge">
+              Scope: <strong>{matrix.dateWindow.label}</strong>
+            </span>
           </p>
         </div>
 
@@ -907,6 +1234,47 @@ export function AdminComplianceHeatmap({
               </div>
             </div>
           )}
+          {hoveredTrend && (
+            <div
+              className="chm-tooltip chm-trend-tooltip"
+              data-testid="heatmap-trend-tooltip"
+              style={{
+                left: `${Math.min(Math.max(hoveredTrend.x - 210, 12), Math.max(containerWidth - 250, 12))}px`,
+                top: `${Math.max(hoveredTrend.y - 20, 8)}px`,
+              }}
+              role="tooltip"
+            >
+              <div className="chm-tooltip-title">
+                {hoveredTrend.row.label} · {matrix.dateWindow.label} Risk Trend
+              </div>
+              <div className="chm-tooltip-metrics">
+                <span>
+                  Trajectory:{' '}
+                  <strong className={`chm-trend-word dir-${hoveredTrend.trend.direction}`}>
+                    {hoveredTrend.trend.direction === 'increasing'
+                      ? 'Risk Increasing'
+                      : hoveredTrend.trend.direction === 'decreasing'
+                        ? 'Risk Decreasing'
+                        : 'Stable'}
+                  </strong>{' '}
+                  ({formatTrendDeltaLabel(hoveredTrend.trend)}
+                  {hoveredTrend.trend.deltaPct !== null
+                    ? `, ${hoveredTrend.trend.deltaPct > 0 ? '+' : ''}${hoveredTrend.trend.deltaPct}%`
+                    : ''}
+                  )
+                </span>
+                <span>
+                  {matrix.dateWindow.shortLabel} Start: <strong>{hoveredTrend.trend.startScore}</strong> → Current:{' '}
+                  <strong>{hoveredTrend.trend.currentScore}</strong> · Peak:{' '}
+                  <strong>{hoveredTrend.trend.peakScore}</strong>
+                </span>
+                <span>
+                  Window: {hoveredTrend.trend.points[0]?.dateLabel} –{' '}
+                  {hoveredTrend.trend.points[hoveredTrend.trend.points.length - 1]?.dateLabel}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Selected Cell / Region / Category Drill-Down Panel */}
@@ -960,9 +1328,18 @@ export function AdminComplianceHeatmap({
                 )}
               </div>
 
+              {inspectorRegionRow?.trend30d && (
+                <Inspector30DayMiniChart
+                  regionLabel={inspectorRegionRow.label}
+                  windowLabel={matrix.dateWindow.label}
+                  trend={inspectorRegionRow.trend30d}
+                  isDark={isDark}
+                />
+              )}
+
               {!inspectorView.isFiltered && (
                 <p className="chm-drilldown-hint">
-                  Click any region name, category column, or heatmap cell to filter the data tables below.
+                  Click any region name, category column, trend line, or heatmap cell to filter the data tables below.
                 </p>
               )}
 
@@ -1013,3 +1390,163 @@ export function AdminComplianceHeatmap({
     </section>
   )
 }
+
+interface Inspector30DayMiniChartProps {
+  regionLabel: string
+  windowLabel: string
+  trend: Region30DayTrend
+  isDark: boolean
+}
+
+function Inspector30DayMiniChart({
+  regionLabel,
+  windowLabel,
+  trend,
+  isDark,
+}: Inspector30DayMiniChartProps) {
+  const width = 280
+  const height = 66
+  const pad = { top: 8, right: 8, bottom: 18, left: 6 }
+  const innerW = width - pad.left - pad.right
+  const innerH = height - pad.top - pad.bottom
+
+  const maxIdx = Math.max(1, trend.points.length - 1)
+  const xScale = d3.scaleLinear().domain([0, maxIdx]).range([pad.left, pad.left + innerW])
+  const yMax = Math.max(trend.peakScore, 20)
+  const yScale = d3.scaleLinear().domain([0, yMax]).range([pad.top + innerH, pad.top])
+
+  const linePath =
+    d3
+      .line<(typeof trend.points)[number]>()
+      .x(p => xScale(p.dayIndex))
+      .y(p => yScale(p.score))
+      .curve(d3.curveMonotoneX)(trend.points) ?? ''
+
+  const areaPath =
+    d3
+      .area<(typeof trend.points)[number]>()
+      .x(p => xScale(p.dayIndex))
+      .y0(pad.top + innerH)
+      .y1(p => yScale(p.score))
+      .curve(d3.curveMonotoneX)(trend.points) ?? ''
+
+  const strokeColor =
+    trend.direction === 'increasing'
+      ? isDark
+        ? '#f87171'
+        : '#dc2626'
+      : trend.direction === 'decreasing'
+        ? isDark
+          ? '#34d399'
+          : '#059669'
+        : isDark
+          ? '#94a3b8'
+          : '#64748b'
+
+  const gradId = `chm-insp-grad-${trend.direction}-${isDark ? 'd' : 'l'}`
+  const startPt = trend.points[0]
+  const midPt = trend.points[Math.floor(trend.points.length / 2)]
+  const endPt = trend.points[trend.points.length - 1]
+  const gridStroke = isDark ? 'rgba(148, 163, 184, 0.16)' : 'rgba(15, 23, 42, 0.1)'
+  const labelInk = isDark ? '#94a3b8' : '#64748b'
+
+  return (
+    <div
+      className="chm-inspector-trend-box"
+      data-testid="inspector-trend-chart"
+      data-trend-direction={trend.direction}
+    >
+      <div className="chm-inspector-trend-head">
+        <span className="chm-inspector-trend-title">{regionLabel} · {windowLabel}</span>
+        <span className={`chm-inspector-trend-delta dir-${trend.direction}`}>
+          {formatTrendDeltaLabel(trend)}
+          {trend.deltaPct !== null ? ` (${trend.deltaPct > 0 ? '+' : ''}${trend.deltaPct}%)` : ''}
+        </span>
+      </div>
+
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="chm-inspector-trend-svg"
+        role="img"
+        aria-label={`${regionLabel} 30-day compliance risk trend from ${trend.startScore} to ${trend.currentScore}`}
+      >
+        <defs>
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={strokeColor} stopOpacity={isDark ? 0.28 : 0.22} />
+            <stop offset="100%" stopColor={strokeColor} stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
+
+        <line
+          x1={pad.left}
+          x2={pad.left + innerW}
+          y1={pad.top + innerH}
+          y2={pad.top + innerH}
+          stroke={gridStroke}
+          strokeDasharray="2,2"
+        />
+        <line
+          x1={pad.left}
+          x2={pad.left + innerW}
+          y1={pad.top}
+          y2={pad.top}
+          stroke={gridStroke}
+          strokeDasharray="2,3"
+        />
+
+        {trend.peakScore > 0 && <path d={areaPath} fill={`url(#${gradId})`} />}
+        <path
+          d={linePath}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth={2}
+          strokeLinecap="round"
+        />
+
+        {endPt && trend.peakScore > 0 && (
+          <circle
+            cx={xScale(endPt.dayIndex)}
+            cy={yScale(endPt.score)}
+            r={3.2}
+            fill={strokeColor}
+          />
+        )}
+
+        {startPt && (
+          <text x={pad.left} y={height - 3} fontSize="9.5" fill={labelInk}>
+            {startPt.dateLabel}
+          </text>
+        )}
+        {midPt && (
+          <text
+            x={pad.left + innerW / 2}
+            y={height - 3}
+            textAnchor="middle"
+            fontSize="9.5"
+            fill={labelInk}
+          >
+            {midPt.dateLabel}
+          </text>
+        )}
+        {endPt && (
+          <text
+            x={pad.left + innerW}
+            y={height - 3}
+            textAnchor="end"
+            fontSize="9.5"
+            fill={labelInk}
+          >
+            {endPt.dateLabel}
+          </text>
+        )}
+      </svg>
+
+      <div className="chm-inspector-trend-stats">
+        <span>Start: <strong>{trend.startScore}</strong></span>
+        <span>Peak: <strong>{trend.peakScore}</strong></span>
+        <span>Current: <strong>{trend.currentScore}</strong></span>
+      </div>
+    </div>
+  )
+}
+

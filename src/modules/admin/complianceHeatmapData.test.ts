@@ -3,10 +3,12 @@ import {
   buildComplianceHeatmapMatrix,
   buildComplianceSignals,
   buildInvestigableEntityRows,
+  buildRegion30DayTrend,
   classifyComplianceRiskTier,
   EMPTY_DRILLDOWN_FILTER,
   filterEntityRowsByDrilldown,
   filterModerationRecordsByDrilldown,
+  formatTrendDeltaLabel,
   normalizeComplianceRegion,
   normalizePartnerCategory,
 } from './complianceHeatmapData'
@@ -245,6 +247,110 @@ describe('Admin Compliance Heatmap Data Engine', () => {
       incidentType: null,
     })
     expect(filteredQueue.map(q => q.id)).toEqual(['q2'])
+  })
+
+  it('computes 30-day regional compliance risk trends accurately for increasing, decreasing, and stable trajectories', () => {
+    const refEnd = new Date('2026-11-25T23:59:59Z')
+    const signals = buildComplianceSignals({
+      incidents: [
+        {
+          id: 'inc-mh-1',
+          incidentNumber: 'TS-2026-083',
+          title: 'Older open complaint',
+          category: 'abuse_harassment',
+          severity: 'high_p1',
+          status: 'appeal_pending',
+          reportedEntityType: 'coach',
+          reportedEntityName: 'Coach R',
+          city: 'Pune',
+          state: 'Maharashtra',
+          createdAt: '2026-10-20T10:00:00Z',
+          updatedAt: '2026-11-20T10:00:00Z',
+        },
+        {
+          id: 'inc-mh-2',
+          incidentNumber: 'TS-2026-081',
+          title: 'Recent P0 turf safety hazard',
+          category: 'safety_hazard',
+          severity: 'critical_p0',
+          status: 'sanction_issued',
+          reportedEntityType: 'venue',
+          reportedEntityName: 'PlayArena Turf',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          createdAt: '2026-11-15T10:00:00Z',
+          updatedAt: '2026-11-18T10:00:00Z',
+        },
+        {
+          id: 'inc-tg-1',
+          incidentNumber: 'TS-2026-085',
+          title: 'Booking dispute resolved and closed',
+          category: 'booking_dispute',
+          severity: 'medium_p2',
+          status: 'case_closed',
+          reportedEntityType: 'venue',
+          reportedEntityName: 'SkyLine Arena',
+          city: 'Hyderabad',
+          state: 'Telangana',
+          createdAt: '2026-11-01T10:00:00Z',
+          updatedAt: '2026-11-10T10:00:00Z',
+        },
+      ],
+      verifications: [],
+      tenants: [
+        {
+          id: 'org-tn-1',
+          name: 'Chennai Turf',
+          tenantType: 'venue',
+          status: 'suspended',
+          city: 'Chennai',
+          state: 'Tamil Nadu',
+          updatedAt: '2026-09-15T10:00:00Z',
+        },
+      ],
+    })
+
+    // Increasing trend (Maharashtra: 28 -> 70)
+    const mhTrend = buildRegion30DayTrend(
+      signals.filter(s => s.region === 'Maharashtra'),
+      refEnd,
+    )
+    expect(mhTrend.points.length).toBe(30)
+    expect(mhTrend.startScore).toBe(28)
+    expect(mhTrend.currentScore).toBe(70)
+    expect(mhTrend.direction).toBe('increasing')
+    expect(mhTrend.delta).toBe(42)
+    expect(formatTrendDeltaLabel(mhTrend)).toBe('↑ +42')
+
+    // Decreasing/improving trend (Telangana: 0 -> 14 peak -> 6 closed)
+    const tgTrend = buildRegion30DayTrend(
+      signals.filter(s => s.region === 'Telangana'),
+      refEnd,
+    )
+    expect(tgTrend.peakScore).toBe(14)
+    expect(tgTrend.currentScore).toBe(6)
+    expect(tgTrend.direction).toBe('decreasing')
+    expect(tgTrend.delta).toBe(-8)
+    expect(tgTrend.deltaPct).toBe(-57)
+    expect(formatTrendDeltaLabel(tgTrend)).toBe('↓ -8')
+
+    // Stable trend (Tamil Nadu suspended well before 30-day window: 34 -> 34)
+    const tnTrend = buildRegion30DayTrend(
+      signals.filter(s => s.region === 'Tamil Nadu'),
+      refEnd,
+    )
+    expect(tnTrend.startScore).toBe(34)
+    expect(tnTrend.currentScore).toBe(34)
+    expect(tnTrend.direction).toBe('stable')
+    expect(formatTrendDeltaLabel(tnTrend)).toBe('→ 0')
+
+    // Matrix attaches trend30d onto every row and preserves final day === totalRisk
+    const matrix = buildComplianceHeatmapMatrix(signals, 'partner_category', 'all')
+    for (const row of matrix.rows) {
+      expect(row.trend30d).toBeDefined()
+      expect(row.trend30d?.points.length).toBe(30)
+      expect(row.trend30d?.currentScore).toBe(row.totalRisk)
+    }
   })
 })
 

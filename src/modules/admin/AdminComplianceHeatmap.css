@@ -134,13 +134,13 @@ html.dark .chm-seg-btn.is-active {
 /* Main Split Grid */
 .chm-body-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr);
+  grid-template-columns: minmax(0, 2.1fr) minmax(295px, 1fr);
   gap: 1.5rem;
   margin-top: 1.25rem;
   align-items: start;
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1120px) {
   .chm-body-grid {
     grid-template-columns: 1fr;
   }
@@ -155,7 +155,7 @@ html.dark .chm-seg-btn.is-active {
 .chm-svg {
   display: block;
   width: 100%;
-  min-width: 540px;
+  min-width: 660px;
 }
 
 .chm-cell-group:focus-visible {
@@ -533,4 +533,161 @@ html.dark .chm-reset-link:hover {
 html.dark .chm-drilldown-hint {
   color: #94a3b8;
 }
+
+/* 30-Day Trend Sparkline Row Hover, Meta Colors & Inspector Mini-Chart */
+.chm-meta-rising {
+  color: #dc2626 !important;
+}
+:root[data-admin-theme='dark'] .chm-meta-rising,
+:root[data-theme='dark'] .chm-meta-rising,
+html.dark .chm-meta-rising {
+  color: #f87171 !important;
+}
+
+.chm-meta-improving {
+  color: #059669 !important;
+}
+:root[data-admin-theme='dark'] .chm-meta-improving,
+:root[data-theme='dark'] .chm-meta-improving,
+html.dark .chm-meta-improving {
+  color: #34d399 !important;
+}
+
+.chm-row-trend-group {
+  outline: none;
+}
+
+.chm-row-trend-group .chm-trend-hit {
+  transition: fill 0.14s ease, stroke 0.14s ease;
+}
+
+.chm-row-trend-group:hover .chm-trend-hit {
+  fill: rgba(14, 165, 233, 0.08);
+  stroke: rgba(14, 165, 233, 0.35);
+}
+
+:root[data-admin-theme='dark'] .chm-row-trend-group:hover .chm-trend-hit,
+:root[data-theme='dark'] .chm-row-trend-group:hover .chm-trend-hit,
+html.dark .chm-row-trend-group:hover .chm-trend-hit {
+  fill: rgba(56, 189, 248, 0.1);
+  stroke: rgba(56, 189, 248, 0.38);
+}
+
+.chm-row-trend-group:focus-visible .chm-trend-hit {
+  stroke: #38bdf8;
+  stroke-width: 1.5px;
+}
+
+.chm-trend-tooltip {
+  min-width: 225px;
+  max-width: 280px;
+}
+
+.chm-trend-word.dir-increasing {
+  color: #fca5a5;
+}
+.chm-trend-word.dir-decreasing {
+  color: #6ee7b7;
+}
+.chm-trend-word.dir-stable {
+  color: #cbd5e1;
+}
+
+.chm-inspector-trend-box {
+  padding: 0.7rem 0.8rem;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+:root[data-admin-theme='dark'] .chm-inspector-trend-box,
+:root[data-theme='dark'] .chm-inspector-trend-box,
+html.dark .chm-inspector-trend-box {
+  background: #090f1d;
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+.chm-inspector-trend-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.74rem;
+}
+
+.chm-inspector-trend-title {
+  font-weight: 650;
+  color: #475569;
+}
+
+:root[data-admin-theme='dark'] .chm-inspector-trend-title,
+:root[data-theme='dark'] .chm-inspector-trend-title,
+html.dark .chm-inspector-trend-title {
+  color: #cbd5e1;
+}
+
+.chm-inspector-trend-delta {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chm-inspector-trend-delta.dir-increasing {
+  color: #dc2626;
+}
+:root[data-admin-theme='dark'] .chm-inspector-trend-delta.dir-increasing,
+html.dark .chm-inspector-trend-delta.dir-increasing {
+  color: #f87171;
+}
+
+.chm-inspector-trend-delta.dir-decreasing {
+  color: #059669;
+}
+:root[data-admin-theme='dark'] .chm-inspector-trend-delta.dir-decreasing,
+html.dark .chm-inspector-trend-delta.dir-decreasing {
+  color: #34d399;
+}
+
+.chm-inspector-trend-delta.dir-stable {
+  color: #64748b;
+}
+:root[data-admin-theme='dark'] .chm-inspector-trend-delta.dir-stable,
+html.dark .chm-inspector-trend-delta.dir-stable {
+  color: #94a3b8;
+}
+
+.chm-inspector-trend-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chm-inspector-trend-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.71rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-admin-theme='dark'] .chm-inspector-trend-stats,
+:root[data-theme='dark'] .chm-inspector-trend-stats,
+html.dark .chm-inspector-trend-stats {
+  color: #94a3b8;
+}
+
+.chm-inspector-trend-stats strong {
+  color: #0f172a;
+}
+
+:root[data-admin-theme='dark'] .chm-inspector-trend-stats strong,
+:root[data-theme='dark'] .chm-inspector-trend-stats strong,
+html.dark .chm-inspector-trend-stats strong {
+  color: #f1f5f9;
+}
+
 
