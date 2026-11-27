@@ -114,6 +114,48 @@
     "passed": true
   },
   {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_athletes",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_athletes",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_athlete_notes",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_athlete_notes",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_training_programmes",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_training_programmes",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_programme_assignments",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_programme_assignments",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_training_sessions",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_training_sessions",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_session_attendance",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_session_attendance",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-01: Anonymous SELECT on public.coach_athlete_assessments",
+    "expected": "42501 permission denied (table deployed & RLS-protected)",
+    "actual": "42501: permission denied for table coach_athlete_assessments",
+    "passed": true
+  },
+  {
     "test": "SEC-PROBE-01: Anonymous SELECT on public.academy_profiles",
     "expected": "42501 permission denied (table deployed & RLS-protected)",
     "actual": "42501: permission denied for table academy_profiles",

@@ -29,12 +29,12 @@ interface QuickActionSpec {
 }
 
 const QUICK_ACTIONS: readonly QuickActionSpec[] = [
-  { label: 'Add Athlete', icon: 'plus', targetSection: 'athletes', note: 'Phase 2 relationship flow' },
+  { label: 'Add Athlete', icon: 'plus', targetSection: 'athletes', note: 'Consent-first athlete roster' },
   { label: 'Invite Athlete', icon: 'mail', targetSection: 'athletes', note: 'Consent-based invitation' },
-  { label: 'Create Programme', icon: 'award', targetSection: 'programmes', note: 'Phase 3 curriculum builder' },
-  { label: 'Schedule Session', icon: 'calendar', targetSection: 'calendar', note: 'Phase 3 training calendar' },
-  { label: 'Record Attendance', icon: 'check-circle', targetSection: 'attendance', note: 'Phase 4 session roll-call' },
-  { label: 'Create Assessment', icon: 'activity', targetSection: 'assessments', note: 'Phase 4 evaluation centre' },
+  { label: 'Create Programme', icon: 'award', targetSection: 'programmes', note: 'Curricula & drill plans' },
+  { label: 'Schedule Session', icon: 'calendar', targetSection: 'calendar', note: 'Calendar & conflict guard' },
+  { label: 'Record Attendance', icon: 'check-circle', targetSection: 'attendance', note: 'Session roll-call' },
+  { label: 'Create Assessment', icon: 'activity', targetSection: 'assessments', note: 'Khelo India & skill tests' },
   { label: 'Upload Certificate', icon: 'upload', targetSection: 'credentials', note: 'Submit accreditation proof' },
   { label: 'View Opportunities', icon: 'target', href: '/opportunities', note: 'Published trials & jobs' },
 ]
@@ -242,7 +242,7 @@ export function CoachOverviewPanel({
             <EmptyState
               icon={<SiteIcon name="calendar" size={24} />}
               title="No scheduled sessions yet"
-              description="Training sessions and dated calendar views will unlock in Phase 3 without fabricated sample dates."
+              description="Schedule a session in Calendar & Sessions or configure an academy batch to track upcoming workouts."
             />
           )}
         </section>

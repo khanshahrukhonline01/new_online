@@ -212,7 +212,34 @@ describe('CoachDashboardPage Foundation & Security Gates (Phase 1)', () => {
         </TenantContext.Provider>
       </AuthContext.Provider>,
     )
-    expect(athleteDetailHtml).toContain('Scheduled for Phase 2')
-    expect(athleteDetailHtml).toContain('ath-101')
+    expect(athleteDetailHtml).toContain('data-coach-section="athletes"')
+    expect(athleteDetailHtml).toContain('data-coach-item="ath-101"')
+    expect(athleteDetailHtml).toContain('Loading coach athletes module from PostgreSQL')
+
+    for (const [subPath, expectedSection] of [
+      ['/coach-dashboard/programmes', 'programmes'],
+      ['/coach-dashboard/calendar', 'calendar'],
+      ['/coach-dashboard/attendance', 'attendance'],
+      ['/coach-dashboard/assessments', 'assessments'],
+    ] as const) {
+      const subHtml = renderToStaticMarkup(
+        <AuthContext.Provider value={makeAuthValue(sampleCoachUser)}>
+          <TenantContext.Provider value={makeTenantValue()}>
+            <CoachDashboardPage currentPath={subPath} />
+          </TenantContext.Provider>
+        </AuthContext.Provider>,
+      )
+      expect(subHtml).toContain(`data-coach-section="${expectedSection}"`)
+      expect(subHtml).not.toContain('Implementation Pending Approval')
+    }
+
+    const futurePhaseHtml = renderToStaticMarkup(
+      <AuthContext.Provider value={makeAuthValue(sampleCoachUser)}>
+        <TenantContext.Provider value={makeTenantValue()}>
+          <CoachDashboardPage currentPath="/coach-dashboard/video-analysis" />
+        </TenantContext.Provider>
+      </AuthContext.Provider>,
+    )
+    expect(futurePhaseHtml).toContain('Scheduled for Phase 8')
   })
 })
