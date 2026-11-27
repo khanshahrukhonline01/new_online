@@ -8,10 +8,6 @@ import {
   type ListingSubmissionInput,
   type SubmissionTrackingDetails,
 } from '../../integrations/supabase/public-client'
-import {
-  enqueueTenantPostForRegulation,
-  type TenantPostCategory,
-} from '../../shared/governance/postRegulationBridge'
 import './ListingSubmissionPage.css'
 
 export { getPublishedListingUrl }
@@ -316,38 +312,6 @@ export default function ListingSubmissionPage({ defaultTab = 'submit', initialTr
         }
         const refNumber = result.reference_number
         const tKey = result.tracking_key
-
-        const mappedCategory: TenantPostCategory =
-          kind === 'venue'
-            ? 'venue_listing'
-            : kind === 'academy'
-              ? 'academy_program'
-              : kind === 'coach'
-                ? 'coach_profile'
-                : kind === 'event'
-                  ? 'tournament_notice'
-                  : 'trial_opportunity'
-
-        enqueueTenantPostForRegulation({
-          referenceCode: refNumber,
-          title: title.trim(),
-          body: combinedDetails || title.trim(),
-          category: mappedCategory,
-          tenantName: helperOrganizer.trim() || helperHost.trim() || title.trim(),
-          tenantPersona:
-            kind === 'venue'
-              ? 'turf'
-              : kind === 'coach'
-                ? 'coach'
-                : kind === 'event'
-                  ? 'tournament'
-                  : 'academy',
-          submitterName: helperOrganizer.trim() || helperHost.trim() || 'Tenant Submitter',
-          submitterEmail: submitterEmail.trim() || 'submitter@khelgrid.com',
-          sport: helperSport.trim() || 'Multi-Sport',
-          city: city.trim() || 'Pan-India',
-          sourceRoute: '/submit-listing',
-        })
 
         setSubmittedData({
           referenceNumber: refNumber,

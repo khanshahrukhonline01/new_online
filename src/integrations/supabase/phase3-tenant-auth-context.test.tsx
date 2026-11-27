@@ -31,8 +31,8 @@ describe('KhelGrid SaaS Platform — Phase 3 Tenant Auth & Context', () => {
     // Protected content should NOT be rendered
     expect(html).not.toContain('Director Workspace')
     // Authentication required header should be visible
-    expect(html).toContain('Verifying your secure workspace access')
-    expect(html).not.toContain('Director Workspace')
+    expect(html).toContain('Authentication Required')
+    expect(html).toContain('Sign In to Academy Workspace')
   })
 
   it('renders no active membership fallback when user has no linked tenant', () => {
@@ -57,8 +57,8 @@ describe('KhelGrid SaaS Platform — Phase 3 Tenant Auth & Context', () => {
 
     // Protected content should NOT be rendered
     expect(html).not.toContain('Director Workspace')
-    expect(html).toContain('Verifying your secure workspace access')
-    expect(html).not.toContain('Director Workspace')
+    expect(html).toContain('No Active Academy Membership')
+    expect(html).toContain('Register Your Sports Academy')
   })
 
   it('provides useTenant hook context values to consumers', () => {
@@ -153,8 +153,8 @@ describe('KhelGrid SaaS Platform — Phase 3 Tenant Auth & Context', () => {
         </RequireTenantMember>
       </TenantProvider>
     )
-    expect(unauthHtml).toContain('Verifying your secure workspace access')
-    expect(unauthHtml).not.toContain('Protected Venue Content')
+    expect(unauthHtml).toContain('Sign In to Venue / Turf Workspace')
+    expect(unauthHtml).toContain('/partner-signup?mode=login&amp;role=venue')
 
     setStoredAuthUser({
       id: 'usr-venue-1',
@@ -172,8 +172,8 @@ describe('KhelGrid SaaS Platform — Phase 3 Tenant Auth & Context', () => {
         </RequireTenantMember>
       </TenantProvider>
     )
-    expect(noMembershipHtml).toContain('Verifying your secure workspace access')
-    expect(noMembershipHtml).not.toContain('Protected Venue Content')
-    expect(noMembershipHtml).not.toContain('Protected Venue Content')
+    expect(noMembershipHtml).toContain('No Active Venue / Turf Membership')
+    expect(noMembershipHtml).toContain('Register Your Venue / Turf Workspace')
+    expect(noMembershipHtml).toContain('/partner-signup?mode=signup&amp;role=venue')
   })
 })

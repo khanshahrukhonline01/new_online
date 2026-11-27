@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { SiteIcon } from '../../../../src/shared/components/SiteIcon'
 import type { AdminPlatformRole } from '../auth/adminSecurityPolicy'
-import type { RegulatoryInboxItem } from '../services/adminRegulatoryInboxService'
 import type { AdminWorkspaceTab } from './AdminSidebar'
 
 export type AdminThemeMode = 'light' | 'dark' | 'cosmic' | 'system'
@@ -10,8 +9,6 @@ export interface AdminHeaderProps {
   onToggleSidebar: () => void
   onOpenCommandPalette: () => void
   onJumpToWorkspace?: (tab: AdminWorkspaceTab) => void
-  onSelectWatchlistItem?: (item: RegulatoryInboxItem) => void
-  onOpenMakerChecker?: () => void
   onResetPassword: () => void
   onSignOut: () => void
   activeWorkspaceTitle: string
@@ -20,11 +17,6 @@ export interface AdminHeaderProps {
   onChangeTheme: (theme: AdminThemeMode) => void
   pendingSubmissionsCount?: number
   pendingManuscriptsCount?: number
-  slaWatchlistItems?: RegulatoryInboxItem[]
-  slaBreachedCount?: number
-  slaAtRiskCount?: number
-  pendingMakerCheckerCount?: number
-  regulatoryComplianceOpenCount?: number
   dbLatencyMs?: number | null
   databaseId: string
   operatorEmail: string
@@ -40,8 +32,6 @@ export function AdminHeader({
   onToggleSidebar,
   onOpenCommandPalette,
   onJumpToWorkspace,
-  onSelectWatchlistItem,
-  onOpenMakerChecker,
   onResetPassword,
   onSignOut,
   activeWorkspaceTitle,
@@ -50,11 +40,6 @@ export function AdminHeader({
   onChangeTheme,
   pendingSubmissionsCount = 0,
   pendingManuscriptsCount = 0,
-  slaWatchlistItems = [],
-  slaBreachedCount = 0,
-  slaAtRiskCount = 0,
-  pendingMakerCheckerCount = 0,
-  regulatoryComplianceOpenCount = 0,
   dbLatencyMs = null,
   databaseId,
   operatorEmail,
@@ -64,12 +49,7 @@ export function AdminHeader({
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const headerRef = useRef<HTMLElement>(null)
 
-  const priorityWatchCount = slaBreachedCount + slaAtRiskCount + pendingMakerCheckerCount
-  const totalAlerts =
-    priorityWatchCount > 0
-      ? priorityWatchCount
-      : pendingSubmissionsCount + pendingManuscriptsCount + regulatoryComplianceOpenCount
-  const hasCriticalBreach = slaBreachedCount > 0
+  const totalAlerts = pendingSubmissionsCount + pendingManuscriptsCount
   const roleLabel = operatorRole === 'super_admin' ? 'Super Admin' : 'Moderator'
   const displayName = operatorEmail.includes('@') ? operatorEmail.split('@')[0] : operatorEmail
   const normalizedTheme: 'system' | 'light' | 'dark' =
@@ -124,12 +104,10 @@ export function AdminHeader({
           type="button"
           className="admin-topbar-command-trigger"
           onClick={onOpenCommandPalette}
-          title="Global Search & Command Palette (Ctrl+K)"
-          aria-label="Global search for users, listings, venues, or IDs (Ctrl+K)"
-          data-testid="admin-global-search-trigger"
+          title="Open Command Palette (Ctrl+K)"
         >
           <SiteIcon name="search" size={14} />
-          <span className="admin-topbar-search-text">Search users, listings, venues, IDs…</span>
+          <span className="admin-topbar-search-text">Search desks &amp; actions…</span>
           <kbd className="admin-topbar-kbd">Ctrl+K</kbd>
         </button>
 
@@ -141,141 +119,26 @@ export function AdminHeader({
               setIsNotificationsOpen(prev => !prev)
               setIsProfileOpen(false)
             }}
-            title="SLA Watchlist & Operational Alerts"
+            title="Operational Alerts"
             aria-label="Operational Alerts"
             aria-haspopup="menu"
             aria-expanded={isNotificationsOpen}
-            data-testid="admin-sla-watchlist-trigger"
           >
             <SiteIcon name="bell" size={16} />
             {totalAlerts > 0 && (
-              <span
-                className={`admin-topbar-alert-count ${hasCriticalBreach ? 'is-critical' : ''}`}
-              >
-                {totalAlerts}
-              </span>
+              <span className="admin-topbar-alert-count">{totalAlerts}</span>
             )}
           </button>
 
           {isNotificationsOpen && (
-            <div
-              className="admin-topbar-popover admin-notifications-popover admin-sla-watchlist-popover"
-              role="menu"
-              data-testid="admin-sla-watchlist-popover"
-            >
+            <div className="admin-topbar-popover admin-notifications-popover" role="menu">
               <div className="admin-popover-header">
-                <div className="admin-watchlist-head-row">
-                  <strong>SLA Watchlist &amp; Priority Alerts</strong>
-                  {slaBreachedCount > 0 && (
-                    <span className="admin-watchlist-breach-tag tabular-nums">
-                      {slaBreachedCount} Breached
-                    </span>
-                  )}
-                </div>
-                <span className="admin-popover-meta-line tabular-nums">
-                  <span>{slaBreachedCount} breached</span>
-                  <span aria-hidden="true">·</span>
-                  <span>{slaAtRiskCount} at risk</span>
-                  <span aria-hidden="true">·</span>
-                  <span>{pendingMakerCheckerCount} dual-control</span>
+                <strong>Operational Queues</strong>
+                <span className="admin-popover-meta-line">
+                  <span className="tabular-nums">{totalAlerts}</span> pending items
                 </span>
               </div>
-
-              <div className="admin-popover-body admin-watchlist-scroll">
-                {slaWatchlistItems.length > 0 && (
-                  <div className="admin-watchlist-section">
-                    <span className="admin-watchlist-section-label">
-                      SLA Priority Items ({slaWatchlistItems.length})
-                    </span>
-                    {slaWatchlistItems.slice(0, 5).map(item => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        role="menuitem"
-                        className="admin-alert-row admin-watchlist-item"
-                        data-testid={`watchlist-jump-${item.referenceCode}`}
-                        onClick={() => {
-                          setIsNotificationsOpen(false)
-                          if (onSelectWatchlistItem) {
-                            onSelectWatchlistItem(item)
-                          } else {
-                            onJumpToWorkspace?.(item.sourceDesk)
-                          }
-                        }}
-                      >
-                        <span
-                          className={`admin-watchlist-dot ${item.slaStatus === 'breached' ? 'is-breached' : 'is-at-risk'}`}
-                          aria-hidden="true"
-                        />
-                        <div className="admin-watchlist-copy">
-                          <div className="admin-watchlist-title-line">
-                            <span className="admin-alert-title">{item.title}</span>
-                            <span
-                              className={`admin-watchlist-sla-text tabular-nums ${item.slaStatus === 'breached' ? 'is-breached' : 'is-at-risk'}`}
-                            >
-                              {item.slaRemainingLabel}
-                            </span>
-                          </div>
-                          <small className="admin-alert-sub">
-                            {item.referenceCode} · {item.sourceLabel} · {item.entityName}
-                          </small>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {pendingMakerCheckerCount > 0 && (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="admin-alert-row"
-                    data-testid="watchlist-maker-checker"
-                    onClick={() => {
-                      setIsNotificationsOpen(false)
-                      if (onOpenMakerChecker) {
-                        onOpenMakerChecker()
-                      } else {
-                        onJumpToWorkspace?.('platform_governance')
-                      }
-                    }}
-                  >
-                    <SiteIcon name="shield-check" size={16} />
-                    <div>
-                      <span className="admin-alert-title">
-                        {pendingMakerCheckerCount} dual-control approval
-                        {pendingMakerCheckerCount > 1 ? 's' : ''} awaiting second sign-off
-                      </span>
-                      <small className="admin-alert-sub">
-                        Open Maker-Checker Queue in Platform RBAC
-                      </small>
-                    </div>
-                  </button>
-                )}
-
-                {regulatoryComplianceOpenCount > 0 && (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="admin-alert-row"
-                    data-testid="watchlist-regulatory-compliance"
-                    onClick={() => {
-                      setIsNotificationsOpen(false)
-                      onJumpToWorkspace?.('regulatory_compliance')
-                    }}
-                  >
-                    <SiteIcon name="file-text" size={16} />
-                    <div>
-                      <span className="admin-alert-title">
-                        {regulatoryComplianceOpenCount} statutory compliance filings open
-                      </span>
-                      <small className="admin-alert-sub">
-                        DPDP DSAR, Minor Safeguards &amp; IT Rules Grievance Desk
-                      </small>
-                    </div>
-                  </button>
-                )}
-
+              <div className="admin-popover-body">
                 {pendingSubmissionsCount > 0 && (
                   <button
                     type="button"
@@ -297,7 +160,6 @@ export function AdminHeader({
                     </div>
                   </button>
                 )}
-
                 {pendingManuscriptsCount > 0 && (
                   <button
                     type="button"
@@ -319,28 +181,12 @@ export function AdminHeader({
                     </div>
                   </button>
                 )}
-
-                {totalAlerts === 0 && slaWatchlistItems.length === 0 && (
+                {totalAlerts === 0 && (
                   <div className="admin-alert-row">
                     <SiteIcon name="check" size={16} />
-                    <span className="admin-alert-title">All SLAs and queues are on track.</span>
+                    <span className="admin-alert-title">All queues are clear.</span>
                   </div>
                 )}
-              </div>
-
-              <div className="admin-watchlist-footer">
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="admin-watchlist-footer-btn"
-                  onClick={() => {
-                    setIsNotificationsOpen(false)
-                    onJumpToWorkspace?.('regulatory_inbox')
-                  }}
-                >
-                  <span>Open Unified Regulatory Inbox</span>
-                  <span aria-hidden="true">→</span>
-                </button>
               </div>
             </div>
           )}

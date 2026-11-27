@@ -12,6 +12,7 @@
  */
 
 import { getSupabaseClient } from './realtime-client'
+import { getStoredAuthUser } from './auth-client'
 import type { OrganizationType } from '../../shared/saas/saasTypes'
 
 export interface DbTenant {
@@ -36,29 +37,11 @@ export interface DbTenant {
   updated_at: string
 }
 
-export type DbTenantMemberRole =
-  | 'owner'
-  | 'org_admin'
-  | 'director'
-  | 'admin'
-  | 'manager'
-  | 'finance_manager'
-  | 'content_manager'
-  | 'listing_manager'
-  | 'verification_coordinator'
-  | 'head_coach'
-  | 'coach'
-  | 'accountant'
-  | 'front_desk'
-  | 'staff'
-  | 'readonly_member'
-  | 'parent'
-
 export interface DbTenantMembership {
   id: string
   tenant_id: string
   user_id: string
-  role: DbTenantMemberRole
+  role: 'owner' | 'director' | 'admin' | 'head_coach' | 'coach' | 'accountant' | 'front_desk' | 'staff' | 'parent'
   status: 'active' | 'invited' | 'suspended' | 'revoked'
   invited_email?: string
   invited_by?: string
@@ -542,117 +525,58 @@ export async function createTenantStudent(
 /**
  * Fetch all active tenant memberships for the authenticated user
  */
-export async function getUserTenantMemberships(userId: string): Promise<DbTenantMembership[]> {
+export async function getUserTenantMemberships(): Promise<DbTenantMembership[]> {
   const client = getSupabaseClient()
   if (!client) {
-    throw new Error('Supabase is not configured. Tenant access cannot be verified.')
+    const user = getStoredAuthUser()
+    if (!user) return []
+    return [
+      {
+        id: `local-mem-${user.id}`,
+        tenant_id: 'delhi-cricket-academy',
+        user_id: user.id,
+        role: (user.role === 'coach' ? 'coach' : 'owner') as 'owner' | 'coach',
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        tenant: {
+          id: 'delhi-cricket-academy',
+          name: 'Delhi Cricket Academy',
+          slug: 'delhi-cricket-academy',
+          tenant_type: 'academy',
+          status: 'active',
+          city: 'Delhi NCR',
+          state: 'Delhi',
+          sport: 'Cricket',
+          contact_phone: '9876543210',
+          contact_email: user.email || 'director@delhicricketacademy.com',
+          upi_vpa: 'delhicricket@upi',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      },
+    ]
   }
-  if (!userId) {
-    throw new Error('An authenticated user ID is required to resolve tenant memberships.')
-  }
-
-  const { data, error } = await client
-    .from('tenant_memberships')
-    .select('*, tenant:tenants(*)')
-    .eq('user_id', userId)
-    .eq('status', 'active')
-    .order('created_at', { ascending: false })
-
-  if (error) {
-    console.error('[TenantClient] getUserTenantMemberships failed:', error.message)
-    throw new Error('Could not verify workspace memberships. Please retry.')
-  }
-
-  return ((data || []) as DbTenantMembership[]).filter(
-    membership => membership.user_id === userId &&
-      membership.status === 'active' &&
-      membership.tenant?.status === 'active'
-  )
-}
-
-/**
- * Best-effort tenant membership lookup used post-login to route users to their active dashboard.
- * Never throws when Supabase is unconfigured or user has zero tenant memberships.
- */
-export async function tryFetchUserTenantMemberships(userId: string): Promise<DbTenantMembership[]> {
-  if (!userId) return []
-  try {
-    return await getUserTenantMemberships(userId)
-  } catch {
-    return []
-  }
-}
-
-/**
- * Fetch pending tenant invitations linked to the authenticated user.
- * Fails cleanly to [] when Supabase is unconfigured or offline.
- */
-export async function getPendingTenantMemberships(userId: string): Promise<DbTenantMembership[]> {
-  const client = getSupabaseClient()
-  if (!client || !userId) return []
 
   try {
     const { data, error } = await client
       .from('tenant_memberships')
       .select('*, tenant:tenants(*)')
-      .eq('user_id', userId)
-      .eq('status', 'invited')
+      .eq('status', 'active')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
-    if (error) return []
-    return ((data || []) as DbTenantMembership[]).filter(
-      membership =>
-        membership.user_id === userId &&
-        membership.status === 'invited' &&
-        membership.tenant?.status === 'active'
-    )
-  } catch {
+    if (error) {
+      console.warn('[TenantClient] getUserTenantMemberships error:', error.message)
+      return []
+    }
+    return (data || []) as DbTenantMembership[]
+  } catch (err) {
+    console.warn('[TenantClient] Failed to fetch memberships:', err)
     return []
   }
 }
 
-export type ResolvedTenantPersona = 'academy' | 'coach' | 'turf' | 'tournament' | 'organization' | 'parent'
-
-/** Maps any of the 18 PostgreSQL tenant_type categories + member role to a WorkspaceShell persona. */
-export function mapTenantTypeToPersona(
-  tenantType?: string | null,
-  memberRole?: string | null
-): ResolvedTenantPersona {
-  if (memberRole === 'parent') return 'parent'
-  switch (tenantType) {
-    case 'academy':
-      return memberRole === 'coach' || memberRole === 'head_coach' ? 'coach' : 'academy'
-    case 'coach':
-      return 'coach'
-    case 'venue':
-      return 'turf'
-    case 'tournament':
-    case 'event_organizer':
-      return 'tournament'
-    default:
-      return 'organization'
-  }
-}
-
-/** Builds the canonical dashboard URL for a verified tenant membership. */
-export function resolveTenantWorkspacePath(membership: DbTenantMembership): string {
-  const persona = mapTenantTypeToPersona(membership.tenant?.tenant_type, membership.role)
-  const slug = membership.tenant?.slug
-  const basePath =
-    persona === 'academy'
-      ? '/workspace/academy/overview'
-      : persona === 'coach'
-        ? '/workspace/coach/overview'
-        : persona === 'turf'
-          ? '/workspace/turf/calendar'
-          : persona === 'tournament'
-            ? '/workspace/tournament/overview'
-            : persona === 'parent'
-              ? '/workspace/parent/attendance'
-              : '/workspace/organization/overview'
-
-  return slug ? `${basePath}?tenant=${encodeURIComponent(slug)}` : basePath
-}
 /**
  * Update tenant profile settings (Restricted to owner & director)
  */

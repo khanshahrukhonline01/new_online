@@ -124,43 +124,6 @@ describe('platform route coverage', () => {
       canonicalPath: '/coach-dashboard',
       slug: 'Coach Operations Hub',
     })
-
-    for (const subPath of [
-      '/coach-dashboard/profile',
-      '/coach-dashboard/athletes',
-      '/coach-dashboard/athletes/ath-1',
-      '/coach-dashboard/programmes',
-      '/coach-dashboard/programmes/create',
-      '/coach-dashboard/programmes/prog-1',
-      '/coach-dashboard/calendar',
-      '/coach-dashboard/sessions/sess-1',
-      '/coach-dashboard/attendance',
-      '/coach-dashboard/assessments',
-      '/coach-dashboard/video-analysis',
-      '/coach-dashboard/academy',
-      '/coach-dashboard/teams',
-      '/coach-dashboard/venues',
-      '/coach-dashboard/messages',
-      '/coach-dashboard/opportunities',
-      '/coach-dashboard/documents',
-      '/coach-dashboard/reports',
-      '/coach-dashboard/reviews',
-      '/coach-dashboard/services',
-      '/coach-dashboard/notifications',
-      '/coach-dashboard/settings',
-    ]) {
-      expect(resolveRoute(subPath)).toMatchObject({
-        name: 'feature',
-        canonicalPath: '/coach-dashboard',
-        slug: 'Coach Operations Hub',
-      })
-      expect(isOperationalRoutePath(subPath)).toBe(true)
-    }
-
-    expect(resolveRoute('/coach-dashboard/nonexistent-route')).toEqual({
-      name: 'not-found',
-      canonicalPath: '/404',
-    })
   })
 
   it('routes KhelChronicle repository pages correctly', () => {

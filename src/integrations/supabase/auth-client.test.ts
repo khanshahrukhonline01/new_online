@@ -521,35 +521,6 @@ describe('Supabase Auth Client Architecture & Session Security', () => {
       expect(res.success).toBe(true)
       expect(res.user?.id).toBe('usr-otp-1')
       expect(res.user?.isVerified).toBe(true)
-
-      const fallbackVerifyOtp = vi
-        .fn()
-        .mockResolvedValueOnce({ data: { user: null }, error: { message: 'Token has expired or is invalid' } })
-        .mockResolvedValueOnce({
-          data: {
-            user: {
-              id: 'usr-otp-signup',
-              email: 'player@khelgrid.in',
-              email_confirmed_at: '2026-11-26T12:00:00Z',
-              user_metadata: { full_name: 'Vikram Singh', role: 'athlete' },
-            },
-          },
-          error: null,
-        })
-      vi.spyOn(realtimeModule, 'getSupabaseClient').mockReturnValue({
-        auth: { verifyOtp: fallbackVerifyOtp },
-        from: () => ({
-          select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null, error: null }) }) }),
-        }),
-      } as unknown as ReturnType<typeof realtimeModule.getSupabaseClient>)
-
-      const signupOtpRes = await verifyEmailOtpCode({ email: 'player@khelgrid.in', token: '654321' })
-      expect(signupOtpRes.success).toBe(true)
-      expect(fallbackVerifyOtp).toHaveBeenNthCalledWith(2, {
-        email: 'player@khelgrid.in',
-        token: '654321',
-        type: 'signup',
-      })
     })
 
     it('initiates Google OAuth PKCE redirect while preserving safe return paths', async () => {

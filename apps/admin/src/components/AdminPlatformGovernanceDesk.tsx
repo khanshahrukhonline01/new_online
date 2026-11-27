@@ -28,7 +28,6 @@ import {
 import { BANNER_AUDIENCE_LABELS, subscribeRegulatoryState } from '../../../../src/shared/governance/regulatoryBridge'
 import { getMakerCheckerProposals } from '../services/adminGovernanceEscalationService'
 import { AdminMakerCheckerPanel } from './AdminMakerCheckerPanel'
-import type { AdminDeskDeepLink } from '../services/adminGlobalSearchService'
 import './AdminPlatformGovernanceDesk.css'
 
 export type GovernanceSubDesk =
@@ -43,7 +42,6 @@ export interface AdminPlatformGovernanceDeskProps {
   operatorEmail?: string
   operatorRole?: AdminPlatformRole
   operatorUserId?: string
-  deepLink?: AdminDeskDeepLink | null
 }
 
 function formatIsoDate(iso: string): string {
@@ -63,7 +61,6 @@ export const AdminPlatformGovernanceDesk: FC<AdminPlatformGovernanceDeskProps> =
   operatorEmail = 'founder@khelgrid.com',
   operatorRole = 'super_admin',
   operatorUserId,
-  deepLink = null,
 }) => {
   const actor = useMemo(
     () => ({
@@ -174,11 +171,6 @@ export const AdminPlatformGovernanceDesk: FC<AdminPlatformGovernanceDeskProps> =
       }
     }
   }, [loadSnapshot])
-
-  useEffect(() => {
-    if (!deepLink || deepLink.workspace !== 'platform_governance') return
-    setSubDesk('operator_rbac')
-  }, [deepLink])
 
   const filteredSports = useMemo(() => {
     if (!snapshot) return []

@@ -1,42 +1,17 @@
 import {
-  mapToUserProfile,
+  getStoredAuthUser,
   signInWithEmail,
   signUpWithEmail,
   type AuthUserProfile,
   type UserRole,
 } from '../../integrations/supabase/auth-client'
-import {
-  acceptTenantInvitation,
-  getPendingTenantMemberships,
-  provisionInitialTenantOwner,
-  resolveTenantWorkspacePath,
-  tryFetchUserTenantMemberships,
-  getUserTenantMemberships,
-  type DbTenantMembership,
-} from '../../integrations/supabase/tenant-client'
+import { provisionInitialTenantOwner } from '../../integrations/supabase/tenant-client'
 import type { OrganizationType } from '../../shared/saas/saasTypes'
 import { registerCustomAcademy } from '../academies/academySaaSClient'
 import { registerCustomCoach } from '../coaches/coachSaaSClient'
 import { saveTurfVenueSettings } from '../venues/turfSlotManager'
-import { getSupabaseClient } from '../../integrations/supabase/realtime-client'
 
-export type PartnerRole = 'academy' | 'coach' | 'venue' | 'tournament' | 'organization'
-
-export const ORGANIZATION_SUBTYPE_OPTIONS: readonly { value: OrganizationType; label: string }[] = [
-  { value: 'club', label: 'Sports Club' },
-  { value: 'school', label: 'School Sports Program' },
-  { value: 'college', label: 'College Athletic Department' },
-  { value: 'university', label: 'University Sports Board' },
-  { value: 'federation', label: 'National / State Sports Federation' },
-  { value: 'association', label: 'District / State Association' },
-  { value: 'corporate', label: 'Corporate Sports & Wellness' },
-  { value: 'training_org', label: 'High-Performance Training Org' },
-  { value: 'service_provider', label: 'Sports Tech / Service Provider' },
-  { value: 'research_org', label: 'Sports Science & Research Org' },
-  { value: 'media_org', label: 'Sports Media / Broadcast Org' },
-  { value: 'enterprise', label: 'Enterprise Multi-Branch Group' },
-  { value: 'other', label: 'Other Sports Organisation' },
-]
+export type PartnerRole = 'academy' | 'coach' | 'venue' | 'tournament'
 
 export interface PartnerRoleDefinition {
   role: PartnerRole
@@ -115,21 +90,6 @@ export const PARTNER_ROLE_CONFIG: Record<PartnerRole, PartnerRoleDefinition> = {
     accentBg: 'rgba(147, 51, 234, 0.1)',
     accentColor: '#9333ea',
   },
-  organization: {
-    role: 'organization',
-    label: 'Club / Federation / Org',
-    description: 'Branches, governance RBAC, compliance & institutional ops',
-    tenantType: 'club',
-    authRole: 'organization',
-    workspacePath: '/workspace/organization/overview',
-    entityLabel: 'Organisation / Federation / Club Name',
-    entityPlaceholder: 'e.g. Delhi State Athletics Association',
-    directorLabel: 'Authorized Administrator / Secretary Name',
-    directorPlaceholder: 'e.g. Ananya Deshmukh',
-    defaultContactTitle: 'Organisation Admin',
-    accentBg: 'rgba(13, 148, 136, 0.1)',
-    accentColor: '#0d9488',
-  },
 }
 
 export const PARTNER_ROLES_ORDERED: readonly PartnerRoleDefinition[] = [
@@ -137,35 +97,14 @@ export const PARTNER_ROLES_ORDERED: readonly PartnerRoleDefinition[] = [
   PARTNER_ROLE_CONFIG.coach,
   PARTNER_ROLE_CONFIG.venue,
   PARTNER_ROLE_CONFIG.tournament,
-  PARTNER_ROLE_CONFIG.organization,
 ]
 
-const ORG_ROLE_ALIASES = new Set([
-  'organization',
-  'organisation',
-  'org',
-  'club',
-  'school',
-  'college',
-  'university',
-  'federation',
-  'association',
-  'corporate',
-  'training_org',
-  'service_provider',
-  'research_org',
-  'media_org',
-  'enterprise',
-  'other',
-])
-
-/** Normalizes query parameter or legacy alias values ('host', 'turf', org subtypes) to a canonical PartnerRole. */
+/** Normalizes query parameter or legacy alias values ('host', 'turf') to a canonical PartnerRole. */
 export function normalizePartnerRole(raw?: string | null): PartnerRole {
   const value = (raw || '').trim().toLowerCase()
   if (value === 'coach') return 'coach'
   if (value === 'venue' || value === 'turf' || value === 'host' || value === 'venue_owner') return 'venue'
-  if (value === 'tournament' || value === 'event_organizer') return 'tournament'
-  if (ORG_ROLE_ALIASES.has(value)) return 'organization'
+  if (value === 'tournament') return 'tournament'
   return 'academy'
 }
 
@@ -174,8 +113,7 @@ export function resolvePartnerWorkspacePath(selectedRole: PartnerRole, userRole?
   if (selectedRole) return PARTNER_ROLE_CONFIG[selectedRole].workspacePath
   if (userRole === 'coach') return PARTNER_ROLE_CONFIG.coach.workspacePath
   if (userRole === 'venue_owner') return PARTNER_ROLE_CONFIG.venue.workspacePath
-  if (userRole === 'host' || userRole === 'tournament') return PARTNER_ROLE_CONFIG.tournament.workspacePath
-  if (userRole === 'organization') return PARTNER_ROLE_CONFIG.organization.workspacePath
+  if (userRole === 'host') return PARTNER_ROLE_CONFIG.tournament.workspacePath
   return PARTNER_ROLE_CONFIG.academy.workspacePath
 }
 
@@ -250,18 +188,11 @@ function initializeVerticalRecord(params: {
         displayName: cleanName,
       }
     }
-    case 'organization': {
-      return {
-        slug: slugifyEntityName(cleanName, 'org'),
-        displayName: cleanName,
-      }
-    }
   }
 }
 
 export interface PartnerSignupInput {
   role: PartnerRole
-  organizationType?: OrganizationType
   entityName: string
   directorName?: string
   sport: string
@@ -272,7 +203,6 @@ export interface PartnerSignupInput {
   upiVpa?: string
   certification?: string
   useMagicLink?: boolean
-  captchaToken?: string
 }
 
 export interface PartnerOnboardingOutcome {
@@ -284,8 +214,6 @@ export interface PartnerOnboardingOutcome {
   requiresEmailVerification?: boolean
   user?: AuthUserProfile
   provisioningWarning?: string
-  memberships?: DbTenantMembership[]
-  pendingInvitations?: DbTenantMembership[]
 }
 
 async function provisionTenantWithCollisionRetry(params: {
@@ -343,24 +271,8 @@ export async function onboardPartnerOrganization(
   const cleanDirectorName = (input.directorName || '').trim() || cleanEntityName || config.defaultContactTitle
   const cleanPhone = input.phone.trim()
   const cleanCity = input.city.trim() || 'Delhi NCR'
-  // localStorage profile data is display-only, never proof of an authenticated session.
-  const authClient = getSupabaseClient()
-  let activeUser: AuthUserProfile | undefined
-  if (authClient) {
-    const { data: sessionData, error: sessionError } = await authClient.auth.getUser()
-    if (!sessionError && sessionData.user?.email_confirmed_at) {
-      activeUser = mapToUserProfile({
-        ...sessionData.user.user_metadata,
-        id: sessionData.user.id,
-        email: sessionData.user.email || '',
-        email_confirmed_at: sessionData.user.email_confirmed_at,
-      }, sessionData.user.email || '', config.authRole)
-      activeUser.id = sessionData.user.id
-      activeUser.role = config.authRole
-      activeUser.isVerified = true
-    }
-  }
-  const resolvedEmail = (input.email.trim() || activeUser?.email || '').toLowerCase()
+  const existingUser = getStoredAuthUser()
+  const resolvedEmail = (input.email.trim() || existingUser?.email || '').toLowerCase()
 
   if (!cleanEntityName) {
     return { success: false, message: `Please enter your ${config.entityLabel}.` }
@@ -371,6 +283,8 @@ export async function onboardPartnerOrganization(
   if (!resolvedEmail || !resolvedEmail.includes('@')) {
     return { success: false, message: 'Please enter a valid official email address.' }
   }
+
+  let activeUser: AuthUserProfile | undefined = existingUser || undefined
 
   if (!activeUser) {
     if (!input.useMagicLink && (!input.password || input.password.length < 6)) {
@@ -385,21 +299,6 @@ export async function onboardPartnerOrganization(
       city: cleanCity,
       phone: cleanPhone,
       useMagicLink: input.useMagicLink,
-      redirectTo: '/partner/verify',
-      partnerOnboarding: {
-        version: 1,
-        role: input.role,
-        organizationType: input.role === 'organization' ? input.organizationType || config.tenantType : config.tenantType,
-        entityName: cleanEntityName,
-        directorName: cleanDirectorName,
-        sport: input.sport,
-        city: cleanCity,
-        phone: cleanPhone,
-        email: resolvedEmail,
-        upiVpa: input.upiVpa?.trim() || '',
-        certification: input.certification?.trim() || '',
-      },
-      ...(input.captchaToken ? { captchaToken: input.captchaToken } : {}),
     })
 
     if (!authResult.success) {
@@ -436,15 +335,10 @@ export async function onboardPartnerOrganization(
     certification: input.certification,
   })
 
-  const resolvedTenantType =
-    input.role === 'organization' && input.organizationType
-      ? input.organizationType
-      : config.tenantType
-
   const { result: provisionRes, slug: provisionedSlug } = await provisionTenantWithCollisionRetry({
     slug: vertical.slug,
     name: cleanEntityName,
-    tenantType: resolvedTenantType,
+    tenantType: config.tenantType,
     city: cleanCity,
     sport: input.sport,
     contactPhone: cleanPhone,
@@ -452,7 +346,6 @@ export async function onboardPartnerOrganization(
     metadata: {
       source: 'unified_partner_onboarding',
       partnerRole: input.role,
-      organizationType: resolvedTenantType,
       upiVpa: input.upiVpa?.trim() || null,
       directorName: cleanDirectorName,
       certification: input.certification?.trim() || null,
@@ -482,106 +375,12 @@ export async function onboardPartnerOrganization(
   }
 }
 
-/**
- * Completes partner onboarding only after Supabase confirms the current user's email.
- * The intake payload is treated as untrusted metadata: it is validated and used only
- * as descriptive tenant input. Ownership always comes from auth.uid() inside the RPC.
- */
-export async function completePartnerEmailVerification(): Promise<PartnerOnboardingOutcome> {
-  const client = getSupabaseClient()
-  if (!client) return { success: false, message: 'Authentication service is not configured.' }
-
-  const { data: authData, error: authError } = await client.auth.getUser()
-  const authUser = authData.user
-  if (authError || !authUser || !authUser.email_confirmed_at) {
-    return { success: false, message: 'Please open the verification link again after confirming your email.' }
-  }
-
-  const raw = authUser.user_metadata?.khelgrid_partner_onboarding
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    return { success: false, message: 'Email verified. No pending partner registration was found. Please sign in or contact KhelGrid support.' }
-  }
-  const pending = raw as Record<string, unknown>
-  const role = pending.role
-  if (pending.version !== 1 || typeof role !== 'string' || !['academy', 'coach', 'venue', 'tournament', 'organization'].includes(role)) {
-    return { success: false, message: 'The pending partner registration is invalid. Please contact KhelGrid support.' }
-  }
-
-  const config = PARTNER_ROLE_CONFIG[role as PartnerRole]
-  const entityName = typeof pending.entityName === 'string' ? pending.entityName.trim() : ''
-  const city = typeof pending.city === 'string' ? pending.city.trim() : ''
-  const sport = typeof pending.sport === 'string' ? pending.sport.trim() : ''
-  const phone = typeof pending.phone === 'string' ? pending.phone.trim() : ''
-  const email = (authUser.email || '').trim().toLowerCase()
-  const directorName = typeof pending.directorName === 'string' ? pending.directorName.trim() : ''
-  if (!entityName || !city || !sport || phone.replace(/\D/g, '').length < 10 || !email) {
-    return { success: false, message: 'Your saved registration details are incomplete. Please contact KhelGrid support.' }
-  }
-
-  const baseSlug = slugifyEntityName(entityName, role)
-  // Fail closed if membership verification fails; never provision against an unknown state.
-  const memberships = await getUserTenantMemberships(authUser.id)
-  const existing = memberships.find(m =>
-    m.role === 'owner' && m.tenant?.name === entityName &&
-    m.tenant?.metadata?.source === 'verified_partner_email_onboarding' &&
-    m.tenant?.metadata?.partnerRole === role
-  ) || memberships.find(m => m.role === 'owner' && m.tenant?.slug === baseSlug)
-  if (existing?.tenant) {
-    const path = resolveTenantWorkspacePath(existing)
-    return { success: true, user: mapToUserProfile({ ...authUser.user_metadata, id: authUser.id, email, email_confirmed_at: authUser.email_confirmed_at }, email, config.authRole), tenantId: existing.tenant_id, entitySlug: existing.tenant.slug, workspacePath: path, message: 'Your verified partner workspace is ready.' }
-  }
-
-  const organizationType = role === 'organization' && typeof pending.organizationType === 'string'
-    ? pending.organizationType as OrganizationType
-    : config.tenantType
-  const provisioned = await provisionTenantWithCollisionRetry({
-    slug: baseSlug,
-    name: entityName,
-    tenantType: organizationType,
-    city,
-    sport,
-    contactPhone: phone,
-    contactEmail: email,
-    metadata: {
-      source: 'verified_partner_email_onboarding',
-      partnerRole: role,
-      organizationType,
-      directorName,
-      upiVpa: typeof pending.upiVpa === 'string' ? pending.upiVpa : null,
-      certification: typeof pending.certification === 'string' ? pending.certification : null,
-    },
-  })
-  if (!provisioned.result.success || !provisioned.result.tenantId) {
-    return { success: false, message: provisioned.result.message || 'Your email is verified, but workspace setup could not be completed. Please retry or contact support.' }
-  }
-
-  const profile = mapToUserProfile({
-    ...authUser.user_metadata,
-    id: authUser.id,
-    email,
-    email_confirmed_at: authUser.email_confirmed_at,
-  }, email, config.authRole)
-  profile.id = authUser.id
-  profile.role = config.authRole
-  profile.isVerified = true
-  const workspacePath = `${config.workspacePath}?tenant=${encodeURIComponent(provisioned.slug)}`
-  return {
-    success: true,
-    user: profile,
-    tenantId: provisioned.result.tenantId,
-    entitySlug: provisioned.slug,
-    workspacePath,
-    message: `${entityName} is verified. Opening your ${config.label} workspace...`,
-  }
-}
-
 /** Authenticates an existing partner account via Supabase Auth without client-side bypasses. */
 export async function signInPartnerAccount(input: {
   role: PartnerRole
   email: string
   password?: string
   useMagicLink?: boolean
-  captchaToken?: string
 }): Promise<PartnerOnboardingOutcome> {
   const cleanEmail = input.email.trim().toLowerCase()
   if (!cleanEmail || !cleanEmail.includes('@')) {
@@ -596,7 +395,6 @@ export async function signInPartnerAccount(input: {
     email: cleanEmail,
     password: input.password,
     useMagicLink: input.useMagicLink,
-    ...(input.captchaToken ? { captchaToken: input.captchaToken } : {}),
   })
 
   if (!authRes.success) {
@@ -614,44 +412,11 @@ export async function signInPartnerAccount(input: {
     }
   }
 
-  const resolvedUser = authRes.user
-  const [memberships, pendingInvitations] = resolvedUser
-    ? await Promise.all([
-        tryFetchUserTenantMemberships(resolvedUser.id),
-        getPendingTenantMemberships(resolvedUser.id),
-      ])
-    : [[], []]
-
-  const activeMemberships = memberships.filter(
-    m => m.status === 'active' && m.tenant?.status === 'active'
-  )
-
-  if (activeMemberships.length > 1 || pendingInvitations.length > 0) {
-    return {
-      success: true,
-      user: resolvedUser,
-      memberships: activeMemberships,
-      pendingInvitations,
-      message: `Signed in! Choose a tenant workspace or accept a pending team invitation below.`,
-    }
-  }
-
-  const preferredMembership =
-    activeMemberships.find(m => m.tenant?.tenant_type === PARTNER_ROLE_CONFIG[input.role].tenantType) ||
-    activeMemberships[0]
-
-  const workspacePath = preferredMembership
-    ? resolveTenantWorkspacePath(preferredMembership)
-    : PARTNER_ROLE_CONFIG[input.role].workspacePath
-
+  const workspacePath = PARTNER_ROLE_CONFIG[input.role].workspacePath
   return {
     success: true,
-    user: resolvedUser,
-    memberships: activeMemberships,
-    pendingInvitations,
+    user: authRes.user,
     workspacePath,
-    message: `Signed in! Opening ${preferredMembership?.tenant?.name || PARTNER_ROLE_CONFIG[input.role].label} workspace...`,
+    message: `Signed in! Opening ${PARTNER_ROLE_CONFIG[input.role].label} workspace...`,
   }
 }
-
-export { acceptTenantInvitation }

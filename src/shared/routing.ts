@@ -10,10 +10,9 @@ export type WorkspacePersona =
   | 'host'
   | 'tournament'
   | 'creator'
-  | 'parent'
 
 const WORKSPACE_PERSONAS = new Set<string>([
-  'athlete', 'organization', 'academy', 'coach', 'turf', 'host', 'tournament', 'creator', 'parent',
+  'athlete', 'organization', 'academy', 'coach', 'turf', 'host', 'tournament', 'creator',
 ])
 
 // ---------------------------------------------------------------------------
@@ -65,9 +64,7 @@ const featurePages: Record<string, string> = {
   '/calendar': 'Sports Calendar', '/for-you': 'For You', '/trust': 'Trust Center',
   '/pricing': 'Pricing & Memberships', '/mobile-app': 'KhelGrid Mobile App', '/careers': 'Careers',
   '/academy-hub': 'Academy Admissions & Operations Hub', '/academies/manage': 'Academy Admissions & Operations Hub',
-  '/partner/verify': 'Partner Email Verification',
   '/partner-signup': 'Partner Onboarding Wizard', '/partner-login': 'Partner Onboarding Wizard', '/partner/signup': 'Partner Onboarding Wizard', '/partner/login': 'Partner Onboarding Wizard', '/partner/onboarding': 'Partner Onboarding Wizard', '/academy/signup': 'Partner Onboarding Wizard',
-  '/demo': 'Interactive Dashboard Demo Showcase', '/preview': 'Interactive Dashboard Demo Showcase', '/partner/preview': 'Interactive Dashboard Demo Showcase',
   '/workspace': 'KhelGrid Workspace',
   '/organizations': 'Organizations & Partner Workspaces', '/workspaces': 'Organizations & Partner Workspaces',
   '/parent-portal': 'Parent & Athlete Passbook', '/parent': 'Parent & Athlete Passbook', '/passbook': 'Parent & Athlete Passbook',
@@ -94,74 +91,6 @@ const featurePages: Record<string, string> = {
   '/creator-hub': 'Sports Creator Hub',
 }
 
-const COACH_WORKSPACE_SUBROUTES = new Set([
-  'profile',
-  'credentials',
-  'athletes',
-  'programmes',
-  'calendar',
-  'sessions',
-  'attendance',
-  'assessments',
-  'video-analysis',
-  'academy',
-  'teams',
-  'venues',
-  'messages',
-  'opportunities',
-  'documents',
-  'reports',
-  'reviews',
-  'services',
-  'notifications',
-  'settings',
-])
-
-function isCoachWorkspaceSubpath(path: string): boolean {
-  if (!path.startsWith('/coach-dashboard/')) return false
-  const parts = path.slice('/coach-dashboard/'.length).split('/').filter(Boolean)
-  if (parts.length === 0 || parts.length > 2) return false
-  const [section, detail] = parts
-  if (!COACH_WORKSPACE_SUBROUTES.has(section)) return false
-  if (!detail) return true
-  return section === 'athletes' || section === 'programmes' || section === 'sessions'
-}
-
-const ACADEMY_WORKSPACE_SUBROUTES = new Set([
-  'overview',
-  'profile',
-  'branches',
-  'athletes',
-  'students',
-  'coaches',
-  'training',
-  'batches',
-  'sessions',
-  'attendance',
-  'admissions',
-  'trials',
-  'leads',
-  'facilities',
-  'equipment',
-  'notifications',
-  'reports',
-  'staff',
-  'fees',
-  'ledger',
-  'settings',
-  'audit-logs',
-])
-
-function isAcademyWorkspaceSubpath(path: string): boolean {
-  if (!path.startsWith('/academy-hub/')) return false
-  const parts = path.slice('/academy-hub/'.length).split('/').filter(Boolean)
-  if (parts.length === 0 || parts.length > 2) return false
-  const [section, detail] = parts
-  if (!ACADEMY_WORKSPACE_SUBROUTES.has(section)) return false
-  if (!detail) return true
-  return section === 'athletes' || section === 'branches' || section === 'admissions' || section === 'training'
-}
-
 function normalizePath(pathname: string): string {
   if (!pathname || pathname === '/') return '/'
   return pathname.replace(/\/+$/, '') || '/'
@@ -169,9 +98,6 @@ function normalizePath(pathname: string): string {
 export function resolveRoute(pathname: string): RouteMatch {
   const path = normalizePath(pathname)
   if (path === '/') return { name: 'home', canonicalPath: '/' }
-  if (path === '/coach-dashboard' || path === '/coach/hub' || path === '/coach/manage' || isCoachWorkspaceSubpath(path)) {
-    return { name: 'feature', canonicalPath: '/coach-dashboard', slug: 'Coach Operations Hub' }
-  }
   if (path === '/sports') return { name: 'sports-index', canonicalPath: '/sports' }
   if (path.startsWith('/sports/') || path.startsWith('/sport/')) {
     const prefix = path.startsWith('/sports/') ? '/sports/' : '/sport/'
@@ -228,7 +154,7 @@ export function resolveRoute(pathname: string): RouteMatch {
       }
     }
   }
-  if (path === '/academy-hub' || path === '/academies/manage' || isAcademyWorkspaceSubpath(path)) {
+  if (path === '/academy-hub' || path === '/academies/manage') {
     return { name: 'feature', canonicalPath: '/academy-hub', slug: 'Academy Admissions & Operations Hub' }
   }
   if (
@@ -401,8 +327,6 @@ const OPERATIONAL_PREFIXES = [
   '/dashboard',
   '/academy-hub',
   '/coach-dashboard',
-  '/coach/hub',
-  '/coach/manage',
   '/turf-calendar',
   '/host',
   '/tournament-ops',

@@ -30,52 +30,6 @@ export type IncidentTypeKey =
   | 'credential_kyc'
   | 'lifecycle_lockout'
 
-export type TrendDirection = 'increasing' | 'decreasing' | 'stable'
-
-export type ComplianceDateRangePreset = '7d' | '30d' | '90d' | 'all' | 'custom'
-
-export interface ComplianceDateRange {
-  preset: ComplianceDateRangePreset
-  /** ISO YYYY-MM-DD start date (used when preset === 'custom') */
-  startDate: string | null
-  /** ISO YYYY-MM-DD end date (used when preset === 'custom') */
-  endDate: string | null
-}
-
-export const DEFAULT_COMPLIANCE_DATE_RANGE: ComplianceDateRange = {
-  preset: '30d',
-  startDate: null,
-  endDate: null,
-}
-
-export interface ResolvedComplianceDateWindow {
-  preset: ComplianceDateRangePreset
-  label: string
-  shortLabel: string
-  startDateIso: string
-  endDateIso: string
-  startMs: number
-  endMs: number
-  dayCount: number
-}
-
-export interface Region30DayPoint {
-  dayIndex: number
-  dateIso: string
-  dateLabel: string
-  score: number
-}
-
-export interface Region30DayTrend {
-  direction: TrendDirection
-  startScore: number
-  currentScore: number
-  peakScore: number
-  delta: number
-  deltaPct: number | null
-  points: Region30DayPoint[]
-}
-
 export interface ComplianceSignalRecord {
   id: string
   referenceCode: string
@@ -90,11 +44,7 @@ export interface ComplianceSignalRecord {
   severityLabel: string
   statusLabel: string
   riskPoints: number
-  /** Peak severity risk points when the incident/flag initially opened (higher than riskPoints if later closed/mitigated) */
-  initialRiskPoints?: number
   isHighRisk: boolean
-  /** ISO timestamp when the risk signal first became active */
-  openedAt?: string
   timestamp: string
 }
 
@@ -103,9 +53,6 @@ export interface HeatmapAxisItem {
   label: string
   totalRisk: number
   signalCount: number
-  highRiskCount?: number
-  trend30d?: Region30DayTrend
-  previousTrend30d?: Region30DayTrend
 }
 
 export interface HeatmapCellDatum {
@@ -124,7 +71,6 @@ export interface HeatmapCellDatum {
 export interface ComplianceHeatmapMatrix {
   mode: HeatmapMatrixMode
   scope: HeatmapSignalScope
-  dateWindow: ResolvedComplianceDateWindow
   rows: HeatmapAxisItem[]
   columns: HeatmapAxisItem[]
   cells: HeatmapCellDatum[]
@@ -215,7 +161,6 @@ export function mapTrustIncidentCategory(rawCategory?: string): IncidentTypeKey 
 
 export function scoreTrustSeverity(severity: string, status: string): {
   points: number
-  initialPoints: number
   isHighRisk: boolean
   label: string
 } {
@@ -223,7 +168,6 @@ export function scoreTrustSeverity(severity: string, status: string): {
   if (severity === 'critical_p0') {
     return {
       points: Math.round(42 * closedMultiplier),
-      initialPoints: 42,
       isHighRisk: status !== 'case_closed',
       label: 'Critical P0',
     }
@@ -231,7 +175,6 @@ export function scoreTrustSeverity(severity: string, status: string): {
   if (severity === 'high_p1') {
     return {
       points: Math.round(28 * closedMultiplier),
-      initialPoints: 28,
       isHighRisk: status !== 'case_closed',
       label: 'High P1',
     }
@@ -239,14 +182,12 @@ export function scoreTrustSeverity(severity: string, status: string): {
   if (severity === 'medium_p2') {
     return {
       points: Math.round(14 * closedMultiplier),
-      initialPoints: 14,
       isHighRisk: false,
       label: 'Medium P2',
     }
   }
   return {
     points: Math.round(7 * closedMultiplier),
-    initialPoints: 7,
     isHighRisk: false,
     label: 'Low P3',
   }
@@ -327,7 +268,6 @@ export function buildComplianceSignals(input: {
 
   for (const inc of input.incidents) {
     const scored = scoreTrustSeverity(inc.severity, inc.status)
-    const timestamp = inc.updatedAt || inc.createdAt || new Date().toISOString()
     signals.push({
       id: `ts-${inc.id}`,
       referenceCode: inc.incidentNumber,
@@ -342,10 +282,8 @@ export function buildComplianceSignals(input: {
       severityLabel: scored.label,
       statusLabel: inc.status.replace(/_/g, ' '),
       riskPoints: scored.points,
-      initialRiskPoints: scored.initialPoints,
       isHighRisk: scored.isHighRisk,
-      openedAt: inc.createdAt || timestamp,
-      timestamp,
+      timestamp: inc.updatedAt || inc.createdAt || new Date().toISOString(),
     })
   }
 
@@ -378,7 +316,6 @@ export function buildComplianceSignals(input: {
       continue
     }
 
-    const verTimestamp = v.lastAuditedAt || v.submittedAt || new Date().toISOString()
     signals.push({
       id: `ver-${v.id}`,
       referenceCode: v.referenceCode,
@@ -393,10 +330,8 @@ export function buildComplianceSignals(input: {
       severityLabel,
       statusLabel: v.status.replace(/_/g, ' '),
       riskPoints: points,
-      initialRiskPoints: points,
       isHighRisk,
-      openedAt: verTimestamp,
-      timestamp: verTimestamp,
+      timestamp: v.lastAuditedAt || v.submittedAt || new Date().toISOString(),
     })
   }
 
@@ -421,7 +356,6 @@ export function buildComplianceSignals(input: {
       continue
     }
 
-    const tenTimestamp = t.updatedAt || new Date().toISOString()
     signals.push({
       id: `ten-${t.id}`,
       referenceCode: t.id.toUpperCase(),
@@ -436,10 +370,8 @@ export function buildComplianceSignals(input: {
       severityLabel,
       statusLabel: t.status.replace(/_/g, ' '),
       riskPoints: points,
-      initialRiskPoints: points,
       isHighRisk,
-      openedAt: tenTimestamp,
-      timestamp: tenTimestamp,
+      timestamp: t.updatedAt || new Date().toISOString(),
     })
   }
 
@@ -455,342 +387,15 @@ const DEFAULT_REGIONS = [
   'Tamil Nadu',
 ]
 
-const DAY_MS = 24 * 60 * 60 * 1000
-const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-function parseTimestampMs(raw?: string): number | null {
-  if (!raw) return null
-  const ms = Date.parse(raw)
-  return Number.isFinite(ms) ? ms : null
-}
-
-function formatUtcDayLabel(ms: number): string {
-  const d = new Date(ms)
-  return `${SHORT_MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`
-}
-
-function parseIsoDayUtcStart(iso?: string | null): number | null {
-  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso.trim())) return null
-  const [y, m, d] = iso.trim().split('-').map(Number)
-  const ms = Date.UTC(y, m - 1, d, 0, 0, 0, 0)
-  return Number.isFinite(ms) ? ms : null
-}
-
-function formatUtcDateRangeText(startMs: number, endMs: number): string {
-  const s = new Date(startMs)
-  const e = new Date(endMs)
-  const sameYear = s.getUTCFullYear() === e.getUTCFullYear()
-  const sLabel = `${SHORT_MONTHS[s.getUTCMonth()]} ${s.getUTCDate()}${sameYear ? '' : `, ${s.getUTCFullYear()}`}`
-  const eLabel = `${SHORT_MONTHS[e.getUTCMonth()]} ${e.getUTCDate()}, ${e.getUTCFullYear()}`
-  return `${sLabel} – ${eLabel}`
-}
-
 /**
- * Anchors the default trend window end to the latest signal day (or today if no signals exist),
- * ensuring real incident timelines are always framed cleanly inside the active window.
- */
-export function resolveTrendWindowEndDate(signals: ComplianceSignalRecord[]): Date {
-  let maxMs = 0
-  for (const sig of signals) {
-    const t1 = parseTimestampMs(sig.timestamp)
-    const t2 = parseTimestampMs(sig.openedAt)
-    if (t1 !== null && t1 > maxMs) maxMs = t1
-    if (t2 !== null && t2 > maxMs) maxMs = t2
-  }
-  const anchor = maxMs > 0 ? new Date(maxMs) : new Date()
-  return new Date(
-    Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate(), 23, 59, 59, 999),
-  )
-}
-
-/**
- * Resolves a preset or custom ComplianceDateRange into concrete UTC timestamps, day counts,
- * and human-readable display labels anchored to the dataset's latest activity date.
- */
-export function resolveComplianceDateWindow(
-  signals: ComplianceSignalRecord[],
-  range: ComplianceDateRange = DEFAULT_COMPLIANCE_DATE_RANGE,
-): ResolvedComplianceDateWindow {
-  const anchorEnd = resolveTrendWindowEndDate(signals)
-  const anchorEndStartMs = Date.UTC(
-    anchorEnd.getUTCFullYear(),
-    anchorEnd.getUTCMonth(),
-    anchorEnd.getUTCDate(),
-    0,
-    0,
-    0,
-    0,
-  )
-
-  let startMs = anchorEndStartMs - 29 * DAY_MS
-  let endMs = anchorEndStartMs + DAY_MS - 1
-  let label = 'Last 30 Days'
-  let shortLabel = '30d'
-
-  if (range.preset === '7d') {
-    startMs = anchorEndStartMs - 6 * DAY_MS
-    label = 'Last 7 Days'
-    shortLabel = '7d'
-  } else if (range.preset === '30d') {
-    startMs = anchorEndStartMs - 29 * DAY_MS
-    label = 'Last 30 Days'
-    shortLabel = '30d'
-  } else if (range.preset === '90d') {
-    startMs = anchorEndStartMs - 89 * DAY_MS
-    label = 'Last 90 Days'
-    shortLabel = '90d'
-  } else if (range.preset === 'all') {
-    let minMs = anchorEndStartMs - 29 * DAY_MS
-    for (const sig of signals) {
-      const t1 = parseTimestampMs(sig.openedAt)
-      const t2 = parseTimestampMs(sig.timestamp)
-      if (t1 !== null && t1 < minMs) minMs = t1
-      if (t2 !== null && t2 < minMs) minMs = t2
-    }
-    const minDate = new Date(minMs)
-    startMs = Date.UTC(minDate.getUTCFullYear(), minDate.getUTCMonth(), minDate.getUTCDate(), 0, 0, 0, 0)
-    // Ensure at least a 7-day span so sparklines always have meaningful horizontal range
-    if (anchorEndStartMs - startMs < 6 * DAY_MS) {
-      startMs = anchorEndStartMs - 6 * DAY_MS
-    }
-    label = 'All Time'
-    shortLabel = 'All-Time'
-  } else if (range.preset === 'custom') {
-    const parsedStart = parseIsoDayUtcStart(range.startDate)
-    const parsedEnd = parseIsoDayUtcStart(range.endDate)
-    if (parsedStart !== null && parsedEnd !== null) {
-      const safeStart = Math.min(parsedStart, parsedEnd)
-      const safeEnd = Math.max(parsedStart, parsedEnd)
-      startMs = safeStart
-      endMs = safeEnd + DAY_MS - 1
-      const days = Math.max(1, Math.round((safeEnd - safeStart) / DAY_MS) + 1)
-      label = formatUtcDateRangeText(safeStart, safeEnd)
-      shortLabel = `${days}d`
-    }
-  }
-
-  const startDayStartMs = Date.UTC(
-    new Date(startMs).getUTCFullYear(),
-    new Date(startMs).getUTCMonth(),
-    new Date(startMs).getUTCDate(),
-    0,
-    0,
-    0,
-    0,
-  )
-  const endDayStartMs = Date.UTC(
-    new Date(endMs).getUTCFullYear(),
-    new Date(endMs).getUTCMonth(),
-    new Date(endMs).getUTCDate(),
-    0,
-    0,
-    0,
-    0,
-  )
-  const dayCount = Math.max(1, Math.round((endDayStartMs - startDayStartMs) / DAY_MS) + 1)
-
-  return {
-    preset: range.preset,
-    label,
-    shortLabel,
-    startDateIso: new Date(startDayStartMs).toISOString().slice(0, 10),
-    endDateIso: new Date(endDayStartMs).toISOString().slice(0, 10),
-    startMs: startDayStartMs,
-    endMs,
-    dayCount,
-  }
-}
-
-/**
- * Filters compliance signals to those with activity inside the resolved date range window.
- * For 'all' preset, returns all signals unchanged.
- */
-export function filterSignalsByDateRange(
-  signals: ComplianceSignalRecord[],
-  range: ComplianceDateRange = DEFAULT_COMPLIANCE_DATE_RANGE,
-  resolvedWindow?: ResolvedComplianceDateWindow,
-): ComplianceSignalRecord[] {
-  if (range.preset === 'all') return signals
-  const win = resolvedWindow ?? resolveComplianceDateWindow(signals, range)
-
-  return signals.filter(sig => {
-    const updatedMs = parseTimestampMs(sig.timestamp)
-    const openedMs = parseTimestampMs(sig.openedAt) ?? updatedMs
-    if (updatedMs === null && openedMs === null) return true
-    const effectiveStart = Math.min(openedMs ?? updatedMs!, updatedMs ?? openedMs!)
-    const effectiveEnd = Math.max(openedMs ?? updatedMs!, updatedMs ?? openedMs!)
-    // Signal falls inside the selected date scope if it opened or was updated within [startMs, endMs],
-    // OR for the default 30d/90d lookback if it was already open prior to startMs and remained active into the window
-    if (range.preset === 'custom' || range.preset === '7d') {
-      return effectiveEnd >= win.startMs && effectiveStart <= win.endMs
-    }
-    return effectiveStart <= win.endMs
-  })
-}
-
-/**
- * Computes a deterministic daily compliance risk trajectory for a single region across
- * any date window (7d, 30d, 90d, All Time, or Custom Range).
- * Final point score always matches the region's risk score as of the window end date.
- */
-export function buildRegionTrendForWindow(
-  regionSignals: ComplianceSignalRecord[],
-  windowStartMs: number,
-  windowEndMs: number,
-): Region30DayTrend {
-  const startDay = new Date(windowStartMs)
-  const endDay = new Date(windowEndMs)
-  const startUtcDayStart = Date.UTC(
-    startDay.getUTCFullYear(),
-    startDay.getUTCMonth(),
-    startDay.getUTCDate(),
-    0,
-    0,
-    0,
-    0,
-  )
-  const endUtcDayStart = Date.UTC(
-    endDay.getUTCFullYear(),
-    endDay.getUTCMonth(),
-    endDay.getUTCDate(),
-    0,
-    0,
-    0,
-    0,
-  )
-  const totalDays = Math.max(2, Math.round((endUtcDayStart - startUtcDayStart) / DAY_MS) + 1)
-  // Sample up to 60 evenly spaced points for long ranges (e.g. 90d / all-time) so SVG paths stay crisp & lightweight
-  const sampleCount = Math.min(totalDays, 60)
-
-  const normalizedSignals = regionSignals.map(sig => {
-    const updatedMs = parseTimestampMs(sig.timestamp) ?? endUtcDayStart
-    const openedMs = parseTimestampMs(sig.openedAt) ?? updatedMs
-    return {
-      effectiveOpenMs: Math.min(openedMs, updatedMs),
-      updatedMs,
-      initialPoints: sig.initialRiskPoints ?? sig.riskPoints,
-      currentPoints: sig.riskPoints,
-    }
-  })
-
-  const points: Region30DayPoint[] = []
-  let peakScore = 0
-
-  for (let idx = 0; idx < sampleCount; idx++) {
-    const dayOffset =
-      sampleCount === 1
-        ? totalDays - 1
-        : Math.round((idx / (sampleCount - 1)) * (totalDays - 1))
-    const dayStartMs = startUtcDayStart + dayOffset * DAY_MS
-    const dayEndMs = dayStartMs + DAY_MS - 1
-    let score = 0
-
-    for (const sig of normalizedSignals) {
-      if (dayEndMs < sig.effectiveOpenMs) {
-        continue
-      }
-      if (sig.currentPoints < sig.initialPoints && dayEndMs < sig.updatedMs) {
-        score += sig.initialPoints
-      } else {
-        score += sig.currentPoints
-      }
-    }
-
-    if (score > peakScore) peakScore = score
-    points.push({
-      dayIndex: idx,
-      dateIso: new Date(dayStartMs).toISOString().slice(0, 10),
-      dateLabel: formatUtcDayLabel(dayStartMs),
-      score,
-    })
-  }
-
-  const startScore = points[0]?.score ?? 0
-  const currentScore = points[points.length - 1]?.score ?? 0
-
-  let direction: TrendDirection = 'stable'
-  let delta = currentScore - startScore
-  let referenceBase = startScore
-
-  if (currentScore < peakScore && (startScore === 0 || currentScore <= startScore)) {
-    // Risk peaked within the window and has since declined via mitigation/case closure
-    direction = 'decreasing'
-    delta = currentScore - peakScore
-    referenceBase = peakScore
-  } else if (currentScore > startScore) {
-    direction = 'increasing'
-    delta = currentScore - startScore
-    referenceBase = startScore
-  } else if (currentScore < startScore) {
-    direction = 'decreasing'
-    delta = currentScore - startScore
-    referenceBase = startScore
-  } else {
-    direction = 'stable'
-    delta = 0
-  }
-
-  const deltaPct =
-    referenceBase > 0 ? Math.round((delta / referenceBase) * 100) : null
-
-  return {
-    direction,
-    startScore,
-    currentScore,
-    peakScore,
-    delta,
-    deltaPct,
-    points,
-  }
-}
-
-/**
- * Computes a deterministic 30-day daily compliance risk trajectory for a single region.
- * Final day score (dayIndex 29) always matches the region's current totalRisk.
- */
-export function buildRegion30DayTrend(
-  regionSignals: ComplianceSignalRecord[],
-  referenceEndDate?: Date,
-): Region30DayTrend {
-  const endDate = referenceEndDate ?? resolveTrendWindowEndDate(regionSignals)
-  const endUtcDayStart = Date.UTC(
-    endDate.getUTCFullYear(),
-    endDate.getUTCMonth(),
-    endDate.getUTCDate(),
-    0,
-    0,
-    0,
-    0,
-  )
-  const startUtcDayStart = endUtcDayStart - 29 * DAY_MS
-  return buildRegionTrendForWindow(regionSignals, startUtcDayStart, endUtcDayStart + DAY_MS - 1)
-}
-
-export function formatTrendDeltaLabel(trend?: Region30DayTrend): string {
-  if (!trend) return '—'
-  if (trend.direction === 'increasing' && trend.delta > 0) {
-    return `↑ +${trend.delta}`
-  }
-  if (trend.direction === 'decreasing' && trend.delta < 0) {
-    return `↓ ${trend.delta}`
-  }
-  return trend.currentScore > 0 ? '→ 0' : '—'
-}
-
-/**
- * Builds the 2D compliance risk heatmap matrix ready for D3 rendering,
- * scoped by dimension mode, signal scope, and date range window.
+ * Builds the 2D compliance risk heatmap matrix ready for D3 rendering.
  */
 export function buildComplianceHeatmapMatrix(
   allSignals: ComplianceSignalRecord[],
   mode: HeatmapMatrixMode = 'partner_category',
   scope: HeatmapSignalScope = 'all',
-  dateRange: ComplianceDateRange = DEFAULT_COMPLIANCE_DATE_RANGE,
 ): ComplianceHeatmapMatrix {
-  const dateWindow = resolveComplianceDateWindow(allSignals, dateRange)
-  const dateScopedSignals = filterSignalsByDateRange(allSignals, dateRange, dateWindow)
-
-  const filteredSignals = dateScopedSignals.filter(sig => {
+  const filteredSignals = allSignals.filter(sig => {
     if (scope === 'trust_safety') return sig.sourceDesk === 'trust_safety'
     if (scope === 'high_risk_only') return sig.isHighRisk
     return true
@@ -835,21 +440,6 @@ export function buildComplianceHeatmapMatrix(
     }
   }
 
-  const rowHighRiskTotals = new Map<string, number>()
-  const signalsByRegion = new Map<string, ComplianceSignalRecord[]>()
-  for (const r of regionSet) {
-    rowHighRiskTotals.set(r, 0)
-    signalsByRegion.set(r, [])
-  }
-  for (const sig of filteredSignals) {
-    const list = signalsByRegion.get(sig.region) || []
-    list.push(sig)
-    signalsByRegion.set(sig.region, list)
-    if (sig.isHighRisk) {
-      rowHighRiskTotals.set(sig.region, (rowHighRiskTotals.get(sig.region) ?? 0) + 1)
-    }
-  }
-
   // Sort regions descending by total risk score (highest-risk regions surface at top)
   const rows: HeatmapAxisItem[] = Array.from(regionSet)
     .map(region => ({
@@ -857,12 +447,6 @@ export function buildComplianceHeatmapMatrix(
       label: region,
       totalRisk: rowTotals.get(region)?.totalRisk ?? 0,
       signalCount: rowTotals.get(region)?.signalCount ?? 0,
-      highRiskCount: rowHighRiskTotals.get(region) ?? 0,
-      trend30d: buildRegionTrendForWindow(
-        signalsByRegion.get(region) || [],
-        dateWindow.startMs,
-        dateWindow.endMs,
-      ),
     }))
     .sort((a, b) => {
       if (b.totalRisk !== a.totalRisk) return b.totalRisk - a.totalRisk
@@ -910,7 +494,6 @@ export function buildComplianceHeatmapMatrix(
   return {
     mode,
     scope,
-    dateWindow,
     rows,
     columns,
     cells,
@@ -1184,123 +767,4 @@ export function filterModerationRecordsByDrilldown<
     return true
   })
 }
-
-export interface PeriodDeltaMetric {
-  current: number
-  previous: number
-  delta: number
-  deltaPct: number | null
-  direction: 'up' | 'down' | 'flat'
-}
-
-export interface PeriodComparisonSummary {
-  previousWindow: ResolvedComplianceDateWindow
-  totalSignals: PeriodDeltaMetric
-  highRiskSignals: PeriodDeltaMetric
-  totalRiskScore: PeriodDeltaMetric
-  affectedRegions: PeriodDeltaMetric
-  previousTrendsByRegion: Record<string, Region30DayTrend>
-}
-
-function buildPeriodDeltaMetric(current: number, previous: number): PeriodDeltaMetric {
-  const delta = current - previous
-  const deltaPct = previous > 0 ? Math.round((delta / previous) * 100) : current > 0 ? 100 : 0
-  const direction: 'up' | 'down' | 'flat' = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'
-  return { current, previous, delta, deltaPct, direction }
-}
-
-/**
- * Resolves the equal-length preceding window immediately before the active compliance window.
- * Returns null when preset is 'all' (no bounded prior window exists).
- */
-export function resolvePreviousComplianceDateWindow(
-  activeWindow: ResolvedComplianceDateWindow,
-): ResolvedComplianceDateWindow | null {
-  if (activeWindow.preset === 'all') return null
-  const daySpan = Math.max(1, activeWindow.dayCount)
-  const prevEndMs = activeWindow.startMs - 1
-  const prevEndUtc = new Date(prevEndMs)
-  const prevEndDayStart = Date.UTC(
-    prevEndUtc.getUTCFullYear(),
-    prevEndUtc.getUTCMonth(),
-    prevEndUtc.getUTCDate(),
-    0,
-    0,
-    0,
-    0,
-  )
-  const prevStartMs = prevEndDayStart - (daySpan - 1) * DAY_MS
-  const startDateIso = new Date(prevStartMs).toISOString().slice(0, 10)
-  const endDateIso = new Date(prevEndDayStart).toISOString().slice(0, 10)
-
-  return {
-    preset: activeWindow.preset,
-    label: `Prev ${daySpan}d (${startDateIso} → ${endDateIso})`,
-    shortLabel: `Prev ${daySpan}d`,
-    startDateIso,
-    endDateIso,
-    startMs: prevStartMs,
-    endMs: prevEndDayStart + DAY_MS - 1,
-    dayCount: daySpan,
-  }
-}
-
-/**
- * Computes period-over-period KPI deltas and previous-period regional trend series
- * for comparison overlays in AdminAnalyticsDashboard and AdminComplianceHeatmap.
- */
-export function computePeriodComparisonMetrics(
-  allSignals: ComplianceSignalRecord[],
-  activeMatrix: ComplianceHeatmapMatrix,
-): PeriodComparisonSummary | null {
-  const previousWindow = resolvePreviousComplianceDateWindow(activeMatrix.dateWindow)
-  if (!previousWindow) return null
-
-  const previousRange: ComplianceDateRange = {
-    preset: 'custom',
-    startDate: previousWindow.startDateIso,
-    endDate: previousWindow.endDateIso,
-  }
-  const previousMatrix = buildComplianceHeatmapMatrix(
-    allSignals,
-    activeMatrix.mode,
-    activeMatrix.scope,
-    previousRange,
-  )
-
-  const currentTotalRisk = activeMatrix.rows.reduce((sum, r) => sum + r.totalRisk, 0)
-  const previousTotalRisk = previousMatrix.rows.reduce((sum, r) => sum + r.totalRisk, 0)
-  const currentAffectedRegions = activeMatrix.rows.filter(r => r.totalRisk > 0).length
-  const previousAffectedRegions = previousMatrix.rows.filter(r => r.totalRisk > 0).length
-
-  const previousTrendsByRegion: Record<string, Region30DayTrend> = {}
-  for (const row of previousMatrix.rows) {
-    if (row.trend30d) {
-      previousTrendsByRegion[row.key] = row.trend30d
-    }
-  }
-
-  return {
-    previousWindow,
-    totalSignals: buildPeriodDeltaMetric(activeMatrix.totalSignals, previousMatrix.totalSignals),
-    highRiskSignals: buildPeriodDeltaMetric(
-      activeMatrix.highRiskSignals,
-      previousMatrix.highRiskSignals,
-    ),
-    totalRiskScore: buildPeriodDeltaMetric(currentTotalRisk, previousTotalRisk),
-    affectedRegions: buildPeriodDeltaMetric(currentAffectedRegions, previousAffectedRegions),
-    previousTrendsByRegion,
-  }
-}
-
-export function formatPeriodDeltaBadge(metric: PeriodDeltaMetric): string {
-  if (metric.direction === 'flat') return '0% vs prev'
-  const arrow = metric.direction === 'up' ? '▲' : '▼'
-  const sign = metric.delta > 0 ? '+' : ''
-  if (metric.deltaPct !== null) {
-    return `${arrow} ${sign}${metric.deltaPct}% vs prev`
-  }
-  return `${arrow} ${sign}${metric.delta} vs prev`
-}
-
 

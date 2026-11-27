@@ -773,36 +773,6 @@ export function isTrialAlreadyApplied(trialSlug: string): boolean {
   return apps.some(a => a.trialSlug.toLowerCase() === trialSlug.toLowerCase())
 }
 
-export function withdrawTrialApplication(applicationId: string): boolean {
-  if (typeof window === 'undefined' || !window.localStorage) return false
-  try {
-    const apps = getUserTrialApplications()
-    const next = apps.filter(a => a.id !== applicationId && a.applicationRef !== applicationId)
-    if (next.length === apps.length) return false
-    window.localStorage.setItem('khelgrid_trial_applications', JSON.stringify(next))
-    window.dispatchEvent(new CustomEvent('khelgrid:trial-applied'))
-    return true
-  } catch {
-    return false
-  }
-}
-
-export function withdrawAcademyEnquiry(enquiryToken: string): boolean {
-  if (typeof window === 'undefined' || !window.localStorage) return false
-  try {
-    const raw = window.localStorage.getItem('khelgrid_academy_enquiries')
-    if (!raw) return false
-    const parsed = JSON.parse(raw) as AcademyEnquiry[]
-    const next = parsed.filter(e => e.enquiryToken !== enquiryToken && e.id !== enquiryToken)
-    if (next.length === parsed.length) return false
-    window.localStorage.setItem('khelgrid_academy_enquiries', JSON.stringify(next))
-    window.dispatchEvent(new CustomEvent('khelgrid:academy-enquiry-submitted'))
-    return true
-  } catch {
-    return false
-  }
-}
-
 export interface AcademyEnquiry {
   id?: string
   enquiryToken: string

@@ -17,8 +17,7 @@ const PREVIEW_OPERATOR_SESSION = {
 }
 
 export default function AdminPreviewPortal({ onNavigate }: AdminPreviewPortalProps) {
-  const isDev = Boolean(import.meta.env.DEV)
-  const [mode, setMode] = useState<'ui_preview' | 'live_gate'>(isDev ? 'ui_preview' : 'live_gate')
+  const [mode, setMode] = useState<'ui_preview' | 'live_gate'>('ui_preview')
 
   return (
     <div className="admin-preview-portal">
@@ -27,25 +26,23 @@ export default function AdminPreviewPortal({ onNavigate }: AdminPreviewPortalPro
           <strong>KhelGrid Admin Operations</strong>
           <span aria-hidden="true">·</span>
           <span>
-            {mode === 'ui_preview' && isDev
-              ? 'Interactive UI Preview (development only — all 16 workspaces unlocked for visual review)'
+            {mode === 'ui_preview'
+              ? 'Interactive UI Preview (all 12 workspaces unlocked for visual review)'
               : 'Live Supabase Auth Gate (fail-closed production behavior)'}
           </span>
         </div>
 
         <div className="admin-preview-mode-bar-actions">
-          {isDev && (
-            <button
-              type="button"
-              className={`admin-preview-mode-btn ${mode === 'ui_preview' ? 'is-active' : ''}`}
-              onClick={() => setMode('ui_preview')}
-            >
-              UI Preview
-            </button>
-          )}
           <button
             type="button"
-            className={`admin-preview-mode-btn ${mode === 'live_gate' || !isDev ? 'is-active' : ''}`}
+            className={`admin-preview-mode-btn ${mode === 'ui_preview' ? 'is-active' : ''}`}
+            onClick={() => setMode('ui_preview')}
+          >
+            UI Preview
+          </button>
+          <button
+            type="button"
+            className={`admin-preview-mode-btn ${mode === 'live_gate' ? 'is-active' : ''}`}
             onClick={() => setMode('live_gate')}
           >
             Auth Gate
@@ -61,7 +58,7 @@ export default function AdminPreviewPortal({ onNavigate }: AdminPreviewPortalPro
         </div>
       </div>
 
-      {mode === 'ui_preview' && isDev ? (
+      {mode === 'ui_preview' ? (
         <AdminApp
           key="preview-shell"
           initialAuthOverride={PREVIEW_OPERATOR_SESSION}

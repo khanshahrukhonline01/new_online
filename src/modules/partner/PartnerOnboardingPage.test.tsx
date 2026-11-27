@@ -40,11 +40,6 @@ describe('PartnerOnboardingPage Component Suite', () => {
 
     const tournamentHtml = renderToStaticMarkup(<PartnerOnboardingPage initialRole="tournament" />)
     expect(tournamentHtml).toContain('Tournament / Sports Organisation Title')
-
-    const orgHtml = renderToStaticMarkup(<PartnerOnboardingPage initialRole="organization" />)
-    expect(orgHtml).toContain('Club / Federation / Org')
-    expect(orgHtml).toContain('Organisation Subtype')
-    expect(orgHtml).toContain('National / State Sports Federation')
   })
 
   it('renders authentic email/password sign in form when initialMode is login', () => {

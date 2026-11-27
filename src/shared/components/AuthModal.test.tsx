@@ -218,7 +218,5 @@ describe('AuthModal Progressive Intent-First Redesign', () => {
     const html = renderToStaticMarkup(<AuthModal isOpen={true} initialTab="login" onClose={vi.fn()} />)
     const ids = Array.from(html.matchAll(/\sid="([^"]+)"/g)).map(m => m[1])
     expect(new Set(ids).size).toBe(ids.length)
-    expect(html).toContain('Partner / Organization Sign In')
-    expect(html).toContain('/partner-signup?role=organization')
   })
 })

@@ -12,8 +12,6 @@
  * - Immutable, append-only ledger entries for rewards
  */
 
-import { enqueueTenantPostForRegulation } from '../../shared/governance/postRegulationBridge'
-
 export type CampaignStatus =
   | 'draft'
   | 'submitted'
@@ -787,34 +785,6 @@ export function createCampaign(params: Omit<Campaign, 'id' | 'slug' | 'createdAt
     entityType: 'campaign',
     entityId: newCampaign.id,
     reason: `Advertiser created campaign brief with total budget of ${formatPaiseToInr(params.totalBudgetPaise)}.`,
-  })
-
-  // Route every new campaign post through the mandatory Admin Pre-Publication Regulation Gate
-  const campaignCopy = [
-    newCampaign.purpose,
-    newCampaign.keyMessages?.join(' '),
-    newCampaign.termsAndConditions,
-  ]
-    .filter(Boolean)
-    .join(' ')
-  const deliverableDisclosurePresent =
-    newCampaign.deliverables?.some(d =>
-      /#(ad|sponsored)/i.test(`${d.mandatoryDisclosure || ''} ${(d.requiredHashtags || []).join(' ')}`),
-    ) ?? false
-  enqueueTenantPostForRegulation({
-    referenceCode: newCampaign.id.toUpperCase(),
-    title: newCampaign.title,
-    body: campaignCopy || newCampaign.title,
-    category: 'creator_campaign',
-    tenantName: params.advertiserName,
-    tenantPersona: 'creator',
-    submitterName: params.advertiserName,
-    submitterEmail: params.advertiserContact || 'campaign.partner@khelgrid.com',
-    sport: params.sport || 'Multi-Sport',
-    city: params.locationCity || 'Pan-India',
-    hasSponsoredDisclosure:
-      deliverableDisclosurePresent || /#(ad|sponsored)/i.test(`${newCampaign.title} ${campaignCopy}`),
-    sourceRoute: '/campaigns/create',
   })
 
   return newCampaign

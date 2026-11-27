@@ -14,24 +14,12 @@ import {
   type SlaStatus,
   type UnifiedRegulatoryInboxSnapshot,
 } from '../services/adminRegulatoryInboxService'
-import type { AdminDeskDeepLink } from '../services/adminGlobalSearchService'
-import {
-  listQueueClaims,
-  type QueueRecordClaim,
-} from '../services/adminQueueWorkflowService'
-import { AdminSavedViewsBar } from './AdminSavedViewsBar'
-import {
-  AdminAssigneeFilterBar,
-  AdminQueueClaimControl,
-  type AssigneeFilterValue,
-} from './AdminQueueClaimControl'
 import type { AdminWorkspaceTab } from './AdminSidebar'
 import './AdminRegulatoryInboxDesk.css'
 
 export interface AdminRegulatoryInboxDeskProps {
   operatorEmail?: string
   onJumpToWorkspace?: (tab: AdminWorkspaceTab) => void
-  deepLink?: AdminDeskDeepLink | null
 }
 
 const DESK_FILTER_OPTIONS: Array<{ id: 'all' | RegulatoryInboxSourceDesk; label: string }> = [
@@ -54,7 +42,6 @@ const ROLE_LABELS: Record<InboxPartnerRole, string> = {
 export function AdminRegulatoryInboxDesk({
   operatorEmail = 'admin@khelgrid.com',
   onJumpToWorkspace,
-  deepLink = null,
 }: AdminRegulatoryInboxDeskProps) {
   const [snapshot, setSnapshot] = useState<UnifiedRegulatoryInboxSnapshot | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -62,8 +49,6 @@ export function AdminRegulatoryInboxDesk({
   const [deskFilter, setDeskFilter] = useState<'all' | RegulatoryInboxSourceDesk>('all')
   const [slaFilter, setSlaFilter] = useState<'all' | SlaStatus>('all')
   const [roleFilter, setRoleFilter] = useState<'all' | InboxPartnerRole>('all')
-  const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilterValue>('all')
-  const [claims, setClaims] = useState<QueueRecordClaim[]>(() => listQueueClaims('regulatory_inbox'))
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   // Live Compliance Notice Modal State
@@ -86,7 +71,6 @@ export function AdminRegulatoryInboxDesk({
     try {
       const next = await loadUnifiedRegulatoryInbox()
       setSnapshot(next)
-      setClaims(listQueueClaims('regulatory_inbox'))
     } finally {
       setIsLoading(false)
     }
@@ -99,39 +83,6 @@ export function AdminRegulatoryInboxDesk({
     })
   }, [refreshInbox])
 
-  const applySavedFilters = useCallback(
-    (filters: Record<string, string>, viewName?: string) => {
-      setDeskFilter((filters.desk as 'all' | RegulatoryInboxSourceDesk) || 'all')
-      setSlaFilter((filters.sla as 'all' | SlaStatus) || 'all')
-      setRoleFilter((filters.role as 'all' | InboxPartnerRole) || 'all')
-      setAssigneeFilter(filters.assignee || 'all')
-      setSearchQuery(filters.search || '')
-      if (viewName) {
-        showToast(`Applied saved view "${viewName}".`)
-      }
-    },
-    [showToast],
-  )
-
-  useEffect(() => {
-    if (!deepLink || deepLink.workspace !== 'regulatory_inbox') return
-    if (deepLink.savedViewFilters) {
-      applySavedFilters(deepLink.savedViewFilters)
-      return
-    }
-    if (deepLink.query) {
-      setSearchQuery(deepLink.query)
-    }
-  }, [deepLink, applySavedFilters])
-
-  const claimByRecordId = useMemo(() => {
-    const map = new Map<string, QueueRecordClaim>()
-    for (const c of claims) {
-      map.set(c.recordId, c)
-    }
-    return map
-  }, [claims])
-
   const filteredItems = useMemo(() => {
     if (!snapshot) return []
     const q = searchQuery.trim().toLowerCase()
@@ -139,23 +90,6 @@ export function AdminRegulatoryInboxDesk({
       if (deskFilter !== 'all' && item.sourceDesk !== deskFilter) return false
       if (slaFilter !== 'all' && item.slaStatus !== slaFilter) return false
       if (roleFilter !== 'all' && item.partnerRole !== roleFilter) return false
-      if (assigneeFilter !== 'all') {
-        const claim = claimByRecordId.get(item.id)
-        if (assigneeFilter === 'unclaimed' && claim) return false
-        if (
-          assigneeFilter === 'mine' &&
-          (!claim || claim.claimedBy.toLowerCase() !== operatorEmail.toLowerCase())
-        ) {
-          return false
-        }
-        if (
-          assigneeFilter !== 'unclaimed' &&
-          assigneeFilter !== 'mine' &&
-          (!claim || claim.claimedBy.toLowerCase() !== assigneeFilter.toLowerCase())
-        ) {
-          return false
-        }
-      }
       if (q) {
         const matches =
           item.referenceCode.toLowerCase().includes(q) ||
@@ -168,16 +102,7 @@ export function AdminRegulatoryInboxDesk({
       }
       return true
     })
-  }, [
-    snapshot,
-    searchQuery,
-    deskFilter,
-    slaFilter,
-    roleFilter,
-    assigneeFilter,
-    claimByRecordId,
-    operatorEmail,
-  ])
+  }, [snapshot, searchQuery, deskFilter, slaFilter, roleFilter])
 
   const openNoticeModal = (item: RegulatoryInboxItem) => {
     setNoticeModalItem(item)
@@ -312,36 +237,8 @@ export function AdminRegulatoryInboxDesk({
         </div>
       </section>
 
-      {/* Saved Filter Views & Moderator Workload */}
-      <AdminSavedViewsBar
-        desk="regulatory_inbox"
-        currentFilters={{
-          desk: deskFilter,
-          sla: slaFilter,
-          role: roleFilter,
-          assignee: assigneeFilter,
-          search: searchQuery,
-        }}
-        onApplyFilters={applySavedFilters}
-        onResetFilters={() => {
-          setSearchQuery('')
-          setDeskFilter('all')
-          setSlaFilter('all')
-          setRoleFilter('all')
-          setAssigneeFilter('all')
-        }}
-        operatorEmail={operatorEmail}
-      />
-
       {/* Faceted Filters */}
       <section className="admin-inbox-filters-card" aria-label="Regulatory Inbox Filters">
-        <AdminAssigneeFilterBar
-          desk="regulatory_inbox"
-          claims={claims}
-          operatorEmail={operatorEmail}
-          value={assigneeFilter}
-          onChange={setAssigneeFilter}
-        />
         <div className="admin-inbox-filter-row">
           <span className="admin-inbox-filter-label">Source Desk:</span>
           {DESK_FILTER_OPTIONS.map(opt => {
@@ -402,7 +299,7 @@ export function AdminRegulatoryInboxDesk({
             <option value="athlete">Athlete</option>
           </select>
 
-          {(searchQuery || deskFilter !== 'all' || slaFilter !== 'all' || roleFilter !== 'all' || assigneeFilter !== 'all') && (
+          {(searchQuery || deskFilter !== 'all' || slaFilter !== 'all' || roleFilter !== 'all') && (
             <button
               type="button"
               className="admin-inbox-btn"
@@ -411,7 +308,6 @@ export function AdminRegulatoryInboxDesk({
                 setDeskFilter('all')
                 setSlaFilter('all')
                 setRoleFilter('all')
-                setAssigneeFilter('all')
               }}
             >
               <SiteIcon name="close" size={13} />
@@ -504,16 +400,6 @@ export function AdminRegulatoryInboxDesk({
 
                     <td>
                       <div className="admin-inbox-actions">
-                        <AdminQueueClaimControl
-                          desk="regulatory_inbox"
-                          recordId={item.id}
-                          referenceCode={item.referenceCode}
-                          recordTitle={item.title}
-                          operatorEmail={operatorEmail}
-                          claim={claimByRecordId.get(item.id) ?? null}
-                          compact
-                          onChanged={() => setClaims(listQueueClaims('regulatory_inbox'))}
-                        />
                         <button
                           type="button"
                           className="admin-inbox-btn admin-inbox-btn-warning"

@@ -16,9 +16,6 @@ import { TenantProvider } from './shared/context/TenantContext'
 import { RequireTenantMember } from './shared/components/RequireTenantMember'
 import { RegulatoryWorkspaceGuard } from './shared/components/RegulatoryWorkspaceGuard'
 import { getRouteSeoMetadata, updatePageSeoMetadata } from './shared/utils/seoAndShare'
-import { normalizePartnerRole } from './modules/partner/partnerOnboardingService'
-import type { DemoDashboardId } from './modules/demo/tenantDemoData'
-import WorkspacePage from './modules/workspace/WorkspacePage'
 
 // Code-split route components via React.lazy()
 const AboutPage = lazy(() => import('./modules/about/AboutPage'))
@@ -64,7 +61,6 @@ const SportsToolsPage = lazy(() => import('./modules/tools/SportsToolsPage'))
 const PricingPage = lazy(() => import('./modules/pricing/PricingPage'))
 const PartnerPage = lazy(() => import('./modules/partner/PartnerPage'))
 const PartnerOnboardingPage = lazy(() => import('./modules/partner/PartnerOnboardingPage'))
-const PartnerEmailVerificationPage = lazy(() => import('./modules/partner/PartnerEmailVerificationPage'))
 const ParentPortalPage = lazy(() => import('./modules/parent/ParentPortalPage'))
 const SavedPage = lazy(() => import('./modules/saved/SavedPage'))
 const CoachesPage = lazy(() => import('./modules/coaches/CoachesPage'))
@@ -76,12 +72,12 @@ const AthleteVerificationPage = lazy(() => import('./modules/verification/Athlet
 const GateCheckInPage = lazy(() => import('./modules/verification/GateCheckInPage').then(m => ({ default: m.GateCheckInPage })))
 const MyPassesVaultPage = lazy(() => import('./modules/passes/MyPassesVaultPage').then(m => ({ default: m.MyPassesVaultPage })))
 const OrganizationsWorkspacePage = lazy(() => import('./modules/organizations/OrganizationsWorkspacePage'))
+const WorkspacePage = lazy(() => import('./modules/workspace/WorkspacePage'))
 const WorkspaceShell = lazy(() => import('./modules/workspace/WorkspaceShell'))
 const CampaignMarketplacePage = lazy(() => import('./modules/campaigns/CampaignMarketplacePage').then(m => ({ default: m.CampaignMarketplacePage })))
 const CampaignCreationPage = lazy(() => import('./modules/campaigns/CampaignCreationPage').then(m => ({ default: m.CampaignCreationPage })))
 const AdvertiserCampaignManagePage = lazy(() => import('./modules/campaigns/AdvertiserCampaignManagePage').then(m => ({ default: m.AdvertiserCampaignManagePage })))
 const CreatorHubPage = lazy(() => import('./modules/campaigns/CreatorHubPage').then(m => ({ default: m.CreatorHubPage })))
-const TenantDemoShowcasePage = lazy(() => import('./modules/demo/TenantDemoShowcasePage'))
 const AdminPreviewPortal = lazy(() => import('./modules/admin/AdminPreviewPortal'))
 
 // Code-split heavyweight modal dialogs
@@ -205,16 +201,6 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
-
-  useEffect(() => {
-    if (path === '/login') {
-      openAuth({ tab: 'login' })
-    } else if (path === '/signup') {
-      openAuth({ tab: 'signup' })
-    } else if (path === '/forgot-password') {
-      openAuth({ tab: 'forgot_password' })
-    }
-  }, [path, openAuth])
 
   useEffect(() => { setMenuOpen(false) }, [path])
 
@@ -382,20 +368,18 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
           <OrganizationsWorkspacePage onNavigate={navigate} />
         </RegulatoryWorkspaceGuard>
       )
-      else if (match.canonicalPath === '/login' || match.canonicalPath === '/signup' || match.canonicalPath === '/forgot-password') {
-        page = (
-          <WorkspacePage
-            authUser={authUser}
-            onOpenAuth={openAuth}
-            onNavigate={navigate}
-          />
-        )
-      }
-      else if (match.canonicalPath === '/partner/verify') page = <PartnerEmailVerificationPage />
-      else if (match.canonicalPath === '/partner-signup' || match.canonicalPath === '/partner-login' || match.canonicalPath === '/partner/signup' || match.canonicalPath === '/partner/login') {
+      else if (match.canonicalPath === '/partner-signup' || match.canonicalPath === '/partner/signup' || match.canonicalPath === '/partner/login') {
         const searchParams = new URLSearchParams(locationSearch)
         const modeParam = searchParams.get('mode') === 'login' || path === '/partner-login' || path === '/partner/login' ? 'login' : 'signup'
-        const roleParam = normalizePartnerRole(searchParams.get('role'))
+        const rawRole = (searchParams.get('role') || '').toLowerCase()
+        const roleParam: 'academy' | 'coach' | 'venue' | 'tournament' =
+          rawRole === 'coach'
+            ? 'coach'
+            : rawRole === 'venue' || rawRole === 'turf' || rawRole === 'host'
+              ? 'venue'
+              : rawRole === 'tournament'
+                ? 'tournament'
+                : 'academy'
         page = (
           <PartnerOnboardingPage
             key={`${path}:${locationSearch}`}
@@ -407,46 +391,17 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
         )
       }
       else if (match.canonicalPath === '/academy-hub' || match.canonicalPath === '/academies/manage') page = (
-        <RegulatoryWorkspaceGuard persona="academy" onNavigate={navigate}>
-          <RequireTenantMember
-            personaLabel="Academy"
-            onboardingRole="academy"
-            requiredTenantTypes={['academy', 'club', 'school', 'college', 'university', 'training_org']}
-            allowedRoles={[
-              'owner',
-              'org_admin',
-              'director',
-              'admin',
-              'manager',
-              'admissions_manager',
-              'front_desk',
-              'head_coach',
-              'coach',
-              'finance_manager',
-              'accountant',
-              'content_manager',
-              'listing_manager',
-              'verification_coordinator',
-              'staff',
-              'readonly_member',
-            ]}
-            onNavigate={navigate}
-          >
-            <AcademyHubPage currentPath={path} onNavigate={navigate} />
-          </RequireTenantMember>
-        </RegulatoryWorkspaceGuard>
+        <TenantProvider>
+          <RegulatoryWorkspaceGuard persona="academy" onNavigate={navigate}>
+            <RequireTenantMember onNavigate={navigate}>
+              <AcademyHubPage onNavigate={navigate} />
+            </RequireTenantMember>
+          </RegulatoryWorkspaceGuard>
+        </TenantProvider>
       )
       else if (match.canonicalPath === '/coach-dashboard' || match.canonicalPath === '/coach/hub' || match.canonicalPath === '/coach/manage') page = (
         <RegulatoryWorkspaceGuard persona="coach" onNavigate={navigate}>
-          <RequireTenantMember
-            personaLabel="Coach"
-            onboardingRole="coach"
-            requiredTenantTypes={['coach', 'academy']}
-            allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'head_coach', 'coach']}
-            onNavigate={navigate}
-          >
-            <CoachDashboardPage currentPath={path} onNavigate={navigate} />
-          </RequireTenantMember>
+          <CoachDashboardPage onNavigate={navigate} />
         </RegulatoryWorkspaceGuard>
       )
       else if (match.canonicalPath === '/turf-calendar' || match.canonicalPath === '/venues/manage' || match.canonicalPath === '/turf') page = (
@@ -496,16 +451,6 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
         </RegulatoryWorkspaceGuard>
       )
       else if (match.canonicalPath === '/for-you') page = <ForYouPage onNavigate={navigate} onOpenAuth={openAuth} />
-      else if (match.canonicalPath === '/demo' || match.canonicalPath === '/preview' || match.canonicalPath === '/partner/preview') {
-        const personaParam = (new URLSearchParams(locationSearch).get('persona') || 'academy') as DemoDashboardId
-        page = (
-          <TenantDemoShowcasePage
-            initialDashboard={personaParam}
-            onNavigate={navigate}
-            onOpenAuth={openAuth}
-          />
-        )
-      }
       else if (match.canonicalPath === '/partner' || match.canonicalPath === '/partners') page = <PartnerPage onNavigate={navigate} onOpenIntake={openListingSubmission} />
       else if (['/privacy','/terms','/cookies','/ipr-policy','/cancellation-policy','/posh-policy','/editorial-policy','/verification-policy','/correction-policy','/workplace-policy','/open-science-policy'].includes(match.canonicalPath)) page = <PolicyPage path={match.canonicalPath} onNavigate={navigate} />
       else page = <FeatureComingSoonPage title={match.slug} path={match.canonicalPath} />
@@ -523,9 +468,8 @@ function AppInner({ initialPath = '/' }: { initialPath?: string }) {
   }
 
   const isOperational = isOperationalRoutePath(path)
-  const activeTenantSlug = new URLSearchParams(locationSearch).get('tenant') || undefined
 
-  return <TenantProvider activeTenantSlug={activeTenantSlug}>
+  return <TenantProvider>
     <div className={`app-shell foundation-v1 ${sidebarCollapsed ? 'sidebar-is-collapsed' : 'sidebar-is-expanded'}${isOperational ? ' is-operational-route' : ''}`}>
     {!isOperational && <CustomCursor />}
     <a className="skip-link" href="#main-content">Skip to content</a>

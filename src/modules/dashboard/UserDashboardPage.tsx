@@ -21,70 +21,29 @@ import { subscribeSavedItems } from '../../shared/services/savedService'
 import {
   getUserTrialApplications,
   getUserAcademyEnquiries,
-  withdrawTrialApplication,
-  withdrawAcademyEnquiry,
   type AcademyEnquiry,
   type TrialApplication,
 } from '../../integrations/supabase/athlete-profile-client'
-import {
-  getAthleteGoals,
-  saveAthleteGoal,
-  updateGoalProgress,
-  deleteAthleteGoal,
-  ATHLETE_GOALS_EVENT,
-  type AthleteGoal,
-} from './athleteGoalsService'
 import { getUserVenueBookings } from '../../shared/payments/paymentService'
 import { PlayerCard } from '../athlete-profile/PlayerCard'
 import type { AuthOpenInput } from '../../shared/components/auth/authModalTypes'
 import './UserDashboardPage.css'
 
 export interface UserDashboardPageProps {
-  workspaceSection?: string
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
   onOpenIntake?: (category?: CommunityListingCategory) => void
   onOpenAuth?: (input?: AuthOpenInput) => void
 }
 
-export type DashboardTab = 'overview' | 'profile' | 'trials' | 'matches' | 'goals' | 'saved'
+type DashboardTab = 'overview' | 'profile' | 'matches' | 'saved'
 
-export function resolveAthleteTabForSection(section?: string): DashboardTab | null {
-  if (!section) return null
-  switch (section) {
-    case 'overview': return 'overview'
-    case 'profile': return 'profile'
-    case 'trials':
-    case 'applications': return 'trials'
-    case 'bookings':
-    case 'matches': return 'matches'
-    case 'goals':
-    case 'cv': return 'goals'
-    case 'saved': return 'saved'
-    default: return null
-  }
-}
-
-export default function UserDashboardPage({ workspaceSection, onNavigate, onOpenIntake, onOpenAuth }: UserDashboardPageProps) {
+export default function UserDashboardPage({ onNavigate, onOpenIntake, onOpenAuth }: UserDashboardPageProps) {
   const [authUser, setAuthUser] = useState<AuthUserProfile | null>(() => getStoredAuthUser())
-  const [activeTab, setActiveTab] = useState<DashboardTab>(() => resolveAthleteTabForSection(workspaceSection) ?? 'overview')
+  const [activeTab, setActiveTab] = useState<DashboardTab>('overview')
   const [athleteProfile, setAthleteProfile] = useState<AthleteProfile | null>(null)
   const [confirmedGames, setConfirmedGames] = useState<DatabasePickupGame[]>([])
   const [savedOpportunities, setSavedOpportunities] = useState<Opportunity[]>([])
   const [savedCount, setSavedCount] = useState<number>(0)
-  const [athleteGoals, setAthleteGoals] = useState<AthleteGoal[]>([])
-  const [goalFeedback, setGoalFeedback] = useState<string | null>(null)
-
-  // Goal creation draft state
-  const [newGoalTitle, setNewGoalTitle] = useState('')
-  const [newGoalSport, setNewGoalSport] = useState('Athletics')
-  const [newGoalMetric, setNewGoalMetric] = useState('100m sprint time')
-  const [newGoalTarget, setNewGoalTarget] = useState('')
-  const [newGoalCurrent, setNewGoalCurrent] = useState('')
-
-  useEffect(() => {
-    const mapped = resolveAthleteTabForSection(workspaceSection)
-    if (mapped) setActiveTab(mapped)
-  }, [workspaceSection])
 
   // Listen to live authentication changes across tabs and modals
   useEffect(() => {
@@ -116,71 +75,6 @@ export default function UserDashboardPage({ workspaceSection, onNavigate, onOpen
       window.removeEventListener('khelgrid:academy-enquiry-submitted', onUpdate)
     }
   }, [authUser])
-
-  // Listen to athlete performance goals
-  useEffect(() => {
-    const refreshGoals = () => {
-      setAthleteGoals(getAthleteGoals(authUser?.id))
-    }
-    refreshGoals()
-    window.addEventListener(ATHLETE_GOALS_EVENT, refreshGoals)
-    return () => window.removeEventListener(ATHLETE_GOALS_EVENT, refreshGoals)
-  }, [authUser?.id])
-
-  const handleCreateGoal = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newGoalTitle.trim() || !newGoalTarget.trim()) {
-      setGoalFeedback('Please provide a goal title and target value.')
-      return
-    }
-    saveAthleteGoal({
-      userId: authUser?.id,
-      title: newGoalTitle.trim(),
-      sport: newGoalSport,
-      category: 'skill',
-      targetMetric: newGoalMetric.trim(),
-      targetValue: newGoalTarget.trim(),
-      currentValue: newGoalCurrent.trim() || 'Not recorded',
-      status: 'in_progress',
-    })
-    setNewGoalTitle('')
-    setNewGoalTarget('')
-    setNewGoalCurrent('')
-    setGoalFeedback('Performance goal created successfully!')
-    setTimeout(() => setGoalFeedback(null), 3000)
-  }
-
-  const handleUpdateGoalStatus = (goalId: string, currentVal: string, status: 'in_progress' | 'achieved' | 'paused') => {
-    updateGoalProgress(goalId, currentVal, status)
-    setGoalFeedback(`Goal marked as ${status.replace('_', ' ')}!`)
-    setTimeout(() => setGoalFeedback(null), 3000)
-  }
-
-  const handleDeleteGoal = (goalId: string) => {
-    deleteAthleteGoal(goalId)
-    setGoalFeedback('Goal removed.')
-    setTimeout(() => setGoalFeedback(null), 3000)
-  }
-
-  const handleWithdrawTrial = (appId: string, trialTitle: string) => {
-    if (typeof window !== 'undefined' && window.confirm && !window.confirm(`Withdraw application for "${trialTitle}"?`)) {
-      return
-    }
-    withdrawTrialApplication(appId)
-    setTrialApplications(getUserTrialApplications())
-    setGoalFeedback('Application withdrawn.')
-    setTimeout(() => setGoalFeedback(null), 3000)
-  }
-
-  const handleWithdrawEnquiry = (token: string, academyName: string) => {
-    if (typeof window !== 'undefined' && window.confirm && !window.confirm(`Withdraw enquiry sent to "${academyName}"?`)) {
-      return
-    }
-    withdrawAcademyEnquiry(token)
-    setAcademyEnquiries(getUserAcademyEnquiries())
-    setGoalFeedback('Enquiry withdrawn.')
-    setTimeout(() => setGoalFeedback(null), 3000)
-  }
 
   // Listen for live physical benchmark updates from Talent Scanner
   useEffect(() => {
@@ -466,13 +360,6 @@ export default function UserDashboardPage({ workspaceSection, onNavigate, onOpen
         </a>
       </div>
 
-      {/* Feedback Banner */}
-      {goalFeedback && (
-        <div className="user-dash-feedback" role="status" style={{ padding: '10px 16px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', borderRadius: '8px', color: '#10b981', marginBottom: '16px', fontWeight: 600 }}>
-          {goalFeedback}
-        </div>
-      )}
-
       {/* Tab Switcher */}
       <nav className="user-dash-tabs" aria-label="Dashboard sections">
         <button
@@ -480,42 +367,28 @@ export default function UserDashboardPage({ workspaceSection, onNavigate, onOpen
           className={`user-dash-tab-btn ${activeTab === 'overview' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('overview')}
         >
-          <SiteIcon name="chart" size={16} /> Overview
+          <SiteIcon name="chart" size={16} /> Overview &amp; Activities
         </button>
         <button
           type="button"
           className={`user-dash-tab-btn ${activeTab === 'profile' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('profile')}
         >
-          <SiteIcon name="user" size={16} /> Player Card &amp; CV
-        </button>
-        <button
-          type="button"
-          className={`user-dash-tab-btn ${activeTab === 'trials' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('trials')}
-        >
-          <SiteIcon name="shield-check" size={16} /> Trials &amp; Enquiries ({trialApplications.length + academyEnquiries.length})
+          <SiteIcon name="user" size={16} /> My Player Card &amp; CV
         </button>
         <button
           type="button"
           className={`user-dash-tab-btn ${activeTab === 'matches' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('matches')}
         >
-          <SiteIcon name="sports" size={16} /> Matches &amp; Bookings ({confirmedGames.length + venueBookings.length})
-        </button>
-        <button
-          type="button"
-          className={`user-dash-tab-btn ${activeTab === 'goals' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('goals')}
-        >
-          <SiteIcon name="award" size={16} /> Goals &amp; Milestones ({athleteGoals.length})
+          <SiteIcon name="sports" size={16} /> Matches &amp; Bookings ({confirmedGames.length + venueBookings.length + trialApplications.length + academyEnquiries.length})
         </button>
         <button
           type="button"
           className={`user-dash-tab-btn ${activeTab === 'saved' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('saved')}
         >
-          <SiteIcon name="bookmark" size={16} /> Saved ({savedCount})
+          <SiteIcon name="bookmark" size={16} /> Saved Deadlines ({savedCount})
         </button>
       </nav>
 
@@ -887,78 +760,10 @@ export default function UserDashboardPage({ workspaceSection, onNavigate, onOpen
             )}
           </div>
 
-          <div className="user-dash-card">
-            <div className="user-dash-card-header">
-              <h2><SiteIcon name="sports" size={18} /> Confirmed Matches &amp; Turf RSVPs</h2>
-              {onOpenIntake && (
-                <button
-                  type="button"
-                  className="user-dash-btn primary"
-                  onClick={() => onOpenIntake('pickup_game')}
-                >
-                  + Host a Match
-                </button>
-              )}
-            </div>
-
-            {confirmedGames.length > 0 ? (
-              <div className="user-match-list">
-                {confirmedGames.map(game => (
-                  <div key={game.id} className="user-match-item">
-                    <div className="user-match-main">
-                      <span className="user-match-sport-badge">{game.sport}</span>
-                      <div className="user-match-details">
-                        <h3>{game.venue_name}</h3>
-                        <p>{game.city} &bull; {game.time_label} &bull; Confirmed Players: {game.confirmed_players}/{game.total_players}</p>
-                      </div>
-                    </div>
-                    <div className="user-match-actions">
-                      {game.whatsapp_group_url && (
-                        <a
-                          href={game.whatsapp_group_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="user-whatsapp-btn"
-                        >
-                          <SiteIcon name="message" size={13} /> WhatsApp Match Group
-                        </a>
-                      )}
-                      <a
-                        href="/play"
-                        onClick={e => handleLink(e, '/play')}
-                        className="user-dash-btn secondary"
-                      >
-                        View Game
-                      </a>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="user-empty-state">
-                <div className="empty-icon">⚽</div>
-                <h3>No Matches Booked</h3>
-                <p>You haven't RSVP'd to any pickup matches yet. Explore available games in your city.</p>
-                <a
-                  href="/play"
-                  onClick={e => handleLink(e, '/play')}
-                  className="user-dash-btn primary"
-                >
-                  Browse Play &amp; Find Games
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: TRIALS & ACADEMY ENQUIRIES */}
-      {activeTab === 'trials' && (
-        <div className="user-dash-section">
-          {/* Section 1: My Selection Trial Applications */}
+          {/* Section 2: My Selection Trial Applications */}
           <div className="user-dash-card" style={{ marginBottom: '24px' }}>
             <div className="user-dash-card-header">
-              <h2><SiteIcon name="shield-check" size={18} /> My Selection Trial Applications ({trialApplications.length})</h2>
+              <h2><SiteIcon name="badge-check" size={18} /> My Selection Trial Applications ({trialApplications.length})</h2>
               <a
                 href="/opportunities"
                 onClick={e => handleLink(e, '/opportunities')}
@@ -983,7 +788,7 @@ export default function UserDashboardPage({ workspaceSection, onNavigate, onOpen
                       </div>
                       <span className="user-app-status submitted">
                         <SiteIcon name="shield-check" size={12} />
-                        <span>Submitted · Active</span>
+                        <span>Submitted · Under Review</span>
                       </span>
                     </div>
                     <div className="user-app-metrics">
@@ -1009,24 +814,14 @@ export default function UserDashboardPage({ workspaceSection, onNavigate, onOpen
                       <span style={{ fontSize: '11.5px', color: '#64748b' }}>
                         Applied on {new Date(app.appliedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleWithdrawTrial(app.id, app.trialTitle)}
-                          className="user-dash-btn secondary"
-                          style={{ fontSize: '12px', padding: '5px 10px', color: '#ef4444', borderColor: '#ef4444' }}
-                        >
-                          Withdraw
-                        </button>
-                        <a
-                          href={`/opportunities/${app.trialSlug}`}
-                          onClick={e => handleLink(e, `/opportunities/${app.trialSlug}`)}
-                          className="user-dash-btn secondary"
-                          style={{ fontSize: '12px', padding: '5px 10px', textDecoration: 'none' }}
-                        >
-                          View Details
-                        </a>
-                      </div>
+                      <a
+                        href={`/opportunities/${app.trialSlug}`}
+                        onClick={e => handleLink(e, `/opportunities/${app.trialSlug}`)}
+                        className="user-dash-btn secondary"
+                        style={{ fontSize: '12px', padding: '5px 10px', textDecoration: 'none' }}
+                      >
+                        View Trial Details
+                      </a>
                     </div>
                   </div>
                 ))}
@@ -1042,8 +837,7 @@ export default function UserDashboardPage({ workspaceSection, onNavigate, onOpen
               </div>
             )}
           </div>
-
-          {/* Section 2: My Academy Enquiries & Trial Batches */}
+          {/* Section 3: My Academy Enquiries & Trial Batches */}
           <div className="user-dash-card" style={{ marginBottom: '24px' }}>
             <div className="user-dash-card-header">
               <h2><SiteIcon name="award" size={18} /> My Academy Enquiries &amp; Trial Batches ({academyEnquiries.length})</h2>
@@ -1105,24 +899,14 @@ export default function UserDashboardPage({ workspaceSection, onNavigate, onOpen
                       <span style={{ fontSize: '11.5px', color: '#64748b' }}>
                         Requested on {new Date(enq.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleWithdrawEnquiry(enq.enquiryToken, enq.academyName)}
-                          className="user-dash-btn secondary"
-                          style={{ fontSize: '12px', padding: '5px 10px', color: '#ef4444', borderColor: '#ef4444' }}
-                        >
-                          Withdraw
-                        </button>
-                        <a
-                          href={`/academies/${enq.academySlug}`}
-                          onClick={e => handleLink(e, `/academies/${enq.academySlug}`)}
-                          className="user-dash-btn secondary"
-                          style={{ fontSize: '12px', padding: '5px 10px', textDecoration: 'none' }}
-                        >
-                          View Academy Page
-                        </a>
-                      </div>
+                      <a
+                        href={`/academies/${enq.academySlug}`}
+                        onClick={e => handleLink(e, `/academies/${enq.academySlug}`)}
+                        className="user-dash-btn secondary"
+                        style={{ fontSize: '12px', padding: '5px 10px', textDecoration: 'none' }}
+                      >
+                        View Academy Page
+                      </a>
                     </div>
                   </div>
                 ))}
@@ -1138,148 +922,66 @@ export default function UserDashboardPage({ workspaceSection, onNavigate, onOpen
               </div>
             )}
           </div>
-        </div>
-      )}
 
-      {/* TAB 4: PERFORMANCE GOALS & MILESTONES */}
-      {activeTab === 'goals' && (
-        <div className="user-dash-section">
-          {/* Goal Creation Form */}
-          <div className="user-dash-card" style={{ marginBottom: '24px' }}>
-            <div className="user-dash-card-header">
-              <h2><SiteIcon name="award" size={18} /> Set New Athlete Training Goal</h2>
-            </div>
-            <form onSubmit={handleCreateGoal} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginTop: '16px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>Goal Title *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Sub 11.5s 100m sprint"
-                  value={newGoalTitle}
-                  onChange={e => setNewGoalTitle(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#f8fafc' }}
-                  required
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>Sport</label>
-                <select
-                  value={newGoalSport}
-                  onChange={e => setNewGoalSport(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#f8fafc' }}
-                >
-                  <option value="Athletics">Athletics</option>
-                  <option value="Football">Football</option>
-                  <option value="Cricket">Cricket</option>
-                  <option value="Badminton">Badminton</option>
-                  <option value="Basketball">Basketball</option>
-                  <option value="Tennis">Tennis</option>
-                  <option value="Swimming">Swimming</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>Metric / Combine Test</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 100m sprint, Yo-Yo test"
-                  value={newGoalMetric}
-                  onChange={e => setNewGoalMetric(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#f8fafc' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>Target Value *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 11.40s, Level 18"
-                  value={newGoalTarget}
-                  onChange={e => setNewGoalTarget(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#f8fafc' }}
-                  required
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>Current Benchmark</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 11.85s, Level 15"
-                  value={newGoalCurrent}
-                  onChange={e => setNewGoalCurrent(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#f8fafc' }}
-                />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <button
-                  type="submit"
-                  className="user-dash-btn primary"
-                  style={{ width: '100%', height: '40px', justifyContent: 'center' }}
-                >
-                  <SiteIcon name="plus" size={14} /> Add Goal
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Active Goals List */}
           <div className="user-dash-card">
             <div className="user-dash-card-header">
-              <h2><SiteIcon name="award" size={18} /> Active Goals &amp; Combine Targets ({athleteGoals.length})</h2>
-              <a href="/sports-cv" onClick={e => handleLink(e, '/sports-cv')}>Manage Sports CV &rarr;</a>
+              <h2><SiteIcon name="sports" size={18} /> Confirmed Matches &amp; Turf RSVPs</h2>
+              {onOpenIntake && (
+                <button
+                  type="button"
+                  className="user-dash-btn primary"
+                  onClick={() => onOpenIntake('pickup_game')}
+                >
+                  + Host a Match
+                </button>
+              )}
             </div>
 
-            {athleteGoals.length > 0 ? (
-              <div className="user-match-list" style={{ marginTop: '16px' }}>
-                {athleteGoals.map(goal => (
-                  <div key={goal.id} className="user-match-item" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-                    <div className="user-match-main" style={{ flex: '1 1 300px' }}>
-                      <span className={`user-match-sport-badge ${goal.status === 'achieved' ? 'is-verified' : ''}`}>
-                        {goal.sport} · {goal.status.replace('_', ' ').toUpperCase()}
-                      </span>
+            {confirmedGames.length > 0 ? (
+              <div className="user-match-list">
+                {confirmedGames.map(game => (
+                  <div key={game.id} className="user-match-item">
+                    <div className="user-match-main">
+                      <span className="user-match-sport-badge">{game.sport}</span>
                       <div className="user-match-details">
-                        <h3 style={{ margin: '4px 0' }}>{goal.title}</h3>
-                        <p style={{ margin: '2px 0', fontSize: '13px', color: '#cbd5e1' }}>
-                          Target: <strong>{goal.targetValue}</strong> ({goal.targetMetric}) &bull; Current: <strong>{goal.currentValue}</strong>
-                        </p>
+                        <h3>{game.venue_name}</h3>
+                        <p>{game.city} &bull; {game.time_label} &bull; Confirmed Players: {game.confirmed_players}/{game.total_players}</p>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                      {goal.status !== 'achieved' ? (
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateGoalStatus(goal.id, goal.targetValue, 'achieved')}
-                          className="user-dash-btn secondary"
-                          style={{ fontSize: '12px', padding: '6px 10px', color: '#10b981', borderColor: '#10b981' }}
+                    <div className="user-match-actions">
+                      {game.whatsapp_group_url && (
+                        <a
+                          href={game.whatsapp_group_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="user-whatsapp-btn"
                         >
-                          ✓ Mark Achieved
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateGoalStatus(goal.id, goal.currentValue, 'in_progress')}
-                          className="user-dash-btn secondary"
-                          style={{ fontSize: '12px', padding: '6px 10px', color: '#3b82f6', borderColor: '#3b82f6' }}
-                        >
-                          ↺ Reopen
-                        </button>
+                          <SiteIcon name="message" size={13} /> WhatsApp Match Group
+                        </a>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteGoal(goal.id)}
+                      <a
+                        href="/play"
+                        onClick={e => handleLink(e, '/play')}
                         className="user-dash-btn secondary"
-                        style={{ fontSize: '12px', padding: '6px 10px', color: '#ef4444', borderColor: '#ef4444' }}
                       >
-                        Delete
-                      </button>
+                        View Game
+                      </a>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="user-empty-state">
-                <div className="empty-icon">🏆</div>
-                <h3>No Training Goals Recorded</h3>
-                <p>Track your combine targets, sprinting milestones, and training routines to showcase normative progression.</p>
+                <div className="empty-icon">⚽</div>
+                <h3>No Matches Booked</h3>
+                <p>You haven't RSVP'd to any pickup matches yet. Explore available games in your city.</p>
+                <a
+                  href="/play"
+                  onClick={e => handleLink(e, '/play')}
+                  className="user-dash-btn primary"
+                >
+                  Browse Play &amp; Find Games
+                </a>
               </div>
             )}
           </div>

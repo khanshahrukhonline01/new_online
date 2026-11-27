@@ -36,17 +36,4 @@ describe('ParentPortalPage Component Suite', () => {
     expect(html).toContain('upi://pay?pa=')
     expect(html).toContain('delhifa%40icici')
   })
-
-  it('wires workspaceSection="fees" directly into active fees tab', () => {
-    const html = renderToStaticMarkup(<ParentPortalPage initialStudentId="st-01" workspaceSection="fees" />)
-    expect(html).toContain('Fee Invoices &amp; Receipts')
-    expect(html).toContain('Coaching Fee')
-    expect(html).toContain('Net Amount Due')
-  })
-
-  it('wires workspaceSection="health" directly into emergency health & pass tab', () => {
-    const html = renderToStaticMarkup(<ParentPortalPage initialStudentId="st-01" workspaceSection="health" />)
-    expect(html).toContain('Health, Emergency &amp; Return-To-Play (RTP) Protocol')
-    expect(html).toContain('Blood Group &amp; Biometrics')
-  })
 })

@@ -1,21 +1,17 @@
 import { getSupabaseClient } from './realtime-client'
 import type { KhelGridUser } from './public-client'
 import { recordUserConsent } from '../../shared/privacy/privacyService'
-import { formatCaptchaAuthError, isCaptchaErrorMessage } from '../../shared/auth/captchaConfig'
 export type { KhelGridUser }
 export { getStoredUser } from './public-client'
 
 export type UserRole =
   | 'athlete'
   | 'parent'
-  | 'creator'
   | 'coach'
   | 'scout'
   | 'academy'
   | 'host'
   | 'venue_owner'
-  | 'tournament'
-  | 'organization'
   | 'submitter'
   | 'moderator'
   | 'admin'
@@ -50,9 +46,6 @@ export interface SignUpInput {
   ageBand?: AuthAgeBand
   guardianEmail?: string
   redirectTo?: string
-  /** Non-authoritative partner intake data retained until email verification completes. */
-  partnerOnboarding?: Record<string, unknown>
-  captchaToken?: string
 }
 
 export interface SignInInput {
@@ -60,7 +53,6 @@ export interface SignInInput {
   password?: string
   useMagicLink?: boolean
   redirectTo?: string
-  captchaToken?: string
 }
 
 export interface AuthResult {
@@ -305,25 +297,11 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
             phone: input.phone || null,
             age_band: input.ageBand || null,
             guardian_email: isMinorAgeBand ? cleanGuardianEmail : null,
-            ...(input.partnerOnboarding ? { khelgrid_partner_onboarding: input.partnerOnboarding } : {}),
           },
           emailRedirectTo: redirectTarget,
-          ...(input.captchaToken ? { captchaToken: input.captchaToken } : {}),
         },
       })
-      if (error) {
-        if (isCaptchaErrorMessage(error.message)) {
-          return { success: false, message: formatCaptchaAuthError(error.message) }
-        }
-        if (error.message?.toLowerCase().includes('rate limit') || error.status === 429) {
-          return {
-            success: false,
-            message:
-              'Email sending rate limit reached (~2/hr on Supabase built-in mail). Configure Custom SMTP in Supabase Authentication Settings or sign in with password.',
-          }
-        }
-        return { success: false, message: error.message }
-      }
+      if (error) return { success: false, message: error.message }
       return { success: true, requiresEmailVerification: true }
     }
 
@@ -332,7 +310,6 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
       password: input.password,
       options: {
         emailRedirectTo: redirectTarget,
-        ...(input.captchaToken ? { captchaToken: input.captchaToken } : {}),
         data: {
           full_name: cleanName,
           name: cleanName,
@@ -342,15 +319,11 @@ export async function signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
           preferred_sports: input.preferredSports || [],
           age_band: input.ageBand || null,
           guardian_email: isMinorAgeBand ? cleanGuardianEmail : null,
-          ...(input.partnerOnboarding ? { khelgrid_partner_onboarding: input.partnerOnboarding } : {}),
         },
       },
     })
 
     if (error) {
-      if (isCaptchaErrorMessage(error.message)) {
-        return { success: false, message: formatCaptchaAuthError(error.message) }
-      }
       if (error.message?.toLowerCase().includes('rate limit')) {
         return {
           success: false,
@@ -440,35 +413,18 @@ export async function signInWithEmail(input: SignInInput): Promise<AuthResult> {
         email: cleanEmail,
         options: {
           emailRedirectTo: resolveEmailRedirectUrl(input.redirectTo),
-          ...(input.captchaToken ? { captchaToken: input.captchaToken } : {}),
         },
       })
-      if (error) {
-        if (isCaptchaErrorMessage(error.message)) {
-          return { success: false, message: formatCaptchaAuthError(error.message) }
-        }
-        if (error.message?.toLowerCase().includes('rate limit') || error.status === 429) {
-          return {
-            success: false,
-            message:
-              'Email sending rate limit reached (~2/hr on Supabase built-in mail). Configure Custom SMTP in Supabase Authentication Settings or sign in with password.',
-          }
-        }
-        return { success: false, message: error.message }
-      }
+      if (error) return { success: false, message: error.message }
       return { success: true, requiresEmailVerification: true }
     }
 
     const { data, error } = await client.auth.signInWithPassword({
       email: cleanEmail,
       password: input.password,
-      ...(input.captchaToken ? { options: { captchaToken: input.captchaToken } } : {}),
     })
 
     if (error) {
-      if (isCaptchaErrorMessage(error.message)) {
-        return { success: false, message: formatCaptchaAuthError(error.message) }
-      }
       if (error.message?.toLowerCase().includes('rate limit')) {
         return {
           success: false,
@@ -515,8 +471,7 @@ export async function signInWithEmail(input: SignInInput): Promise<AuthResult> {
  */
 export async function sendPasswordReset(
   email: string,
-  redirectToOverride?: string,
-  captchaToken?: string
+  redirectToOverride?: string
 ): Promise<{ success: boolean; message: string }> {
   const cleanEmail = email ? email.trim().toLowerCase() : ''
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
@@ -559,16 +514,9 @@ export async function sendPasswordReset(
 
     const { error } = await client.auth.resetPasswordForEmail(cleanEmail, {
       redirectTo: redirectUrl,
-      ...(captchaToken ? { captchaToken } : {}),
     })
 
     if (error) {
-      if (isCaptchaErrorMessage(error.message)) {
-        return {
-          success: false,
-          message: formatCaptchaAuthError(error.message),
-        }
-      }
       if (error.message?.toLowerCase().includes('rate limit')) {
         return {
           success: false,
@@ -594,10 +542,7 @@ export async function sendPasswordReset(
 /**
  * Resends an email verification/confirmation link to the given email address.
  */
-export async function resendVerificationEmail(
-  email: string,
-  captchaToken?: string
-): Promise<{ success: boolean; message: string }> {
+export async function resendVerificationEmail(email: string): Promise<{ success: boolean; message: string }> {
   const cleanEmail = email ? email.trim().toLowerCase() : ''
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
   if (!cleanEmail || !emailRegex.test(cleanEmail)) {
@@ -618,17 +563,10 @@ export async function resendVerificationEmail(
       email: cleanEmail,
       options: {
         emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
-        ...(captchaToken ? { captchaToken } : {}),
       },
     })
 
     if (error) {
-      if (isCaptchaErrorMessage(error.message)) {
-        return {
-          success: false,
-          message: formatCaptchaAuthError(error.message),
-        }
-      }
       if (error.message?.toLowerCase().includes('rate limit') || error.status === 429) {
         return {
           success: false,
@@ -793,26 +731,11 @@ export async function verifyEmailOtpCode(params: {
   }
 
   try {
-    const requestedType = params.type || 'email'
-    let { data, error } = await client.auth.verifyOtp({
+    const { data, error } = await client.auth.verifyOtp({
       email: cleanEmail,
       token: cleanToken,
-      type: requestedType,
+      type: params.type || 'email',
     })
-
-    // Confirm-signup OTPs use type 'signup' whereas magic-link OTPs use type 'email'.
-    if ((error || !data.user) && (requestedType === 'email' || requestedType === 'signup')) {
-      const fallbackType = requestedType === 'email' ? 'signup' : 'email'
-      const fallbackRes = await client.auth.verifyOtp({
-        email: cleanEmail,
-        token: cleanToken,
-        type: fallbackType,
-      })
-      if (!fallbackRes.error && fallbackRes.data.user) {
-        data = fallbackRes.data
-        error = null
-      }
-    }
 
     if (error || !data.user) {
       return {
@@ -964,30 +887,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'trial:submit',
     'academy:inquire',
     'venue:book',
-  ],
-  creator: [
-    'profile:view',
-    'profile:edit',
-    'campaign:apply',
-    'deliverable:submit',
-    'reward:view',
-  ],
-  tournament: [
-    'profile:view',
-    'profile:edit',
-    'tournament:manage',
-    'match:create',
-    'match:score',
-    'trial:publish',
-  ],
-  organization: [
-    'profile:view',
-    'profile:edit',
-    'org:manage',
-    'org:team',
-    'venue:manage',
-    'academy:manage_enquiries',
-    'tournament:manage',
   ],
   host: [
     'profile:view',

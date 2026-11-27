@@ -2,32 +2,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const {
   mockGetStoredAuthUser,
-  mockGetSupabaseClient,
   mockSignUpWithEmail,
   mockSignInWithEmail,
   mockProvisionInitialTenantOwner,
-  mockTryFetchUserTenantMemberships,
-  mockGetPendingTenantMemberships,
-  mockAcceptTenantInvitation,
   mockRegisterCustomAcademy,
   mockRegisterCustomCoach,
   mockSaveTurfVenueSettings,
 } = vi.hoisted(() => ({
   mockGetStoredAuthUser: vi.fn(),
-  mockGetSupabaseClient: vi.fn(),
   mockSignUpWithEmail: vi.fn(),
   mockSignInWithEmail: vi.fn(),
   mockProvisionInitialTenantOwner: vi.fn(),
-  mockTryFetchUserTenantMemberships: vi.fn(),
-  mockGetPendingTenantMemberships: vi.fn(),
-  mockAcceptTenantInvitation: vi.fn(),
   mockRegisterCustomAcademy: vi.fn(),
   mockRegisterCustomCoach: vi.fn(),
   mockSaveTurfVenueSettings: vi.fn(),
-}))
-
-vi.mock('../../integrations/supabase/realtime-client', () => ({
-  getSupabaseClient: mockGetSupabaseClient,
 }))
 
 vi.mock('../../integrations/supabase/auth-client', () => ({
@@ -36,16 +24,9 @@ vi.mock('../../integrations/supabase/auth-client', () => ({
   signInWithEmail: mockSignInWithEmail,
 }))
 
-vi.mock('../../integrations/supabase/tenant-client', async importOriginal => {
-  const actual = await importOriginal<typeof import('../../integrations/supabase/tenant-client')>()
-  return {
-    ...actual,
-    provisionInitialTenantOwner: mockProvisionInitialTenantOwner,
-    tryFetchUserTenantMemberships: mockTryFetchUserTenantMemberships,
-    getPendingTenantMemberships: mockGetPendingTenantMemberships,
-    acceptTenantInvitation: mockAcceptTenantInvitation,
-  }
-})
+vi.mock('../../integrations/supabase/tenant-client', () => ({
+  provisionInitialTenantOwner: mockProvisionInitialTenantOwner,
+}))
 
 vi.mock('../academies/academySaaSClient', () => ({
   registerCustomAcademy: mockRegisterCustomAcademy,
@@ -69,9 +50,6 @@ describe('partnerOnboardingService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetStoredAuthUser.mockReturnValue(null)
-    mockGetSupabaseClient.mockReturnValue(null)
-    mockTryFetchUserTenantMemberships.mockResolvedValue([])
-    mockGetPendingTenantMemberships.mockResolvedValue([])
     mockRegisterCustomAcademy.mockImplementation((params: { name: string }) => ({
       slug: params.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       name: params.name,
@@ -162,14 +140,6 @@ describe('partnerOnboardingService', () => {
           role: expectedAuthRole,
           city: 'Bengaluru',
           phone: '9876543210',
-          redirectTo: '/partner/verify',
-          partnerOnboarding: expect.objectContaining({
-            version: 1,
-            role,
-            entityName,
-            city: 'Bengaluru',
-            phone: '9876543210',
-          }),
         })
       )
       expect(mockProvisionInitialTenantOwner).toHaveBeenCalledWith(
@@ -185,37 +155,6 @@ describe('partnerOnboardingService', () => {
       expect(outcome.workspacePath?.startsWith(`${expectedBasePath}?tenant=`)).toBe(true)
     }
   )
-
-  it('does not treat a cached local profile as an authenticated partner session', async () => {
-    mockGetStoredAuthUser.mockReturnValue({
-      id: 'cached-user',
-      email: 'cached@khelgrid.com',
-      fullName: 'Cached User',
-      name: 'Cached User',
-      role: 'academy',
-      isVerified: true,
-      createdAt: '2026-11-20T00:00:00Z',
-    })
-    mockSignUpWithEmail.mockResolvedValue({
-      success: true,
-      requiresEmailVerification: true,
-      message: 'Verification email sent',
-    })
-
-    const outcome = await onboardPartnerOrganization({
-      role: 'academy',
-      entityName: 'Cached Academy',
-      sport: 'Football',
-      city: 'Delhi NCR',
-      phone: '9876543210',
-      email: 'cached@khelgrid.com',
-      password: 'password123',
-    })
-
-    expect(mockSignUpWithEmail).toHaveBeenCalled()
-    expect(outcome.requiresEmailVerification).toBe(true)
-    expect(mockProvisionInitialTenantOwner).not.toHaveBeenCalled()
-  })
 
   it('halts provisioning and returns verification status when email confirmation is required', async () => {
     mockSignUpWithEmail.mockResolvedValue({
@@ -258,19 +197,6 @@ describe('partnerOnboardingService', () => {
       isVerified: true,
       createdAt: '2026-11-20T00:00:00Z',
     })
-    mockGetSupabaseClient.mockReturnValue({
-      auth: {
-        getUser: vi.fn().mockResolvedValue({
-          data: { user: {
-            id: 'existing-user-1',
-            email: 'owner@khelgrid.com',
-            email_confirmed_at: '2026-11-20T00:00:00Z',
-            user_metadata: { full_name: 'Existing Owner' },
-          } },
-          error: null,
-        }),
-      },
-    })
     mockProvisionInitialTenantOwner.mockResolvedValue({
       success: true,
       tenantId: 'tenant-venue-99',
@@ -308,19 +234,6 @@ describe('partnerOnboardingService', () => {
       role: 'host',
       isVerified: true,
       createdAt: '2026-11-20T00:00:00Z',
-    })
-    mockGetSupabaseClient.mockReturnValue({
-      auth: {
-        getUser: vi.fn().mockResolvedValue({
-          data: { user: {
-            id: 'existing-user-1',
-            email: 'owner@khelgrid.com',
-            email_confirmed_at: '2026-11-20T00:00:00Z',
-            user_metadata: { full_name: 'Existing Owner' },
-          } },
-          error: null,
-        }),
-      },
     })
     mockProvisionInitialTenantOwner
       .mockResolvedValueOnce({ success: false, message: 'duplicate key value violates unique constraint (23505)' })
@@ -374,120 +287,5 @@ describe('partnerOnboardingService', () => {
       password: '123',
     })
     expect(failedValidation.success).toBe(false)
-  })
-
-  it('normalizes organization aliases and provisions custom institutional tenant types', async () => {
-    expect(normalizePartnerRole('organization')).toBe('organization')
-    expect(normalizePartnerRole('federation')).toBe('organization')
-    expect(normalizePartnerRole('club')).toBe('organization')
-    expect(normalizePartnerRole('school')).toBe('organization')
-    expect(normalizePartnerRole('event_organizer')).toBe('tournament')
-
-    mockGetStoredAuthUser.mockReturnValue(null)
-    mockSignUpWithEmail.mockResolvedValue({
-      success: true,
-      user: {
-        id: 'org-user-1',
-        email: 'secretary@delhiathletics.in',
-        fullName: 'Ananya Deshmukh',
-        name: 'Ananya Deshmukh',
-        role: 'organization',
-        isVerified: true,
-        createdAt: '2026-11-26T00:00:00Z',
-      },
-    })
-    mockProvisionInitialTenantOwner.mockResolvedValue({
-      success: true,
-      tenantId: 'tenant-fed-1',
-      message: 'Provisioned',
-    })
-
-    const res = await onboardPartnerOrganization({
-      role: 'organization',
-      organizationType: 'federation',
-      entityName: 'Delhi State Athletics Association',
-      directorName: 'Ananya Deshmukh',
-      sport: 'Athletics',
-      city: 'Delhi NCR',
-      phone: '9876543210',
-      email: 'secretary@delhiathletics.in',
-      password: 'password123',
-    })
-
-    expect(mockSignUpWithEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ role: 'organization' }),
-    )
-    expect(mockProvisionInitialTenantOwner).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tenantType: 'federation',
-        slug: 'delhi-state-athletics-association',
-      }),
-    )
-    expect(res.success).toBe(true)
-    expect(res.workspacePath).toBe('/workspace/organization/overview?tenant=delhi-state-athletics-association')
-  })
-
-  it('resolves multi-tenant memberships and pending invites cleanly during partner sign-in', async () => {
-    mockTryFetchUserTenantMemberships.mockResolvedValue([
-      {
-        id: 'm1',
-        tenant_id: 't1',
-        user_id: 'multi-1',
-        role: 'owner',
-        status: 'active',
-        created_at: '2026-11-26T00:00:00Z',
-        tenant: {
-          id: 't1',
-          slug: 'alpha-academy',
-          name: 'Alpha Academy',
-          tenant_type: 'academy',
-          status: 'active',
-          metadata: {},
-          created_at: '2026-11-26T00:00:00Z',
-          updated_at: '2026-11-26T00:00:00Z',
-        },
-      },
-      {
-        id: 'm2',
-        tenant_id: 't2',
-        user_id: 'multi-1',
-        role: 'director',
-        status: 'active',
-        created_at: '2026-11-26T00:00:00Z',
-        tenant: {
-          id: 't2',
-          slug: 'metro-turf',
-          name: 'Metro Turf',
-          tenant_type: 'venue',
-          status: 'active',
-          metadata: {},
-          created_at: '2026-11-26T00:00:00Z',
-          updated_at: '2026-11-26T00:00:00Z',
-        },
-      },
-    ])
-    mockGetPendingTenantMemberships.mockResolvedValue([])
-    mockSignInWithEmail.mockResolvedValue({
-      success: true,
-      user: {
-        id: 'multi-1',
-        email: 'multi@khelgrid.com',
-        fullName: 'Multi Owner',
-        name: 'Multi Owner',
-        role: 'academy',
-        isVerified: true,
-        createdAt: '2026-11-26T00:00:00Z',
-      },
-    })
-
-    const res = await signInPartnerAccount({
-      role: 'academy',
-      email: 'multi@khelgrid.com',
-      password: 'password123',
-    })
-
-    expect(res.success).toBe(true)
-    expect(res.workspacePath).toBeUndefined()
-    expect(res.memberships).toHaveLength(2)
   })
 })

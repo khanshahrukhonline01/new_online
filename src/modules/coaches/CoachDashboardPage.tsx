@@ -1,343 +1,455 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
-import { EmptyState } from '../../shared/components/ui/EmptyState'
+import { useEffect, useState, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { useAuth } from '../../shared/auth/useAuth'
-import { useTenant } from '../../shared/context/useTenant'
+import { getStoredAuthUser } from '../../integrations/supabase/auth-client'
+import { PartnerVerificationStatusTracker } from '../partner/components/PartnerVerificationStatusTracker'
 import {
-  COACH_WORKSPACE_NAV_ITEMS,
-  resolveCoachRouteTarget,
-  type CoachWorkspaceSectionId,
-} from './coachDashboardTypes'
+  generateWhatsAppShareProfileUrl,
+  type DigitalFeeReceipt,
+} from '../../shared/saas/saasSharedOperations'
 import {
-  loadCoachDashboardOverview,
-  loadCoachVerificationSubmissions,
-  loadOrInitializeCoachProfile,
-  type CoachOverviewPayload,
-  type CoachProfileRecord,
-  type CoachVerificationStatus,
-  type CoachVerificationSubmissionRecord,
-} from './coachWorkspaceClient'
-import { CoachOverviewPanel } from './components/CoachOverviewPanel'
-import { CoachProfileEditorPanel } from './components/CoachProfileEditorPanel'
-import { CoachVerificationPanel } from './components/CoachVerificationPanel'
-import {
-  CoachAcademyAssociationsPanel,
-  CoachAccountSettingsPanel,
-  CoachNotificationsPanel,
-  CoachPhaseRoadmapView,
-} from './components/CoachSectionViews'
+  confirmAndVerifyCoach,
+  getCoachBatches,
+  getCoachEndorsements,
+  getCoachInquiries,
+  getCoachSaaSSummary,
+  getCoachTrainees,
+  getCoachTrainingPlans,
+  getCurrentCoach,
+  getRegisteredCoaches,
+  getTraineeCombines,
+  revokeCoachVerification,
+  type RegisteredCoach,
+} from './coachSaaSClient'
+import { getKheloIndiaAssessments } from './kheloIndiaBattery'
+import { resolveCoachTabForSection, type CoachHubTab } from './coachDashboardTypes'
+import { CoachRosterAndInquiriesPanel } from './components/CoachRosterAndInquiriesPanel'
+import { CoachBatchesAndAttendancePanel } from './components/CoachBatchesAndAttendancePanel'
+import { CoachRevenueAndCredentialsPanel } from './components/CoachRevenueAndCredentialsPanel'
+import { CoachPerformanceAndSaiPanel } from './components/CoachPerformanceAndSaiPanel'
+import { CoachActionModals } from './components/CoachActionModals'
 import './CoachDashboardPage.css'
 
 export interface CoachDashboardPageProps {
+  initialCoachSlug?: string
   workspaceSection?: string
-  currentPath?: string
-  onNavigate?: (event?: MouseEvent<HTMLAnchorElement>, target?: string) => void
+  onNavigate?: (event: MouseEvent<HTMLAnchorElement>, target: string) => void
 }
 
-const VERIF_BADGE_MAP: Record<CoachVerificationStatus, { label: string; className: string }> = {
-  verified: { label: 'KhelGrid Verified Coach', className: 'is-verified' },
-  pending: { label: 'Verification Pending Review', className: 'is-pending' },
-  under_review: { label: 'Under Moderation Review', className: 'is-pending' },
-  rejected: { label: 'Verification Rejected', className: 'is-danger' },
-  suspended: { label: 'Verification Suspended', className: 'is-danger' },
-  unverified: { label: 'Unverified Profile', className: 'is-neutral' },
-}
-
-const NAV_GROUPS: readonly { id: 'foundation' | 'coaching' | 'network' | 'trust'; title: string }[] = [
-  { id: 'foundation', title: 'Workspace Foundation' },
-  { id: 'coaching', title: 'Coaching Operations' },
-  { id: 'network', title: 'Associations & Network' },
-  { id: 'trust', title: 'Reputation, Docs & Account' },
-]
-
-/**
- * Authenticated, Multi-Tenant Coach Workspace (Phase 1 Foundation).
- * Fail-closed against anonymous visitors; binds all profile, verification,
- * and overview metrics strictly to Supabase auth + TenantContext.
- */
 export default function CoachDashboardPage({
+  initialCoachSlug,
   workspaceSection,
-  currentPath,
   onNavigate,
 }: CoachDashboardPageProps) {
-  const { user: authUser } = useAuth()
-  const {
-    userId,
-    isAuthenticated,
-    currentTenant,
-    currentMembership,
-    memberships,
-    isLoading: tenantLoading,
-    switchTenant,
-  } = useTenant()
+  const [selectedSlug, setSelectedSlug] = useState<string>(() => {
+    if (initialCoachSlug) return initialCoachSlug
+    if (typeof window !== 'undefined') {
+      const q = new URLSearchParams(window.location.search).get('coach')
+      if (q) return q
+    }
+    return 'zaheer-farooq-coach'
+  })
 
-  const effectivePath =
-    currentPath ?? (typeof window !== 'undefined' ? window.location.pathname : '')
+  const [refreshKey, setRefreshKey] = useState(0)
+  const triggerRefresh = () => setRefreshKey(k => k + 1)
 
-  const routeTarget = useMemo(
-    () => resolveCoachRouteTarget(effectivePath, workspaceSection),
-    [effectivePath, workspaceSection],
-  )
+  const registeredCoaches = getRegisteredCoaches()
+  const currentCoach: RegisteredCoach = getCurrentCoach(selectedSlug)
 
-  const [activeSection, setActiveSection] = useState<CoachWorkspaceSectionId>(routeTarget.section)
-  const [profile, setProfile] = useState<CoachProfileRecord | null>(null)
-  const [overview, setOverview] = useState<CoachOverviewPayload | null>(null)
-  const [submissions, setSubmissions] = useState<CoachVerificationSubmissionRecord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadingHistory, setLoadingHistory] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<CoachHubTab>(() => resolveCoachTabForSection(workspaceSection) ?? 'trainees')
 
   useEffect(() => {
-    setActiveSection(routeTarget.section)
-  }, [routeTarget.section])
-
-  const loadWorkspaceData = useCallback(async () => {
-    if (!isAuthenticated || !userId) {
-      setLoading(false)
-      setProfile(null)
-      setOverview(null)
-      setSubmissions([])
-      return
+    const mapped = resolveCoachTabForSection(workspaceSection)
+    if (mapped) {
+      setActiveTab(mapped)
     }
+  }, [workspaceSection])
 
-    setLoading(true)
-    setError(null)
+  // Data
+  const trainees = getCoachTrainees(selectedSlug)
+  const batches = getCoachBatches(selectedSlug)
+  const inquiries = getCoachInquiries(selectedSlug)
+  const summary = getCoachSaaSSummary(selectedSlug)
+  const combines = getTraineeCombines(selectedSlug)
+  const trainingPlans = getCoachTrainingPlans(selectedSlug)
+  const endorsements = getCoachEndorsements(selectedSlug)
+  const kheloIndiaReports = getKheloIndiaAssessments(selectedSlug)
 
-    const [profileRes, overviewRes] = await Promise.all([
-      loadOrInitializeCoachProfile(currentTenant?.id),
-      loadCoachDashboardOverview(currentTenant?.id),
-    ])
+  // Modal / Drawer open flags
+  const [isAddTraineeModalOpen, setIsAddTraineeModalOpen] = useState(false)
+  const [isAddBatchModalOpen, setIsAddBatchModalOpen] = useState(false)
+  const [isRegisterCoachModalOpen, setIsRegisterCoachModalOpen] = useState(false)
+  const [isImportCsvModalOpen, setIsImportCsvModalOpen] = useState(false)
+  const [activeReceipt, setActiveReceipt] = useState<DigitalFeeReceipt | null>(null)
+  const [isAddCombineModalOpen, setIsAddCombineModalOpen] = useState(false)
+  const [isAddPlanModalOpen, setIsAddPlanModalOpen] = useState(false)
+  const [isAwardEndorsementModalOpen, setIsAwardEndorsementModalOpen] = useState(false)
 
-    if (!profileRes.ok) {
-      setError(profileRes.error)
-    } else {
-      setProfile(profileRes.data)
-      setLoadingHistory(true)
-      const histRes = await loadCoachVerificationSubmissions(profileRes.data.id)
-      setLoadingHistory(false)
-      if (histRes.ok) {
-        setSubmissions(histRes.data)
-      }
-    }
-
-    if (!overviewRes.ok) {
-      setError(prev => prev || overviewRes.error)
-    } else {
-      setOverview(overviewRes.data)
-    }
-
-    setLoading(false)
-  }, [isAuthenticated, userId, currentTenant?.id])
-
-  useEffect(() => {
-    if (!tenantLoading) {
-      void loadWorkspaceData()
-    }
-  }, [tenantLoading, loadWorkspaceData])
-
-  const handleSelectSection = useCallback(
-    (nextSection: CoachWorkspaceSectionId) => {
-      setActiveSection(nextSection)
-      if (!onNavigate) return
-      const item = COACH_WORKSPACE_NAV_ITEMS.find(n => n.id === nextSection)
-      const isShellMode = effectivePath.startsWith('/workspace/coach') || Boolean(workspaceSection && !effectivePath.startsWith('/coach-dashboard'))
-      if (isShellMode) {
-        const tenantParam = currentTenant?.slug ? `?tenant=${encodeURIComponent(currentTenant.slug)}` : ''
-        onNavigate(undefined, `/workspace/coach/${nextSection}${tenantParam}`)
-      } else {
-        const suffix = item?.pathSegment ? `/${item.pathSegment}` : ''
-        onNavigate(undefined, `/coach-dashboard${suffix}`)
-      }
-    },
-    [onNavigate, effectivePath, workspaceSection, currentTenant?.slug],
-  )
-
-  // Defense-in-depth fail-closed authentication state (never render sample records anonymously)
-  if (!isAuthenticated || !userId) {
-    return (
-      <section className="kg-coach-root content-page" aria-label="Coach Workspace Authentication Required">
-        <div className="kg-coach-card">
-          <EmptyState
-            icon={<SiteIcon name="lock" size={28} />}
-            title="Sign in required for Coach Workspace"
-            description="Access to coaching profiles, athlete rosters, verification requests, and workspace metrics requires an authenticated coach account."
-            action={
-              <div className="kg-coach-btn-row">
-                <a
-                  href="/partner-signup?mode=login&role=coach"
-                  className="kg-coach-btn-primary"
-                  onClick={e => onNavigate?.(e, '/partner-signup?mode=login&role=coach')}
-                >
-                  Coach Sign In
-                </a>
-                <a
-                  href="/demo?persona=coach"
-                  className="kg-coach-btn-outline"
-                  onClick={e => onNavigate?.(e, '/demo?persona=coach')}
-                >
-                  View Read-Only Demo
-                </a>
-              </div>
-            }
-          />
-        </div>
-      </section>
-    )
-  }
-
-  const verifMeta = VERIF_BADGE_MAP[profile?.verificationStatus || 'unverified']
-  const displayName = profile?.fullName || authUser?.fullName || authUser?.email || 'Coach Workspace'
-  const roleLabel = (currentMembership?.role || authUser?.role || 'coach').replace(/_/g, ' ')
+  const shareWhatsAppCardUrl = generateWhatsAppShareProfileUrl({
+    entityType: 'coach',
+    entityName: currentCoach.name,
+    slug: currentCoach.slug,
+    sport: currentCoach.sport || 'Sports',
+    city: currentCoach.city,
+    isVerified: currentCoach.verificationStatus === 'verified',
+  })
 
   return (
-    <section className="kg-coach-root content-page" aria-label="KhelGrid Coach Workspace">
-      {/* Header */}
-      <header className="kg-coach-header">
-        <div>
-          <div className="kg-coach-eyebrow-row">
-            <span className="kg-coach-eyebrow">KHELGRID · COACH WORKSPACE</span>
-            <span className={`kg-coach-verif-pill ${verifMeta.className}`}>
-              <SiteIcon name="shield-check" size={13} />
-              <span>{verifMeta.label}</span>
-            </span>
+    <div className="coach-hub-root content-page" key={refreshKey}>
+      {onNavigate && !workspaceSection && (
+        <div style={{ marginBottom: '0.75rem' }}>
+          <a
+            href="#/coaches"
+            className="coach-back-link"
+            onClick={e => onNavigate(e, '/coaches')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.84rem',
+              color: '#059669',
+              fontWeight: 600,
+              textDecoration: 'none',
+            }}
+          >
+            <SiteIcon name="arrow-left" size={14} />
+            <span>Back to Coaches Directory</span>
+          </a>
+        </div>
+      )}
+
+      <div className="coach-hub-header-row">
+        <div className="coach-hub-title">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+            <p className="eyebrow" style={{ color: '#059669', fontWeight: 800, margin: 0 }}>
+              KHELGRID · COACH OPERATIONS HUB
+            </p>
+            {currentCoach.verificationStatus === 'verified' ? (
+              <span className="coach-verified-pill verified">
+                <SiteIcon name="shield-check" size={13} /> KhelGrid Verified Coach
+              </span>
+            ) : (
+              <span className="coach-verified-pill pending">
+                <SiteIcon name="alert-triangle" size={13} /> Pending Credentials Review
+              </span>
+            )}
           </div>
-          <h1>{displayName}</h1>
-          <p className="kg-coach-subtitle">
-            {currentTenant ? `${currentTenant.name} · Role: ${roleLabel}` : `Role: ${roleLabel}`}
-            {profile?.city ? ` · ${profile.city}${profile.state ? `, ${profile.state}` : ''}` : ''}
-            {profile?.sportsSpecialization?.length ? ` · ${profile.sportsSpecialization.join(', ')}` : ''}
+          <h1>{currentCoach.name}</h1>
+          <p style={{ color: '#64748b', margin: 0, fontSize: '0.9rem' }}>
+            {currentCoach.sport} Specialist · {currentCoach.city}, {currentCoach.state} · {currentCoach.certification}
           </p>
         </div>
 
-        <div className="kg-coach-btn-row">
-          <a
-            href="/coaches"
-            className="kg-coach-btn-outline"
-            onClick={e => onNavigate?.(e, '/coaches')}
-          >
-            <SiteIcon name="external-link" size={14} />
-            <span>Public Directory</span>
-          </a>
-          <button
-            type="button"
-            className="kg-coach-btn-primary"
-            onClick={() => handleSelectSection('profile')}
-          >
-            <SiteIcon name="user-round" size={14} />
-            <span>Edit Coach Profile</span>
-          </button>
+        <div className="coach-hub-switcher">
+          <label htmlFor="coach-hub-select">Switch Coach Workspace:</label>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <select
+              id="coach-hub-select"
+              className="coach-hub-select"
+              value={selectedSlug}
+              onChange={e => setSelectedSlug(e.target.value)}
+            >
+              {registeredCoaches.map(c => (
+                <option key={c.slug} value={c.slug}>
+                  {c.name} ({c.sport} · {c.city}) {c.isCustom ? '★ Your Profile' : ''}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="coach-hub-btn-outline"
+              onClick={() => setIsRegisterCoachModalOpen(true)}
+              style={{ padding: '8px 12px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+            >
+              <SiteIcon name="plus" size={14} />
+              <span>+ Register Coach</span>
+            </button>
+            <a
+              href="#/coaches"
+              className="coach-hub-btn-outline"
+              onClick={e => onNavigate ? onNavigate(e, '/coaches') : undefined}
+              style={{
+                padding: '8px 12px',
+                fontSize: '13px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                textDecoration: 'none',
+                color: '#0f172a',
+              }}
+              title="Preview how parents view your verified profile on the public directory"
+            >
+              <SiteIcon name="external-link" size={14} />
+              <span>Public Profile</span>
+            </a>
+            <a
+              href={shareWhatsAppCardUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="coach-hub-btn-outline"
+              style={{
+                padding: '8px 12px',
+                fontSize: '13px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                textDecoration: 'none',
+                color: '#047857',
+                borderColor: '#10b981',
+              }}
+              title="Broadcast your coaching profile and open trials on WhatsApp"
+            >
+              <SiteIcon name="share" size={14} />
+              <span>Share WhatsApp Card</span>
+            </a>
+          </div>
         </div>
-      </header>
-
-      {/* Main Split Layout: Navigation Rail + Active Section */}
-      <div className="kg-coach-layout">
-        <aside className="kg-coach-sidebar" aria-label="Coach workspace navigation">
-          {NAV_GROUPS.map(group => {
-            const items = COACH_WORKSPACE_NAV_ITEMS.filter(item => item.group === group.id)
-            return (
-              <div key={group.id} className="kg-coach-nav-group">
-                <p className="kg-coach-nav-heading">{group.title}</p>
-                <div className="kg-coach-nav-list" role="tablist" aria-label={group.title}>
-                  {items.map(item => {
-                    const selected = activeSection === item.id
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        role="tab"
-                        aria-selected={selected}
-                        className={`kg-coach-nav-item ${selected ? 'is-active' : ''}`}
-                        onClick={() => handleSelectSection(item.id)}
-                      >
-                        <SiteIcon name={item.icon} size={15} />
-                        <span className="kg-coach-nav-label">{item.label}</span>
-                        {!item.phaseReady && (
-                          <span className="kg-coach-phase-tag">P{item.phase}</span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
-        </aside>
-
-        <main className="kg-coach-main" role="tabpanel">
-          {loading && !profile && activeSection === 'profile' ? (
-            <div className="kg-coach-card" role="status">
-              <p className="kg-coach-muted-note">Loading coach profile from PostgreSQL…</p>
-            </div>
-          ) : activeSection === 'overview' ? (
-            <CoachOverviewPanel
-              profile={profile}
-              overview={overview}
-              loading={loading}
-              error={error}
-              tenantName={currentTenant?.name}
-              onRetry={() => void loadWorkspaceData()}
-              onSelectSection={handleSelectSection}
-              onNavigate={onNavigate}
-            />
-          ) : activeSection === 'profile' ? (
-            profile ? (
-              <CoachProfileEditorPanel
-                key={profile.updatedAt}
-                profile={profile}
-                onProfileSaved={updated => {
-                  setProfile(updated)
-                  void loadWorkspaceData()
-                }}
-              />
-            ) : (
-              <div className="kg-coach-alert is-error" role="alert">
-                <span>{error || 'Coach profile could not be loaded.'}</span>
-                <button type="button" className="kg-coach-btn-outline" onClick={() => void loadWorkspaceData()}>
-                  Retry
-                </button>
-              </div>
-            )
-          ) : activeSection === 'credentials' ? (
-            profile ? (
-              <CoachVerificationPanel
-                profile={profile}
-                submissions={submissions}
-                loadingHistory={loadingHistory}
-                onSubmitted={() => void loadWorkspaceData()}
-              />
-            ) : (
-              <div className="kg-coach-alert is-error" role="alert">
-                <span>{error || 'Verification profile could not be loaded.'}</span>
-              </div>
-            )
-          ) : activeSection === 'academy' ? (
-            <CoachAcademyAssociationsPanel
-              memberships={memberships}
-              currentTenantId={currentTenant?.id}
-              onSwitchTenant={switchTenant}
-              onNavigate={onNavigate}
-            />
-          ) : activeSection === 'notifications' ? (
-            <CoachNotificationsPanel
-              userId={userId}
-              onNavigate={onNavigate}
-            />
-          ) : activeSection === 'settings' ? (
-            <CoachAccountSettingsPanel
-              profile={profile}
-              onSelectSection={handleSelectSection}
-              onNavigate={onNavigate}
-            />
-          ) : (
-            <CoachPhaseRoadmapView
-              section={activeSection}
-              itemId={routeTarget.itemId}
-              onSelectSection={handleSelectSection}
-              onNavigate={onNavigate}
-            />
-          )}
-        </main>
       </div>
-    </section>
+
+      {(() => {
+        const authUser = getStoredAuthUser()
+        const isPlatformModerator = authUser?.role === 'admin' || authUser?.role === 'moderator'
+
+        if (currentCoach.verificationStatus !== 'verified') {
+          return (
+            <>
+              {!workspaceSection && (
+                <PartnerVerificationStatusTracker
+                  persona="coach"
+                  authUser={authUser}
+                  entitySlug={currentCoach.slug}
+                  entityName={currentCoach.name}
+                  localVerificationStatus={currentCoach.verificationStatus}
+                />
+              )}
+              {isPlatformModerator && (
+                <div className="coach-verification-status-banner pending">
+                  <div className="coach-verification-status-text">
+                    <SiteIcon name="alert-triangle" size={20} className="status-banner-icon pending" />
+                    <div>
+                      <strong>Credentials Verification Pending · Moderator Override Available</strong>
+                      <p>
+                        Internal trainee roster and UPI payments are active. Grant the official <strong>&quot;KhelGrid Verified Coach&quot;</strong> tag once credentials are confirmed.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="coach-hub-verify-now-btn"
+                    onClick={() => {
+                      confirmAndVerifyCoach(currentCoach.slug)
+                      triggerRefresh()
+                    }}
+                    title="Admin Action: Confirm NIS/Federation credentials and grant verified badge"
+                  >
+                    <SiteIcon name="shield-check" size={14} />
+                    <span>Confirm &amp; Grant Verified Tag (Admin)</span>
+                  </button>
+                </div>
+              )}
+            </>
+          )
+        }
+
+        return (
+          <div className="coach-verification-status-banner verified">
+            <div className="coach-verification-status-text">
+              <SiteIcon name="shield-check" size={20} className="status-banner-icon verified" />
+              <div>
+                <strong style={{ color: '#065f46' }}>Official KhelGrid Verified Coach</strong>
+                <p style={{ color: '#047857', margin: 0, fontSize: '0.84rem' }}>
+                  Credentials verified by KhelGrid Admin Desk. Your profile displays the official verified badge across student search and parent trial inquiries.
+                </p>
+              </div>
+            </div>
+            {currentCoach.isCustom && isPlatformModerator && (
+              <button
+                type="button"
+                className="coach-hub-btn-outline"
+                style={{ fontSize: '0.75rem', padding: '4px 8px' }}
+                onClick={() => {
+                  revokeCoachVerification(currentCoach.slug)
+                  triggerRefresh()
+                }}
+                title="Admin Action: Revert to pending review"
+              >
+                Revoke Tag (Admin)
+              </button>
+            )}
+          </div>
+        )
+      })()}
+
+      <div className="coach-metrics-grid">
+        <div className="coach-stat-card">
+          <div className="coach-stat-header">
+            <div className="coach-stat-icon-wrap" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#059669' }}>
+              <SiteIcon name="users" size={18} />
+            </div>
+            <span className="coach-stat-value">{summary.totalTrainees}</span>
+          </div>
+          <div className="coach-stat-body">
+            <span className="coach-stat-title">Active Trainees</span>
+            <p className="coach-stat-sub">
+              <span className="coach-trend-pill positive">+14.2%</span>
+              <span style={{ color: '#64748b' }}>than last month</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="coach-stat-card">
+          <div className="coach-stat-header">
+            <div className="coach-stat-icon-wrap" style={{ background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb' }}>
+              <SiteIcon name="sparkles" size={18} />
+            </div>
+            <span className="coach-stat-value">₹{summary.totalRevenue.toLocaleString('en-IN')}</span>
+          </div>
+          <div className="coach-stat-body">
+            <span className="coach-stat-title">Collected This Month</span>
+            <p className="coach-stat-sub">
+              <span className="coach-trend-pill positive">{summary.collectionRate}% collected</span>
+              <span style={{ color: '#64748b' }}>₹{summary.pendingRevenue.toLocaleString('en-IN')} due</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="coach-stat-card">
+          <div className="coach-stat-header">
+            <div className="coach-stat-icon-wrap" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#d97706' }}>
+              <SiteIcon name="mail" size={18} />
+            </div>
+            <span className="coach-stat-value">{summary.newInquiriesCount}</span>
+          </div>
+          <div className="coach-stat-body">
+            <span className="coach-stat-title">New Inquiries</span>
+            <p className="coach-stat-sub">
+              <span className="coach-trend-pill positive">+4 this week</span>
+              <span style={{ color: '#64748b' }}>Parent trials</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="coach-stat-card">
+          <div className="coach-stat-header">
+            <div className="coach-stat-icon-wrap" style={{ background: 'rgba(147, 51, 234, 0.1)', color: '#9333ea' }}>
+              <SiteIcon name="calendar" size={18} />
+            </div>
+            <span className="coach-stat-value">{summary.totalBatches}</span>
+          </div>
+          <div className="coach-stat-body">
+            <span className="coach-stat-title">Active Batches</span>
+            <p className="coach-stat-sub">
+              <span className="coach-trend-pill neutral">Morning &amp; Evening</span>
+              <span style={{ color: '#64748b' }}>Training camps</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="coach-tabs-nav" role="tablist">
+        {(
+          [
+            { id: 'trainees', icon: 'users', label: `Trainee Roster (${trainees.length})` },
+            { id: 'inquiries', icon: 'mail', label: `Inbound Inquiries (${inquiries.length})` },
+            { id: 'batches', icon: 'calendar', label: `Batches & Timings (${batches.length})` },
+            { id: 'attendance', icon: 'check-circle', label: 'Daily Attendance' },
+            { id: 'earnings', icon: 'sparkles', label: 'Total Earnings & UPI QR' },
+            { id: 'credentials', icon: 'award', label: 'Credentials & Evidence' },
+            { id: 'combines', icon: 'award', label: `Combines & Benchmarks (${combines.length})` },
+            { id: 'plans', icon: 'calendar', label: `Weekly Drills & Homework (${trainingPlans.length})` },
+            { id: 'endorsements', icon: 'shield-check', label: `Verified Endorsements (${endorsements.length})` },
+            { id: 'khelo_india', icon: 'trophy', label: `🇮🇳 Khelo India & SAI Battery (${kheloIndiaReports.length})` },
+          ] as const
+        ).map(tab => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            className={`coach-tab-btn ${activeTab === tab.id ? 'is-active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            <SiteIcon name={tab.icon} size={15} />
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {(activeTab === 'trainees' || activeTab === 'inquiries') && (
+        <CoachRosterAndInquiriesPanel
+          activeTab={activeTab}
+          currentCoach={currentCoach}
+          trainees={trainees}
+          batches={batches}
+          inquiries={inquiries}
+          onOpenImportCsv={() => setIsImportCsvModalOpen(true)}
+          onOpenAddTrainee={() => setIsAddTraineeModalOpen(true)}
+          onSelectReceipt={setActiveReceipt}
+          onRefresh={triggerRefresh}
+        />
+      )}
+
+      {(activeTab === 'batches' || activeTab === 'attendance') && (
+        <CoachBatchesAndAttendancePanel
+          activeTab={activeTab}
+          selectedSlug={selectedSlug}
+          currentCoach={currentCoach}
+          batches={batches}
+          trainees={trainees}
+          onOpenAddBatch={() => setIsAddBatchModalOpen(true)}
+          onRefresh={triggerRefresh}
+        />
+      )}
+
+      {(activeTab === 'earnings' || activeTab === 'credentials' || activeTab === 'endorsements') && (
+        <CoachRevenueAndCredentialsPanel
+          activeTab={activeTab}
+          currentCoach={currentCoach}
+          batches={batches}
+          endorsements={endorsements}
+          summary={summary}
+          onOpenAwardEndorsement={() => setIsAwardEndorsementModalOpen(true)}
+          onRefresh={triggerRefresh}
+        />
+      )}
+
+      {(activeTab === 'combines' || activeTab === 'plans' || activeTab === 'khelo_india') && (
+        <CoachPerformanceAndSaiPanel
+          activeTab={activeTab}
+          selectedSlug={selectedSlug}
+          currentCoach={currentCoach}
+          combines={combines}
+          trainingPlans={trainingPlans}
+          kheloIndiaReports={kheloIndiaReports}
+          onOpenAddCombine={() => setIsAddCombineModalOpen(true)}
+          onOpenAddPlan={() => setIsAddPlanModalOpen(true)}
+          onRefresh={triggerRefresh}
+        />
+      )}
+
+      <CoachActionModals
+        selectedSlug={selectedSlug}
+        currentCoach={currentCoach}
+        batches={batches}
+        trainees={trainees}
+        isAddTraineeModalOpen={isAddTraineeModalOpen}
+        isAddBatchModalOpen={isAddBatchModalOpen}
+        isRegisterCoachModalOpen={isRegisterCoachModalOpen}
+        isImportCsvModalOpen={isImportCsvModalOpen}
+        isAddCombineModalOpen={isAddCombineModalOpen}
+        isAddPlanModalOpen={isAddPlanModalOpen}
+        isAwardEndorsementModalOpen={isAwardEndorsementModalOpen}
+        activeReceipt={activeReceipt}
+        onCloseAddTrainee={() => setIsAddTraineeModalOpen(false)}
+        onCloseAddBatch={() => setIsAddBatchModalOpen(false)}
+        onCloseRegisterCoach={() => setIsRegisterCoachModalOpen(false)}
+        onCloseImportCsv={() => setIsImportCsvModalOpen(false)}
+        onCloseAddCombine={() => setIsAddCombineModalOpen(false)}
+        onCloseAddPlan={() => setIsAddPlanModalOpen(false)}
+        onCloseAwardEndorsement={() => setIsAwardEndorsementModalOpen(false)}
+        onCloseReceipt={() => setActiveReceipt(null)}
+        onSelectCoachSlug={setSelectedSlug}
+        onRefresh={triggerRefresh}
+      />
+    </div>
   )
 }

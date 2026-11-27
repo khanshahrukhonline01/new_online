@@ -304,16 +304,11 @@ export function getAllowedWorkspacesForRole(role: AdminPlatformRole | null): Adm
   // System governance mutations inside platform_governance remain strictly gated to super_admin.
   return [
     'command',
-    'post_regulation_gate',
-    'regulatory_rules_engine',
-    'regulatory_inbox',
     'moderation_desk',
     'analytics',
     'chronicle_desk',
     'tenant_governance',
     'verification_vault',
-    'regulatory_compliance',
-    'audit_explorer',
     'creator_campaigns',
     'fraud_disputes',
     'platform_governance',

@@ -17,7 +17,6 @@ import {
   signOut as performSupabaseSignOut,
   updatePassword,
 } from '../../../../src/integrations/supabase/auth-client'
-import { AuthCaptchaWidget } from '../../../../src/shared/components/auth/AuthCaptchaWidget'
 import { getSupabaseClient } from '../../../../src/integrations/supabase/realtime-client'
 import {
   getModerationAccessProfile,
@@ -95,8 +94,6 @@ export function AdminAuthGate({ children, initialAuthOverride }: AdminAuthGatePr
   const [formBusy, setFormBusy] = useState(false)
   const [formError, setFormError] = useState('')
   const [formNotice, setFormNotice] = useState('')
-  const [captchaToken, setCaptchaToken] = useState('')
-  const [captchaResetKey, setCaptchaResetKey] = useState(0)
 
   const hadActiveSessionRef = useRef(Boolean(initialAuthOverride))
 
@@ -254,21 +251,14 @@ export function AdminAuthGate({ children, initialAuthOverride }: AdminAuthGatePr
     setFormNotice('')
     setSessionExpired(false)
     try {
-      const result = await signInWithEmail({
-        email: email.trim(),
-        password,
-        ...(captchaToken ? { captchaToken } : {}),
-      })
+      const result = await signInWithEmail({ email: email.trim(), password })
       if (!result.success) {
-        setCaptchaResetKey(k => k + 1)
         setFormError(result.message || 'Invalid email or password.')
         return
       }
       setPassword('')
-      setCaptchaResetKey(k => k + 1)
       await revalidate()
     } catch (err) {
-      setCaptchaResetKey(k => k + 1)
       setFormError(err instanceof Error ? err.message : 'Sign-in failed.')
     } finally {
       setFormBusy(false)
@@ -286,15 +276,13 @@ export function AdminAuthGate({ children, initialAuthOverride }: AdminAuthGatePr
         typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : '/',
         origin,
       )
-      const res = await sendPasswordReset(email.trim(), safeRedirect, captchaToken || undefined)
-      setCaptchaResetKey(k => k + 1)
+      const res = await sendPasswordReset(email.trim(), safeRedirect)
       if (!res.success) {
         setFormError(res.message)
       } else {
         setFormNotice(res.message)
       }
     } catch (err) {
-      setCaptchaResetKey(k => k + 1)
       setFormError(err instanceof Error ? err.message : 'Could not send reset instructions.')
     } finally {
       setFormBusy(false)
@@ -480,7 +468,6 @@ export function AdminAuthGate({ children, initialAuthOverride }: AdminAuthGatePr
                 required
               />
             </label>
-            <AuthCaptchaWidget resetKey={captchaResetKey} onTokenChange={setCaptchaToken} />
             <div className="admin-gate-actions">
               <button type="submit" className="admin-gate-btn-primary" disabled={formBusy}>
                 {formBusy ? 'Sending…' : 'Send reset link'}
@@ -605,7 +592,6 @@ export function AdminAuthGate({ children, initialAuthOverride }: AdminAuthGatePr
                 required
               />
             </label>
-            <AuthCaptchaWidget resetKey={captchaResetKey} onTokenChange={setCaptchaToken} />
             <div className="admin-gate-actions">
               <button type="submit" className="admin-gate-btn-primary" disabled={formBusy}>
                 {formBusy ? 'Verifying…' : 'Sign in securely'}

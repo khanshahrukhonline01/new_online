@@ -15,28 +15,7 @@ import { AdminChronicleEditorialDesk } from './components/AdminChronicleEditoria
 import { AdminTrustSafetyDesk } from './components/AdminTrustSafetyDesk'
 import { AdminPlatformGovernanceDesk } from './components/AdminPlatformGovernanceDesk'
 import { AdminRegulatoryInboxDesk } from './components/AdminRegulatoryInboxDesk'
-import { AdminRegulatoryComplianceDesk } from './components/AdminRegulatoryComplianceDesk'
-import { AdminAuditExplorerDesk } from './components/AdminAuditExplorerDesk'
-import { AdminPostRegulationGateDesk } from './components/AdminPostRegulationGateDesk'
-import { AdminRegulatoryRulesDesk } from './components/AdminRegulatoryRulesDesk'
-import {
-  loadUnifiedRegulatoryInbox,
-  type RegulatoryInboxItem,
-} from './services/adminRegulatoryInboxService'
-import { getMakerCheckerProposals } from './services/adminGovernanceEscalationService'
-import { getRegulatoryComplianceSnapshot } from './services/adminRegulatoryComplianceService'
-import { getAdminModerationListings } from './services/adminModerationService'
-import { getPostRegulationSnapshot } from '../../../src/shared/governance/postRegulationBridge'
-import {
-  formatSavedViewFilterSummary,
-  listSavedViews,
-  type AdminSavedFilterView,
-} from './services/adminSavedViewsService'
-import {
-  loadGlobalAdminSearchIndex,
-  type AdminDeskDeepLink,
-  type GlobalSearchEntityItem,
-} from './services/adminGlobalSearchService'
+import { loadUnifiedRegulatoryInbox } from './services/adminRegulatoryInboxService'
 import { subscribeRegulatoryState } from '../../../src/shared/governance/regulatoryBridge'
 import {
   AdminAuthGate,
@@ -62,8 +41,6 @@ export interface AdminAppProps {
 
 const KEY_CHORD_WORKSPACES: Record<string, AdminWorkspaceTab> = {
   c: 'command',
-  e: 'post_regulation_gate',
-  k: 'regulatory_rules_engine',
   i: 'regulatory_inbox',
   m: 'moderation_desk',
   a: 'analytics',
@@ -71,8 +48,6 @@ const KEY_CHORD_WORKSPACES: Record<string, AdminWorkspaceTab> = {
   t: 'tenant_governance',
   v: 'verification_vault',
   s: 'fraud_disputes',
-  d: 'regulatory_compliance',
-  l: 'audit_explorer',
   p: 'platform_governance',
   g: 'gate_desk',
   u: 'turf_oversight',
@@ -95,21 +70,9 @@ function AuthenticatedAdminShell({
   const [pendingManuscriptsCount, setPendingManuscriptsCount] = useState(0)
   const [inboxActionableCount, setInboxActionableCount] = useState(0)
   const [inboxBreachedCount, setInboxBreachedCount] = useState(0)
-  const [inboxAtRiskCount, setInboxAtRiskCount] = useState(0)
-  const [slaWatchlistItems, setSlaWatchlistItems] = useState<RegulatoryInboxItem[]>([])
-  const [pendingMakerCheckerCount, setPendingMakerCheckerCount] = useState(0)
-  const [regulatoryComplianceOpenCount, setRegulatoryComplianceOpenCount] = useState(0)
-  const [postRegulationPendingCount, setPostRegulationPendingCount] = useState(0)
-  const [postRegulationHardHoldsCount, setPostRegulationHardHoldsCount] = useState(0)
-  const [savedFilterViews, setSavedFilterViews] = useState<AdminSavedFilterView[]>(() =>
-    listSavedViews(),
-  )
   const [toastNotification, setToastNotification] = useState<string | null>(null)
   const [dbLatencyMs, setDbLatencyMs] = useState<number | null>(null)
   const [isRefreshingCounts, setIsRefreshingCounts] = useState(false)
-  const [globalSearchItems, setGlobalSearchItems] = useState<GlobalSearchEntityItem[]>([])
-  const [isLoadingSearchIndex, setIsLoadingSearchIndex] = useState(false)
-  const [deskDeepLink, setDeskDeepLink] = useState<AdminDeskDeepLink | null>(null)
   const lastGKeyTimeRef = useRef<number>(0)
 
   const [adminTheme, setAdminTheme] = useState<AdminThemeMode>(() => {
@@ -184,13 +147,8 @@ function AuthenticatedAdminShell({
         loadUnifiedRegulatoryInbox().catch(() => null),
       ])
       setDbLatencyMs(Math.max(1, Date.now() - start))
-      const localPendingListings = getAdminModerationListings().filter(
-        l => l.status === 'pending_review',
-      ).length
-      if (queueRes?.pendingSubmissions && queueRes.pendingSubmissions.length > 0) {
+      if (queueRes?.pendingSubmissions) {
         setPendingListingsCount(queueRes.pendingSubmissions.length)
-      } else {
-        setPendingListingsCount(localPendingListings)
       }
       if (chronicleRes?.submissions) {
         setPendingManuscriptsCount(chronicleRes.submissions.length)
@@ -198,40 +156,7 @@ function AuthenticatedAdminShell({
       if (inboxSnapshot) {
         setInboxActionableCount(inboxSnapshot.metrics.totalActionable)
         setInboxBreachedCount(inboxSnapshot.metrics.breachedCount)
-        setInboxAtRiskCount(inboxSnapshot.metrics.atRiskCount)
-        setSlaWatchlistItems(
-          inboxSnapshot.items.filter(
-            item => item.slaStatus === 'breached' || item.slaStatus === 'at_risk',
-          ),
-        )
       }
-      try {
-        const mcPending = getMakerCheckerProposals().filter(
-          p => p.status === 'pending_approval',
-        ).length
-        setPendingMakerCheckerCount(mcPending)
-      } catch {
-        setPendingMakerCheckerCount(0)
-      }
-      try {
-        const regSnap = getRegulatoryComplianceSnapshot()
-        setRegulatoryComplianceOpenCount(
-          regSnap.metrics.openDsarCount +
-            regSnap.metrics.pendingSafeguardsCount +
-            regSnap.metrics.openGrievancesCount,
-        )
-      } catch {
-        setRegulatoryComplianceOpenCount(0)
-      }
-      try {
-        const postGateSnap = getPostRegulationSnapshot()
-        setPostRegulationPendingCount(postGateSnap.metrics.awaitingEvaluation)
-        setPostRegulationHardHoldsCount(postGateSnap.metrics.hardHolds)
-      } catch {
-        setPostRegulationPendingCount(0)
-        setPostRegulationHardHoldsCount(0)
-      }
-      setSavedFilterViews(listSavedViews())
     } catch {
       setDbLatencyMs(null)
     } finally {
@@ -239,75 +164,12 @@ function AuthenticatedAdminShell({
     }
   }, [])
 
-  const refreshGlobalSearchIndex = useCallback(async () => {
-    setIsLoadingSearchIndex(true)
-    try {
-      const items = await loadGlobalAdminSearchIndex()
-      setGlobalSearchItems(items)
-    } catch {
-      // keep prior search index if transient error
-    } finally {
-      setIsLoadingSearchIndex(false)
-    }
-  }, [])
-
   useEffect(() => {
     void loadCounts()
-    void refreshGlobalSearchIndex()
     return subscribeRegulatoryState(() => {
       void loadCounts()
-      void refreshGlobalSearchIndex()
     })
-  }, [loadCounts, refreshGlobalSearchIndex])
-
-  useEffect(() => {
-    if (isCommandPaletteOpen) {
-      void refreshGlobalSearchIndex()
-    }
-  }, [isCommandPaletteOpen, refreshGlobalSearchIndex])
-
-  const handleSelectSearchEntity = useCallback((item: GlobalSearchEntityItem) => {
-    setActiveWorkspace(item.targetWorkspace)
-    setDeskDeepLink({
-      workspace: item.targetWorkspace,
-      recordId: item.focusRecordId,
-      query: item.focusQuery,
-      tab: item.focusTab,
-      nonce: Date.now(),
-    })
-    setToastNotification(`Jumped to ${item.title} in ${item.targetDeskLabel}.`)
-    window.setTimeout(() => setToastNotification(null), 3200)
-  }, [])
-
-  const handleSelectWatchlistItem = useCallback((item: RegulatoryInboxItem) => {
-    setActiveWorkspace(item.sourceDesk)
-    setDeskDeepLink({
-      workspace: item.sourceDesk,
-      recordId: item.entityId,
-      query: item.referenceCode,
-      nonce: Date.now(),
-    })
-    setToastNotification(`Jumped to ${item.referenceCode} (${item.sourceLabel}).`)
-    window.setTimeout(() => setToastNotification(null), 3200)
-  }, [])
-
-  const handleOpenMakerCheckerQueue = useCallback(() => {
-    setActiveWorkspace('platform_governance')
-    window.setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('khelgrid-admin-open-maker-checker'))
-    }, 0)
-  }, [])
-
-  const handleApplySavedViewFromPalette = useCallback((view: AdminSavedFilterView) => {
-    setActiveWorkspace(view.desk)
-    setDeskDeepLink({
-      workspace: view.desk,
-      savedViewFilters: view.filters,
-      nonce: Date.now(),
-    })
-    setToastNotification(`Applied view "${view.name}" in ${view.deskLabel}.`)
-    window.setTimeout(() => setToastNotification(null), 3200)
-  }, [])
+  }, [loadCounts])
 
   // Global keyboard navigation chords (G + workspace key), suppressed inside inputs or open dialogs
   useEffect(() => {
@@ -398,31 +260,9 @@ function AuthenticatedAdminShell({
         onSelect: () => setActiveWorkspace('command'),
       },
       {
-        id: 'cmd-post-regulation-gate',
-        title: 'Open Tenant Post Pre-Publication Evaluation Gate',
-        section: 'Regulation',
-        icon: 'shield-check',
-        badge:
-          postRegulationHardHoldsCount > 0
-            ? `${postRegulationHardHoldsCount} Holds`
-            : postRegulationPendingCount > 0
-              ? `${postRegulationPendingCount} Awaiting`
-              : undefined,
-        shortcut: 'G E',
-        onSelect: () => setActiveWorkspace('post_regulation_gate'),
-      },
-      {
-        id: 'cmd-regulatory-rules-engine',
-        title: 'Open Regulatory Policy Rules & Live Sandbox Engine',
-        section: 'Regulation',
-        icon: 'sliders',
-        shortcut: 'G K',
-        onSelect: () => setActiveWorkspace('regulatory_rules_engine'),
-      },
-      {
         id: 'cmd-regulatory-inbox',
         title: 'Open Unified Regulatory Inbox & SLA Queue',
-        section: 'Regulation',
+        section: 'Operations',
         icon: 'bell',
         badge:
           inboxBreachedCount > 0
@@ -475,26 +315,6 @@ function AuthenticatedAdminShell({
         onSelect: () => setActiveWorkspace('fraud_disputes'),
       },
       {
-        id: 'cmd-regulatory-compliance',
-        title: 'Open Statutory Regulatory Compliance Desk (DPDP · POCSO · IT Rules)',
-        section: 'Governance & Trust',
-        icon: 'shield-check',
-        badge:
-          regulatoryComplianceOpenCount > 0
-            ? `${regulatoryComplianceOpenCount} Open`
-            : undefined,
-        shortcut: 'G D',
-        onSelect: () => setActiveWorkspace('regulatory_compliance'),
-      },
-      {
-        id: 'cmd-audit-explorer',
-        title: 'Open Centralized Cross-Desk Audit Trail Explorer',
-        section: 'Governance & Trust',
-        icon: 'file-text',
-        shortcut: 'G L',
-        onSelect: () => setActiveWorkspace('audit_explorer'),
-      },
-      {
         id: 'cmd-platform-governance',
         title: 'Open Platform Settings, Audit Trails & RBAC Desk',
         section: 'Governance & Trust',
@@ -507,9 +327,12 @@ function AuthenticatedAdminShell({
         title: 'Open Dual-Control Approvals (Maker-Checker Queue)',
         section: 'Governance & Trust',
         icon: 'shield-check',
-        badge:
-          pendingMakerCheckerCount > 0 ? `${pendingMakerCheckerCount} Pending` : undefined,
-        onSelect: handleOpenMakerCheckerQueue,
+        onSelect: () => {
+          setActiveWorkspace('platform_governance')
+          window.setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('khelgrid-admin-open-maker-checker'))
+          }, 0)
+        },
       },
       {
         id: 'cmd-chronicle',
@@ -601,29 +424,12 @@ function AuthenticatedAdminShell({
           void signOut()
         },
       },
-      ...savedFilterViews
-        .filter(v => v.isPinned)
-        .map(view => ({
-          id: `saved-view-${view.id}`,
-          title: `View: ${view.name} (${view.deskLabel})`,
-          section: 'Saved Filter Views',
-          icon: 'sliders' as const,
-          badge: formatSavedViewFilterSummary(view.filters),
-          onSelect: () => handleApplySavedViewFromPalette(view),
-        })),
     ],
     [
-      postRegulationPendingCount,
-      postRegulationHardHoldsCount,
       inboxActionableCount,
       inboxBreachedCount,
       pendingListingsCount,
       pendingManuscriptsCount,
-      pendingMakerCheckerCount,
-      regulatoryComplianceOpenCount,
-      savedFilterViews,
-      handleApplySavedViewFromPalette,
-      handleOpenMakerCheckerQueue,
       handleThemeChange,
       openPasswordReset,
       revalidate,
@@ -633,16 +439,12 @@ function AuthenticatedAdminShell({
 
   const workspaceDetails: Record<AdminWorkspaceTab, { title: string; section: string }> = {
     command: { title: 'Command Centre', section: 'Operations' },
-    post_regulation_gate: { title: 'Post Evaluation Gate', section: 'Regulation' },
-    regulatory_rules_engine: { title: 'Policy Rules Engine', section: 'Regulation' },
-    regulatory_inbox: { title: 'Unified Regulatory Inbox', section: 'Regulation' },
-    regulatory_compliance: { title: 'Statutory Compliance', section: 'Regulation' },
+    regulatory_inbox: { title: 'Unified Regulatory Inbox', section: 'Operations' },
     moderation_desk: { title: 'Listing Moderation Queue', section: 'Operations' },
     analytics: { title: 'Operations & KPI Analytics', section: 'Operations' },
     tenant_governance: { title: 'Tenant & Org Governance', section: 'Governance & Trust' },
     verification_vault: { title: 'Verification & Evidence', section: 'Governance & Trust' },
     fraud_disputes: { title: 'Trust & Safety / Sanctions', section: 'Governance & Trust' },
-    audit_explorer: { title: 'Audit Trail Explorer', section: 'Governance & Trust' },
     platform_governance: { title: 'Platform Settings & RBAC', section: 'Governance & Trust' },
     chronicle_desk: { title: 'Chronicle Peer-Review Desk', section: 'Editorial & Creators' },
     creator_campaigns: { title: 'Creator & Attribution Desk', section: 'Editorial & Creators' },
@@ -664,9 +466,7 @@ function AuthenticatedAdminShell({
           onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
           isMobileOpen={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
-          postRegulationPendingCount={postRegulationPendingCount}
           regulatoryInboxCount={inboxActionableCount}
-          regulatoryComplianceCount={regulatoryComplianceOpenCount}
           pendingSubmissionsCount={pendingListingsCount}
           pendingManuscriptsCount={pendingManuscriptsCount}
           moderatorEmail={identity.email}
@@ -679,8 +479,6 @@ function AuthenticatedAdminShell({
             onToggleSidebar={handleToggleSidebar}
             onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
             onJumpToWorkspace={tab => setActiveWorkspace(tab)}
-            onSelectWatchlistItem={handleSelectWatchlistItem}
-            onOpenMakerChecker={handleOpenMakerCheckerQueue}
             onResetPassword={openPasswordReset}
             onSignOut={() => void signOut()}
             activeWorkspaceTitle={workspaceDetails[activeWorkspace]?.title || 'Command Centre'}
@@ -689,11 +487,6 @@ function AuthenticatedAdminShell({
             onChangeTheme={handleThemeChange}
             pendingSubmissionsCount={pendingListingsCount}
             pendingManuscriptsCount={pendingManuscriptsCount}
-            slaWatchlistItems={slaWatchlistItems}
-            slaBreachedCount={inboxBreachedCount}
-            slaAtRiskCount={inboxAtRiskCount}
-            pendingMakerCheckerCount={pendingMakerCheckerCount}
-            regulatoryComplianceOpenCount={regulatoryComplianceOpenCount}
             dbLatencyMs={dbLatencyMs}
             databaseId={databaseProjectRef}
             operatorEmail={identity.email}
@@ -703,22 +496,6 @@ function AuthenticatedAdminShell({
           {/* Compact Actionable Triage Strip */}
           <div className="admin-triage-strip" role="region" aria-label="Quick queue jump bar">
             <div className="admin-triage-items">
-              <button
-                type="button"
-                className={`admin-triage-link ${activeWorkspace === 'post_regulation_gate' ? 'is-active' : ''}`}
-                onClick={() => setActiveWorkspace('post_regulation_gate')}
-                data-testid="triage-post-regulation-gate"
-              >
-                <span>Post Gate</span>
-                <span
-                  className={`admin-triage-count ${postRegulationPendingCount > 0 ? 'is-pending' : ''}`}
-                >
-                  {postRegulationHardHoldsCount > 0
-                    ? `${postRegulationHardHoldsCount} Holds`
-                    : postRegulationPendingCount}
-                </span>
-              </button>
-              <span className="admin-triage-sep" aria-hidden="true">·</span>
               <button
                 type="button"
                 className={`admin-triage-link ${activeWorkspace === 'regulatory_inbox' ? 'is-active' : ''}`}
@@ -737,18 +514,6 @@ function AuthenticatedAdminShell({
               <span className="admin-triage-sep" aria-hidden="true">·</span>
               <button
                 type="button"
-                className={`admin-triage-link ${activeWorkspace === 'regulatory_compliance' ? 'is-active' : ''}`}
-                onClick={() => setActiveWorkspace('regulatory_compliance')}
-                data-testid="triage-regulatory-compliance"
-              >
-                <span>Statutory Suite</span>
-                <span className={`admin-triage-count ${regulatoryComplianceOpenCount > 0 ? 'is-pending' : ''}`}>
-                  {regulatoryComplianceOpenCount}
-                </span>
-              </button>
-              <span className="admin-triage-sep" aria-hidden="true">·</span>
-              <button
-                type="button"
                 className={`admin-triage-link ${activeWorkspace === 'moderation_desk' ? 'is-active' : ''}`}
                 onClick={() => setActiveWorkspace('moderation_desk')}
               >
@@ -760,11 +525,29 @@ function AuthenticatedAdminShell({
               <span className="admin-triage-sep" aria-hidden="true">·</span>
               <button
                 type="button"
-                className={`admin-triage-link ${activeWorkspace === 'audit_explorer' ? 'is-active' : ''}`}
-                onClick={() => setActiveWorkspace('audit_explorer')}
-                data-testid="triage-audit-explorer"
+                className={`admin-triage-link ${activeWorkspace === 'chronicle_desk' ? 'is-active' : ''}`}
+                onClick={() => setActiveWorkspace('chronicle_desk')}
               >
-                <span>Audit Trail</span>
+                <span>Manuscripts</span>
+                <span className={`admin-triage-count ${pendingManuscriptsCount > 0 ? 'is-pending' : ''}`}>
+                  {pendingManuscriptsCount}
+                </span>
+              </button>
+              <span className="admin-triage-sep" aria-hidden="true">·</span>
+              <button
+                type="button"
+                className={`admin-triage-link ${activeWorkspace === 'verification_vault' ? 'is-active' : ''}`}
+                onClick={() => setActiveWorkspace('verification_vault')}
+              >
+                <span>Verification Vault</span>
+              </button>
+              <span className="admin-triage-sep" aria-hidden="true">·</span>
+              <button
+                type="button"
+                className={`admin-triage-link ${activeWorkspace === 'fraud_disputes' ? 'is-active' : ''}`}
+                onClick={() => setActiveWorkspace('fraud_disputes')}
+              >
+                <span>Trust &amp; Safety</span>
               </button>
               <span className="admin-triage-sep" aria-hidden="true">·</span>
               <button
@@ -778,7 +561,7 @@ function AuthenticatedAdminShell({
 
             <div className="admin-triage-actions">
               <span className="admin-triage-shortcut-hint">
-                Press <kbd>G</kbd> + <kbd>E</kbd> post gate · <kbd>G</kbd> + <kbd>K</kbd> rules · <kbd>Ctrl+K</kbd>
+                Press <kbd>G</kbd> + <kbd>M</kbd> for queue · <kbd>Ctrl+K</kbd> command
               </span>
               <button
                 type="button"
@@ -803,38 +586,13 @@ function AuthenticatedAdminShell({
           <div className="admin-shell-content">
             {activeWorkspace === 'command' ? (
               <AdminControlPanelPage />
-            ) : activeWorkspace === 'post_regulation_gate' ? (
-              <AdminPostRegulationGateDesk
-                operatorEmail={identity.email}
-                deepLink={deskDeepLink?.workspace === 'post_regulation_gate' ? deskDeepLink : null}
-                onOpenPolicyRules={() => setActiveWorkspace('regulatory_rules_engine')}
-              />
-            ) : activeWorkspace === 'regulatory_rules_engine' ? (
-              <AdminRegulatoryRulesDesk
-                operatorEmail={identity.email}
-                onOpenPostGate={() => setActiveWorkspace('post_regulation_gate')}
-              />
             ) : activeWorkspace === 'regulatory_inbox' ? (
               <AdminRegulatoryInboxDesk
                 operatorEmail={identity.email}
                 onJumpToWorkspace={tab => setActiveWorkspace(tab)}
-                deepLink={deskDeepLink?.workspace === 'regulatory_inbox' ? deskDeepLink : null}
-              />
-            ) : activeWorkspace === 'regulatory_compliance' ? (
-              <AdminRegulatoryComplianceDesk
-                operatorEmail={identity.email}
-                deepLink={deskDeepLink?.workspace === 'regulatory_compliance' ? deskDeepLink : null}
-              />
-            ) : activeWorkspace === 'audit_explorer' ? (
-              <AdminAuditExplorerDesk
-                operatorEmail={identity.email}
-                deepLink={deskDeepLink?.workspace === 'audit_explorer' ? deskDeepLink : null}
               />
             ) : activeWorkspace === 'moderation_desk' ? (
-              <AdminListingModerationDesk
-                operatorEmail={identity.email}
-                deepLink={deskDeepLink?.workspace === 'moderation_desk' ? deskDeepLink : null}
-              />
+              <AdminListingModerationDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'chronicle_desk' ? (
               <AdminChronicleEditorialDesk
                 currentUser={{
@@ -843,30 +601,20 @@ function AuthenticatedAdminShell({
                 }}
               />
             ) : activeWorkspace === 'tenant_governance' ? (
-              <AdminTenantManagementDesk
-                operatorEmail={identity.email}
-                deepLink={deskDeepLink?.workspace === 'tenant_governance' ? deskDeepLink : null}
-              />
+              <AdminTenantManagementDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'verification_vault' ? (
-              <AdminVerificationVaultDesk
-                operatorEmail={identity.email}
-                deepLink={deskDeepLink?.workspace === 'verification_vault' ? deskDeepLink : null}
-              />
+              <AdminVerificationVaultDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'analytics' ? (
               <AdminAnalyticsDashboard shellAuthorized />
             ) : activeWorkspace === 'creator_campaigns' ? (
               <AdminCampaignMarketplaceDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'fraud_disputes' ? (
-              <AdminTrustSafetyDesk
-                operatorEmail={identity.email}
-                deepLink={deskDeepLink?.workspace === 'fraud_disputes' ? deskDeepLink : null}
-              />
+              <AdminTrustSafetyDesk operatorEmail={identity.email} />
             ) : activeWorkspace === 'platform_governance' ? (
               <AdminPlatformGovernanceDesk
                 operatorEmail={identity.email}
                 operatorRole={identity.role}
                 operatorUserId={identity.userId}
-                deepLink={deskDeepLink?.workspace === 'platform_governance' ? deskDeepLink : null}
               />
             ) : (activeWorkspace === 'gate_desk' ||
                 activeWorkspace === 'turf_oversight' ||
@@ -893,9 +641,6 @@ function AuthenticatedAdminShell({
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         actions={commandActions}
-        searchItems={globalSearchItems}
-        onSelectEntity={handleSelectSearchEntity}
-        isLoadingEntities={isLoadingSearchIndex}
       />
     </main>
   )

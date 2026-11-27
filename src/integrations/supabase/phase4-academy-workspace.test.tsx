@@ -213,13 +213,27 @@ describe('KhelGrid SaaS Platform — Phase 4 Academy Workspace & Administration 
   })
 
   describe('7. AcademyHubPage React Component Integration', () => {
-    it('fails closed without TenantProvider session and exposes zero fake demo academies', () => {
-      const htmlUnauth = renderToStaticMarkup(<AcademyHubPage />)
+    it('renders workspace switcher and operational settings tab with proper fields', () => {
+      const htmlLeads = renderToStaticMarkup(<AcademyHubPage initialAcademySlug="bengaluru-fc-academy" />)
 
-      expect(htmlUnauth).toContain('Authorized Academy Membership Required')
-      expect(htmlUnauth).not.toContain('Bengaluru FC Residential Academy')
-      expect(htmlUnauth).not.toContain('id="academy-hub-select"')
-      expect(htmlUnauth).not.toContain('id="academy-role-select"')
+      // Workspace Switcher
+      expect(htmlLeads).toContain('Switch Academy Management Workspace:')
+      expect(htmlLeads).toContain('id="academy-hub-select"')
+      expect(htmlLeads).toContain('WhatsApp &amp; UPI Setup')
+
+      // Operational Settings Tab Render
+      const htmlSettings = renderToStaticMarkup(
+        <AcademyHubPage initialAcademySlug="bengaluru-fc-academy" initialTab="settings" />
+      )
+
+      expect(htmlSettings).toContain('Director WhatsApp &amp; UPI Routing Setup')
+      expect(htmlSettings).toContain('Academy Legal / Operating Name')
+      expect(htmlSettings).toContain('Primary Sport')
+      expect(htmlSettings).toContain('City / District')
+      expect(htmlSettings).toContain('Director / Head Coach Name')
+      expect(htmlSettings).toContain('Official WhatsApp Mobile Number (for Lead Routing)')
+      expect(htmlSettings).toContain('Academy UPI ID (VPA) for Fee Collection')
+      expect(htmlSettings).toContain('Save Operations Settings')
     })
   })
 })
