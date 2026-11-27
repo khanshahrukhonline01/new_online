@@ -1111,6 +1111,142 @@ html.dark .admin-analytics-status-notice {
   opacity: 1;
 }
 
+/* Period-over-Period Comparison Strip */
+.admin-period-compare-strip {
+  margin-bottom: 1.25rem;
+  padding: 0.9rem 1.05rem;
+  border-radius: 10px;
+  border: 1px solid rgba(14, 165, 233, 0.28);
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+:root[data-admin-theme='dark'] .admin-period-compare-strip,
+:root[data-theme='dark'] .admin-period-compare-strip,
+html.dark .admin-period-compare-strip {
+  background: rgba(15, 23, 42, 0.72);
+  border-color: rgba(56, 189, 248, 0.28);
+}
+
+.admin-period-compare-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.admin-period-compare-title {
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+:root[data-admin-theme='dark'] .admin-period-compare-title,
+html.dark .admin-period-compare-title {
+  color: #cbd5e1;
+}
+
+.admin-period-compare-dismiss {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 6px;
+  padding: 0.24rem 0.6rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+}
+
+.admin-period-compare-dismiss:hover {
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.admin-period-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (max-width: 960px) {
+  .admin-period-compare-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.admin-period-compare-cell {
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+:root[data-admin-theme='dark'] .admin-period-compare-cell,
+html.dark .admin-period-compare-cell {
+  background: #0b1220;
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
+.admin-period-compare-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+:root[data-admin-theme='dark'] .admin-period-compare-label,
+html.dark .admin-period-compare-label {
+  color: #94a3b8;
+}
+
+.admin-period-compare-values {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.admin-period-compare-values strong {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.admin-period-compare-prev {
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.admin-period-delta {
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.admin-period-delta.is-up {
+  color: #dc2626;
+}
+
+.admin-period-delta.is-down {
+  color: #16a34a;
+}
+
+.admin-period-delta.is-flat {
+  color: #64748b;
+}
+
+:root[data-admin-theme='dark'] .admin-period-delta.is-up,
+html.dark .admin-period-delta.is-up {
+  color: #f87171;
+}
+
+:root[data-admin-theme='dark'] .admin-period-delta.is-down,
+html.dark .admin-period-delta.is-down {
+  color: #4ade80;
+}
+
+
 
 
 

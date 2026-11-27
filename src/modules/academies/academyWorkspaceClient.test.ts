@@ -8,11 +8,7 @@ import {
 } from './academyHubTypes'
 import {
   calculateAcademyProfileCompleteness,
-  createAcademyFeeInvoice,
-  generateAcademyUpiPayLink,
-  listAcademyFeeInvoices,
   loadAcademyDashboardOverview,
-  recordAcademyFeeReceipt,
   saveAcademySecuritySettings,
   type AcademyProfileRecord,
 } from './academyWorkspaceClient'
@@ -154,124 +150,5 @@ describe('Academy Workspace Client & 7-Role RBAC Matrix', () => {
     })
     expect(invalidVpa.success).toBe(false)
     expect(invalidVpa.message).toContain('UPI VPA')
-  })
-
-  it('builds valid direct UPI deep links, manages invoices/receipts, and preserves existing tenant settings', async () => {
-    const upi = generateAcademyUpiPayLink({
-      vpa: 'academy@oksbi',
-      name: 'Apex Academy',
-      amount: 2500,
-      note: 'December Fee',
-    })
-    expect(upi).toBe(
-      'upi://pay?pa=academy%40oksbi&pn=Apex%20Academy&am=2500&cu=INR&tn=December%20Fee',
-    )
-
-    const orderCalls: unknown[] = []
-    const insertInvoiceSpy = vi.fn().mockResolvedValue({ error: null })
-    const insertTxSpy = vi.fn().mockResolvedValue({ error: null })
-    const eqStudentSpy = vi.fn().mockResolvedValue({ error: null })
-    const eqTenantSpy = vi.fn().mockReturnValue({ eq: eqStudentSpy })
-    const updateInvoiceSpy = vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
-    })
-    const updateTenantEqSpy = vi.fn().mockResolvedValue({ error: null })
-    const updateTenantSpy = vi.fn().mockReturnValue({ eq: updateTenantEqSpy })
-
-    vi.spyOn(realtimeModule, 'getSupabaseClient').mockReturnValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'usr-fin' } }, error: null }) },
-      from: vi.fn().mockImplementation((table: string) => {
-        if (table === 'tenant_fee_invoices') {
-          return {
-            select: () => ({
-              eq: () => ({
-                order: () => ({
-                  order: async () => {
-                    orderCalls.push(true)
-                    return {
-                      data: [
-                        {
-                          id: 'inv-1',
-                          tenant_id: 't-1',
-                          student_id: 'stu-1',
-                          invoice_number: 'INV-202612-0001',
-                          amount: 3000,
-                          billing_month: '2026-12',
-                          due_date: '2026-12-05',
-                          status: 'issued',
-                          created_at: '2026-12-01T00:00:00Z',
-                          updated_at: '2026-12-01T00:00:00Z',
-                        },
-                      ],
-                      error: null,
-                    }
-                  },
-                }),
-              }),
-            }),
-            insert: insertInvoiceSpy,
-            update: updateInvoiceSpy,
-          }
-        }
-        if (table === 'tenant_fee_transactions') {
-          return { insert: insertTxSpy }
-        }
-        if (table === 'tenant_students') {
-          return { update: () => ({ eq: eqTenantSpy }) }
-        }
-        if (table === 'tenants') {
-          return { update: updateTenantSpy }
-        }
-        return {}
-      }),
-    } as unknown as ReturnType<typeof realtimeModule.getSupabaseClient>)
-
-    const invoices = await listAcademyFeeInvoices('t-1')
-    expect(orderCalls).toHaveLength(1)
-    expect(invoices).toHaveLength(1)
-    expect(invoices[0].invoiceNumber).toBe('INV-202612-0001')
-
-    const invRes = await createAcademyFeeInvoice({
-      tenantId: 't-1',
-      studentId: 'stu-1',
-      amount: 3000,
-      billingMonth: '2026-12',
-      dueDate: '2026-12-05',
-    })
-    expect(invRes.success).toBe(true)
-    expect(insertInvoiceSpy).toHaveBeenCalledTimes(1)
-
-    const settleRes = await recordAcademyFeeReceipt({
-      tenantId: 't-1',
-      studentId: 'stu-1',
-      invoiceId: 'inv-1',
-      amount: 3000,
-      paymentMode: 'direct_upi',
-      collectedByName: 'Finance Lead',
-      billingMonth: '2026-12',
-    })
-    expect(settleRes.success).toBe(true)
-    expect(updateInvoiceSpy).toHaveBeenCalledTimes(1)
-
-    const saveRes = await saveAcademySecuritySettings('t-1', {
-      upiVpa: 'apex@oksbi',
-      dpdpMaskMinorsDefault: true,
-      emergencyHotline: '9900112233',
-      pocsoOfficerName: 'Meera Nair',
-      existingSettings: { customFlag: 'keep-me' },
-    })
-    expect(saveRes.success).toBe(true)
-    expect(updateTenantSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        upi_vpa: 'apex@oksbi',
-        settings: expect.objectContaining({
-          customFlag: 'keep-me',
-          dpdpMaskMinorsDefault: true,
-          emergencyHotline: '9900112233',
-          pocsoOfficerName: 'Meera Nair',
-          onlineGatewayPaused: true,
-        }),
-      }),
-    )
   })
 })

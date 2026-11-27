@@ -28,7 +28,7 @@ export default function AdminPreviewPortal({ onNavigate }: AdminPreviewPortalPro
           <span aria-hidden="true">·</span>
           <span>
             {mode === 'ui_preview' && isDev
-              ? 'Interactive UI Preview (development only — all 12 workspaces unlocked for visual review)'
+              ? 'Interactive UI Preview (development only — all 16 workspaces unlocked for visual review)'
               : 'Live Supabase Auth Gate (fail-closed production behavior)'}
           </span>
         </div>

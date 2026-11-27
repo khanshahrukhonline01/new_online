@@ -24,6 +24,7 @@ export interface AdminDeskDeepLink {
   recordId?: string
   query?: string
   tab?: string
+  savedViewFilters?: Record<string, string>
   nonce: number
 }
 

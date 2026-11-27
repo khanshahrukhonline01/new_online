@@ -21,16 +21,19 @@ import {
   buildComplianceHeatmapMatrix,
   buildComplianceSignals,
   buildInvestigableEntityRows,
+  computePeriodComparisonMetrics,
   DEFAULT_COMPLIANCE_DATE_RANGE,
   EMPTY_DRILLDOWN_FILTER,
   filterEntityRowsByDrilldown,
   filterModerationRecordsByDrilldown,
+  formatPeriodDeltaBadge,
   formatRiskTierLabel,
   getIncidentTypeLabel,
   getPartnerCategoryLabel,
   hasActiveDrilldown,
   normalizeComplianceRegion,
   normalizePartnerCategory,
+  resolvePreviousComplianceDateWindow,
   type ComplianceDateRange,
   type ComplianceSignalRecord,
   type HeatmapDrilldownFilter,
@@ -185,6 +188,7 @@ export function AdminAnalyticsDashboard({
   const [heatmapMode, setHeatmapMode] = useState<HeatmapMatrixMode>('partner_category')
   const [heatmapScope, setHeatmapScope] = useState<HeatmapSignalScope>('all')
   const [dateRange, setDateRange] = useState<ComplianceDateRange>(DEFAULT_COMPLIANCE_DATE_RANGE)
+  const [comparePreviousPeriod, setComparePreviousPeriod] = useState(false)
   const [drilldown, setDrilldown] = useState<HeatmapDrilldownFilter>(EMPTY_DRILLDOWN_FILTER)
   const [complianceSignals, setComplianceSignals] = useState<ComplianceSignalRecord[]>([])
   const [entityRows, setEntityRows] = useState<InvestigableEntityRow[]>([])
@@ -403,6 +407,19 @@ export function AdminAnalyticsDashboard({
   const heatmapMatrix = useMemo(
     () => buildComplianceHeatmapMatrix(complianceSignals, heatmapMode, heatmapScope, dateRange),
     [complianceSignals, heatmapMode, heatmapScope, dateRange],
+  )
+
+  const previousWindowPreview = useMemo(
+    () => resolvePreviousComplianceDateWindow(heatmapMatrix.dateWindow),
+    [heatmapMatrix.dateWindow],
+  )
+
+  const periodComparison = useMemo(
+    () =>
+      comparePreviousPeriod
+        ? computePeriodComparisonMetrics(complianceSignals, heatmapMatrix)
+        : null,
+    [comparePreviousPeriod, complianceSignals, heatmapMatrix],
   )
 
   const exportProjection = useMemo(
@@ -643,6 +660,13 @@ export function AdminAnalyticsDashboard({
               value={dateRange}
               resolvedWindow={heatmapMatrix.dateWindow}
               onChange={setDateRange}
+              comparePreviousPeriod={comparePreviousPeriod}
+              onToggleComparePreviousPeriod={setComparePreviousPeriod}
+              previousWindowPreview={
+                previousWindowPreview
+                  ? `${previousWindowPreview.startDateIso} → ${previousWindowPreview.endDateIso}`
+                  : null
+              }
             />
 
             <div className="admin-csv-export-split" ref={exportMenuRef}>
@@ -831,6 +855,92 @@ export function AdminAnalyticsDashboard({
         </div>
       </section>
 
+      {periodComparison && (
+        <section
+          className="admin-period-compare-strip"
+          data-testid="analytics-period-comparison-strip"
+          aria-label="Period-over-Period Compliance Comparison"
+        >
+          <div className="admin-period-compare-header">
+            <span className="admin-period-compare-title">
+              Period Comparison · <strong>{heatmapMatrix.dateWindow.label}</strong> vs.{' '}
+              <span className="tabular-nums">
+                {periodComparison.previousWindow.startDateIso} → {periodComparison.previousWindow.endDateIso}
+              </span>
+            </span>
+            <button
+              type="button"
+              className="admin-period-compare-dismiss"
+              onClick={() => setComparePreviousPeriod(false)}
+            >
+              Disable comparison
+            </button>
+          </div>
+          <div className="admin-period-compare-grid">
+            <div className="admin-period-compare-cell">
+              <span className="admin-period-compare-label">Regulatory Signals</span>
+              <div className="admin-period-compare-values tabular-nums">
+                <strong>{periodComparison.totalSignals.current}</strong>
+                <span className="admin-period-compare-prev">
+                  prev {periodComparison.totalSignals.previous}
+                </span>
+                <span
+                  className={`admin-period-delta is-${periodComparison.totalSignals.direction}`}
+                  data-testid="compare-delta-signals"
+                >
+                  {formatPeriodDeltaBadge(periodComparison.totalSignals)}
+                </span>
+              </div>
+            </div>
+            <div className="admin-period-compare-cell">
+              <span className="admin-period-compare-label">High-Risk Active</span>
+              <div className="admin-period-compare-values tabular-nums">
+                <strong>{periodComparison.highRiskSignals.current}</strong>
+                <span className="admin-period-compare-prev">
+                  prev {periodComparison.highRiskSignals.previous}
+                </span>
+                <span
+                  className={`admin-period-delta is-${periodComparison.highRiskSignals.direction}`}
+                  data-testid="compare-delta-high-risk"
+                >
+                  {formatPeriodDeltaBadge(periodComparison.highRiskSignals)}
+                </span>
+              </div>
+            </div>
+            <div className="admin-period-compare-cell">
+              <span className="admin-period-compare-label">Severity Exposure Score</span>
+              <div className="admin-period-compare-values tabular-nums">
+                <strong>{periodComparison.totalRiskScore.current}</strong>
+                <span className="admin-period-compare-prev">
+                  prev {periodComparison.totalRiskScore.previous}
+                </span>
+                <span
+                  className={`admin-period-delta is-${periodComparison.totalRiskScore.direction}`}
+                  data-testid="compare-delta-risk-score"
+                >
+                  {formatPeriodDeltaBadge(periodComparison.totalRiskScore)}
+                </span>
+              </div>
+            </div>
+            <div className="admin-period-compare-cell">
+              <span className="admin-period-compare-label">Regions with Active Risk</span>
+              <div className="admin-period-compare-values tabular-nums">
+                <strong>{periodComparison.affectedRegions.current}</strong>
+                <span className="admin-period-compare-prev">
+                  prev {periodComparison.affectedRegions.previous}
+                </span>
+                <span
+                  className={`admin-period-delta is-${periodComparison.affectedRegions.direction}`}
+                  data-testid="compare-delta-regions"
+                >
+                  {formatPeriodDeltaBadge(periodComparison.affectedRegions)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* 2. D3 COMPLIANCE RISK HEATMAP (REGIONS × PARTNER CATEGORIES / INCIDENT TYPES) */}
       <AdminComplianceHeatmap
         refreshKey={lastRefreshedAt.getTime()}
@@ -841,6 +951,7 @@ export function AdminAnalyticsDashboard({
         scope={heatmapScope}
         onScopeChange={setHeatmapScope}
         dateRange={dateRange}
+        comparePreviousPeriod={comparePreviousPeriod}
       />
 
       {/* 2B. REGULATED ENTITIES INVESTIGATION TABLE (FILTERED LIVE BY HEATMAP DRILLDOWN) */}

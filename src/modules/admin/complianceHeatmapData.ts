@@ -105,6 +105,7 @@ export interface HeatmapAxisItem {
   signalCount: number
   highRiskCount?: number
   trend30d?: Region30DayTrend
+  previousTrend30d?: Region30DayTrend
 }
 
 export interface HeatmapCellDatum {
@@ -1183,4 +1184,123 @@ export function filterModerationRecordsByDrilldown<
     return true
   })
 }
+
+export interface PeriodDeltaMetric {
+  current: number
+  previous: number
+  delta: number
+  deltaPct: number | null
+  direction: 'up' | 'down' | 'flat'
+}
+
+export interface PeriodComparisonSummary {
+  previousWindow: ResolvedComplianceDateWindow
+  totalSignals: PeriodDeltaMetric
+  highRiskSignals: PeriodDeltaMetric
+  totalRiskScore: PeriodDeltaMetric
+  affectedRegions: PeriodDeltaMetric
+  previousTrendsByRegion: Record<string, Region30DayTrend>
+}
+
+function buildPeriodDeltaMetric(current: number, previous: number): PeriodDeltaMetric {
+  const delta = current - previous
+  const deltaPct = previous > 0 ? Math.round((delta / previous) * 100) : current > 0 ? 100 : 0
+  const direction: 'up' | 'down' | 'flat' = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'
+  return { current, previous, delta, deltaPct, direction }
+}
+
+/**
+ * Resolves the equal-length preceding window immediately before the active compliance window.
+ * Returns null when preset is 'all' (no bounded prior window exists).
+ */
+export function resolvePreviousComplianceDateWindow(
+  activeWindow: ResolvedComplianceDateWindow,
+): ResolvedComplianceDateWindow | null {
+  if (activeWindow.preset === 'all') return null
+  const daySpan = Math.max(1, activeWindow.dayCount)
+  const prevEndMs = activeWindow.startMs - 1
+  const prevEndUtc = new Date(prevEndMs)
+  const prevEndDayStart = Date.UTC(
+    prevEndUtc.getUTCFullYear(),
+    prevEndUtc.getUTCMonth(),
+    prevEndUtc.getUTCDate(),
+    0,
+    0,
+    0,
+    0,
+  )
+  const prevStartMs = prevEndDayStart - (daySpan - 1) * DAY_MS
+  const startDateIso = new Date(prevStartMs).toISOString().slice(0, 10)
+  const endDateIso = new Date(prevEndDayStart).toISOString().slice(0, 10)
+
+  return {
+    preset: activeWindow.preset,
+    label: `Prev ${daySpan}d (${startDateIso} → ${endDateIso})`,
+    shortLabel: `Prev ${daySpan}d`,
+    startDateIso,
+    endDateIso,
+    startMs: prevStartMs,
+    endMs: prevEndDayStart + DAY_MS - 1,
+    dayCount: daySpan,
+  }
+}
+
+/**
+ * Computes period-over-period KPI deltas and previous-period regional trend series
+ * for comparison overlays in AdminAnalyticsDashboard and AdminComplianceHeatmap.
+ */
+export function computePeriodComparisonMetrics(
+  allSignals: ComplianceSignalRecord[],
+  activeMatrix: ComplianceHeatmapMatrix,
+): PeriodComparisonSummary | null {
+  const previousWindow = resolvePreviousComplianceDateWindow(activeMatrix.dateWindow)
+  if (!previousWindow) return null
+
+  const previousRange: ComplianceDateRange = {
+    preset: 'custom',
+    startDate: previousWindow.startDateIso,
+    endDate: previousWindow.endDateIso,
+  }
+  const previousMatrix = buildComplianceHeatmapMatrix(
+    allSignals,
+    activeMatrix.mode,
+    activeMatrix.scope,
+    previousRange,
+  )
+
+  const currentTotalRisk = activeMatrix.rows.reduce((sum, r) => sum + r.totalRisk, 0)
+  const previousTotalRisk = previousMatrix.rows.reduce((sum, r) => sum + r.totalRisk, 0)
+  const currentAffectedRegions = activeMatrix.rows.filter(r => r.totalRisk > 0).length
+  const previousAffectedRegions = previousMatrix.rows.filter(r => r.totalRisk > 0).length
+
+  const previousTrendsByRegion: Record<string, Region30DayTrend> = {}
+  for (const row of previousMatrix.rows) {
+    if (row.trend30d) {
+      previousTrendsByRegion[row.key] = row.trend30d
+    }
+  }
+
+  return {
+    previousWindow,
+    totalSignals: buildPeriodDeltaMetric(activeMatrix.totalSignals, previousMatrix.totalSignals),
+    highRiskSignals: buildPeriodDeltaMetric(
+      activeMatrix.highRiskSignals,
+      previousMatrix.highRiskSignals,
+    ),
+    totalRiskScore: buildPeriodDeltaMetric(currentTotalRisk, previousTotalRisk),
+    affectedRegions: buildPeriodDeltaMetric(currentAffectedRegions, previousAffectedRegions),
+    previousTrendsByRegion,
+  }
+}
+
+export function formatPeriodDeltaBadge(metric: PeriodDeltaMetric): string {
+  if (metric.direction === 'flat') return '0% vs prev'
+  const arrow = metric.direction === 'up' ? '▲' : '▼'
+  const sign = metric.delta > 0 ? '+' : ''
+  if (metric.deltaPct !== null) {
+    return `${arrow} ${sign}${metric.deltaPct}% vs prev`
+  }
+  return `${arrow} ${sign}${metric.delta} vs prev`
+}
+
 

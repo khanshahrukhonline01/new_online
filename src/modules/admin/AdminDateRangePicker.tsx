@@ -12,6 +12,9 @@ export interface AdminDateRangePickerProps {
   value: ComplianceDateRange
   resolvedWindow: ResolvedComplianceDateWindow
   onChange: (next: ComplianceDateRange) => void
+  comparePreviousPeriod?: boolean
+  onToggleComparePreviousPeriod?: (enabled: boolean) => void
+  previousWindowPreview?: string | null
 }
 
 const PRESET_OPTIONS: readonly {
@@ -29,6 +32,9 @@ export function AdminDateRangePicker({
   value,
   resolvedWindow,
   onChange,
+  comparePreviousPeriod = false,
+  onToggleComparePreviousPeriod,
+  previousWindowPreview = null,
 }: AdminDateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [draftStart, setDraftStart] = useState(value.startDate ?? resolvedWindow.startDateIso)
@@ -73,6 +79,9 @@ export function AdminDateRangePicker({
   const handleSelectPreset = (preset: Exclude<ComplianceDateRangePreset, 'custom'>) => {
     setValidationError('')
     onChange({ preset, startDate: null, endDate: null })
+    if (preset === 'all' && comparePreviousPeriod && onToggleComparePreviousPeriod) {
+      onToggleComparePreviousPeriod(false)
+    }
     setIsOpen(false)
   }
 
@@ -95,7 +104,8 @@ export function AdminDateRangePicker({
     setIsOpen(false)
   }
 
-  const isNonDefault = value.preset !== '30d'
+  const isNonDefault = value.preset !== '30d' || comparePreviousPeriod
+  const canCompare = value.preset !== 'all'
 
   return (
     <div className="admin-date-picker" ref={rootRef}>
@@ -105,12 +115,15 @@ export function AdminDateRangePicker({
         onClick={handleToggleOpen}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
-        aria-label={`Compliance date range: ${resolvedWindow.label}`}
+        aria-label={`Compliance date range: ${resolvedWindow.label}${comparePreviousPeriod && canCompare ? ', comparing to previous period' : ''}`}
         data-testid="analytics-date-range-trigger"
         title={`Active scope: ${resolvedWindow.startDateIso} to ${resolvedWindow.endDateIso}`}
       >
         <SiteIcon name="calendar" size={14} />
-        <span className="admin-date-picker-label">{resolvedWindow.label}</span>
+        <span className="admin-date-picker-label">
+          {resolvedWindow.label}
+          {comparePreviousPeriod && canCompare ? ' · vs Prev' : ''}
+        </span>
         <SiteIcon name="chevron-down" size={13} />
       </button>
 
@@ -142,6 +155,30 @@ export function AdminDateRangePicker({
               })}
             </div>
           </div>
+
+          {onToggleComparePreviousPeriod && (
+            <div className="admin-date-compare-row">
+              <label className={`admin-date-compare-toggle ${!canCompare ? 'is-disabled' : ''}`}>
+                <input
+                  type="checkbox"
+                  checked={canCompare && comparePreviousPeriod}
+                  disabled={!canCompare}
+                  onChange={e => onToggleComparePreviousPeriod(e.target.checked)}
+                  data-testid="date-range-compare-toggle"
+                />
+                <span className="admin-date-compare-copy">
+                  <strong>Compare to previous period</strong>
+                  <small>
+                    {!canCompare
+                      ? 'Select a bounded range (7d, 30d, 90d, or Custom)'
+                      : previousWindowPreview
+                        ? `Baseline: ${previousWindowPreview}`
+                        : 'Overlays prior-window deltas & dashed baseline trend'}
+                  </small>
+                </span>
+              </label>
+            </div>
+          )}
 
           <form className="admin-date-custom-form" onSubmit={handleApplyCustom}>
             <span className="admin-date-picker-kicker">Custom Date Range</span>
@@ -191,6 +228,7 @@ export function AdminDateRangePicker({
                     className="admin-date-reset-btn"
                     onClick={() => {
                       onChange(DEFAULT_COMPLIANCE_DATE_RANGE)
+                      onToggleComparePreviousPeriod?.(false)
                       setIsOpen(false)
                     }}
                     data-testid="date-range-reset-btn"

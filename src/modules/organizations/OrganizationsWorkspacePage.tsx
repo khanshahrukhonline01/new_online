@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
 import { ConfirmDialog } from '../../shared/components/ui/ConfirmDialog'
-import { useAuth } from '../../shared/auth/useAuth'
-import { useTenant } from '../../shared/context/useTenant'
-import type { DbTenantMembership } from '../../integrations/supabase/tenant-client'
 import {
   CANONICAL_SAAS_PLANS,
   ORGANIZATION_ROLE_PERMISSIONS,
@@ -14,7 +11,6 @@ import {
 } from '../../shared/saas/saasCoreEngine'
 import type {
   EntitlementFeatureKey,
-  OrganizationMembership,
   OrganizationRecord,
   OrganizationRole,
   OrganizationType,
@@ -22,17 +18,17 @@ import type {
   OwnableResourceType,
   OwnershipType,
   PlanCode,
-  SubscriptionRecord,
 } from '../../shared/saas/saasTypes'
 import {
   bindResourceOwnership,
-  createEmptyWorkspaceState,
   createOrganizationUnit,
   grantAuditedEntitlementOverride,
   inviteMemberToOrganization,
+  loadWorkspaceState,
   previewSwitchSubscriptionPlan,
   provisionOrganizationWorkspace,
   resolveOrganizationInvitation,
+  saveWorkspaceState,
   transferOrganizationOwnership,
   updateOrganizationLifecycleStatus,
   updateOrganizationMemberRole,
@@ -51,120 +47,11 @@ export interface OrganizationsWorkspacePageProps {
   workspaceSection?: string
 }
 
-function buildTenantBackedWorkspace(params: {
-  userId: string
-  userName: string
-  userEmail: string
-  memberships: DbTenantMembership[]
-  activeTenantId?: string | null
-}): SaaSWorkspaceState {
-  const base = createEmptyWorkspaceState(null)
-  const organizations: OrganizationRecord[] = []
-  const mappedMemberships: OrganizationMembership[] = []
-  const subscriptions: SubscriptionRecord[] = []
-
-  for (const m of params.memberships) {
-    if (!m.tenant || m.tenant.status !== 'active' || m.status !== 'active') continue
-    organizations.push({
-      id: m.tenant.id,
-      slug: m.tenant.slug,
-      name: m.tenant.name,
-      tenantType: m.tenant.tenant_type,
-      status: m.tenant.status,
-      verificationStatus: m.tenant.verification_status || 'unverified',
-      ownerId: m.tenant.owner_id || params.userId,
-      parentTenantId: m.tenant.parent_tenant_id ?? null,
-      city: m.tenant.city,
-      state: m.tenant.state,
-      sport: m.tenant.sport,
-      contactEmail: m.tenant.contact_email,
-      contactPhone: m.tenant.contact_phone,
-      upiVpa: m.tenant.upi_vpa,
-      createdAt: m.tenant.created_at,
-      updatedAt: m.tenant.updated_at,
-    })
-    mappedMemberships.push({
-      id: m.id,
-      tenantId: m.tenant_id,
-      userId: m.user_id,
-      displayName: params.userName,
-      email: params.userEmail,
-      role: m.role,
-      status: m.status,
-      joinedAt: m.created_at,
-    })
-    subscriptions.push({
-      id: `sub-${m.tenant_id}`,
-      subjectType: 'tenant',
-      subjectId: m.tenant_id,
-      planCode: 'org_free',
-      status: 'free_active',
-      billingCycle: 'none',
-      paymentCollectionEnabled: false,
-      currentPeriodStart: m.tenant.created_at,
-      currentPeriodEnd: null,
-    })
-  }
-
-  const chosenTenantId =
-    (params.activeTenantId && organizations.some(o => o.id === params.activeTenantId) && params.activeTenantId) ||
-    organizations[0]?.id ||
-    null
-
-  return {
-    ...base,
-    currentUserId: params.userId,
-    currentUserName: params.userName,
-    currentUserEmail: params.userEmail,
-    activeContext: chosenTenantId ? { kind: 'organization', tenantId: chosenTenantId } : { kind: 'personal' },
-    organizations,
-    memberships: mappedMemberships,
-    subscriptions,
-    storageMode: 'supabase',
-  }
-}
-
 export default function OrganizationsWorkspacePage({
   onNavigate,
   workspaceSection,
 }: OrganizationsWorkspacePageProps) {
-  const { user: authUser, openAuth } = useAuth()
-  const {
-    userId,
-    isAuthenticated,
-    currentTenant,
-    memberships: dbMemberships,
-    isLoading: tenantLoading,
-    switchTenant,
-    refreshTenant,
-  } = useTenant()
-
-  const authorizedUserId = isAuthenticated && userId ? userId : null
-  const syncedWorkspaceSnapshot = useMemo(() => {
-    if (!authorizedUserId) return null
-    return buildTenantBackedWorkspace({
-      userId: authorizedUserId,
-      userName: authUser?.fullName || authUser?.name || currentTenant?.name || 'Organization Member',
-      userEmail: authUser?.email || '',
-      memberships: dbMemberships,
-      activeTenantId: currentTenant?.id ?? null,
-    })
-  }, [authorizedUserId, authUser?.email, authUser?.fullName, authUser?.name, currentTenant?.id, currentTenant?.name, dbMemberships])
-
-  const [workspaceOverrides, setWorkspaceOverrides] = useState<SaaSWorkspaceState | null>(null)
-  const workspace = workspaceOverrides && workspaceOverrides.currentUserId === authorizedUserId
-    ? workspaceOverrides
-    : syncedWorkspaceSnapshot ?? createEmptyWorkspaceState(null)
-  const setWorkspace = (updater: SaaSWorkspaceState | ((prev: SaaSWorkspaceState) => SaaSWorkspaceState)) => {
-    setWorkspaceOverrides(prev => {
-      const baseState =
-        prev && prev.currentUserId === authorizedUserId
-          ? prev
-          : syncedWorkspaceSnapshot ?? createEmptyWorkspaceState(null)
-      return typeof updater === 'function' ? updater(baseState) : updater
-    })
-  }
-
+  const [workspace, setWorkspace] = useState<SaaSWorkspaceState>(() => loadWorkspaceState())
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(() =>
     resolveOrgTabForSection(workspaceSection)
   )
@@ -180,9 +67,8 @@ export default function OrganizationsWorkspacePage({
   }, [workspaceSection])
 
   useEffect(() => {
-    if (!syncedWorkspaceSnapshot) return
-    setWorkspaceOverrides(syncedWorkspaceSnapshot)
-  }, [syncedWorkspaceSnapshot])
+    saveWorkspaceState(workspace)
+  }, [workspace])
 
   const activeOrg = useMemo(() => {
     if (workspace.activeContext.kind !== 'organization') return null
@@ -287,43 +173,25 @@ export default function OrganizationsWorkspacePage({
   function handleContextSwitch(value: string) {
     if (value === '__personal__') {
       setWorkspace(prev => ({ ...prev, activeContext: { kind: 'personal' } }))
-      setFeedback({ type: 'success', message: 'Switched to Personal Identity context.' })
+      setFeedback({ type: 'success', message: 'Switched to Personal Identity workspace (individual ownership & free athlete passport).' })
     } else {
       const targetOrg = workspace.organizations.find(o => o.id === value)
       if (!targetOrg) return
-      void switchTenant(targetOrg.id)
       setWorkspace(prev => ({ ...prev, activeContext: { kind: 'organization', tenantId: targetOrg.id } }))
       setFeedback({ type: 'success', message: `Active workspace set to "${targetOrg.name}".` })
     }
   }
 
-  async function runSyncedOrgMutation<T>(
-    action: () => Promise<{ success: boolean; message: string; syncedToSupabase: boolean; state: SaaSWorkspaceState; data?: T }>,
-    unsyncedError: string,
-    refreshMemberships = false,
-  ): Promise<boolean> {
+  async function handleProvisionOrg(input: ProvisionOrgInput): Promise<boolean> {
     setBusy(true)
     try {
-      const result = await action()
-      if (!result.success || !result.syncedToSupabase) {
-        setFeedback({ type: 'error', message: result.message || unsyncedError })
-        return false
-      }
+      const result = await provisionOrganizationWorkspace(workspace, input)
       setWorkspace(result.state)
-      setFeedback({ type: 'success', message: result.message })
-      if (refreshMemberships) await refreshTenant()
-      return true
+      setFeedback({ type: result.success ? 'success' : 'error', message: result.message })
+      return result.success
     } finally {
       setBusy(false)
     }
-  }
-
-  async function handleProvisionOrg(input: ProvisionOrgInput): Promise<boolean> {
-    return runSyncedOrgMutation(
-      () => provisionOrganizationWorkspace(workspace, input),
-      'Workspace provisioning requires an active database connection and verified Supabase session.',
-      true,
-    )
   }
 
   async function handleInviteMember(email: string, role: Exclude<OrganizationRole, 'owner'>): Promise<boolean> {
@@ -331,11 +199,19 @@ export default function OrganizationsWorkspacePage({
       setFeedback({ type: 'error', message: 'Select an active organization workspace before inviting members.' })
       return false
     }
-    return runSyncedOrgMutation(
-      () => inviteMemberToOrganization(workspace, { tenantId: activeOrg.id, invitedEmail: email, role }),
-      'Database invitation write could not be confirmed.',
-      true,
-    )
+    setBusy(true)
+    try {
+      const result = await inviteMemberToOrganization(workspace, {
+        tenantId: activeOrg.id,
+        invitedEmail: email,
+        role,
+      })
+      setWorkspace(result.state)
+      setFeedback({ type: result.success ? 'success' : 'error', message: result.message })
+      return result.success
+    } finally {
+      setBusy(false)
+    }
   }
 
   function handleResolveInvite(invitationId: string, decision: 'accept' | 'revoke') {
@@ -357,11 +233,15 @@ export default function OrganizationsWorkspacePage({
 
   async function handleOwnershipTransfer(targetUserId: string): Promise<boolean> {
     if (!activeOrg || !targetUserId) return false
-    return runSyncedOrgMutation(
-      () => transferOrganizationOwnership(workspace, activeOrg.id, targetUserId),
-      'Ownership transfer requires an active verified database session.',
-      true,
-    )
+    setBusy(true)
+    try {
+      const result = await transferOrganizationOwnership(workspace, activeOrg.id, targetUserId)
+      setWorkspace(result.state)
+      setFeedback({ type: result.success ? 'success' : 'error', message: result.message })
+      return result.success
+    } finally {
+      setBusy(false)
+    }
   }
 
   function handleToggleOrgLifecycle(org: OrganizationRecord) {
@@ -392,16 +272,20 @@ export default function OrganizationsWorkspacePage({
     resourceType: OwnableResourceType
     ownershipType: OwnershipType
   }): Promise<boolean> {
-    return runSyncedOrgMutation(
-      () =>
-        bindResourceOwnership(workspace, {
-          resourceType: input.resourceType,
-          resourceTitle: input.resourceTitle,
-          ownershipType: input.ownershipType,
-          ownerTenantId: input.ownershipType === 'organization' ? activeOrg?.id ?? null : null,
-        }),
-      'Database write required to persist resource ownership binding.',
-    )
+    setBusy(true)
+    try {
+      const result = await bindResourceOwnership(workspace, {
+        resourceType: input.resourceType,
+        resourceTitle: input.resourceTitle,
+        ownershipType: input.ownershipType,
+        ownerTenantId: input.ownershipType === 'organization' ? activeOrg?.id ?? null : null,
+      })
+      setWorkspace(result.state)
+      setFeedback({ type: result.success ? 'success' : 'error', message: result.message })
+      return result.success
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function handleCreateUnit(input: {
@@ -413,16 +297,20 @@ export default function OrganizationsWorkspacePage({
       setFeedback({ type: 'error', message: 'Switch to an active organization to add branches or teams.' })
       return false
     }
-    return runSyncedOrgMutation(
-      () =>
-        createOrganizationUnit(workspace, {
-          tenantId: activeOrg.id,
-          name: input.name,
-          unitType: input.unitType,
-          city: input.city,
-        }),
-      'Database write required to create an organization branch or unit.',
-    )
+    setBusy(true)
+    try {
+      const result = await createOrganizationUnit(workspace, {
+        tenantId: activeOrg.id,
+        name: input.name,
+        unitType: input.unitType,
+        city: input.city,
+      })
+      setWorkspace(result.state)
+      setFeedback({ type: result.success ? 'success' : 'error', message: result.message })
+      return result.success
+    } finally {
+      setBusy(false)
+    }
   }
 
   function handlePreviewPlanSwitch(planCode: PlanCode) {
@@ -469,51 +357,6 @@ export default function OrganizationsWorkspacePage({
   const eligibleTransferTargets = orgMembers.filter(
     m => m.status === 'active' && m.userId !== workspace.currentUserId
   )
-
-  if (tenantLoading) {
-    return (
-      <section className="org-saas-page" role="status" aria-live="polite">
-        <div className="org-saas-hero">
-          <h1>Verifying organization workspace access…</h1>
-          <p className="org-saas-subtitle">Loading verified database memberships.</p>
-        </div>
-      </section>
-    )
-  }
-
-  if (!authorizedUserId) {
-    return (
-      <section className="org-saas-page" aria-labelledby="org-auth-required-title">
-        <div className="org-saas-hero">
-          <p className="org-saas-eyebrow">
-            <SiteIcon name="shield-check" size={14} />
-            <span>KHELGRID MULTI-TENANT SAAS CORE</span>
-          </p>
-          <h1 id="org-auth-required-title">Sign in required</h1>
-          <p className="org-saas-subtitle">
-            Sign in with an authenticated KhelGrid organization account backed by active Supabase membership to access organization governance, team RBAC, and branches.
-          </p>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '16px' }}>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => openAuth({ tab: 'login', redirectTo: '/workspace/organization/overview' })}
-            >
-              Sign in to Organization Console
-            </button>
-            <a
-              href="/partner-signup?role=organization"
-              className="btn-secondary"
-              style={{ textDecoration: 'none' }}
-              onClick={e => onNavigate?.(e, '/partner-signup?role=organization')}
-            >
-              Register Organization →
-            </a>
-          </div>
-        </div>
-      </section>
-    )
-  }
 
   return (
     <section className="org-saas-page" aria-label="Organizations and SaaS Workspace Console">

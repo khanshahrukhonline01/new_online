@@ -596,7 +596,6 @@ export async function signInPartnerAccount(input: {
     email: cleanEmail,
     password: input.password,
     useMagicLink: input.useMagicLink,
-    ...(input.useMagicLink ? { redirectTo: '/partner/verify' } : {}),
     ...(input.captchaToken ? { captchaToken: input.captchaToken } : {}),
   })
 

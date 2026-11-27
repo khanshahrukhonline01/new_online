@@ -17,17 +17,8 @@ import {
   type CoachVerificationStatus,
   type CoachVerificationSubmissionRecord,
 } from './coachWorkspaceClient'
-import { CoachAthletesPanel } from './components/CoachAthletesPanel'
-import {
-  CoachAssessmentsPanel,
-  CoachAttendancePanel,
-} from './components/CoachAttendanceAndAssessmentsPanel'
 import { CoachOverviewPanel } from './components/CoachOverviewPanel'
 import { CoachProfileEditorPanel } from './components/CoachProfileEditorPanel'
-import {
-  CoachCalendarSessionsPanel,
-  CoachProgrammesPanel,
-} from './components/CoachProgrammesAndCalendarPanel'
 import { CoachVerificationPanel } from './components/CoachVerificationPanel'
 import {
   CoachAcademyAssociationsPanel,
@@ -272,21 +263,10 @@ export default function CoachDashboardPage({
           })}
         </aside>
 
-        <main
-          className="kg-coach-main"
-          role="tabpanel"
-          data-coach-section={activeSection}
-          data-coach-item={routeTarget.itemId || ''}
-        >
-          {loading &&
-          !profile &&
-          ['profile', 'credentials', 'athletes', 'programmes', 'calendar', 'attendance', 'assessments'].includes(
-            activeSection,
-          ) ? (
+        <main className="kg-coach-main" role="tabpanel">
+          {loading && !profile && activeSection === 'profile' ? (
             <div className="kg-coach-card" role="status">
-              <p className="kg-coach-muted-note">
-                Loading coach {activeSection} module from PostgreSQL…
-              </p>
+              <p className="kg-coach-muted-note">Loading coach profile from PostgreSQL…</p>
             </div>
           ) : activeSection === 'overview' ? (
             <CoachOverviewPanel
@@ -328,68 +308,6 @@ export default function CoachDashboardPage({
             ) : (
               <div className="kg-coach-alert is-error" role="alert">
                 <span>{error || 'Verification profile could not be loaded.'}</span>
-              </div>
-            )
-          ) : activeSection === 'athletes' ? (
-            profile ? (
-              <CoachAthletesPanel
-                profile={profile}
-                tenantId={currentTenant?.id}
-                initialAthleteId={routeTarget.itemId}
-                onRefreshOverview={() => void loadWorkspaceData()}
-              />
-            ) : (
-              <div className="kg-coach-alert is-error" role="alert">
-                <span>{error || 'Coach roster could not be loaded.'}</span>
-              </div>
-            )
-          ) : activeSection === 'programmes' ? (
-            profile ? (
-              <CoachProgrammesPanel
-                profile={profile}
-                tenantId={currentTenant?.id}
-                initialProgrammeId={routeTarget.itemId}
-                onRefreshOverview={() => void loadWorkspaceData()}
-              />
-            ) : (
-              <div className="kg-coach-alert is-error" role="alert">
-                <span>{error || 'Training programmes could not be loaded.'}</span>
-              </div>
-            )
-          ) : activeSection === 'calendar' ? (
-            profile ? (
-              <CoachCalendarSessionsPanel
-                profile={profile}
-                tenantId={currentTenant?.id}
-                initialSessionId={routeTarget.itemId}
-                onRefreshOverview={() => void loadWorkspaceData()}
-                onSelectSection={handleSelectSection}
-              />
-            ) : (
-              <div className="kg-coach-alert is-error" role="alert">
-                <span>{error || 'Training calendar could not be loaded.'}</span>
-              </div>
-            )
-          ) : activeSection === 'attendance' ? (
-            profile ? (
-              <CoachAttendancePanel
-                profile={profile}
-                onRefreshOverview={() => void loadWorkspaceData()}
-              />
-            ) : (
-              <div className="kg-coach-alert is-error" role="alert">
-                <span>{error || 'Attendance roll-call could not be loaded.'}</span>
-              </div>
-            )
-          ) : activeSection === 'assessments' ? (
-            profile ? (
-              <CoachAssessmentsPanel
-                profile={profile}
-                onRefreshOverview={() => void loadWorkspaceData()}
-              />
-            ) : (
-              <div className="kg-coach-alert is-error" role="alert">
-                <span>{error || 'Assessments could not be loaded.'}</span>
               </div>
             )
           ) : activeSection === 'academy' ? (

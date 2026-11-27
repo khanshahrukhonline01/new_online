@@ -72,14 +72,7 @@ export function RegulatoryWorkspaceGuard({
 
   const handleExitInspection = (e: MouseEvent<HTMLAnchorElement>) => {
     endReadOnlyWorkspaceInspection()
-    const rawAdminUrl = import.meta.env.VITE_ADMIN_APP_URL as string | undefined
-    const adminOrigin = rawAdminUrl?.trim().replace(/\/$/, '')
-    if (adminOrigin && (adminOrigin.startsWith('https://') || adminOrigin.startsWith('http://localhost'))) {
-      e.preventDefault()
-      window.location.assign(adminOrigin)
-      return
-    }
-    handleLink(e, '/workspace')
+    handleLink(e, '/admin')
   }
 
   const handleReadOnlySubmitCapture = (e: FormEvent<HTMLDivElement>) => {
@@ -113,13 +106,13 @@ export function RegulatoryWorkspaceGuard({
         </span>
       </div>
       <a
-        href="/workspace"
+        href="/admin"
         className="kg-readonly-inspection-exit"
         data-testid="exit-readonly-inspection-btn"
         onClick={handleExitInspection}
       >
         <SiteIcon name="arrow-left" size={14} />
-        <span>Exit Inspection Mode</span>
+        <span>Exit Inspection &amp; Return to Admin</span>
       </a>
     </div>
   ) : null

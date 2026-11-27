@@ -6,9 +6,7 @@ import { RequireTenantMember } from '../../shared/components/RequireTenantMember
 import { setStoredAuthUser, type AuthUserProfile } from '../../integrations/supabase/auth-client'
 import * as realtimeModule from './realtime-client'
 import {
-  getTenantBySlug,
   provisionInitialTenantOwner,
-  submitTenantEnquiry,
   createTenantInvitation,
   acceptTenantInvitation,
 } from './tenant-client'
@@ -177,61 +175,5 @@ describe('KhelGrid SaaS Platform — Phase 3 Tenant Auth & Context', () => {
     expect(noMembershipHtml).toContain('Verifying your secure workspace access')
     expect(noMembershipHtml).not.toContain('Protected Venue Content')
     expect(noMembershipHtml).not.toContain('Protected Venue Content')
-  })
-
-  it('fails closed in tenant-client CRUD/provisioning calls when Supabase client is unconfigured', async () => {
-    vi.spyOn(realtimeModule, 'getSupabaseClient').mockReturnValue(null)
-
-    expect(await getTenantBySlug('delhi-cricket-academy')).toBeNull()
-
-    const provRes = await provisionInitialTenantOwner({
-      slug: 'offline-org',
-      name: 'Offline Org',
-      tenantType: 'academy',
-    })
-    expect(provRes.success).toBe(false)
-
-    const enqRes = await submitTenantEnquiry({
-      tenantId: '00000000-0000-0000-0000-000000000000',
-      parentName: 'Test Parent',
-      parentPhone: '9876543210',
-      studentName: 'Test Student',
-      sport: 'Cricket',
-      requestType: 'free_trial',
-    })
-    expect(enqRes.success).toBe(false)
-
-    const invRes = await createTenantInvitation({
-      tenantId: '00000000-0000-0000-0000-000000000000',
-      invitedEmail: 'staff@khelgrid.in',
-      role: 'coach',
-    })
-    expect(invRes.success).toBe(false)
-
-    const acceptRes = await acceptTenantInvitation('inv-1')
-    expect(acceptRes.success).toBe(false)
-  })
-
-  it('submits public tenant_enquiries via insert without select() so anon INSERT-only grants succeed', async () => {
-    const insertSpy = vi.fn().mockResolvedValue({ error: null })
-    vi.spyOn(realtimeModule, 'getSupabaseClient').mockReturnValue({
-      from: vi.fn().mockImplementation((table: string) => {
-        expect(table).toBe('tenant_enquiries')
-        return { insert: insertSpy }
-      }),
-    } as unknown as ReturnType<typeof realtimeModule.getSupabaseClient>)
-
-    const res = await submitTenantEnquiry({
-      tenantId: 'tenant-acad-99',
-      parentName: 'Ananya Rao',
-      parentPhone: '9876543210',
-      studentName: 'Kabir Rao',
-      sport: 'Badminton',
-      requestType: 'free_trial',
-    })
-
-    expect(res.success).toBe(true)
-    expect(res.enquiryToken).toMatch(/^ENQ-/)
-    expect(insertSpy).toHaveBeenCalledTimes(1)
   })
 })

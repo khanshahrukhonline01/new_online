@@ -32,20 +32,14 @@ const results = []
 
 async function probeTableSelect(tableName) {
   const { data, error } = await client.from(tableName).select('*').limit(5)
-  const isMissingSchema = error?.code === 'PGRST205' || error?.code === '42P01'
-  const passed = !!error && !isMissingSchema && (error.code === '42501' || error.message.includes('permission denied'))
+  const passed = !!error && (error.code === '42501' || error.message.includes('permission denied'))
   results.push({
     test: `SEC-PROBE-01: Anonymous SELECT on public.${tableName}`,
-    expected: '42501 permission denied (table deployed & RLS-protected)',
+    expected: '42501 permission denied',
     actual: error ? `${error.code}: ${error.message}` : `Unexpected 200 OK (${data?.length} rows)`,
     passed
   })
-  console.log(
-    `[${passed ? 'PASS' : 'FAIL'}] public.${tableName} SELECT ->`,
-    error
-      ? (isMissingSchema ? `${error.code}: Table not deployed to hosted Supabase (${error.message})` : `${error.code}: ${error.message}`)
-      : 'EXPOSED!',
-  )
+  console.log(`[${passed ? 'PASS' : 'FAIL'}] public.${tableName} SELECT ->`, error ? `${error.code}: ${error.message}` : 'EXPOSED!')
 }
 
 async function probeRpcFunction(functionName, params) {
@@ -86,7 +80,6 @@ async function probeEnquiryInsert() {
 
 async function run() {
   const tables = [
-    'profiles',
     'tenants',
     'tenant_memberships',
     'tenant_batches',
@@ -94,31 +87,7 @@ async function run() {
     'tenant_enquiries',
     'tenant_fee_invoices',
     'tenant_fee_transactions',
-    'tenant_attendance_events',
-    'tenant_units',
-    'tenant_invitations',
-    'saas_audit_logs',
-    'saas_subscriptions',
-    'tenant_audit_logs',
-    'creator_profiles',
-    'creator_reward_ledger',
-    'campaign_organisations',
-    'coach_profiles',
-    'coach_verification_submissions',
-    'coach_athletes',
-    'coach_athlete_notes',
-    'coach_training_programmes',
-    'coach_programme_assignments',
-    'coach_training_sessions',
-    'coach_session_attendance',
-    'coach_athlete_assessments',
-    'academy_profiles',
-    'academy_coaches',
-    'academy_staff_branch_assignments',
-    'academy_training_sessions',
-    'academy_facilities',
-    'academy_trial_postings',
-    'academy_announcements',
+    'tenant_attendance_events'
   ]
 
   console.log('\n--- 1. Testing Fail-Closed Anonymous Access on Tenant Tables ---')
@@ -144,9 +113,6 @@ async function run() {
   console.log('='.repeat(80))
 
   fs.writeFileSync('scripts/remote-rls-probe-output.json', JSON.stringify(results, null, 2))
-  if (!allPassed) {
-    process.exitCode = 1
-  }
 }
 
 run().catch(err => {

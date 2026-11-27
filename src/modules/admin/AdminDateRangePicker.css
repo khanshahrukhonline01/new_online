@@ -255,3 +255,59 @@ html.dark .admin-date-window-meta {
 .admin-date-apply-btn:hover {
   background: #0369a1;
 }
+
+.admin-date-compare-row {
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.admin-date-compare-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 7px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.admin-date-compare-toggle.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-date-compare-toggle input[type='checkbox'] {
+  margin-top: 0.16rem;
+  accent-color: #0284c7;
+}
+
+.admin-date-compare-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.admin-date-compare-copy strong {
+  font-size: 0.77rem;
+  font-weight: 650;
+}
+
+.admin-date-compare-copy small {
+  font-size: 0.68rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-admin-theme='dark'] .admin-date-compare-toggle,
+html.dark .admin-date-compare-toggle {
+  background: #090f1d;
+  border-color: rgba(148, 163, 184, 0.18);
+  color: #f1f5f9;
+}
+
+:root[data-admin-theme='dark'] .admin-date-compare-copy small,
+html.dark .admin-date-compare-copy small {
+  color: #94a3b8;
+}
+

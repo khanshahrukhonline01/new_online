@@ -1,18 +1,15 @@
 import { useState, useEffect, useId, type MouseEvent } from 'react'
 import { SiteIcon } from '../../shared/components/SiteIcon'
-import { useAuth } from '../../shared/auth/useAuth'
-import { useTenant } from '../../shared/context/useTenant'
 import { WorkspaceDetailDrawer } from '../../shared/components/ui/WorkspaceDetailDrawer'
 import { FeeReceiptDrawerContent } from '../../shared/components/workflows/FeeReceiptDrawerContent'
 import {
-  getRemoteParentStudentProfiles,
-  getRemoteStudentAttendanceHistory,
-  getRemoteStudentFeeInvoices,
-  submitParentUpiProofRemote,
+  getParentStudentProfiles,
+  getStudentAttendanceHistory,
+  getStudentFeeInvoices,
+  recordParentUpiPayment,
   generateDirectUpiDeepLink,
   generateParentFeeWhatsAppShareUrl,
   type ParentStudentProfile,
-  type ParentAttendanceSession,
   type ParentFeeInvoice,
 } from './parentPortalService'
 import './ParentPortalPage.css'
@@ -40,20 +37,18 @@ function resolveParentTabForSection(section?: string): 'attendance' | 'fees' | '
 }
 
 export default function ParentPortalPage({
-  initialStudentId = '',
+  initialStudentId = 'st-01',
   initialTab = 'attendance',
   workspaceSection,
-  onNavigate,
 }: ParentPortalPageProps) {
-  const { openAuth } = useAuth()
-  const { userId, isAuthenticated: tenantAuthenticated, isLoading: tenantLoading } = useTenant()
-  const isSignedIn = Boolean(userId && tenantAuthenticated)
-
-  const [students, setStudents] = useState<ParentStudentProfile[]>([])
-  const [attendanceSessions, setAttendanceSessions] = useState<ParentAttendanceSession[]>([])
-  const [feeInvoices, setFeeInvoices] = useState<ParentFeeInvoice[]>([])
-  const [loadingProfiles, setLoadingProfiles] = useState(false)
-  const [selectedStudentId, setSelectedStudentId] = useState<string>(initialStudentId)
+  const students = getParentStudentProfiles()
+  const [selectedStudentId, setSelectedStudentId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const param = new URLSearchParams(window.location.search).get('student')
+      if (param && students.some(s => s.studentId === param)) return param
+    }
+    return initialStudentId
+  })
   const [activeTab, setActiveTab] = useState<'attendance' | 'fees' | 'health'>(() => {
     const mapped = resolveParentTabForSection(workspaceSection)
     if (mapped) return mapped
@@ -69,61 +64,10 @@ export default function ParentPortalPage({
     if (mapped) setActiveTab(mapped)
   }, [workspaceSection])
 
-  useEffect(() => {
-    if (!isSignedIn) {
-      setStudents([])
-      setAttendanceSessions([])
-      setFeeInvoices([])
-      setLoadingProfiles(false)
-      return
-    }
-    let active = true
-    setLoadingProfiles(true)
-    void getRemoteParentStudentProfiles()
-      .then(remoteStudents => {
-        if (!active) return
-        setStudents(remoteStudents)
-        const queryStudent =
-          typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('student') : null
-        const preferred =
-          (queryStudent && remoteStudents.find(s => s.studentId === queryStudent)?.studentId) ||
-          (initialStudentId && remoteStudents.find(s => s.studentId === initialStudentId)?.studentId) ||
-          remoteStudents[0]?.studentId ||
-          ''
-        setSelectedStudentId(preferred)
-      })
-      .finally(() => {
-        if (active) setLoadingProfiles(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [isSignedIn, initialStudentId])
-
-  useEffect(() => {
-    if (!isSignedIn || !selectedStudentId) {
-      setAttendanceSessions([])
-      setFeeInvoices([])
-      return
-    }
-    let active = true
-    void Promise.all([
-      getRemoteStudentAttendanceHistory(selectedStudentId),
-      getRemoteStudentFeeInvoices(selectedStudentId),
-    ]).then(([att, inv]) => {
-      if (!active) return
-      setAttendanceSessions(att)
-      setFeeInvoices(inv)
-    })
-    return () => {
-      active = false
-    }
-  }, [isSignedIn, selectedStudentId])
-
   // Share link state
   const [copiedLink, setCopiedLink] = useState(false)
   const handleCopyPassbookLink = () => {
-    if (typeof window === 'undefined' || !selectedStudentId) return
+    if (typeof window === 'undefined') return
     const url = `${window.location.origin}/parent-portal?student=${selectedStudentId}&tab=${activeTab}`
     try {
       navigator.clipboard.writeText(url)
@@ -137,144 +81,38 @@ export default function ParentPortalPage({
   // Payment Modal state
   const [payingInvoice, setPayingInvoice] = useState<ParentFeeInvoice | null>(null)
   const [utrRef, setUtrRef] = useState('')
-  const [paymentStatusMsg, setPaymentStatusMsg] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
+  const [paymentSuccessMsg, setPaymentSuccessMsg] = useState('')
 
   // Receipt Modal state
   const [viewingReceiptInvoice, setViewingReceiptInvoice] = useState<ParentFeeInvoice | null>(null)
 
-  const studentSelectId = useId()
-  const utrInputId = useId()
-
-  if (tenantLoading) {
-    return (
-      <div className="parent-portal-container">
-        <section className="portal-content-panel" role="status" aria-live="polite">
-          <h2>Verifying guardian session…</h2>
-          <p>Checking authenticated session before loading guardian passbooks.</p>
-        </section>
-      </div>
-    )
-  }
-
-  if (!isSignedIn) {
-    return (
-      <div className="parent-portal-container">
-        <section className="portal-content-panel" aria-labelledby="parent-auth-required-title">
-          <div className="parent-portal-eyebrow">
-            <SiteIcon name="shield-check" size={16} />
-            <span>KhelGrid Guardian-Verified Passbook (DPDP 2023)</span>
-          </div>
-          <h1 id="parent-auth-required-title">Sign in required</h1>
-          <p>
-            Sign in with your verified parent or guardian account linked by your sports academy to view live student attendance, fee invoices, and digital ground passes.
-          </p>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => openAuth({ tab: 'login', redirectTo: '/parent-portal' })}
-            >
-              Sign in as Guardian
-            </button>
-            <a
-              href="/demo?persona=parent"
-              className="btn-secondary"
-              style={{ textDecoration: 'none' }}
-              onClick={e => onNavigate?.(e, '/demo?persona=parent')}
-            >
-              View Sample Demo Tour →
-            </a>
-          </div>
-        </section>
-      </div>
-    )
-  }
-
-  if (loadingProfiles) {
-    return (
-      <div className="parent-portal-container">
-        <section className="portal-content-panel" role="status" aria-live="polite">
-          <h2>Loading guardian passbooks…</h2>
-          <p>Verifying linked athlete records under guardian access policy.</p>
-        </section>
-      </div>
-    )
-  }
-
-  const student: ParentStudentProfile | undefined =
+  const student: ParentStudentProfile =
     students.find(s => s.studentId === selectedStudentId) || students[0]
 
-  if (!student) {
-    return (
-      <div className="parent-portal-container">
-        <section className="portal-content-panel">
-          <div className="parent-portal-eyebrow">
-            <SiteIcon name="shield-check" size={16} />
-            <span>KhelGrid Guardian-Verified Passbook (DPDP 2023)</span>
-          </div>
-          <h1>No linked athlete passbooks yet</h1>
-          <p>
-            No academy student records are currently linked to your verified account. Ask your academy director or admissions coordinator to link your guardian email under student enrollment.
-          </p>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-            <a
-              href="/academies"
-              className="btn-primary"
-              style={{ textDecoration: 'none' }}
-              onClick={e => onNavigate?.(e, '/academies')}
-            >
-              Browse Verified Academies →
-            </a>
-            <a
-              href="/demo?persona=parent"
-              className="btn-secondary"
-              style={{ textDecoration: 'none' }}
-              onClick={e => onNavigate?.(e, '/demo?persona=parent')}
-            >
-              View Sample Demo Tour →
-            </a>
-          </div>
-        </section>
-      </div>
-    )
-  }
+  const attendanceSessions = getStudentAttendanceHistory(student.studentId)
+  const feeInvoices = getStudentFeeInvoices(student.studentId)
 
   const presentCount = attendanceSessions.filter(s => s.status === 'PRESENT').length
   const totalSessions = attendanceSessions.length
-  const attendanceRate = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0
+  const attendanceRate = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : student.attendancePercentage
 
   const pendingInvoices = feeInvoices.filter(i => i.status !== 'PAID')
   const totalPendingBalance = pendingInvoices.reduce((sum, i) => sum + i.netAmount, 0)
 
-  const handleConfirmPayment = async () => {
+  const studentSelectId = useId()
+  const utrInputId = useId()
+
+  const handleConfirmPayment = () => {
     if (!payingInvoice) return
-    const res = await submitParentUpiProofRemote({
-      invoiceId: payingInvoice.invoiceId,
-      utrRef,
-    })
-    if (!res.success) {
-      setPaymentStatusMsg({ kind: 'error', text: res.message })
-      return
+    const res = recordParentUpiPayment(payingInvoice.invoiceId, utrRef)
+    if (res.success) {
+      setPaymentSuccessMsg(res.message)
+      setTimeout(() => {
+        setPayingInvoice(null)
+        setUtrRef('')
+        setPaymentSuccessMsg('')
+      }, 1500)
     }
-    const cleanRef = utrRef.trim()
-    setFeeInvoices(prev =>
-      prev.map(inv =>
-        inv.invoiceId === payingInvoice.invoiceId
-          ? {
-              ...inv,
-              status: 'PENDING_VERIFICATION',
-              paymentMethod: 'UPI_DIRECT',
-              transactionRef: cleanRef,
-            }
-          : inv,
-      ),
-    )
-    setPaymentStatusMsg({ kind: 'success', text: res.message })
-    setTimeout(() => {
-      setPayingInvoice(null)
-      setUtrRef('')
-      setPaymentStatusMsg(null)
-    }, 1500)
   }
 
   return (
@@ -463,29 +301,23 @@ export default function ParentPortalPage({
           </div>
 
           <div className="attendance-timeline">
-            {attendanceSessions.length === 0 ? (
-              <p className="portal-empty-note" role="status">
-                No training session attendance events recorded for this athlete yet.
-              </p>
-            ) : (
-              attendanceSessions.map(sess => (
-                <div key={sess.id} className="attendance-timeline-item">
-                  <div className="att-date-col">
-                    <strong>{sess.date}</strong>
-                    <small>{sess.markedBy}</small>
-                  </div>
-                  <div className="att-status-col">
-                    <span className={`att-pill ${sess.status.toLowerCase()}`}>
-                      {sess.status === 'PRESENT' ? '✅ Present' : sess.status === 'EXCUSED' ? 'ℹ️ Excused' : '❌ Absent'}
-                    </span>
-                  </div>
-                  <div className="att-detail-col">
-                    <h4>{sess.sessionTopic}</h4>
-                    {sess.coachNotes && <p className="att-notes">Coach note: "{sess.coachNotes}"</p>}
-                  </div>
+            {attendanceSessions.map(sess => (
+              <div key={sess.id} className="attendance-timeline-item">
+                <div className="att-date-col">
+                  <strong>{sess.date}</strong>
+                  <small>{sess.markedBy}</small>
                 </div>
-              ))
-            )}
+                <div className="att-status-col">
+                  <span className={`att-pill ${sess.status.toLowerCase()}`}>
+                    {sess.status === 'PRESENT' ? '✅ Present' : sess.status === 'EXCUSED' ? 'ℹ️ Excused' : '❌ Absent'}
+                  </span>
+                </div>
+                <div className="att-detail-col">
+                  <h4>{sess.sessionTopic}</h4>
+                  {sess.coachNotes && <p className="att-notes">Coach note: "{sess.coachNotes}"</p>}
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       )}
@@ -501,12 +333,7 @@ export default function ParentPortalPage({
           </div>
 
           <div className="fee-invoices-grid">
-            {feeInvoices.length === 0 ? (
-              <p className="portal-empty-note" role="status">
-                No fee invoices have been issued for this athlete yet.
-              </p>
-            ) : (
-              feeInvoices.map(inv => {
+            {feeInvoices.map(inv => {
               const upiLink = generateDirectUpiDeepLink(inv, student)
               const waUrl = generateParentFeeWhatsAppShareUrl(inv, student)
 
@@ -557,7 +384,20 @@ export default function ParentPortalPage({
                   </div>
 
                   <div className="invoice-actions">
-                    {inv.status === 'PAID' ? (
+                    {inv.status !== 'PAID' ? (
+                      <>
+                        <a href={upiLink} className="btn-pay-upi">
+                          <SiteIcon name="credit-card" size={15} /> Pay ₹{inv.netAmount} via UPI App
+                        </a>
+                        <button
+                          type="button"
+                          className="btn-mark-paid"
+                          onClick={() => setPayingInvoice(inv)}
+                        >
+                          I Already Paid (Submit UTR)
+                        </button>
+                      </>
+                    ) : (
                       <button
                         type="button"
                         className="btn-view-receipt"
@@ -565,25 +405,6 @@ export default function ParentPortalPage({
                       >
                         <SiteIcon name="download" size={15} /> Download Tax Receipt
                       </button>
-                    ) : inv.status === 'PENDING_VERIFICATION' ? (
-                      <span className="invoice-status-tag pending" role="status">
-                        UTR Submitted · Pending Academy Verification
-                      </span>
-                    ) : (
-                      <>
-                        {student.academyUpiVpa && (
-                          <a href={upiLink} className="btn-pay-upi">
-                            <SiteIcon name="credit-card" size={15} /> Pay ₹{inv.netAmount} via UPI App
-                          </a>
-                        )}
-                        <button
-                          type="button"
-                          className="btn-mark-paid"
-                          onClick={() => setPayingInvoice(inv)}
-                        >
-                          Submit Payment UTR for Verification
-                        </button>
-                      </>
                     )}
                     <a
                       href={waUrl}
@@ -596,8 +417,7 @@ export default function ParentPortalPage({
                   </div>
                 </div>
               )
-            })
-            )}
+            })}
           </div>
         </section>
       )}
@@ -620,7 +440,7 @@ export default function ParentPortalPage({
               <h4>Blood Group &amp; Biometrics</h4>
               <p><strong>Blood Group:</strong> {student.bloodGroup}</p>
               <p><strong>Emergency Contact:</strong> {student.emergencyContactPhone} ({student.parentName})</p>
-              <p><strong>Academy Verification Contact:</strong> {student.academyName}</p>
+              <p><strong>Academy Medical Lead:</strong> Dr. Sneha Pillai (Certified Sports Physio)</p>
             </div>
 
             <div className="health-card">
@@ -645,23 +465,17 @@ export default function ParentPortalPage({
         <div className="parent-portal-modal-overlay" onClick={() => setPayingInvoice(null)}>
           <div className="parent-portal-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Submit Direct UPI Reference for Verification</h3>
+              <h3>Confirm Direct UPI Payment</h3>
               <button type="button" onClick={() => setPayingInvoice(null)} className="close-btn">×</button>
             </div>
             <div className="modal-body">
-              {paymentStatusMsg && (
-                <div
-                  role={paymentStatusMsg.kind === 'error' ? 'alert' : 'status'}
-                  className={paymentStatusMsg.kind === 'error' ? 'alert-banner' : 'success-banner'}
-                >
-                  {paymentStatusMsg.text}
-                </div>
-              )}
-              {paymentStatusMsg?.kind !== 'success' && (
+              {paymentSuccessMsg ? (
+                <div className="success-banner">{paymentSuccessMsg}</div>
+              ) : (
                 <>
                   <p>
-                    Transfer <strong>₹{payingInvoice.netAmount.toLocaleString('en-IN')}</strong> directly to Academy VPA:{' '}
-                    <code>{student.academyUpiVpa || 'Configured by Academy'}</code>, then submit your 12-digit UTR for academy verification.
+                    Please transfer <strong>₹{payingInvoice.netAmount.toLocaleString('en-IN')}</strong> to Academy VPA:{' '}
+                    <code>{student.academyUpiVpa}</code>.
                   </p>
                   <div className="form-group">
                     <label htmlFor={utrInputId}>12-Digit Bank UTR / UPI Transaction Reference:</label>
@@ -678,8 +492,8 @@ export default function ParentPortalPage({
                     <button type="button" className="btn-secondary" onClick={() => setPayingInvoice(null)}>
                       Cancel
                     </button>
-                    <button type="button" className="btn-primary" onClick={() => void handleConfirmPayment()}>
-                      Submit UTR for Verification
+                    <button type="button" className="btn-primary" onClick={handleConfirmPayment}>
+                      Confirm Payment
                     </button>
                   </div>
                 </>

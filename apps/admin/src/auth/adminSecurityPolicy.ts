@@ -304,11 +304,16 @@ export function getAllowedWorkspacesForRole(role: AdminPlatformRole | null): Adm
   // System governance mutations inside platform_governance remain strictly gated to super_admin.
   return [
     'command',
+    'post_regulation_gate',
+    'regulatory_rules_engine',
+    'regulatory_inbox',
     'moderation_desk',
     'analytics',
     'chronicle_desk',
     'tenant_governance',
     'verification_vault',
+    'regulatory_compliance',
+    'audit_explorer',
     'creator_campaigns',
     'fraud_disputes',
     'platform_governance',
@@ -347,88 +352,4 @@ export function isWorkspaceAuthorized(
   if (!role) return false
   if (UNAVAILABLE_LOCALSTORAGE_WORKSPACES.has(workspace)) return false
   return getAllowedWorkspacesForRole(role).includes(workspace)
-}
-
-const DEFAULT_PUBLIC_APP_ORIGIN = 'https://khelgrid-platform.vercel.app'
-const NON_ADMIN_ACCOUNT_ROLES: ReadonlySet<string> = new Set([
-  'academy',
-  'coach',
-  'venue_owner',
-  'host',
-  'tournament',
-  'organization',
-  'athlete',
-  'parent',
-  'creator',
-  'scout',
-])
-
-/**
- * Resolves the public/tenant KhelGrid origin when redirecting non-admin accounts
- * or partner verification links away from the isolated Admin Operations app.
- */
-export function resolvePublicKhelGridOrigin(
-  configuredPublicOrigin?: string | null,
-  currentOrigin?: string | null,
-): string {
-  const tryOrigin = (raw: string | undefined | null): string | null => {
-    const trimmed = (raw ?? '').toString().trim().replace(/^["']|["']$/g, '')
-    if (!trimmed) return null
-    try {
-      const parsed = new URL(trimmed)
-      if (parsed.protocol === 'https:' || (parsed.protocol === 'http:' && (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1'))) {
-        return parsed.origin
-      }
-    } catch {
-      return null
-    }
-    return null
-  }
-
-  const explicit = tryOrigin(configuredPublicOrigin)
-  if (explicit) return explicit
-
-  const current = tryOrigin(currentOrigin)
-  if (current) {
-    try {
-      const host = new URL(current).hostname.toLowerCase()
-      if (host === 'admin.khelgrid.com') return 'https://khelgrid.com'
-      if (host === 'localhost' || host === '127.0.0.1') {
-        return 'http://localhost:3000'
-      }
-    } catch {
-      // Fall through to default
-    }
-  }
-
-  return DEFAULT_PUBLIC_APP_ORIGIN
-}
-
-/**
- * Builds a safe callback redirect URL on the public/tenant KhelGrid application,
- * forwarding optional query/hash tokens so PKCE or verification can finish cleanly.
- */
-export function resolvePublicAppCallbackUrl(params: {
-  targetPath: string
-  configuredPublicOrigin?: string | null
-  currentOrigin?: string | null
-  search?: string
-  hash?: string
-}): string {
-  const origin = resolvePublicKhelGridOrigin(params.configuredPublicOrigin, params.currentOrigin)
-  const cleanPath = params.targetPath.startsWith('/') ? params.targetPath : `/${params.targetPath}`
-  const search = params.search || ''
-  const hash = params.hash || ''
-  return `${origin}${cleanPath}${search}${hash}`
-}
-
-/**
- * Returns true when user metadata clearly identifies a public tenant/partner account
- * rather than an internal platform administrator.
- */
-export function isPartnerOrTenantAccountMetadata(meta?: Record<string, unknown> | null): boolean {
-  if (!meta) return false
-  if (meta.khelgrid_partner_onboarding) return true
-  const rawRole = typeof meta.role === 'string' ? meta.role.trim().toLowerCase() : ''
-  return NON_ADMIN_ACCOUNT_ROLES.has(rawRole)
 }

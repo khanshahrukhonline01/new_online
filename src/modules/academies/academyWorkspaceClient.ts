@@ -367,7 +367,6 @@ export interface AcademyStaffMemberRecord {
 export interface AcademyFeeTransactionRecord {
   id: string
   tenantId: string
-  invoiceId: string | null
   studentId: string
   receiptNumber: string
   amount: number
@@ -378,30 +377,6 @@ export interface AcademyFeeTransactionRecord {
   status: 'settled' | 'cash_in_hand' | 'refunded'
   notes: string | null
   createdAt: string
-}
-
-export interface AcademyFeeInvoiceRecord {
-  id: string
-  tenantId: string
-  studentId: string
-  invoiceNumber: string
-  amount: number
-  billingMonth: string
-  dueDate: string
-  status: 'draft' | 'issued' | 'paid' | 'partially_paid' | 'cancelled' | 'refunded'
-  createdAt: string
-  updatedAt: string
-}
-
-export function generateAcademyUpiPayLink(params: {
-  vpa: string
-  name: string
-  amount: number
-  note: string
-}): string {
-  const cleanVpa = params.vpa.trim()
-  const safeAmount = Math.max(1, Math.round(params.amount || 0))
-  return `upi://pay?pa=${encodeURIComponent(cleanVpa)}&pn=${encodeURIComponent(params.name.trim())}&am=${safeAmount}&cu=INR&tn=${encodeURIComponent(params.note.trim())}`
 }
 
 export interface AcademyOverviewStats {
@@ -1842,55 +1817,6 @@ export async function updateAcademyStaffMember(
   return { success: true, message: 'Staff role and branch scope updated.' }
 }
 
-export async function listAcademyFeeInvoices(tenantId: string): Promise<AcademyFeeInvoiceRecord[]> {
-  const client = getSupabaseClient()
-  if (!client || !tenantId) return []
-  const { data, error } = await client
-    .from('tenant_fee_invoices')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .order('due_date', { ascending: false })
-    .order('created_at', { ascending: false })
-  if (error || !data) return []
-  return (data as Record<string, unknown>[]).map(r => ({
-    id: String(r.id),
-    tenantId: String(r.tenant_id),
-    studentId: String(r.student_id),
-    invoiceNumber: String(r.invoice_number),
-    amount: Number(r.amount ?? 0),
-    billingMonth: String(r.billing_month || ''),
-    dueDate: String(r.due_date || ''),
-    status: (r.status as AcademyFeeInvoiceRecord['status']) || 'issued',
-    createdAt: String(r.created_at || ''),
-    updatedAt: String(r.updated_at || ''),
-  }))
-}
-
-export async function createAcademyFeeInvoice(params: {
-  tenantId: string
-  studentId: string
-  amount: number
-  billingMonth: string
-  dueDate: string
-}): Promise<WorkspaceMutationResult> {
-  const client = getSupabaseClient()
-  if (!client || !params.tenantId || !params.studentId) {
-    return { success: false, message: 'Tenant and student selection required.' }
-  }
-  const invoiceNo = `INV-${params.billingMonth.replace(/[^0-9]/g, '') || 'FEES'}-${Date.now().toString(36).slice(-4).toUpperCase()}`
-  const { error } = await client.from('tenant_fee_invoices').insert({
-    tenant_id: params.tenantId,
-    student_id: params.studentId,
-    invoice_number: invoiceNo,
-    amount: Math.max(0, Math.round(params.amount)),
-    billing_month: params.billingMonth,
-    due_date: params.dueDate,
-    status: 'issued',
-  })
-  if (error) return { success: false, message: error.message }
-  return { success: true, message: `Issued fee invoice ${invoiceNo} (₹${Math.round(params.amount)}).` }
-}
-
 export async function listAcademyFeeLedger(tenantId: string): Promise<AcademyFeeTransactionRecord[]> {
   const client = getSupabaseClient()
   if (!client || !tenantId) return []
@@ -1904,7 +1830,6 @@ export async function listAcademyFeeLedger(tenantId: string): Promise<AcademyFee
   return (data as Record<string, unknown>[]).map(r => ({
     id: String(r.id),
     tenantId: String(r.tenant_id),
-    invoiceId: r.invoice_id ? String(r.invoice_id) : null,
     studentId: String(r.student_id),
     receiptNumber: String(r.receipt_number),
     amount: Number(r.amount ?? 0),
@@ -1921,7 +1846,6 @@ export async function listAcademyFeeLedger(tenantId: string): Promise<AcademyFee
 export async function recordAcademyFeeReceipt(params: {
   tenantId: string
   studentId: string
-  invoiceId?: string | null
   amount: number
   paymentMode: AcademyFeeTransactionRecord['paymentMode']
   collectedByName: string
@@ -1935,7 +1859,6 @@ export async function recordAcademyFeeReceipt(params: {
   const status = params.paymentMode === 'cash' ? 'cash_in_hand' : 'settled'
   const { error } = await client.from('tenant_fee_transactions').insert({
     tenant_id: params.tenantId,
-    invoice_id: params.invoiceId || null,
     student_id: params.studentId,
     receipt_number: receipt,
     amount: Math.max(1, Math.round(params.amount)),
@@ -1948,17 +1871,6 @@ export async function recordAcademyFeeReceipt(params: {
     notes: params.notes?.trim() || null,
   })
   if (error) return { success: false, message: error.message }
-
-  if (params.invoiceId) {
-    await client
-      .from('tenant_fee_invoices')
-      .update({
-        status: 'paid',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', params.invoiceId)
-      .eq('tenant_id', params.tenantId)
-  }
 
   await client
     .from('tenant_students')
@@ -1979,7 +1891,6 @@ export async function saveAcademySecuritySettings(
     dpdpMaskMinorsDefault: boolean
     emergencyHotline: string
     pocsoOfficerName: string
-    existingSettings?: Record<string, unknown>
   },
 ): Promise<WorkspaceMutationResult> {
   const client = getSupabaseClient()
@@ -1993,7 +1904,6 @@ export async function saveAcademySecuritySettings(
     .update({
       upi_vpa: vpa || null,
       settings: {
-        ...(input.existingSettings || {}),
         dpdpMaskMinorsDefault: input.dpdpMaskMinorsDefault,
         emergencyHotline: input.emergencyHotline.trim(),
         pocsoOfficerName: input.pocsoOfficerName.trim(),

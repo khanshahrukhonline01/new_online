@@ -6,14 +6,17 @@ import {
   buildRegion30DayTrend,
   buildRegionTrendForWindow,
   classifyComplianceRiskTier,
+  computePeriodComparisonMetrics,
   EMPTY_DRILLDOWN_FILTER,
   filterEntityRowsByDrilldown,
   filterModerationRecordsByDrilldown,
   filterSignalsByDateRange,
+  formatPeriodDeltaBadge,
   formatTrendDeltaLabel,
   normalizeComplianceRegion,
   normalizePartnerCategory,
   resolveComplianceDateWindow,
+  resolvePreviousComplianceDateWindow,
 } from './complianceHeatmapData'
 
 describe('Admin Compliance Heatmap Data Engine', () => {
@@ -442,5 +445,72 @@ describe('Admin Compliance Heatmap Data Engine', () => {
     const allFiltered = filterSignalsByDateRange(signals, { preset: 'all', startDate: null, endDate: null })
     expect(allFiltered.length).toBe(3)
   })
+
+  it('computes previous comparison windows, KPI deltas, and dashed baseline trends accurately', () => {
+    const signals = buildComplianceSignals({
+      incidents: [
+        {
+          id: 'inc-prev',
+          incidentNumber: 'TS-2026-070',
+          title: 'Prior window P1 dispute',
+          category: 'booking_dispute',
+          severity: 'high_p1',
+          status: 'under_investigation',
+          reportedEntityType: 'venue',
+          reportedEntityName: 'Westside Arena',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          createdAt: '2026-11-05T10:00:00Z',
+          updatedAt: '2026-11-06T10:00:00Z',
+        },
+        {
+          id: 'inc-curr-1',
+          incidentNumber: 'TS-2026-091',
+          title: 'Current window P0 turf hazard',
+          category: 'safety_hazard',
+          severity: 'critical_p0',
+          status: 'sanction_issued',
+          reportedEntityType: 'venue',
+          reportedEntityName: 'Westside Arena',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          createdAt: '2026-11-20T10:00:00Z',
+          updatedAt: '2026-11-22T10:00:00Z',
+        },
+        {
+          id: 'inc-curr-2',
+          incidentNumber: 'TS-2026-092',
+          title: 'Current window P1 abuse alert',
+          category: 'abuse_harassment',
+          severity: 'high_p1',
+          status: 'intake_pending',
+          reportedEntityType: 'coach',
+          reportedEntityName: 'Coach V',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          createdAt: '2026-11-23T10:00:00Z',
+          updatedAt: '2026-11-25T10:00:00Z',
+        },
+      ],
+      verifications: [],
+      tenants: [],
+    })
+
+    const range = { preset: '7d' as const, startDate: null, endDate: null }
+    const currentWin = resolveComplianceDateWindow(signals, range)
+    const prevWin = resolvePreviousComplianceDateWindow(currentWin)
+    expect(prevWin).not.toBeNull()
+    expect(prevWin!.dayCount).toBe(7)
+    expect(prevWin!.endMs).toBeLessThan(currentWin.startMs)
+
+    const matrix = buildComplianceHeatmapMatrix(signals, 'partner_category', 'all', range)
+    const comparison = computePeriodComparisonMetrics(signals, matrix)
+    expect(comparison).not.toBeNull()
+    expect(comparison!.totalSignals.current).toBe(2)
+    expect(comparison!.totalSignals.delta).toBeGreaterThanOrEqual(1)
+    expect(formatPeriodDeltaBadge(comparison!.totalSignals)).toContain('+')
+    expect(comparison!.previousTrendsByRegion['Maharashtra']?.points.length).toBeGreaterThanOrEqual(2)
+  })
 })
+
 

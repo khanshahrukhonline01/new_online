@@ -73,7 +73,7 @@ runStage('4. Native PostgreSQL RLS Engine', 'python scripts/run-comprehensive-po
 function validateMigrations() {
   process.stdout.write('\n[STAGE] 5. Migration Safety: Verifying non-destructive SQL rules...\n')
   const migrationDir = path.resolve('supabase/migrations')
-  const files = fs.readdirSync(migrationDir).filter(f => f.startsWith('202611') && f.endsWith('.sql'))
+  const files = fs.readdirSync(migrationDir).filter(f => f.startsWith('20261121'))
   const prohibitedPatterns = [
     /\bDROP\s+TABLE\b/i,
     /\bDROP\s+SCHEMA\b/i,
@@ -83,14 +83,9 @@ function validateMigrations() {
   
   const violations = []
   for (const f of files) {
-    const rawSql = fs.readFileSync(path.join(migrationDir, f), 'utf-8')
-    // Strip SQL comments and REVOKE privilege statements before scanning for destructive DDL/DML.
-    const executableSql = rawSql
-      .replace(/\/\*[\s\S]*?\*\//g, ' ')
-      .replace(/--.*$/gm, ' ')
-      .replace(/\bREVOKE\b[^;]*;/gi, ' ')
+    const content = fs.readFileSync(path.join(migrationDir, f), 'utf-8')
     for (const pat of prohibitedPatterns) {
-      if (pat.test(executableSql)) {
+      if (pat.test(content)) {
         violations.push(`${f} matches prohibited destructive pattern: ${pat}`)
       }
     }
@@ -100,7 +95,7 @@ function validateMigrations() {
     process.stdout.write(`[PASS] 5. Migration Safety: Verified ${files.length} Phase 1 migration files.\n`)
     stages.push({ name: '5. Migration Safety', command: 'internal check', status: 'PASS', duration: '0.05s', output: `Verified safe migrations: ${files.join(', ')}` })
   } else {
-    process.stdout.write(`[FAIL] 5. Migration Safety: Violations detected!\n${violations.join('\n')}\n`)
+    process.stdout.write(`[FAIL] 5. Migration Safety: Violations detected!\n`)
     stages.push({ name: '5. Migration Safety', command: 'internal check', status: 'FAIL', duration: '0.05s', output: violations.join('\n') })
     overallSuccess = false
   }

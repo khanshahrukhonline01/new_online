@@ -22,6 +22,17 @@ import {
   escalateDisputeToSanction,
 } from '../services/adminGovernanceEscalationService'
 import type { AdminDeskDeepLink } from '../services/adminGlobalSearchService'
+import {
+  listQueueClaims,
+  type QueueRecordClaim,
+} from '../services/adminQueueWorkflowService'
+import { subscribeRegulatoryState } from '../../../../src/shared/governance/regulatoryBridge'
+import { AdminSavedViewsBar } from './AdminSavedViewsBar'
+import {
+  AdminAssigneeFilterBar,
+  AdminQueueClaimControl,
+  type AssigneeFilterValue,
+} from './AdminQueueClaimControl'
 import './AdminTrustSafetyDesk.css'
 
 export interface AdminTrustSafetyDeskProps {
@@ -58,6 +69,8 @@ export const AdminTrustSafetyDesk: FC<AdminTrustSafetyDeskProps> = ({
   const [severityFilter, setSeverityFilter] = useState<IncidentSeverity | 'all'>('all')
   const [categoryFilter, setCategoryFilter] = useState<IncidentCategory | 'all'>('all')
   const [entityFilter, setEntityFilter] = useState<ReportedEntityType | 'all'>('all')
+  const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilterValue>('all')
+  const [claims, setClaims] = useState<QueueRecordClaim[]>(() => listQueueClaims('fraud_disputes'))
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null)
   const [activeDrawerTab, setActiveDrawerTab] = useState<
     'narrative' | 'evidence' | 'notes' | 'sanctions' | 'appeals' | 'audit'
@@ -89,18 +102,42 @@ export const AdminTrustSafetyDesk: FC<AdminTrustSafetyDeskProps> = ({
     setTimeout(() => setToastMessage(null), 3500)
   }
 
+  const applySavedFilters = useCallback((filters: Record<string, string>, viewName?: string) => {
+    setStatusFilter((filters.status as IncidentStatus | 'all') || 'all')
+    setSeverityFilter((filters.severity as IncidentSeverity | 'all') || 'all')
+    setCategoryFilter((filters.category as IncidentCategory | 'all') || 'all')
+    setEntityFilter((filters.entity as ReportedEntityType | 'all') || 'all')
+    setAssigneeFilter(filters.assignee || 'all')
+    setSearchQuery(filters.search || '')
+    if (viewName) {
+      showToast(`Applied saved view "${viewName}".`)
+    }
+  }, [])
+
+  useEffect(() => {
+    setClaims(listQueueClaims('fraud_disputes'))
+    return subscribeRegulatoryState(() => {
+      setClaims(listQueueClaims('fraud_disputes'))
+    })
+  }, [])
+
   useEffect(() => {
     if (!deepLink || deepLink.workspace !== 'fraud_disputes') return
+    if (deepLink.savedViewFilters) {
+      applySavedFilters(deepLink.savedViewFilters)
+      return
+    }
     setStatusFilter('all')
     setSeverityFilter('all')
     setCategoryFilter('all')
     setEntityFilter('all')
+    setAssigneeFilter('all')
     setSearchQuery(deepLink.query ?? '')
     if (deepLink.recordId) {
       setSelectedCaseId(deepLink.recordId)
       setActiveDrawerTab('narrative')
     }
-  }, [deepLink])
+  }, [deepLink, applySavedFilters])
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
@@ -124,6 +161,26 @@ export const AdminTrustSafetyDesk: FC<AdminTrustSafetyDeskProps> = ({
   useEffect(() => {
     void loadData()
   }, [loadData])
+
+  const claimByRecordId = useMemo(() => {
+    const map = new Map<string, QueueRecordClaim>()
+    for (const c of claims) {
+      map.set(c.recordId, c)
+    }
+    return map
+  }, [claims])
+
+  const visibleCases = useMemo(() => {
+    if (assigneeFilter === 'all') return cases
+    return cases.filter(c => {
+      const claim = claimByRecordId.get(c.id)
+      if (assigneeFilter === 'unclaimed') return !claim
+      if (assigneeFilter === 'mine') {
+        return Boolean(claim && claim.claimedBy.toLowerCase() === operatorEmail.toLowerCase())
+      }
+      return Boolean(claim && claim.claimedBy.toLowerCase() === assigneeFilter.toLowerCase())
+    })
+  }, [cases, assigneeFilter, claimByRecordId, operatorEmail])
 
   const activeCase = useMemo(() => {
     if (!selectedCaseId) return null
@@ -341,8 +398,38 @@ export const AdminTrustSafetyDesk: FC<AdminTrustSafetyDeskProps> = ({
         </div>
       </section>
 
+      {/* Saved Filter Views */}
+      <AdminSavedViewsBar
+        desk="fraud_disputes"
+        currentFilters={{
+          status: statusFilter,
+          severity: severityFilter,
+          category: categoryFilter,
+          entity: entityFilter,
+          assignee: assigneeFilter,
+          search: searchQuery,
+        }}
+        onApplyFilters={applySavedFilters}
+        onResetFilters={() => {
+          setSearchQuery('')
+          setStatusFilter('all')
+          setSeverityFilter('all')
+          setCategoryFilter('all')
+          setEntityFilter('all')
+          setAssigneeFilter('all')
+        }}
+        operatorEmail={operatorEmail}
+      />
+
       {/* 3. Filters & Search Controls */}
       <section className="trust-filters-container">
+        <AdminAssigneeFilterBar
+          desk="fraud_disputes"
+          claims={claims}
+          operatorEmail={operatorEmail}
+          value={assigneeFilter}
+          onChange={setAssigneeFilter}
+        />
         <div className="trust-search-row">
           <div className="trust-search-input-wrapper">
             <span className="trust-search-icon" aria-hidden="true">🔍</span>
@@ -453,14 +540,14 @@ export const AdminTrustSafetyDesk: FC<AdminTrustSafetyDeskProps> = ({
                     Loading Trust & Safety cases…
                   </td>
                 </tr>
-              ) : cases.length === 0 ? (
+              ) : visibleCases.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
                     No incident cases matched the selected criteria.
                   </td>
                 </tr>
               ) : (
-                cases.map(c => (
+                visibleCases.map(c => (
                   <tr key={c.id} data-testid={`case-row-${c.id}`}>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -527,6 +614,16 @@ export const AdminTrustSafetyDesk: FC<AdminTrustSafetyDeskProps> = ({
 
                     <td>
                       <div className="trust-action-btn-group">
+                        <AdminQueueClaimControl
+                          desk="fraud_disputes"
+                          recordId={c.id}
+                          referenceCode={c.incidentNumber}
+                          recordTitle={c.title}
+                          operatorEmail={operatorEmail}
+                          claim={claimByRecordId.get(c.id) ?? null}
+                          compact
+                          onChanged={() => setClaims(listQueueClaims('fraud_disputes'))}
+                        />
                         <button
                           type="button"
                           className="trust-row-btn trust-row-btn-primary"
@@ -612,6 +709,17 @@ export const AdminTrustSafetyDesk: FC<AdminTrustSafetyDeskProps> = ({
                   </span>
                 </div>
                 <h2>{activeCase.title}</h2>
+                <div style={{ marginTop: '0.5rem' }}>
+                  <AdminQueueClaimControl
+                    desk="fraud_disputes"
+                    recordId={activeCase.id}
+                    referenceCode={activeCase.incidentNumber}
+                    recordTitle={activeCase.title}
+                    operatorEmail={operatorEmail}
+                    claim={claimByRecordId.get(activeCase.id) ?? null}
+                    onChanged={() => setClaims(listQueueClaims('fraud_disputes'))}
+                  />
+                </div>
               </div>
               <button
                 type="button"

@@ -9,6 +9,7 @@ import {
   buildComplianceHeatmapMatrix,
   buildComplianceSignals,
   classifyComplianceRiskTier,
+  computePeriodComparisonMetrics,
   DEFAULT_COMPLIANCE_DATE_RANGE,
   EMPTY_DRILLDOWN_FILTER,
   filterSignalsByDateRange,
@@ -41,6 +42,7 @@ export interface AdminComplianceHeatmapProps {
   scope?: HeatmapSignalScope
   onScopeChange?: (next: HeatmapSignalScope) => void
   dateRange?: ComplianceDateRange
+  comparePreviousPeriod?: boolean
 }
 
 function readIsDarkTheme(): boolean {
@@ -73,6 +75,7 @@ export function AdminComplianceHeatmap({
   scope: controlledScope,
   onScopeChange,
   dateRange = DEFAULT_COMPLIANCE_DATE_RANGE,
+  comparePreviousPeriod = false,
 }: AdminComplianceHeatmapProps) {
   const [signals, setSignals] = useState<ComplianceSignalRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -194,6 +197,14 @@ export function AdminComplianceHeatmap({
   const matrix = useMemo(
     () => buildComplianceHeatmapMatrix(signals, mode, scope, dateRange),
     [signals, mode, scope, dateRange],
+  )
+
+  const periodComparison = useMemo(
+    () =>
+      comparePreviousPeriod
+        ? computePeriodComparisonMetrics(signals, matrix)
+        : null,
+    [comparePreviousPeriod, signals, matrix],
   )
 
   const isDrilldownActive = hasActiveDrilldown(activeDrilldown)
@@ -755,7 +766,8 @@ export function AdminComplianceHeatmap({
               ? 'chm-spark-flat-dark'
               : 'chm-spark-flat-light'
 
-      const yMax = Math.max(trend.peakScore, 20)
+      const prevTrend = periodComparison?.previousTrendsByRegion[row.key]
+      const yMax = Math.max(trend.peakScore, prevTrend?.peakScore ?? 0, 20)
       const sparkYScale = d3.scaleLinear().domain([0, yMax]).range([sparkBottom, sparkTop])
 
       // Subtle baseline
@@ -783,6 +795,33 @@ export function AdminComplianceHeatmap({
           .datum(trend.points)
           .attr('d', areaGen)
           .attr('fill', `url(#${gradId})`)
+          .style('pointer-events', 'none')
+      }
+
+      // Previous-period dashed comparison baseline series
+      if (prevTrend && prevTrend.points.length > 0) {
+        const prevMaxIdx = Math.max(1, prevTrend.points.length - 1)
+        const prevXScale = d3
+          .scaleLinear()
+          .domain([0, prevMaxIdx])
+          .range([sparkXStart, sparkXStart + sparkWidth])
+        const prevLineGen = d3
+          .line<(typeof prevTrend.points)[number]>()
+          .x(p => prevXScale(p.dayIndex))
+          .y(p => sparkYScale(p.score))
+          .curve(d3.curveMonotoneX)
+
+        grp
+          .append('path')
+          .datum(prevTrend.points)
+          .attr('class', 'chm-prev-sparkline-path')
+          .attr('data-testid', `prev-trend-line-${row.key.toLowerCase().replace(/\s+/g, '-')}`)
+          .attr('d', prevLineGen)
+          .attr('fill', 'none')
+          .attr('stroke', isDark ? '#94a3b8' : '#64748b')
+          .attr('stroke-width', 1.3)
+          .attr('stroke-dasharray', '4,3')
+          .attr('opacity', 0.85)
           .style('pointer-events', 'none')
       }
 
@@ -1059,8 +1098,30 @@ export function AdminComplianceHeatmap({
         .style('font-variant-numeric', 'tabular-nums')
         .text(t.label)
     })
+
+    if (periodComparison) {
+      const compLegendX = legendWidth + 28
+      legendGroup
+        .append('line')
+        .attr('x1', compLegendX)
+        .attr('x2', compLegendX + 22)
+        .attr('y1', 5)
+        .attr('y2', 5)
+        .attr('stroke', isDark ? '#94a3b8' : '#64748b')
+        .attr('stroke-width', 1.6)
+        .attr('stroke-dasharray', '4,3')
+      legendGroup
+        .append('text')
+        .attr('x', compLegendX + 28)
+        .attr('y', 9)
+        .attr('fill', mutedTextColor)
+        .attr('font-size', '10.5px')
+        .attr('font-weight', '600')
+        .text(`Dashed baseline: ${periodComparison.previousWindow.startDateIso} → ${periodComparison.previousWindow.endDateIso}`)
+    }
   }, [
     matrix,
+    periodComparison,
     isDark,
     containerWidth,
     activeDrilldown,

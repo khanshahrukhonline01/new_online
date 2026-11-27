@@ -30,15 +30,11 @@ vi.mock('../../integrations/supabase/realtime-client', () => ({
   getSupabaseClient: mockGetSupabaseClient,
 }))
 
-vi.mock('../../integrations/supabase/auth-client', async importOriginal => {
-  const actual = await importOriginal<typeof import('../../integrations/supabase/auth-client')>()
-  return {
-    ...actual,
-    getStoredAuthUser: mockGetStoredAuthUser,
-    signUpWithEmail: mockSignUpWithEmail,
-    signInWithEmail: mockSignInWithEmail,
-  }
-})
+vi.mock('../../integrations/supabase/auth-client', () => ({
+  getStoredAuthUser: mockGetStoredAuthUser,
+  signUpWithEmail: mockSignUpWithEmail,
+  signInWithEmail: mockSignInWithEmail,
+}))
 
 vi.mock('../../integrations/supabase/tenant-client', async importOriginal => {
   const actual = await importOriginal<typeof import('../../integrations/supabase/tenant-client')>()
@@ -72,7 +68,6 @@ import {
 describe('partnerOnboardingService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockProvisionInitialTenantOwner.mockReset()
     mockGetStoredAuthUser.mockReturnValue(null)
     mockGetSupabaseClient.mockReturnValue(null)
     mockTryFetchUserTenantMemberships.mockResolvedValue([])

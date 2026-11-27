@@ -1,0 +1,185 @@
+/* Reusable Saved Filter Views Bar — Single-Line Controls, Dual Theme */
+
+.admin-saved-views-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--admin-border-subtle, rgba(148, 163, 184, 0.2));
+  background: var(--admin-surface-subtle, rgba(15, 23, 42, 0.03));
+  margin-bottom: 0.85rem;
+}
+
+:root[data-admin-theme='dark'] .admin-saved-views-bar,
+html.dark .admin-saved-views-bar {
+  background: rgba(15, 23, 42, 0.55);
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+.admin-saved-views-list {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.admin-saved-views-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--admin-text-muted, #64748b);
+  margin-right: 0.2rem;
+  white-space: nowrap;
+}
+
+.admin-saved-view-tab,
+.admin-saved-view-item {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: transparent;
+  color: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: border-color 0.14s ease, background-color 0.14s ease, color 0.14s ease;
+}
+
+.admin-saved-view-tab {
+  padding: 0.28rem 0.6rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-saved-view-btn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0.28rem 0.6rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-saved-view-delete {
+  border: none;
+  border-left: 1px solid rgba(148, 163, 184, 0.24);
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  padding: 0.24rem 0.42rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.admin-saved-view-delete:hover {
+  opacity: 1;
+  color: #dc2626;
+}
+
+.admin-saved-view-tab.is-active,
+.admin-saved-view-item.is-active {
+  border-color: #0284c7;
+  background: rgba(14, 165, 233, 0.12);
+  color: #0369a1;
+}
+
+:root[data-admin-theme='dark'] .admin-saved-view-tab.is-active,
+:root[data-admin-theme='dark'] .admin-saved-view-item.is-active,
+html.dark .admin-saved-view-tab.is-active,
+html.dark .admin-saved-view-item.is-active {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.16);
+  color: #38bdf8;
+}
+
+.admin-saved-view-tab:hover,
+.admin-saved-view-item:hover {
+  border-color: rgba(14, 165, 233, 0.5);
+}
+
+.admin-saved-views-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.admin-saved-view-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.28rem 0.62rem;
+  border-radius: 6px;
+  border: 1px dashed rgba(148, 163, 184, 0.45);
+  background: transparent;
+  color: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-saved-view-add-btn:hover {
+  border-color: #0284c7;
+  color: #0284c7;
+}
+
+:root[data-admin-theme='dark'] .admin-saved-view-add-btn:hover,
+html.dark .admin-saved-view-add-btn:hover {
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.admin-saved-view-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.admin-saved-view-input {
+  width: 185px;
+  padding: 0.28rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.75rem;
+}
+
+:root[data-admin-theme='dark'] .admin-saved-view-input,
+html.dark .admin-saved-view-input {
+  background: #090f1d;
+  border-color: rgba(148, 163, 184, 0.28);
+  color: #f8fafc;
+}
+
+.admin-saved-view-confirm {
+  padding: 0.28rem 0.6rem;
+  border-radius: 6px;
+  border: none;
+  background: #0284c7;
+  color: #ffffff;
+  font-size: 0.74rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.admin-saved-view-cancel {
+  padding: 0.26rem 0.52rem;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: transparent;
+  color: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.admin-saved-view-error {
+  font-size: 0.72rem;
+  color: #dc2626;
+  font-weight: 600;
+}

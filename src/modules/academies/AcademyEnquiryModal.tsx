@@ -8,7 +8,7 @@ import {
   submitAcademyEnquiry,
   type AcademyEnquiry,
 } from '../../integrations/supabase/athlete-profile-client'
-import { getPublicTenantBySlug, submitTenantEnquiry } from '../../integrations/supabase/tenant-client'
+import { addAcademyLead, getAcademySettings } from './academySaaSClient'
 import type { AthleteProfile } from '../../shared/domain'
 import './AcademyEnquiryModal.css'
 
@@ -77,10 +77,6 @@ export function AcademyEnquiryModal({
     setErrorMsg('')
 
     try {
-      const parsedAgeMatch = ageCategory.match(/\d+/)
-      const parsedAge = parsedAgeMatch ? Number(parsedAgeMatch[0]) : undefined
-      const liveTenant = await getPublicTenantBySlug(academy.slug)
-
       const res = await submitAcademyEnquiry({
         academySlug: academy.slug,
         academyName: academy.name,
@@ -99,26 +95,26 @@ export function AcademyEnquiryModal({
         statement,
       })
 
-      if (liveTenant?.id) {
-        const remoteEnq = await submitTenantEnquiry({
-          tenantId: liveTenant.id,
-          enquiryToken: res.enquiry.enquiryToken,
+      setConfirmedEnquiry(res.enquiry)
+      // Mirror to Academy SaaS CRM inbox
+      try {
+        addAcademyLead({
+          academySlug: academy.slug,
           parentName: fullName.trim(),
           parentPhone: phone.trim(),
           parentEmail: email.trim() || undefined,
           studentName: fullName.trim(),
-          studentAge: parsedAge,
+          studentAge: ageCategory,
           sport: sportName,
+          batchType,
+          batchName: res.enquiry.batchLabel,
           requestType,
-          notes: `${ageCategory} · ${batchType} · ${statement}`.trim(),
+          status: 'new',
+          notes: statement,
         })
-        if (!remoteEnq.success) {
-          setErrorMsg(remoteEnq.message || 'Unable to route admission enquiry to the academy workspace.')
-          return
-        }
+      } catch {
+        // ignore CRM sync error
       }
-
-      setConfirmedEnquiry(res.enquiry)
       if (onSuccess) onSuccess(res.enquiry)
     } catch {
       setErrorMsg('Failed to submit admission enquiry. Please verify your connection.')
@@ -212,10 +208,9 @@ export function AcademyEnquiryModal({
               </p>
 
               {(() => {
-                const rawPhone = (academy.phone || '').replace(/\D/g, '')
-                if (rawPhone.length < 10) return null
-                const normalized = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone
-                const waUrl = `https://wa.me/${normalized}?text=${encodeURIComponent(
+                const settings = getAcademySettings(academy.slug, academy.name)
+                const phone = settings.directorWhatsApp.replace(/\D/g, '')
+                const waUrl = `https://wa.me/91${phone}?text=${encodeURIComponent(
                   `Hi, I just submitted an admission enquiry on KhelGrid for ${confirmedEnquiry.athleteName} for ${confirmedEnquiry.sport} (${confirmedEnquiry.batchLabel}). Enquiry Ref: ${confirmedEnquiry.enquiryToken}.`
                 )}`
                 return (

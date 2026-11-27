@@ -411,6 +411,7 @@ const OPERATIONAL_PREFIXES = [
   '/parent-portal',
   '/gate-checkin',
   '/gate-check-in',
+  '/admin',
 ]
 
 export function isOperationalRoutePath(pathname: string): boolean {

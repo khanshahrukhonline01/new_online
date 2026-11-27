@@ -17,6 +17,17 @@ import {
   type AdminModerationListing,
 } from '../services/adminModerationService'
 import type { AdminDeskDeepLink } from '../services/adminGlobalSearchService'
+import {
+  listQueueClaims,
+  type QueueRecordClaim,
+} from '../services/adminQueueWorkflowService'
+import { subscribeRegulatoryState } from '../../../../src/shared/governance/regulatoryBridge'
+import { AdminSavedViewsBar } from './AdminSavedViewsBar'
+import {
+  AdminAssigneeFilterBar,
+  AdminQueueClaimControl,
+  type AssigneeFilterValue,
+} from './AdminQueueClaimControl'
 import './AdminListingModerationDesk.css'
 
 export interface AdminListingModerationDeskProps {
@@ -33,6 +44,8 @@ export function AdminListingModerationDesk({
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [sportFilter, setSportFilter] = useState<string>('all')
   const [cityFilter, setCityFilter] = useState<string>('all')
+  const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilterValue>('all')
+  const [claims, setClaims] = useState<QueueRecordClaim[]>(() => listQueueClaims('moderation_desk'))
 
   const [refreshTick, setRefreshTick] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -70,18 +83,45 @@ export function AdminListingModerationDesk({
     }, 3500)
   }, [])
 
+  const applySavedFilters = useCallback(
+    (filters: Record<string, string>, viewName?: string) => {
+      setCategoryFilter(filters.category || 'all')
+      setStatusFilter(filters.status || 'all')
+      setSportFilter(filters.sport || 'all')
+      setCityFilter(filters.city || 'all')
+      setAssigneeFilter(filters.assignee || 'all')
+      setSearchQuery(filters.search || '')
+      if (viewName) {
+        showToast(`Applied saved view "${viewName}".`)
+      }
+    },
+    [showToast],
+  )
+
+  useEffect(() => {
+    setClaims(listQueueClaims('moderation_desk'))
+    return subscribeRegulatoryState(() => {
+      setClaims(listQueueClaims('moderation_desk'))
+    })
+  }, [refreshTick])
+
   useEffect(() => {
     if (!deepLink || deepLink.workspace !== 'moderation_desk') return
+    if (deepLink.savedViewFilters) {
+      applySavedFilters(deepLink.savedViewFilters)
+      return
+    }
     setCategoryFilter('all')
     setStatusFilter('all')
     setSportFilter('all')
     setCityFilter('all')
+    setAssigneeFilter('all')
     setSearchQuery(deepLink.query ?? '')
     if (deepLink.recordId) {
       setSelectedId(deepLink.recordId)
       setDrawerTab('preview')
     }
-  }, [deepLink])
+  }, [deepLink, applySavedFilters])
 
   // All listings
   const allListings = useMemo(() => {
@@ -130,6 +170,14 @@ export function AdminListingModerationDesk({
     }
   }, [allListings])
 
+  const claimByRecordId = useMemo(() => {
+    const map = new Map<string, QueueRecordClaim>()
+    for (const c of claims) {
+      map.set(c.recordId, c)
+    }
+    return map
+  }, [claims])
+
   // Multi-facet filtering logic
   const filteredListings = useMemo(() => {
     return allListings.filter(item => {
@@ -167,9 +215,38 @@ export function AdminListingModerationDesk({
         return false
       }
 
+      // Assignee / Workload filter
+      if (assigneeFilter !== 'all') {
+        const claim = claimByRecordId.get(item.id)
+        if (assigneeFilter === 'unclaimed' && claim) return false
+        if (
+          assigneeFilter === 'mine' &&
+          (!claim || claim.claimedBy.toLowerCase() !== operatorEmail.toLowerCase())
+        ) {
+          return false
+        }
+        if (
+          assigneeFilter !== 'unclaimed' &&
+          assigneeFilter !== 'mine' &&
+          (!claim || claim.claimedBy.toLowerCase() !== assigneeFilter.toLowerCase())
+        ) {
+          return false
+        }
+      }
+
       return true
     })
-  }, [allListings, searchQuery, categoryFilter, statusFilter, sportFilter, cityFilter])
+  }, [
+    allListings,
+    searchQuery,
+    categoryFilter,
+    statusFilter,
+    sportFilter,
+    cityFilter,
+    assigneeFilter,
+    claimByRecordId,
+    operatorEmail,
+  ])
 
   // Selected item for slide-over drawer
   const selectedItem = useMemo(() => {
@@ -477,8 +554,38 @@ export function AdminListingModerationDesk({
         </div>
       </section>
 
+      {/* Saved Filter Views */}
+      <AdminSavedViewsBar
+        desk="moderation_desk"
+        currentFilters={{
+          category: categoryFilter,
+          status: statusFilter,
+          sport: sportFilter,
+          city: cityFilter,
+          assignee: assigneeFilter,
+          search: searchQuery,
+        }}
+        onApplyFilters={applySavedFilters}
+        onResetFilters={() => {
+          setSearchQuery('')
+          setCategoryFilter('all')
+          setStatusFilter('all')
+          setSportFilter('all')
+          setCityFilter('all')
+          setAssigneeFilter('all')
+        }}
+        operatorEmail={operatorEmail}
+      />
+
       {/* 3. Controls & Filter Pills */}
       <section className="admin-mod-controls-card">
+        <AdminAssigneeFilterBar
+          desk="moderation_desk"
+          claims={claims}
+          operatorEmail={operatorEmail}
+          value={assigneeFilter}
+          onChange={setAssigneeFilter}
+        />
         {/* Workspace Category Pills */}
         <div className="admin-mod-pill-filter-row">
           <span className="admin-mod-filter-group-label">Workspace:</span>
@@ -577,7 +684,7 @@ export function AdminListingModerationDesk({
             ))}
           </select>
 
-          {(searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' || sportFilter !== 'all' || cityFilter !== 'all') && (
+          {(searchQuery || categoryFilter !== 'all' || statusFilter !== 'all' || sportFilter !== 'all' || cityFilter !== 'all' || assigneeFilter !== 'all') && (
             <button
               type="button"
               className="admin-mod-btn admin-mod-btn-secondary"
@@ -587,6 +694,7 @@ export function AdminListingModerationDesk({
                 setStatusFilter('all')
                 setSportFilter('all')
                 setCityFilter('all')
+                setAssigneeFilter('all')
               }}
             >
               <SiteIcon name="close" size={12} />
@@ -694,7 +802,7 @@ export function AdminListingModerationDesk({
 
                       {/* Reference & Title */}
                       <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', maxWidth: '320px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', maxWidth: '215px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                             <span style={{ fontFamily: 'var(--adm-font-mono)', fontSize: '0.7rem', color: 'var(--adm-info)', background: 'var(--adm-info-soft)', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>
                               {item.referenceCode}
@@ -714,7 +822,10 @@ export function AdminListingModerationDesk({
                               </span>
                             )}
                           </div>
-                          <span style={{ fontWeight: 700, color: 'var(--adm-text)', fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span
+                            title={item.title}
+                            style={{ fontWeight: 700, color: 'var(--adm-text)', fontSize: '0.83rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                          >
                             {item.title}
                           </span>
                         </div>
@@ -729,11 +840,11 @@ export function AdminListingModerationDesk({
 
                       {/* Organization / Submitter */}
                       <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                          <span style={{ fontWeight: 600, color: 'var(--adm-text)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', maxWidth: '155px' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--adm-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.organizationName ?? 'Direct Individual'}>
                             {item.organizationName ?? 'Direct Individual'}
                           </span>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)' }}>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--adm-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {item.submitterName}
                           </span>
                         </div>
@@ -775,37 +886,50 @@ export function AdminListingModerationDesk({
 
                       {/* Actions */}
                       <td style={{ textAlign: 'right' }}>
-                        <div className="admin-mod-actions-cell" style={{ justifyContent: 'flex-end' }}>
-                          <button
-                            type="button"
-                            className="admin-mod-btn admin-mod-btn-secondary"
-                            onClick={() => openInspectionDrawer(item.id, rowIndex)}
-                          >
-                            <SiteIcon name="eye" size={13} />
-                            <span>Inspect</span>
-                          </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.32rem' }}>
+                          <AdminQueueClaimControl
+                            desk="moderation_desk"
+                            recordId={item.id}
+                            referenceCode={item.referenceCode}
+                            recordTitle={item.title}
+                            operatorEmail={operatorEmail}
+                            claim={claimByRecordId.get(item.id) ?? null}
+                            compact
+                            onChanged={() => setClaims(listQueueClaims('moderation_desk'))}
+                          />
 
-                          {item.status === 'pending_review' && (
+                          <div className="admin-mod-actions-cell" style={{ justifyContent: 'flex-end' }}>
                             <button
                               type="button"
-                              className="admin-mod-btn admin-mod-btn-warning"
-                              onClick={() => handleStartReview(item)}
+                              className="admin-mod-btn admin-mod-btn-secondary"
+                              onClick={() => openInspectionDrawer(item.id, rowIndex)}
                             >
-                              <SiteIcon name="clock" size={13} />
-                              <span>Start</span>
+                              <SiteIcon name="eye" size={13} />
+                              <span>Inspect</span>
                             </button>
-                          )}
 
-                          {(item.status === 'pending_review' || item.status === 'under_review' || item.status === 'changes_requested') && (
-                            <button
-                              type="button"
-                              className="admin-mod-btn admin-mod-btn-primary"
-                              onClick={() => setActionModal({ type: 'approve', item })}
-                            >
-                              <SiteIcon name="check" size={13} />
-                              <span>Approve</span>
-                            </button>
-                          )}
+                            {item.status === 'pending_review' && (
+                              <button
+                                type="button"
+                                className="admin-mod-btn admin-mod-btn-warning"
+                                onClick={() => handleStartReview(item)}
+                              >
+                                <SiteIcon name="clock" size={13} />
+                                <span>Start</span>
+                              </button>
+                            )}
+
+                            {(item.status === 'pending_review' || item.status === 'under_review' || item.status === 'changes_requested') && (
+                              <button
+                                type="button"
+                                className="admin-mod-btn admin-mod-btn-primary"
+                                onClick={() => setActionModal({ type: 'approve', item })}
+                              >
+                                <SiteIcon name="check" size={13} />
+                                <span>Approve</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -853,6 +977,17 @@ export function AdminListingModerationDesk({
                   {selectedItem.organizationName ? `${selectedItem.organizationName} · ` : ''}
                   {selectedItem.city}, {selectedItem.state}
                 </span>
+                <div style={{ marginTop: '0.5rem' }}>
+                  <AdminQueueClaimControl
+                    desk="moderation_desk"
+                    recordId={selectedItem.id}
+                    referenceCode={selectedItem.referenceCode}
+                    recordTitle={selectedItem.title}
+                    operatorEmail={operatorEmail}
+                    claim={claimByRecordId.get(selectedItem.id) ?? null}
+                    onChanged={() => setClaims(listQueueClaims('moderation_desk'))}
+                  />
+                </div>
               </div>
 
               <button

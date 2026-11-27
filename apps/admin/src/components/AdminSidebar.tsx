@@ -4,12 +4,16 @@ import type { AdminPlatformRole } from '../auth/adminSecurityPolicy'
 
 export type AdminWorkspaceTab =
   | 'command'
+  | 'post_regulation_gate'
+  | 'regulatory_rules_engine'
   | 'regulatory_inbox'
   | 'moderation_desk'
   | 'analytics'
   | 'chronicle_desk'
   | 'tenant_governance'
   | 'verification_vault'
+  | 'regulatory_compliance'
+  | 'audit_explorer'
   | 'creator_campaigns'
   | 'fraud_disputes'
   | 'platform_governance'
@@ -24,7 +28,9 @@ export interface AdminSidebarProps {
   onToggleCollapse: () => void
   isMobileOpen?: boolean
   onCloseMobile?: () => void
+  postRegulationPendingCount?: number
   regulatoryInboxCount?: number
+  regulatoryComplianceCount?: number
   pendingSubmissionsCount?: number
   pendingManuscriptsCount?: number
   moderatorEmail: string
@@ -52,7 +58,9 @@ export function AdminSidebar({
   onToggleCollapse,
   isMobileOpen = false,
   onCloseMobile,
+  postRegulationPendingCount = 0,
   regulatoryInboxCount = 0,
+  regulatoryComplianceCount = 0,
   pendingSubmissionsCount = 0,
   pendingManuscriptsCount = 0,
   moderatorEmail,
@@ -70,13 +78,6 @@ export function AdminSidebar({
         icon: 'activity',
       },
       {
-        id: 'regulatory_inbox',
-        label: 'Regulatory Inbox',
-        section: 'Operations',
-        icon: 'bell',
-        count: regulatoryInboxCount > 0 ? regulatoryInboxCount : undefined,
-      },
-      {
         id: 'moderation_desk',
         label: 'Listing Moderation Queue',
         section: 'Operations',
@@ -88,6 +89,33 @@ export function AdminSidebar({
         label: 'Operations & KPI Analytics',
         section: 'Operations',
         icon: 'chart',
+      },
+      {
+        id: 'post_regulation_gate',
+        label: 'Post Evaluation Gate',
+        section: 'Regulation',
+        icon: 'shield-check',
+        count: postRegulationPendingCount > 0 ? postRegulationPendingCount : undefined,
+      },
+      {
+        id: 'regulatory_rules_engine',
+        label: 'Policy Rules Engine',
+        section: 'Regulation',
+        icon: 'sliders',
+      },
+      {
+        id: 'regulatory_inbox',
+        label: 'Regulatory Inbox',
+        section: 'Regulation',
+        icon: 'bell',
+        count: regulatoryInboxCount > 0 ? regulatoryInboxCount : undefined,
+      },
+      {
+        id: 'regulatory_compliance',
+        label: 'Statutory Compliance',
+        section: 'Regulation',
+        icon: 'file-text',
+        count: regulatoryComplianceCount > 0 ? regulatoryComplianceCount : undefined,
       },
       {
         id: 'tenant_governance',
@@ -106,6 +134,12 @@ export function AdminSidebar({
         label: 'Trust & Safety / Sanctions',
         section: 'Governance & Trust',
         icon: 'flag',
+      },
+      {
+        id: 'audit_explorer',
+        label: 'Audit Trail Explorer',
+        section: 'Governance & Trust',
+        icon: 'file-text',
       },
       {
         id: 'platform_governance',
@@ -145,7 +179,13 @@ export function AdminSidebar({
         icon: 'building',
       },
     ],
-    [regulatoryInboxCount, pendingSubmissionsCount, pendingManuscriptsCount],
+    [
+      postRegulationPendingCount,
+      regulatoryInboxCount,
+      regulatoryComplianceCount,
+      pendingSubmissionsCount,
+      pendingManuscriptsCount,
+    ],
   )
 
   const filteredItems = useMemo(() => {

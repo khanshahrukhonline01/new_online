@@ -17,6 +17,17 @@ import {
   type VerificationBadgeTier,
 } from '../services/adminVerificationService'
 import type { AdminDeskDeepLink } from '../services/adminGlobalSearchService'
+import {
+  listQueueClaims,
+  type QueueRecordClaim,
+} from '../services/adminQueueWorkflowService'
+import { subscribeRegulatoryState } from '../../../../src/shared/governance/regulatoryBridge'
+import { AdminSavedViewsBar } from './AdminSavedViewsBar'
+import {
+  AdminAssigneeFilterBar,
+  AdminQueueClaimControl,
+  type AssigneeFilterValue,
+} from './AdminQueueClaimControl'
 import './AdminVerificationVaultDesk.css'
 
 export interface AdminVerificationVaultDeskProps {
@@ -34,6 +45,10 @@ export function AdminVerificationVaultDesk({
   const [expiryFilter, setExpiryFilter] = useState<string>('all')
   const [sportFilter, setSportFilter] = useState<string>('all')
   const [cityFilter, setCityFilter] = useState<string>('all')
+  const [assigneeFilter, setAssigneeFilter] = useState<AssigneeFilterValue>('all')
+  const [claims, setClaims] = useState<QueueRecordClaim[]>(() =>
+    listQueueClaims('verification_vault'),
+  )
 
   const [refreshTick, setRefreshTick] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -66,19 +81,47 @@ export function AdminVerificationVaultDesk({
     }, 3500)
   }, [])
 
+  const applySavedFilters = useCallback(
+    (filters: Record<string, string>, viewName?: string) => {
+      setEntityFilter(filters.entity || 'all')
+      setStatusFilter(filters.status || 'all')
+      setExpiryFilter(filters.expiry || 'all')
+      setSportFilter(filters.sport || 'all')
+      setCityFilter(filters.city || 'all')
+      setAssigneeFilter(filters.assignee || 'all')
+      setSearchQuery(filters.search || '')
+      if (viewName) {
+        showToast(`Applied saved view "${viewName}".`)
+      }
+    },
+    [showToast],
+  )
+
+  useEffect(() => {
+    setClaims(listQueueClaims('verification_vault'))
+    return subscribeRegulatoryState(() => {
+      setClaims(listQueueClaims('verification_vault'))
+    })
+  }, [refreshTick])
+
   useEffect(() => {
     if (!deepLink || deepLink.workspace !== 'verification_vault') return
+    if (deepLink.savedViewFilters) {
+      applySavedFilters(deepLink.savedViewFilters)
+      return
+    }
     setEntityFilter('all')
     setStatusFilter('all')
     setExpiryFilter('all')
     setSportFilter('all')
     setCityFilter('all')
+    setAssigneeFilter('all')
     setSearchQuery(deepLink.query ?? '')
     if (deepLink.recordId) {
       setSelectedId(deepLink.recordId)
       setDrawerTab('overview')
     }
-  }, [deepLink])
+  }, [deepLink, applySavedFilters])
 
   // All verification records
   const allVerifications = useMemo(() => {
@@ -143,6 +186,14 @@ export function AdminVerificationVaultDesk({
     }
   }, [allVerifications])
 
+  const claimByRecordId = useMemo(() => {
+    const map = new Map<string, QueueRecordClaim>()
+    for (const c of claims) {
+      map.set(c.recordId, c)
+    }
+    return map
+  }, [claims])
+
   // Multi-facet filtering logic
   const filteredVerifications = useMemo(() => {
     return allVerifications.filter(item => {
@@ -193,9 +244,39 @@ export function AdminVerificationVaultDesk({
         return false
       }
 
+      // Assignee / Workload filter
+      if (assigneeFilter !== 'all') {
+        const claim = claimByRecordId.get(item.id)
+        if (assigneeFilter === 'unclaimed' && claim) return false
+        if (
+          assigneeFilter === 'mine' &&
+          (!claim || claim.claimedBy.toLowerCase() !== operatorEmail.toLowerCase())
+        ) {
+          return false
+        }
+        if (
+          assigneeFilter !== 'unclaimed' &&
+          assigneeFilter !== 'mine' &&
+          (!claim || claim.claimedBy.toLowerCase() !== assigneeFilter.toLowerCase())
+        ) {
+          return false
+        }
+      }
+
       return true
     })
-  }, [allVerifications, searchQuery, entityFilter, statusFilter, expiryFilter, sportFilter, cityFilter])
+  }, [
+    allVerifications,
+    searchQuery,
+    entityFilter,
+    statusFilter,
+    expiryFilter,
+    sportFilter,
+    cityFilter,
+    assigneeFilter,
+    claimByRecordId,
+    operatorEmail,
+  ])
 
   // Selected item for slide-over drawer
   const selectedItem = useMemo(() => {
@@ -373,8 +454,40 @@ export function AdminVerificationVaultDesk({
         </div>
       </section>
 
+      {/* Saved Filter Views */}
+      <AdminSavedViewsBar
+        desk="verification_vault"
+        currentFilters={{
+          entity: entityFilter,
+          status: statusFilter,
+          expiry: expiryFilter,
+          sport: sportFilter,
+          city: cityFilter,
+          assignee: assigneeFilter,
+          search: searchQuery,
+        }}
+        onApplyFilters={applySavedFilters}
+        onResetFilters={() => {
+          setSearchQuery('')
+          setEntityFilter('all')
+          setStatusFilter('all')
+          setExpiryFilter('all')
+          setSportFilter('all')
+          setCityFilter('all')
+          setAssigneeFilter('all')
+        }}
+        operatorEmail={operatorEmail}
+      />
+
       {/* 3. Multi-Facet Filter & Search Controls */}
       <section className="admin-verif-controls-card">
+        <AdminAssigneeFilterBar
+          desk="verification_vault"
+          claims={claims}
+          operatorEmail={operatorEmail}
+          value={assigneeFilter}
+          onChange={setAssigneeFilter}
+        />
         {/* Entity Type Filter Pills */}
         <div className="admin-verif-pill-filter-row">
           <span className="admin-verif-filter-group-label">Entity:</span>
@@ -472,7 +585,7 @@ export function AdminVerificationVaultDesk({
             ))}
           </select>
 
-          {(searchQuery || entityFilter !== 'all' || statusFilter !== 'all' || expiryFilter !== 'all' || sportFilter !== 'all' || cityFilter !== 'all') && (
+          {(searchQuery || entityFilter !== 'all' || statusFilter !== 'all' || expiryFilter !== 'all' || sportFilter !== 'all' || cityFilter !== 'all' || assigneeFilter !== 'all') && (
             <button
               type="button"
               className="admin-verif-btn admin-verif-btn-secondary"
@@ -483,6 +596,7 @@ export function AdminVerificationVaultDesk({
                 setExpiryFilter('all')
                 setSportFilter('all')
                 setCityFilter('all')
+                setAssigneeFilter('all')
               }}
             >
               <SiteIcon name="close" size={12} />
@@ -628,6 +742,17 @@ export function AdminVerificationVaultDesk({
                       {/* 7. Actions */}
                       <td style={{ textAlign: 'right' }}>
                         <div className="admin-verif-actions-cell" style={{ justifyContent: 'flex-end' }}>
+                          <AdminQueueClaimControl
+                            desk="verification_vault"
+                            recordId={item.id}
+                            referenceCode={item.referenceCode}
+                            recordTitle={item.entityName}
+                            operatorEmail={operatorEmail}
+                            claim={claimByRecordId.get(item.id) ?? null}
+                            compact
+                            onChanged={() => setClaims(listQueueClaims('verification_vault'))}
+                          />
+
                           <button
                             type="button"
                             className="admin-verif-btn admin-verif-btn-secondary"
@@ -699,6 +824,17 @@ export function AdminVerificationVaultDesk({
                 <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
                   {selectedItem.organizationName ? `${selectedItem.organizationName} · ` : ''}{selectedItem.city}, {selectedItem.state}
                 </span>
+                <div style={{ marginTop: '0.5rem' }}>
+                  <AdminQueueClaimControl
+                    desk="verification_vault"
+                    recordId={selectedItem.id}
+                    referenceCode={selectedItem.referenceCode}
+                    recordTitle={selectedItem.entityName}
+                    operatorEmail={operatorEmail}
+                    claim={claimByRecordId.get(selectedItem.id) ?? null}
+                    onChanged={() => setClaims(listQueueClaims('verification_vault'))}
+                  />
+                </div>
               </div>
 
               <button

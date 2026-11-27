@@ -15,7 +15,6 @@ import { useCallback, useContext, useEffect, useMemo, useState, Suspense, lazy }
 import type { MouseEvent } from 'react'
 import type { AuthUserProfile } from '../../integrations/supabase/auth-client'
 import type { WorkspacePersona } from '../../shared/routing'
-import { TENANT_ROUTE_POLICIES } from '../../integrations/supabase/tenant-client'
 import { TenantProvider } from '../../shared/context/TenantContext'
 import { TenantContext } from '../../shared/context/tenantContextCore'
 import { useTenant } from '../../shared/context/useTenant'
@@ -447,37 +446,37 @@ function PersonaContent({ persona, section, onOpenAuth, onNavigate }: {
       return <LazyDashboard workspaceSection={section} onOpenAuth={onOpenAuth} onNavigate={handleStrictNav} />
     case 'academy':
       return (
-        <RequireTenantMember {...TENANT_ROUTE_POLICIES.academy} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Academy" onboardingRole="academy" requiredTenantTypes={['academy', 'club', 'school', 'college', 'university', 'training_org']} allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'admissions_manager', 'finance_manager', 'content_manager', 'listing_manager', 'verification_coordinator', 'head_coach', 'coach', 'accountant', 'front_desk', 'staff', 'readonly_member']} onNavigate={handleStrictNav}>
           <LazyAcademyHub workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'coach':
       return (
-        <RequireTenantMember {...TENANT_ROUTE_POLICIES.coach} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Coach" onboardingRole="coach" requiredTenantTypes={['coach', 'academy']} allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'head_coach', 'coach']} onNavigate={handleStrictNav}>
           <LazyCoachDashboard workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'turf':
       return (
-        <RequireTenantMember {...TENANT_ROUTE_POLICIES.turf} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Venue / Turf" onboardingRole="venue" requiredTenantTypes={['venue']} allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'listing_manager', 'finance_manager', 'accountant', 'front_desk', 'staff', 'readonly_member']} onNavigate={handleStrictNav}>
           <LazyTurfCalendar workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'host':
       return (
-        <RequireTenantMember {...TENANT_ROUTE_POLICIES.host} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Venue / Host" onboardingRole="venue" requiredTenantTypes={['venue']} allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'listing_manager', 'finance_manager', 'accountant', 'front_desk', 'staff', 'readonly_member']} onNavigate={handleStrictNav}>
           <LazyHostDashboard workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'tournament':
       return (
-        <RequireTenantMember {...TENANT_ROUTE_POLICIES.tournament} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Tournament" onboardingRole="tournament" requiredTenantTypes={['tournament', 'event_organizer']} allowedRoles={['owner', 'org_admin', 'director', 'admin', 'manager', 'finance_manager', 'content_manager', 'verification_coordinator', 'accountant', 'staff', 'readonly_member']} onNavigate={handleStrictNav}>
           <LazyTournamentOps workspaceSection={section} onNavigate={handleStrictNav} />
         </RequireTenantMember>
       )
     case 'organization':
       return (
-        <RequireTenantMember {...TENANT_ROUTE_POLICIES.organization} onNavigate={handleStrictNav}>
+        <RequireTenantMember personaLabel="Organisation" onboardingRole="organization" requireTenantMembership={false} onNavigate={handleStrictNav}>
           <LazyOrganizations workspaceSection={section} onNavigate={onNavigate} />
         </RequireTenantMember>
       )
