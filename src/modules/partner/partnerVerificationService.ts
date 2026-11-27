@@ -59,6 +59,8 @@ export interface PartnerVerificationSnapshot {
   headline: string
   summary: string
   isPubliclyVerified: boolean
+  directoryPublicationStatus?: 'unpublished' | 'pending_approval' | 'approved' | 'rejected'
+  isPubliclyListed: boolean
   completedSteps: number
   totalSteps: number
   moderatorNotes?: string
@@ -210,9 +212,27 @@ function resolveModerationStatus(params: {
   return 'unverified'
 }
 
-function buildStatusSummary(status: PartnerModerationStatus, entityName: string) {
+function buildStatusSummary(
+  status: PartnerModerationStatus,
+  entityName: string,
+  directoryPublicationStatus?: DbTenant['directory_publication_status']
+) {
   switch (status) {
     case 'verified':
+      if (directoryPublicationStatus && directoryPublicationStatus !== 'approved') {
+        return {
+          statusLabel: 'KhelGrid Verified',
+          statusTone: 'success' as const,
+          headline:
+            directoryPublicationStatus === 'rejected'
+              ? 'Verified Partner · Directory Listing Rejected'
+              : 'Verified Partner · Awaiting Public Directory Publication',
+          summary:
+            directoryPublicationStatus === 'rejected'
+              ? `${entityName} holds verified credentials, but public directory listing is currently declined by moderation.`
+              : `${entityName} has passed verification review. Public directory listing remains separate and requires explicit publication approval.`,
+        }
+      }
       return {
         statusLabel: 'KhelGrid Verified',
         statusTone: 'success' as const,
@@ -289,6 +309,13 @@ export function getPartnerVerificationSnapshot(params: {
     claims[0]?.moderatorNotes ||
     undefined
 
+  const directoryPublicationStatus = params.tenant?.directory_publication_status
+  const isPubliclyListed =
+    status === 'verified' && directoryPublicationStatus === 'approved'
+  const publicStepDone =
+    status === 'verified' &&
+    (directoryPublicationStatus === undefined || directoryPublicationStatus === 'approved')
+
   const hasSubmittedProof = claims.length > 0 || status === 'verified' || status === 'pending_review' || status === 'rejected' || status === 'more_info_needed'
 
   const milestones: VerificationMilestone[] = [
@@ -334,16 +361,21 @@ export function getPartnerVerificationSnapshot(params: {
     {
       id: 'public_badge',
       label: 'Verified Public Badge',
-      state: status === 'verified' ? 'done' : 'pending',
-      detail:
-        status === 'verified'
-          ? 'Public KhelGrid Verified badge active on search & discovery cards.'
-          : 'Unlocks automatically after moderation approval.',
+      state: publicStepDone
+        ? 'done'
+        : directoryPublicationStatus === 'rejected'
+          ? 'blocked'
+          : 'pending',
+      detail: publicStepDone
+        ? 'Public KhelGrid Verified badge active on search & discovery cards.'
+        : status === 'verified'
+          ? 'Credentials verified — public directory listing awaits publication approval.'
+          : 'Unlocks automatically after moderation and directory publication approval.',
     },
   ]
 
   const completedSteps = milestones.filter(m => m.state === 'done').length
-  const copy = buildStatusSummary(status, entityName)
+  const copy = buildStatusSummary(status, entityName, directoryPublicationStatus)
 
   return {
     persona: params.persona,
@@ -356,6 +388,8 @@ export function getPartnerVerificationSnapshot(params: {
     headline: copy.headline,
     summary: copy.summary,
     isPubliclyVerified: status === 'verified',
+    directoryPublicationStatus,
+    isPubliclyListed,
     completedSteps,
     totalSteps: milestones.length,
     moderatorNotes: moderationNotes,

@@ -33,15 +33,15 @@ export function RequireTenantMember({
   )
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && matchingMembership && currentMembership?.id !== matchingMembership.id) {
+    if (!isLoading && !error && isAuthenticated && matchingMembership && currentMembership?.id !== matchingMembership.id) {
       void switchTenant(matchingMembership.tenant_id)
     }
-  }, [isLoading, isAuthenticated, matchingMembership, currentMembership?.id, switchTenant])
+  }, [isLoading, error, isAuthenticated, matchingMembership, currentMembership?.id, switchTenant])
   const isPartnerRole = onboardingRole !== 'creator' && onboardingRole !== 'parent'
   const loginHref = isPartnerRole ? `/partner-signup?mode=login&role=${onboardingRole}` : '/login'
   const signupHref = isPartnerRole ? `/partner-signup?mode=signup&role=${onboardingRole}` : '/signup'
 
-  if (isLoading || (matchingMembership && currentMembership?.id !== matchingMembership.id)) {
+  if (isLoading || (!error && matchingMembership && currentMembership?.id !== matchingMembership.id)) {
     return <div className="kg-tenant-guard-loading" role="status"><p>Verifying your secure workspace access…</p></div>
   }
 

@@ -187,6 +187,32 @@ describe('partnerVerificationService', () => {
     expect(snap.milestones[2].detail).toContain('expired')
   })
 
+  it('keeps directory listing distinct from verification when directory_publication_status is unpublished or approved', () => {
+    const unpublishedSnap = getPartnerVerificationSnapshot({
+      persona: 'academy',
+      tenant: makeTenant({
+        verification_status: 'verified',
+        directory_publication_status: 'unpublished',
+      }),
+    })
+    expect(unpublishedSnap.isPubliclyVerified).toBe(true)
+    expect(unpublishedSnap.isPubliclyListed).toBe(false)
+    expect(unpublishedSnap.directoryPublicationStatus).toBe('unpublished')
+    expect(unpublishedSnap.headline).toContain('Awaiting Public Directory Publication')
+    expect(unpublishedSnap.milestones[3].state).toBe('pending')
+
+    const approvedSnap = getPartnerVerificationSnapshot({
+      persona: 'academy',
+      tenant: makeTenant({
+        verification_status: 'verified',
+        directory_publication_status: 'approved',
+      }),
+    })
+    expect(approvedSnap.isPubliclyVerified).toBe(true)
+    expect(approvedSnap.isPubliclyListed).toBe(true)
+    expect(approvedSnap.milestones[3].state).toBe('done')
+  })
+
   it('surfaces moderatorNotes on more_info_needed claim status', () => {
     const claim: StoredVerificationClaim = {
       id: 'claim-2',

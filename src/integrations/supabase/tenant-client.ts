@@ -21,6 +21,8 @@ export interface DbTenant {
   tenant_type: OrganizationType
   status: 'active' | 'pending_verification' | 'suspended' | 'archived'
   verification_status?: 'unverified' | 'pending_review' | 'verified' | 'rejected'
+  directory_publication_status?: 'unpublished' | 'pending_approval' | 'approved' | 'rejected'
+  directory_approved_at?: string | null
   owner_id?: string
   parent_tenant_id?: string | null
   city?: string
@@ -677,7 +679,9 @@ export async function getUserTenantMemberships(userId: string): Promise<DbTenant
   return ((data || []) as DbTenantMembership[]).filter(
     membership => membership.user_id === userId &&
       membership.status === 'active' &&
-      membership.tenant?.status === 'active'
+      !membership.deleted_at &&
+      membership.tenant?.status === 'active' &&
+      !membership.tenant?.deleted_at
   )
 }
 

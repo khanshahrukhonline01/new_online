@@ -134,9 +134,40 @@ async function run() {
     p_name: 'Probe Tenant',
     p_tenant_type: 'academy'
   })
+  await probeRpcFunction('has_tenant_permission', { p_tenant_id: '00000000-0000-0000-0000-000000000000', p_permission: 'org:team' })
+  await probeRpcFunction('admin_moderate_tenant_verification', { p_tenant_id: '00000000-0000-0000-0000-000000000000', p_verification_status: 'verified' })
+  await probeRpcFunction('admin_set_tenant_directory_publication', { p_tenant_id: '00000000-0000-0000-0000-000000000000', p_publication_status: 'approved' })
+  await probeRpcFunction('admin_set_tenant_operational_status', { p_tenant_id: '00000000-0000-0000-0000-000000000000', p_status: 'suspended' })
 
-  console.log('\n--- 3. Testing Public Admissions Intake Validation ---')
+  console.log('\n--- 3. Testing Public Admissions Intake Validation & P0 Directory/Tenant Gates ---')
   await probeEnquiryInsert()
+
+  const { error: directTenantInsertErr } = await client.from('tenants').insert({
+    slug: 'probe-bypass-' + Date.now(),
+    name: 'Probe Bypass Academy',
+    tenant_type: 'academy',
+  })
+  const directInsertDenied = !!directTenantInsertErr && (directTenantInsertErr.code === '42501' || directTenantInsertErr.message.includes('permission denied'))
+  results.push({
+    test: 'SEC-PROBE-04: Direct client INSERT on public.tenants',
+    expected: '42501 permission denied',
+    actual: directTenantInsertErr ? `${directTenantInsertErr.code}: ${directTenantInsertErr.message}` : 'EXPOSED!',
+    passed: directInsertDenied,
+  })
+  console.log(`[${directInsertDenied ? 'PASS' : 'FAIL'}] direct tenants INSERT ->`, directTenantInsertErr ? `${directTenantInsertErr.code}: ${directTenantInsertErr.message}` : 'EXPOSED!')
+
+  const { data: unverifiedDirRows, error: dirQueryErr } = await client
+    .from('tenant_public_directory')
+    .select('id, verification_status, directory_publication_status')
+    .or('verification_status.neq.verified,directory_publication_status.neq.approved')
+  const noUnverifiedDir = !dirQueryErr && Array.isArray(unverifiedDirRows) && unverifiedDirRows.length === 0
+  results.push({
+    test: 'SEC-PROBE-05: Zero unverified/unapproved rows visible in tenant_public_directory',
+    expected: '200 OK with 0 rows matching unverified or non-approved',
+    actual: dirQueryErr ? `${dirQueryErr.code}: ${dirQueryErr.message}` : `${unverifiedDirRows?.length ?? 0} exposed rows`,
+    passed: noUnverifiedDir,
+  })
+  console.log(`[${noUnverifiedDir ? 'PASS' : 'FAIL'}] tenant_public_directory gate ->`, dirQueryErr ? `${dirQueryErr.code}: ${dirQueryErr.message}` : `${unverifiedDirRows?.length ?? 0} unverified/unapproved rows`)
 
   console.log('\n' + '='.repeat(80))
   const allPassed = results.every(r => r.passed)

@@ -64,6 +64,7 @@ vi.mock('../venues/turfSlotManager', () => ({
 }))
 
 import {
+  completePartnerEmailVerification,
   normalizePartnerRole,
   onboardPartnerOrganization,
   signInPartnerAccount,
@@ -494,5 +495,61 @@ describe('partnerOnboardingService', () => {
     expect(res.success).toBe(true)
     expect(res.workspacePath).toBeUndefined()
     expect(res.memberships).toHaveLength(2)
+  })
+
+  it('deduplicates concurrent completePartnerEmailVerification calls and forwards idempotency_key', async () => {
+    const getUserMock = vi.fn().mockResolvedValue({
+      data: {
+        user: {
+          id: 'verify-user-99',
+          email: 'founder@new-academy.in',
+          email_confirmed_at: '2026-11-27T12:00:00Z',
+          user_metadata: {
+            full_name: 'Founder Rao',
+            khelgrid_partner_onboarding: {
+              version: 1,
+              role: 'academy',
+              entityName: 'New Generation Sports Academy',
+              city: 'Pune',
+              sport: 'Badminton',
+              phone: '9876543210',
+            },
+          },
+        },
+      },
+      error: null,
+    })
+    const orderMock = vi.fn().mockResolvedValue({ data: [], error: null })
+    const eqStatusMock = vi.fn(() => ({ order: orderMock }))
+    const eqUserMock = vi.fn(() => ({ eq: eqStatusMock }))
+    const selectMock = vi.fn(() => ({ eq: eqUserMock }))
+    const fromMock = vi.fn(() => ({ select: selectMock }))
+
+    mockGetSupabaseClient.mockReturnValue({ auth: { getUser: getUserMock }, from: fromMock })
+    mockTryFetchUserTenantMemberships.mockResolvedValue([])
+    mockProvisionInitialTenantOwner.mockResolvedValue({
+      success: true,
+      tenantId: 'tenant-idemp-99',
+      message: 'Provisioned',
+    })
+
+    const [r1, r2] = await Promise.all([
+      completePartnerEmailVerification(),
+      completePartnerEmailVerification(),
+    ])
+
+    expect(getUserMock).toHaveBeenCalledTimes(1)
+    expect(mockProvisionInitialTenantOwner).toHaveBeenCalledTimes(1)
+    expect(mockProvisionInitialTenantOwner).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          source: 'verified_partner_email_onboarding',
+          idempotency_key: 'verify-v1:verify-user-99:academy:new-generation-sports-academy',
+        }),
+      }),
+    )
+    expect(r1).toEqual(r2)
+    expect(r1.success).toBe(true)
+    expect(r1.tenantId).toBe('tenant-idemp-99')
   })
 })
