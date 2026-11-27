@@ -76,15 +76,29 @@ export const KHELGRID_AUTH_SESSION_KEY = 'khelgrid_auth_session'
 let inMemoryUser: AuthUserProfile | null = null
 
 const PRIVILEGED_ROLES: ReadonlySet<string> = new Set(['admin', 'moderator'])
+const ALLOWED_STANDARD_ROLES: ReadonlySet<UserRole> = new Set([
+  'athlete',
+  'parent',
+  'creator',
+  'coach',
+  'scout',
+  'academy',
+  'host',
+  'venue_owner',
+  'tournament',
+  'organization',
+  'submitter',
+])
 
 /**
- * Strips privileged roles when hydrating from untrusted client sources
+ * Strips privileged and unknown roles when hydrating from untrusted client sources
  * (localStorage or user-modifiable user_metadata).
  */
 export function sanitizeUntrustedRole(rawRole: unknown, fallback: UserRole = 'athlete'): UserRole {
+  const safeFallback = ALLOWED_STANDARD_ROLES.has(fallback) ? fallback : 'athlete'
   const candidate = typeof rawRole === 'string' ? rawRole.trim().toLowerCase() : ''
-  if (!candidate || PRIVILEGED_ROLES.has(candidate)) {
-    return fallback
+  if (!candidate || PRIVILEGED_ROLES.has(candidate) || !ALLOWED_STANDARD_ROLES.has(candidate as UserRole)) {
+    return safeFallback
   }
   return candidate as UserRole
 }
@@ -245,9 +259,13 @@ export function mapToUserProfile(
 }
 
 /**
- * Synchronizes user profile from the database 'profiles' table.
+ * Synchronizes user profile from the database 'profiles' table while preserving
+ * authoritative session verification status and stripping self-escalated roles.
  */
-export async function syncProfileFromDatabase(userId: string): Promise<AuthUserProfile | null> {
+export async function syncProfileFromDatabase(
+  userId: string,
+  sessionContext?: { email?: string | null; emailConfirmedAt?: string | null },
+): Promise<AuthUserProfile | null> {
   const client = getSupabaseClient()
   if (!client) return null
 
@@ -260,7 +278,16 @@ export async function syncProfileFromDatabase(userId: string): Promise<AuthUserP
 
     if (error || !data) return null
 
-    const profile = mapToUserProfile(data as Record<string, unknown>)
+    const raw = data as Record<string, unknown>
+    const profile = mapToUserProfile(
+      {
+        ...raw,
+        role: sanitizeUntrustedRole(raw.role, 'athlete'),
+        email: sessionContext?.email ?? raw.email,
+        email_confirmed_at: sessionContext?.emailConfirmedAt ?? raw.email_confirmed_at,
+      },
+      sessionContext?.email || '',
+    )
     setStoredAuthUser(profile)
     return profile
   } catch {
@@ -500,9 +527,12 @@ export async function signInWithEmail(input: SignInInput): Promise<AuthResult> {
     }
 
     // Try fetching database profile first, otherwise fallback to metadata
-    const dbProfile = await syncProfileFromDatabase(data.user.id)
+    const dbProfile = await syncProfileFromDatabase(data.user.id, {
+      email: data.user.email || cleanEmail,
+      emailConfirmedAt: data.user.email_confirmed_at || null,
+    })
     if (dbProfile) {
-      dbProfile.isVerified = Boolean(data.user.email_confirmed_at || dbProfile.isVerified)
+      dbProfile.isVerified = Boolean(data.user.email_confirmed_at)
       setStoredAuthUser(dbProfile)
       return { success: true, user: dbProfile }
     }
@@ -891,9 +921,12 @@ export async function verifyEmailOtpCode(params: {
       }
     }
 
-    const dbProfile = await syncProfileFromDatabase(data.user.id)
+    const dbProfile = await syncProfileFromDatabase(data.user.id, {
+      email: data.user.email || cleanEmail,
+      emailConfirmedAt: data.user.email_confirmed_at || null,
+    })
     if (dbProfile) {
-      dbProfile.isVerified = true
+      dbProfile.isVerified = Boolean(data.user.email_confirmed_at)
       setStoredAuthUser(dbProfile)
       return { success: true, user: dbProfile }
     }
@@ -902,13 +935,13 @@ export async function verifyEmailOtpCode(params: {
       {
         ...(data.user.user_metadata || {}),
         role: sanitizeUntrustedRole(data.user.user_metadata?.role, 'athlete'),
-        email_confirmed_at: data.user.email_confirmed_at || new Date().toISOString(),
+        email_confirmed_at: data.user.email_confirmed_at ?? null,
       } as Record<string, unknown>,
       cleanEmail,
       'athlete',
     )
     metaProfile.id = data.user.id
-    metaProfile.isVerified = true
+    metaProfile.isVerified = Boolean(data.user.email_confirmed_at)
     setStoredAuthUser(metaProfile)
     return { success: true, user: metaProfile }
   } catch (err: unknown) {
@@ -1244,8 +1277,11 @@ export function onAuthChange(callback: (user: AuthUserProfile | null) => void): 
         )
         user.id = session.user.id
         setStoredAuthUser(user)
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          syncProfileFromDatabase(session.user.id).then(dbProfile => {
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+          syncProfileFromDatabase(session.user.id, {
+            email: session.user.email,
+            emailConfirmedAt: session.user.email_confirmed_at,
+          }).then(dbProfile => {
             if (dbProfile) setStoredAuthUser(dbProfile)
           }).catch(() => {
             // Keep metadata profile if profiles table query fails

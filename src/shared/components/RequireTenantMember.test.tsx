@@ -57,4 +57,44 @@ describe('RequireTenantMember', () => {
     expect(html).toContain('Workspace access could not be verified')
     expect(html).not.toContain('Private academy records')
   })
+
+  it('fails closed with explicit error even when matchingMembership exists alongside an unauthorized ?tenant= error', () => {
+    const html = renderToStaticMarkup(
+      <TenantContext.Provider
+        value={makeContext({
+          error: 'Access denied. This account does not have an active membership in the requested workspace.',
+          memberships: [
+            {
+              id: 'm-1',
+              tenant_id: 't-1',
+              user_id: 'user-1',
+              role: 'owner',
+              status: 'active',
+              created_at: '2026-11-27T00:00:00Z',
+              updated_at: '2026-11-27T00:00:00Z',
+              tenant: {
+                id: 't-1',
+                slug: 'alpha-academy',
+                name: 'Alpha Academy',
+                tenant_type: 'academy',
+                status: 'active',
+                metadata: {},
+                created_at: '2026-11-27T00:00:00Z',
+                updated_at: '2026-11-27T00:00:00Z',
+              },
+            },
+          ],
+        })}
+      >
+        <RequireTenantMember personaLabel="Academy" requiredTenantTypes={['academy']}>
+          <div>Private academy records</div>
+        </RequireTenantMember>
+      </TenantContext.Provider>,
+    )
+
+    expect(html).toContain('Workspace access could not be verified')
+    expect(html).toContain('Access denied')
+    expect(html).not.toContain('Verifying your secure workspace access')
+    expect(html).not.toContain('Private academy records')
+  })
 })

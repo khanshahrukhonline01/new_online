@@ -254,6 +254,21 @@ INSERT INTO public.tenants (id, name, slug, tenant_type, sport, city, state, con
 ('b0000000-0000-0000-0000-000000000002', 'Tenant Beta Cricket', 'tenant-beta', 'academy', 'cricket', 'Mumbai', 'Maharashtra', '+919876543211', 'owner_b@khelgrid.com', 'beta@upi', '{{"tax_id": "GSTIN456"}}'::jsonb, '77777777-7777-7777-7777-777777777777', 'active'),
 ('c0000000-0000-0000-0000-000000000003', 'Tenant Suspended Club', 'tenant-suspended', 'academy', 'football', 'Delhi', 'Delhi', '+919876543212', 'suspended@khelgrid.com', 'suspended@upi', '{{"tax_id": "GSTIN789"}}'::jsonb, 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'suspended');
 
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'tenants' AND column_name = 'directory_publication_status'
+  ) THEN
+    UPDATE public.tenants
+    SET verification_status = 'verified', directory_publication_status = 'approved'
+    WHERE id IN (
+      'a0000000-0000-0000-0000-000000000001',
+      'b0000000-0000-0000-0000-000000000002'
+    );
+  END IF;
+END $$;
+
 -- Seed Memberships
 INSERT INTO public.tenant_memberships (tenant_id, user_id, role, status) VALUES
 ('a0000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'owner', 'active'),

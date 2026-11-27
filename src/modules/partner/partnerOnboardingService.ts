@@ -441,6 +441,7 @@ export async function onboardPartnerOrganization(
       ? input.organizationType
       : config.tenantType
 
+  const deterministicKey = `onboard-v1:${resolvedEmail.toLowerCase()}:${input.role}:${vertical.slug}`
   const { result: provisionRes, slug: provisionedSlug } = await provisionTenantWithCollisionRetry({
     slug: vertical.slug,
     name: cleanEntityName,
@@ -451,6 +452,7 @@ export async function onboardPartnerOrganization(
     contactEmail: resolvedEmail,
     metadata: {
       source: 'unified_partner_onboarding',
+      idempotency_key: deterministicKey,
       partnerRole: input.role,
       organizationType: resolvedTenantType,
       upiVpa: input.upiVpa?.trim() || null,
@@ -482,12 +484,27 @@ export async function onboardPartnerOrganization(
   }
 }
 
+let inFlightPartnerVerification: Promise<PartnerOnboardingOutcome> | null = null
+
 /**
  * Completes partner onboarding only after Supabase confirms the current user's email.
  * The intake payload is treated as untrusted metadata: it is validated and used only
  * as descriptive tenant input. Ownership always comes from auth.uid() inside the RPC.
  */
 export async function completePartnerEmailVerification(): Promise<PartnerOnboardingOutcome> {
+  if (inFlightPartnerVerification) {
+    return inFlightPartnerVerification
+  }
+
+  inFlightPartnerVerification = runCompletePartnerEmailVerification()
+  try {
+    return await inFlightPartnerVerification
+  } finally {
+    inFlightPartnerVerification = null
+  }
+}
+
+async function runCompletePartnerEmailVerification(): Promise<PartnerOnboardingOutcome> {
   const client = getSupabaseClient()
   if (!client) return { success: false, message: 'Authentication service is not configured.' }
 
@@ -519,6 +536,7 @@ export async function completePartnerEmailVerification(): Promise<PartnerOnboard
   }
 
   const baseSlug = slugifyEntityName(entityName, role)
+  const idempotencyKey = `verify-v1:${authUser.id}:${role}:${baseSlug}`
   // Fail closed if membership verification fails; never provision against an unknown state.
   const memberships = await getUserTenantMemberships(authUser.id)
   const existing = memberships.find(m =>
@@ -544,6 +562,7 @@ export async function completePartnerEmailVerification(): Promise<PartnerOnboard
     contactEmail: email,
     metadata: {
       source: 'verified_partner_email_onboarding',
+      idempotency_key: idempotencyKey,
       partnerRole: role,
       organizationType,
       directorName,

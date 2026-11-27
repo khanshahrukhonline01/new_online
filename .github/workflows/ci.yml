@@ -1,7 +1,7 @@
 name: CI
 on:
   push:
-    branches: [main, development/admin-control-center, development/admin-app-separation]
+    branches: [main, development/admin-control-center, development/admin-app-separation, 'fix/**']
   pull_request:
     branches: [main, development/admin-control-center, development/admin-app-separation]
 permissions:
@@ -289,6 +289,42 @@ jobs:
       - run: npm install
       - name: Run Phase 1 Native PostgreSQL RLS Integration Suite
         run: npx vitest run src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts
+      - name: Apply Sprint 1 & Workspace Schema Migrations in Isolated PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          migrations=(
+            supabase/migrations/20261025070100_initial_core_schema.sql
+            supabase/migrations/20261028090000_directory_and_listing_moderation.sql
+            supabase/migrations/20261031120000_create_athlete_profiles.sql
+            supabase/migrations/20261101010000_trust_safety_verification_and_reporting.sql
+            supabase/migrations/20261107120000_auth_and_user_profiles_hardening.sql
+            supabase/migrations/20261107180000_pillar1_unified_relational_schema.sql
+            supabase/migrations/20261108000000_phase3_rbac_and_privilege_hardening.sql
+            supabase/migrations/20261110150000_phase_moderation_notifications.sql
+            supabase/migrations/20261122000000_saas_platform_core_rbac_entitlements_metering.sql
+            supabase/migrations/20261122100000_phase2_schema_consolidation_and_soft_deletion.sql
+            supabase/migrations/20261126000000_expand_profiles_role_check.sql
+            supabase/migrations/20261126120000_coach_workspace_phase1_foundation.sql
+            supabase/migrations/20261126140000_academy_workspace_saas_foundation.sql
+            supabase/migrations/20261127000000_phase2_academy_finance_ledger_hardening.sql
+            supabase/migrations/20261127120000_coach_workspace_phase3_operations.sql
+            supabase/migrations/20261128000000_shared_saas_foundation_p0_remediation.sql
+          )
+          for mig in "${migrations[@]}"; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$mig"
+          done
+      - name: Verify Phase 2 SaaS Platform Core Assertions
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f .github/scripts/phase-2-saas-platform-core-assertions.sql
+      - name: Verify Sprint 1 Shared SaaS P0 Acceptance Assertions (9 Identities)
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "BEGIN;"
+            cat .github/scripts/sprint1-shared-saas-assertions.sql
+            echo "ROLLBACK;"
+          } | psql "$DATABASE_URL" -v ON_ERROR_STOP=1
       - name: Publish RLS Test Results Artifact
         uses: actions/upload-artifact@v4
         if: always()

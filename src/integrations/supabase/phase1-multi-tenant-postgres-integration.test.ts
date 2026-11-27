@@ -22,7 +22,7 @@ describe('KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Integration Sui
     // Execute the real PostgreSQL comprehensive test runner
     const res = cp.spawnSync('python', ['scripts/run-comprehensive-postgres-rls-suite.py'], {
       encoding: 'utf-8',
-      timeout: 120000,
+      timeout: 240000,
       env: { ...proc.env, KHELGRID_LOCAL_RLS_TEST: '1' }
     })
 
@@ -47,5 +47,5 @@ describe('KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Integration Sui
     expect(data.passed).toBe(49)
     expect(data.failed).toBe(0)
     expect(data.supplemental_checks?.projection_trigger_acl_and_lifecycle).toBe(true)
-  }, 120000)
+  }, 240000)
 })

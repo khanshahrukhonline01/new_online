@@ -69,7 +69,21 @@ export function TenantProvider({ children, initialTenantSlug, activeTenantSlug }
         typeof window !== 'undefined'
           ? new URLSearchParams(window.location.search).get('tenant')
           : null
-      const preferredSlug = activeTenantSlugRef.current || initialTenantSlug || urlTenantSlug || undefined
+      const explicitRequestedSlug = activeTenantSlugRef.current || urlTenantSlug || undefined
+      const preferredSlug = explicitRequestedSlug || initialTenantSlug || undefined
+
+      if (explicitRequestedSlug) {
+        const requestedMatch = safeRows.find(row => row.tenant?.slug === explicitRequestedSlug) || null
+        if (!requestedMatch) {
+          setCurrentMembership(null)
+          setCurrentTenant(null)
+          setError('Access denied. This account does not have an active membership in the requested workspace.')
+          return
+        }
+        setCurrentMembership(requestedMatch)
+        setCurrentTenant(requestedMatch.tenant || null)
+        return
+      }
 
       const selected = (preferredSlug
         ? safeRows.find(row => row.tenant?.slug === preferredSlug)
@@ -170,8 +184,20 @@ export function TenantProvider({ children, initialTenantSlug, activeTenantSlug }
   }, [memberships, userId])
 
   useEffect(() => {
-    if (!activeTenantSlug || isLoading || memberships.length === 0) return
-    if (currentTenant?.slug === activeTenantSlug) return
+    if (isLoading || !userId) return
+    if (!activeTenantSlug) {
+      if (!currentMembership && memberships.length > 0) {
+        const fallback = memberships[0]
+        setCurrentMembership(fallback)
+        setCurrentTenant(fallback.tenant || null)
+        setError(null)
+      }
+      return
+    }
+    if (currentTenant?.slug === activeTenantSlug) {
+      setError(null)
+      return
+    }
     const target = memberships.find(row =>
       row.tenant?.slug === activeTenantSlug &&
       row.user_id === userId &&
@@ -182,8 +208,12 @@ export function TenantProvider({ children, initialTenantSlug, activeTenantSlug }
       setError(null)
       setCurrentMembership(target)
       setCurrentTenant(target.tenant || null)
+    } else {
+      setCurrentMembership(null)
+      setCurrentTenant(null)
+      setError('Access denied. This account does not have an active membership in the requested workspace.')
     }
-  }, [activeTenantSlug, currentTenant?.slug, isLoading, memberships, userId])
+  }, [activeTenantSlug, currentMembership, currentTenant?.slug, isLoading, memberships, userId])
 
   const acceptInvitation = useCallback(async (membershipId: string) => {
     const result = await acceptTenantInvitation(membershipId)

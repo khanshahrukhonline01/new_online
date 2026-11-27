@@ -1,18 +1,18 @@
 ================================================================================
 KHELGRID SAAS PHASE 1 — LOCAL VERIFICATION EVIDENCE REPORT
 ================================================================================
-Generated At: 2026-11-27T17:28:21.155Z
+Generated At: 2026-11-27T19:09:27.702Z
 Host Environment: Windows / Node v24.12.0 / Docker PostgreSQL 16.4
 Overall Status: ALL STAGES PASSED (100%)
 
 SUMMARY OF STAGES:
-[PASS] 1. ESLint (46.31s)
-[PASS] 2. TypeScript Check (115.91s)
-[PASS] 3. Unit RLS Simulation (9.26s)
-[PASS] 4. Native PostgreSQL RLS Engine (53.02s)
+[PASS] 1. ESLint (23.91s)
+[PASS] 2. TypeScript Check (52.02s)
+[PASS] 3. Unit RLS Simulation (7.11s)
+[PASS] 4. Native PostgreSQL RLS Engine (74.80s)
 [PASS] 5. Migration Safety (0.05s)
-[PASS] 6. Application Build (144.58s)
-[PASS] 7. Supabase Security Regression (49.04s)
+[PASS] 6. Application Build (62.96s)
+[PASS] 7. Supabase Security Regression (73.66s)
 
 ================================================================================
 DETAILED STAGE OUTPUTS
@@ -20,7 +20,7 @@ DETAILED STAGE OUTPUTS
 
 --- STAGE: 1. ESLint (PASS) ---
 Command: npm run lint
-Duration: 46.31s
+Duration: 23.91s
 Output:
 > khelgrid-platform@0.2.0 lint
 > eslint .
@@ -73,27 +73,27 @@ C:\Users\7khan\OneDrive\Desktop\Live score\src\shared\sports\sportIcons.tsx
 
 --- STAGE: 2. TypeScript Check (PASS) ---
 Command: npm run typecheck
-Duration: 115.91s
+Duration: 52.02s
 Output:
 > khelgrid-platform@0.2.0 typecheck
 > tsc -b --pretty
 
 --- STAGE: 3. Unit RLS Simulation (PASS) ---
 Command: npx vitest run src/integrations/supabase/phase1-multi-tenant-isolation.test.ts
-Duration: 9.26s
+Duration: 7.11s
 Output:
 [1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mC:/Users/7khan/OneDrive/Desktop/Live score[39m
 
- [32m✓[39m src/integrations/supabase/phase1-multi-tenant-isolation.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 553[2mms[22m[39m
+ [32m✓[39m src/integrations/supabase/phase1-multi-tenant-isolation.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 487[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
 [2m      Tests [22m [1m[32m17 passed[39m[22m[90m (17)[39m
-[2m   Start at [22m 22:54:10
-[2m   Duration [22m 3.03s[2m (transform 71ms, setup 0ms, collect 1.43s, tests 553ms, environment 0ms, prepare 253ms)[22m
+[2m   Start at [22m 00:35:53
+[2m   Duration [22m 1.98s[2m (transform 75ms, setup 0ms, collect 386ms, tests 487ms, environment 0ms, prepare 251ms)[22m
 
 --- STAGE: 4. Native PostgreSQL RLS Engine (PASS) ---
 Command: python scripts/run-comprehensive-postgres-rls-suite.py
-Duration: 53.02s
+Duration: 74.80s
 Output:
 [SAFETY & MIGRATION VERIFIED] Running against verified local test database: khelgrid_rls_test
 
@@ -158,11 +158,11 @@ Detailed evidence written to: scripts/comprehensive_postgres_rls_matrix.json
 Command: internal check
 Duration: 0.05s
 Output:
-Verified safe migrations: 20261101000000_create_site_announcements.sql, 20261101003000_create_chronicle_categories.sql, 20261101010000_trust_safety_verification_and_reporting.sql, 20261101020000_create_pickup_game_participants.sql, 20261101030000_create_reviews_and_storage.sql, 20261104045129_secure_pickup_game_participant_privacy.sql, 20261104120000_secure_host_game_management.sql, 20261105084018_atomic_rsvp_reservation_integrity.sql, 20261105084103_fix_rsvp_greatest_expression.sql, 20261105084210_hash_rsvp_cancellation_tokens.sql, 20261105084244_fix_hash_migration_greatest.sql, 20261105110000_secure_host_game_management_phase2_compatible.sql, 20261105112000_optimize_pickup_game_read_policies.sql, 20261105130000_gate_pickup_game_whatsapp_invites.sql, 20261105131500_lock_down_pickup_game_admin_helper.sql, 20261105170000_fix_pickup_game_cancellation_capacity.sql, 20261105190000_phase35_private_schema_rpc_hardening.sql, 20261106120000_create_payments_and_bookings.sql, 20261106130000_add_listing_subscription_plans.sql, 20261106150000_create_live_matches_and_host_payouts.sql, 20261107000000_create_sports_books_table.sql, 20261107120000_auth_and_user_profiles_hardening.sql, 20261107140000_seed_complete_curated_catalogues_and_admin_rls.sql, 20261107180000_pillar1_unified_relational_schema.sql, 20261107181000_seed_tournaments_and_coaches_expansion.sql, 20261107233000_phase2_rls_remediation.sql, 20261108000000_phase3_rbac_and_privilege_hardening.sql, 20261108010000_phase4_database_functions_hardening.sql, 20261108020000_phase5_storage_security_and_document_isolation.sql, 20261108030000_phase6_privacy_pii_masking_cryptography.sql, 20261108040000_phase2_rls_post_merge_remediation.sql, 20261108050000_phase4_auth_and_session_security.sql, 20261108060000_phase5_api_rpc_and_backend_hardening.sql, 20261108070000_phase5_1_rpc_volatility_and_caller_auth_remediation.sql, 20261108080000_phase6_athlete_privacy_and_minor_protection.sql, 20261108090000_phase7_and_8_business_logic_and_moderation_security.sql, 20261108100000_phase5_2_critical_remediation_and_closure.sql, 20261108110000_identity_ownership_and_schema_reconciliation.sql, 20261108120000_phase5_4_payment_booking_security.sql, 20261108130000_phase5_5_payment_gateway_integration.sql, 20261108140000_phase5_6_capture_assurance_and_pricing_integrity.sql, 20261108160000_phase5_7_hosted_db_reconciliation_legacy_rpc_closure.sql, 20261109100000_phase5_7_5_secure_payment_registration_and_athlete_moderation.sql, 20261109193312_phase5_8_1_4_payment_schema_compatibility.sql, 20261110043733_phase_core_catalogue_privilege_closure.sql, 20261110043804_phase_listing_review_rpc_execute_closure.sql, 20261110043836_phase_listing_moderator_helper_execute_grant.sql, 20261110100000_phase5_8_2_razorpay_order_creation.sql, 20261110120000_phase5_8_3_payment_verification_hardening.sql, 20261110143000_phase_core_catalogue_listing_integrity.sql, 20261110150000_phase_moderation_notifications.sql, 20261110160000_phase_3_listing_moderation_publication_system.sql, 20261111100000_phase_3_1_publication_integrity_admin_control_panel.sql, 20261112120000_require_evidence_for_seeded_coach_profiles.sql, 20261112125000_allow_anonymous_listing_intake.sql, 20261112130000_require_verified_status_for_public_directory_rls.sql, 20261112140000_harden_public_listing_intake_rpc.sql, 20261112145000_sync_verified_listing_publication.sql, 20261112150000_queue_legacy_unverified_directory_records.sql, 20261113174100_phase_a_security_default_privilege_hardening.sql, 20261113174236_phase_a_sequence_privilege_correction.sql, 20261113174338_phase_a_restrict_authenticated_game_creation.sql, 20261113174449_phase_a_rls_initplan_optimization.sql, 20261114100000_phase_b_listing_function_hardening.sql, 20261114110000_phase_b_listing_fk_indexes.sql, 20261114120000_reject_test_only_legacy_venues.sql, 20261114130000_unpublish_unverified_catalogue_rows.sql, 20261114220000_chronicle_paper_comments_and_metrics.sql, 20261117103000_athlete_profile_public_access_guard.sql, 20261117120000_athlete_profile_policy_helper.sql, 20261117123000_khelchronicle_seed_publication_gate.sql, 20261117130000_khelchronicle_submission_and_publication_schema.sql, 20261117140000_khelchronicle_intake_validation.sql, 20261118100000_add_lacrosse_sport_catalogue.sql, 20261121160000_phase1_multi_tenant_core_schema.sql, 20261121200000_phase1_security_remediation_and_composite_keys.sql, 20261121210000_phase1_fk_deletion_and_function_hardening.sql, 20261121220000_phase1_tenant_information_disclosure_remediation.sql, 20261121230000_phase1_tenant_public_directory_projection_table.sql, 20261121233000_phase1_projection_trigger_execute_hardening.sql, 20261122000000_saas_platform_core_rbac_entitlements_metering.sql, 20261122100000_phase2_schema_consolidation_and_soft_deletion.sql, 20261123000000_sports_creator_campaign_marketplace_rls.sql, 20261126000000_expand_profiles_role_check.sql, 20261126120000_coach_workspace_phase1_foundation.sql, 20261126140000_academy_workspace_saas_foundation.sql, 20261127000000_phase2_academy_finance_ledger_hardening.sql, 20261127120000_coach_workspace_phase3_operations.sql
+Verified safe migrations: 20261101000000_create_site_announcements.sql, 20261101003000_create_chronicle_categories.sql, 20261101010000_trust_safety_verification_and_reporting.sql, 20261101020000_create_pickup_game_participants.sql, 20261101030000_create_reviews_and_storage.sql, 20261104045129_secure_pickup_game_participant_privacy.sql, 20261104120000_secure_host_game_management.sql, 20261105084018_atomic_rsvp_reservation_integrity.sql, 20261105084103_fix_rsvp_greatest_expression.sql, 20261105084210_hash_rsvp_cancellation_tokens.sql, 20261105084244_fix_hash_migration_greatest.sql, 20261105110000_secure_host_game_management_phase2_compatible.sql, 20261105112000_optimize_pickup_game_read_policies.sql, 20261105130000_gate_pickup_game_whatsapp_invites.sql, 20261105131500_lock_down_pickup_game_admin_helper.sql, 20261105170000_fix_pickup_game_cancellation_capacity.sql, 20261105190000_phase35_private_schema_rpc_hardening.sql, 20261106120000_create_payments_and_bookings.sql, 20261106130000_add_listing_subscription_plans.sql, 20261106150000_create_live_matches_and_host_payouts.sql, 20261107000000_create_sports_books_table.sql, 20261107120000_auth_and_user_profiles_hardening.sql, 20261107140000_seed_complete_curated_catalogues_and_admin_rls.sql, 20261107180000_pillar1_unified_relational_schema.sql, 20261107181000_seed_tournaments_and_coaches_expansion.sql, 20261107233000_phase2_rls_remediation.sql, 20261108000000_phase3_rbac_and_privilege_hardening.sql, 20261108010000_phase4_database_functions_hardening.sql, 20261108020000_phase5_storage_security_and_document_isolation.sql, 20261108030000_phase6_privacy_pii_masking_cryptography.sql, 20261108040000_phase2_rls_post_merge_remediation.sql, 20261108050000_phase4_auth_and_session_security.sql, 20261108060000_phase5_api_rpc_and_backend_hardening.sql, 20261108070000_phase5_1_rpc_volatility_and_caller_auth_remediation.sql, 20261108080000_phase6_athlete_privacy_and_minor_protection.sql, 20261108090000_phase7_and_8_business_logic_and_moderation_security.sql, 20261108100000_phase5_2_critical_remediation_and_closure.sql, 20261108110000_identity_ownership_and_schema_reconciliation.sql, 20261108120000_phase5_4_payment_booking_security.sql, 20261108130000_phase5_5_payment_gateway_integration.sql, 20261108140000_phase5_6_capture_assurance_and_pricing_integrity.sql, 20261108160000_phase5_7_hosted_db_reconciliation_legacy_rpc_closure.sql, 20261109100000_phase5_7_5_secure_payment_registration_and_athlete_moderation.sql, 20261109193312_phase5_8_1_4_payment_schema_compatibility.sql, 20261110043733_phase_core_catalogue_privilege_closure.sql, 20261110043804_phase_listing_review_rpc_execute_closure.sql, 20261110043836_phase_listing_moderator_helper_execute_grant.sql, 20261110100000_phase5_8_2_razorpay_order_creation.sql, 20261110120000_phase5_8_3_payment_verification_hardening.sql, 20261110143000_phase_core_catalogue_listing_integrity.sql, 20261110150000_phase_moderation_notifications.sql, 20261110160000_phase_3_listing_moderation_publication_system.sql, 20261111100000_phase_3_1_publication_integrity_admin_control_panel.sql, 20261112120000_require_evidence_for_seeded_coach_profiles.sql, 20261112125000_allow_anonymous_listing_intake.sql, 20261112130000_require_verified_status_for_public_directory_rls.sql, 20261112140000_harden_public_listing_intake_rpc.sql, 20261112145000_sync_verified_listing_publication.sql, 20261112150000_queue_legacy_unverified_directory_records.sql, 20261113174100_phase_a_security_default_privilege_hardening.sql, 20261113174236_phase_a_sequence_privilege_correction.sql, 20261113174338_phase_a_restrict_authenticated_game_creation.sql, 20261113174449_phase_a_rls_initplan_optimization.sql, 20261114100000_phase_b_listing_function_hardening.sql, 20261114110000_phase_b_listing_fk_indexes.sql, 20261114120000_reject_test_only_legacy_venues.sql, 20261114130000_unpublish_unverified_catalogue_rows.sql, 20261114220000_chronicle_paper_comments_and_metrics.sql, 20261117103000_athlete_profile_public_access_guard.sql, 20261117120000_athlete_profile_policy_helper.sql, 20261117123000_khelchronicle_seed_publication_gate.sql, 20261117130000_khelchronicle_submission_and_publication_schema.sql, 20261117140000_khelchronicle_intake_validation.sql, 20261118100000_add_lacrosse_sport_catalogue.sql, 20261121160000_phase1_multi_tenant_core_schema.sql, 20261121200000_phase1_security_remediation_and_composite_keys.sql, 20261121210000_phase1_fk_deletion_and_function_hardening.sql, 20261121220000_phase1_tenant_information_disclosure_remediation.sql, 20261121230000_phase1_tenant_public_directory_projection_table.sql, 20261121233000_phase1_projection_trigger_execute_hardening.sql, 20261122000000_saas_platform_core_rbac_entitlements_metering.sql, 20261122100000_phase2_schema_consolidation_and_soft_deletion.sql, 20261123000000_sports_creator_campaign_marketplace_rls.sql, 20261126000000_expand_profiles_role_check.sql, 20261126120000_coach_workspace_phase1_foundation.sql, 20261126140000_academy_workspace_saas_foundation.sql, 20261127000000_phase2_academy_finance_ledger_hardening.sql, 20261127120000_coach_workspace_phase3_operations.sql, 20261128000000_shared_saas_foundation_p0_remediation.sql
 
 --- STAGE: 6. Application Build (PASS) ---
 Command: npm run build
-Duration: 144.58s
+Duration: 62.96s
 Output:
 > khelgrid-platform@0.2.0 build
 > node --experimental-strip-types scripts/generate-sitemap.mjs && node --experimental-strip-types scripts/generate-feed.mjs && tsc -b && vite build
@@ -247,127 +247,127 @@ computing gzip size...
 [2mdist/[22m[35massets/khelchronicle-BWEcR7pW.css                 [39m[1m[2m 55.63 kB[22m[1m[22m[2m │ gzip:   9.69 kB[22m
 [2mdist/[22m[35massets/index-GVzrxy6d.css                         [39m[1m[2m235.52 kB[22m[1m[22m[2m │ gzip:  39.44 kB[22m
 [2mdist/[22m[36massets/listingPricing-B3j5MC8N.js                 [39m[1m[2m  0.26 kB[22m[1m[22m[2m │ gzip:   0.15 kB[22m
-[2mdist/[22m[36massets/useRouter-CPK_X2Ym.js                      [39m[1m[2m  0.40 kB[22m[1m[22m[2m │ gzip:   0.27 kB[22m
+[2mdist/[22m[36massets/useRouter-CFOGATmU.js                      [39m[1m[2m  0.40 kB[22m[1m[22m[2m │ gzip:   0.28 kB[22m
 [2mdist/[22m[36massets/EmptyState-5NVUFX56.js                     [39m[1m[2m  0.40 kB[22m[1m[22m[2m │ gzip:   0.25 kB[22m
 [2mdist/[22m[36massets/academyExportUtils-DDTrF4kg.js             [39m[1m[2m  0.42 kB[22m[1m[22m[2m │ gzip:   0.30 kB[22m
-[2mdist/[22m[36massets/BookmarkButton-BdEO8HG3.js                 [39m[1m[2m  0.74 kB[22m[1m[22m[2m │ gzip:   0.47 kB[22m
-[2mdist/[22m[36massets/DirectoryCallout-Bo4khANT.js               [39m[1m[2m  0.88 kB[22m[1m[22m[2m │ gzip:   0.43 kB[22m
+[2mdist/[22m[36massets/BookmarkButton-62eIlJAy.js                 [39m[1m[2m  0.74 kB[22m[1m[22m[2m │ gzip:   0.47 kB[22m
+[2mdist/[22m[36massets/DirectoryCallout-CNAQ9F-W.js               [39m[1m[2m  0.88 kB[22m[1m[22m[2m │ gzip:   0.43 kB[22m
 [2mdist/[22m[36massets/AsyncState-BACivTnA.js                     [39m[1m[2m  0.98 kB[22m[1m[22m[2m │ gzip:   0.57 kB[22m
 [2mdist/[22m[36massets/KpiStrip-CJbkwSNp.js                       [39m[1m[2m  0.99 kB[22m[1m[22m[2m │ gzip:   0.46 kB[22m
 [2mdist/[22m[36massets/ConfirmDialog-BCY3_bQo.js                  [39m[1m[2m  1.10 kB[22m[1m[22m[2m │ gzip:   0.55 kB[22m
 [2mdist/[22m[36massets/useFormState-M3LDZMIE.js                   [39m[1m[2m  1.15 kB[22m[1m[22m[2m │ gzip:   0.48 kB[22m
 [2mdist/[22m[36massets/WorkspaceDetailDrawer-0X5hmP_Z.js          [39m[1m[2m  2.01 kB[22m[1m[22m[2m │ gzip:   0.99 kB[22m
-[2mdist/[22m[36massets/AuthCaptchaWidget-CwU1g6Ic.js              [39m[1m[2m  2.29 kB[22m[1m[22m[2m │ gzip:   1.01 kB[22m
-[2mdist/[22m[36massets/ShareBar-ClM0pzvQ.js                       [39m[1m[2m  2.30 kB[22m[1m[22m[2m │ gzip:   0.93 kB[22m
-[2mdist/[22m[36massets/FeedbackSupportModal-DIGya11J.js           [39m[1m[2m  3.17 kB[22m[1m[22m[2m │ gzip:   1.19 kB[22m
+[2mdist/[22m[36massets/AuthCaptchaWidget-BTZr-h5t.js              [39m[1m[2m  2.29 kB[22m[1m[22m[2m │ gzip:   1.01 kB[22m
+[2mdist/[22m[36massets/ShareBar-DsHT8kaz.js                       [39m[1m[2m  2.30 kB[22m[1m[22m[2m │ gzip:   0.93 kB[22m
+[2mdist/[22m[36massets/FeedbackSupportModal-BlRo122_.js           [39m[1m[2m  3.17 kB[22m[1m[22m[2m │ gzip:   1.19 kB[22m
 [2mdist/[22m[36massets/qrCodeGenerator-BlUCV83p.js                [39m[1m[2m  3.30 kB[22m[1m[22m[2m │ gzip:   1.56 kB[22m
-[2mdist/[22m[36massets/SportsPage-C7GKItDi.js                     [39m[1m[2m  3.34 kB[22m[1m[22m[2m │ gzip:   1.51 kB[22m
-[2mdist/[22m[36massets/TrialAlertActions-BaOqveN7.js              [39m[1m[2m  3.57 kB[22m[1m[22m[2m │ gzip:   1.70 kB[22m
+[2mdist/[22m[36massets/SportsPage-w07oraMb.js                     [39m[1m[2m  3.34 kB[22m[1m[22m[2m │ gzip:   1.51 kB[22m
+[2mdist/[22m[36massets/TrialAlertActions-DjbDpmIv.js              [39m[1m[2m  3.57 kB[22m[1m[22m[2m │ gzip:   1.70 kB[22m
 [2mdist/[22m[36massets/verificationData-BUb9ZG4J.js               [39m[1m[2m  3.80 kB[22m[1m[22m[2m │ gzip:   1.71 kB[22m
 [2mdist/[22m[36massets/tournamentRegistrationManager-MT-SroqJ.js  [39m[1m[2m  3.96 kB[22m[1m[22m[2m │ gzip:   1.68 kB[22m
-[2mdist/[22m[36massets/PartnerEmailVerificationPage-DG_ZaUDU.js   [39m[1m[2m  4.04 kB[22m[1m[22m[2m │ gzip:   1.87 kB[22m
+[2mdist/[22m[36massets/PartnerEmailVerificationPage-DvDccLE1.js   [39m[1m[2m  4.04 kB[22m[1m[22m[2m │ gzip:   1.87 kB[22m
 [2mdist/[22m[36massets/coachDashboardTypes-B-4jAhxJ.js            [39m[1m[2m  4.73 kB[22m[1m[22m[2m │ gzip:   1.66 kB[22m
-[2mdist/[22m[36massets/ReferralsPage-DKVxfBI6.js                  [39m[1m[2m  5.47 kB[22m[1m[22m[2m │ gzip:   2.11 kB[22m
-[2mdist/[22m[36massets/SearchPage-BVZoifAg.js                     [39m[1m[2m  5.48 kB[22m[1m[22m[2m │ gzip:   2.31 kB[22m
-[2mdist/[22m[36massets/MobileAppPage-CvTIAJqF.js                  [39m[1m[2m  5.75 kB[22m[1m[22m[2m │ gzip:   1.99 kB[22m
-[2mdist/[22m[36massets/HostDashboardPage-3-o1VMAD.js              [39m[1m[2m  5.80 kB[22m[1m[22m[2m │ gzip:   1.97 kB[22m
-[2mdist/[22m[36massets/CatalogueDetailPage-CZZj2tI4.js            [39m[1m[2m  6.01 kB[22m[1m[22m[2m │ gzip:   2.33 kB[22m
-[2mdist/[22m[36massets/KhelChronicleCategoryPage-DJXEPo8g.js      [39m[1m[2m  6.45 kB[22m[1m[22m[2m │ gzip:   2.24 kB[22m
-[2mdist/[22m[36massets/CitationExportModal-C4ep_Sv5.js            [39m[1m[2m  6.68 kB[22m[1m[22m[2m │ gzip:   2.26 kB[22m
-[2mdist/[22m[36massets/AcademiesPage-BuP2ScMu.js                  [39m[1m[2m  6.93 kB[22m[1m[22m[2m │ gzip:   2.83 kB[22m
-[2mdist/[22m[36massets/SpotlightSearchModal-BKh94fJg.js           [39m[1m[2m  7.08 kB[22m[1m[22m[2m │ gzip:   2.54 kB[22m
-[2mdist/[22m[36massets/CareersPage-Yj7WKFDy.js                    [39m[1m[2m  7.10 kB[22m[1m[22m[2m │ gzip:   2.43 kB[22m
-[2mdist/[22m[36massets/CitiesPage-DaWhuqtv.js                     [39m[1m[2m  7.19 kB[22m[1m[22m[2m │ gzip:   2.45 kB[22m
-[2mdist/[22m[36massets/KhelChronicleAuthorPage-BPrJVfaQ.js        [39m[1m[2m  7.21 kB[22m[1m[22m[2m │ gzip:   2.44 kB[22m
-[2mdist/[22m[36massets/GoProModal-CuEOTk6I.js                     [39m[1m[2m  7.50 kB[22m[1m[22m[2m │ gzip:   2.95 kB[22m
-[2mdist/[22m[36massets/CatalogueFilterPanel-N-Gd-p61.js           [39m[1m[2m  7.71 kB[22m[1m[22m[2m │ gzip:   2.45 kB[22m
-[2mdist/[22m[36massets/ForYouPage-CVGNrcot.js                     [39m[1m[2m  8.92 kB[22m[1m[22m[2m │ gzip:   2.35 kB[22m
+[2mdist/[22m[36massets/ReferralsPage-4HNAKYgD.js                  [39m[1m[2m  5.47 kB[22m[1m[22m[2m │ gzip:   2.11 kB[22m
+[2mdist/[22m[36massets/SearchPage-Bgy-fj-N.js                     [39m[1m[2m  5.48 kB[22m[1m[22m[2m │ gzip:   2.31 kB[22m
+[2mdist/[22m[36massets/MobileAppPage-BUKshHjp.js                  [39m[1m[2m  5.75 kB[22m[1m[22m[2m │ gzip:   2.00 kB[22m
+[2mdist/[22m[36massets/HostDashboardPage-hDE3sLOX.js              [39m[1m[2m  5.80 kB[22m[1m[22m[2m │ gzip:   1.97 kB[22m
+[2mdist/[22m[36massets/CatalogueDetailPage-_KQgiv0f.js            [39m[1m[2m  6.01 kB[22m[1m[22m[2m │ gzip:   2.33 kB[22m
+[2mdist/[22m[36massets/KhelChronicleCategoryPage-BgY_mTEZ.js      [39m[1m[2m  6.45 kB[22m[1m[22m[2m │ gzip:   2.24 kB[22m
+[2mdist/[22m[36massets/CitationExportModal-D2eAMnzG.js            [39m[1m[2m  6.68 kB[22m[1m[22m[2m │ gzip:   2.26 kB[22m
+[2mdist/[22m[36massets/AcademiesPage-_3YEyf1X.js                  [39m[1m[2m  6.93 kB[22m[1m[22m[2m │ gzip:   2.84 kB[22m
+[2mdist/[22m[36massets/SpotlightSearchModal-5eMBccWJ.js           [39m[1m[2m  7.08 kB[22m[1m[22m[2m │ gzip:   2.54 kB[22m
+[2mdist/[22m[36massets/CareersPage-DtuS3X91.js                    [39m[1m[2m  7.10 kB[22m[1m[22m[2m │ gzip:   2.44 kB[22m
+[2mdist/[22m[36massets/CitiesPage-BCNJMb75.js                     [39m[1m[2m  7.19 kB[22m[1m[22m[2m │ gzip:   2.45 kB[22m
+[2mdist/[22m[36massets/KhelChronicleAuthorPage-7GLZSygg.js        [39m[1m[2m  7.21 kB[22m[1m[22m[2m │ gzip:   2.44 kB[22m
+[2mdist/[22m[36massets/GoProModal-BNQAd_Ho.js                     [39m[1m[2m  7.50 kB[22m[1m[22m[2m │ gzip:   2.95 kB[22m
+[2mdist/[22m[36massets/CatalogueFilterPanel-BBzHVjUw.js           [39m[1m[2m  7.71 kB[22m[1m[22m[2m │ gzip:   2.45 kB[22m
+[2mdist/[22m[36massets/ForYouPage-CrqD7sCs.js                     [39m[1m[2m  8.92 kB[22m[1m[22m[2m │ gzip:   2.36 kB[22m
 [2mdist/[22m[36massets/LacrosseSixesPage-Ba0m_HQD.js              [39m[1m[2m  8.94 kB[22m[1m[22m[2m │ gzip:   3.29 kB[22m
-[2mdist/[22m[36massets/MyPassesVaultPage-DoskmsvA.js              [39m[1m[2m  9.03 kB[22m[1m[22m[2m │ gzip:   3.10 kB[22m
+[2mdist/[22m[36massets/MyPassesVaultPage-CxDAHah-.js              [39m[1m[2m  9.03 kB[22m[1m[22m[2m │ gzip:   3.10 kB[22m
 [2mdist/[22m[36massets/sportRolesData-Rz0ZCr2p.js                 [39m[1m[2m  9.15 kB[22m[1m[22m[2m │ gzip:   3.67 kB[22m
 [2mdist/[22m[36massets/paymentService-Bw8ryE6U.js                 [39m[1m[2m  9.23 kB[22m[1m[22m[2m │ gzip:   3.23 kB[22m
-[2mdist/[22m[36massets/WhatsAppTrialAlertWidget-DAuxxWp5.js       [39m[1m[2m  9.23 kB[22m[1m[22m[2m │ gzip:   3.19 kB[22m
-[2mdist/[22m[36massets/NormativeBenchmarkCalculator-DCp4MuSe.js   [39m[1m[2m  9.45 kB[22m[1m[22m[2m │ gzip:   3.50 kB[22m
-[2mdist/[22m[36massets/HelpFeedbackPage-Bc27RJSz.js               [39m[1m[2m  9.96 kB[22m[1m[22m[2m │ gzip:   3.70 kB[22m
-[2mdist/[22m[36massets/LearningHubPage-CRtwmh_O.js                [39m[1m[2m 10.60 kB[22m[1m[22m[2m │ gzip:   3.12 kB[22m
-[2mdist/[22m[36massets/TrustPage-CBL_blV-.js                      [39m[1m[2m 10.92 kB[22m[1m[22m[2m │ gzip:   3.62 kB[22m
-[2mdist/[22m[36massets/NotificationCenterDrawer-C5KiYJd-.js       [39m[1m[2m 11.17 kB[22m[1m[22m[2m │ gzip:   3.73 kB[22m
-[2mdist/[22m[36massets/SavedPage-CXdOWfvm.js                      [39m[1m[2m 11.58 kB[22m[1m[22m[2m │ gzip:   3.41 kB[22m
-[2mdist/[22m[36massets/AthleteProfilePage-FtO7xOs9.js             [39m[1m[2m 11.68 kB[22m[1m[22m[2m │ gzip:   3.12 kB[22m
-[2mdist/[22m[36massets/PlayerCard-BMn8UjFx.js                     [39m[1m[2m 11.87 kB[22m[1m[22m[2m │ gzip:   3.90 kB[22m
-[2mdist/[22m[36massets/PaymentCheckoutModal-DDLret0s.js           [39m[1m[2m 12.31 kB[22m[1m[22m[2m │ gzip:   3.96 kB[22m
-[2mdist/[22m[36massets/AboutPage-CkF3aYr5.js                      [39m[1m[2m 13.00 kB[22m[1m[22m[2m │ gzip:   4.23 kB[22m
-[2mdist/[22m[36massets/PartnerOnboardingPage-9gio4ZYb.js          [39m[1m[2m 13.46 kB[22m[1m[22m[2m │ gzip:   3.87 kB[22m
-[2mdist/[22m[36massets/WorkspaceSearch-DiR6fImR.js                [39m[1m[2m 14.37 kB[22m[1m[22m[2m │ gzip:   4.29 kB[22m
-[2mdist/[22m[36massets/AcademicGalleyModal-BcqYZx5d.js            [39m[1m[2m 14.72 kB[22m[1m[22m[2m │ gzip:   4.68 kB[22m
-[2mdist/[22m[36massets/UserConsentModal-D1qoabJr.js               [39m[1m[2m 14.88 kB[22m[1m[22m[2m │ gzip:   4.41 kB[22m
-[2mdist/[22m[36massets/khelchronicle-C39l-6A9.js                  [39m[1m[2m 14.91 kB[22m[1m[22m[2m │ gzip:   4.51 kB[22m
-[2mdist/[22m[36massets/CampaignMarketplacePage-Bc4v25KY.js        [39m[1m[2m 15.81 kB[22m[1m[22m[2m │ gzip:   4.49 kB[22m
-[2mdist/[22m[36massets/AdvertiserCampaignManagePage-Dba8XXqh.js   [39m[1m[2m 15.90 kB[22m[1m[22m[2m │ gzip:   4.37 kB[22m
-[2mdist/[22m[36massets/PlayPage-DmXeZb3P.js                       [39m[1m[2m 17.16 kB[22m[1m[22m[2m │ gzip:   6.13 kB[22m
-[2mdist/[22m[36massets/CampaignCreationPage-DJGVFRRP.js           [39m[1m[2m 17.77 kB[22m[1m[22m[2m │ gzip:   5.06 kB[22m
-[2mdist/[22m[36massets/SportDetailPage-BrIYuKvC.js                [39m[1m[2m 17.92 kB[22m[1m[22m[2m │ gzip:   4.74 kB[22m
+[2mdist/[22m[36massets/WhatsAppTrialAlertWidget-8_caTVKg.js       [39m[1m[2m  9.23 kB[22m[1m[22m[2m │ gzip:   3.19 kB[22m
+[2mdist/[22m[36massets/NormativeBenchmarkCalculator-DZ_5Vdaa.js   [39m[1m[2m  9.45 kB[22m[1m[22m[2m │ gzip:   3.50 kB[22m
+[2mdist/[22m[36massets/HelpFeedbackPage-C8-NlTGt.js               [39m[1m[2m  9.96 kB[22m[1m[22m[2m │ gzip:   3.71 kB[22m
+[2mdist/[22m[36massets/LearningHubPage-PRTAav48.js                [39m[1m[2m 10.60 kB[22m[1m[22m[2m │ gzip:   3.12 kB[22m
+[2mdist/[22m[36massets/TrustPage-B7BZdshI.js                      [39m[1m[2m 10.92 kB[22m[1m[22m[2m │ gzip:   3.62 kB[22m
+[2mdist/[22m[36massets/NotificationCenterDrawer-kcG2-i-r.js       [39m[1m[2m 11.17 kB[22m[1m[22m[2m │ gzip:   3.73 kB[22m
+[2mdist/[22m[36massets/SavedPage-C-ZjDzGt.js                      [39m[1m[2m 11.58 kB[22m[1m[22m[2m │ gzip:   3.41 kB[22m
+[2mdist/[22m[36massets/AthleteProfilePage-MkrVCwbC.js             [39m[1m[2m 11.68 kB[22m[1m[22m[2m │ gzip:   3.12 kB[22m
+[2mdist/[22m[36massets/PlayerCard-b9Ft5pdz.js                     [39m[1m[2m 11.87 kB[22m[1m[22m[2m │ gzip:   3.90 kB[22m
+[2mdist/[22m[36massets/PaymentCheckoutModal-D5Lg1_TN.js           [39m[1m[2m 12.31 kB[22m[1m[22m[2m │ gzip:   3.96 kB[22m
+[2mdist/[22m[36massets/AboutPage-CPRjejTe.js                      [39m[1m[2m 13.00 kB[22m[1m[22m[2m │ gzip:   4.23 kB[22m
+[2mdist/[22m[36massets/PartnerOnboardingPage-B4otcnE1.js          [39m[1m[2m 13.46 kB[22m[1m[22m[2m │ gzip:   3.87 kB[22m
+[2mdist/[22m[36massets/WorkspaceSearch-M5eV4bZ0.js                [39m[1m[2m 14.37 kB[22m[1m[22m[2m │ gzip:   4.29 kB[22m
+[2mdist/[22m[36massets/AcademicGalleyModal-CEy16uh1.js            [39m[1m[2m 14.72 kB[22m[1m[22m[2m │ gzip:   4.68 kB[22m
+[2mdist/[22m[36massets/UserConsentModal-CCSCdZIP.js               [39m[1m[2m 14.88 kB[22m[1m[22m[2m │ gzip:   4.41 kB[22m
+[2mdist/[22m[36massets/khelchronicle-6VhiaBLl.js                  [39m[1m[2m 14.91 kB[22m[1m[22m[2m │ gzip:   4.51 kB[22m
+[2mdist/[22m[36massets/CampaignMarketplacePage-FvfLcFZM.js        [39m[1m[2m 15.81 kB[22m[1m[22m[2m │ gzip:   4.49 kB[22m
+[2mdist/[22m[36massets/AdvertiserCampaignManagePage-DFExnU34.js   [39m[1m[2m 15.90 kB[22m[1m[22m[2m │ gzip:   4.37 kB[22m
+[2mdist/[22m[36massets/PlayPage-DXILvlER.js                       [39m[1m[2m 17.16 kB[22m[1m[22m[2m │ gzip:   6.13 kB[22m
+[2mdist/[22m[36massets/CampaignCreationPage-DoqOCtpb.js           [39m[1m[2m 17.77 kB[22m[1m[22m[2m │ gzip:   5.07 kB[22m
+[2mdist/[22m[36massets/SportDetailPage-DMJQeTNi.js                [39m[1m[2m 17.92 kB[22m[1m[22m[2m │ gzip:   4.75 kB[22m
 [2mdist/[22m[36massets/campaignClient-Bkh9shdv.js                 [39m[1m[2m 18.09 kB[22m[1m[22m[2m │ gzip:   6.02 kB[22m
 [2mdist/[22m[36massets/athlete-profile-client-M1gUBhfw.js         [39m[1m[2m 18.46 kB[22m[1m[22m[2m │ gzip:   6.10 kB[22m
-[2mdist/[22m[36massets/VenueDetailPage-CjJh9wsH.js                [39m[1m[2m 19.03 kB[22m[1m[22m[2m │ gzip:   6.15 kB[22m
-[2mdist/[22m[36massets/OpportunitiesPage-DOerG-kv.js              [39m[1m[2m 19.62 kB[22m[1m[22m[2m │ gzip:   6.64 kB[22m
-[2mdist/[22m[36massets/TenantDemoShowcasePage-BppHHTfa.js         [39m[1m[2m 20.69 kB[22m[1m[22m[2m │ gzip:   7.45 kB[22m
-[2mdist/[22m[36massets/GateCheckInPage-DthEES2L.js                [39m[1m[2m 20.92 kB[22m[1m[22m[2m │ gzip:   6.18 kB[22m
-[2mdist/[22m[36massets/AthleteVerificationPage-D5_5YGYx.js        [39m[1m[2m 21.04 kB[22m[1m[22m[2m │ gzip:   4.97 kB[22m
-[2mdist/[22m[36massets/VenuesPage-CH3zy4jU.js                     [39m[1m[2m 21.34 kB[22m[1m[22m[2m │ gzip:   7.94 kB[22m
-[2mdist/[22m[36massets/SportsCalendarPage-BzZmTJUU.js             [39m[1m[2m 21.76 kB[22m[1m[22m[2m │ gzip:   5.85 kB[22m
-[2mdist/[22m[36massets/CoachesPage-Cqau526e.js                    [39m[1m[2m 22.01 kB[22m[1m[22m[2m │ gzip:   6.76 kB[22m
-[2mdist/[22m[36massets/TurfSlotCalendarPage-YeFOG6W3.js           [39m[1m[2m 22.31 kB[22m[1m[22m[2m │ gzip:   6.38 kB[22m
-[2mdist/[22m[36massets/TalentScannerPage-34zh7TqP.js              [39m[1m[2m 22.80 kB[22m[1m[22m[2m │ gzip:   6.71 kB[22m
-[2mdist/[22m[36massets/CommunityReviewsSection-COe4KVYS.js        [39m[1m[2m 22.99 kB[22m[1m[22m[2m │ gzip:   6.46 kB[22m
-[2mdist/[22m[36massets/SettingsPage-CF594c0e.js                   [39m[1m[2m 25.02 kB[22m[1m[22m[2m │ gzip:   5.87 kB[22m
-[2mdist/[22m[36massets/PricingPage-gR-IHFyg.js                    [39m[1m[2m 25.13 kB[22m[1m[22m[2m │ gzip:   7.81 kB[22m
-[2mdist/[22m[36massets/FeatureComingSoonPage-4u-DBqjV.js          [39m[1m[2m 25.59 kB[22m[1m[22m[2m │ gzip:   7.63 kB[22m
-[2mdist/[22m[36massets/ParentPortalPage-t1wRuQIN.js               [39m[1m[2m 26.23 kB[22m[1m[22m[2m │ gzip:   7.59 kB[22m
-[2mdist/[22m[36massets/WorkspaceShell-CA1k5D4O.js                 [39m[1m[2m 27.68 kB[22m[1m[22m[2m │ gzip:   8.59 kB[22m
-[2mdist/[22m[36massets/CreatorHubPage-DrQV9V45.js                 [39m[1m[2m 29.51 kB[22m[1m[22m[2m │ gzip:   7.29 kB[22m
-[2mdist/[22m[36massets/ScoutPortalPage-D9rYJKSC.js                [39m[1m[2m 32.32 kB[22m[1m[22m[2m │ gzip:   9.61 kB[22m
-[2mdist/[22m[36massets/PartnerPage-Ds_ZI0Jr.js                    [39m[1m[2m 32.60 kB[22m[1m[22m[2m │ gzip:   9.09 kB[22m
-[2mdist/[22m[36massets/PolicyPage-C8cetWlD.js                     [39m[1m[2m 33.04 kB[22m[1m[22m[2m │ gzip:  12.02 kB[22m
-[2mdist/[22m[36massets/AuthModal-CywMg2Mx.js                      [39m[1m[2m 35.24 kB[22m[1m[22m[2m │ gzip:   8.75 kB[22m
-[2mdist/[22m[36massets/TournamentOpsPage-BKEH6qfJ.js              [39m[1m[2m 36.87 kB[22m[1m[22m[2m │ gzip:   9.02 kB[22m
-[2mdist/[22m[36massets/UserDashboardPage-CeXBSRQn.js              [39m[1m[2m 38.26 kB[22m[1m[22m[2m │ gzip:   8.42 kB[22m
-[2mdist/[22m[36massets/AcademyDetailPage-CiayqbMp.js              [39m[1m[2m 39.04 kB[22m[1m[22m[2m │ gzip:  10.16 kB[22m
-[2mdist/[22m[36massets/ListingSubmissionPage-DaT_OMmk.js          [39m[1m[2m 40.80 kB[22m[1m[22m[2m │ gzip:  10.11 kB[22m
-[2mdist/[22m[36massets/LiveScoresPage-B1_y3O-m.js                 [39m[1m[2m 40.87 kB[22m[1m[22m[2m │ gzip:  10.43 kB[22m
-[2mdist/[22m[36massets/KhelChronicleSubmitPage-DgwPU_D5.js        [39m[1m[2m 42.96 kB[22m[1m[22m[2m │ gzip:  12.33 kB[22m
-[2mdist/[22m[36massets/KhelChroniclePaperPage-DzF3JPdy.js         [39m[1m[2m 43.76 kB[22m[1m[22m[2m │ gzip:  10.43 kB[22m
+[2mdist/[22m[36massets/VenueDetailPage-v-XylAiS.js                [39m[1m[2m 19.03 kB[22m[1m[22m[2m │ gzip:   6.15 kB[22m
+[2mdist/[22m[36massets/OpportunitiesPage-DvvGZiiB.js              [39m[1m[2m 19.62 kB[22m[1m[22m[2m │ gzip:   6.64 kB[22m
+[2mdist/[22m[36massets/TenantDemoShowcasePage-D1PHrLs5.js         [39m[1m[2m 20.69 kB[22m[1m[22m[2m │ gzip:   7.45 kB[22m
+[2mdist/[22m[36massets/GateCheckInPage-C9vcssE5.js                [39m[1m[2m 20.92 kB[22m[1m[22m[2m │ gzip:   6.18 kB[22m
+[2mdist/[22m[36massets/AthleteVerificationPage-DH_jibv6.js        [39m[1m[2m 21.04 kB[22m[1m[22m[2m │ gzip:   4.97 kB[22m
+[2mdist/[22m[36massets/VenuesPage-BeILCoU5.js                     [39m[1m[2m 21.34 kB[22m[1m[22m[2m │ gzip:   7.94 kB[22m
+[2mdist/[22m[36massets/SportsCalendarPage-Dp7cmSco.js             [39m[1m[2m 21.76 kB[22m[1m[22m[2m │ gzip:   5.85 kB[22m
+[2mdist/[22m[36massets/CoachesPage-Dygm7MVv.js                    [39m[1m[2m 22.01 kB[22m[1m[22m[2m │ gzip:   6.76 kB[22m
+[2mdist/[22m[36massets/TurfSlotCalendarPage-C6pXebPP.js           [39m[1m[2m 22.31 kB[22m[1m[22m[2m │ gzip:   6.38 kB[22m
+[2mdist/[22m[36massets/TalentScannerPage-wgoKMH7o.js              [39m[1m[2m 22.80 kB[22m[1m[22m[2m │ gzip:   6.71 kB[22m
+[2mdist/[22m[36massets/CommunityReviewsSection-COEO5Be1.js        [39m[1m[2m 22.99 kB[22m[1m[22m[2m │ gzip:   6.46 kB[22m
+[2mdist/[22m[36massets/SettingsPage-BqAsIBfa.js                   [39m[1m[2m 25.02 kB[22m[1m[22m[2m │ gzip:   5.87 kB[22m
+[2mdist/[22m[36massets/PricingPage-4GoQicu2.js                    [39m[1m[2m 25.13 kB[22m[1m[22m[2m │ gzip:   7.81 kB[22m
+[2mdist/[22m[36massets/FeatureComingSoonPage-CZ30Yyyc.js          [39m[1m[2m 25.59 kB[22m[1m[22m[2m │ gzip:   7.63 kB[22m
+[2mdist/[22m[36massets/ParentPortalPage-LcUZfehK.js               [39m[1m[2m 26.23 kB[22m[1m[22m[2m │ gzip:   7.59 kB[22m
+[2mdist/[22m[36massets/WorkspaceShell-CaMQ8C65.js                 [39m[1m[2m 28.43 kB[22m[1m[22m[2m │ gzip:   8.81 kB[22m
+[2mdist/[22m[36massets/CreatorHubPage-Dr1bKzXM.js                 [39m[1m[2m 29.51 kB[22m[1m[22m[2m │ gzip:   7.29 kB[22m
+[2mdist/[22m[36massets/ScoutPortalPage-C3E1diDz.js                [39m[1m[2m 32.32 kB[22m[1m[22m[2m │ gzip:   9.61 kB[22m
+[2mdist/[22m[36massets/PartnerPage-DXzX4hqv.js                    [39m[1m[2m 32.60 kB[22m[1m[22m[2m │ gzip:   9.09 kB[22m
+[2mdist/[22m[36massets/PolicyPage-CRHblbJM.js                     [39m[1m[2m 33.04 kB[22m[1m[22m[2m │ gzip:  12.02 kB[22m
+[2mdist/[22m[36massets/AuthModal-P2M7XIvC.js                      [39m[1m[2m 35.24 kB[22m[1m[22m[2m │ gzip:   8.75 kB[22m
+[2mdist/[22m[36massets/TournamentOpsPage-DfU727Sz.js              [39m[1m[2m 36.87 kB[22m[1m[22m[2m │ gzip:   9.02 kB[22m
+[2mdist/[22m[36massets/UserDashboardPage-B6Honmsh.js              [39m[1m[2m 38.26 kB[22m[1m[22m[2m │ gzip:   8.42 kB[22m
+[2mdist/[22m[36massets/AcademyDetailPage-vRSpxHog.js              [39m[1m[2m 39.04 kB[22m[1m[22m[2m │ gzip:  10.16 kB[22m
+[2mdist/[22m[36massets/ListingSubmissionPage-DImpdoyt.js          [39m[1m[2m 40.80 kB[22m[1m[22m[2m │ gzip:  10.12 kB[22m
+[2mdist/[22m[36massets/LiveScoresPage-BexyIjPL.js                 [39m[1m[2m 40.87 kB[22m[1m[22m[2m │ gzip:  10.43 kB[22m
+[2mdist/[22m[36massets/KhelChronicleSubmitPage-CFwEk1do.js        [39m[1m[2m 42.96 kB[22m[1m[22m[2m │ gzip:  12.33 kB[22m
+[2mdist/[22m[36massets/KhelChroniclePaperPage-DrLk0D4c.js         [39m[1m[2m 43.76 kB[22m[1m[22m[2m │ gzip:  10.42 kB[22m
 [2mdist/[22m[36massets/vendor-i18n-KlOR7bwk.js                    [39m[1m[2m 44.44 kB[22m[1m[22m[2m │ gzip:  14.27 kB[22m
-[2mdist/[22m[36massets/SportsCvWizard-BUoatX96.js                 [39m[1m[2m 44.69 kB[22m[1m[22m[2m │ gzip:  11.68 kB[22m
-[2mdist/[22m[36massets/CityDetailPage-CrFqyLLI.js                 [39m[1m[2m 44.69 kB[22m[1m[22m[2m │ gzip:  11.07 kB[22m
-[2mdist/[22m[36massets/KhelChronicleHome-BnU9QVSn.js              [39m[1m[2m 46.57 kB[22m[1m[22m[2m │ gzip:  11.81 kB[22m
-[2mdist/[22m[36massets/EventsPage-C--nY5XH.js                     [39m[1m[2m 48.60 kB[22m[1m[22m[2m │ gzip:  14.16 kB[22m
-[2mdist/[22m[36massets/OrganizationsWorkspacePage-BEf7aIMQ.js     [39m[1m[2m 73.81 kB[22m[1m[22m[2m │ gzip:  17.65 kB[22m
-[2mdist/[22m[36massets/SportsToolsPage-D5Xz-JAx.js                [39m[1m[2m 91.70 kB[22m[1m[22m[2m │ gzip:  24.77 kB[22m
+[2mdist/[22m[36massets/SportsCvWizard-CLXavJk9.js                 [39m[1m[2m 44.69 kB[22m[1m[22m[2m │ gzip:  11.68 kB[22m
+[2mdist/[22m[36massets/CityDetailPage-DQc5TUEi.js                 [39m[1m[2m 44.69 kB[22m[1m[22m[2m │ gzip:  11.07 kB[22m
+[2mdist/[22m[36massets/KhelChronicleHome-KBc-OKWU.js              [39m[1m[2m 46.57 kB[22m[1m[22m[2m │ gzip:  11.81 kB[22m
+[2mdist/[22m[36massets/EventsPage-BKoXJEpq.js                     [39m[1m[2m 48.60 kB[22m[1m[22m[2m │ gzip:  14.16 kB[22m
+[2mdist/[22m[36massets/OrganizationsWorkspacePage-PC-X7rVD.js     [39m[1m[2m 73.81 kB[22m[1m[22m[2m │ gzip:  17.65 kB[22m
+[2mdist/[22m[36massets/SportsToolsPage-byZoB7bN.js                [39m[1m[2m 91.70 kB[22m[1m[22m[2m │ gzip:  24.77 kB[22m
 [2mdist/[22m[36massets/sportsData-B8nGhhpn.js                     [39m[1m[2m 93.76 kB[22m[1m[22m[2m │ gzip:  30.73 kB[22m
-[2mdist/[22m[36massets/CoachDashboardPage-CPJqR_JX.js             [39m[1m[2m113.44 kB[22m[1m[22m[2m │ gzip:  27.68 kB[22m
+[2mdist/[22m[36massets/CoachDashboardPage-B4PBOWno.js             [39m[1m[2m113.44 kB[22m[1m[22m[2m │ gzip:  27.68 kB[22m
 [2mdist/[22m[36massets/vendor-leaflet-CWP9_b4z.js                 [39m[1m[2m149.91 kB[22m[1m[22m[2m │ gzip:  43.49 kB[22m
-[2mdist/[22m[36massets/AcademyHubPage-BU1TlACk.js                 [39m[1m[2m154.09 kB[22m[1m[22m[2m │ gzip:  33.10 kB[22m
+[2mdist/[22m[36massets/AcademyHubPage-D1TcPFnJ.js                 [39m[1m[2m154.09 kB[22m[1m[22m[2m │ gzip:  33.10 kB[22m
 [2mdist/[22m[36massets/vendor-supabase-CB7MGzWB.js                [39m[1m[2m223.73 kB[22m[1m[22m[2m │ gzip:  58.62 kB[22m
 [2mdist/[22m[36massets/vendor-react-5myFmjq1.js                   [39m[1m[2m246.95 kB[22m[1m[22m[2m │ gzip:  78.53 kB[22m
-[2mdist/[22m[36massets/index-EjY22fak.js                          [39m[1m[33m676.35 kB[39m[22m[2m │ gzip: 201.61 kB[22m
-[32m✓ built in 12.46s[39m
+[2mdist/[22m[36massets/index-CmHHp4NL.js                          [39m[1m[33m677.60 kB[39m[22m[2m │ gzip: 201.98 kB[22m
+[32m✓ built in 9.72s[39m
 
 --- STAGE: 7. Supabase Security Regression (PASS) ---
 Command: npx vitest run src/integrations/supabase/phase1-runner-safety.test.ts src/integrations/supabase/phase1-ci-migration-drift.test.ts src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts src/integrations/supabase/database-security-foundation.test.ts
-Duration: 49.04s
+Duration: 73.66s
 Output:
 [1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mC:/Users/7khan/OneDrive/Desktop/Live score[39m
 
- [32m✓[39m src/integrations/supabase/database-security-foundation.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 8[2mms[22m[39m
- [32m✓[39m src/integrations/supabase/phase1-ci-migration-drift.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
- [32m✓[39m src/integrations/supabase/phase1-runner-safety.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 848[2mms[22m[39m
-   [33m[2m✓[22m[39m KhelGrid SaaS Platform — Phase 1 Test Runner Safety Verification[2m > [22msuccessfully passes the internal safety rejection test suite [33m 622[2mms[22m[39m
- [32m✓[39m src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 42072[2mms[22m[39m
-   [33m[2m✓[22m[39m KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Integration Suite[2m > [22mexecutes comprehensive 49-vector native PostgreSQL RLS attack matrix across 11 test identities [33m 42066[2mms[22m[39m
+ [32m✓[39m src/integrations/supabase/database-security-foundation.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/integrations/supabase/phase1-ci-migration-drift.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/integrations/supabase/phase1-runner-safety.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 689[2mms[22m[39m
+   [33m[2m✓[22m[39m KhelGrid SaaS Platform — Phase 1 Test Runner Safety Verification[2m > [22msuccessfully passes the internal safety rejection test suite [33m 443[2mms[22m[39m
+ [32m✓[39m src/integrations/supabase/phase1-multi-tenant-postgres-integration.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 66766[2mms[22m[39m
+   [33m[2m✓[22m[39m KhelGrid SaaS Platform — Phase 1 Real PostgreSQL RLS Integration Suite[2m > [22mexecutes comprehensive 49-vector native PostgreSQL RLS attack matrix across 11 test identities [33m 66764[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m4 passed[39m[22m[90m (4)[39m
 [2m      Tests [22m [1m[32m17 passed[39m[22m[90m (17)[39m
-[2m   Start at [22m 22:57:37
-[2m   Duration [22m 43.14s[2m (transform 68ms, setup 0ms, collect 140ms, tests 42.93s, environment 1ms, prepare 880ms)[22m
+[2m   Start at [22m 00:38:19
+[2m   Duration [22m 67.97s[2m (transform 89ms, setup 0ms, collect 164ms, tests 67.47s, environment 1ms, prepare 1.32s)[22m
 

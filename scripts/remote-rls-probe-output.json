@@ -216,9 +216,45 @@
     "passed": true
   },
   {
+    "test": "SEC-PROBE-02: Anonymous EXECUTE on public.has_tenant_permission",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for function has_tenant_permission",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-02: Anonymous EXECUTE on public.admin_moderate_tenant_verification",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for function admin_moderate_tenant_verification",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-02: Anonymous EXECUTE on public.admin_set_tenant_directory_publication",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for function admin_set_tenant_directory_publication",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-02: Anonymous EXECUTE on public.admin_set_tenant_operational_status",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for function admin_set_tenant_operational_status",
+    "passed": true
+  },
+  {
     "test": "SEC-PROBE-03: Anonymous INSERT on tenant_enquiries for non-existent tenant",
     "expected": "Denied by RLS WITH CHECK or Foreign Key",
     "actual": "42501: new row violates row-level security policy for table \"tenant_enquiries\"",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-04: Direct client INSERT on public.tenants",
+    "expected": "42501 permission denied",
+    "actual": "42501: permission denied for table tenants",
+    "passed": true
+  },
+  {
+    "test": "SEC-PROBE-05: Zero unverified/unapproved rows visible in tenant_public_directory",
+    "expected": "200 OK with 0 rows matching unverified or non-approved",
+    "actual": "0 exposed rows",
     "passed": true
   }
 ]
